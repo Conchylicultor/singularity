@@ -1,20 +1,29 @@
 import { useEffect, useRef } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { reportsRevisionResource } from "@plugins/reports/core";
 
 /** Module-level so the selector reference is stable across every mount. */
 const selectRev = (d: { rev: number }): number => d.rev;
 
 /**
- * The `reports.revision` tick as a DataView `changeTick`: `null` while pending
- * (no refetch), then the settled `rev` — the first one refreshes once.
+ * The `reports.revision` tick as a DataView `changeTick`: `null` while loading
+ * (no refetch), then the settled `rev` — the first one refreshes once. A failed
+ * tick read holds its last-known `rev` (or `null`): a missed nudge is not a
+ * change, and the refreshed read owns its own error state.
  */
 export function useReportsChangeTick(): number | null {
   // `select` narrows the subscription and the re-render to the one scalar.
   const tick = useResource(reportsRevisionResource, undefined, {
     select: selectRev,
   });
-  return tick.pending ? null : tick.data;
+  return foldResource(tick, {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (rev) => rev,
+  });
 }
 
 /**

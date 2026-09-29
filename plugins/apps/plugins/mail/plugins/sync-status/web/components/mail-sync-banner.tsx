@@ -12,6 +12,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useMailSyncState } from "../internal/use-mail-sync";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -30,9 +31,27 @@ const warningIcon = symbol("warning");
 export function MailSyncBanner(): ReactElement | null {
   const sync = useMailSyncState();
 
-  // Pending, or all-clear: the banner is silent (the landing shows "last synced").
-  if (sync.pending) return null;
-  const { view } = sync;
+  // Loading, or all-clear: the banner is silent (the landing shows "last synced").
+  if (sync.status === "loading") return null;
+  // The sync state itself failed to load: say so, with its retry — silence
+  // would read as "all clear".
+  if (sync.status === "error") {
+    return (
+      <BannerShell
+        tone="warning"
+        icon={<Icon icon={warningIcon} className="size-4" />}
+        title={
+          <ResourceErrorInline
+            variant="inline"
+            subject="the mail sync status"
+            error={sync.error}
+            refetch={sync.refetch}
+          />
+        }
+      />
+    );
+  }
+  const view = sync.data;
   if (view.phase === "healthy" || view.phase === "idle") return null;
 
   if (view.phase === "syncing") {

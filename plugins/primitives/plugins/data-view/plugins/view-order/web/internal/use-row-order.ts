@@ -1,33 +1,34 @@
 import { useCallback, useMemo } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { rowOrder, setRowOrder, type SetRowOrderBody } from "../../core";
 
 /**
- * One view instance's persisted row order: `pending` until the first value
- * lands, then the settled map. A union, so "no order loaded yet" can never be
- * read as "this view has genuinely never been reordered" — the two must render
- * differently (defer vs. seed-everything), and only the settled arm HAS a map.
+ * One view instance's persisted row order, as a read: loading until the first
+ * value lands, failed if it cannot load (the last map seen, if any, as
+ * `stale`), then the settled `rowKey → Rank` map, rank-ascending (the value's
+ * own order). A state, so "no order loaded yet" can never be read as "this view
+ * has genuinely never been reordered" — the two must render differently (defer
+ * vs. seed-everything), and only the settled arm HAS a map.
  */
-export type RowOrderState =
-  | { pending: true }
-  | {
-      pending: false;
-      /** `rowKey → Rank`, rank-ascending (the value's own order). */
-      persisted: Map<string, Rank>;
-    };
+export type RowOrderState = ResourceResult<Map<string, Rank>>;
 
 /** Subscribe to one view instance's persisted row order. */
 export function useRowOrder(dataViewId: string, viewId: string): RowOrderState {
   const result = useLive(rowOrder, { dataViewId, viewId });
-  return useMemo((): RowOrderState => {
-    if (result.pending) return { pending: true };
-    return {
-      pending: false,
-      persisted: new Map(result.data.map((row) => [row.rowKey, row.rank])),
-    };
-  }, [result]);
+  return useMemo(
+    () =>
+      mapResource(
+        result,
+        (rows) => new Map(rows.map((row) => [row.rowKey, row.rank])),
+      ),
+    [result],
+  );
 }
 
 /**

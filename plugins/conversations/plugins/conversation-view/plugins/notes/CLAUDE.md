@@ -12,11 +12,13 @@
   - Uses:
     - `conversations/conversation-view.Conversation`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/pin.Pin`
     - `primitives/editable-field.EditableField`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
 - Server:
   - Contributes: `resource.declare` "conversation-notes:rows"
   - Uses:

@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   CollapsibleChevron,
@@ -54,7 +55,17 @@ export function TurnSummaryCard({
   const { open, toggle } = useCollapsible({ defaultOpen: true });
   // Not loaded yet and "no summary yet" both render nothing: the card is an
   // optional banner, and there is no stand-in summary to show in either case.
-  if (result.pending || !result.found) return null;
+  if (result.status === "loading") return null;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the turn summary"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  if (!result.found) return null;
   const summary = result.row;
 
   const caveats = parseBullets(summary.caveats);

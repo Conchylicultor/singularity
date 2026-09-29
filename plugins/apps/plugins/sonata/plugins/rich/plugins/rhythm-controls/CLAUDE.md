@@ -89,6 +89,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `apps/sonata/shell.grooveSetting`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useCursorApi`
+    - `apps/sonata/shell.useFailSongSetting`
     - `apps/sonata/shell.useHasVoicedChords`
     - `apps/sonata/shell.useMountedSongId`
     - `apps/sonata/shell.useSonata`
@@ -107,6 +108,11 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `primitives/css/ui-kit.SelectTrigger`
     - `primitives/css/ui-kit.SelectValue`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.combineResources`
+    - `primitives/live-state.GateInput`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
   - Exports (types): `RhythmGroove`
   - Exports (values): `useSaveRhythm`

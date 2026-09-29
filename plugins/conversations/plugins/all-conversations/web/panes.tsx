@@ -45,7 +45,7 @@ function AllConversationsView(): ReactElement {
   const tick = useResource(conversationsRevisionResource);
   const openPane = useOpenPane();
   const changeTick = matchResource(tick, {
-    pending: () => null,
+    loading: () => null,
     ready: (d) => d.rev,
   });
 

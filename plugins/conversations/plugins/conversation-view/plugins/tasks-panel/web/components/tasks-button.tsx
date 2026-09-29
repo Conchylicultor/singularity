@@ -1,3 +1,4 @@
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -25,20 +26,33 @@ export function TasksButton() {
 
   const task = useTask(taskId ?? null);
   const blocked = useActiveDependentCount(taskId);
-  const status = task ? STATUS_META[task.status] : null;
+  // The status dot appears once the task is known; a failed read leaves it out
+  // (the blocked-count line below names the failure — both read one list).
+  const status = foldResource(task, {
+    loading: () => null,
+    error: () => null,
+    ready: (t) => (t ? STATUS_META[t.status] : null),
+  });
   // Until the task set is known there is no count to show — and no `0` drawn
   // either, so the button never claims "nothing is waiting on this" before it
   // could know. The count simply appears once the answer arrives.
-  const blockedCount =
-    blocked.pending || blocked.count === 0 ? null : blocked.count;
+  // A count that FAILED to load says so in the tooltip rather than vanishing
+  // as if still on its way.
+  const blockedCount = foldResource(blocked, {
+    loading: () => null,
+    error: () => null,
+    ready: (count) => (count === 0 ? null : count),
+  });
+  const blockedLine = foldResource(blocked, {
+    loading: () => null,
+    error: (error) => `Blocked count failed to load: ${error.message}`,
+    ready: (count) =>
+      count === 0
+        ? null
+        : `${count} task${count === 1 ? "" : "s"} blocked on this task`,
+  });
 
-  const title = [
-    "Tasks",
-    status?.label,
-    blockedCount === null
-      ? null
-      : `${blockedCount} task${blockedCount === 1 ? "" : "s"} blocked on this task`,
-  ]
+  const title = ["Tasks", status?.label, blockedLine]
     .filter(Boolean)
     .join(" · ");
 

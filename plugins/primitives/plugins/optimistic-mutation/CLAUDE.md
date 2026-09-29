@@ -110,8 +110,10 @@ The read is a declaration, positionally — mirroring `useLive`'s arguments:
 const picks = useOptimisticResource(prototypePicks, { name }, options); // a param'd liveValue
 const unread = useOptimisticResource(someValue, options);              // a param-less liveValue
 const ranks = useOptimisticResource(queueRanks, { ids }, options);     // a collection's id set (`:rows`)
-if (picks.pending) return <Loading />;   // { pending: true; error }
-picks.dispatch(change);                  // the settled arm: data, serverData, error, dispatch,
+if (picks.status === "loading") return <Loading />;
+if (picks.status === "error")            // a first load that failed: no base yet
+  return <ResourceErrorInline error={picks.error} refetch={picks.refetch} />;
+picks.dispatch(change);                  // the ready arm: data, serverData, error, dispatch,
                                          // pendingOps, saving, failed, retry
 
 // options:
@@ -127,18 +129,21 @@ picks.dispatch(change);                  // the settled arm: data, serverData, e
 }
 ```
 
-- **`pending` until a base exists, and no placeholder is ever the base.** The
-  base is the first authoritative value — or, once one has landed, the last one
-  under a transient error (the loud exemption below). `dispatch` exists only on
-  the settled arm (a tsc error on the pending one), so an op can never be folded
+- **`loading` (or `error`) until a base exists, and no placeholder is ever the
+  base.** The result is named by `status` like every live read, so it feeds the
+  live-state gates and lint rules as one. The base is the first authoritative
+  value — or, once one has landed, the last one under a transient error (the
+  loud exemption below: the result stays `ready` and carries that failure as the
+  ready arm's `error`). `dispatch` exists only on the `ready` arm (a tsc error on
+  the others), so an op can never be folded
   onto a base nobody has seen — `prototypes.picks` used to fold a click onto
   `{}` before the stored picks loaded. A collection's `:rows` descriptor still
   carries a `[]` placeholder for its legacy readers; the `{ ids }` form never
   takes it.
 - **Ops do not reset when the params change** (a re-baseline: the queue's live
   id set moves). The overlay keeps its ops and replays them on the new tuple's
-  base; the result is `pending` again until that base lands. A caller that must
-  let the user keep acting through that window keeps the settled arm it
+  base; the result is `loading` again until that base lands. A caller that must
+  let the user keep acting through that window keeps the `ready` arm it
   rendered from (the queue keeps its last display together with its
   `dispatch`); a caller whose params name a different entity keys the
   component by it, so the overlay starts fresh (the prototype canvas).
@@ -181,7 +186,7 @@ picks.dispatch(change);                  // the settled arm: data, serverData, e
   block its same-target juniors until it settles, which is correct either way.
 - `serverData` is the raw authoritative overlay base — server truth with NO
   pending ops applied (there is none before the first value: the result is
-  `pending` instead). For consumers that must distinguish "the server has
+  `loading` instead). For consumers that must distinguish "the server has
   really absorbed this row" from the prediction — e.g. the page editor gates a
   block's content-doc seed (an FK-dependent write) on the block id appearing
   here, never in overlaid `data`.

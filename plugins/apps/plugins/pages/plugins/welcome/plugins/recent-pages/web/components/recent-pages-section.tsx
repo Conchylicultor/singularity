@@ -1,5 +1,8 @@
 import { type ReactElement } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -24,13 +27,22 @@ export function RecentPagesSection(): ReactElement | null {
   const openPane = useOpenPane();
   const result = useResource(pagesResource);
 
-  if (result.pending) {
+  if (result.status === "loading" || result.status === "error") {
     return (
       <Stack gap="md">
         <Text as="span" variant="label" tone="muted">
           Recent pages
         </Text>
-        <Loading variant="rows" count={3} />
+        {result.status === "loading" ? (
+          <Loading variant="rows" count={3} />
+        ) : (
+          <ResourceErrorInline
+            variant="block"
+            subject="recent pages"
+            error={result.error}
+            refetch={result.refetch}
+          />
+        )}
       </Stack>
     );
   }

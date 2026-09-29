@@ -135,6 +135,7 @@ Config-backed like every DataView:
     - `primitives/css/ui-kit.cn`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.ElapsedTime`
     - `ui/icons.Icon`

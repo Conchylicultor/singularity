@@ -3,7 +3,11 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { pagesResource, pageData, type Block } from "../../core";
 import { PageIcon } from "./page-icon";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -15,9 +19,8 @@ const addCircleIcon = symbol("add-circle");
 export type PageOption =
   { kind: "page"; page: Block } | { kind: "create"; title: string };
 
-export type PageOptionsResult =
-  | { pending: true; options?: undefined }
-  | { pending: false; options: PageOption[] };
+/** The picker options read: the pages read's own states, mapped to options. */
+export type PageOptionsResult = ResourceResult<PageOption[]>;
 
 /**
  * Ordered picker options for a query: pages whose title matches, followed by an
@@ -26,8 +29,9 @@ export type PageOptionsResult =
  * filtering is local. Shared by the page-link block picker and the inline `[[`
  * typeahead so both surfaces stay identical.
  *
- * Returns a discriminated union so consumers can render a distinct loading state
- * instead of a premature "No pages found" while the resource is still pending.
+ * The pages read's own result, mapped: consumers render a distinct loading
+ * state (instead of a premature "No pages found") and a failed read as a
+ * failure.
  */
 export function usePageOptions(
   query: string,
@@ -35,23 +39,26 @@ export function usePageOptions(
 ): PageOptionsResult {
   const resourceResult = useResource(pagesResource);
   const allowCreate = opts?.allowCreate ?? false;
-  const options = useMemo(() => {
-    if (resourceResult.pending) return null;
-    const pages = resourceResult.data;
-    const q = query.trim().toLowerCase();
-    const matched = q
-      ? pages.filter((d) =>
-          (pageData(d).title || "Untitled").toLowerCase().includes(q),
-        )
-      : pages;
-    const items: PageOption[] = matched.map((page) => ({ kind: "page", page }));
-    if (allowCreate && query.trim()) {
-      items.push({ kind: "create", title: query.trim() });
-    }
-    return items;
-  }, [resourceResult, query, allowCreate]);
-  if (resourceResult.pending) return { pending: true };
-  return { pending: false, options: options! };
+  return useMemo(
+    () =>
+      mapResource(resourceResult, (pages) => {
+        const q = query.trim().toLowerCase();
+        const matched = q
+          ? pages.filter((d) =>
+              (pageData(d).title || "Untitled").toLowerCase().includes(q),
+            )
+          : pages;
+        const items: PageOption[] = matched.map((page) => ({
+          kind: "page",
+          page,
+        }));
+        if (allowCreate && query.trim()) {
+          items.push({ kind: "create", title: query.trim() });
+        }
+        return items;
+      }),
+    [resourceResult, query, allowCreate],
+  );
 }
 
 function PageOptionIcon({ page }: { page: Block }) {

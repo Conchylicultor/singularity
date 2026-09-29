@@ -294,7 +294,13 @@ function fullCollection<Row, F, S extends string>(
       defaultLimit: spec.default.limit,
       ...preloadOpts,
     }),
-    { window: windowCodec, defaultParams: windowCodec.encode() },
+    {
+      window: windowCodec,
+      defaultParams: windowCodec.encode(),
+      // The gate is the query codec's strict decode, like the window codec.
+      validateParams: (params: Record<string, string>) =>
+        void windowCodec.decode(params),
+    },
   );
   // Minted after the window, as it always was (descriptor registration order).
   const base = rowsPart(key, spec);
@@ -314,6 +320,8 @@ function fullCollection<Row, F, S extends string>(
       }),
     ),
     groups: groupCodec,
+    validateParams: (params: Record<string, string>) =>
+      void groupCodec.decode(params),
   };
   registerResourceDescriptor(groups as ResourceDescriptor<unknown>);
   return {

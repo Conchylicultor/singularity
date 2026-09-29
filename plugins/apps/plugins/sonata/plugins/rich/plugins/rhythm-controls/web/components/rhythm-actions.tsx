@@ -1,5 +1,6 @@
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useGroove } from "../use-groove";
 
 /**
@@ -12,9 +13,19 @@ import { useGroove } from "../use-groove";
  */
 export function RhythmActions() {
   const groove = useGroove();
-  if (groove.pending) return <Loading variant="spinner" />;
+  if (groove.status === "loading") return <Loading variant="spinner" />;
+  if (groove.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="this song's rhythm"
+        error={groove.error}
+        refetch={groove.refetch}
+      />
+    );
+  }
   const { enabled, bass, chord, bassFigurationId, chordFigurationId, commit } =
-    groove;
+    groove.data;
   return (
     <ToggleChip
       active={enabled}

@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -66,7 +67,16 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const { convId } = conversationPane.useParams();
   const eventsResult = useLive(jsonlEvents, { id: convId });
 
-  if (eventsResult.pending) return null;
+  if (eventsResult.status === "loading") return null;
+  if (eventsResult.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the question's answer state"
+        error={eventsResult.error}
+        refetch={eventsResult.refetch}
+      />
+    );
 
   const events = eventsResult.data;
   const lastToolCall = events.findLast((e) => e.kind === "tool-call");

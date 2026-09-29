@@ -3,6 +3,7 @@ import {
   Pane,
   PaneChrome,
   defineRoute,
+  type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import {
@@ -32,11 +33,11 @@ export const compositionsPane = Pane.define({
   width: 380,
 });
 
-function useResolveComposition({ id }: { id: string }) {
+function useResolveComposition({ id }: { id: string }): ResolveResult {
   const items = useManifestItems();
   const { isLoading } = useCompositionData();
-  if (isLoading && items.length === 0) return { pending: true, found: false };
-  return { pending: false, found: items.some((it) => it.id === id) };
+  if (isLoading && items.length === 0) return { status: "pending" };
+  return { status: items.some((it) => it.id === id) ? "found" : "missing" };
 }
 
 /** The composition's name from the manifests config, or undefined while it loads. */

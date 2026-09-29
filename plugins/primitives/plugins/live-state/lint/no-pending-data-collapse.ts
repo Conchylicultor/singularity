@@ -6,7 +6,8 @@
  * and destructive default button modes flashing during the load window).
  *
  * Flags a ConditionalExpression when ALL of:
- *   - the test is `X.pending` (or `!X.pending`, branches swapped),
+ *   - the test is `X.pending` (or `!X.pending`, branches swapped) — or its
+ *     `status` spelling, `X.status !== "ready"` (or `=== "ready"`, swapped),
  *   - X is a binding initialized from a resource read (`RESOURCE_HOOKS`:
  *     useLive / useResource / useOptimisticResource / combineResources /
  *     useCombinedResources / useConfigResult),
@@ -17,8 +18,9 @@
  * The same conceptual ban has a second syntactic form — the early-return
  * statement `if (X.pending) return <typed-empty>` followed by a later
  * `return <…X.data…>`. The IfStatement visitor flags that form when ALL of:
- *   - the test is `X.pending` (the direct form only; `!X.pending` with an
- *     inverted block body is NOT covered — see the visitor comment),
+ *   - the test is `X.pending` or `X.status !== "ready"` (the direct form
+ *     only; `!X.pending` with an inverted block body is NOT covered — see the
+ *     visitor comment),
  *   - X is a resource-result binding (same hooks + the same select carve-out),
  *   - the consequent (a bare ReturnStatement, or a block whose only statement is
  *     one) returns a TYPED-EMPTY data stand-in: a non-`null`/`undefined` empty
@@ -52,7 +54,7 @@
  *
  * Sanctioned replacements: early-return on `.pending`, <ResourceView>/
  * matchResource(...), combineResources(...) for multi-resource views, or
- * DataView's `loading` prop. See plugins/primitives/plugins/live-state/CLAUDE.md.
+ * DataView's `readiness` prop. See plugins/primitives/plugins/live-state/CLAUDE.md.
  */
 import {
   AST_NODE_TYPES,
@@ -504,6 +506,54 @@ function isResourceResultBinding(
   return true;
 }
 
+/**
+ * A test that is TRUE while the result is not ready — `X.pending`, or its
+ * `status` spelling `X.status !== "ready"` — as `{ obj, swapped: false }`; its
+ * negation (`!X.pending`, `X.status === "ready"`) as `swapped: true`. Null for
+ * any other test.
+ */
+function notReadyTestOf(
+  expr: TSESTree.Node,
+): { obj: TSESTree.Identifier; swapped: boolean } | null {
+  const n = unwrap(expr);
+  const pending = pendingAccessOf(n);
+  if (pending) return { obj: pending, swapped: false };
+  if (n.type === AST_NODE_TYPES.UnaryExpression && n.operator === "!") {
+    const inner = pendingAccessOf(n.argument);
+    if (inner) return { obj: inner, swapped: true };
+    return null;
+  }
+  if (n.type !== AST_NODE_TYPES.BinaryExpression) return null;
+  const negated = n.operator === "!==" || n.operator === "!=";
+  if (!negated && n.operator !== "===" && n.operator !== "==") return null;
+  const obj = isReadyLiteral(n.right)
+    ? statusAccessOf(n.left)
+    : isReadyLiteral(n.left)
+      ? statusAccessOf(n.right)
+      : null;
+  return obj ? { obj, swapped: !negated } : null;
+}
+
+function isReadyLiteral(node: TSESTree.Node): boolean {
+  const n = unwrap(node);
+  return n.type === AST_NODE_TYPES.Literal && n.value === "ready";
+}
+
+/** Returns the result identifier when `expr` is `<ident>.status`. */
+function statusAccessOf(expr: TSESTree.Node): TSESTree.Identifier | null {
+  const n = unwrap(expr);
+  if (
+    n.type === AST_NODE_TYPES.MemberExpression &&
+    !n.computed &&
+    n.object.type === AST_NODE_TYPES.Identifier &&
+    n.property.type === AST_NODE_TYPES.Identifier &&
+    n.property.name === "status"
+  ) {
+    return n.object;
+  }
+  return null;
+}
+
 /** Returns the result identifier when `expr` is `<ident>.pending`. */
 function pendingAccessOf(expr: TSESTree.Node): TSESTree.Identifier | null {
   const n = unwrap(expr);
@@ -532,7 +582,7 @@ export default createRule({
       pendingCollapse:
         "`{{name}}.pending ? <default> : {{name}}.data` collapses loading into a fake empty/default state — downstream code can no " +
         'longer tell "still loading" from "genuinely empty" (the wrong-state-while-loading bug class). Gate instead: early-return on ' +
-        "`.pending`, wrap in <ResourceView>/matchResource(…), combine multiple resources with combineResources(…), or pass `loading` to " +
+        "`.pending`, wrap in <ResourceView>/matchResource(…), combine multiple resources with combineResources(…), or pass `readiness` to " +
         "DataView. See plugins/primitives/plugins/live-state/CLAUDE.md.",
       pendingCollapseReturn:
         "`if ({{name}}.pending) return <typed-empty>` returns a fake empty/default value while loading (or `null` where the settled " +
@@ -547,21 +597,11 @@ export default createRule({
   create(context) {
     return {
       ConditionalExpression(node) {
-        let obj = pendingAccessOf(node.test);
-        let pendingBranch: TSESTree.Node;
-        let dataBranch: TSESTree.Node;
-        if (obj) {
-          pendingBranch = node.consequent;
-          dataBranch = node.alternate;
-        } else {
-          const t = unwrap(node.test);
-          if (t.type !== AST_NODE_TYPES.UnaryExpression || t.operator !== "!")
-            return;
-          obj = pendingAccessOf(t.argument);
-          if (!obj) return;
-          pendingBranch = node.alternate;
-          dataBranch = node.consequent;
-        }
+        const test = notReadyTestOf(node.test);
+        if (!test) return;
+        const { obj } = test;
+        const pendingBranch = test.swapped ? node.alternate : node.consequent;
+        const dataBranch = test.swapped ? node.consequent : node.alternate;
         if (!isEmptyDefault(context, pendingBranch)) return;
         if (!referencesData(dataBranch, obj.name)) return;
         if (isTitleFallback(context, node, pendingBranch)) return;
@@ -577,8 +617,9 @@ export default createRule({
       // `if (!X.pending) { … } return <empty>` form is intentionally NOT covered
       // (rare, and the data-stand-in correlation is harder to assert safely).
       IfStatement(node) {
-        const obj = pendingAccessOf(node.test);
-        if (!obj) return;
+        const test = notReadyTestOf(node.test);
+        if (!test || test.swapped) return;
+        const { obj } = test;
         const consReturn = consequentReturn(node.consequent);
         if (!consReturn || !consReturn.argument) return;
         // Locate the subsequent VALUE return so we can structurally compare the

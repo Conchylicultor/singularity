@@ -50,7 +50,12 @@ function cascadeHarness() {
   });
   const downLoads: string[] = [];
   h.runtime.defineResource(
-    { key: "down", schema: rowsSchema, keyed: { keyOf } },
+    {
+      key: "down",
+      schema: rowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    },
     {
       identityTable: "down_t",
       fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -140,7 +145,12 @@ describe("cascade edge-read attribution", () => {
     // second compares equal → relevance empty → SKIP_EDGE.
     let n = 0;
     h.runtime.defineResource(
-      { key: "down", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "down",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "down_t",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },

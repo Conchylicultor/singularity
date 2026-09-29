@@ -39,7 +39,7 @@ export function PrototypeChip({
   const raw = <>{id}</>;
 
   return matchResource(result, {
-    pending: () => raw,
+    loading: () => raw,
     // Explicit, unlike page-link: matchResource's default error arm is a block
     // `<Placeholder tone="error">`, which is a reasonable default for a pane
     // body and quite wrong dropped into the middle of a paragraph.

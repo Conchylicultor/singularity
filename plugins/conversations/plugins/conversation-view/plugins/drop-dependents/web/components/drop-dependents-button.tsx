@@ -1,6 +1,6 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
-import { useConversation } from "@plugins/conversations/web";
+import { useLiveConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useActiveDependentCount } from "@plugins/tasks/web";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -15,7 +15,7 @@ export function DropDependentsItem({
 }: {
   conversation: ConversationRecord;
 }) {
-  const live = useConversation(conversation.id) ?? conversation;
+  const live = useLiveConversation(conversation);
   const blocked = useActiveDependentCount(conversation.taskId);
 
   const { mutate, isPending } = useEndpointMutation(dropDependents, {
@@ -37,8 +37,15 @@ export function DropDependentsItem({
   });
 
   // Nothing is waiting on this task (or we do not know yet) ⇒ no sweep to offer.
-  if (blocked.pending || blocked.count === 0) return null;
-  const dependentCount = blocked.count;
+  // A failed read hides it too, deliberately: a destructive sweep is never
+  // offered over a count nobody could read.
+  if (
+    blocked.status === "loading" ||
+    blocked.status === "error" ||
+    blocked.data === 0
+  )
+    return null;
+  const dependentCount = blocked.data;
 
   const disabled =
     isPending ||

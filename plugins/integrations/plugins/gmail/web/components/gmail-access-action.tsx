@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { ConnectButton, GrantAccessButton } from "@plugins/auth/web";
 import { useSetConfig } from "@plugins/config_v2/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { gmailConfig } from "../../shared/config";
 import { GMAIL_SCOPES, GOOGLE_PROVIDER_ID } from "../../core";
 import { useGmailAccess } from "../internal/use-gmail-access";
@@ -38,10 +39,21 @@ export function GmailAccessAction({
 }: {
   reconnect?: boolean;
 }): ReactElement | null {
-  const { blocker, loading } = useGmailAccess();
+  const { blocker, loading, error, refetch } = useGmailAccess();
   const setConfig = useSetConfig(gmailConfig);
 
   if (loading) return null;
+  // The account state could not be read: no fix can be named, so offer the
+  // read's own Retry rather than a guessed control (or nothing).
+  if (error !== null)
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the Google account state"
+        error={error}
+        refetch={refetch}
+      />
+    );
 
   switch (blocker) {
     case "disabled":

@@ -6,13 +6,23 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
   clientLog: () => {},
 }));
 
-import { cleanup, fireEvent, render, renderHook } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+} from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import {
   NotificationsProvider,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
+import {
+  markResourceContractMismatch,
+  resetResourceContractMismatches,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { markDeferredPluginsFailed } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
@@ -73,12 +83,14 @@ beforeEach(() => {
   // (a dev server has no baked graph), and no tab could ever read as stale.
   vi.stubEnv("VITE_BUILD_GRAPH", BAKED);
   resetDeferredLoadStateForTests();
+  resetResourceContractMismatches();
 });
 
 afterEach(() => {
   cleanup();
   vi.unstubAllEnvs();
   resetDeferredLoadStateForTests();
+  resetResourceContractMismatches();
 });
 
 describe("useReloadAdvice", () => {
@@ -123,6 +135,67 @@ describe("useReloadAdvice", () => {
     });
   });
 
+  it("is outdated when the server refused resources for skew, counting them", () => {
+    markResourceContractMismatch({
+      key: "build.history",
+      reason: "contract-mismatch",
+      verdict: "skew",
+    });
+    markResourceContractMismatch({
+      key: "gone.key",
+      reason: "unknown-key",
+      verdict: "skew",
+    });
+    // A same-build / unknown verdict is a bug, not an out-of-date tab.
+    markResourceContractMismatch({
+      key: "bug.key",
+      reason: "contract-mismatch",
+      verdict: "same-build",
+    });
+    const { result } = renderHook(() => useReloadAdvice(), {
+      wrapper: wrapperServing("graph-newer"),
+    });
+    expect(result.current).toEqual({ kind: "outdated", stale: true, count: 2 });
+  });
+
+  it("precedence: broken > outdated > stale", () => {
+    markResourceContractMismatch({
+      key: "build.history",
+      reason: "contract-mismatch",
+      verdict: "skew",
+    });
+    markDeferredPluginsFailed(["apps/plugins/story/plugins/lenses"]);
+    const { result } = renderHook(() => useReloadAdvice(), {
+      wrapper: wrapperServing(BAKED),
+    });
+    // An outdated tab is a stale one: the broken copy names both.
+    expect(result.current).toEqual({
+      kind: "broken",
+      stale: true,
+      failedCount: 1,
+    });
+  });
+
+  it("turns outdated the moment a mismatch is recorded, without a remount", () => {
+    const { result, rerender } = renderHook(() => useReloadAdvice(), {
+      wrapper: wrapperServing(BAKED),
+    });
+    expect(result.current.kind).toBe("none");
+    act(() =>
+      markResourceContractMismatch({
+        key: "build.history",
+        reason: "contract-mismatch",
+        verdict: "skew",
+      }),
+    );
+    rerender();
+    expect(result.current).toEqual({
+      kind: "outdated",
+      stale: false,
+      count: 1,
+    });
+  });
+
   it("turns broken the moment a failure is published, without a remount", () => {
     const { result, rerender } = renderHook(() => useReloadAdvice(), {
       wrapper: wrapperServing(BAKED),
@@ -138,6 +211,8 @@ const STALE_ONLY = "Server was rebuilt — click to reload this tab";
 const BROKEN_ONLY = "Part of the app didn't load — reload to fix";
 const BOTH =
   "This tab is out of date and part of the app didn't load — reload to fix";
+const OUTDATED =
+  "This tab is out of date and can't load some data — reload to fix";
 
 describe("ReloadSegment", () => {
   it("renders nothing when no reload is needed", () => {
@@ -163,6 +238,13 @@ describe("ReloadSegment", () => {
       name: "failed only → red, didn't-load copy",
       advice: { kind: "broken", stale: false, failedCount: 3 },
       message: BROKEN_ONLY,
+      tint: "text-destructive",
+      notTint: "text-info",
+    },
+    {
+      name: "outdated → red, can't-load copy",
+      advice: { kind: "outdated", stale: true, count: 1 },
+      message: OUTDATED,
       tint: "text-destructive",
       notTint: "text-info",
     },

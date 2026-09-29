@@ -12,6 +12,7 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useContext, useState } from "react";
 import { configSecretMeta } from "../../core";
@@ -47,13 +48,27 @@ const SecretRenderer = defineFieldShape({
     let isSet = false;
     if (ctx !== null) {
       // Not-known-yet is a state to render, never a value to stand in for: a
-      // pending read reported as `isSet: false` would show the password input
+      // loading read reported as `isSet: false` would show the password input
       // for a secret that IS configured, then swap under the user.
-      if (metaResult.pending) {
+      if (metaResult.status === "loading") {
         return {
           kind: "value",
           fit: "field",
           control: <Loading variant="text" />,
+        };
+      }
+      if (metaResult.status === "error") {
+        return {
+          kind: "value",
+          fit: "field",
+          control: (
+            <ResourceErrorInline
+              variant="inline"
+              subject="whether this secret is set"
+              error={metaResult.error}
+              refetch={metaResult.refetch}
+            />
+          ),
         };
       }
       isSet = metaResult.data[ctx.fieldKey]?.set ?? false;

@@ -1,4 +1,8 @@
 import {
+  ResourceErrorInline,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
   Button,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -45,7 +49,13 @@ export function GoogleSetupPane() {
     configSecretMeta,
     reg ? { path: reg.storePath } : null,
   );
-  const status = useAccountStatus("google");
+  const statusResult = useAccountStatus("google");
+  // Both reads decide what the wizard claims (credentials saved, account
+  // connected), so it waits for both — and a failure of either says so.
+  const reads = useCombinedResources({
+    meta: metaResult,
+    status: statusResult,
+  });
   // The config is registered by auth/google itself, so a missing registration
   // is a wiring bug — never "still loading": the read above skipped, and the
   // render throws.
@@ -55,8 +65,18 @@ export function GoogleSetupPane() {
     );
   }
   const storePath = reg.storePath;
-  if (metaResult.pending) return <Loading />;
-  const secretMeta = metaResult.data;
+  if (reads.status === "loading") return <Loading />;
+  if (reads.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the Google connection state"
+        error={reads.error}
+        refetch={reads.refetch}
+      />
+    );
+  }
+  const { meta: secretMeta, status } = reads.data;
   const credentialsSaved =
     !!secretMeta.clientId?.set && !!secretMeta.clientSecret?.set;
   const connected = status?.connected;
@@ -210,7 +230,7 @@ export function GoogleSetupPane() {
             {connected ? (
               <StepDone>
                 Connected
-                {status.identity?.email ? ` (${status.identity.email})` : ""}
+                {status?.identity?.email ? ` (${status.identity.email})` : ""}
               </StepDone>
             ) : (
               <>

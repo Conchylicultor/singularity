@@ -158,7 +158,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `network/live.LiveRowResult`
     - `network/live.useLive`
     - `network/live.useLiveRow`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.useEndpointResource`
     - `primitives/live-state.useResource`
   - Exports (values):
     - `EventSources`

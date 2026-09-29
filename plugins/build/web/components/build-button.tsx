@@ -4,8 +4,11 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useState, useEffect } from "react";
-import { useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
+import { useState, useEffect, type ReactNode } from "react";
+import {
+  ResourceErrorInline,
+  useNotificationsChannelStatuses,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -48,7 +51,9 @@ function BuildButtonInner({
   // externally-killed run reports no defect, so it must not read "Build failed".
   const failed = latestRun != null && buildStatusOf(latestRun) === "failed";
   const staleTab =
-    advice.kind === "stale" || (advice.kind === "broken" && advice.stale);
+    advice.kind === "stale" ||
+    advice.kind === "outdated" ||
+    (advice.kind === "broken" && advice.stale);
 
   // The label and the Reload segment answer different questions. The label is
   // about the SERVER (what the build is doing); the segment is about THIS TAB
@@ -211,20 +216,46 @@ export function BuildButton() {
   // --- Build history (the default window, newest first; preloaded) ---
   const historyResult = useLive(buildHistory);
 
-  // Render the neutral wrench, inert, while the build history is still
-  // loading — no fake "idle" status and no misleading useEffect trace before
-  // data arrives. The popover needs the history, so it cannot open yet.
-  if (historyResult.pending) {
-    return <IconButton icon={buildIcon} label="Builds" disabled />;
+  // No history yet: no fake "idle" status and no misleading useEffect trace
+  // before data arrives, and the popover needs the history, so it cannot open.
+  // Two states, never one: still LOADING is the neutral wrench, inert; a read
+  // that FAILED is the live error wrench whose click retries (or reloads, when
+  // this tab is out of date) — a disabled wrench would read as "loading"
+  // forever. Either way the Reload segment stays: whether this tab needs a
+  // reload is independent of the history read (and an out-of-date tab is
+  // exactly when that read fails).
+  let wrench: ReactNode;
+  switch (historyResult.status) {
+    case "ready":
+      return (
+        <BuildButtonInner
+          open={open}
+          setOpen={setOpen}
+          advice={advice}
+          wsStatus={wsStatus}
+          historyData={historyResult.data}
+        />
+      );
+    case "loading":
+      wrench = <IconButton icon={buildIcon} label="Builds" disabled />;
+      break;
+    case "error":
+      wrench = (
+        <ResourceErrorInline
+          variant="icon"
+          icon={buildIcon}
+          subject="the build history"
+          error={historyResult.error}
+          refetch={historyResult.refetch}
+        />
+      );
+      break;
   }
-
+  if (advice.kind === "none") return wrench;
   return (
-    <BuildButtonInner
-      open={open}
-      setOpen={setOpen}
-      advice={advice}
-      wsStatus={wsStatus}
-      historyData={historyResult.data}
-    />
+    <ButtonGroup shape="pill" className="text-foreground">
+      {wrench}
+      <ReloadSegment advice={advice} />
+    </ButtonGroup>
   );
 }

@@ -53,7 +53,7 @@ export function useRun(ref: { kind: string; id: string }): RunRead {
   const tick = useResource(runsRevisionResource);
   const changeTick = matchResource(tick, {
     // No tick while it is pending — the first settled `rev` refreshes once.
-    pending: () => null,
+    loading: () => null,
     ready: (d) => d.rev,
   });
 

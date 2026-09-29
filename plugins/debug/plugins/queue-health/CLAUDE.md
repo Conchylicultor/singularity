@@ -380,6 +380,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useNotificationsChannelStatuses`
     - `primitives/loading.Loading`
     - `reports.Reports`

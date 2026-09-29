@@ -77,7 +77,7 @@ export function HistorySource({
   // paginated SQL query is the source of truth. While pending, hand a null tick.
   const tick = useResource(conversationsRevisionResource);
   const changeTick = matchResource(tick, {
-    pending: () => null,
+    loading: () => null,
     ready: (d) => d.rev,
   });
 

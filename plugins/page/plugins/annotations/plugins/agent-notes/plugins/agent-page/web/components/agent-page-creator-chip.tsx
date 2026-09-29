@@ -1,5 +1,6 @@
 import { ConversationChip } from "@plugins/conversations/plugins/conversation-ui/plugins/chip/web";
 import { useConversationById } from "@plugins/conversations/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { PageReferenceChipProps } from "@plugins/page/plugins/page-reference/web";
 import { useAgentNotesCreator } from "@plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/web";
@@ -28,7 +29,17 @@ function ChipLoading() {
  */
 export function AgentPageCreatorChip({ pageId }: PageReferenceChipProps) {
   const creator = useAgentNotesCreator(pageId);
-  if (creator.pending) return <ChipLoading />;
+  if (creator.status === "loading") return <ChipLoading />;
+  if (creator.status === "error") {
+    return (
+      <ResourceErrorInline
+        error={creator.error}
+        refetch={creator.refetch}
+        variant="icon"
+        subject="the page's creator"
+      />
+    );
+  }
   if (creator.data === null) return null;
   return <CreatorChip conversationId={creator.data.conversationId} />;
 }

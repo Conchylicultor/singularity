@@ -27,9 +27,18 @@ export function CanvasShortcuts(): ReactElement | null {
   const { name } = usePrototypeDetail();
   const history = useLive(prototypeHistory, { name });
   // Until the history is known the keys are not registered — there is nowhere
-  // to step yet.
-  if (history.pending) return null;
-  return <KnownShortcuts history={history.data} />;
+  // to step yet. A failed read keeps stepping through the last history the
+  // server vouched for, if any; the frame's own history surface shows the error.
+  switch (history.status) {
+    case "loading":
+      return null;
+    case "error":
+      return history.stale === undefined ? null : (
+        <KnownShortcuts history={history.stale} />
+      );
+    case "ready":
+      return <KnownShortcuts history={history.data} />;
+  }
 }
 
 function KnownShortcuts({

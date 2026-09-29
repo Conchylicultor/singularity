@@ -1,4 +1,7 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -36,8 +39,13 @@ export function PageLinkChip({
   // unstyled — a font change would advertise an affordance that isn't there.
   // Until it resolves that is also all we honestly know.
   if (target.kind !== "page" && target.kind !== "block") return <>{blockId}</>;
-  if (pages.pending) return <>{blockId}</>;
-  const page = pages.data.find((p) => p.id === target.pageId);
+  // A failed pages read is the same: the id is a guess about prose, so the
+  // text as written beats an error inside a sentence.
+  const page = foldResource(pages, {
+    loading: () => undefined,
+    error: () => undefined,
+    ready: (list) => list.find((p) => p.id === target.pageId),
+  });
   if (title === undefined || page === undefined) return <>{blockId}</>;
 
   return (

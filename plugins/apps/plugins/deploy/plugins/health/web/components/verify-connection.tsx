@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ReactNode } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -30,7 +31,17 @@ import { isKeyVerified, useServerHealth } from "../hooks";
  */
 export function VerifyConnectionBody({ server }: { server: Server }) {
   const health = useServerHealth(server.id);
-  if (health.pending) return <Loading />;
+  if (health.status === "loading") return <Loading />;
+  if (health.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the server's last check"
+        error={health.error}
+        refetch={health.refetch}
+      />
+    );
+  }
   return (
     <VerifyConnectionForm
       server={server}

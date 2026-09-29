@@ -25,7 +25,7 @@ export function RecentsSection() {
   const result = useLive(browserRecents);
 
   return matchResource(result, {
-    pending: () => null,
+    loading: () => null,
     ready: (recents) => {
       if (recents.length === 0) return null;
       return (

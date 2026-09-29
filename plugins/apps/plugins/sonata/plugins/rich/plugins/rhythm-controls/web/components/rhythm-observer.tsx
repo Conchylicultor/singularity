@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import {
   grooveSetting,
+  useFailSongSetting,
   useMountedSongId,
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
-import { rhythms } from "../../shared/resources";
+import { rhythms, type RhythmRow } from "../../shared/resources";
 
 /**
  * Headless observer of the `grooveSetting` (`Sonata.SongSetting`, mounted
@@ -22,12 +23,30 @@ import { rhythms } from "../../shared/resources";
 export function RhythmObserver() {
   const songId = useMountedSongId();
   const setGroove = useWriteSongSetting(grooveSetting);
+  const failSetting = useFailSongSetting(grooveSetting);
   const row = useLiveRow(rhythms, songId);
   // The row read reduced to what the effect needs: whether it has settled, and
   // the row itself (the cache's own object, identity-stable until it changes) —
   // so the effect runs on a real change only.
-  const settled = !row.pending;
-  const persisted = !row.pending && row.found ? row.row : null;
+  // A failed read settles only from its last-seen row (`stale`); with none the
+  // setting is reported FAILED (below) — never a stand-in value — so the
+  // player shows the failure with Retry instead of waiting forever.
+  let settled: boolean;
+  let persisted: RhythmRow | null;
+  switch (row.status) {
+    case "loading":
+      settled = false;
+      persisted = null;
+      break;
+    case "error":
+      settled = row.stale !== undefined;
+      persisted = row.stale ?? null;
+      break;
+    case "ready":
+      settled = true;
+      persisted = row.found ? row.row : null;
+      break;
+  }
 
   useEffect(() => {
     if (!settled) return;
@@ -42,6 +61,15 @@ export function RhythmObserver() {
         : null,
     );
   }, [songId, settled, persisted, setGroove]);
+
+  // The read failed with nothing to settle from: the setting is FAILED.
+  const failedError =
+    row.status === "error" && row.stale === undefined ? row.error : undefined;
+  const refetch = row.refetch;
+  useEffect(() => {
+    if (failedError === undefined) return;
+    failSetting(songId, { error: failedError, refetch });
+  }, [songId, failedError, refetch, failSetting]);
 
   return null;
 }

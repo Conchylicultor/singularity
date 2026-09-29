@@ -198,6 +198,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
   - Exports (types):

@@ -1,6 +1,7 @@
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { resetTrackViews } from "../actions";
 import { useTrackMixerEntries } from "../hooks";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -22,7 +23,17 @@ export function TrackMixerActions() {
   const { currentSongId } = useSonata();
   const entries = useTrackMixerEntries();
   if (!currentSongId) return null;
-  if (entries.pending) return <Loading variant="spinner" />;
+  if (entries.kind === "pending") return <Loading variant="spinner" />;
+  if (entries.kind === "failed")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={restartAltIcon}
+        subject="the track views"
+        error={entries.error}
+        refetch={entries.refetch}
+      />
+    );
   const anyCustomized = entries.value.some((e) => e.customized);
   return (
     <IconButton

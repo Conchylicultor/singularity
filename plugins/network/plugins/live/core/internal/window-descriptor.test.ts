@@ -9,6 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
@@ -60,6 +61,20 @@ describe("windowQueryResourceDescriptor", () => {
     expect(() => win.window.decode({ limit: "007" })).toThrow(/params\.limit/);
     expect(() => win.window.decode({ limit: "-1" })).toThrow(/params\.limit/);
     expect(() => win.window.decode({ limit: "1e3" })).toThrow(/params\.limit/);
+  });
+
+  test("a decode failure is a contract mismatch; an encode failure is not", () => {
+    expect(() => win.window.decode({})).toThrow(ResourceContractError);
+    expect(() => win.validateParams({})).toThrow(ResourceContractError);
+    expect(() => win.validateParams({ limit: "5" })).not.toThrow();
+    let encodeErr: unknown;
+    try {
+      win.window.encode({ limit: 0 });
+    } catch (err) {
+      encodeErr = err;
+    }
+    expect(encodeErr).toBeInstanceOf(Error);
+    expect(encodeErr).not.toBeInstanceOf(ResourceContractError);
   });
 
   test("factory rejects an invalid defaultLimit at declaration", () => {

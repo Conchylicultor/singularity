@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import {
   transposeSetting,
+  useFailSongSetting,
   useMountedSongId,
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -20,15 +21,39 @@ import { transposes } from "../../shared/resources";
 export function TransposeObserver() {
   const songId = useMountedSongId();
   const setTranspose = useWriteSongSetting(transposeSetting);
+  const failSetting = useFailSongSetting(transposeSetting);
   const row = useLiveRow(transposes, songId);
   // The row read reduced to the value it settles to — `undefined` while it is
-  // pending — so the effect below runs on a real change only.
-  const semitones = row.pending ? undefined : row.found ? row.row.semitones : 0;
+  // loading — so the effect below runs on a real change only.
+  // A failed read settles only from its last-seen row (`stale`); with none the
+  // setting is reported FAILED (below) — never a stand-in value — so the
+  // player shows the failure with Retry instead of waiting forever.
+  let semitones: number | undefined;
+  switch (row.status) {
+    case "loading":
+      semitones = undefined;
+      break;
+    case "error":
+      semitones = row.stale?.semitones;
+      break;
+    case "ready":
+      semitones = row.found ? row.row.semitones : 0;
+      break;
+  }
 
   useEffect(() => {
     if (semitones === undefined) return;
     setTranspose(songId, semitones);
   }, [songId, semitones, setTranspose]);
+
+  // The read failed with nothing to settle from: the setting is FAILED.
+  const failedError =
+    row.status === "error" && row.stale === undefined ? row.error : undefined;
+  const refetch = row.refetch;
+  useEffect(() => {
+    if (failedError === undefined) return;
+    failSetting(songId, { error: failedError, refetch });
+  }, [songId, failedError, refetch, failSetting]);
 
   return null;
 }

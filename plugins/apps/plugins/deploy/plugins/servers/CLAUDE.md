@@ -65,10 +65,13 @@ key also writes the row's `ssh_public_key`, so no hand-notify exists.
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.resolveFrom`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.useOpenPane`
   - Exports (types):
     - `Server`

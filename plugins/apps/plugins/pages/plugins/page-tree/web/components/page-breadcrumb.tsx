@@ -1,5 +1,8 @@
 import { type ReactElement } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Breadcrumb,
@@ -31,7 +34,7 @@ function SegmentLabel({ page }: { page: Block }): ReactElement {
  * current page is the inert trailing leaf, so the big in-body title is the only
  * other place the title appears. A root page with no ancestors still shows its
  * own title as the lone segment; renders nothing only while the pages resource
- * loads. Typography size is owned by PaneChrome's title container — this trail
+ * loads (and the failure, with Retry, when it failed). Typography size is owned by PaneChrome's title container — this trail
  * carries only the per-segment weight/color baked into the Breadcrumb primitive,
  * never its own size or inset.
  */
@@ -48,7 +51,17 @@ export function PageBreadcrumb({
 }): ReactElement | null {
   const openPane = useOpenPane();
   const result = useResource(pagesResource);
-  if (result.pending) return null;
+  if (result.status === "loading") return null;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the page"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  }
 
   const current = result.data.find((p) => p.id === pageId);
   if (!current) return null;

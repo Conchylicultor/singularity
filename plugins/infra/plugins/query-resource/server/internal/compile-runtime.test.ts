@@ -142,6 +142,7 @@ const keyed = (key: string) => ({
   key,
   schema: rowSchema,
   keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+  validateParams: () => {},
 });
 
 // Register a compiled spec into the runtime under `key`, wrapping the loader so

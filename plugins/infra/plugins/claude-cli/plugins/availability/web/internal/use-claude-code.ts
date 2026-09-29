@@ -1,4 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import {
   claudeCodeBlockMessage,
@@ -7,7 +8,7 @@ import {
 } from "../../core";
 import { claudeCodeVerdict } from "./claude-code-health";
 
-/** Claude Code's live status on this backend — pending until the first check lands. */
+/** Claude Code's live status on this backend — loading until the first check lands. */
 export function useClaudeCodeStatus() {
   return useLive(claudeCodeStatus);
 }
@@ -26,9 +27,11 @@ export function useClaudeCodeHealth(): HealthStatus {
  * refused on a guess, and never lets a known-dead agent start either.
  */
 export function useClaudeCodeLaunchBlock(): string | null {
-  const result = useClaudeCodeStatus();
-  if (result.pending) return null;
-  return launchBlock(result.data);
+  return foldResource(useClaudeCodeStatus(), {
+    loading: () => null,
+    error: () => null,
+    ready: launchBlock,
+  });
 }
 
 function launchBlock(s: ClaudeCodeStatus): string | null {

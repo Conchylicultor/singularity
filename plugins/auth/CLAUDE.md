@@ -115,6 +115,10 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/css/ui-kit.DialogDescription`
     - `primitives/css/ui-kit.DialogTitle`
     - `primitives/css/ui-kit.Input`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/pane.defineRoute`

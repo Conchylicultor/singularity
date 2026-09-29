@@ -57,6 +57,7 @@ source-page edit.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
+    - `primitives/live-state.ResourceErrorInline`
   - Exports (types): `BacklinksProps`
   - Exports (values): `Backlinks`
 - Core:

@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  foldResource,
+  type ResourceError,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { ViewConfigRow, ViewSourceEntry, ViewTypeMeta } from "../../core";
 import { buildInstanceFromRow } from "./resolve-instances";
@@ -22,6 +26,13 @@ export interface ViewsConfigHandle {
    * state (see `DataViewShellFrame`).
    */
   ready: boolean;
+  /**
+   * The config document failed to load and no earlier value is held — so
+   * `ready` is `false` for a reason that waiting will not fix. The host renders
+   * this (with its `refetch`) instead of a loading state. `null` otherwise
+   * (loading, ready, or failed while a last-known value is still shown).
+   */
+  failure: { error: ResourceError; refetch: () => Promise<void> } | null;
   /** Resolved, ordered instances (fail-soft skip of orphan / hierarchical rows). */
   instances: ResolvedViewInstance[];
   /** The RAW `view` value for one instance (the variant blob `{ type, ...opts }`),
@@ -113,9 +124,23 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   // `stale` (a value the server previously vouched for, held through a
   // transient error) counts as KNOWN — showing the last-known views beats
   // showing a skeleton over data we still have.
+  //
+  // A failure with nothing held is NOT loading: it is reported as `failure`,
+  // so the host can say so rather than spin forever.
   const configRes = useConfigResult(descriptor);
-  const knownConfig = configRes.pending ? configRes.stale : configRes.data;
+  const knownConfig = foldResource(configRes, {
+    loading: () => undefined,
+    error: (_error, stale) => stale,
+    ready: (data) => data,
+  });
   const ready = knownConfig !== undefined;
+  const failure = useMemo(
+    () =>
+      configRes.status === "error" && configRes.stale === undefined
+        ? { error: configRes.error, refetch: configRes.refetch }
+        : null,
+    [configRes],
+  );
   const setConfig = useSetConfig(descriptor);
 
   // Raw (possibly terse) rows straight off the config doc. `id` is derived on
@@ -335,6 +360,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   return useMemo(
     () => ({
       ready,
+      failure,
       instances,
       viewFor,
       updateView,
@@ -346,6 +372,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     }),
     [
       ready,
+      failure,
       instances,
       viewFor,
       updateView,

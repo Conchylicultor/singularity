@@ -5,14 +5,19 @@ import { claudeCodeVerdict } from "./claude-code-health";
 
 const refetch = () => Promise.resolve();
 const loaded = (data: ClaudeCodeStatus): ResourceResult<ClaudeCodeStatus> => ({
-  pending: false,
+  status: "ready",
   data,
   refetch,
 });
 
 describe("claudeCodeVerdict", () => {
   test("is unknown, not ok, while loading", () => {
-    expect(claudeCodeVerdict({ pending: true, error: null, refetch })).toEqual({
+    expect(
+      claudeCodeVerdict({
+        status: "loading",
+        refetch,
+      }),
+    ).toEqual({
       state: "unknown",
     });
   });

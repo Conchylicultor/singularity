@@ -169,19 +169,19 @@ function mountPositional<R>(client: QueryClient, useHook: () => R) {
 }
 
 /** Wait for the settled arm and return it. */
-async function settledOf<R extends { pending: boolean }>(result: {
+async function settledOf<R extends { status: string }>(result: {
   current: R;
-}): Promise<Extract<R, { pending: false }>> {
-  await waitFor(() => expect(result.current.pending).toBe(false));
-  return result.current as Extract<R, { pending: false }>;
+}): Promise<Extract<R, { status: "ready" }>> {
+  await waitFor(() => expect(result.current.status).toBe("ready"));
+  return result.current as Extract<R, { status: "ready" }>;
 }
 
 /** The settled arm, now — throws (so a `waitFor` retries) while pending. */
-function settledArm<R extends { pending: boolean }>(
+function settledArm<R extends { status: string }>(
   r: R,
-): Extract<R, { pending: false }> {
-  if (r.pending) throw new Error("expected the settled arm");
-  return r as Extract<R, { pending: false }>;
+): Extract<R, { status: "ready" }> {
+  if (r.status !== "ready") throw new Error("expected the settled arm");
+  return r as Extract<R, { status: "ready" }>;
 }
 
 /**
@@ -357,7 +357,7 @@ describe("useOptimisticResource", () => {
     function Probe() {
       const rows = useRows(mutate, true);
       // Only the settled arm can dispatch — published once the base lands.
-      const dispatch = rows.pending ? undefined : rows.dispatch;
+      const dispatch = rows.status !== "ready" ? undefined : rows.dispatch;
       useEffect(() => {
         handle.dispatch = dispatch;
       }, [dispatch]);
@@ -670,7 +670,7 @@ describe("useOptimisticResource", () => {
     // Params re-baseline mid-flight: pending until the new tuple's base lands.
     // The overlay keeps its op and replays it on that base.
     rerender({ p: { v: "2" } });
-    expect(result.current.pending).toBe(true);
+    expect(result.current.status).toBe("loading");
     // The new tuple's base carries no watermark — it proves nothing about the
     // commit, so the (coarse, tokened) op survives it.
     act(() => {
@@ -908,15 +908,20 @@ describe("useOptimisticResource — read forms", () => {
     const { result } = mountPositional(client, () =>
       useOptimisticResource(numbersValue, { apply, mutate }),
     );
-    expect(result.current.pending).toBe(true);
+    expect(result.current.status).toBe("loading");
     expect("dispatch" in result.current).toBe(false);
     expect("data" in result.current).toBe(false);
+    // The not-settled arm carries the read's Retry, so a host gating on it can
+    // offer one for a failed first load (and it survives into the settled arm).
+    const pendingRefetch = result.current.refetch;
+    expect(typeof pendingRefetch).toBe("function");
 
     act(() => {
       client.setQueryData(numbersKey, [1]);
     });
     const settled = await settledOf(result);
     expect(settled.data).toEqual([1]);
+    expect(settled.refetch).toBe(pendingRefetch);
 
     act(() => {
       settled.dispatch(2);
@@ -933,19 +938,19 @@ describe("useOptimisticResource — read forms", () => {
     });
     await waitFor(() => {
       const r = result.current;
-      if (r.pending) throw new Error("expected the settled arm");
+      if (r.status !== "ready") throw new Error("expected the settled arm");
       expect(r.pendingOps).toEqual([]);
       expect(r.saving).toBe(false);
     });
   });
 
-  it("the pending arm has no dispatch, data or serverData (type level)", () => {
+  it("the loading arm has no dispatch, data or serverData (type level)", () => {
     const client = makeClient();
     const { result } = mountPositional(client, () =>
       useOptimisticResource(numbersValue, { apply, mutate: async () => {} }),
     );
     const r = result.current;
-    if (r.pending) {
+    if (r.status === "loading") {
       // @ts-expect-error — an op cannot be made against a base nobody has seen
       void r.dispatch;
       // @ts-expect-error — no stand-in value while pending
@@ -953,7 +958,7 @@ describe("useOptimisticResource — read forms", () => {
       // @ts-expect-error — no stand-in base while pending
       void r.serverData;
     }
-    expect(r.pending).toBe(true);
+    expect(r.status).toBe("loading");
   });
 
   it("a parameterized value reads its own tuple; its params are required (type level)", async () => {
@@ -965,7 +970,7 @@ describe("useOptimisticResource — read forms", () => {
         { apply, mutate: async () => {} },
       ),
     );
-    expect(result.current.pending).toBe(true);
+    expect(result.current.status).toBe("loading");
     act(() => {
       client.setQueryData(queryKeyFor(namedValue.key, { name: "a" }), [7]);
     });
@@ -994,7 +999,7 @@ describe("useOptimisticResource — read forms", () => {
         { apply: setRank, mutate: async () => {} },
       ),
     );
-    expect(result.current.pending).toBe(true);
+    expect(result.current.status).toBe("loading");
     act(() => {
       client.setQueryData(queryKeyFor(ranks.rows.key, { ids: "a,b" }), [
         { id: "a", rank: "m" },
@@ -1060,7 +1065,7 @@ describe("useOptimisticResource — read forms", () => {
     });
     await waitFor(() => {
       const r = result.current;
-      if (r.pending) throw new Error("expected the settled arm");
+      if (r.status !== "ready") throw new Error("expected the settled arm");
       expect(r.saving).toBe(false);
       expect(r.pendingOps).toHaveLength(1); // resolved; no push, no ack yet
     });

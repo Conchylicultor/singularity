@@ -4,6 +4,10 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  ResourceErrorInline,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { configValues, setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
@@ -53,9 +57,20 @@ export function AppleSetupPane() {
   }
   const storePath = reg.storePath;
 
-  if (metaResult.pending || cfgResult.pending) return <Loading />;
-  const secretMeta = metaResult.data;
-  const cfg = cfgResult.data as {
+  const both = useCombinedResources({ meta: metaResult, cfg: cfgResult });
+  if (both.status === "loading") return <Loading />;
+  if (both.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the signing setup"
+        error={both.error}
+        refetch={both.refetch}
+      />
+    );
+  }
+  const secretMeta = both.data.meta;
+  const cfg = (both.data.cfg ?? {}) as {
     signingIdentity?: string;
     ascKeyId?: string;
     ascIssuerId?: string;

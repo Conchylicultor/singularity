@@ -6,8 +6,11 @@ import {
 import { useState, useMemo, useCallback } from "react";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useActiveConversations } from "@plugins/conversations/web";
-import { useTask } from "@plugins/tasks/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useCombinedResources,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { addTaskDependency, removeTaskDependency } from "@plugins/tasks/core";
 import {
   tasksResource,
@@ -37,12 +40,26 @@ export function DependenciesButton({
 }) {
   const tasksResult = useResource(tasksResource);
   const activeResult = useActiveConversations();
-  if (tasksResult.pending || activeResult.pending) return null;
+  const combined = useCombinedResources({
+    tasks: tasksResult,
+    active: activeResult,
+  });
+  if (combined.status === "loading") return null;
+  if (combined.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={linkIcon}
+        subject="the dependencies"
+        error={combined.error}
+        refetch={combined.refetch}
+      />
+    );
   return (
     <DependenciesButtonInner
       conversation={conversation}
-      allTasks={tasksResult.data}
-      active={activeResult.data}
+      allTasks={combined.data.tasks}
+      active={combined.data.active}
     />
   );
 }
@@ -60,7 +77,12 @@ function DependenciesButtonInner({
   const [blockingOpen, setBlockingOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
-  const task = useTask(conversation.taskId);
+  // The task list is already known here (the outer gate), so the task is a
+  // plain lookup — absent only when the list really holds no such task.
+  const task = useMemo(
+    () => allTasks.find((t) => t.id === conversation.taskId) ?? null,
+    [allTasks, conversation.taskId],
+  );
 
   const depTaskIds = useMemo(
     () => new Set(task?.dependencies ?? []),

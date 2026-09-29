@@ -20,6 +20,8 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

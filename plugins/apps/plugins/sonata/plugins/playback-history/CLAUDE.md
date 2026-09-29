@@ -31,6 +31,7 @@ empty-map collapse (a missing entry sorts as "never played").
     - `apps/sonata/shell.useSonata`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
+    - `primitives/live-state.foldResource`
     - `primitives/relative-time.formatRelativeTime`
   - Exports (values): `usePlaybackHistoryMap`
 - Server:

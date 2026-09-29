@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useState } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -17,7 +18,17 @@ export function PrepromptChip() {
   const result = useConversationPreprompt(convId);
   const [open, setOpen] = useState(false);
   // Nothing while loading, nothing when no preprompt was recorded.
-  if (result.pending || !result.found) return null;
+  if (result.status === "loading") return null;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the preprompt"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  if (!result.found) return null;
   const record = result.row;
 
   return (

@@ -15,7 +15,9 @@ const descriptionIcon = symbol("description");
  *
  * - the task did not come from a prompt block (the common case — every task
  *   filed from anywhere else), so there is no link row;
- * - either read is still hydrating, so we do not yet know;
+ * - either read is still hydrating, so we do not yet know — or failed: the
+ *   origin is an optional provenance chip, so its section is not painted
+ *   rather than painted as an error;
  * - the page is gone. `pageId`/`blockId` carry **no FK** by design (a task is
  *   real work and must outlive its block), so a dangling id is expected, not an
  *   error — the provenance is simply no longer navigable.
@@ -26,7 +28,9 @@ function useOriginPage(
   const origin = usePromptTaskLink(taskId);
   const pagesResult = useResource(pagesResource);
 
-  if (origin.pending || pagesResult.pending) return null;
+  if (origin.status === "loading" || origin.status === "error") return null;
+  if (pagesResult.status === "loading" || pagesResult.status === "error")
+    return null;
   if (!origin.found) return null;
   const { pageId } = origin.row;
 

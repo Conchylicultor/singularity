@@ -14,6 +14,7 @@
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`
     - `primitives/css/text.Text`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`

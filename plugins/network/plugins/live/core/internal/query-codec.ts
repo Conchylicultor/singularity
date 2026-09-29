@@ -1,3 +1,4 @@
+import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import {
   decodeFilter,
   encodeFilter,
@@ -25,6 +26,13 @@ import {
 // can never open a second subscription for the same query, and the filterable
 // whitelist is a security boundary, so nothing unknown is ever defaulted or
 // dropped.
+//
+// Two kinds of failure, thrown differently. A DECLARATION or an ENCODE that
+// fails is a programmer error in this bundle: a plain `Error`, crashing loudly.
+// A DECODE that fails is a subscription whose wire params do not match the
+// declaration — after a deploy, most often a tab running an older bundle: a
+// `ResourceContractError`, which the resource runtime refuses as
+// `contract-mismatch` before the sub registers.
 
 export interface LiveQueryCodecSpec {
   key: string;
@@ -82,6 +90,13 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   const fail = (message: string): never => {
     throw new Error(`liveCollection("${spec.key}"): ${message}`);
   };
+  /** A decode failure: the params do not match the declaration. */
+  const reject = (message: string): never => {
+    throw new ResourceContractError(
+      spec.key,
+      `liveCollection("${spec.key}"): ${message}`,
+    );
+  };
 
   for (const column of Object.keys(spec.filterable)) {
     if (RESERVED_COLUMNS.has(column)) {
@@ -91,12 +106,16 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     }
   }
 
-  const checkLimit = (limit: number, what: string): number => {
+  const checkLimit = (
+    limit: number,
+    what: string,
+    onFail: (message: string) => never = fail,
+  ): number => {
     if (!Number.isSafeInteger(limit) || limit <= 0) {
-      fail(`${what} must be a positive integer, got ${limit}`);
+      onFail(`${what} must be a positive integer, got ${limit}`);
     }
     if (limit > spec.maxLimit) {
-      fail(`${what} ${limit} exceeds maxLimit ${spec.maxLimit}`);
+      onFail(`${what} ${limit} exceeds maxLimit ${spec.maxLimit}`);
     }
     return limit;
   };
@@ -161,14 +180,17 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     try {
       return decodeFilter(json, spec.filterable);
     } catch (err) {
-      if (err instanceof Error) fail(`decode: ${err.message}`);
+      if (err instanceof Error) reject(`decode: ${err.message}`);
       throw err;
     }
   };
 
-  const toOrderBy = (raw: unknown): LiveOrderBy<S> => {
+  const toOrderBy = (
+    raw: unknown,
+    onFail: (message: string) => never = fail,
+  ): LiveOrderBy<S> => {
     if (!Array.isArray(raw) || raw.length === 0) {
-      fail(
+      onFail(
         `orderBy must be a non-empty list of [column, direction], got ${JSON.stringify(raw)}`,
       );
     }
@@ -180,14 +202,14 @@ export function createLiveQueryCodec<C extends string, S extends string>(
         typeof entry[0] !== "string" ||
         (entry[1] !== "asc" && entry[1] !== "desc")
       ) {
-        return fail(
+        return onFail(
           `orderBy entry must be [column, "asc" | "desc"], got ${JSON.stringify(entry)}`,
         );
       }
       const [column, dir] = entry as [string, LiveSortDirection];
       if (!spec.sortable.includes(column))
-        fail(`"${column}" is not a sortable column`);
-      if (seen.has(column)) fail(`orderBy names "${column}" twice`);
+        onFail(`"${column}" is not a sortable column`);
+      if (seen.has(column)) onFail(`orderBy names "${column}" twice`);
       seen.add(column);
       return [column as S, dir] as const;
     });
@@ -217,26 +239,26 @@ export function createLiveQueryCodec<C extends string, S extends string>(
 
   const decode = (params: Record<string, string>): LiveDecodedQuery<S> => {
     for (const k of Object.keys(params)) {
-      if (!PARAM_KEYS.has(k)) fail(`decode: unknown param "${k}"`);
+      if (!PARAM_KEYS.has(k)) reject(`decode: unknown param "${k}"`);
     }
     const { limit, where, order } = params;
     if (limit === undefined || !/^[1-9][0-9]*$/.test(limit)) {
-      fail(
+      reject(
         `decode: params.limit must be a canonical positive-integer string, got ${JSON.stringify(limit)}`,
       );
     }
     const decoded: LiveDecodedQuery<S> = {
-      limit: checkLimit(Number(limit), "limit"),
+      limit: checkLimit(Number(limit), "limit", reject),
       where: decodeWhere(where),
       orderBy:
         order === undefined
           ? toOrderBy(spec.defaultOrderBy)
-          : toOrderBy(parseJson(order, fail)),
+          : toOrderBy(parseJson(order, reject), reject),
     };
     // The filter is already strictly canonical; this pins limit / order.
     const canonical = windowParams(decoded.limit, where, decoded.orderBy);
     if (!sameParams(canonical, params)) {
-      fail(
+      reject(
         `decode: params are not canonical — got ${JSON.stringify(params)}, ` +
           `the canonical encoding is ${JSON.stringify(canonical)}`,
       );
@@ -249,24 +271,30 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   // limit is bounded by `LIST_MAX` rather than the collection's `maxLimit` — a
   // picked set of groups must still fit one `in` filter.
 
-  const checkGroupLimit = (limit: number): number => {
+  const checkGroupLimit = (
+    limit: number,
+    onFail: (message: string) => never = fail,
+  ): number => {
     if (!Number.isSafeInteger(limit) || limit <= 0) {
-      fail(`group limit must be a positive integer, got ${limit}`);
+      onFail(`group limit must be a positive integer, got ${limit}`);
     }
     if (limit > LIST_MAX) {
-      fail(`group limit ${limit} exceeds ${LIST_MAX}`);
+      onFail(`group limit ${limit} exceeds ${LIST_MAX}`);
     }
     return limit;
   };
-  const checkGroupBy = (column: unknown): C => {
+  const checkGroupBy = (
+    column: unknown,
+    onFail: (message: string) => never = fail,
+  ): C => {
     if (typeof column !== "string" || !Object.hasOwn(spec.filterable, column)) {
-      fail(
+      onFail(
         `groupBy ${JSON.stringify(column)} is not a filterable column — only a declared filterable column can be grouped on`,
       );
     }
     const domain = spec.filterable[column as string]!.domain;
     if (!GROUPABLE_DOMAINS.has(domain)) {
-      fail(
+      onFail(
         `groupBy "${column as string}" is a ${domain} column — only text / number / boolean columns can be grouped on`,
       );
     }
@@ -301,22 +329,23 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     params: Record<string, string>,
   ): LiveDecodedGroupQuery<C> => {
     for (const k of Object.keys(params)) {
-      if (!GROUP_PARAM_KEYS.has(k)) fail(`decodeGroups: unknown param "${k}"`);
+      if (!GROUP_PARAM_KEYS.has(k))
+        reject(`decodeGroups: unknown param "${k}"`);
     }
     const { groupBy, limit, where } = params;
     if (limit === undefined || !/^[1-9][0-9]*$/.test(limit)) {
-      fail(
+      reject(
         `decodeGroups: params.limit must be a canonical positive-integer string, got ${JSON.stringify(limit)}`,
       );
     }
     const decoded: LiveDecodedGroupQuery<C> = {
-      groupBy: checkGroupBy(groupBy),
-      limit: checkGroupLimit(Number(limit)),
+      groupBy: checkGroupBy(groupBy, reject),
+      limit: checkGroupLimit(Number(limit), reject),
       where: decodeWhere(where),
     };
     const canonical = groupParams(decoded.groupBy, decoded.limit, where);
     if (!sameParams(canonical, params)) {
-      fail(
+      reject(
         `decodeGroups: params are not canonical — got ${JSON.stringify(params)}, ` +
           `the canonical encoding is ${JSON.stringify(canonical)}`,
       );
@@ -327,12 +356,12 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   return { encode, decode, encodeGroups, decodeGroups };
 }
 
-function parseJson(raw: string, fail: (m: string) => never): unknown {
+function parseJson(raw: string, reject: (m: string) => never): unknown {
   try {
     return JSON.parse(raw) as unknown;
   } catch (err) {
     if (!(err instanceof SyntaxError)) throw err;
-    return fail(`decode: invalid JSON ${JSON.stringify(raw)}`);
+    return reject(`decode: invalid JSON ${JSON.stringify(raw)}`);
   }
 }
 

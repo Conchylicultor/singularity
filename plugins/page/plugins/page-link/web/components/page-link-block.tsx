@@ -3,7 +3,13 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  matchResource,
+  ResourceErrorInline,
+  useResource,
+  type ResourceError,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -28,7 +34,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const linkIcon = symbol("link");
 
 /**
- * The four states a page-link row can be in.
+ * The five states a page-link row can be in.
  *
  * A union rather than "the page, or undefined", because two of the four —
  * *loading* and *no such page* — would otherwise both spell themselves
@@ -40,6 +46,12 @@ const linkIcon = symbol("link");
 type PageLinkState =
   | { state: "unset"; data?: undefined }
   | { state: "pending"; data?: undefined }
+  | {
+      state: "failed";
+      data?: undefined;
+      error: ResourceError;
+      refetch: () => Promise<void>;
+    }
   | { state: "missing"; data?: undefined }
   | { state: "resolved"; data: ReturnType<typeof pageData> };
 
@@ -103,20 +115,21 @@ function PagePicker({
           onChange={(e) => setQuery(e.target.value)}
         />
         <Scroll className="max-h-64">
-          {pageOptionsResult.pending ? (
-            <Loading variant="rows" />
-          ) : (
-            <PageOptionsList
-              options={pageOptionsResult.options}
-              activeIndex={activeIndex}
-              onHoverIndex={setActiveIndex}
-              onSelect={(id) => {
-                onSelect(id);
-                onOpenChange(false);
-                setQuery("");
-              }}
-            />
-          )}
+          {matchResource(pageOptionsResult, {
+            loading: () => <Loading variant="rows" />,
+            ready: (options) => (
+              <PageOptionsList
+                options={options}
+                activeIndex={activeIndex}
+                onHoverIndex={setActiveIndex}
+                onSelect={(id) => {
+                  onSelect(id);
+                  onOpenChange(false);
+                  setQuery("");
+                }}
+              />
+            ),
+          })}
         </Scroll>
       </Stack>
     </InlinePopover>
@@ -132,7 +145,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   const result = useResource(pagesResource);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Which of the four arms below will render, as a UNION that CARRIES the
+  // Which of the five arms below will render, as a UNION that CARRIES the
   // resolved page rather than a flag the resolved arm then has to re-derive. A
   // hook must run before any early return, so the state has to be computed up
   // here; making it a union is what keeps "not known yet" its own answer instead
@@ -140,9 +153,17 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   const link: PageLinkState =
     pageId === ""
       ? { state: "unset" }
-      : result.pending
-        ? { state: "pending" }
-        : resolvedOrMissing(result.data.find((d) => d.id === pageId));
+      : foldResource(result, {
+          loading: (): PageLinkState => ({ state: "pending" }),
+          // A failed read that once had the page set keeps resolving from it;
+          // without one, the row says the read failed.
+          error: (error, stale): PageLinkState =>
+            stale === undefined
+              ? { state: "failed", error, refetch: result.refetch }
+              : resolvedOrMissing(stale.find((d) => d.id === pageId)),
+          ready: (pages) =>
+            resolvedOrMissing(pages.find((d) => d.id === pageId)),
+        });
 
   // Both arms that render a picker make "open it" the block's primary action, so
   // inserting a page-link and pressing Enter picks a page — the single step
@@ -187,6 +208,19 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
     return (
       <div className="px-md py-xs">
         <Loading variant="text" label="Loading page…" />
+      </div>
+    );
+  }
+
+  if (link.state === "failed") {
+    return (
+      <div className="px-md py-xs">
+        <ResourceErrorInline
+          error={link.error}
+          refetch={link.refetch}
+          variant="inline"
+          subject="the linked page"
+        />
       </div>
     );
   }

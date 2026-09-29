@@ -63,7 +63,12 @@ function membershipHarness(
   let orderOfCalls = 0;
   const h = createHarness({ readSet: () => ["row_table"], ...runtimeOpts });
   h.runtime.defineResource(
-    { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+    {
+      key: "rows",
+      schema: rowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    },
     {
       identityTable: "row_table",
       scopedMembership: {
@@ -464,7 +469,12 @@ describe("scopedMembership — downstream cascade", () => {
       readSet: (k) => (k === "up" ? ["up_t"] : ["down_t"]),
     });
     const upResource = h.runtime.defineResource(
-      { key: "up", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "up",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "up_t",
         scopedMembership: { orderOf: async () => up.orderIds() },
@@ -478,7 +488,12 @@ describe("scopedMembership — downstream cascade", () => {
     );
     const downLoads: string[] = [];
     h.runtime.defineResource(
-      { key: "down", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "down",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "down_t",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -528,7 +543,12 @@ describe("default-off — a keyed resource without scopedMembership is byte-iden
     const loaderCalls: string[] = [];
     const h = createHarness({ readSet: () => ["row_table"] });
     h.runtime.defineResource(
-      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "rows",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "row_table", // scoped, but NOT scopedMembership
         fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -598,7 +618,12 @@ describe("scopedMembership — registration guards", () => {
       // is the backstop for a caller who casts past the type.
       // @ts-expect-error — `recompute` and `scopedMembership` are different arms
       h.runtime.defineResource(
-        { key: "bad2", schema: rowsSchema, keyed: { keyOf } },
+        {
+          key: "bad2",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
         {
           // no identityTable → the ScopePolicy would be violated anyway; the runtime
           // fails loudly rather than silently disabling membership scoping.

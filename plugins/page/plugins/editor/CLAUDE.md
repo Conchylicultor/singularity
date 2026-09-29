@@ -3374,8 +3374,10 @@ the whole document lives in React state and is discarded on unmount.
   semantics are byte-identical to the server. In memory `serverData === data`
   (every row is authoritative from the start, so the doc-init FK gate is inert).
 - **A store is `pending`, then settled — and the provider only sees settled.**
-  `BlockStore` is `{ pending: true } | SettledBlockStore`; only the settled arm has
-  rows and `dispatch`. The server feed is the positional
+  `BlockStore` is `PendingBlockStore | SettledBlockStore` (the store's own
+  vocabulary, folded from `useOptimisticResource`'s `loading` / `error` arms:
+  `{ pending: true, error: null }` or a failed first load with its `refetch`);
+  only the settled arm has rows and `dispatch`. The server feed is the positional
   `useOptimisticResource(pageBlocks, { pageId }, …)` read, so there is no `[]`
   placeholder document an op could be folded onto. `BlockEditorProviderInner`
   takes a `SettledBlockStore` (tsc), and `BlockEditorProviderGate` is the one
@@ -3385,7 +3387,8 @@ the whole document lives in React state and is discarded on unmount.
   `pending`. In the composite (inline nested pages), an expanded child page
   whose own feed is still pending contributes NO rows — never an empty list —
   and its anchor row is named in `loadingBelow`, where `BlockRow` renders a
-  loading region; an op routed to such a page throws (its rows are not on
+  loading region — or, when that feed's first load FAILED, in `failedBelow`
+  (with the failure and its Retry), where `BlockRow` renders the error; an op routed to such a page throws (its rows are not on
   screen), and an undo patch for it takes the detached-persist path.
 - **The store owns rank authority.** `move` takes positional intent
   (`zone`/`targetId`) plus the provider's `computeDrop` rank PREDICTION. The server
@@ -3838,6 +3841,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/announce.announce`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
@@ -3875,6 +3879,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.liveStateSocketKind`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/multi-select.MultiSelectProvider`

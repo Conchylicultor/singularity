@@ -72,7 +72,7 @@ export function VersionStepper(props: VersionStepperProps): ReactElement {
     <ControlSizeProvider size="xs">
       <ActionFormShield>
         {matchResource(history, {
-          pending: () => <PendingStepper compact={compact} />,
+          loading: () => <PendingStepper compact={compact} />,
           error: (err) => (
             <Text variant="caption" tone="destructive" title={err.message}>
               History unavailable

@@ -21,6 +21,10 @@
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceError`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`

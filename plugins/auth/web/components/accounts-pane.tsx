@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { SECRETS_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -33,7 +34,7 @@ export function AccountsPane() {
         </div>
       </Stack>
 
-      {!authState.pending && authState.data.mainOffline ? (
+      {authState.status === "ready" && authState.data.mainOffline ? (
         <Text
           as="div"
           variant="body"
@@ -53,14 +54,13 @@ export function AccountsPane() {
         </Text>
       ) : null}
 
-      {authState.pending && authState.error ? (
-        <Text
-          as="div"
-          variant="body"
-          className="rounded-md border border-destructive/50 bg-destructive/10 p-md text-destructive"
-        >
-          Failed to load auth state: {String(authState.error)}
-        </Text>
+      {authState.status === "error" ? (
+        <ResourceErrorInline
+          variant="inline"
+          subject="the auth state"
+          error={authState.error}
+          refetch={authState.refetch}
+        />
       ) : null}
 
       <Stack gap="none" className="divide-y rounded-md border">

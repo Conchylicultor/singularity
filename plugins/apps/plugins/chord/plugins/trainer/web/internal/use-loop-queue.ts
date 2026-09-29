@@ -208,8 +208,9 @@ export function useLoopQueue(opts: {
 
   useEffect(() => {
     if (!wantsMore || isPending) return;
-    // The target is not known until the progress has loaded.
-    if (progress.pending) return;
+    // The target is not known until the progress has loaded — nor while its
+    // read has failed (the caller renders that failure; nothing is asked).
+    if (progress.status === "loading" || progress.status === "error") return;
     const askedFor = palette;
     const target = weakestChord(practised, progress.data.chords);
     const exclude = [

@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -30,7 +31,16 @@ export function AnswerHereButton({
       }),
   });
 
-  if (eventsResult.pending) return null;
+  if (eventsResult.status === "loading") return null;
+  if (eventsResult.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the transcript"
+        error={eventsResult.error}
+        refetch={eventsResult.refetch}
+      />
+    );
   if (findAwaitingAuqEvent(eventsResult.data) != null) return null;
 
   return (

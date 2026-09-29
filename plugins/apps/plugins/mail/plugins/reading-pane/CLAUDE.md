@@ -91,6 +91,7 @@ parses MIME or HTML itself.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

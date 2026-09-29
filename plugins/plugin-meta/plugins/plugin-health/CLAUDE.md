@@ -14,6 +14,9 @@
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.SectionCount`
     - `primitives/css/scroll.Scroll`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.ResourceView`
     - `primitives/relative-time.RelativeTime`
 - Server:

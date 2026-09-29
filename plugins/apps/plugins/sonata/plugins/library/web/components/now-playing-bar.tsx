@@ -11,6 +11,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenSong } from "../hooks";
 import { useCurrentSong } from "../use-current-song";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -34,9 +35,15 @@ export function NowPlayingBar() {
   const current = useCurrentSong();
   const openSong = useOpenSong();
   // Nothing to show until the open song's canonical row is available (no song
-  // open, or the live `songs` value still loading).
-  if (current.pending || !current.data) return null;
-  const song = current.data;
+  // open, or the live `songs` value still loading). A failed read keeps the
+  // row it last saw (`stale`); with none the bar stays hidden — the library
+  // body above it renders that same read's failure, with its retry.
+  const song = foldResource(current, {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (row) => row,
+  });
+  if (!song) return null;
   const title = song.title;
   return (
     <div className="border-t border-border bg-background">

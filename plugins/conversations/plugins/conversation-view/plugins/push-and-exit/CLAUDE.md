@@ -12,7 +12,6 @@
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `conversations.useConversation`
     - `conversations.useConversationById`
     - `conversations.useHasActiveSiblingInWorktree`
     - `conversations/conversation-view.conversationPane`

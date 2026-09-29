@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   PLATFORM_TAGS,
   releaseCandidateEndpoint,
@@ -10,10 +13,7 @@ import {
   type ReleaseCandidateResponse,
   type ReleaseRun,
 } from "@plugins/release/core";
-import {
-  resolveReleaseState,
-  type ReleaseState,
-} from "../../core";
+import { resolveReleaseState, type ReleaseState } from "../../core";
 
 /**
  * Everything the pipeline and the row chip know about one deployment's release
@@ -43,13 +43,18 @@ const selectRev = (d: { rev: string }): string => d.rev;
  */
 function useRevisionRefetch(refetch: () => unknown): void {
   // A sanctioned point read: `select` narrows both the subscription and the
-  // re-render to the one scalar this hook reacts to, and `null` while pending
+  // re-render to the one scalar this hook reacts to, and `null` while loading
   // means "no revision yet" — the effect below acts on a CHANGE, never on an
-  // absence, so loading is not collapsed into a value.
+  // absence, so loading is not collapsed into a value. A failed tick read holds
+  // its last-known `rev`: a missed nudge is not a change.
   const tick = useResource(releaseRunsRevisionResource, undefined, {
     select: selectRev,
   });
-  const rev = tick.pending ? null : tick.data;
+  const rev = foldResource(tick, {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (value) => value,
+  });
   const seenRev = useRef<string | null>(null);
 
   useEffect(() => {
@@ -119,14 +124,18 @@ export function useReleaseInfo(
   const candidate = candidateQuery.data ?? null;
   const latestRun = latestRunQuery.data?.run ?? null;
   const pending =
-    enabled && (candidateQuery.data === undefined || latestRunQuery.data === undefined);
+    enabled &&
+    (candidateQuery.data === undefined || latestRunQuery.data === undefined);
 
   return useMemo(
     () => ({
       candidate,
       latestRun,
       pending,
-      state: candidate && !pending ? resolveReleaseState({ candidate, latestRun }) : null,
+      state:
+        candidate && !pending
+          ? resolveReleaseState({ candidate, latestRun })
+          : null,
     }),
     [candidate, latestRun, pending],
   );

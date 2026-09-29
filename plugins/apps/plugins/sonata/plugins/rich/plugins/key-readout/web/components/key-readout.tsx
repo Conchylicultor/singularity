@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useMemo } from "react";
 import {
   useCursorSelector,
@@ -71,7 +72,7 @@ const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
 export function KeyReadout() {
   // Sonata's own look paints its keys: one control, every keyboard in the app.
   const skin = useSonataKeySkin();
-  const { score, scorePending } = useSonata();
+  const { score, scorePending, scoreFailure } = useSonata();
 
   // Beat-indexed key entries — recomputed only when the Score changes. Walking
   // the memoized list (rather than `effectiveKeyAt`, which rebuilds it each call)
@@ -141,6 +142,15 @@ export function KeyReadout() {
 
   // The song's settings are still loading (the score is withheld until they
   // settle): not "No key detected".
+  if (scoreFailure !== null)
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the song's settings"
+        error={scoreFailure.error}
+        refetch={scoreFailure.refetch}
+      />
+    );
   if (scorePending) return <Loading variant="rows" count={2} />;
 
   return (

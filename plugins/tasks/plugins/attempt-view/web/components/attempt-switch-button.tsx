@@ -22,19 +22,26 @@ export function AttemptSwitchButton() {
 
   // Render a neutral button (no count chip) while the resource is still loading —
   // the variant and toggle are data-independent so the button is usable immediately.
-  if (result.pending) {
-    return (
-      // eslint-disable-next-line icon-button/prefer-icon-button -- placeholder for the icon+count button below; a square IconButton would resize the toolbar when the count settles
-      <Button
-        variant={isOpen ? "secondary" : "ghost"}
-        title={isOpen ? "Close attempt view" : "Open attempt view"}
-        aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
-        aria-pressed={isOpen}
-        onClick={toggle}
-      >
-        <Icon icon={splitscreenIcon} />
-      </Button>
-    );
+  // A failed read gets the same neutral button, deliberately: the count is
+  // decoration, the toggle still works, and the attempt pane it opens reads the
+  // same resource and renders the failure with Retry.
+  switch (result.status) {
+    case "ready":
+      break;
+    case "loading":
+    case "error":
+      return (
+        // eslint-disable-next-line icon-button/prefer-icon-button -- placeholder for the icon+count button below; a square IconButton would resize the toolbar when the count settles
+        <Button
+          variant={isOpen ? "secondary" : "ghost"}
+          title={isOpen ? "Close attempt view" : "Open attempt view"}
+          aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
+          aria-pressed={isOpen}
+          onClick={toggle}
+        >
+          <Icon icon={splitscreenIcon} />
+        </Button>
+      );
   }
 
   const attempt =

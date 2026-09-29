@@ -5,7 +5,11 @@ import {
   defineRoute,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -73,11 +77,40 @@ function AttemptSourceTabs({
   onChange: (next: Source) => void;
 }) {
   const pushesQ = useLive(pushRows, { where: { attemptId } });
-  return (
-    <SourceTabs
-      source={source}
-      onChange={onChange}
-      pushGroups={pushesQ.pending ? "pending" : groupPushes(pushesQ.data)}
-    />
-  );
+  switch (pushesQ.status) {
+    case "loading":
+      return (
+        <SourceTabs source={source} onChange={onChange} pushGroups="pending" />
+      );
+    case "error":
+      // The pushes as last seen keep their tabs; never seen, the strip says the
+      // read failed (the Review body below still shows the working tree).
+      if (pushesQ.stale !== undefined) {
+        return (
+          <SourceTabs
+            source={source}
+            onChange={onChange}
+            pushGroups={groupPushes(pushesQ.stale)}
+          />
+        );
+      }
+      return (
+        <Inset x="sm" y="xs" className="border-b border-border">
+          <ResourceErrorInline
+            variant="inline"
+            subject="this attempt's pushes"
+            error={pushesQ.error}
+            refetch={pushesQ.refetch}
+          />
+        </Inset>
+      );
+    case "ready":
+      return (
+        <SourceTabs
+          source={source}
+          onChange={onChange}
+          pushGroups={groupPushes(pushesQ.data)}
+        />
+      );
+  }
 }

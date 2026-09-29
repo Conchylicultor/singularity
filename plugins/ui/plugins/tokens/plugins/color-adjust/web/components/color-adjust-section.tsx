@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { ColorAdjustment } from "@plugins/ui/plugins/theme-engine/core";
 import {
@@ -75,7 +76,23 @@ export function ColorAdjustSection() {
     value: number;
   } | null>(null);
 
-  if (editor.pending) return <Loading variant="rows" count={SLIDERS.length} />;
+  if (editor.pending) {
+    if (editor.error !== null) {
+      return (
+        <ResourceErrorInline
+          error={editor.error}
+
+          refetch={editor.refetch}
+
+          variant="block"
+
+          subject="the theme selection"
+        />
+      );
+    }
+
+    return <Loading variant="rows" count={SLIDERS.length} />;
+  }
 
   const commit = () => {
     if (dragging === null) return;

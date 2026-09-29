@@ -8,10 +8,11 @@
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
   - Exports (types):
     - `AutoStartModel`
-    - `DependentCountResult`
     - `TaskPatch`
   - Exports (values):
     - `patchTask`
@@ -132,13 +133,16 @@
     - `UpdateTaskBodySchema`
 - Cross-plugin:
   - Imported by:
-    - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-dependents`
     - `conversations/conversation-view/tasks-panel`
     - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
+<<<<<<< .merge_file_UCGGhX
     - `tasks/task-dependencies`
+=======
+    - `tasks/task-deps-tree`
+>>>>>>> .merge_file_QSToyu
     - `tasks/task-description`
     - `tasks/task-detail`
     - `tasks/task-graph`

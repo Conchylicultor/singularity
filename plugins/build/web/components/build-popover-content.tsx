@@ -12,6 +12,7 @@ import {
 } from "../../core";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -211,10 +212,22 @@ export function BuildPopoverContent({
   onRowActivate?: () => void;
 }) {
   const historyResult = useLive(buildHistory);
-  if (historyResult.pending) {
+  if (historyResult.status === "loading") {
     return (
       <Stack gap="none" className={cn(variant === "pane" && "h-full")}>
         <Loading variant="rows" count={3} />
+      </Stack>
+    );
+  }
+  if (historyResult.status === "error") {
+    return (
+      <Stack gap="none" className={cn(variant === "pane" && "h-full")}>
+        <ResourceErrorInline
+          variant="block"
+          subject="the build history"
+          error={historyResult.error}
+          refetch={historyResult.refetch}
+        />
       </Stack>
     );
   }

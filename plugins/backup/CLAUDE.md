@@ -131,6 +131,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.ResolveResult`
     - `runs.RunsDataView`
     - `runs.useRun`
     - `ui/icons.Icon`

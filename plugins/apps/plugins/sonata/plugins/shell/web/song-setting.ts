@@ -1,7 +1,12 @@
+import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+
 /**
  * One per-song setting — transpose, key mode, chord mode, groove, track view —
  * as a Sonata surface holds it for the loaded song: `pending` until the feature
- * plugin that persists it has read that song's value, then the value.
+ * plugin that persists it has read that song's value, then `settled` with the
+ * value — or `failed` when that read failed with no last-known value to settle
+ * from, so a surface renders the failure (with Retry) instead of waiting on a
+ * value that will never come.
  *
  * Not known yet is a STATE here, never a stand-in. The two stand-ins it
  * replaces were each wrong for a round trip: the setting's default (a muted
@@ -10,7 +15,16 @@
  * nothing of a song until every per-song setting registered in the running
  * composition has settled.
  */
-export type SongSetting<T> = { pending: true } | { pending: false; value: T };
+export type SongSetting<T> =
+  | { kind: "pending" }
+  | ({ kind: "failed" } & SongSettingFailure)
+  | { kind: "settled"; value: T };
+
+/** Why a setting could not be settled, and how to retry the read behind it. */
+export interface SongSettingFailure {
+  error: ResourceError;
+  refetch: () => Promise<void>;
+}
 
 /**
  * A per-song setting's identity and value type. Its value lives in the loaded

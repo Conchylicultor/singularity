@@ -10,7 +10,6 @@ import type {
   FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -158,10 +157,11 @@ export function SongLibrary() {
     [saveSong, sourceOptions],
   );
 
-  // One render path for both states: while loading, DataView renders its
-  // skeleton (`loading`) and the chrome (title / search / add actions) stays
-  // stable — the "No songs yet" empty state requires confirmed-empty.
-  const renderLibrary = (rows: Song[], loading: boolean) => (
+  // One render path for every state: while loading, DataView renders its
+  // skeleton, and on a failed read its error (with Retry) — `readiness` — while
+  // the chrome (title / search / add actions) stays stable. The "No songs yet"
+  // empty state requires confirmed-empty.
+  const renderLibrary = (rows: Song[]) => (
     <DataView<Song>
       rows={rows}
       fields={fields}
@@ -177,7 +177,7 @@ export function SongLibrary() {
       selectedRowId={currentSongId ?? undefined}
       // The "Library" title is owned by the enclosing `PaneChrome` (the pane
       // header), so the DataView omits its own to avoid a duplicate.
-      loading={loading}
+      readiness={library}
       // Per-source create affordances (e.g. MIDI Import, New Chord Grid),
       // mapped from the `Library.Source` registry into the data-view "+"
       // menu. The library stays source-agnostic — it threads an opaque
@@ -205,29 +205,16 @@ export function SongLibrary() {
     <Column
       fill
       className="h-full"
-      header={
-        library.pending && library.error ? (
-          <Text
-            as="div"
-            variant="body"
-            tone="destructive"
-            className="px-xl py-lg"
-          >
-            Failed to load songs: {library.error.message}
-          </Text>
-        ) : null
-      }
       body={matchResource(library, {
-        pending: () => renderLibrary([], true),
-        // The error banner above already covers the failed-load case; keep the
-        // (skeleton) chrome underneath it rather than a second error block.
-        error: () => renderLibrary([], true),
+        // DataView renders the skeleton / the failure itself (`readiness`).
+        loading: () => renderLibrary([]),
+        error: () => renderLibrary([]),
         // Confirmed-empty (ready + 0 rows) → the first-run onboarding takeover
         // (hero + source cards). Any songs → the DataView. Keeping onboarding to
-        // the ready-empty case means pending/error still show the DataView
-        // skeleton, never a flash of the empty state.
+        // the ready-empty case means loading/error still show the DataView's
+        // own states, never a flash of the empty state.
         ready: (rows) =>
-          rows.length === 0 ? <SonataOnboarding /> : renderLibrary(rows, false),
+          rows.length === 0 ? <SonataOnboarding /> : renderLibrary(rows),
       })}
       footer={<NowPlayingBar />}
     />

@@ -107,6 +107,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `primitives/avatar.Avatar`
     - `primitives/css/status-dot.statusDotPaintClass`
     - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
   - Exports (types):
     - `Category`

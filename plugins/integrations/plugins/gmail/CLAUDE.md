@@ -46,6 +46,9 @@ for themselves.
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `primitives/css/ui-kit.Button`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceError`
+    - `primitives/live-state.ResourceErrorInline`
   - Exports (types):
     - `GmailAccess`
     - `GmailAccessBlocker`

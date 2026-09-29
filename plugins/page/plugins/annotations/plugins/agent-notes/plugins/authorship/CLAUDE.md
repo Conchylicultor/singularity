@@ -105,6 +105,8 @@ gap in that plugin.
     - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/relative-time.RelativeTime`
   - Exports (types): `AgentNotesAuthor`
   - Exports (values):

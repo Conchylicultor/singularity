@@ -59,15 +59,15 @@ export function databaseVerdict(
   result: ResourceResult<QueryDeadlines>,
   now: number,
 ): DatabaseVerdict {
-  if (result.pending) {
+  if (result.status === "loading") {
+    return { status: { state: "unknown" }, nextChangeAt: null };
+  }
+  if (result.status === "error") {
     return {
-      status:
-        result.error === null
-          ? { state: "unknown" }
-          : {
-              state: "unknown",
-              summary: "Couldn't load recent database call failures",
-            },
+      status: {
+        state: "unknown",
+        summary: "Couldn't load recent database call failures",
+      },
       nextChangeAt: null,
     };
   }

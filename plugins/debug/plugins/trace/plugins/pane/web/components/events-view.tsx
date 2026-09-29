@@ -158,7 +158,8 @@ export function EventsView(): ReactElement {
       storageKey={TRACE_EVENTS}
       views={["table", "list"]}
       defaultView="table"
-      loading={isLoading}
+      // A failed read returned above; here the list is loading or ready.
+      readiness={isLoading ? { status: "loading" } : { status: "ready" }}
       selectedRowId={selectedId}
       onRowActivate={(r) =>
         openPane(traceDetailPane, { id: r.id }, { mode: "push" })

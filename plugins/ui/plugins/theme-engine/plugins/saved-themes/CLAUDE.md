@@ -15,9 +15,10 @@
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.endpointQueryKey`
     - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/live-state.hydrateEndpoint`
+    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.useEndpointResource`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useThemes`
     - `ui/theme-engine.whenNoScopeSelects`

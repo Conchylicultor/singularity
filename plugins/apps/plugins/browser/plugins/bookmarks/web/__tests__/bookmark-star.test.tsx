@@ -42,6 +42,7 @@ vi.mock("@plugins/apps/plugins/browser/plugins/shell/web", () => ({
 }));
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import type { BookmarkRow } from "../../core";
 import { BookmarkStar } from "../components/bookmark-star";
 
@@ -50,12 +51,17 @@ const refetch = () => Promise.resolve();
 const paging = { canGrow: false, growing: false, loadMore: () => {} };
 
 function settled(rows: BookmarkRow[]) {
-  state.result = { pending: false, data: rows, refetch, ...paging };
+  state.result = {
+    status: "ready",
+    data: rows,
+    refetch,
+    ...paging,
+  };
 }
 
 beforeEach(() => {
   state.current = "";
-  state.result = { pending: true, error: null, refetch };
+  state.result = { status: "loading", refetch };
   state.queries = [];
   state.calls = [];
 });
@@ -79,6 +85,25 @@ describe("BookmarkStar", () => {
     const star = screen.getByRole("button", { name: "Add bookmark" });
     expect(star).toHaveProperty("disabled", true);
     fireEvent.click(star);
+    expect(state.calls).toEqual([]);
+  });
+
+  it("shows a failed read as an error star that retries, never as loading", () => {
+    state.current = URL_A;
+    let retried = 0;
+    state.result = {
+      status: "error",
+      error: new ResourceError("loader-failed", "boom", null),
+      refetch: () => {
+        retried += 1;
+        return Promise.resolve();
+      },
+    };
+    render(<BookmarkStar />);
+    const star = screen.getByRole("button", { name: /Couldn't load/ });
+    expect(star).toHaveProperty("disabled", false);
+    fireEvent.click(star);
+    expect(retried).toBe(1);
     expect(state.calls).toEqual([]);
   });
 

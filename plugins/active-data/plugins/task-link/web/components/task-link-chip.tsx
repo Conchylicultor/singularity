@@ -28,7 +28,7 @@ export function TaskLinkChip({
 
   // While pending, render the degraded raw-id chip so it never disappears.
   return matchResource(result, {
-    pending: () => (
+    loading: () => (
       <LinkChip
         onClick={handleClick}
         title={taskId}

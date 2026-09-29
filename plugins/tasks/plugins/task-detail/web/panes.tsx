@@ -1,9 +1,14 @@
 import { type ReactElement } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   Pane,
   PaneChrome,
   useOpenPane,
+  resolveFrom,
+  type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { TasksListView } from "@plugins/tasks/plugins/task-list/web";
@@ -28,15 +33,21 @@ export const tasksRootPane = Pane.define({
   width: 320,
 });
 
-function useResolveTask({ taskId }: { taskId: string }) {
-  const result = useResource(tasksResource);
-  if (result.pending) return { pending: true, found: false };
-  return { pending: false, found: result.data.some((t) => t.id === taskId) };
+function useResolveTask({ taskId }: { taskId: string }): ResolveResult {
+  return resolveFrom(useResource(tasksResource), (tasks) =>
+    tasks.some((t) => t.id === taskId),
+  );
 }
 
 /** The task's title from the global live-state resource, or undefined. */
 function useTaskTitle({ taskId }: { taskId: string }): string | undefined {
-  return useTask(taskId)?.title ?? undefined;
+  // No title until the task is known; a failed read leaves the tab untitled
+  // (the pane's sections render that failure).
+  return foldResource(useTask(taskId), {
+    loading: () => undefined,
+    error: () => undefined,
+    ready: (task) => task?.title,
+  });
 }
 
 export const taskDetailPane = Pane.define({

@@ -17,9 +17,12 @@
   - Uses:
     - `primitives/app-shell.opensPane`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useResource`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.resolveFrom`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.useOpenPane`
     - `shell.Shell`
     - `tasks.useTask`

@@ -12,6 +12,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import {
   RELEASE_LOG_CHANNEL,
@@ -28,12 +29,33 @@ export function ReleaseLogSection({ runId }: { runId: string }): ReactElement {
   const result = useLiveRow(releaseRuns, runId);
 
   // Live runs stream over `/ws/logs`; finished runs read the persisted fallback.
-  // While the row is still pending we optimistically show the live stream
-  // (gate on `.pending` with an early return rather than collapsing it into a
-  // fake-empty default — keeps "loading" distinct from "genuinely finished").
-  if (result.pending) return <LiveLogs />;
-  if (result.found && result.row.status === "running") return <LiveLogs />;
-  return <PersistedLogs runId={runId} />;
+  // While the row is still loading we optimistically show the live stream
+  // (an early return rather than collapsing it into a fake-empty default —
+  // keeps "loading" distinct from "genuinely finished"). A failed read decides
+  // from the row as last seen; never seen, it says so rather than guessing.
+  switch (result.status) {
+    case "loading":
+      return <LiveLogs />;
+    case "error":
+      if (result.stale === undefined) {
+        return (
+          <ResourceErrorInline
+            variant="block"
+            subject="the release run"
+            error={result.error}
+            refetch={result.refetch}
+          />
+        );
+      }
+      return result.stale.status === "running" ? (
+        <LiveLogs />
+      ) : (
+        <PersistedLogs runId={runId} />
+      );
+    case "ready":
+      if (result.found && result.row.status === "running") return <LiveLogs />;
+      return <PersistedLogs runId={runId} />;
+  }
 }
 
 /**

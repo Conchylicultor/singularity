@@ -102,6 +102,7 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.Button`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
 - Server:

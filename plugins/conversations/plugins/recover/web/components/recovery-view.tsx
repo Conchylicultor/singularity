@@ -74,11 +74,11 @@ export function RecoveryView() {
   });
 
   useEffect(() => {
-    if (!resource.pending) {
+    if (resource.status === "ready") {
       // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab maintains its own query cache, no cross-tab write to deduplicate
       void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     }
-  }, [resource.pending, queryClient]);
+  }, [resource.status, queryClient]);
 
   const items = useMemo(() => q.data ?? [], [q.data]);
   const isLoading = q.isLoading;

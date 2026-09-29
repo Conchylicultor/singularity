@@ -20,7 +20,8 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useGroove, type Groove } from "../use-groove";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useGroove, type GrooveState } from "../use-groove";
 import { TrackConfig } from "./track-config";
 
 // Distinct theme tokens for the two concentric rings (outer = chords, inner = bass).
@@ -50,16 +51,25 @@ const BASS_COLOR = "var(--chart-2)";
  */
 export function RhythmControls() {
   const groove = useGroove();
-  if (groove.pending) return <Loading variant="rows" count={3} />;
-  return <GrooveEditor groove={groove} />;
+  switch (groove.status) {
+    case "loading":
+      return <Loading variant="rows" count={3} />;
+    case "error":
+      return (
+        <ResourceErrorInline
+          variant="block"
+          subject="this song's rhythm"
+          error={groove.error}
+          refetch={groove.refetch}
+        />
+      );
+    case "ready":
+      return <GrooveEditor groove={groove.data} />;
+  }
 }
 
 /** The circle + per-hand controls over a KNOWN groove. */
-function GrooveEditor({
-  groove,
-}: {
-  groove: Extract<Groove, { pending: false }>;
-}) {
+function GrooveEditor({ groove }: { groove: GrooveState }) {
   const { score } = useSonata();
   const { enabled, bass, chord, bassFigurationId, chordFigurationId, commit } =
     groove;

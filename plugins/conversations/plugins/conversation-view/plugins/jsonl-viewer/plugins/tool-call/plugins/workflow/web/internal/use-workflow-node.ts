@@ -1,4 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { useWorkflowTrace } from "./use-workflow-trace";
 import type { TracedGraph, TracedNode, TraceStatus } from "./trace-types";
@@ -9,13 +10,15 @@ interface WorkflowInput {
 }
 
 export type WorkflowNodeState =
-  | { pending: true }
+  // The transcript is not known yet.
+  | { phase: "loading" }
+  // The transcript read failed.
+  | { phase: "failed"; error: ResourceError; retry: () => Promise<void> }
   // No conversation pane above this one: there is no transcript to read
   // (skipped), a settled answer — never a spinner.
-  | { pending: false; conversation: false }
+  | { phase: "no-conversation" }
   | {
-      pending: false;
-      conversation: true;
+      phase: "found";
       graph: TracedGraph | null;
       status: TraceStatus;
       node: TracedNode | undefined;
@@ -39,10 +42,10 @@ export function useWorkflowNode(
     convId === undefined ? null : { id: convId },
   );
   // The trace hook runs unconditionally, so the script is read here without an
-  // early return; a pending transcript has no script yet (and is reported as
-  // pending below, never as an empty trace).
+  // early return; a transcript not read yet has no script (and is reported as
+  // loading / failed below, never as an empty trace).
   let input: WorkflowInput | null = null;
-  if (!eventsResult.pending) {
+  if (eventsResult.status === "ready") {
     const event = eventsResult.data.find(
       (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
     );
@@ -51,10 +54,21 @@ export function useWorkflowNode(
 
   const { graph, status } = useWorkflowTrace(input?.script ?? "", input?.args);
 
-  if (convId === undefined) return { pending: false, conversation: false };
-  if (eventsResult.pending) return { pending: true };
-  const node = graph?.nodes.find((n) => n.id === nodeId);
-  return { pending: false, conversation: true, graph, status, node };
+  if (convId === undefined) return { phase: "no-conversation" };
+  switch (eventsResult.status) {
+    case "loading":
+      return { phase: "loading" };
+    case "error":
+      return {
+        phase: "failed",
+        error: eventsResult.error,
+        retry: eventsResult.refetch,
+      };
+    case "ready": {
+      const node = graph?.nodes.find((n) => n.id === nodeId);
+      return { phase: "found", graph, status, node };
+    }
+  }
 }
 
 /**
@@ -72,5 +86,5 @@ export function useWorkflowNodeTitle({
   nodeId: string;
 }): string | undefined {
   const state = useWorkflowNode(convId, toolUseId, nodeId);
-  return state.pending || !state.conversation ? undefined : state.node?.label;
+  return state.phase === "found" ? state.node?.label : undefined;
 }

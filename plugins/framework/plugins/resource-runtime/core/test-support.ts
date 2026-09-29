@@ -61,6 +61,8 @@ export interface RecordedFrame {
   /** Flight-co-produced commit watermark (Rule B′): full frames only. */
   watermark?: string;
   reason?: string;
+  /** `sub-error` on contract-mismatch / unknown-key: skew / same-build / unknown. */
+  verdict?: string;
   params?: ResourceParams;
   /** Boot epoch stamped on sub-ack / up-to-date / up-to-date-batch frames. */
   epoch?: string;
@@ -91,6 +93,8 @@ export interface Harness {
       tabId?: string;
       /** Ask for standalone `{ kind: "ack" }` frames on this tuple. */
       acks?: boolean;
+      /** The client's build graph (the frame's `build`); absent = a pre-protocol bundle. */
+      build?: string;
     },
   ) => Promise<void>;
   /** Send `op:sub-batch` (one tab's whole-set replay) and await the next macrotask. */
@@ -102,7 +106,13 @@ export interface Harness {
       version?: number;
       acks?: boolean;
     }>,
-    o?: { socket?: number; tabId?: string; epoch?: string; complete?: boolean },
+    o?: {
+      socket?: number;
+      tabId?: string;
+      epoch?: string;
+      complete?: boolean;
+      build?: string;
+    },
   ) => Promise<void>;
   /** Send `op:sub-acks` (flip a held sub's ack request) and await the next macrotask. */
   subAcks: (
@@ -178,6 +188,7 @@ export function createHarness(
           ...(o.epoch !== undefined ? { epoch: o.epoch } : {}),
           ...(o.tabId !== undefined ? { tabId: o.tabId } : {}),
           ...(o.acks !== undefined ? { acks: o.acks } : {}),
+          ...(o.build !== undefined ? { build: o.build } : {}),
         }),
       );
       await tick(); // let the async sub-ack (initial load) complete
@@ -190,6 +201,7 @@ export function createHarness(
           op: "sub-batch",
           tabId: o.tabId ?? "tab-test",
           ...(o.epoch !== undefined ? { epoch: o.epoch } : {}),
+          ...(o.build !== undefined ? { build: o.build } : {}),
           complete: o.complete ?? true,
           entries: entries.map((e, i) => ({
             id: i + 1,

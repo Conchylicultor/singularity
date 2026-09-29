@@ -63,11 +63,13 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/launch.LaunchAgentPopover`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/tab-id.getTabId`

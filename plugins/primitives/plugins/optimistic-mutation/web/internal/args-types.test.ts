@@ -61,8 +61,8 @@ export function _optimisticPositionalGuard(): void {
   // @ts-expect-error — isConfirmedBy requires sameTarget
   hook(value, { apply, mutate, isConfirmedBy });
   const r = hook(value, { apply, mutate, isConfirmedBy, sameTarget });
-  if (r.pending) {
-    // @ts-expect-error — no dispatch on the pending arm
+  if (r.status !== "ready") {
+    // @ts-expect-error — no dispatch before the ready arm
     void r.dispatch;
   } else {
     void r.dispatch;

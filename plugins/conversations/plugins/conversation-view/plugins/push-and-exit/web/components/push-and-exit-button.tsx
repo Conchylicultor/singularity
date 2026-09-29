@@ -9,7 +9,6 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   useHasActiveSiblingInWorktree,
-  useConversation,
   useConversationById,
 } from "@plugins/conversations/web";
 import { stopConversation } from "@plugins/conversations/core";
@@ -133,7 +132,9 @@ const LABELS: Record<Mode, string> = {
 export function PushAndExitButton(_: PromptEditorActionProps) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const live = useConversation(convId) ?? conversation;
+  // `useConversationById` already answers with the live row whenever a
+  // conversations list holds it (the fetched row only while none does).
+  const live = conversation;
 
   const [draft, setDraft, clearDraft] = useDraft(
     CONVERSATION_PROMPT_DRAFT_KEY,

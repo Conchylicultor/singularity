@@ -1,3 +1,7 @@
+import {
+  ResourceErrorInline,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -28,9 +32,14 @@ export function BellButton() {
   const prevIdsRef = useRef<Set<string> | null>(null);
 
   // Effect: fire toasts for newly arrived notifications. Reads notificationsResult
-  // directly and narrows inside so we never capture a stale pending snapshot.
+  // directly and narrows inside so we never capture a stale unsettled snapshot.
   useEffect(() => {
-    if (notificationsResult.pending) return;
+    if (
+      notificationsResult.status === "loading" ||
+      notificationsResult.status === "error"
+    ) {
+      return;
+    }
     const settled = notificationsResult.data;
     const currentIds = new Set(settled.map((n) => n.id));
     if (prevIdsRef.current !== null) {
@@ -56,8 +65,14 @@ export function BellButton() {
 
   // Gate at the render boundary — prevents the badge from flashing 0→N while
   // either read loads (both are boot-preloaded, so this is normally never hit).
-  // Render a neutral bell (no badge) during the load window.
-  if (unreadResult.pending || notificationsResult.pending) {
+  // Render a neutral bell (no badge) during the load window, and the error
+  // bell (click retries) when either read failed — never the neutral one, which
+  // would claim "nothing unread" about a count nobody could read.
+  const both = useCombinedResources({
+    list: notificationsResult,
+    unread: unreadResult,
+  });
+  if (both.status === "loading") {
     return (
       <span className="relative inline-block">
         <IconButton
@@ -68,9 +83,22 @@ export function BellButton() {
       </span>
     );
   }
+  if (both.status === "error") {
+    return (
+      <span className="relative inline-block">
+        <ResourceErrorInline
+          variant="icon"
+          icon={notificationsIcon}
+          subject="notifications"
+          error={both.error}
+          refetch={both.refetch}
+        />
+      </span>
+    );
+  }
 
-  const list = notificationsResult.data;
-  const { errors, warnings } = unreadResult.data;
+  const { list } = both.data;
+  const { errors, warnings } = both.data.unread;
   const unreadCount = errors + warnings;
   // Match the badge color to the most severe unread item: red only when a crash
   // (error) is present, otherwise orange for warning-only noise (e.g. slow ops).

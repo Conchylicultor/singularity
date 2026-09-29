@@ -87,7 +87,12 @@ describe("watermark — full frames carry it", () => {
       { id: "b", n: 1 },
     ];
     h.runtime.defineResource(
-      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "rows",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "row_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -141,7 +146,12 @@ describe("watermark — full frames carry it", () => {
     const table = new Map<string, number>();
     const rows = () => [...table.entries()].map(([id, n]) => ({ id, n }));
     h.runtime.defineResource(
-      { key: "m", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "m",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "m_table",
         scopedMembership: { orderOf: async () => [...table.keys()] },
@@ -194,7 +204,12 @@ describe("watermark — full frames carry it", () => {
     });
     let truth = [{ id: "a", n: 1 }];
     h.runtime.defineResource(
-      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "rows",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "row_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },

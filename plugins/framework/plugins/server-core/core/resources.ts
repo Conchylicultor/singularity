@@ -190,6 +190,19 @@ export function setLiveStateSnapshotHooks(hooks: LiveStateSnapshotHooks): void {
   liveStateSnapshotHooks = hooks;
 }
 
+// The build graph this backend serves, for judging a live-resource contract
+// mismatch (`ResourceRuntimeOptions.serverBuildGraph`): a tab whose build
+// differs is out of date (skew — warned, not reported); one whose build matches
+// has a real bug (reported). Boot-injected by `build/server-build-id`, which
+// owns reading the served dist (server-core must not import build — the same
+// boot-injection pattern as `setLiveStateSnapshotHooks`). The fn must return
+// the graph memoized at BOOT, not a fresh read. Before injection, and on
+// central, the graph is unknown (`null`) → every verdict `unknown` → reported.
+let clientBuildIdentity: () => string | null = () => null;
+export function setClientBuildIdentity(fn: () => string | null): void {
+  clientBuildIdentity = fn;
+}
+
 function errorReport(context: string, err: unknown): ServerErrorReport {
   const e = err instanceof Error ? err : new Error(String(err));
   return {
@@ -350,6 +363,8 @@ const runtime = createResourceRuntime({
     );
   },
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
+  // Reads the boot-injected holder at call time (see `setClientBuildIdentity`).
+  serverBuildGraph: () => clientBuildIdentity(),
   // Fan each push outcome out to every registered observer (no-op detector et al).
   onPush: (key, info) => {
     for (const cb of pushObservers) cb(key, info);

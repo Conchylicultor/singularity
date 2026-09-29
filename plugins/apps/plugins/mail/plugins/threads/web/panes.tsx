@@ -59,7 +59,7 @@ function MailThreadsPaneView(): ReactElement {
   const openPane = useOpenPane();
   const fields = useMailThreadFieldDefs();
   const changeTick = matchResource(tick, {
-    pending: () => null,
+    loading: () => null,
     ready: (d) => d.rev,
   });
 

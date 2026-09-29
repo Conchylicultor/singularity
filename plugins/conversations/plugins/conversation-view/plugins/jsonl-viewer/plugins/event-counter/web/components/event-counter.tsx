@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
@@ -7,7 +8,16 @@ export function EventCounter() {
   const { convId } = conversationPane.useParams();
   const result = useLive(jsonlEvents, { id: convId });
 
-  if (result.pending) return null;
+  if (result.status === "loading") return null;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the transcript events"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
 
   const count = result.data.length;
   if (count === 0) return null;

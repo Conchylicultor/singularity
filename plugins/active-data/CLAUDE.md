@@ -93,8 +93,13 @@ tag in the message). Inside the contributed component:
 const TaskBindingSchema = z.object({ taskId: z.string() });
 const binding = useActiveDataBinding(TaskBindingSchema);
 
-if (binding.enabled && binding.pending) return null;  // avoid flashing the editable card
-const value = binding.pending ? null : binding.value;
+// `binding.value` is a read: loading, error, or ready with the payload (or null).
+if (binding.enabled) {
+  if (binding.value.status === "loading") return null;  // avoid flashing the editable card
+  if (binding.value.status === "error")
+    return <ResourceErrorInline error={binding.value.error} refetch={binding.value.refetch} variant="inline" />;
+}
+const value = foldResource(binding.value, { loading: () => null, error: () => null, ready: (v) => v });
 if (value?.taskId) return <TaskChip taskId={value.taskId} />;
 // ... otherwise render the editable card; call binding.set({ taskId }) on action
 ```
@@ -134,6 +139,8 @@ Behavior:
     - `primitives/inline-text.InlineTextWalkerContext`
     - `primitives/inline-text.InlineTextWalkerSlot`
     - `primitives/inline-text.useInlineTextWalker`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/markdown.InlineCode`
     - `primitives/markdown.MarkdownEnhancement`
     - `primitives/markdown.MarkdownEnhancementContext`

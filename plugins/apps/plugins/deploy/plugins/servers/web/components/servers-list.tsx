@@ -42,10 +42,11 @@ export function ServersList() {
     [],
   );
 
-  // One render path for both states: while loading, DataView renders its
-  // skeleton (`loading`) and the chrome (search / + Add) stays stable — the
-  // "No servers registered" empty state requires confirmed-empty.
-  const renderList = (rows: Server[], loading: boolean) => (
+  // One render path for every state: DataView renders its skeleton while
+  // loading and the failure (with Retry) when the read failed (`readiness`), and
+  // the chrome (search / + Add) stays stable — the "No servers registered" empty
+  // state requires confirmed-empty.
+  const renderList = (rows: Server[]) => (
     <DataView<Server>
       rows={rows}
       fields={fields}
@@ -54,7 +55,7 @@ export function ServersList() {
       views={["list"]}
       defaultView="list"
       storageKey={SERVERS_VIEW}
-      loading={loading}
+      readiness={result}
       itemActions={ServerItemActions}
       selectedRowId={selectedId}
       onRowActivate={(s) =>
@@ -79,8 +80,8 @@ export function ServersList() {
   );
 
   return matchResource(result, {
-    pending: () => renderList([], true),
-    error: () => renderList([], true),
-    ready: (rows) => renderList(rows, false),
+    loading: () => renderList([]),
+    error: () => renderList([]),
+    ready: (rows) => renderList(rows),
   });
 }

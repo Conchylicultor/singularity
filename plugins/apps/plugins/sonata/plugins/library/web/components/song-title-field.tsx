@@ -43,7 +43,7 @@ export function SongTitle() {
   return matchResource(current, {
     // A title-shaped shimmer, not the word "Loading…" — this slot IS the header.
     // `Loading` only fades in after ~120ms, so a warm resource never flashes it.
-    pending: () => (
+    loading: () => (
       <Loading variant="block" className={cn(CONTROL_HEIGHT[size], "w-56")} />
     ),
     ready: (song) => (song ? <SongTitleInner song={song} /> : null),

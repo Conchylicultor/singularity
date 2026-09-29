@@ -17,6 +17,8 @@ const REPRESENTATIVE_KEYS: (keyof typeof sidebarPaletteGroup.schema)[] = [
  */
 export function SidebarPaletteHeaderDots() {
   const editor = useTokenGroupEditor(sidebarPaletteGroup);
+  // Loading or failed alike: decorative, so nothing — the section body renders
+  // the failure with its retry.
   if (editor.pending) return null;
   const painted = transformValues(editor.values.light, editor.colorAdjust);
 

@@ -1,5 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   PaneChrome,
   PaneInstanceContext,
@@ -183,7 +186,19 @@ export function AttemptPane() {
   const selectedConvId = openedConv?.params.convId;
   const convInstanceId = openedConv?.instanceId;
 
-  if (result.pending) return <Loading />;
+  if (result.status === "loading") return <Loading />;
+  if (result.status === "error") {
+    return (
+      <PaneChrome pane={attemptPane} title="Attempts">
+        <ResourceErrorInline
+          variant="block"
+          subject="the attempts"
+          error={result.error}
+          refetch={result.refetch}
+        />
+      </PaneChrome>
+    );
+  }
 
   const taskAttempts = taskAttemptsOf(result.data, attemptId);
 

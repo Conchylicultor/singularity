@@ -12,14 +12,18 @@ function messageFor(advice: ShownAdvice): string {
   if (advice.kind === "stale") {
     return "Server was rebuilt — click to reload this tab";
   }
+  if (advice.kind === "outdated") {
+    return "This tab is out of date and can't load some data — reload to fix";
+  }
   return advice.stale
     ? "This tab is out of date and part of the app didn't load — reload to fix"
     : "Part of the app didn't load — reload to fix";
 }
 
 /**
- * The Reload segment of the Build pill: shown when the tab is stale or part of
- * the app failed to load. Blue when only stale, red when something failed.
+ * The Reload segment of the Build pill: shown when the tab is stale, cannot
+ * load some data (outdated), or part of the app failed to load. Blue when only
+ * stale, red when something is already failing (outdated or broken).
  *
  * A real `<button>`, joined to the Build button as the pill's second segment
  * (a sibling, never nested inside the popover trigger), so pressing it reloads
@@ -32,7 +36,7 @@ function messageFor(advice: ShownAdvice): string {
 export function ReloadSegment({ advice }: { advice: ReloadAdvice }) {
   if (advice.kind === "none") return null;
   const message = messageFor(advice);
-  const broken = advice.kind === "broken";
+  const failing = advice.kind === "broken" || advice.kind === "outdated";
   return (
     <WithTooltip content={message}>
       <Button
@@ -40,7 +44,7 @@ export function ReloadSegment({ advice }: { advice: ReloadAdvice }) {
         aria-label={message}
         // The tint holds on hover too — it is what says why a reload is due.
         className={cn(
-          broken
+          failing
             ? "text-destructive hover:text-destructive"
             : "text-info hover:text-info",
         )}

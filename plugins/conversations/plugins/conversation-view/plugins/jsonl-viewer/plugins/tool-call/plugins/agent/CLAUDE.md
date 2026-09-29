@@ -31,6 +31,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/markdown.Markdown`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

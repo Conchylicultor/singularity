@@ -247,6 +247,8 @@ Run with `./singularity test plugins/plugin-meta/plugins/composition`.
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `infra/endpoints.useEndpoint`
+    - `primitives/live-state.ResourceError`
+    - `primitives/live-state.useEndpointResource`
   - Exports (types):
     - `AppExclusions`
     - `CompositionDataResult`

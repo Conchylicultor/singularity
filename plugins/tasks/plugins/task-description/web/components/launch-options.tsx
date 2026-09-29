@@ -1,5 +1,9 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
+  matchResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   TooltipDoc,
@@ -37,11 +41,20 @@ function BoundOptionRow({
       </WithTooltip>
       {/* Until the task's value is known the control is not mounted at all —
           it would otherwise show (and accept clicks on) a stand-in value. */}
-      {binding.pending ? (
-        <Loading variant="block" className="control-md w-32" />
-      ) : (
-        <Control value={binding.value} onChange={binding.onChange} />
-      )}
+      {matchResource(binding, {
+        loading: () => <Loading variant="block" className="control-md w-32" />,
+        error: (error) => (
+          <ResourceErrorInline
+            variant="inline"
+            subject={option.label.toLowerCase()}
+            error={error}
+            refetch={binding.refetch}
+          />
+        ),
+        ready: ({ value, onChange }) => (
+          <Control value={value} onChange={onChange} />
+        ),
+      })}
     </Stack>
   );
 }

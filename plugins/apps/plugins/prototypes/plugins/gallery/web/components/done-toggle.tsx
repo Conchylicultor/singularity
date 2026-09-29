@@ -3,6 +3,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   prototypeStatuses,
   setPrototypeStatus,
@@ -65,18 +66,30 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
 /**
  * The detail pane header's Done toggle: a checkbox icon beside the copy-id
  * icon, a same-size glyph in both states so ticking it never moves the header.
- * Disabled until the statuses are known, rather than claiming "not done".
+ * Disabled until the statuses are known, rather than claiming "not done";
+ * a failed read is the error icon, whose click retries.
  */
 export function DoneHeaderAction() {
   const { name } = usePrototypeDetail();
   const statuses = useLive(prototypeStatuses);
   const { pending, setDone } = useSetPrototypeDone();
-  if (statuses.pending) {
+  if (statuses.status === "loading") {
     return (
       <IconButton
         icon={checkBoxOutlineBlankIcon}
         label="Mark as done"
         disabled
+      />
+    );
+  }
+  if (statuses.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={checkBoxOutlineBlankIcon}
+        subject="the Done status"
+        error={statuses.error}
+        refetch={statuses.refetch}
       />
     );
   }

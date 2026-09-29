@@ -44,7 +44,6 @@
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
-    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
@@ -54,6 +53,8 @@
     - `primitives/cursor-pagination.InfiniteScrollFooter`
     - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.RelativeTime`

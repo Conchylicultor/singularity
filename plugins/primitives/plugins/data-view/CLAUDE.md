@@ -55,6 +55,20 @@ build-time codegen scrapes the markers, the primitive registers one
   via `dataViewDescriptors.get(storageKey)` — reference identity vs the
   registration, like `reorderDescriptors.get(slotId)`.
 
+### The rows' own read: `readiness`, never `emptyState` for a failure
+
+Pass the read backing `rows` as `readiness={result}` (any `useLive` /
+`useResource` / combined result — its `status` is all the DataView reads). The
+body's precedence is `server error > failed read > loading > the view`
+(`web/internal/body-state.ts`): `error` renders `errorState` (default
+`<ResourceErrorInline variant="block"/>` — the message with Retry, or Reload for
+an out-of-date tab), `loading` renders `loadingState` (the view's skeleton), and
+only `ready` reaches the view, so `emptyState` can only mean "ready, and zero
+rows". There is no boolean `loading` prop: a boolean cannot say a read failed,
+so a failure would render as a skeleton forever (or, set false, as empty).
+Without `readiness` the rows are taken as ready (a static list). An endpoint read
+becomes a result through `useEndpointResource`.
+
 ### Config is the single source of truth (fail by default)
 
 There is **no code synthesis** of default view-instances (view-core owns the
@@ -1889,6 +1903,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/row-actions.RowActions`

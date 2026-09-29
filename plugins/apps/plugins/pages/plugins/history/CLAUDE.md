@@ -21,6 +21,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes:

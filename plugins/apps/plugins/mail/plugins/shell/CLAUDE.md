@@ -40,6 +40,7 @@ Auth state and affordances come only from
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

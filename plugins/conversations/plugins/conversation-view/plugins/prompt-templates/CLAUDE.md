@@ -13,7 +13,6 @@
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2/config-link.ConfigGearButton`
-    - `conversations.useConversation`
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/pending-turn.sendConversationTurn`

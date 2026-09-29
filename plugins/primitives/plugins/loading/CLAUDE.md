@@ -159,6 +159,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `layouts/route-fallback`
     - `page/annotations/agent-notes/agent-page`
     - `page/annotations/instructions/instructions-page`
+    - `page/annotations/todo/task-link`
     - `page/bookmark`
     - `page/editor`
     - `page/inline-page-link`

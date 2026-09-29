@@ -1,4 +1,5 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
@@ -164,6 +165,18 @@ export function AgentToolView({ event }: ToolRendererProps) {
       {/* What it is doing right now, under the card rather than inside it: the
           body is collapsed by default, and this is the line you want without
           opening anything. Once it has reported, the report is the answer. */}
+      {/* A state that could not be read says so here, with Retry — outside the
+          summary, whose content is click-through. */}
+      {status.kind === "failed" && (
+        <div className="px-md">
+          <ResourceErrorInline
+            variant="inline"
+            subject="the sub-agent's state"
+            error={status.error}
+            refetch={status.refetch}
+          />
+        </div>
+      )}
       {status.kind === "known" && status.state.kind !== "finished" && (
         <SubagentLastStep
           row={status.row}

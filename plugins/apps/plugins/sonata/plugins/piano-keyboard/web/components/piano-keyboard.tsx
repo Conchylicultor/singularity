@@ -163,7 +163,14 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
   const sounding = useCursorSelector(
     (beat) => {
       const m = new Map<number, string>();
-      if (colorMap.pending || hiddenIds.pending || mutedIds.pending) return m;
+      // Unsettled (pending or failed) track views light nothing: the score is
+      // empty then too, and the player's score gate says why.
+      if (
+        colorMap.kind !== "settled" ||
+        hiddenIds.kind !== "settled" ||
+        mutedIds.kind !== "settled"
+      )
+        return m;
       const colors = colorMap.value;
       const hidden = hiddenIds.value;
       const muted = mutedIds.value;

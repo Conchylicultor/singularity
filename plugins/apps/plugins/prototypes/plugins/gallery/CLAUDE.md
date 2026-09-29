@@ -114,6 +114,7 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
     - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useCombinedResources`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

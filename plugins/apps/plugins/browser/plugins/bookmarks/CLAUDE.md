@@ -41,7 +41,9 @@ Bookmarks section reads the same collection).
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.matchResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
   - Exports (types): `BookmarkRow`
   - Exports (values):
     - `BookmarkRowSchema`

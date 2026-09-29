@@ -18,7 +18,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const autoFixHighIcon = symbol("auto-fix-high");
 
 /**
- * The run, by id: pending, then found or determinately absent (`found: false`
+ * The run, by id: loading (or failed), then found or determinately absent (`found: false`
  * means this namespace has no such run). A point read, so a run older than the
  * newest 50 the history window holds is still found.
  */
@@ -41,9 +41,15 @@ function useBuildRun(runId: string): LiveRowResult<BuildRun> {
 export function useBuildFailed({ runId }: { runId: string }): boolean {
   const run = useBuildRun(runId);
   // Unavailable until the run is known: offering a fix before knowing the build
-  // failed would be a claim the data may not back.
-  if (run.pending || !run.found) return false;
-  return buildStatusOf(run.row) === "failed";
+  // failed would be a claim the data may not back. A failed read says so in
+  // the run's own detail (build-info), not by offering a fix here.
+  switch (run.status) {
+    case "loading":
+    case "error":
+      return false;
+    case "ready":
+      return run.found && buildStatusOf(run.row) === "failed";
+  }
 }
 
 /**
@@ -54,7 +60,9 @@ export function useBuildFailed({ runId }: { runId: string }): boolean {
 export function BuildFixAction({ runId }: { runId: string }) {
   const run = useBuildRun(runId);
   // `useAvailable` already gated on a failed run; this only narrows the type.
-  if (run.pending || !run.found) return null;
+  if (run.status === "loading" || run.status === "error" || !run.found) {
+    return null;
+  }
   return <BuildFixButton runId={runId} run={run.row} />;
 }
 

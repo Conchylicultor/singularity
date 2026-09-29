@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import { liveValue } from "./live-value";
 
 const S = z.object({ n: z.number() });
@@ -112,5 +113,49 @@ describe("liveValue", () => {
         preload: "boot" as never,
       }),
     ).toThrow(/central value cannot be preloaded/);
+  });
+
+  describe("validateParams — the runtime's params gate", () => {
+    const v = liveValue("test.live-value.gate", {
+      schema: S,
+      params: ["id", "scope"],
+    });
+    const plain = liveValue("test.live-value.gate-plain", { schema: S });
+
+    test("accepts exactly the declared names", () => {
+      expect(() => v.validateParams({ id: "a", scope: "b" })).not.toThrow();
+      expect(() => plain.validateParams({})).not.toThrow();
+    });
+
+    test("refuses a missing, an unknown or a non-string param — typed", () => {
+      const bad: Record<string, unknown>[] = [
+        { id: "a" },
+        { id: "a", scope: "b", extra: "c" },
+        { id: "a", scope: 1 },
+      ];
+      for (const params of bad) {
+        expect(() =>
+          v.validateParams(params as Record<string, string>),
+        ).toThrow(ResourceContractError);
+      }
+      expect(() => plain.validateParams({ limit: "5" })).toThrow(
+        /unknown param "limit"/,
+      );
+    });
+
+    test("an optional param may be absent; a required one may not; unknown still refused", () => {
+      const o = liveValue("test.live-value.gate-optional", {
+        schema: S,
+        params: ["path", "scopeId?"],
+      });
+      expect(() => o.validateParams({ path: "a" })).not.toThrow();
+      expect(() => o.validateParams({ path: "a", scopeId: "s" })).not.toThrow();
+      expect(() => o.validateParams({ scopeId: "s" })).toThrow(
+        /missing param "path"/,
+      );
+      expect(() => o.validateParams({ path: "a", other: "x" })).toThrow(
+        /unknown param "other"/,
+      );
+    });
   });
 });

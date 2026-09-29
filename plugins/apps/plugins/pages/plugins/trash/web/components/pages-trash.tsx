@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   Button,
@@ -16,6 +16,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   useLive,
   type LiveListResult,
@@ -74,6 +75,37 @@ export function PagesTrash() {
     );
   };
 
+  let body: ReactNode;
+  switch (result.status) {
+    case "loading":
+      body = <Loading />;
+      break;
+    case "error":
+      body = (
+        <ResourceErrorInline
+          variant="block"
+          subject="the trash"
+          error={result.error}
+          refetch={result.refetch}
+        />
+      );
+      break;
+    case "ready":
+      body =
+        result.data.length === 0 ? (
+          <Placeholder>Trash is empty</Placeholder>
+        ) : (
+          <TrashList
+            list={result}
+            restoring={restore.isPending}
+            purging={purge.isPending}
+            onRestore={onRestore}
+            onPurge={setConfirmEntry}
+          />
+        );
+      break;
+  }
+
   return (
     <>
       <div className="px-xs pt-xs">
@@ -88,25 +120,7 @@ export function PagesTrash() {
           <DialogDescription>
             Deleted pages are kept for 30 days before being permanently removed.
           </DialogDescription>
-          {result.pending ? (
-            result.error ? (
-              <Placeholder tone="error">
-                Couldn&apos;t load the trash: {result.error.message}
-              </Placeholder>
-            ) : (
-              <Loading />
-            )
-          ) : result.data.length === 0 ? (
-            <Placeholder>Trash is empty</Placeholder>
-          ) : (
-            <TrashList
-              list={result}
-              restoring={restore.isPending}
-              purging={purge.isPending}
-              onRestore={onRestore}
-              onPurge={setConfirmEntry}
-            />
-          )}
+          {body}
         </DialogContent>
       </Dialog>
 
@@ -161,7 +175,7 @@ function TrashList({
   onRestore,
   onPurge,
 }: {
-  list: Extract<LiveListResult<TrashEntry>, { pending: false }>;
+  list: Extract<LiveListResult<TrashEntry>, { status: "ready" }>;
   restoring: boolean;
   purging: boolean;
   onRestore: (entry: TrashEntry) => void;

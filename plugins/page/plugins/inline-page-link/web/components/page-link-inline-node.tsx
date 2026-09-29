@@ -1,9 +1,16 @@
 import type { LexicalNode } from "lexical";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
+import {
+  pagesResource,
+  pageData,
+  type PageRow,
+} from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
 import { pageLinkInlineNode } from "../../core";
@@ -29,10 +36,32 @@ function PageLinkInlineView({ pageId }: { pageId: string }) {
   const nav = usePageNavigation();
   const result = useResource(pagesResource);
 
-  // Gate: render nothing while the pages resource is loading.
-  if (result.pending) return null;
+  // A failed read that once had the page set keeps resolving from it;
+  // without one, the chip is the failure (an icon, to keep the line intact).
+  let pages: readonly PageRow[];
+  switch (result.status) {
+    case "loading":
+      // Render nothing while the pages resource is loading.
+      return null;
+    case "error":
+      if (result.stale === undefined) {
+        return (
+          <ResourceErrorInline
+            error={result.error}
+            refetch={result.refetch}
+            variant="icon"
+            icon={linkIcon}
+            subject="the linked page"
+          />
+        );
+      }
+      pages = result.stale;
+      break;
+    case "ready":
+      pages = result.data;
+  }
 
-  const target = result.data.find((d) => d.id === pageId);
+  const target = pages.find((d) => d.id === pageId);
   const data = target ? pageData(target) : undefined;
 
   if (!target) {

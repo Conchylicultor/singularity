@@ -73,6 +73,7 @@ the join and the order: oldest run first.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/launch.LaunchControl`
+    - `primitives/live-state.ResourceErrorInline`
     - `tasks/tasks-core.useTaskConversations`
     - `ui/icons.Icon`
   - Exports (values): `promptBlock`

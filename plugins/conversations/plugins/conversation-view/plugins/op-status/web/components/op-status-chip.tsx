@@ -2,6 +2,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { OP_KINDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 import { useWorktreeOp } from "../internal/use-worktree-op";
@@ -55,8 +56,18 @@ function displayFor(op: WorktreeOp): OpDisplay {
 // adornment has no loading affordance of its own.
 export function OpStatusChip({ conv }: { conv: ConversationItemConv }) {
   const reading = useWorktreeOp(conv.id);
-  if (reading.pending || !reading.op) return null;
-  const { icon, title } = displayFor(reading.op);
+  if (reading.status === "loading") return null;
+  if (reading.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the worktree op"
+        error={reading.error}
+        refetch={reading.refetch}
+      />
+    );
+  if (!reading.data) return null;
+  const { icon, title } = displayFor(reading.data);
   return (
     <WithTooltip content={title}>
       <Inline gap="none" className="text-muted-foreground">

@@ -61,17 +61,21 @@ export interface TrackMixerEntry {
 }
 
 /**
- * Derive a settled setting's value, keeping `pending` as it is. Every hook
- * below is one such derivation of the loaded song's track views, so each
- * reports the same state the `trackViewSetting` does.
+ * Derive a settled setting's value, keeping `pending` and `failed` as they
+ * are. Every hook below is one such derivation of the loaded song's track
+ * views, so each reports the same state the `trackViewSetting` does.
  */
 function mapSetting<T, U>(
   setting: SongSetting<T>,
   fn: (value: T) => U,
 ): SongSetting<U> {
-  return setting.pending
-    ? setting
-    : { pending: false, value: fn(setting.value) };
+  switch (setting.kind) {
+    case "pending":
+    case "failed":
+      return setting;
+    case "settled":
+      return { kind: "settled", value: fn(setting.value) };
+  }
 }
 
 /**
@@ -185,8 +189,16 @@ export function useTrackMixerEntries(): SongSetting<TrackMixerEntry[]> {
 export function useTrackMixerAvailable(): boolean {
   const { currentSongId } = useSonata();
   const entries = useTrackMixerEntries();
-  if (entries.pending) return false;
-  return currentSongId != null && entries.value.length > 0;
+  switch (entries.kind) {
+    case "pending":
+      return false;
+    // A failed read keeps the card: its body is where the failure (with
+    // Retry) is shown.
+    case "failed":
+      return currentSongId != null;
+    case "settled":
+      return currentSongId != null && entries.value.length > 0;
+  }
 }
 
 /** Effective color per trackId — consumed by the piano-roll note renderer. */

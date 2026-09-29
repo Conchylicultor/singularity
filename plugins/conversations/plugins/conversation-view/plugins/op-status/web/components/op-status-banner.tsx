@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -71,10 +74,18 @@ function useTitleBySlug(): Record<string, string> {
     select: titleMapOf,
   });
   return useMemo(() => {
-    if (active.pending || gone.pending || system.pending) return EMPTY_TITLES;
-    // Spread order matches the previous [...system, ...recentGone, ...active]:
-    // a live `active` title wins over a stale gone/system one.
-    return { ...system.data, ...gone.data, ...active.data };
+    if (
+      active.status === "ready" &&
+      gone.status === "ready" &&
+      system.status === "ready"
+    )
+      // Spread order matches the previous [...system, ...recentGone, ...active]:
+      // a live `active` title wins over a stale gone/system one.
+      return { ...system.data, ...gone.data, ...active.data };
+    // Loading or failed alike: the titles are cosmetic labels on the other
+    // worktrees' rows, which fall back to their slug — the op map itself (the
+    // banner's real read) renders its own failure.
+    return EMPTY_TITLES;
   }, [active, gone, system]);
 }
 
@@ -238,7 +249,16 @@ export function OpStatusBanner({
 
   const selfSlug = slugOf(conversation.worktreePath);
 
-  if (result.pending) return null;
+  if (result.status === "loading") return null;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the worktree ops"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
   const ops = Object.values(result.data);
   const rows = buildRows(ops, selfSlug);
   const op = result.data[selfSlug];

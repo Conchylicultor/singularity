@@ -39,6 +39,7 @@ import { Sonata } from "./slots";
 import { useCursorApi } from "./cursor-store";
 import { useEditLoadedRaw, useLoadSong, useLoadedRaw } from "./loaded-song";
 import { useScoreSettings } from "./score-settings";
+import type { SongSettingFailure } from "./song-setting";
 
 /** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
 const MIN_TEMPO_SCALE = 0;
@@ -162,6 +163,14 @@ export interface SonataContextValue {
    * never its empty-score message.
    */
   scorePending: boolean;
+  /**
+   * A song's content is loaded but one of its per-song settings could NOT be
+   * read (its observer's read failed with no last-known value). `score` is
+   * empty, exactly as while pending, so a display shows this failure — with
+   * its Retry — never its empty-score message and never a spinner. `null`
+   * otherwise; never set together with {@link scorePending}.
+   */
+  scoreFailure: SongSettingFailure | null;
   /**
    * The seekable span `[startBeat, endBeat]` of {@link score}, in beats — THE
    * bound every navigation surface shares. `startBeat` is the timeline origin
@@ -560,7 +569,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     () => sources.some((s) => rawById[s.id] !== undefined),
     [sources, rawById],
   );
-  const scorePending = hasContent && settings.pending;
+  const scorePending = hasContent && settings.kind === "pending";
+  const scoreFailure = useMemo<SongSettingFailure | null>(
+    () =>
+      hasContent && settings.kind === "failed"
+        ? { error: settings.error, refetch: settings.refetch }
+        : null,
+    [hasContent, settings],
+  );
 
   // `baseScore` layers the pure VIEW transforms on top of `contentScore`. Every
   // step here PRESERVES the playable timeline (note onsets, durations, tempo
@@ -573,8 +589,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const baseScore = useMemo<Score>(() => {
     // Not one frame of the song under a setting it does not have: until every
     // per-song setting has settled for the loaded song there is no view of it
-    // (`scorePending` tells the displays why the score is empty).
-    if (settings.pending) return emptyScore();
+    // (`scorePending` / `scoreFailure` tell the displays why the score is empty).
+    if (settings.kind !== "settled") return emptyScore();
     const { transposeSemitones, keyAutoDetect, groove, chordMode } =
       settings.value;
     // Shift the whole song by the per-song transpose offset BEFORE anything else
@@ -1246,6 +1262,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     () => ({
       score,
       scorePending,
+      scoreFailure,
       timelineBeats,
       currentSongId,
       songOpenEpoch,
@@ -1292,6 +1309,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     [
       score,
       scorePending,
+      scoreFailure,
       timelineBeats,
       currentSongId,
       songOpenEpoch,

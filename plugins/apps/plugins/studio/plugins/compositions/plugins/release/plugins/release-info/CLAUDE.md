@@ -14,6 +14,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
 

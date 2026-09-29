@@ -7,7 +7,10 @@ import {
 } from "react";
 import type { Doc } from "yjs";
 import type { Provider } from "@lexical/yjs";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  useLiveRow,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import {
   useEventCallback,
   useLatestRef,
@@ -774,6 +777,20 @@ function useHydrationState(hold: CollabDocHold): HydrationSnapshot {
   return useSyncExternalStore(subscribeHydration, hydrationState);
 }
 
+// The row read as what the provider should merge: see the call site.
+function serverStateOf<S>(
+  content: LiveRowResult<{ state: S }>,
+): S | null | undefined {
+  switch (content.status) {
+    case "loading":
+      return undefined;
+    case "error":
+      return content.stale?.state;
+    case "ready":
+      return content.found ? content.row.state : null;
+  }
+}
+
 export function useCollabBlockDoc(
   blockId: string,
   dataText: unknown,
@@ -800,12 +817,11 @@ export function useCollabBlockDoc(
   const content = useLiveRow(blockDocs, blockId);
   // While loading we can't tell "absent" (→ seed) from "not arrived yet", so
   // nothing is delivered until the row settles (`undefined`); `found: false`
-  // is the positive "no doc yet" (`null`).
-  const serverState = content.pending
-    ? undefined
-    : content.found
-      ? content.row.state
-      : null;
+  // is the positive "no doc yet" (`null`). A FAILED read is never "absent" —
+  // seeding over a doc we could not read would fork it — so it delivers only
+  // the state last seen (already merged; the merge is idempotent), else
+  // nothing; live-state's resource-error sink reports the failure.
+  const serverState = serverStateOf(content);
   useEffect(() => {
     if (serverState === undefined) return;
     ensure(blockId).owner.provider.onServerState(serverState);

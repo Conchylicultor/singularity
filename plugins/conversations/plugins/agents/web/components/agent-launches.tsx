@@ -1,4 +1,7 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -77,7 +80,16 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
   const convEntry = conversationPane.useRouteEntry();
   const activeConvId = convEntry?.params.convId;
 
-  if (launchesQ.pending) return <Loading variant="text" />;
+  if (launchesQ.status === "loading") return <Loading variant="text" />;
+  if (launchesQ.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the attempts"
+        error={launchesQ.error}
+        refetch={launchesQ.refetch}
+      />
+    );
 
   const launches = launchesQ.data.filter((l) => l.agentId === agentId);
 

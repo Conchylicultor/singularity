@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -12,7 +13,17 @@ import { PrepromptIcon } from "./preprompt-icon";
 export function PrepromptListIcon({ conv }: { conv: ConversationItemConv }) {
   const result = useConversationPreprompt(conv.id);
   // Nothing while loading, nothing when no preprompt was recorded.
-  if (result.pending || !result.found) return null;
+  if (result.status === "loading") return null;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the preprompt"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  if (!result.found) return null;
   const record = result.row;
   return (
     <WithTooltip content={`Preprompt: ${record.title}`}>

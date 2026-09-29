@@ -208,6 +208,8 @@ contributions each surface passes in, and per-entry plugin id
     - `primitives/hover-reveal.useHoverReveal`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceError`
     - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`

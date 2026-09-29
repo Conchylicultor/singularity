@@ -24,10 +24,13 @@ import {
   type ProviderHostViewProps,
 } from "./block-editor-context";
 import {
+  NOTHING_FAILED,
   NOTHING_LOADING,
   PENDING_BLOCK_STORE,
   useServerBlockStore,
+  type BelowFailure,
   type BlockStore,
+  type PendingBlockStore,
 } from "./block-store";
 import type { BlockOverlayOp } from "./internal/optimistic-block-ops";
 import {
@@ -46,14 +49,15 @@ import {
 /**
  * One mounted feed's published state: `pending` until the page's first
  * authoritative rows land — a pending feed has NO rows, not an empty list of
- * them — then `data`/`serverData`, the render-driving snapshot
+ * them, and carries its first load's failure as `error` (null while loading) —
+ * then `data`/`serverData`, the render-driving snapshot
  * (reference-stable through `useOptimisticResource`'s memoization), and a
  * stable-identity `dispatch` that routes to the feed's CURRENT store, so
  * routed writes always reach the latest render's callbacks without the
  * registry churning on every store re-creation.
  */
 type FeedSnapshot =
-  | { pending: true }
+  | PendingBlockStore
   | {
       pending: false;
       data: Block[];
@@ -61,11 +65,11 @@ type FeedSnapshot =
       dispatch: (v: BlockOverlayOp) => void;
     };
 
-const PENDING_FEED: FeedSnapshot = { pending: true };
-
 /** Reference-identical state — what the publish convergence guard compares. */
 function sameSnapshot(a: FeedSnapshot, b: FeedSnapshot): boolean {
-  if (a.pending || b.pending) return a.pending === b.pending;
+  if (a.pending || b.pending) {
+    return a.pending && b.pending && a.error === b.error;
+  }
   return (
     a.data === b.data &&
     a.serverData === b.serverData &&
@@ -108,7 +112,7 @@ function PageFeedMount({
     onSnapshot(
       pageId,
       store.pending
-        ? PENDING_FEED
+        ? store
         : {
             pending: false,
             data: store.data,
@@ -210,15 +214,34 @@ export function CompositeServerProviderHost({
     for (const [pageId, anchorId] of mounts) {
       if (pageId === basePageId) continue;
       const feed = feeds.get(pageId);
-      if (!feed || feed.pending) anchors.add(anchorId);
+      if (!feed || (feed.pending && feed.error === null)) anchors.add(anchorId);
     }
     // The shared empty set when nothing loads, so a push that changes no
     // expansion hands the context no new identity for it.
     return anchors.size === 0 ? NOTHING_LOADING : anchors;
   }, [basePageId, feeds, mounts]);
 
-  // The BASE feed alone decides whether the editor has a document at all.
-  const basePending = feeds.get(basePageId)?.pending ?? true;
+  // A child feed whose first load FAILED is not loading: its anchor renders the
+  // failure with Retry instead of a loading region that never ends.
+  const failedBelow = useMemo(() => {
+    const failed = new Map<string, BelowFailure>();
+    for (const [pageId, anchorId] of mounts) {
+      if (pageId === basePageId) continue;
+      const feed = feeds.get(pageId);
+      if (feed?.pending && feed.error !== null) {
+        failed.set(anchorId, { error: feed.error, refetch: feed.refetch });
+      }
+    }
+    return failed.size === 0 ? NOTHING_FAILED : failed;
+  }, [basePageId, feeds, mounts]);
+
+  // The BASE feed alone decides whether the editor has a document at all — and
+  // its failed first load is the editor's failure. (A failed CHILD feed
+  // renders under its anchor — `failedBelow`.)
+  const baseFeed = feeds.get(basePageId) ?? PENDING_BLOCK_STORE;
+  const basePending: PendingBlockStore | null = baseFeed.pending
+    ? baseFeed
+    : null;
 
   // Cumulative indexes for writes that outlive their feed (undo entries are
   // mount-scoped to the EDITOR, not to a child feed, so they can replay after
@@ -374,10 +397,15 @@ export function CompositeServerProviderHost({
   // page id.
   const store = useMemo<BlockStore>(
     () =>
-      basePending
-        ? PENDING_BLOCK_STORE
-        : { pending: false, data, serverData, loadingBelow, dispatch },
-    [basePending, data, serverData, loadingBelow, dispatch],
+      basePending ?? {
+        pending: false,
+        data,
+        serverData,
+        loadingBelow,
+        failedBelow,
+        dispatch,
+      },
+    [basePending, data, serverData, loadingBelow, failedBelow, dispatch],
   );
 
   return (

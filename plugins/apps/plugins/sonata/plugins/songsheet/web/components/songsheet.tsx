@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useEffect, useMemo, useRef } from "react";
 import {
   Sonata,
@@ -75,7 +76,7 @@ function groupLines(
 }
 
 function SongsheetInner({ score }: SongsheetProps) {
-  const { seekTo, isPlaying, scorePending } = useSonata();
+  const { seekTo, isPlaying, scorePending, scoreFailure } = useSonata();
 
   // Lyric lines, sorted by start = the songsheet's rows. Memoized off the Score
   // so the per-frame cursor selectors below only walk this stable array.
@@ -138,6 +139,19 @@ function SongsheetInner({ score }: SongsheetProps) {
     });
   }, [activeLine, isPlaying]);
 
+  if (scoreFailure !== null) {
+    // A setting could not be read: say so, not "no lyrics" nor a spinner.
+    return (
+      <Center className="h-full w-full bg-background">
+        <ResourceErrorInline
+          variant="block"
+          subject="the song's settings"
+          error={scoreFailure.error}
+          refetch={scoreFailure.refetch}
+        />
+      </Center>
+    );
+  }
   if (scorePending) {
     // The song's settings are still loading (the score is withheld until they
     // settle): not "no lyrics".

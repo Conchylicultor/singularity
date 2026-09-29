@@ -69,6 +69,7 @@ remove the overwrite trade-off.
   - Uses:
     - `apps/sonata/shell.chordModeSetting`
     - `apps/sonata/shell.Sonata`
+    - `apps/sonata/shell.useFailSongSetting`
     - `apps/sonata/shell.useHasDerivedChord`
     - `apps/sonata/shell.useMountedSongId`
     - `apps/sonata/shell.useSonata`
@@ -78,6 +79,7 @@ remove the overwrite trade-off.
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLiveRow`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
   - Exports (values): `useSaveChordMode`
 - Server:

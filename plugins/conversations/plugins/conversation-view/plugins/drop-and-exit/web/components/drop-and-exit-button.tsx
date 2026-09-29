@@ -4,10 +4,13 @@ import { useMemo } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  useConversation,
+  useLiveConversation,
   useHasActiveSiblings,
 } from "@plugins/conversations/web";
-import { useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
@@ -25,7 +28,7 @@ export function DropAndExitItem({
 }: {
   conversation: ConversationRecord;
 }) {
-  const live = useConversation(conversation.id) ?? conversation;
+  const live = useLiveConversation(conversation);
   // The attempt's standing relative to `main`, measured from git. NOT the
   // `pushes` ledger this used to read: that table is written by a background
   // ingest job, so an empty result meant either "nothing was pushed" or "nothing
@@ -46,19 +49,20 @@ export function DropAndExitItem({
     hasOtherActive: siblingsResult,
   });
 
-  // `null` = no standing to decide on: either the combine is still pending, or
-  // the server could measure nothing (the `Resolvable` unresolved arm). The
-  // readiness gate folds an errored input into `pending`, so a settled decision
-  // is one the server vouches for — no separate error guard needed.
+  // `null` = no standing to decide on: the combine is still loading, one of its
+  // reads failed, or the server could measure nothing (the `Resolvable`
+  // unresolved arm). A ready decision is one the server vouches for.
   //
   // `standingOf` is the only thing consulted here: a discriminated
   // "none" | "pending" | "landed", never a length compared to zero (invariant
   // I4), so there is no array whose emptiness this component could misread.
   const standing = useMemo(
     () =>
-      !decision.pending && decision.data.work.resolved
-        ? standingOf(decision.data.work.value)
-        : null,
+      foldResource(decision, {
+        loading: () => null,
+        error: () => null,
+        ready: ({ work }) => (work.resolved ? standingOf(work.value) : null),
+      }),
     [decision],
   );
   const hasWork = standing !== null && standing !== "none";
@@ -86,14 +90,19 @@ export function DropAndExitItem({
   // redundant "Close" (mirrors how Drop dependents hides when there's nothing
   // to drop).
   //
-  // A `null` standing hides the entry for the same reason: an errored
-  // `hasOtherActive` keeps the combine pending (the readiness gate never lets a
-  // stale value decide), and an unresolved `work` means the server could not
-  // measure this attempt at all. The plain "Close" exit entry already covers
+  // A failed read hides the entry too — deliberately, not as a spinner: the
+  // plain "Close" entry is right there, and a stale value must never decide a
+  // destructive action. An unresolved `work` (a `null` standing) means the
+  // server could not measure this attempt at all. The plain "Close" exit entry already covers
   // both cases, and putting a destructive label over an unknown standing is
   // precisely what this change removes. Unknown state is never a licence to drop
   // a task.
-  if (decision.pending || decision.data.hasOtherActive || standing === null)
+  if (
+    decision.status === "loading" ||
+    decision.status === "error" ||
+    decision.data.hasOtherActive ||
+    standing === null
+  )
     return null;
 
   const disabled =

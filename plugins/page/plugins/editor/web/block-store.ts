@@ -33,13 +33,30 @@ import { useBlockOpContext } from "./internal/block-handles";
 
 /**
  * A store is `pending` until its first authoritative rows land, and only then
- * {@link SettledBlockStore} — the one arm with rows and a `dispatch`. There is
+ * {@link SettledBlockStore} — the one arm with rows and a `dispatch`. A pending
+ * store whose first load FAILED carries that `error` (null while it is simply
+ * loading), so the gate renders the failure instead of loading forever. There is
  * no placeholder document: an op can never be folded onto rows nobody has
  * seen, and the provider (whose hooks read the rows unconditionally) takes the
  * settled arm only, so it cannot be mounted on a pending store (a tsc error).
  * `BlockEditorProviderGate` is the one place that tells the two apart.
  */
-export type BlockStore = { pending: true } | SettledBlockStore;
+export type BlockStore = PendingBlockStore | SettledBlockStore;
+
+/**
+ * The not-yet-settled arm: `useOptimisticResource`'s `loading` / `error` arms
+ * folded into the store's own `pending` vocabulary — still loading, or a failed
+ * first load carrying the read's `refetch` for its Retry.
+ */
+export type PendingBlockStore =
+  | { pending: true; error: null }
+  | {
+      pending: true;
+      /** The first load's failure. */
+      error: Error;
+      /** Re-fetch the failed load — the gate's Retry. */
+      refetch: () => Promise<void>;
+    };
 
 /**
  * The full read/write surface the provider needs. Recording for undo stays in
@@ -75,15 +92,37 @@ export interface SettledBlockStore {
    * region under its anchor instead. Empty for a single page and in memory.
    */
   loadingBelow: ReadonlySet<string>;
+  /**
+   * Rows below which content FAILED to load: the anchor of an expanded nested
+   * page whose own feed's first load failed, with that failure and its Retry.
+   * Such a page contributes no rows, as while loading, but the editor renders
+   * the failure under its anchor — never a loading region that never ends. A
+   * row is in at most one of `loadingBelow` / `failedBelow`. Empty for a single
+   * page and in memory.
+   */
+  failedBelow: ReadonlyMap<string, BelowFailure>;
   /** Apply a structural op / undo-redo patch through the overlay pipeline. */
   dispatch: (v: BlockOverlayOp) => void;
 }
 
-/** The pending arm, shared: it carries nothing, so one object serves every store. */
-export const PENDING_BLOCK_STORE: BlockStore = { pending: true };
+/** The still-loading arm, shared: it carries nothing, so one object serves every store. */
+export const PENDING_BLOCK_STORE: PendingBlockStore = {
+  pending: true,
+  error: null,
+};
 
 /** No row has anything loading below it (a single page; memory). */
 export const NOTHING_LOADING: ReadonlySet<string> = new Set();
+
+/** A nested page's failed first load, as its anchor row renders it. */
+export interface BelowFailure {
+  error: Error;
+  /** Re-fetch the failed load — the anchor's Retry. */
+  refetch: () => Promise<void>;
+}
+
+/** No row has a failed load below it (a single page; memory). */
+export const NOTHING_FAILED: ReadonlyMap<string, BelowFailure> = new Map();
 
 // ---------------------------------------------------------------------------
 // Server-backed store (the persistent path).
@@ -141,13 +180,25 @@ export function useServerBlockStore(pageId: string): BlockStore {
   // Reference-stable per settled render (the hook memoizes its result), so the
   // composite's per-feed snapshot only moves when the rows do.
   return useMemo<BlockStore>(() => {
-    if (optimistic.pending) return PENDING_BLOCK_STORE;
+    switch (optimistic.status) {
+      case "loading":
+        return PENDING_BLOCK_STORE;
+      case "error":
+        return {
+          pending: true,
+          error: optimistic.error,
+          refetch: optimistic.refetch,
+        };
+      case "ready":
+        break;
+    }
     const { data, serverData, dispatch } = optimistic;
     return {
       pending: false,
       data,
       serverData,
       loadingBelow: NOTHING_LOADING,
+      failedBelow: NOTHING_FAILED,
       // The hook's dispatch returns the minted op id; the seam's is fire-and-forget.
       dispatch: (v) => {
         dispatch(v);
@@ -204,6 +255,7 @@ export function useMemoryBlockStore({
       // doc-init FK gate is a no-op — `serverIds` covers all blocks.
       serverData: rows,
       loadingBelow: NOTHING_LOADING,
+      failedBelow: NOTHING_FAILED,
       dispatch,
     }),
     [rows, dispatch],

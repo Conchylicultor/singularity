@@ -10,8 +10,11 @@ import {
   subscribeResourceTxAcks,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
+import type {
+  ResourceDescriptor,
+  ResourceError,
+} from "@plugins/primitives/plugins/live-state/core";
 import type {
   LiveCollection,
   LiveValue,
@@ -106,18 +109,32 @@ export type OptimisticOptions<Data, Vars> = OptimisticOpArgs<Data, Vars> &
   ConfirmationArgs<Data, Vars>;
 
 /**
- * An optimistic read's result. `pending` until a base exists — the first
- * authoritative value, or (the loud exemption) the last one under a transient
- * error — and then the settled arm, the only one that can `dispatch`: an op can
- * never be made against a base nobody has seen. There is no placeholder base.
+ * An optimistic read's result, named by `status` like every live read:
+ * `loading` / `error` until a base exists, then `ready` — the only arm that can
+ * `dispatch`: an op can never be made against a base nobody has seen. There is
+ * no placeholder base.
+ *
+ * The one difference from a `ResourceResult` (live-state's named exemption):
+ * a base is the first authoritative value OR the last one under a transient
+ * error, so once a value has landed a failing read stays `ready` — an editor
+ * keeps painting instead of blanking — and carries the failure as the ready
+ * arm's `error` (sync-status reports it with a Retry). `error` is the arm only
+ * for a read that failed before any value landed.
  */
 export type OptimisticResult<Data, Vars> =
   | {
-      pending: true;
-      /** The load error keeping it pending, or null while it is still loading. */
-      error: Error | null;
+      status: "loading";
+      /** Re-fetch the resource. */
+      refetch: () => Promise<void>;
     }
-  | ({ pending: false } & OptimisticSettled<Data, Vars>);
+  | {
+      status: "error";
+      /** The first-load failure — no base has ever landed. */
+      error: ResourceError;
+      /** Re-fetch the resource — the Retry for a failed load. */
+      refetch: () => Promise<void>;
+    }
+  | ({ status: "ready" } & OptimisticSettled<Data, Vars>);
 
 /** The settled arm of {@link OptimisticResult}. */
 export interface OptimisticSettled<Data, Vars> {
@@ -136,7 +153,9 @@ export interface OptimisticSettled<Data, Vars> {
    * null. Sync-status already reports it with a Retry. Null once a fresh
    * authoritative value lands.
    */
-  error: Error | null;
+  error: ResourceError | null;
+  /** Re-fetch the resource — the Retry for {@link error} (not for failed ops: see `retry`). */
+  refetch: () => Promise<void>;
   /** Enqueue an overlay op + fire `mutate`; returns the minted opId. */
   dispatch: (vars: Vars) => string;
   /**
@@ -170,12 +189,13 @@ interface OptimisticIdsQuery {
 }
 
 /**
- * Optimistic read of a declared `liveValue` (param-less): `pending`, then the
- * settled arm with `data` / `serverData` / `dispatch`.
+ * Optimistic read of a declared `liveValue` (param-less): `loading` (or
+ * `error`), then the `ready` arm with `data` / `serverData` / `dispatch`.
  *
  * ```ts
  * const picks = useOptimisticResource(prototypePicks, { name }, { apply, mutate });
- * if (picks.pending) return <Loading />;
+ * if (picks.status === "loading") return <Loading />;
+ * if (picks.status === "error") return <ResourceErrorInline error={picks.error} refetch={picks.refetch} />;
  * picks.dispatch(change);               // only on the settled arm
  * ```
  */
@@ -297,19 +317,32 @@ function useOptimisticCore<Data, Vars>(
   // until an unrelated frame. Asked by the reader, so it cannot be forgotten
   // and a tuple nobody writes optimistically pays nothing.
   useResourceAcks(resource, params);
-  // Optimistic surfaces are the sanctioned, LOUD exemption to live-state's I1
-  // ("`pending` means no trustworthy value"): they are editors, so under a
-  // transient error they deliberately KEEP PAINTING last-known-good rather than
-  // blanking — `sync-status` (wired below via useReportSync) owns their error
-  // affordance. So the overlay base falls back to `result.stale` (the last
-  // authoritative value) — and no further: there is no placeholder base, so no
-  // base means pending. That is also why the result is NOT the widened
-  // `useResource` `pending`: once a value has landed, an error keeps the
-  // settled arm (painting last-known-good) rather than re-reporting loading.
-  const base: Data | undefined = result.pending ? result.stale : result.data;
-  // The transient error (if any), surfaced so editor surfaces can report it
-  // (they keep painting `base`). Only the pending arm carries `error`.
-  const resultError = result.pending ? result.error : null;
+  // Optimistic surfaces are the sanctioned, LOUD exemption to live-state's
+  // "an error is not ready": they are editors, so under a transient error they
+  // deliberately KEEP PAINTING last-known-good rather than blanking —
+  // `sync-status` (wired below via useReportSync) owns their error affordance.
+  // So the overlay base falls back to `result.stale` (the last authoritative
+  // value) — and no further: there is no placeholder base, so no base means
+  // loading (or, after a failure, error). Once a value has landed, an error
+  // keeps the `ready` arm (painting last-known-good) and rides on its `error`.
+  let base: Data | undefined;
+  // The read's failure (if any), surfaced so editor surfaces can report it
+  // (they keep painting `base`).
+  let resultError: ResourceError | null;
+  switch (result.status) {
+    case "ready":
+      base = result.data;
+      resultError = null;
+      break;
+    case "error":
+      base = result.stale;
+      resultError = result.error;
+      break;
+    case "loading":
+      base = undefined;
+      resultError = null;
+      break;
+  }
 
   const [pending, setPending] = useState<ReadonlyArray<PendingOp<Vars>>>([]);
   // Explicit "everything this hook dispatched has been acked" timestamp,
@@ -721,9 +754,10 @@ function useOptimisticCore<Data, Vars>(
 
   // Re-fetch the RESOURCE (not an op) — the retry for a failing READ.
   const refetchRef = useLatestRef(result.refetch);
+  const refetch = useCallback(() => refetchRef.current(), [refetchRef]);
   const retryLoad = useCallback(() => {
-    void refetchRef.current();
-  }, [refetchRef]);
+    void refetch();
+  }, [refetch]);
 
   // Forced sync-status reporting: any optimistic surface lights up the universal
   // indicator with no indicator code of its own. Retry is wired to retryAll so
@@ -752,18 +786,31 @@ function useOptimisticCore<Data, Vars>(
   return useMemo(
     (): OptimisticResult<Data, Vars> =>
       base === undefined || data === undefined
-        ? { pending: true, error: resultError }
+        ? resultError === null
+          ? { status: "loading", refetch }
+          : { status: "error", error: resultError, refetch }
         : {
-            pending: false,
+            status: "ready",
             data,
             serverData: base,
             error: resultError,
+            refetch,
             dispatch,
             pendingOps,
             saving,
             failed,
             retry,
           },
-    [data, base, resultError, dispatch, pendingOps, saving, failed, retry],
+    [
+      data,
+      base,
+      resultError,
+      refetch,
+      dispatch,
+      pendingOps,
+      saving,
+      failed,
+      retry,
+    ],
   );
 }

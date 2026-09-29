@@ -9,7 +9,7 @@ import type {
   ViewTypeMeta,
 } from "../../core";
 import type { ResolvedViewInstance } from "./resolve-instances";
-import { useViewsConfig } from "./use-views-config";
+import { useViewsConfig, type ViewsConfigHandle } from "./use-views-config";
 import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
 import { resolveActiveId } from "./resolve-active-id";
 import { usableTypes } from "./usable-types";
@@ -54,6 +54,10 @@ export interface ViewModelCore<T extends ViewTypeMeta = ViewTypeMeta> {
   /** Is the authored config known yet? See `ViewsConfigHandle.ready` — while
    *  `false`, `instances` is "we don't know", never "there are none". */
   ready: boolean;
+  /** Why `ready` is false when waiting will not fix it — see
+   *  `ViewsConfigHandle.failure`. The host renders it (with Retry), never a
+   *  loading state. `null` while loading, ready, or failed-with-a-held-value. */
+  failure: ViewsConfigHandle["failure"];
   instances: ResolvedViewInstance<T>[];
   activeId: string;
   setActiveView: (id: string) => void;
@@ -165,6 +169,7 @@ export function useViewModel<T extends ViewTypeMeta>(
   return useMemo(
     () => ({
       ready: cfg.ready,
+      failure: cfg.failure,
       instances: cfg.instances as ResolvedViewInstance<T>[],
       activeId,
       setActiveView: active.setActiveView,

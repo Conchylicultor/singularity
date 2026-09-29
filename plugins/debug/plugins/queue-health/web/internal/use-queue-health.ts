@@ -1,5 +1,8 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useNotificationsChannelStatuses,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { queuePulse, type QueuePulse } from "../../core";
 
@@ -34,10 +37,11 @@ export function useQueuePulse(): QueuePulseRead {
     return { kind: "disconnected" };
   }
   if (socket === "connecting") return { kind: "loading" };
-  if (result.pending) {
-    return result.error ? { kind: "error" } : { kind: "loading" };
-  }
-  return { kind: "ready", pulse: result.data };
+  return foldResource<typeof result, QueuePulseRead>(result, {
+    loading: () => ({ kind: "loading" }),
+    error: () => ({ kind: "error" }),
+    ready: (pulse) => ({ kind: "ready", pulse }),
+  });
 }
 
 /** The status a read gives the row. Pure, so the mapping is testable alone. */

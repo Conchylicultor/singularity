@@ -1,4 +1,5 @@
 import type { BlockFrameProps } from "@plugins/page/plugins/editor/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { ContainerBackdrop } from "@plugins/page/plugins/container/web";
 import { useTodoTaskState } from "@plugins/page/plugins/annotations/plugins/todo/plugins/task-link/web";
 
@@ -61,12 +62,20 @@ function LinkedTodoFrame({
   frame: BlockFrameProps;
 }) {
   const dispatched = useTodoTaskState(blockId);
-  const tint =
-    dispatched?.status === "done"
-      ? TINTS.done
-      : dispatched?.status === "dropped"
-        ? TINTS.dropped
-        : TINTS.open;
+  // A wash has no room for a loading or error affordance, so both paint the
+  // "outstanding work" hue — the card's own look before any task says
+  // otherwise. The dispatch panel behind the card's glyph is where a failed
+  // read is reported, with Retry.
+  const tint = foldResource(dispatched, {
+    loading: () => TINTS.open,
+    error: () => TINTS.open,
+    ready: (task) =>
+      task?.status === "done"
+        ? TINTS.done
+        : task?.status === "dropped"
+          ? TINTS.dropped
+          : TINTS.open,
+  });
 
   return <ContainerBackdrop frame={frame} className={tint} />;
 }

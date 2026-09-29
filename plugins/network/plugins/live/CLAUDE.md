@@ -117,13 +117,16 @@ useLiveRow(eventSources, sourceId);                                   // one row
 - **Read — `useLive(c, query?)`.** The query's SHAPE picks the resource; there is
   one hook for every list read, and a separate hook only where the result has
   different STATES (`useLiveRow`).
-  - A window query returns `ResourceResult<Row[]>` whose settled arm adds
-    `canGrow` (`rows.length === limit && limit < maxLimit`), `growing` and
-    `loadMore()` (grow by one default page, clamped to `maxLimit`). While a grown
-    window loads the hook stays SETTLED on the previous rows (`growing: true`) —
-    the previous tuple stays subscribed only for that moment — so `if (pending)`
-    never flashes over a list that already rendered. Each grow step is a new
-    tuple; that is fine up to `maxLimit`.
+  - A window query returns `LiveListResult<Row>` — `ResourceResult<Row[]>`
+    (`status: "loading" | "error" | "ready"`, see `live-state/CLAUDE.md`) whose
+    `ready` arm adds `canGrow` (`rows.length === limit && limit < maxLimit`),
+    `growing` and `loadMore()` (grow by one default page, clamped to
+    `maxLimit`). While a grown window loads the hook stays `ready` on the
+    previous rows (`growing: true`) — the previous tuple stays subscribed only
+    until the grown one has a value — so a list that already rendered never
+    flashes a spinner. A grow that FAILS before its first value is the `error`
+    arm with the previous window as `stale`. Each grow step is a new tuple;
+    that is fine up to `maxLimit`.
   - A **grouping** — `{ groupBy, where?, limit? }` — returns the same
     `LiveListResult`, of `{ value: V | null; count: number }`. `groupBy` is any
     declared filterable column of a `text` / `number` / `boolean` domain, and
@@ -139,25 +142,38 @@ useLiveRow(eventSources, sourceId);                                   // one row
   - Every query is identified by its canonical encoding, so inline object
     literals are fine. A list result (and its `loadMore`) keeps its identity
     until its rows, state or limit change, so a consumer may memoize on it.
-- **Read — `useLiveRow(c, id: string | null)`.** `{ pending: true; error;
-  stale? } | { pending: false; found: true; row } | { pending: false; found:
-  false }`. A point read: it ignores every client filter and window bound (the
+- **Read — `useLiveRow(c, id: string | null)`.** `{ status: "loading" } |
+  { status: "error"; error; stale? } | { status: "ready"; found: true; row } |
+  { status: "ready"; found: false }`, every arm with `refetch`. A point read: it ignores every client filter and window bound (the
   base `where` still applies — a row outside the collection is not found), so
   `found: false` means the row is not in the collection — never "outside the
   window".
+<<<<<<< .merge_file_W9fIjy
   - **A `null` id** (nothing to look up yet) is `{ pending: false, found:
     false }` from the FIRST render, and reads nothing: the substrate's skip
     (`useResource(desc, null)` — no subscription, no HTTP read or cold-start
     prime, not a pending mount), the same one a value's `useLive(v, null)` uses.
+=======
+  - **A `null` id** (nothing to look up yet) is `{ status: "ready", found:
+    false }` from the FIRST render. It still reads a tuple — the empty id set
+    `{ ids: "" }`, one per collection, shared by every null reader, answered
+    with `[]` and no query — so it counts as a pending mount until that `[]`
+    lands. `useResource` has deliberately no skip option: a public skip would
+    skip values too, and would have to disarm the pending-mount count and the
+    cold-start prime.
+>>>>>>> .merge_file_PZXzrC
 - **Optimistic reads** are `optimistic-mutation`'s, over the same argument
   shapes: `useOptimisticResource(value, params?, options)` and
   `useOptimisticResource(c, { ids }, options)` (the `:rows` read — the queue's
-  ranks). `pending` until a real value lands, never on a placeholder, and
-  `dispatch` only on the settled arm. The hook asks the server for standalone
+  ranks). `loading` until a real value lands, never on a placeholder, and
+  `dispatch` only on the `ready` arm — named by `status` like every read, with
+  live-state's one named exemption: once a value has landed, a failing read
+  stays `ready` and carries the failure as `error` (see live-state CLAUDE.md). The hook asks the server for standalone
   ack frames on its tuple (client-requested, per subscription), so a write
   that changes nothing in the tuple still confirms — nothing is declared here.
-- `useLive` is on `live-state/no-pending-data-collapse`'s watched list;
-  `useLiveRow` has no `data` to collapse.
+- `useLive` is on `live-state/no-pending-data-collapse`'s watched list
+  (`useLiveRow` has no `data` to collapse), and both on `no-ready-negation`'s:
+  never `status !== "ready"` — name `"loading"` and `"error"`.
 
 ## Values — `liveValue` / `serveValue` / `useLive(value)`
 
@@ -204,8 +220,9 @@ useLive(taskDetail, id === null ? null : { id });  // no subject yet: skipped, p
 
 - **Declare.** The key is a positional string literal (the scanners read it).
   `params` is a const tuple of names; `P` is derived from it (no phantom
-  generic to restate). There is **no `initial`**: not known yet is `pending`,
+  generic to restate). There is **no `initial`**: not known yet is `loading`,
   never a stand-in — the descriptor has no `initialData` (an optimistic read of
+<<<<<<< .merge_file_W9fIjy
   a value is `useOptimisticResource(value, params?, options)`, pending until the
   first value — see below). `live: "value"` is the discriminant `useLive`
   dispatches on.
@@ -228,6 +245,14 @@ useLive(taskDetail, id === null ? null : { id });  // no subject yet: skipped, p
     must pass `preloadParams: () => P[] | Promise<P[]>` (tsc, and a throw at
     serve time for an untyped caller; any other value may not pass it) — see
     Preload below.
+=======
+  a value is `useOptimisticResource(value, params?, options)`, loading until the
+  first value — see below). `preload` is typed `never`
+  beside `params`: only a param-less value has a default tuple the server can
+  load before a tab names one. A preloaded value sets `defaultParams: {}`, the
+  tuple both the boot snapshot and `useLive(v)` use. `live: "value"` is the
+  discriminant `useLive` dispatches on.
+>>>>>>> .merge_file_PZXzrC
 - **Load (delivery mode).** `load` defaults to `"push"` (the value is
   recomputed and pushed); `"on-demand"` is the runtime's `invalidate` — the
   server never ships the value over the socket, and each tab reads it over
@@ -393,10 +418,11 @@ grouped under the wave or item that removes it
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Uses:
     - `primitives/live-state.ResourceDescriptor`
+    - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
   - Exports (types):
@@ -405,6 +431,7 @@ grouped under the wave or item that removes it
     - `LivePaging`
     - `LiveRowResult`
   - Exports (values):
+    - `mapRow`
     - `useLive`
     - `useLiveRow`
 - Server:
@@ -445,6 +472,11 @@ grouped under the wave or item that removes it
     - `network/live/filter.Filterable`
     - `network/live/filter.FilterScalar`
     - `network/live/filter.LIST_MAX`
+<<<<<<< .merge_file_W9fIjy
+=======
+    - `packages/resource-protocol.ResourceContractError`
+    - `primitives/live-state.keyedResourceDescriptor`
+>>>>>>> .merge_file_PZXzrC
     - `primitives/live-state.PointParams`
     - `primitives/live-state.registerResourceDescriptor`
     - `primitives/live-state.ResourceDescriptor`
@@ -601,6 +633,7 @@ grouped under the wave or item that removes it
     - `shell/notifications`
     - `tasks/attempt-work`
     - `tasks/auto-start`
+    - `tasks/auto-start/launch-option`
     - `tasks/task-description`
     - `tasks/task-effort`
     - `tasks/task-events`

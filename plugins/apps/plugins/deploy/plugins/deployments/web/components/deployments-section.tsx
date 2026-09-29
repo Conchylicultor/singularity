@@ -1,3 +1,4 @@
+import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import { useMemo, type ReactElement, type ReactNode } from "react";
 import {
   DataView,
@@ -7,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   matchResource,
+  ResourceErrorInline,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive, type LiveRowResult } from "@plugins/network/plugins/live/web";
@@ -86,21 +88,32 @@ export function DeploymentsSection({
     <Stack gap="md">
       <PlatformCaption health={health} />
       {matchResource(loaded, {
-        // The DataView owns the loading render (its own skeleton) and keeps its
-        // chrome stable, so the "nothing is deployed" empty state always means
-        // confirmed-empty. Same shape as the servers list next door.
-        pending: () => (
-          <DeploymentsBody serverId={serverId} rows={[]} runs={{}} loading />
+        // The DataView owns the loading and error renders (its own skeleton,
+        // the failure with Retry) and keeps its chrome stable, so the "nothing
+        // is deployed" empty state always means confirmed-empty. Same shape as
+        // the servers list next door.
+        loading: () => (
+          <DeploymentsBody
+            serverId={serverId}
+            rows={[]}
+            runs={{}}
+            readiness={loaded}
+          />
         ),
         error: () => (
-          <DeploymentsBody serverId={serverId} rows={[]} runs={{}} loading />
+          <DeploymentsBody
+            serverId={serverId}
+            rows={[]}
+            runs={{}}
+            readiness={loaded}
+          />
         ),
         ready: ({ rows, runs }) => (
           <DeploymentsBody
             serverId={serverId}
             rows={rows}
             runs={runs}
-            loading={false}
+            readiness={loaded}
           />
         ),
       })}
@@ -118,7 +131,17 @@ function PlatformCaption({
 }: {
   health: LiveRowResult<ServerHealthRow>;
 }): ReactNode {
-  if (health.pending) return <Loading />;
+  if (health.status === "loading") return <Loading />;
+  if (health.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the server's platform"
+        error={health.error}
+        refetch={health.refetch}
+      />
+    );
+  }
   const platform = health.found && health.row.ok ? health.row.platform : null;
   return (
     <Text as="p" variant="caption" tone="muted">
@@ -133,12 +156,12 @@ function DeploymentsBody({
   serverId,
   rows,
   runs,
-  loading,
+  readiness,
 }: {
   serverId: string;
   rows: readonly Deployment[];
   runs: Record<string, DeployRun>;
-  loading: boolean;
+  readiness: ResourceReadiness;
 }): ReactNode {
   const openPane = useOpenPane();
   // The selection is the ROUTE, never local state: the highlighted row and the
@@ -210,7 +233,7 @@ function DeploymentsBody({
         views={["list", "table"]}
         defaultView="list"
         storageKey={DEPLOYMENTS_VIEW}
-        loading={loading}
+        readiness={readiness}
         itemActions={DeploymentItemActions}
         creators={creators}
         selectedRowId={selectedId}

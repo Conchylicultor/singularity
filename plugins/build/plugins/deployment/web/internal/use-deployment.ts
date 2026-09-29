@@ -1,4 +1,8 @@
 import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { deployment, type Carrier, type DeploymentState } from "../../core";
 import { tabCarrier } from "./tab-carrier";
 
@@ -7,14 +11,14 @@ import { tabCarrier } from "./tab-carrier";
  * evidence, and the full carrier set — the server's two deployable pins with
  * THIS tab's own pin composed in beside them.
  *
- * A discriminated union rather than nullable fields, so a consumer cannot read
- * `state` before it exists. `error` rides on the pending arm because that is
- * where live-state puts a transient read failure: a settled result is one the
- * server currently vouches for, and never carries an error.
+ * A resource result rather than nullable fields, so a consumer cannot read
+ * `state` before it exists, and a failed read is its own `error` arm (with the
+ * typed `ResourceError` and a `refetch`) rather than a flavour of loading.
  */
-export type DeploymentReading =
-  | { pending: true; error: Error | null }
-  | { pending: false; state: DeploymentState; carriers: Carrier[] };
+export type DeploymentReading = ResourceResult<{
+  state: DeploymentState;
+  carriers: Carrier[];
+}>;
 
 /**
  * The one client-side read of the deployment.
@@ -30,11 +34,9 @@ export type DeploymentReading =
  */
 export function useDeployment(): DeploymentReading {
   const result = useLive(deployment);
-  if (result.pending) return { pending: true, error: result.error };
-  return {
-    pending: false,
-    state: result.data,
+  return mapResource(result, (state) => ({
+    state,
     // Order matters only for reading: server, web, then this tab.
-    carriers: [...result.data.deployable, tabCarrier()],
-  };
+    carriers: [...state.deployable, tabCarrier()],
+  }));
 }

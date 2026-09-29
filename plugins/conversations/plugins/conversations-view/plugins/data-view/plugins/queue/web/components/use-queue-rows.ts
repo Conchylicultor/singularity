@@ -6,7 +6,11 @@ import {
   conversationsGoneResource,
   tasksResource,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  combineResources,
+  useResource,
+  type ResourceReadiness,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -72,7 +76,8 @@ type QueueDisplay = {
 export function useQueueRows(): {
   rows: QueueRow[];
   dispatchReorder: (vars: ReorderVars) => void;
-  pending: boolean;
+  /** The state of the reads behind `rows` — hand it to DataView's `readiness`. */
+  readiness: ResourceReadiness;
 } {
   const activeResult = useResource(conversationsActiveResource);
   const goneResult = useResource(conversationsGoneResource);
@@ -83,7 +88,8 @@ export function useQueueRows(): {
   // with a genuinely-empty one. The all-or-nothing gate below (which includes
   // `activeResult`) keeps the whole hook pending until active settles.
   const liveIds = useMemo<string[] | null>(() => {
-    if (activeResult.pending) return null;
+    if (activeResult.status === "loading" || activeResult.status === "error")
+      return null;
     return activeResult.data.map((c) => c.id);
   }, [activeResult]);
   // The ranks of the live set, as an id set of the collection. A pending live
@@ -107,24 +113,28 @@ export function useQueueRows(): {
 
   // All-or-nothing gate over the four live resources, memoized on their STABLE
   // result identities (each `useResource`/`useOptimisticResource` result is
-  // referentially stable when its data/pending is unchanged). This stability is
+  // referentially stable when its data/status is unchanged). This stability is
   // load-bearing: the retain-last set-during-render below relies on `computed`
   // being a stable object between renders, so it fires only on genuine changes and
   // terminates. `null` early-returns (never a fake-empty) so a pending resource is
   // never confused with an empty one.
   const computed = useMemo<QueueDisplay | null>(() => {
-    if (
-      activeResult.pending ||
-      goneResult.pending ||
-      ranksResult.pending ||
-      tasksResult.pending
-    ) {
+    const all = combineResources({
+      active: activeResult,
+      gone: goneResult,
+      ranks: ranksResult,
+      tasks: tasksResult,
+    });
+    if (all.status === "loading" || all.status === "error") return null;
+    // Already settled per the combine above; this narrows the optimistic
+    // result to its `ready` arm, the one carrying `dispatch`.
+    if (ranksResult.status === "loading" || ranksResult.status === "error")
       return null;
-    }
+    const { active, gone, ranks, tasks } = all.data;
 
     // Wrap the point ranks in the client-side `QueueData` shape so
     // `classifyQueue` (the shared source of truth) stays UNCHANGED.
-    const queue: QueueData = { ranks: ranksResult.data };
+    const queue: QueueData = { ranks };
     const {
       pinnedGroups,
       waitingGroups,
@@ -134,12 +144,7 @@ export function useQueueRows(): {
       unranked,
       disconnected,
       recentGone,
-    } = classifyQueue({
-      active: activeResult.data,
-      gone: goneResult.data,
-      queue,
-      tasks: tasksResult.data,
-    });
+    } = classifyQueue({ active, gone, queue, tasks });
 
     const out: QueueRow[] = [];
 
@@ -244,12 +249,37 @@ export function useQueueRows(): {
   // `pending`.
   const [lastGood, setLastGood] = useState<QueueDisplay | null>(null);
   if (computed && computed !== lastGood) setLastGood(computed);
-  const display = computed ?? lastGood;
+
+  // A FAILED read is never papered over by the retained display: the retention
+  // exists for the brief loading re-baseline, and a failure shown as the old
+  // rows (or as a skeleton) would hide that the queue stopped updating.
+  const gate = combineResources({
+    active: activeResult,
+    gone: goneResult,
+    ranks: ranksResult,
+    tasks: tasksResult,
+  });
+  let display: QueueDisplay | null;
+  let readiness: ResourceReadiness;
+  switch (gate.status) {
+    case "error":
+      display = null;
+      readiness = gate;
+      break;
+    case "loading":
+      display = lastGood;
+      readiness = lastGood === null ? gate : { status: "ready" };
+      break;
+    case "ready":
+      display = computed;
+      readiness = gate;
+      break;
+  }
 
   return {
     rows: display?.rows ?? [],
     dispatchReorder: display?.dispatchReorder ?? noReorder,
-    pending: display === null,
+    readiness,
   };
 }
 

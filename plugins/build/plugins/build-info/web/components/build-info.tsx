@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -100,7 +101,17 @@ export function BuildInfo({ runId }: { runId: string }) {
   // newest 50 the window holds is still found. `found: false` means this
   // namespace has no such run.
   const result = useLiveRow(buildHistory, runId);
-  if (result.pending) return <Loading />;
+  if (result.status === "loading") return <Loading />;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="this build run"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  }
   if (!result.found) {
     return (
       <Text as="p" variant="caption" className="text-muted-foreground">

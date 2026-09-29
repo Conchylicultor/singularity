@@ -58,6 +58,7 @@ It contributes to two generic seams and names nothing else:
     - `page/editor.Editor`
     - `page/page-reference.PageReference`
     - `primitives/css/badge.Badge`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`

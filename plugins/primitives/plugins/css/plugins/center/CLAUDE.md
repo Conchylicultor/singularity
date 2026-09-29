@@ -121,6 +121,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `primitives/diff-view`
     - `primitives/folder-picker`
     - `primitives/icon-picker`
+    - `primitives/live-state`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `primitives/setup-steps`

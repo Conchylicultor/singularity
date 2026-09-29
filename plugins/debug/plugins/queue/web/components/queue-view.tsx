@@ -7,7 +7,10 @@ import { useMemo, useState } from "react";
 
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   useLive,
   type LiveListResult,
@@ -42,7 +45,6 @@ import {
 } from "@plugins/infra/plugins/events/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
@@ -142,16 +144,7 @@ function truncate(s: string, max: number): string {
 }
 
 /** A window read's settled arm: its rows plus the paging handles. */
-type SettledList<Row> = Extract<LiveListResult<Row>, { pending: false }>;
-
-/** A window read that has not settled: its load error, else the loading state. */
-function PendingList({ error }: { error: Error | null }) {
-  return error ? (
-    <Placeholder tone="error">{error.message}</Placeholder>
-  ) : (
-    <Loading />
-  );
-}
+type SettledList<Row> = Extract<LiveListResult<Row>, { status: "ready" }>;
 
 /**
  * Grows a window by one page when the footer's sentinel scrolls into view, up
@@ -476,7 +469,17 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
 
 function DeadTab() {
   const dead = useLive(deadJobs);
-  if (dead.pending) return <PendingList error={dead.error} />;
+  if (dead.status === "loading") return <Loading />;
+  if (dead.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the dead jobs"
+        error={dead.error}
+        refetch={dead.refetch}
+      />
+    );
+  }
   return <DeadTabInner dead={dead} />;
 }
 
@@ -620,7 +623,17 @@ function DeadJobDrawer({
 
 function EventsTab() {
   const emissions = useLive(eventEmissions);
-  if (emissions.pending) return <PendingList error={emissions.error} />;
+  if (emissions.status === "loading") return <Loading />;
+  if (emissions.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the event emissions"
+        error={emissions.error}
+        refetch={emissions.refetch}
+      />
+    );
+  }
   return <EventsTabInner emissions={emissions} />;
 }
 

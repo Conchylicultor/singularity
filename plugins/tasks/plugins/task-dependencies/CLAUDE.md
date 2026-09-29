@@ -17,10 +17,10 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
-    - `tasks.useTask`
     - `tasks/task-category.useTaskCategoryMap`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-detail.TaskDetailSlots`

@@ -26,6 +26,7 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/relative-time.RelativeTime`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`

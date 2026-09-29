@@ -21,3 +21,9 @@ export { tolerantEnum } from "./tolerant-enum";
 export { resolvableSchema, resolved, unresolved } from "./resolvable";
 export type { Resolvable } from "./resolvable";
 export { compareTxWatermark } from "./watermark";
+export { ResourceError } from "./resource-status";
+export type {
+  ResourceStatus,
+  ResourceErrorKind,
+  ResourceReadiness,
+} from "./resource-status";

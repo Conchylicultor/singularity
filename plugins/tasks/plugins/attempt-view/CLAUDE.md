@@ -29,12 +29,15 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/launch.LaunchControl`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneInstanceContext`
+    - `primitives/pane.resolveFrom`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
   - Exports (values): `attemptPane`

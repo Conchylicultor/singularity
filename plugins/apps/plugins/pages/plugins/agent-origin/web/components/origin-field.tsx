@@ -4,6 +4,7 @@ import type {
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PageRow } from "@plugins/page/plugins/editor/core";
 import { agentPages } from "../../shared/resources";
 
@@ -19,12 +20,18 @@ export function OriginField({ render }: FieldExtensionProps<PageRow>) {
   // An empty set while pending is the correct read: every page then projects
   // "user", so the tree renders exactly as it did before this plugin existed
   // until the resource settles — never a flash of pages under `Agent` and never
-  // an unresolvable rule.
+  // an unresolvable rule. A failed read projects the same empty set: the
+  // grouping is an enrichment, and the tree itself stays correct without it.
   const result = useLive(agentPages);
-  const agentIds = useMemo(() => {
-    if (result.pending) return new Set<string>();
-    return new Set(result.data.map((r) => r.blockId));
-  }, [result]);
+  const agentIds = useMemo(
+    () =>
+      foldResource(result, {
+        loading: () => new Set<string>(),
+        error: () => new Set<string>(),
+        ready: (rows) => new Set(rows.map((r) => r.blockId)),
+      }),
+    [result],
+  );
   const fields = useMemo<FieldDef<PageRow>[]>(
     () => [
       {

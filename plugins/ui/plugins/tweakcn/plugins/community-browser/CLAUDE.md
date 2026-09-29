@@ -13,13 +13,17 @@
     - `config_v2.useSetConfig`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.combineResources`
+    - `primitives/live-state.GateInput`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.useEndpointResource`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.ThemeSourceEntry`
     - `ui/theme-engine.useThemes`

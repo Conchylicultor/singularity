@@ -9,6 +9,7 @@ import {
 import type { ConfigV2ConflictLocations } from "@plugins/config_v2/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -43,7 +44,17 @@ export function ScopeTabs({
   // descriptor's list is its entry. Gate so the tab bar paints only settled
   // data (no flash of a Base-only bar before known scopes resolve).
   const scopesRes = useLive(configScopes);
-  if (scopesRes.pending) return <Loading />;
+  if (scopesRes.status === "loading") return <Loading />;
+  if (scopesRes.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the scopes"
+        error={scopesRes.error}
+        refetch={scopesRes.refetch}
+      />
+    );
+  }
   const scopes = scopesRes.data[storePath] ?? [];
 
   return (

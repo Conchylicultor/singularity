@@ -15,6 +15,8 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/editable-field.useEditableField`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `tasks.patchTask`

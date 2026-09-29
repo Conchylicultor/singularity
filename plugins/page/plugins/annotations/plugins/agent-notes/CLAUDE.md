@@ -71,6 +71,7 @@ without being in it.
     - `page/container.ContainerCornerLabel`
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
+    - `primitives/live-state.foldResource`
   - Exports (values): `agentNotesBlock`
 - Server:
   - Contributes: `page.block-data` "agent-note"

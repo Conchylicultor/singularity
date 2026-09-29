@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   listTaskCategories,
   type TaskCategoryDef,
@@ -19,13 +22,17 @@ export function useTaskCategories(): TaskCategoryDef[] {
   return data?.categories ?? [];
 }
 
-// Map<taskId, categoryId> from the live keyed resource. Empty while pending —
-// consumers treat a missing entry as "no category" (the "None" bucket), and the
-// resource is boot-critical so it is hydrated before first paint anyway.
+// Map<taskId, categoryId> from the live keyed resource. Empty while loading or
+// failed — consumers treat a missing entry as "no category" (the "None"
+// bucket), the category is cosmetic grouping, and the resource is
+// boot-critical so it is hydrated before first paint anyway.
 export function useTaskCategoryMap(): ReadonlyMap<string, string> {
   const result = useResource(taskCategoriesResource);
   return useMemo(() => {
-    if (result.pending) return new Map<string, string>();
-    return new Map(result.data.map((r) => [r.taskId, r.category]));
+    return foldResource(result, {
+      loading: () => new Map<string, string>(),
+      error: () => new Map<string, string>(),
+      ready: (rows) => new Map(rows.map((r) => [r.taskId, r.category])),
+    });
   }, [result]);
 }

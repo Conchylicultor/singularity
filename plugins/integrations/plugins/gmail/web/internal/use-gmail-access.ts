@@ -1,5 +1,9 @@
 import { useConfig } from "@plugins/config_v2/web";
 import { useAccountStatus, missingScopes } from "@plugins/auth/web";
+import {
+  foldResource,
+  type ResourceError,
+} from "@plugins/primitives/plugins/live-state/web";
 import { gmailConfig } from "../../shared/config";
 import { GMAIL_SCOPES, GOOGLE_PROVIDER_ID } from "../../core";
 
@@ -20,29 +24,69 @@ export interface GmailAccess {
   scopesGranted: boolean;
   /** enabled && connected && scopesGranted. */
   ready: boolean;
-  /** Auth status still resolving (null from useAccountStatus). */
+  /** The auth status has not arrived yet. */
   loading: boolean;
-  /** The next unmet prerequisite, or null when ready (or still loading). */
+  /**
+   * The auth status failed to load — whether an account is connected is
+   * unknown, so neither `ready` nor a `blocker` is claimed. Null otherwise.
+   */
+  error: ResourceError | null;
+  /** Retry the auth-status read (what an error rendering offers). */
+  refetch: () => Promise<void>;
+  /** The next unmet prerequisite, or null when ready (or still loading, or failed). */
   blocker: GmailAccessBlocker | null;
 }
 
 export function useGmailAccess(): GmailAccess {
   const { enabled } = useConfig(gmailConfig);
   const status = useAccountStatus(GOOGLE_PROVIDER_ID);
-  const loading = status === null;
-  const connected = status?.connected ?? false;
-  const scopesGranted =
-    status != null && missingScopes([...GMAIL_SCOPES], status.scopes).length === 0;
+  const read = foldResource<
+    typeof status,
+    Pick<GmailAccess, "loading" | "error" | "connected" | "scopesGranted">
+  >(status, {
+    loading: () => ({
+      loading: true,
+      error: null,
+      connected: false,
+      scopesGranted: false,
+    }),
+    // A failed read claims nothing: not connected, and no blocker (the fix
+    // affordance would be a guess).
+    error: (error) => ({
+      loading: false,
+      error,
+      connected: false,
+      scopesGranted: false,
+    }),
+    ready: (account) => ({
+      loading: false,
+      error: null,
+      connected: account?.connected ?? false,
+      scopesGranted:
+        account !== null &&
+        missingScopes([...GMAIL_SCOPES], account.scopes).length === 0,
+    }),
+  });
+  const { loading, error, connected, scopesGranted } = read;
   const ready = enabled && connected && scopesGranted;
 
   // Precedence matters: enabling the toggle is what makes the scope requestable,
   // and a scope can only be granted on a connected account.
   let blocker: GmailAccessBlocker | null = null;
-  if (!loading && !ready) {
+  if (!loading && error === null && !ready) {
     if (!enabled) blocker = "disabled";
     else if (!connected) blocker = "disconnected";
     else blocker = "scopes";
   }
 
-  return { enabled, connected, scopesGranted, ready, loading, blocker };
+  return {
+    enabled,
+    connected,
+    scopesGranted,
+    ready,
+    loading,
+    error,
+    refetch: status.refetch,
+    blocker,
+  };
 }

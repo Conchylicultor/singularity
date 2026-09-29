@@ -44,7 +44,7 @@ describe("undeclaredPreloadedKeys", () => {
 describe("assertPreloadedResourcesDeclared", () => {
   const key = "server-core-test.preload-declare";
   const preloaded = defineResource(
-    { key, schema: z.number(), preload: "boot" },
+    { key, schema: z.number(), preload: "boot", validateParams: () => {} },
     { mode: "push", loader: () => 1 },
   );
   const named = `"${key}"`;

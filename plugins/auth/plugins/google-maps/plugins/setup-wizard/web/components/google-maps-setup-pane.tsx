@@ -18,6 +18,10 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { setApiKey } from "@plugins/auth/core";
 import { useAccountStatus } from "@plugins/auth/web";
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { GOOGLE_MAPS_PROVIDER_ID } from "@plugins/auth/plugins/google-maps/core";
 
 const CONSOLE = "https://console.cloud.google.com";
@@ -40,7 +44,14 @@ export function GoogleMapsSetupPane() {
   const status = useAccountStatus(GOOGLE_MAPS_PROVIDER_ID);
 
   const hasProject = projectId.length > 0;
-  const connected = !!status?.connected;
+  // Whether a key is stored is only claimed once the auth state is read; a
+  // failed read says so on the key step (with Retry) instead of looking like
+  // "no key yet".
+  const connected = foldResource(status, {
+    loading: () => false,
+    error: () => false,
+    ready: (account) => account?.connected ?? false,
+  });
 
   async function handleSaveKey() {
     setSaving(true);
@@ -136,6 +147,14 @@ export function GoogleMapsSetupPane() {
 
         <Step title="Paste the key" state={connected ? "done" : "active"}>
           <Stack gap="sm">
+            {status.status === "error" && (
+              <ResourceErrorInline
+                variant="inline"
+                subject="whether a key is stored"
+                error={status.error}
+                refetch={status.refetch}
+              />
+            )}
             {connected ? (
               <StepDone>
                 Key stored and verified against the Places API

@@ -3,7 +3,12 @@ import {
   SectionCount,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  mapResource,
+  ResourceView,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -161,15 +166,13 @@ function usePluginReviews(node: PluginNode) {
 }
 
 /**
- * How many health reviews this plugin has, or `null` while the read is still
- * in flight. The `null` is load-bearing: collapsing "not known yet" into `0`
- * would make a reviewed plugin's card read as never-reviewed for the whole load
- * window, and would paint a literal "0" count beside the title.
+ * How many health reviews this plugin has, as a read: loading and failed are
+ * states, never a count. Collapsing "not known yet" into `0` would make a
+ * reviewed plugin's card read as never-reviewed for the whole load window, and
+ * would paint a literal "0" count beside the title.
  */
-function useReviewCount(node: PluginNode): number | null {
-  const reviewsResult = usePluginReviews(node);
-  if (reviewsResult.pending) return null;
-  return reviewsResult.data.length;
+function useReviewCount(node: PluginNode): ResourceResult<number> {
+  return mapResource(usePluginReviews(node), (reviews) => reviews.length);
 }
 
 /**
@@ -179,18 +182,28 @@ function useReviewCount(node: PluginNode): number | null {
  * boolean and so cannot express "not known yet"; of the two honest readings,
  * hiding-then-appearing costs a pop-in only on the few reviewed plugins, whereas
  * showing-then-vanishing would flash a card on every unreviewed one — and most
- * plugins are unreviewed.
+ * plugins are unreviewed. A FAILED read shows the card, so the section's own
+ * error (with Retry) is on screen rather than the failure hiding the card.
  */
 export function useHealthAvailable({ node }: { node: PluginNode }): boolean {
-  const count = useReviewCount(node);
-  return count !== null && count > 0;
+  return foldResource(useReviewCount(node), {
+    loading: () => false,
+    error: () => true,
+    ready: (count) => count > 0,
+  });
 }
 
 export function HealthCount({ node }: { node: PluginNode }) {
   const count = useReviewCount(node);
-  // Nothing rather than "0" while the count is unknown.
-  if (count === null) return null;
-  return <SectionCount>{count}</SectionCount>;
+  // Nothing rather than "0" while the count is unknown; a failed read shows in
+  // the section body, not in the title's count.
+  switch (count.status) {
+    case "loading":
+    case "error":
+      return null;
+    case "ready":
+      return <SectionCount>{count.data}</SectionCount>;
+  }
 }
 
 export function HealthSection({ node }: { node: PluginNode }) {

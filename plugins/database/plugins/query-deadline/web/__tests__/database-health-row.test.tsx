@@ -9,6 +9,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import type { QueryDeadlineHit, QueryDeadlines } from "../../core";
 
 let resourceValue: ResourceResult<QueryDeadlines>;
@@ -24,7 +25,7 @@ const MIN = 60_000;
 const refetch = () => Promise.resolve();
 
 function settled(hits: QueryDeadlineHit[]): ResourceResult<QueryDeadlines> {
-  return { pending: false, data: { hits }, refetch };
+  return { status: "ready", data: { hits }, refetch };
 }
 
 function hit(
@@ -65,13 +66,17 @@ afterEach(() => {
 
 describe("Database health row", () => {
   it("is unknown — not ok — while the resource has not loaded", () => {
-    resourceValue = { pending: true, error: null, refetch };
+    resourceValue = { status: "loading", refetch };
     const { result } = renderHook(() => useDatabaseHealth());
     expect(result.current).toEqual({ state: "unknown" });
   });
 
   it("is unknown with a reason when the resource failed to load", () => {
-    resourceValue = { pending: true, error: new Error("boom"), refetch };
+    resourceValue = {
+      status: "error",
+      error: new ResourceError("loader-failed", "boom", null),
+      refetch,
+    };
     const { result } = renderHook(() => useDatabaseHealth());
     expect(result.current).toEqual({
       state: "unknown",

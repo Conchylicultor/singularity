@@ -9,6 +9,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useMemo, useState } from "react";
 import {
+  foldResource,
   useResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -83,13 +84,23 @@ function AgentDetailInner({
     [agentId],
   );
 
-  const latestStatus = useMemo(() => {
-    if (launchesQ.pending) return null;
-    const latest = launchesQ.data
-      .filter((l) => l.agentId === agentId)
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
-    return latest?.latestConversationStatus ?? null;
-  }, [launchesQ, agentId]);
+  // The avatar's status dot. A failed launches read draws no dot, the same as
+  // loading: the dot is decoration on the avatar, and the Attempts section
+  // below renders that same read's failure where it can be retried.
+  const latestStatus = useMemo(
+    () =>
+      foldResource(launchesQ, {
+        loading: () => null,
+        error: () => null,
+        ready: (launches) => {
+          const latest = launches
+            .filter((l) => l.agentId === agentId)
+            .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
+          return latest?.latestConversationStatus ?? null;
+        },
+      }),
+    [launchesQ, agentId],
+  );
 
   const nameField = useEditableField({
     value: agent.name ?? "",

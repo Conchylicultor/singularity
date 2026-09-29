@@ -78,7 +78,7 @@ export function PresentStage({
     version: useLive(prototypesVersion),
   });
   return matchResource(stage, {
-    pending: () => <Loading variant="block" />,
+    loading: () => <Loading variant="block" />,
     ready: ({ rows, version }) => {
       const meta = rows.find((p) => p.name === name) ?? null;
       if (!meta) {

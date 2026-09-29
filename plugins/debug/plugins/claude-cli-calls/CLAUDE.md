@@ -21,7 +21,6 @@
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
-    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -31,6 +30,7 @@
     - `primitives/filter-chips.FilterChip`
     - `primitives/filter-chips.FilterGroup`
     - `primitives/filter-chips.useChipFilter`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`

@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ReactNode } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -76,7 +77,30 @@ export function RemoteDeploySection({
   const deployment = useLiveRow(deployments, deploymentId);
   const runs = useLive(deployRuns);
 
-  if (deployment.pending || runs.pending) return <Loading variant="rows" />;
+  // Precedence error > loading: one failed read fails the section.
+  if (deployment.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the deployment"
+        error={deployment.error}
+        refetch={deployment.refetch}
+      />
+    );
+  }
+  if (runs.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the deploy runs"
+        error={runs.error}
+        refetch={runs.refetch}
+      />
+    );
+  }
+  if (deployment.status === "loading" || runs.status === "loading") {
+    return <Loading variant="rows" />;
+  }
   if (!deployment.found) {
     return (
       <Placeholder tone="error">This deployment no longer exists.</Placeholder>
@@ -99,7 +123,17 @@ function RemoteDeployHealth({
   run: DeployRun | undefined;
 }): ReactNode {
   const health = useServerHealth(deployment.serverId);
-  if (health.pending) return <Loading variant="rows" />;
+  if (health.status === "loading") return <Loading variant="rows" />;
+  if (health.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the server's health"
+        error={health.error}
+        refetch={health.refetch}
+      />
+    );
+  }
   return (
     <RemoteDeploy
       deployment={deployment}

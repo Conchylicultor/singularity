@@ -19,15 +19,15 @@ import {
  * neighbor-based `reorderQueue` drag; `aggregate` collapses task-groups (in the
  * ranked/working sections) to one representative + `×N` badge.
  *
- * `render(bundle)` is ALWAYS called (loading rides in the bundle) so the
- * surface chrome never vanishes while the queue resource is pending.
+ * `render(bundle)` is ALWAYS called (readiness rides in the bundle) so the
+ * surface chrome never vanishes while the queue reads load or fail.
  */
 export function QueueSource({
   hostProps,
   render,
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
   const { activeId, onNavigate, onCloseConversation } = hostProps;
-  const { rows, dispatchReorder, pending } = useQueueRows();
+  const { rows, dispatchReorder, readiness } = useQueueRows();
 
   return (
     <CloseConversationContext.Provider value={onCloseConversation}>
@@ -35,7 +35,7 @@ export function QueueSource({
         rows,
         fields: queueFields,
         rowKey: (c) => c.id,
-        loading: pending,
+        readiness,
         selectedRowId: activeId ?? undefined,
         onRowActivate: (r) => onNavigate(r.id),
         viewOptions: {

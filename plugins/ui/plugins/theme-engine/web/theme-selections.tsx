@@ -2,7 +2,8 @@ import { useLayoutEffect, useSyncExternalStore } from "react";
 import { useConfigResult, useScopeMembership } from "@plugins/config_v2/web";
 import { Apps } from "@plugins/apps-core/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { themeSelectionConfig, type ThemeId } from "../core";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { DEFAULT_THEME_ID, themeSelectionConfig, type ThemeId } from "../core";
 
 /** One scope that chose a theme: the desktop (`scopeId` undefined) or an app with its own theme document. */
 export interface ThemeSelection {
@@ -106,16 +107,38 @@ function ScopeReporter({ scopeId }: { scopeId: string | undefined }) {
   // inherits is exactly what is unknown.
   const member = useScopeMembership(themeSelectionConfig, scopeId);
   const selection = useConfigResult(themeSelectionConfig, { scopeId });
+  // A failed membership read keeps its last-known answer, else stays unknown.
   const owns: boolean | "unknown" =
-    scopeId === undefined ? true : member.pending ? "unknown" : member.data;
+    scopeId === undefined
+      ? true
+      : foldResource(member, {
+          loading: (): boolean | "unknown" => "unknown",
+          error: (_error, stale): boolean | "unknown" => stale ?? "unknown",
+          ready: (isMember) => isMember,
+        });
 
   useLayoutEffect(() => {
     const key = keyOf(scopeId);
     let report: ScopeReport;
     if (owns === "unknown") report = { kind: "pending" };
     else if (!owns) report = { kind: "inherits" };
-    else if (selection.pending) report = { kind: "pending" };
-    else report = { kind: "selects", themeId: selection.data.theme };
+    else {
+      // A failed read reports what the painter paints for it (the stale
+      // selection, else Default — see useResolvedTheme), so every reader of
+      // the selections agrees with the screen; the failure is reported by
+      // live-state's resource-error sink.
+      report = foldResource(selection, {
+        loading: (): ScopeReport => ({ kind: "pending" }),
+        error: (_error, stale): ScopeReport => ({
+          kind: "selects",
+          themeId: stale?.theme ?? DEFAULT_THEME_ID,
+        }),
+        ready: (data): ScopeReport => ({
+          kind: "selects",
+          themeId: data.theme,
+        }),
+      });
+    }
     reports.set(key, report);
     publish();
     return () => {

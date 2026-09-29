@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   configConflict,
@@ -12,7 +13,7 @@ import type {
 } from "@plugins/config_v2/core";
 
 // One descriptor's conflict entry (or null) for the selected scope. Raw gateable
-// result — never collapse `pending` into `null` (that hides "still loading" from
+// result — never collapse loading/error into `null` (that hides "not known" from
 // "genuinely no conflict"). Callers gate. `scopeId` selects the scope (undefined
 // = Base). Keyed per-path so opening one descriptor recomputes only that one.
 export function useConflict(
@@ -24,20 +25,25 @@ export function useConflict(
 
 // Every conflicting storePath mapped to WHERE it conflicts (base and/or named
 // app scopes) — the aggregate that makes a scoped-only conflict both visible and
-// locatable without opening the descriptor. Gate on `pending` like useConflict.
+// locatable without opening the descriptor. Gate on `status` like useConflict.
 export function useConflictMap(): ResourceResult<ConfigV2ConflictMap> {
   return useLive(configConflictLocations);
 }
 
 // One descriptor's slice of that map, as a stable accessor. `undefined` means
-// "no conflict anywhere" — and, while the resource is still pending, "we don't
-// know yet", which the detail pane's scope-tab dots and conflict-elsewhere banner
-// render as nothing rather than as a claim. (The nav needs the two apart — its
+// "no conflict anywhere" — and, while the resource is still loading or its read
+// failed, "we don't know", which the detail pane's scope-tab dots and
+// conflict-elsewhere banner render as nothing rather than as a claim (a failure
+// keeps its last-known map, when it has one). (The nav needs the two apart — its
 // filters read them — so it reads `useConflictMap` directly.)
 export function useConflictLocationsOf(): (
   storePath: string,
 ) => ConfigV2ConflictLocations | undefined {
   const res = useConflictMap();
-  const map = res.pending ? undefined : res.data;
+  const map = foldResource(res, {
+    loading: () => undefined,
+    error: (_error, stale) => stale,
+    ready: (data) => data,
+  });
   return useCallback((storePath: string) => map?.[storePath], [map]);
 }

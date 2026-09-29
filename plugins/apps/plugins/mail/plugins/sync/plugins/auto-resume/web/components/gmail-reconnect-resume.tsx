@@ -26,19 +26,22 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
  * and fire on every page load.
  */
 export function GmailReconnectResume(): null {
-  const { ready, loading } = useGmailAccess();
+  const { ready, loading, error } = useGmailAccess();
   const resume = useEndpointMutation(mailSyncEndpoint);
   // null = not yet resolved (no baseline captured).
   const prevReady = useRef<boolean | null>(null);
 
   useEffect(() => {
-    if (loading) return;
+    // An unresolved (or failed) status is no observation: a failure reads
+    // `ready === false`, and recording it would make the recovery look like a
+    // reconnect.
+    if (loading || error !== null) return;
     const prev = prevReady.current;
     prevReady.current = ready;
     // First resolved observation is the baseline — don't fire on it.
     if (prev === null) return;
     if (ready && !prev) resume.mutate({});
-  }, [ready, loading, resume]);
+  }, [ready, loading, error, resume]);
 
   return null;
 }

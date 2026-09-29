@@ -5,7 +5,7 @@ import {
   isDraftEmpty,
   usePromptInsert,
 } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversation } from "@plugins/conversations/web";
+import { useLiveConversation } from "@plugins/conversations/web";
 import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
@@ -17,7 +17,7 @@ export function PromptInput({
 }: {
   conversation: ConversationRecord;
 }) {
-  const live = useConversation(conversation.id) ?? conversation;
+  const live = useLiveConversation(conversation);
   const [draft, setDraft, clearDraft] = useDraft(
     CONVERSATION_PROMPT_DRAFT_KEY,
     "",

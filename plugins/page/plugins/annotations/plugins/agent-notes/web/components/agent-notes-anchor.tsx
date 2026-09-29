@@ -1,4 +1,5 @@
 import { ContainerCornerLabel } from "@plugins/page/plugins/container/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type {
   BlockAnchorProps,
   BlockEditorAPI,
@@ -74,8 +75,15 @@ function AuthoredAgentNotesAnchor({
   // While the authorship loads, the card shows its plain name: the name is true
   // whatever the answer, and only its trigger waits on the read — a spinner in
   // place of the word would be noise on every card of the page. An unauthored
-  // card keeps the same plain name once settled.
-  if (authors.pending || authors.data.length === 0)
+  // card keeps the same plain name once settled. Authorship only decorates that
+  // true name, so a FAILED read keeps the authors it last knew, else the plain
+  // name — live-state's resource-error sink reports the failure.
+  const known = foldResource(authors, {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (data) => data,
+  });
+  if (known === null || known.length === 0)
     return <AgentNotesName blockId={blockId} editor={editor} />;
 
   return (
@@ -87,7 +95,7 @@ function AuthoredAgentNotesAnchor({
       triggerLabel="Agent notes authorship"
       width="md"
       sections={({ close }) => (
-        <AgentNotesAuthors authors={authors.data} onOpen={close} />
+        <AgentNotesAuthors authors={known} onOpen={close} />
       )}
     />
   );

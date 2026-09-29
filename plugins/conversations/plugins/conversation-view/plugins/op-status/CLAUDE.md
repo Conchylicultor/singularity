@@ -57,9 +57,11 @@ errors until they have an entry.
 - The **sidebar chip** (`Item.Chips` contribution) shares the same source of
   truth via the `useWorktreeOp(conversationId)` hook: it resolves the row's
   conversation → `worktreePath` → slug (the shared `slugOf` helper) and reads
-  the same `worktreeOps` value. The hook returns `{ pending: true } | {
-  pending: false; op }`, so a map that has not loaded never reads as "idle".
-  The chip renders nothing while pending or for idle worktrees and a
+  the same `worktreeOps` value. The hook returns a
+  `ResourceResult<WorktreeOp | null>` (`mapResource` over the value), so a map
+  that has not loaded — or failed to — never reads as "idle": a ready `null` is
+  the settled "no op". The chip renders nothing while loading or for idle
+  worktrees, the failure as an error icon with Retry, and a
   single **muted icon** otherwise — no chip, no label: the distinct icon (wrench
   = building, up-arrow = pushing, flask = checking, checklist = testing,
   open-in-browser = e2e, hourglass = any op waiting for its lock), not color or
@@ -112,6 +114,10 @@ errors until they have an entry.
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.combineResources`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/relative-time.formatElapsed`

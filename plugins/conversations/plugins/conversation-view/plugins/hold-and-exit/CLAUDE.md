@@ -8,7 +8,7 @@
 - Web:
   - Contributes: `ExitMenu.Item` "hold-and-exit" → `HoldAndExitItem`
   - Uses:
-    - `conversations.useConversation`
+    - `conversations.useLiveConversation`
     - `conversations/conversation-view/exit-menu.ExitMenu`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/ui-kit.DropdownMenuItem`

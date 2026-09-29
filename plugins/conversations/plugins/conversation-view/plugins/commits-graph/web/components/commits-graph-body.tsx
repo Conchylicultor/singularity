@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -35,20 +36,16 @@ function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
   const openPane = useOpenPane();
   const result = useLive(commitsGraph, { attemptId });
 
-  // A settled result no longer carries `.error` (the value it exposes is one the
-  // server currently vouches for). A transient load failure surfaces as
-  // `pending` with `.error` set, so the error placeholder lives inside the
-  // pending arm — checked before the plain `<Loading/>`.
-  if (result.pending) {
-    if (result.error) {
-      return (
-        <Placeholder tone="error">
-          Failed to load commits: {String(result.error)}
-        </Placeholder>
-      );
-    }
-    return <Loading />;
-  }
+  if (result.status === "loading") return <Loading />;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the commits"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
   const graph = result.data;
   // No worktree to measure ⇒ a determinate non-value; render its reason.
   if (!graph.resolved) {

@@ -2,6 +2,10 @@ import { useCallback, useMemo } from "react";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
   fetchEndpoint,
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
@@ -28,47 +32,50 @@ function bindingParams(identity: ActiveDataIdentity) {
   };
 }
 
-interface ActiveDataBindingBase<T> {
+export interface ActiveDataBindingHandle<T> {
   /** Whether identity is available (false in legacy logs without messageId). */
   enabled: boolean;
+  /**
+   * The persisted, schema-validated payload for this widget instance, as a
+   * read: loading, failed, or ready with the payload (`null` when none is
+   * stored). Stays `loading` while `enabled` is false — no identity names no
+   * binding, so nothing is read.
+   */
+  value: ResourceResult<T | null>;
   /** Upsert the payload. No-op when `enabled` is false. */
   set: (next: T) => Promise<void>;
   /** Delete the binding. No-op when `enabled` is false. */
   clear: () => Promise<void>;
 }
 
-export type ActiveDataBindingHandle<T> =
-  | (ActiveDataBindingBase<T> & { pending: true })
-  | (ActiveDataBindingBase<T> & {
-      pending: false;
-      /** Persisted, schema-validated payload for this widget instance, or null. */
-      value: T | null;
-    });
-
 export function useActiveDataBinding<T>(
   schema: ZodParser<T>,
 ): ActiveDataBindingHandle<T> {
   const identity = useActiveDataIdentity();
   // Without an identity there is no conversation to read: the read is skipped
-  // (nothing subscribed), and the handle below reports `pending` with
+  // (nothing subscribed), and the handle below reports `loading` with
   // `enabled: false` — a caller renders a legacy log's widget off `enabled`.
   const resource = useLive(
     activeDataBindings,
     identity ? { conversationId: identity.conversationId } : null,
   );
 
-  const value = useMemo<T | null>(() => {
-    if (!identity || resource.pending) return null;
-    const row = resource.data.find(
-      (b) =>
-        b.messageId === identity.messageId &&
-        b.tag === identity.tag &&
-        b.occurrenceIndex === identity.occurrenceIndex,
-    );
-    if (!row) return null;
-    const parsed = schema.safeParse(row.payload);
-    return parsed.success ? parsed.data : null;
-  }, [identity, resource, schema]);
+  const value = useMemo(
+    () =>
+      mapResource(resource, (rows): T | null => {
+        if (!identity) return null;
+        const row = rows.find(
+          (b) =>
+            b.messageId === identity.messageId &&
+            b.tag === identity.tag &&
+            b.occurrenceIndex === identity.occurrenceIndex,
+        );
+        if (!row) return null;
+        const parsed = schema.safeParse(row.payload);
+        return parsed.success ? parsed.data : null;
+      }),
+    [identity, resource, schema],
+  );
 
   const set = useCallback(
     async (next: T) => {
@@ -105,7 +112,5 @@ export function useActiveDataBinding<T>(
     }
   }, [identity]);
 
-  if (!identity || resource.pending)
-    return { pending: true, enabled: identity !== null, set, clear };
-  return { pending: false, value, enabled: true, set, clear };
+  return { enabled: identity !== null, value, set, clear };
 }

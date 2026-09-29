@@ -1,4 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
+import { combineResources } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -53,18 +54,28 @@ function AttemptCodeReviewSummary({
   const pushesQ = useLive(pushRows, { where: { attemptId } });
 
   // Gate: render nothing while pushes are loading so hasPastPushes is never
-  // incorrectly false (which would hide the file-stats row on a past-push conversation).
-  if (pushesQ.pending) return null;
-  // Same gate for edited-files: collapsing pending to an empty list would show a
-  // confidently-wrong "0 +0 −0" (and hide warnings) until the resource settles.
-  if (filesResult.pending) return null;
+  // incorrectly false (which would hide the file-stats row on a past-push
+  // conversation). Same gate for edited-files: collapsing loading to an empty
+  // list would show a confidently-wrong "0 +0 −0" (and hide warnings) until the
+  // resource settles. A failed read renders nothing here too, deliberately:
+  // this is a header summary chip, and the section body (edited files) and the
+  // review pane's source tabs (pushes) each render their own failure.
+  const reads = combineResources({ pushes: pushesQ, files: filesResult });
+  switch (reads.status) {
+    case "loading":
+    case "error":
+      return null;
+    case "ready":
+      break;
+  }
+  const { pushes, files: filesPayload } = reads.data;
   // An unresolved worktree has no measurable stats — render nothing (this chip's
   // existing absence idiom); the code-review section pane surfaces the reason.
-  if (!filesResult.data.resolved) return null;
-  const files = filesResult.data.value;
+  if (!filesPayload.resolved) return null;
+  const files = filesPayload.value;
 
   // The read is already scoped to this conversation's attempt, so any row means a past push.
-  const hasPastPushes = pushesQ.data.length > 0;
+  const hasPastPushes = pushes.length > 0;
 
   const count = files.length;
   const additions = files.reduce((sum, f) => sum + f.additions, 0);

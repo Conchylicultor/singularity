@@ -15,12 +15,14 @@ import {
   emptyScore,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { Sonata } from "../slots";
 import {
   LoadedSongProvider,
   useLoadSong,
   useLoadedRaw,
   useSettledSongSettings,
+  useFailSongSetting,
   useSongSetting,
   useWriteSongSetting,
 } from "../loaded-song";
@@ -193,9 +195,9 @@ describe("loaded song: content and settings belong to one song", () => {
       return null;
     }
     renderSurface(plugins, [<Capture key="c" />, <Probe key="p" />]);
-    expect(last(seen)).toEqual({ pending: true });
+    expect(last(seen)).toEqual({ kind: "pending" });
     act(() => handles.writeTranspose("a", 3));
-    expect(last(seen)).toEqual({ pending: true });
+    expect(last(seen)).toEqual({ kind: "pending" });
   });
 
   it("loading another song replaces its content and settings in one write: no render pairs one song's content with another's settings", () => {
@@ -217,25 +219,25 @@ describe("loaded song: content and settings belong to one song", () => {
     act(() => handles.load("A", { fixture: "a" }));
     expect(last(seen)).toEqual({
       raw: "a",
-      transpose: { pending: false, value: 1 },
+      transpose: { kind: "settled", value: 1 },
     });
 
     act(() => handles.load("B", { fixture: "b" }));
-    expect(last(seen)).toEqual({ raw: "b", transpose: { pending: true } });
+    expect(last(seen)).toEqual({ raw: "b", transpose: { kind: "pending" } });
 
     // A write for the song that is no longer loaded — a late push — is dropped.
     act(() => handles.writeTranspose("A", 9));
-    expect(last(seen)).toEqual({ raw: "b", transpose: { pending: true } });
+    expect(last(seen)).toEqual({ raw: "b", transpose: { kind: "pending" } });
 
     act(() => server.settle("B", 5));
     expect(last(seen)).toEqual({
       raw: "b",
-      transpose: { pending: false, value: 5 },
+      transpose: { kind: "settled", value: 5 },
     });
 
     // Every render paired a song's content with that song's own settings.
     for (const s of seen) {
-      if (s.transpose.pending) continue;
+      if (s.transpose.kind !== "settled") continue;
       expect(s.transpose.value).toBe(s.raw === "a" ? 1 : 5);
     }
   });
@@ -265,7 +267,7 @@ describe("loaded song: content and settings belong to one song", () => {
     expect(mounts.count).toBe(1);
     // Not one render of the reloaded content went pending.
     expect(seen.slice(rendersSettled)).toEqual([
-      { raw: "a2", transpose: { pending: false, value: 1 } },
+      { raw: "a2", transpose: { kind: "settled", value: 1 } },
     ]);
   });
 
@@ -286,7 +288,7 @@ describe("loaded song: content and settings belong to one song", () => {
     renderSurface(plugins, [<Capture key="c" />, <Probe key="p" />]);
 
     act(() => handles.load("A", { fixture: "a" }));
-    expect(last(seen)).toEqual({ pending: false, value: 1 });
+    expect(last(seen)).toEqual({ kind: "settled", value: 1 });
 
     // The B load empties the settings and the A load empties them again, while
     // the loaded id reads "A" before and after: the observer — which writes only
@@ -296,7 +298,7 @@ describe("loaded song: content and settings belong to one song", () => {
       handles.load("A", { fixture: "a" });
     });
     expect(mounts.count).toBe(2);
-    expect(last(seen)).toEqual({ pending: false, value: 1 });
+    expect(last(seen)).toEqual({ kind: "settled", value: 1 });
   });
 
   it("an unchanged value does not re-render readers", () => {
@@ -343,10 +345,10 @@ describe("the score gate waits on the registered settings, and only on them", ()
 
     act(() => handles.load("A", {}));
     act(() => transposes.settle("A", 2));
-    expect(last(seen)).toEqual({ pending: true });
+    expect(last(seen)).toEqual({ kind: "pending" });
     act(() => extras.settle("A", "x"));
     expect(last(seen)).toEqual({
-      pending: false,
+      kind: "settled",
       value: { transposeSemitones: 2 },
     });
   });
@@ -369,10 +371,10 @@ describe("the score gate waits on the registered settings, and only on them", ()
     renderSurface(plugins, [<Capture key="c" />, <Probe key="p" />]);
 
     act(() => handles.load("A", {}));
-    expect(last(seen)).toEqual({ pending: true });
+    expect(last(seen)).toEqual({ kind: "pending" });
     act(() => transposes.settle("A", 3));
     expect(last(seen)).toEqual({
-      pending: false,
+      kind: "settled",
       value: {
         transposeSemitones: 3,
         keyAutoDetect: false,
@@ -380,7 +382,57 @@ describe("the score gate waits on the registered settings, and only on them", ()
         chordMode: false,
       },
     });
-    expect(last(chordMode)).toEqual({ pending: false, value: false });
+    expect(last(chordMode)).toEqual({ kind: "settled", value: false });
+  });
+
+  it("a registered setting whose read failed fails the gate — with its retry — until a value lands", () => {
+    const transposes = fixtureServer<number>();
+    const extras = fixtureServer<string>();
+    const failure = {
+      error: new ResourceError("loader-failed", "boom", undefined),
+      refetch: () => Promise.resolve(),
+    };
+    // The extra feature's observer, shaped like the real ones: its read
+    // FAILED with nothing to settle from, so it reports the failure.
+    function FailingObserver() {
+      const songId = useMountedSongId();
+      const fail = useFailSongSetting(extraSetting);
+      const write = useWriteSongSetting(extraSetting);
+      const value = extras.useValue(songId);
+      useEffect(() => {
+        if (value === undefined) fail(songId, failure);
+        else write(songId, value);
+      }, [songId, value, fail, write]);
+      return null;
+    }
+    const plugins = shellPlugin([
+      register(transposeSetting, observerOf(transposeSetting, transposes)),
+      register(extraSetting, FailingObserver),
+    ]);
+    const { handles, Capture } = captureHandles();
+    const gate: SongSetting<{ transposeSemitones: number }>[] = [];
+    const extra: SongSetting<string>[] = [];
+    function Probe() {
+      gate.push(useSettledSongSettings(ONLY_TRANSPOSE));
+      extra.push(useSongSetting(extraSetting));
+      return null;
+    }
+    renderSurface(plugins, [<Capture key="c" />, <Probe key="p" />]);
+
+    act(() => handles.load("A", {}));
+    // Failed beats pending: the gate fails even while transpose still loads.
+    expect(last(gate)).toEqual({ kind: "failed", ...failure });
+    expect(last(extra)).toEqual({ kind: "failed", ...failure });
+    act(() => transposes.settle("A", 2));
+    expect(last(gate)).toEqual({ kind: "failed", ...failure });
+
+    // The retry lands a value: the failure clears and the gate settles.
+    act(() => extras.settle("A", "x"));
+    expect(last(extra)).toEqual({ kind: "settled", value: "x" });
+    expect(last(gate)).toEqual({
+      kind: "settled",
+      value: { transposeSemitones: 2 },
+    });
   });
 
   it("settles on load when the composition registers no setting at all", () => {
@@ -391,10 +443,10 @@ describe("the score gate waits on the registered settings, and only on them", ()
       return null;
     }
     renderSurface(shellPlugin([]), [<Capture key="c" />, <Probe key="p" />]);
-    expect(last(seen)).toEqual({ pending: true });
+    expect(last(seen)).toEqual({ kind: "pending" });
     act(() => handles.load("A", {}));
     expect(last(seen)).toMatchObject({
-      pending: false,
+      kind: "settled",
       value: { transposeSemitones: 0 },
     });
   });

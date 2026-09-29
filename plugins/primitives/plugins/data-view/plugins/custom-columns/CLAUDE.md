@@ -18,9 +18,11 @@ User-defined custom columns for any DataView. Two stores:
   `serveValue(…, { source: "db", unbounded })` — recomputed by the change feed on
   every write) + a single upsert/delete-on-empty endpoint. A value, not a
   collection: the composite key has no single id to read a row by.
-  `useCustomColumnValues` returns `pending` until it lands; meanwhile the cells
-  read as unset, because `FieldExtensionProps.render` has no pending channel and
-  dropping the columns would turn a filter on one into keep-every-row.
+  `useCustomColumnValues` is a `ResourceResult`. While it is `loading` the cells
+  read as unset — dropping the columns would turn a filter on one into
+  keep-every-row. A failed read keeps its `stale` values; with none, every custom
+  field carries `FieldDef.readError`, so `FieldCell` renders the failure (with
+  Retry) in each cell instead of an unset-looking value.
 
 **Dependency direction: this child imports the parent (`custom-columns → data-view`),
 never the reverse.** It contributes itself both ways instead of the host reaching
@@ -80,7 +82,13 @@ how the caller obtained it.
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/data-view.useResolveValueCodec`
     - `primitives/latest-ref.useLatestRef`
+<<<<<<< .merge_file_QkttTv
     - `ui/icons.Icon`
+=======
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
+>>>>>>> .merge_file_BCvPVp
   - Exports (types):
     - `CustomColumnDefsController`
     - `CustomColumnValueIndex`

@@ -15,6 +15,7 @@ A sub-plugin rather than part of `auto-start` itself: applying the option means
     - `conversations/model-provider.ModelChoiceLabel`
     - `conversations/model-provider.ModelSelect`
     - `conversations/model-provider.useVisibleModels`
+    - `network/live.mapRow`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `tasks.setAutoStart`
     - `tasks/auto-start.useTaskAutoStart`

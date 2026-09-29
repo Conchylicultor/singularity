@@ -3,6 +3,7 @@ import {
   Pane,
   PaneChrome,
   defineRoute,
+  type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
@@ -66,17 +67,10 @@ function useSourceTitle({
   return lookup.status === "found" ? lookup.source.name : undefined;
 }
 
-function useResolveSource({ sourceId }: { sourceId: string }): {
-  pending: boolean;
-  found: boolean;
-} {
-  const lookup = useEventSource(sourceId);
-  // An errored subscription is NOT "not found" — a deep link must not be
-  // discarded because the socket blipped. Stay pending and let the body say so.
-  if (lookup.status === "pending" || lookup.status === "error") {
-    return { pending: true, found: false };
-  }
-  return { pending: false, found: lookup.status === "found" };
+function useResolveSource({ sourceId }: { sourceId: string }): ResolveResult {
+  // The by-id lookup already answers in the resolve vocabulary; an errored
+  // subscription is its own arm, so a deep link survives a socket blip.
+  return useEventSource(sourceId);
 }
 
 function EventSourcesPaneView(): ReactNode {

@@ -57,6 +57,7 @@ export {
   setRelationResolver,
   setFeedExemptTables,
   setLiveStateSnapshotHooks,
+  setClientBuildIdentity,
   triggerResourcePush,
   withNotifyBatch,
 } from "./resources";

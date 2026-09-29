@@ -14,46 +14,41 @@ export interface KindExtractor {
 }
 
 /**
- * What the conversation produced — or the fact that we do not know yet.
- *
- * Two arms, not a count that starts at zero: an artifact count is a claim about
- * the user's work, and a button that says "0" and then says "7" told them
- * something false for as long as the transcript took to arrive.
+ * What the conversation produced. The hook hands it out as a resource result
+ * (`ConversationArtifactsResult`), never a count that starts at zero: an
+ * artifact count is a claim about the user's work, and a button that says "0"
+ * and then says "7" told them something false for as long as the transcript
+ * took to arrive.
  */
-export type ConversationArtifactsResult =
-  | { pending: true }
-  | {
-      pending: false;
-      /** Items per kind id. A kind that found nothing has no entry. */
-      byKind: ReadonlyMap<string, ArtifactItem[]>;
-      /** Every artifact, across every kind — what the panel lists. */
-      total: number;
-      /**
-       * What the conversation MADE, per kind id: the items of `"produced"`
-       * kinds it created or edited — never one it only read. A kind with
-       * nothing made has no entry, so the closed button draws exactly the kinds
-       * listed here, each with its number.
-       */
-      made: ReadonlyMap<string, number>;
-      /**
-       * The sum of `made` — the whole of what the conversation produced.
-       *
-       * Lower than `total` whenever the conversation looked at things it did
-       * not make, and `0` for one that only looked: the panel still has
-       * something to show, so the two are asked separately.
-       */
-      count: number;
-    };
+export interface ConversationArtifactSet {
+  /** Items per kind id. A kind that found nothing has no entry. */
+  byKind: ReadonlyMap<string, ArtifactItem[]>;
+  /** Every artifact, across every kind — what the panel lists. */
+  total: number;
+  /**
+   * What the conversation MADE, per kind id: the items of `"produced"`
+   * kinds it created or edited — never one it only read. A kind with
+   * nothing made has no entry, so the closed button draws exactly the kinds
+   * listed here, each with its number.
+   */
+  made: ReadonlyMap<string, number>;
+  /**
+   * The sum of `made` — the whole of what the conversation produced.
+   *
+   * Lower than `total` whenever the conversation looked at things it did
+   * not make, and `0` for one that only looked: the panel still has
+   * something to show, so the two are asked separately.
+   */
+  count: number;
+}
 
 /** Events are read in transcript order, so hits arrive oldest-first. */
 export function collectArtifacts(
   kinds: readonly KindExtractor[],
-  events: { pending: true } | { pending: false; data: readonly JsonlEvent[] },
-): ConversationArtifactsResult {
-  if (events.pending) return { pending: true };
-
+  events: readonly JsonlEvent[],
+): ConversationArtifactSet {
   const hits: ArtifactHit[] = [];
-  for (const event of events.data) {
+  for (const event of events) {
     for (const kind of kinds) {
       for (const hit of kind.extract(event)) {
         // A kind reporting under someone else's name would land its rows in a
@@ -86,5 +81,5 @@ export function collectArtifacts(
     made.set(id, n);
     count += n;
   }
-  return { pending: false, byKind, total, made, count };
+  return { byKind, total, made, count };
 }

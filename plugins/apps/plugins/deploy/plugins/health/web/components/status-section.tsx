@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -16,11 +17,13 @@ import { ServerStatusBadge, serverStatus } from "./server-status-badge";
  * plugin's side-table and only a real probe can write it.
  *
  * Nothing while the verdict loads: `Unknown` is what a server that was never
- * checked reads as, which a read still loading cannot claim.
+ * checked reads as, which a read still loading cannot claim. Nothing either
+ * when the read failed — the section body (below) renders that failure with
+ * its Retry; a preview chip is no place for it.
  */
 export function ServerStatusSummary({ server }: { server: Server }) {
   const health = useServerHealth(server.id);
-  if (health.pending) return null;
+  if (health.status === "loading" || health.status === "error") return null;
   return (
     <ServerStatusBadge
       status={serverStatus(health.found ? health.row : undefined)}
@@ -32,7 +35,17 @@ export function ServerStatusSummary({ server }: { server: Server }) {
 export function ServerStatusSection({ server }: { server: Server }) {
   const health = useServerHealth(server.id);
 
-  if (health.pending) return <Loading />;
+  if (health.status === "loading") return <Loading />;
+  if (health.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the server's last check"
+        error={health.error}
+        refetch={health.refetch}
+      />
+    );
+  }
   if (!health.found) {
     return (
       <Text as="p" variant="body" className="text-muted-foreground">

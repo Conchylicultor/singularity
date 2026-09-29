@@ -57,6 +57,9 @@ export const CLIENT_REPORT_SOURCES = [
   "client-optimistic-divergence",
   "client-turn-unconfirmed",
   "client-live-state-stale-drop",
+  // A live read whose query gained an error (reports/resource-errors) — one per
+  // failing (key, params) episode, however many hooks observe it.
+  "client-resource-error",
   "client-caret-flight",
   "client-adaptive-bar",
   "client-viewport-escape",

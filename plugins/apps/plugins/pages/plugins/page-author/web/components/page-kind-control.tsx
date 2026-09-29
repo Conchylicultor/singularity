@@ -1,4 +1,7 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -108,8 +111,19 @@ export function PageKindControl() {
   const result = useResource(pagesResource);
   const { mutateAsync } = useEndpointMutation(setPageKind);
 
-  if (result.pending) {
+  if (result.status === "loading") {
     return <Loading variant="block" className={ICON_BOX[size]} />;
+  }
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={descriptionIcon}
+        subject="the page kind"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
   }
   const page = result.data.find((p) => p.id === pageId);
   if (!page) return null;

@@ -12,6 +12,7 @@
   - Contributes: `Pane.Register` "theme-customizer"
   - Uses:
     - `apps-core.useCurrentAppId`
+    - `config_v2.useConfigResult`
     - `config_v2.useScopeMembership`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.useEndpointMutation`

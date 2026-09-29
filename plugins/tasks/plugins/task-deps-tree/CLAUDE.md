@@ -51,6 +51,7 @@ now"), the opposite of the monotone one here.
     - `primitives/data-view.ItemActionProps`
     - `primitives/data-view.MergedDataView`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`

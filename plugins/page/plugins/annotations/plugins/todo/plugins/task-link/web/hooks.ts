@@ -1,6 +1,11 @@
-import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
+  combineResources,
+  mapResource,
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapRow,
   useLiveRow,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
@@ -38,22 +43,28 @@ export interface TodoTaskState {
  * to keep in sync, which is the same read `page/prompt/block`'s chips make
  * against `attempts`.
  *
- * `null` while either side is hydrating, and `null` when the task is not in the
- * tasks resource at all. That last case is not a hole to fill: the link's
- * `task_id` FK cascades, so a deleted task takes its link row with it and both
- * reads converge on "this card has not been dispatched" — which is the truth,
- * and is what frees the card for a fresh dispatch.
+ * A resource result: loading while either side is hydrating, error when
+ * either read failed, and on the ready arm the task — or `null` when the card
+ * has not been dispatched, or its task is not in the tasks resource at all.
+ * That last case is not a hole to fill: the link's `task_id` FK cascades, so
+ * a deleted task takes its link row with it and both reads converge on "this
+ * card has not been dispatched" — which is the truth, and is what frees the
+ * card for a fresh dispatch. An undispatched card settles on the link alone:
+ * it has no task to look up, so the task list's state does not reach it.
  */
-export function useTodoTaskState(blockId: string): TodoTaskState | null {
-  const link = useTodoTask(blockId);
+export function useTodoTaskState(
+  blockId: string,
+): ResourceResult<TodoTaskState | null> {
+  const taskId = mapRow(useTodoTask(blockId), (row) => row?.taskId ?? null);
   const tasks = useResource(tasksResource);
-  // Hydrating reads as "no task" here by design — see above.
-  const taskId = !link.pending && link.found ? link.row.taskId : undefined;
-
-  return useMemo(() => {
-    if (taskId === undefined || tasks.pending) return null;
-    const task = tasks.data.find((t) => t.id === taskId);
-    if (!task) return null;
-    return { taskId, title: task.title, status: task.status };
-  }, [taskId, tasks]);
+  if (taskId.status === "ready" && taskId.data === null)
+    return mapResource(taskId, () => null);
+  return mapResource(
+    combineResources({ taskId, tasks }),
+    ({ taskId: id, tasks: list }): TodoTaskState | null => {
+      const task = id === null ? undefined : list.find((t) => t.id === id);
+      if (id === null || !task) return null;
+      return { taskId: id, title: task.title, status: task.status };
+    },
+  );
 }

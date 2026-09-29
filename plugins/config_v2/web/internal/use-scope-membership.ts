@@ -13,7 +13,7 @@ import { useStorePath } from "./use-store-path";
 // recomputed server-side from `scopeHasOwnConfig`), so read and theme share one
 // source of truth and can never disagree.
 //
-// `pending` while the map is not known: a scope's membership decides which
+// `loading` while the map is not known: a scope's membership decides which
 // document a surface edits, so "not a member" is not a stand-in for "unknown".
 // The map is preloaded and kept (`"boot-and-keep"`), so after a successful boot
 // it is settled on the first frame, whenever the reader mounts. A `scopeId` of

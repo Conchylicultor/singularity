@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { mapRow } from "@plugins/network/plugins/live/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import type { LaunchBinding } from "@plugins/tasks/plugins/launch-options/web";
 import { useTaskPreprompt } from "../hooks";
@@ -24,10 +25,9 @@ export function useTaskPrepromptBinding(
     [taskId],
   );
 
-  if (result.pending) return { pending: true };
-  return {
-    pending: false,
-    value: result.found ? result.row.prepromptId : null,
+  // An absent row is "no preprompt"; loading / error pass through.
+  return mapRow(result, (row) => ({
+    value: row?.prepromptId ?? null,
     onChange,
-  };
+  }));
 }

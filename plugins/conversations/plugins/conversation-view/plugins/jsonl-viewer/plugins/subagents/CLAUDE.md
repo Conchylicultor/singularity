@@ -424,6 +424,8 @@ downstream can widen the set, because nothing downstream resolves one.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.combineResources`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`

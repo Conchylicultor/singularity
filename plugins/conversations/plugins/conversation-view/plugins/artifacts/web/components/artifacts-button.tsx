@@ -3,6 +3,7 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
@@ -38,7 +39,18 @@ export function ArtifactsButton() {
   const artifacts = useConversationArtifacts(convId);
   const [open, setOpen] = useState(false);
 
-  if (artifacts.pending) {
+  if (artifacts.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={categoryIcon}
+        subject="the artifacts"
+        error={artifacts.error}
+        refetch={artifacts.refetch}
+      />
+    );
+  }
+  if (artifacts.status === "loading") {
     return (
       // eslint-disable-next-line icon-button/prefer-icon-button -- placeholder for the icon+count button below; a square IconButton would resize the toolbar when the count settles
       <Button
@@ -55,10 +67,10 @@ export function ArtifactsButton() {
 
   return (
     <ArtifactsReady
-      byKind={artifacts.byKind}
-      total={artifacts.total}
-      made={artifacts.made}
-      count={artifacts.count}
+      byKind={artifacts.data.byKind}
+      total={artifacts.data.total}
+      made={artifacts.data.made}
+      count={artifacts.data.count}
       open={open}
       onOpenChange={setOpen}
     />

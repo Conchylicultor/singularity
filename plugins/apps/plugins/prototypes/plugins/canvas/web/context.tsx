@@ -19,7 +19,7 @@ import {
   type DraftOptions,
 } from "@plugins/primitives/plugins/persistent-draft/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -194,7 +194,7 @@ function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
   // the re-open when the pane points at another prototype), and the context
   // value `DetailProvider` memoizes never depends on it — so a fresh `size`
   // object from a re-broadcast list moves nothing its consumers see.
-  // Not-loaded is `pending` (no placeholder list), so the settle always
+  // Not-loaded is `loading` (no placeholder list), so the settle always
   // re-renders this gate.
   const list = useLive(prototypesList);
 
@@ -217,15 +217,28 @@ function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
     },
   );
 
-  if (list.pending) return <Loading variant="block" />;
-  if (stored.pending) {
+  if (list.status === "loading") return <Loading variant="block" />;
+  if (list.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the prototypes"
+        error={list.error}
+        refetch={list.refetch}
+      />
+    );
+  }
+  if (stored.status === "loading") return <Loading variant="block" />;
+  if (stored.status === "error") {
     // A record that cannot be read stays broken until someone fixes it, so it
-    // renders the default error placeholder naming the problem — never a
-    // spinner that never ends.
-    return matchResource(stored, {
-      pending: () => <Loading variant="block" />,
-      ready: () => null,
-    });
+    // renders the error naming the problem — never a spinner that never ends.
+    return (
+      <ResourceErrorInline
+        variant="block"
+        error={stored.error}
+        refetch={stored.refetch}
+      />
+    );
   }
   const size =
     list.data.find((p) => p.name === name)?.viewport ??

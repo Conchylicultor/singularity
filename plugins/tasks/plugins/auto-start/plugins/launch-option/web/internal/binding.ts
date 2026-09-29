@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { mapRow } from "@plugins/network/plugins/live/web";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 import { setAutoStart } from "@plugins/tasks/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
@@ -15,10 +16,9 @@ export function useTaskAutoStartBinding(
     [taskId],
   );
 
-  if (autoStart.pending) return { pending: true };
-  return {
-    pending: false,
-    value: autoStart.found ? autoStart.row.autoStartModel : null,
+  // An absent row is "not armed"; loading / error pass through.
+  return mapRow(autoStart, (row) => ({
+    value: row?.autoStartModel ?? null,
     onChange,
-  };
+  }));
 }

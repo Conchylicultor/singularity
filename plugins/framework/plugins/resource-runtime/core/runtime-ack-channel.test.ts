@@ -47,7 +47,12 @@ function keyedHarness() {
   const rows = () => [...table.entries()].map(([id, n]) => ({ id, n }));
   const h = createHarness({ readSet: () => ["row_table"], sockets: 2 });
   h.runtime.defineResource(
-    { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+    {
+      key: "rows",
+      schema: rowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    },
     {
       identityTable: "row_table",
       fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -223,7 +228,12 @@ describe("ackTx — coalescing", () => {
     const rows = () => [...table.entries()].map(([id, n]) => ({ id, n }));
     const h = createHarness({ readSet: () => ["m_table"] });
     h.runtime.defineResource(
-      { key: "m", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "m",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "m_table",
         scopedMembership: { orderOf: async () => [...table.keys()] },
@@ -291,7 +301,12 @@ describe("standalone ack frames — no-value-change recomputes", () => {
         (p.ids ?? "").split(",").filter(Boolean);
       const h = createHarness({ readSet: () => ["pt_table"] });
       h.runtime.defineResource(
-        { key: "pt", schema: rowsSchema, keyed: { keyOf } },
+        {
+          key: "pt",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
         {
           identityTable: "pt_table",
           membership: { kind: "point", idsOf },
@@ -355,7 +370,12 @@ describe("standalone ack frames — no-value-change recomputes", () => {
         .sort((a, b) => a.n - b.n || (a.id < b.id ? -1 : 1));
     const h = createHarness({ readSet: () => ["w_table"] });
     h.runtime.defineResource(
-      { key: "win", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "win",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "w_table",
         membership: {
@@ -509,7 +529,12 @@ describe("ackTx — stale-flight REFUSAL (co-production made exact)", () => {
     const ctl = snapshotControllable([{ id: "a", n: 1 }]);
     const h = createHarness({ readSet: () => ["c_table"], sockets: 2 });
     h.runtime.defineResource(
-      { key: "c", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "c",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "c_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -564,7 +589,12 @@ describe("ackTx — failure and overflow", () => {
     const h = createHarness({ readSet: () => ["f_table"] });
     let boom = false;
     h.runtime.defineResource(
-      { key: "f", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "f",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "f_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },

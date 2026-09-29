@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { AttemptWork } from "@plugins/tasks/plugins/attempt-work/core";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import {
   deriveExitMode,
   type ExitDecision,
@@ -9,7 +10,20 @@ import {
 const conversation = { attemptId: "att-1" };
 const live = { status: "waiting" } as const;
 
-type SettledData = Extract<ExitDecision, { pending: false }>["data"];
+type SettledData = Extract<ExitDecision, { status: "ready" }>["data"];
+
+const refetch = () => Promise.resolve();
+
+const loading: ExitDecision = {
+  status: "loading",
+  refetch,
+};
+
+const failed = (message: string): ExitDecision => ({
+  status: "error",
+  error: new ResourceError("loader-failed", message, null),
+  refetch,
+});
 
 /** The resolved edited-files arm carrying `value`. */
 const resolvedFiles = (
@@ -44,7 +58,8 @@ const resolvedWork = (
 });
 
 const settled = (data: Partial<SettledData> = {}): ExitDecision => ({
-  pending: false,
+  status: "ready",
+  refetch,
   data: {
     work: resolvedWork(),
     hasSibling: false,
@@ -61,23 +76,17 @@ const input = (exitDecision: ExitDecision): ExitModeInput => ({
 });
 
 describe("deriveExitMode", () => {
-  test("pending, no error: neutral provisional Close — never the destructive default", () => {
-    expect(deriveExitMode(input({ pending: true, error: null }))).toEqual({
+  test("loading: neutral provisional Close — never the destructive default", () => {
+    expect(deriveExitMode(input(loading))).toEqual({
       mode: "exit",
       provisional: true,
     });
   });
 
-  test("pending + error: degraded exit-error, clickable and NOT provisional", () => {
-    // The readiness gate folds an errored input into `pending` (a value you can
-    // read is one the server vouches for), so an errored decision surfaces on the
-    // pending arm — and must NOT stay provisional (that would leave the button
+  test("error: degraded exit-error, clickable and NOT provisional", () => {
+    // A failed read must NOT stay provisional (that would leave the button
     // stuck disabled forever on a persistent error).
-    expect(
-      deriveExitMode(
-        input({ pending: true, error: new Error("worktree missing") }),
-      ),
-    ).toEqual({
+    expect(deriveExitMode(input(failed("worktree missing")))).toEqual({
       mode: "exit-error",
       provisional: false,
     });
@@ -222,10 +231,7 @@ describe("deriveExitMode", () => {
   });
 
   test("the exit decision is only consulted once the conversation is idle with an empty draft", () => {
-    const pendingErr: ExitDecision = {
-      pending: true,
-      error: new Error("boom"),
-    };
+    const pendingErr = failed("boom");
     expect(
       deriveExitMode({ ...input(pendingErr), draftEmpty: false }).mode,
     ).toBe("send");

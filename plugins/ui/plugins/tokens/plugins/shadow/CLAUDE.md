@@ -25,6 +25,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`

@@ -30,9 +30,14 @@ export {
 export {
   defineSongSetting,
   type SongSetting,
+  type SongSettingFailure,
   type SongSettingKey,
 } from "./song-setting";
-export { useSongSetting, useWriteSongSetting } from "./loaded-song";
+export {
+  useSongSetting,
+  useWriteSongSetting,
+  useFailSongSetting,
+} from "./loaded-song";
 export { useMountedSongId } from "./song-setting-mount";
 export {
   transposeSetting,

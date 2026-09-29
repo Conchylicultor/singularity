@@ -1,7 +1,13 @@
 import { useMemo } from "react";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  foldResource,
+  useEndpointResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { OrphanEntry } from "@plugins/config_v2/core";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -19,15 +25,26 @@ const UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
 // choice for this one call site.
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  const exp = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), UNITS.length - 1);
+  const exp = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    UNITS.length - 1,
+  );
   const value = bytes / 1024 ** exp;
   const text = exp === 0 ? String(Math.round(value)) : value.toFixed(1);
   return `${text.replace(/\.0$/, "")} ${UNITS[exp]}`;
 }
 
+const NO_ORPHANS: OrphanEntry[] = [];
+
 export function ConfigOrphansPanel() {
-  const { data, isPending } = useEndpoint(configOrphans, {});
-  const orphans = data?.orphans ?? [];
+  const audit = useEndpointResource(configOrphans, {});
+  // The DataView renders the loading and failed states (`readiness`); only a
+  // ready audit's rows reach the view.
+  const orphans = foldResource(audit, {
+    loading: () => NO_ORPHANS,
+    error: () => NO_ORPHANS,
+    ready: (d) => d.orphans,
+  });
 
   const fields = useMemo<FieldDef<OrphanEntry>[]>(
     () => [
@@ -103,7 +120,11 @@ export function ConfigOrphansPanel() {
         label: "Files",
         type: "int",
         value: (r) => r.files.length,
-        cell: (r) => <span className="tabular-nums text-muted-foreground">{r.files.length}</span>,
+        cell: (r) => (
+          <span className="tabular-nums text-muted-foreground">
+            {r.files.length}
+          </span>
+        ),
         sortable: true,
         align: "end",
         width: "5rem",
@@ -114,7 +135,9 @@ export function ConfigOrphansPanel() {
         type: "int",
         value: (r) => r.totalBytes,
         cell: (r) => (
-          <span className="tabular-nums text-muted-foreground">{formatBytes(r.totalBytes)}</span>
+          <span className="tabular-nums text-muted-foreground">
+            {formatBytes(r.totalBytes)}
+          </span>
         ),
         sortable: true,
         align: "end",
@@ -139,11 +162,17 @@ export function ConfigOrphansPanel() {
 
   return (
     <Stack gap="none">
-      <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground border-b">
-        On-disk config files in this worktree whose <span className="font-mono">defineConfig</span>{" "}
-        descriptor is no longer live. <strong>Stranded user data</strong> means a real user
-        customization (a base or scoped override) silently stopped applying because its descriptor
-        moved or was removed — review it before any deletion. Read-only audit; nothing is deleted.
+      <Text
+        as="div"
+        variant="caption"
+        className="px-lg py-sm text-muted-foreground border-b"
+      >
+        On-disk config files in this worktree whose{" "}
+        <span className="font-mono">defineConfig</span> descriptor is no longer
+        live. <strong>Stranded user data</strong> means a real user
+        customization (a base or scoped override) silently stopped applying
+        because its descriptor moved or was removed — review it before any
+        deletion. Read-only audit; nothing is deleted.
       </Text>
       <DataView<OrphanEntry>
         rows={orphans}
@@ -151,7 +180,7 @@ export function ConfigOrphansPanel() {
         rowKey={(r) => r.storeKey}
         views={["table"]}
         storageKey={ORPHANS_VIEW}
-        loading={isPending}
+        readiness={audit}
         searchAccessor={(r) => `${r.storeKey} ${r.relocatedToHier ?? ""}`}
         emptyState={<>No orphaned config files — user config dir is clean.</>}
       />

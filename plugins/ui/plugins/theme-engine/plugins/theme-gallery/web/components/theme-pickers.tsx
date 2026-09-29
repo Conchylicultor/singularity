@@ -58,7 +58,15 @@ export function SelectedThemeSummary() {
   const scopeId = useThemeScopeId();
   const themes = useThemes();
   const selection = useConfigResult(themeSelectionConfig, { scopeId });
-  if (themes.pending || selection.pending) return null;
+  // Loading or failed alike: an empty summary claims nothing, and the gallery
+  // in the section body renders the failure with its retry.
+  if (
+    themes.pending ||
+    selection.status === "loading" ||
+    selection.status === "error"
+  ) {
+    return null;
+  }
   const theme = themes.themesById.get(selection.data.theme);
   return theme ? (
     <Text as="span" variant="caption" tone="muted">

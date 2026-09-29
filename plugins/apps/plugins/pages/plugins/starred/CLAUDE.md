@@ -13,8 +13,8 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
   (`web/internal/use-starred-ids.ts`) is the only reader of the `starredPages`
   collection (`useLive(starredPages)`, the default window); the field and both
   toggles go through it, so they cannot disagree and every mount shares one
-  subscription tuple. Not known yet is its own arm (`{ pending: true }`), and
-  each caller decides: the toggles render a disabled loading button (a hollow
+  subscription tuple. It returns a read (`ResourceResult<ReadonlySet<string>>`):
+  not known yet and failed are their own arms, and each caller decides: the toggles render a disabled loading button (a hollow
   star would claim "not a favorite", and a click would star an already-starred
   page), while `StarredField` projects an empty set, so Favorites stays empty
   until the window lands.
@@ -55,6 +55,10 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
   - Exports (types): `StarredPageRow`
   - Exports (values): `StarredPageRowSchema`
 - Server:

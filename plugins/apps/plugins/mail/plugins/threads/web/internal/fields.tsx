@@ -5,6 +5,7 @@ import type {
   FieldValue,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   mailLabels,
   type MailLabel,
@@ -89,15 +90,25 @@ export function useMailThreadFieldDefs(): FieldDef<MailThread>[] {
   const userLabels = useLive(mailLabels);
   // `options` is a display-name LOOKUP, not a data set: a label id missing from
   // it renders as its own raw id — the same thing an unsynced id already does. So
-  // the pending arm is a smaller lookup table, never a fake-empty collection, and
-  // it can't produce a confidently-wrong empty state. The result's identity only
-  // moves when the labels do (structural sharing), so the id→name projection is
-  // recomputed on a genuine label change, not on every render.
+  // the loading arm is a smaller lookup table, never a fake-empty collection, and
+  // it can't produce a confidently-wrong empty state. A failed read keeps the
+  // last labels it saw, else degrades the same way (raw ids for user labels) —
+  // cosmetic, and live-state reports the failure itself. The result's identity only moves when the labels do
+  // (structural sharing), so the id→name projection is recomputed on a genuine
+  // label change, not on every render.
   const labelOptions = useMemo(
     () =>
-      userLabels.pending
-        ? SYSTEM_LABEL_OPTIONS
-        : [...SYSTEM_LABEL_OPTIONS, ...userLabels.data.map(labelOption)],
+      foldResource(userLabels, {
+        loading: () => SYSTEM_LABEL_OPTIONS,
+        error: (_error, stale) =>
+          stale === undefined
+            ? SYSTEM_LABEL_OPTIONS
+            : [...SYSTEM_LABEL_OPTIONS, ...stale.map(labelOption)],
+        ready: (labels) => [
+          ...SYSTEM_LABEL_OPTIONS,
+          ...labels.map(labelOption),
+        ],
+      }),
     [userLabels],
   );
 

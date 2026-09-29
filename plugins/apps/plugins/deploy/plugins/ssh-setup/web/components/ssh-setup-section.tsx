@@ -1,5 +1,6 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   Steps,
   Step,
@@ -38,13 +39,23 @@ import { InstallKeyStep } from "./install-key-step";
  *
  * Loading until the verdict lands: every step after the key takes its state
  * from it, and "active" shown for a server already proven would ask the user
- * to redo work that is done.
+ * to redo work that is done. A verdict that could not be read says so, with
+ * Retry, rather than guessing the steps' states.
  */
 export function SshSetupSection({ server }: { server: Server }) {
   const verification = useServerVerified(server);
   const { url, provider } = useSshProvider(server);
-  if (verification === "pending") return <Loading variant="rows" />;
-  const verified = verification === "verified";
+  if (verification.status === "loading") return <Loading variant="rows" />;
+  if (verification.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the connection verdict"
+        error={verification.error}
+        refetch={verification.refetch}
+      />
+    );
+  const verified = verification.data;
 
   const key = server.sshKey;
   const ConsoleInstructions = provider?.ConsoleInstructions;

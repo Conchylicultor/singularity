@@ -1,3 +1,4 @@
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEffect, useMemo, useRef } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -65,21 +66,26 @@ function buildSignature(
 ): string | null {
   // `null` is genuine absence the caller must handle, not an empty default: the
   // effect below acts on a CHANGE of signature, so "no signature yet" can never
-  // be mistaken for "nothing has built".
-  if (result.pending) return null;
-
-  let newestAt = -1;
-  let newestId = "";
-  for (const run of result.data) {
-    if (!run.targets.includes(composition)) continue;
-    if (run.finishedAt === null) continue;
-    const at = run.finishedAt.getTime();
-    if (at > newestAt) {
-      newestAt = at;
-      newestId = run.id;
-    }
-  }
-  return `${newestAt}:${newestId}`;
+  // be mistaken for "nothing has built". A failed history read is no signature
+  // either: it announces no build, so it must not nudge a refetch.
+  return foldResource(result, {
+    loading: () => null,
+    error: () => null,
+    ready: (runs) => {
+      let newestAt = -1;
+      let newestId = "";
+      for (const run of runs) {
+        if (!run.targets.includes(composition)) continue;
+        if (run.finishedAt === null) continue;
+        const at = run.finishedAt.getTime();
+        if (at > newestAt) {
+          newestAt = at;
+          newestId = run.id;
+        }
+      }
+      return `${newestAt}:${newestId}`;
+    },
+  });
 }
 
 /**

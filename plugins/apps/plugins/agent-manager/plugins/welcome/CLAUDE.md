@@ -22,6 +22,8 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/launch.LaunchControl`
+    - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

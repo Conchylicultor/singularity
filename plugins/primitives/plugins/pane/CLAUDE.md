@@ -93,7 +93,15 @@ Rules:
   it from inside the pane with `pane.useSetParams()` (below), not a `swap`.
 - `resolve` is required exactly when the route's own segment has a `:param`, and
   forbidden when it does not — a paramful pane must be able to say "no such
-  entity". Opt out with `resolve: false`.
+  entity". Opt out with `resolve: false`. The hook returns a `ResolveResult`:
+  `pending` / `error` (with an optional `retry`) / `missing` / `found` — the
+  vocabulary by-id domain reads (`useRun`, `useReport`) already speak, so those
+  are returned as is. Over a live read use `resolveFrom(result, isFound)`, over
+  a `useLiveRow` `resolveRow(row)`. The guard paints Loading, the failure with
+  Retry (`ResourceErrorInline`), or Not Found; once `found` it stays mounted
+  through later `pending` / `error` flips (sticky), and only `missing` unmounts
+  it. Never answer `found` or `pending` for a failed read — `error` exists for
+  exactly that.
 - `width` (optional) — default column width in pixels for column layouts
   (Miller). Last column flex-grows regardless. Defaults to 400.
 - `options` / `hint` — see **Non-URL state** below.
@@ -193,8 +201,8 @@ openPane(sonataPlayerPane, { songId }, { mode: "root", hint: { title: song.title
 
 function useSongTitle({ songId }: { songId: string }, hint: Hint<{ title: string }>) {
   const library = useLive(songs);
-  let canonical: string | undefined;
-  if (!library.pending) canonical = library.data.find((s) => s.id === songId)?.title;
+  const canonical =
+    library.status === "ready" ? library.data.find((s) => s.id === songId)?.title : undefined;
   return hint.pick("title", canonical);   // canonical wins; hint fills the gap
 }
 ```
@@ -873,6 +881,9 @@ See "Open questions" in the design doc.
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/scope/install-sink.defineInstallSink`
@@ -912,6 +923,7 @@ See "Open questions" in the design doc.
     - `ParsedRoute`
     - `PromoteAction`
     - `ResolveHook`
+    - `ResolveResult`
     - `RouteState`
     - `SerializedSlot`
     - `SurfaceChrome`
@@ -944,6 +956,8 @@ See "Open questions" in the design doc.
     - `peekBasePath`
     - `peekRoute`
     - `reorderRoute`
+    - `resolveFrom`
+    - `resolveRow`
     - `restoreRoute`
     - `setBasePath`
     - `setHistoryAdapter`

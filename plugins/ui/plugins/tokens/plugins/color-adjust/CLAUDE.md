@@ -10,6 +10,7 @@
   - Uses:
     - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine/theme-customizer.FillFromMenu`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

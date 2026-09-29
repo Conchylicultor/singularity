@@ -1,53 +1,100 @@
 /**
- * Readiness combinators over resource results. These exist to kill the
- * `result.pending ? [] : result.data` idiom, which collapses "still loading"
- * and "genuinely empty" into the same value at the exact line where the
- * distinction still exists — the root of the wrong-state-while-loading bug
+ * Readiness combinators over resource results. These exist so no consumer ever
+ * writes `r.status === "ready" ? r.data : []`, which collapses "still loading",
+ * "failed" and "genuinely empty" into the same value at the exact line where
+ * the distinction still exists — the root of the wrong-state-while-loading bug
  * class (enforced by the `live-state/no-pending-data-collapse` lint rule).
  *
  * Correct patterns:
  *   - one resource, JSX:        <ResourceView resource={r}>{(data) => …}</ResourceView>
  *   - one resource, expression: matchResource(r, { ready: (data) => … })
+ *   - a plain value:            foldResource(r, { loading, error, ready })
  *   - several resources:        combineResources({ a, b, c }) — all-or-nothing,
  *     so a view can never render from a half-loaded snapshot
  *
  * GATE RESTRICTION: feed only whole-resource results (no `select`) into these.
- * A select-scoped subscription can flip `pending` without a re-render when the
+ * A select-scoped subscription can settle without a re-render when the
  * selected slice is identical across the initialData→first-real-data boundary
- * (see use-resource.ts) — a gate built on one can wedge as pending forever.
+ * (see use-resource.ts) — a gate built on one can wedge as loading forever.
  * For a select-based readiness read, pass `gate: true` to useResource instead.
  */
 
+import { ResourceError, type ResourceStatus } from "../core";
 import type { ResourceResult } from "./use-resource";
 
 /**
- * Anything gateable on readiness: a `useResource` result (discriminated
- * union), a `combineResources` result, or `useOptimisticResource`'s
- * `{ data, pending }` shape.
+ * Anything gateable on readiness: a `useResource` / `useLive` / `useLiveRow`
+ * result, a `combineResources` result, a `useOptimisticResource` result — any
+ * value naming its state by `status`, whose `error` arm carries the failure
+ * (and, for a gate that reads values, whose `ready` arm carries `data`).
  */
-export type GateInput = { pending: boolean };
+export type GateInput =
+  | { status: "loading" }
+  | { status: "error"; error: Error }
+  | { status: "ready" };
 
 /** The settled data type carried by a gateable result. */
-export type GateDataOf<R> = R extends { pending: false; data: infer D }
+export type GateDataOf<R> = R extends { status: "ready"; data: infer D }
   ? D
-  : R extends { data: infer D }
-    ? D
-    : never;
+  : never;
 
-export type CombinedResources<T extends Record<string, GateInput>> =
-  | { pending: true; error: Error | null }
-  | {
-      pending: false;
-      data: { [K in keyof T]: GateDataOf<T[K]> };
-    };
+/** The last-known-good value a gateable result's error arm may carry. */
+type GateStaleOf<R> = R extends { status: "error"; stale?: infer D }
+  ? D
+  : never;
 
 /**
- * Promise.all for resource results: `pending` until EVERY input has settled
- * once, then `data` carries each input's settled value under its key. One
- * erroring input keeps the whole combine pending (it ORs `pending`, and an
- * errored `useResource` result is itself pending) and carries the first
- * non-null input error on the pending arm. The settled arm mirrors
- * `ResourceResult` and OMITS `error` — a settled combine vouches for its data.
+ * `combineResources`' result: the same three states as a `ResourceResult`,
+ * precedence error > loading > ready — one failed input fails the whole combine
+ * (a surface never renders from a half-loaded snapshot, and never spins on a
+ * read that will not load). No `stale`: a partial snapshot is not a value.
+ */
+export type CombinedResources<T extends Record<string, GateInput>> =
+  | {
+      status: "loading";
+      refetch: () => Promise<void>;
+    }
+  | {
+      status: "error";
+      error: ResourceError;
+      refetch: () => Promise<void>;
+    }
+  | {
+      status: "ready";
+      data: { [K in keyof T]: GateDataOf<T[K]> };
+      refetch: () => Promise<void>;
+    };
+
+/** The status of any gateable result. */
+export function statusOf(r: GateInput): ResourceStatus {
+  return r.status;
+}
+
+/**
+ * The typed error of a result in the error state. A plain `Error` (a
+ * hand-built gate input) is wrapped (`loader-failed`, the raw error as
+ * `cause`); a `ResourceError` passes through.
+ */
+export function errorOf(r: GateInput): ResourceError {
+  if (r.status !== "error") {
+    throw new Error("errorOf: the result is not in the error state");
+  }
+  const e = r.error;
+  if (e instanceof ResourceError) return e;
+  return new ResourceError("loader-failed", e.message, e);
+}
+
+function refetchOf(r: GateInput): (() => Promise<void>) | undefined {
+  const f = (r as { refetch?: () => Promise<unknown> }).refetch;
+  return f === undefined ? undefined : () => f().then(() => {});
+}
+
+/**
+ * Promise.all for resource results: `loading` until EVERY input is ready, then
+ * `data` carries each input's value under its key. Precedence
+ * **error > loading > ready**: one failed input makes the combine `error` (with
+ * the first failed input's error), even while others still load. The combine's
+ * `refetch` refetches every input that can.
  *
  * Pure function — for a render-stable identity inside a component, use
  * `useCombinedResources`.
@@ -55,21 +102,26 @@ export type CombinedResources<T extends Record<string, GateInput>> =
 export function combineResources<T extends Record<string, GateInput>>(
   inputs: T,
 ): CombinedResources<T> {
-  let error: Error | null = null;
-  let pending = false;
+  let error: ResourceError | null = null;
+  let loading = false;
+  const refetches: (() => Promise<void>)[] = [];
   for (const r of Object.values(inputs)) {
-    const e = (r as { error?: Error | null }).error ?? null;
-    if (e && !error) error = e;
-    if (r.pending) pending = true;
+    const status = statusOf(r);
+    if (status === "error" && error === null) error = errorOf(r);
+    if (status === "loading") loading = true;
+    const refetch = refetchOf(r);
+    if (refetch !== undefined) refetches.push(refetch);
   }
-  if (pending) return { pending: true, error };
+  const refetch = () => Promise.all(refetches.map((f) => f())).then(() => {});
+  if (error !== null) return { status: "error", error, refetch };
+  if (loading) return { status: "loading", refetch };
   const data = Object.fromEntries(
     Object.entries(inputs).map(([k, r]) => [
       k,
       (r as unknown as { data: unknown }).data,
     ]),
   ) as { [K in keyof T]: GateDataOf<T[K]> };
-  return { pending: false, data };
+  return { status: "ready", data, refetch };
 }
 
 /**
@@ -86,11 +138,12 @@ export function useCombinedResources<T extends Record<string, GateInput>>(
 }
 
 /**
- * Derive from a resource result WITHOUT erasing its readiness: the settled arm's
- * `data` goes through `fn`, the pending arm passes through (its `stale` value, if
- * any, derived the same way). This is how a domain hook narrows a read — e.g. a
- * point set to its one row, `rows[0] ?? null` — while still handing its caller
- * "not known yet" as a state rather than as a value that means "absent".
+ * Derive from a resource result WITHOUT erasing its readiness: the ready arm's
+ * `data` goes through `fn`, the loading and error arms pass through (the error
+ * arm's `stale` value, if any, derived the same way). This is how a domain hook
+ * narrows a read — e.g. a point set to its one row, `rows[0] ?? null` — while
+ * still handing its caller "not known yet" and "failed" as states rather than
+ * as a value that means "absent".
  *
  * Pure; `fn` runs on every call, so memoize its output at the call site when a
  * stable identity matters.
@@ -99,13 +152,61 @@ export function mapResource<T, U>(
   result: ResourceResult<T>,
   fn: (data: T) => U,
 ): ResourceResult<U> {
-  if (!result.pending) {
-    return { pending: false, data: fn(result.data), refetch: result.refetch };
+  switch (result.status) {
+    case "ready":
+      return {
+        status: "ready",
+        data: fn(result.data),
+        refetch: result.refetch,
+      };
+    case "loading":
+      return result;
+    case "error":
+      return result.stale === undefined
+        ? {
+            status: "error",
+            error: result.error,
+            refetch: result.refetch,
+          }
+        : {
+            status: "error",
+            error: result.error,
+            stale: fn(result.stale),
+            refetch: result.refetch,
+          };
   }
-  return {
-    pending: true,
-    error: result.error,
-    refetch: result.refetch,
-    ...(result.stale === undefined ? {} : { stale: fn(result.stale) }),
-  };
+}
+
+/** The handlers of {@link foldResource} — all three required, by design. */
+export interface FoldResourceHandlers<R extends GateInput, U> {
+  loading: () => U;
+  /** `stale` is the last-known-good value, when the result carries one. */
+  error: (error: ResourceError, stale: GateStaleOf<R> | undefined) => U;
+  ready: (data: GateDataOf<R>) => U;
+}
+
+/**
+ * Reduce a resource result to a plain value, naming what every state yields.
+ * The `.ts`-derivation twin of `matchResource`: where a value (not JSX) must
+ * come out, a failure still gets its own explicit answer instead of silently
+ * sharing the loading one — `error` is required, so "what do we show when this
+ * failed" is a decision written at the call site.
+ */
+export function foldResource<R extends GateInput, U>(
+  result: R,
+  handlers: FoldResourceHandlers<R, U>,
+): U {
+  switch (statusOf(result)) {
+    case "ready":
+      return handlers.ready(
+        (result as unknown as { data: GateDataOf<R> }).data,
+      );
+    case "loading":
+      return handlers.loading();
+    case "error":
+      return handlers.error(
+        errorOf(result),
+        (result as { stale?: GateStaleOf<R> }).stale,
+      );
+  }
 }

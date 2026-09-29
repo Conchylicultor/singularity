@@ -1,3 +1,7 @@
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -14,25 +18,40 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { AuthorDisplay } from "./author-display";
 
 export function TaskHeader({ taskId }: { taskId: string }) {
-  const task = useTask(taskId);
+  const result = useTask(taskId);
   const titleField = useEditableField({
-    value: task?.title ?? "",
+    // The field renders only once the task is known, so the "" seed for the
+    // other states is never shown or saved.
+    value: foldResource(result, {
+      loading: () => "",
+      error: () => "",
+      ready: (t) => t?.title ?? "",
+    }),
     onSave: (v) => patchTask(taskId, { title: v.trim() || "Untitled" }),
     label: "Task title",
   });
   useRegisterFlush(titleField.flush);
 
+  if (result.status === "loading") return null;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the task"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  const task = result.data;
+  if (task === null) return null;
+
   const toggleDrop = () => {
-    if (!task) return;
     void patchTask(taskId, { drop: task.status !== "dropped" });
   };
 
   const toggleHold = () => {
-    if (!task) return;
     void patchTask(taskId, { hold: task.status !== "held" });
   };
-
-  if (!task) return null;
 
   return (
     <Stack gap="lg">

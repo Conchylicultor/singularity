@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import type { ManualOrderConfig } from "@plugins/primitives/plugins/data-view/core";
 import type { GlobalRowOrderProps } from "@plugins/primitives/plugins/data-view/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { seedRanks, computeMoveWrites } from "../../core";
 import { useRowOrder, useSetRowOrder } from "../internal/use-row-order";
@@ -51,10 +52,15 @@ export function RowOrderContribution({
   // Never render a half-order: until the first value lands there is no
   // persisted order to seed from, so the contributor abstains (`null`) —
   // seeding would show pure source order, and a drag would persist it as if it
-  // were the user's arrangement.
+  // were the user's arrangement. A failed read keeps the last order seen; with
+  // none, it abstains the same way.
   const config = useMemo<ManualOrderConfig<unknown> | null>(() => {
-    if (order.pending) return null;
-    const { persisted } = order;
+    const persisted = foldResource(order, {
+      loading: () => undefined,
+      error: (_error, stale) => stale,
+      ready: (data) => data,
+    });
+    if (persisted === undefined) return null;
     const rankByKey = seedRanks(orderedKeys, persisted);
 
     const getRank = (row: unknown): Rank | null =>

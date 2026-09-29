@@ -85,8 +85,17 @@ export interface ReadyViewModel {
  * "No views configured" for the second one has no way to notice it is looking
  * at the first. Narrowing is the enforcement: nothing downstream accepts the
  * loading arm, so a host must answer it before it can render anything.
+ *
+ * The not-ready arm carries `failure` when the config document FAILED to load
+ * with nothing held — a state waiting will not fix, rendered with its Retry
+ * rather than as a skeleton forever. `null` means still loading.
  */
-export type ViewModel = { ready: false } | (ReadyViewModel & { ready: true });
+export type ViewModel =
+  | {
+      ready: false;
+      failure: { error: Error; refetch: () => Promise<void> } | null;
+    }
+  | (ReadyViewModel & { ready: true });
 
 /**
  * Read the host-managed sort rules off a row's raw variant value, coercing every
@@ -369,7 +378,9 @@ export function useDataViewModel(
   // narrowing of an already-built model, not a second code path.
   return useMemo(
     (): ViewModel =>
-      core.ready ? { ready: true, ...model } : { ready: false },
-    [core.ready, model],
+      core.ready
+        ? { ready: true, ...model }
+        : { ready: false, failure: core.failure },
+    [core.ready, core.failure, model],
   );
 }

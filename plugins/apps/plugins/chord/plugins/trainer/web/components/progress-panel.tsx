@@ -66,7 +66,7 @@ export function ProgressPanel({
     <Card className="rounded-2xl" aria-label="Your progress">
       <Stack gap="lg">
         {matchResource(progress, {
-          pending: () => <Loading variant="rows" count={4} />,
+          loading: () => <Loading variant="rows" count={4} />,
           ready: (p) => <PanelBody progress={p} selection={selection} />,
         })}
       </Stack>

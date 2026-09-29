@@ -1,5 +1,8 @@
 import { useCallback } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -43,22 +46,26 @@ const MISSING: BlockTarget = { kind: "missing" };
  */
 export function useBlockTarget(blockId: string): BlockTarget {
   const pages = useResource(pagesResource);
-  const isListedPage =
-    !pages.pending && pages.data.some((p) => p.id === blockId);
+  // `null` until the pages list is known (the target then answers from the
+  // list's own state below); the reverse lookup fires only on a known miss.
+  const isListedPage = foldResource(pages, {
+    loading: () => null,
+    error: () => null,
+    ready: (list) => list.some((p) => p.id === blockId),
+  });
   const lookup = useEndpoint(
     getBlockPage,
     { id: blockId },
     {
-      enabled: !pages.pending && !isListedPage,
+      enabled: isListedPage === false,
       // Ids are immutable and a block's page changes only on a cross-page move,
       // so one lookup per id per session is plenty.
       staleTime: 5 * 60_000,
     },
   );
 
-  if (pages.pending) {
-    return pages.error ? { kind: "error", error: pages.error } : PENDING;
-  }
+  if (pages.status === "loading") return PENDING;
+  if (pages.status === "error") return { kind: "error", error: pages.error };
   if (isListedPage) return { kind: "page", pageId: blockId };
   if (lookup.isError) return { kind: "error", error: lookup.error };
   if (lookup.isPending) return PENDING;
@@ -118,8 +125,12 @@ export function useBlockTargetTitle(target: BlockTarget): string | undefined {
   const label = useBlockTypeLabel(target.kind === "block" ? target.type : "");
   const pages = useResource(pagesResource);
   if (target.kind !== "page" && target.kind !== "block") return undefined;
-  if (pages.pending) return undefined;
-  const page = pages.data.find((p) => p.id === target.pageId);
+  // The pages list not known (loading) or failed: no title, never a stand-in.
+  const page = foldResource(pages, {
+    loading: () => undefined,
+    error: () => undefined,
+    ready: (list) => list.find((p) => p.id === target.pageId),
+  });
   if (page === undefined) return undefined;
   const title = pageData(page).title || UNTITLED;
   return target.kind === "page" ? title : `${title} › ${label}`;

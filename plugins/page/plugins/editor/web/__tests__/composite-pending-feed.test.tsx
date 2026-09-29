@@ -8,7 +8,9 @@
 //   unconditionally), and the editor's loading state renders in its place;
 // - an expanded CHILD page still loading contributes no rows to the union and
 //   names its anchor row in `loadingBelow`, so the editor renders a loading
-//   region under it rather than an expansion that reads as an empty page.
+//   region under it rather than an expansion that reads as an empty page — and
+//   one whose first load FAILED names it in `failedBelow` instead, with the
+//   failure and its retry.
 //
 // The per-page reads are faked at the `useServerBlockStore` seam, so each page's
 // feed is settled exactly when the test says — the composite is the unit.
@@ -29,7 +31,11 @@ import {
 import { fromNodes } from "../internal/optimistic-block-ops";
 import { useBlockEditor } from "../block-editor-context";
 import { CompositeServerProviderHost } from "../composite-block-store";
-import { NOTHING_LOADING, type BlockStore } from "../block-store";
+import {
+  NOTHING_FAILED,
+  NOTHING_LOADING,
+  type BlockStore,
+} from "../block-store";
 
 const feeds = vi.hoisted(() => {
   const stores = new Map<string, unknown>();
@@ -125,6 +131,7 @@ function settled(rows: Block[]): BlockStore {
     data: rows,
     serverData: rows,
     loadingBelow: NOTHING_LOADING,
+    failedBelow: NOTHING_FAILED,
     dispatch: vi.fn(),
   };
 }
@@ -187,6 +194,26 @@ describe("composite store while a feed is pending", () => {
 
     expect(ids(h.ctx()!.blocks)).toEqual(ids([...baseRows, ...subRows]));
     expect(h.ctx()!.loadingBelow.size).toBe(0);
+  });
+
+  it("a child page whose first load failed is not loading: its anchor carries the failure and its retry", () => {
+    const { baseRows, subId, subRows } = seed();
+    const h = mount();
+    act(() => feeds.publish(BASE, settled(baseRows)));
+
+    const error = new Error("boom");
+    const refetch = vi.fn(() => Promise.resolve());
+    act(() => feeds.publish(subId, { pending: true, error, refetch }));
+
+    // No rows from the failed page, no loading region — the failure instead.
+    expect(ids(h.ctx()!.blocks)).toEqual(ids(baseRows));
+    expect(h.ctx()!.loadingBelow.size).toBe(0);
+    expect([...h.ctx()!.failedBelow]).toEqual([[subId, { error, refetch }]]);
+
+    // The retry lands the rows: the failure clears.
+    act(() => feeds.publish(subId, settled(subRows)));
+    expect(ids(h.ctx()!.blocks)).toEqual(ids([...baseRows, ...subRows]));
+    expect(h.ctx()!.failedBelow.size).toBe(0);
   });
 
   it("feeds already settled at mount compose into one document with nothing loading", () => {

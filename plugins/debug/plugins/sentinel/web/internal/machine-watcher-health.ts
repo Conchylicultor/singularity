@@ -42,13 +42,12 @@ export function clockTime(at: number): string {
 export function machineWatcherVerdict(
   result: ResourceResult<SentinelStatusValue>,
 ): HealthStatus {
-  if (result.pending) {
-    return result.error === null
-      ? { state: "unknown" }
-      : {
-          state: "unknown",
-          summary: "Couldn't load the machine watcher's status",
-        };
+  if (result.status === "loading") return { state: "unknown" };
+  if (result.status === "error") {
+    return {
+      state: "unknown",
+      summary: "Couldn't load the machine watcher's status",
+    };
   }
 
   const { watch, duress } = result.data;

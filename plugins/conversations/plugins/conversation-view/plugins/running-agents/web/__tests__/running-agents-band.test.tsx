@@ -12,6 +12,7 @@ import type {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import type { WorkflowRunEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
 import type { HostedToolbarParts } from "@plugins/primitives/plugins/data-view/core";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { RunningAgentsBand } from "../components/running-agents-band";
 
 /**
@@ -234,6 +235,23 @@ describe("the running-agents band", () => {
   it("shows nothing at all while the reads have not landed", () => {
     subagents = { kind: "pending" };
     expect(renderBand().container.innerHTML).toBe("");
+  });
+
+  it("says a failed read failed, with Retry — never an empty band", () => {
+    const refetch = vi.fn(() => Promise.resolve());
+    subagents = {
+      kind: "failed",
+      error: new ResourceError("loader-failed", "boom", undefined),
+      refetch,
+    };
+    renderBand();
+    expect(
+      screen.getByText(/Couldn't load the running agents: boom/),
+    ).toBeTruthy();
+    act(() => {
+      screen.getByRole("button", { name: "Retry" }).click();
+    });
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it("shows nothing when no sub-agent is working", () => {

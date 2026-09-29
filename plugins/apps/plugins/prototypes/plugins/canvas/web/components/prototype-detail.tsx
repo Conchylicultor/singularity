@@ -57,7 +57,7 @@ export function PrototypeTitle(): ReactNode {
   const result = useLive(prototypesList);
   const unknown = <span className="font-mono">{name}</span>;
   return matchResource(result, {
-    pending: () => <Loading variant="text" />,
+    loading: () => <Loading variant="text" />,
     error: () => unknown,
     ready: (rows) => {
       const meta = rows.find((p) => p.name === name);
@@ -79,7 +79,7 @@ export function PrototypeCanvas(): ReactNode {
     version: useLive(prototypesVersion),
   });
   return matchResource(gate, {
-    pending: () => <Loading variant="block" />,
+    loading: () => <Loading variant="block" />,
     error: () => <Loading variant="block" />,
     ready: ({ rows, version }) => {
       const meta = rows.find((p) => p.name === name) ?? null;

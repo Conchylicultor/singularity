@@ -38,7 +38,12 @@ describe("over-replay idempotence", () => {
       { id: "b", n: 1 },
     ];
     h.runtime.defineResource(
-      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "rows",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "row_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -118,7 +123,12 @@ describe("over-replay idempotence — a seeded scopedMembership entry", () => {
       },
     });
     h.runtime.defineResource(
-      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "rows",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "row_table",
         scopedMembership: { orderOf: async () => order() },
@@ -256,7 +266,12 @@ describe("L2 persist-hook calling contract", () => {
         }),
     });
     h.runtime.defineResource(
-      { key: "p", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "p",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "p_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -318,7 +333,12 @@ describe("L2 persist-hook calling contract", () => {
       },
     });
     h.runtime.defineResource(
-      { key: "p", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "p",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "p_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },

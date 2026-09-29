@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { useConversationSubagents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import {
   nextLingerExpiry,
@@ -16,7 +17,10 @@ import {
  * would then reverse itself the moment the reads land.
  */
 export type RunningAgentsState =
-  { kind: "pending" } | { kind: "known"; rows: RunningAgentRow[] };
+  | { kind: "pending" }
+  /** A read behind the band FAILED — rendered with Retry, never as "none working". */
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
+  | { kind: "known"; rows: RunningAgentRow[] };
 
 const NOTHING: BandSource = { entries: [], workflowRuns: [] };
 
@@ -56,6 +60,11 @@ export function useRunningAgents(conversationId: string): RunningAgentsState {
     return () => clearTimeout(id);
   }, [rows, now]);
 
-  if (subagents.kind === "pending") return { kind: "pending" };
-  return { kind: "known", rows };
+  switch (subagents.kind) {
+    case "pending":
+    case "failed":
+      return subagents;
+    case "known":
+      return { kind: "known", rows };
+  }
 }

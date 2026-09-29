@@ -38,6 +38,8 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineRenderSlot`
     - `review.ReviewSlots`

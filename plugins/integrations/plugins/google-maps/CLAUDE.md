@@ -53,6 +53,9 @@ over:
     - `auth.useAuthState`
     - `auth/google-maps/setup-wizard.googleMapsSetupPane`
     - `primitives/css/ui-kit.Button`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceError`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.openPane`
   - Exports (types):
     - `MapsAccess`

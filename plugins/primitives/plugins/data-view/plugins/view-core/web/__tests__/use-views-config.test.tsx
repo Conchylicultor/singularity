@@ -16,11 +16,25 @@ import type { ViewConfigRow, ViewSourceEntry, ViewTypeMeta } from "../../core";
 const setConfigSpy = vi.fn();
 let configDoc: { views: unknown[] } = { views: [] };
 let configPending = false;
+let configFailure: Error | null = null;
 vi.mock("@plugins/config_v2/web", () => ({
   useConfigResult: () =>
-    configPending
-      ? { pending: true, error: null, refetch: async () => {} }
-      : { pending: false, data: configDoc, refetch: async () => {} },
+    configFailure !== null
+      ? {
+          status: "error",
+          error: configFailure,
+          refetch: async () => {},
+        }
+      : configPending
+        ? {
+            status: "loading",
+            refetch: async () => {},
+          }
+        : {
+            status: "ready",
+            data: configDoc,
+            refetch: async () => {},
+          },
   useSetConfig: () => setConfigSpy,
 }));
 
@@ -263,6 +277,19 @@ describe("useViewsConfig — loading is not empty", () => {
     // alone, which is exactly the bug this flag exists to prevent.
     expect(result.current.ready).toBe(false);
     expect(result.current.instances).toEqual([]);
+  });
+
+  it("reports a failure (not endless loading) when the document cannot load", () => {
+    configFailure = new Error("boom");
+    try {
+      const { result } = renderHook(() =>
+        useViewsConfig<ViewTypeMeta>("k", descriptorMap, singleSource),
+      );
+      expect(result.current.ready).toBe(false);
+      expect(result.current.failure?.error).toBe(configFailure);
+    } finally {
+      configFailure = null;
+    }
   });
 
   it("reports ready:true for a settled, genuinely empty config", () => {

@@ -4,6 +4,11 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  matchResource,
+  ResourceErrorInline,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { configValues } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
@@ -24,6 +29,7 @@ export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
   const path = reg ? { path: reg.storePath } : null;
   const metaResult = useLive(configSecretMeta, path);
   const cfgResult = useLive(configValues, path);
+  const both = useCombinedResources({ meta: metaResult, cfg: cfgResult });
   if (!reg) {
     throw new Error(
       `[apple-signing setup] the "apple-signing" config has no web registration.`,
@@ -39,22 +45,31 @@ export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset to baseline-align icon with adjacent text */}
       <Icon icon={icon} className="mt-1 size-6" />
       <Fill>
-        {metaResult.pending || cfgResult.pending ? (
-          <Loading variant="text" />
-        ) : (
-          <Body
-            secretMeta={metaResult.data}
-            cfg={
-              cfgResult.data as {
-                signingIdentity?: string;
-                ascKeyId?: string;
-                ascIssuerId?: string;
+        {matchResource(both, {
+          loading: () => <Loading variant="text" />,
+          error: (error) => (
+            <ResourceErrorInline
+              variant="inline"
+              subject="the signing setup"
+              error={error}
+              refetch={both.refetch}
+            />
+          ),
+          ready: ({ meta, cfg }) => (
+            <Body
+              secretMeta={meta}
+              cfg={
+                (cfg ?? {}) as {
+                  signingIdentity?: string;
+                  ascKeyId?: string;
+                  ascIssuerId?: string;
+                }
               }
-            }
-            name={provider.name}
-            onConfigure={configure}
-          />
-        )}
+              name={provider.name}
+              onConfigure={configure}
+            />
+          ),
+        })}
       </Fill>
     </Stack>
   );

@@ -15,7 +15,7 @@ renders as a pending-turn card in the transcript, never as a restored draft.
 - Web:
   - Contributes: `Conversation.PromptInput` → `PromptInput`
   - Uses:
-    - `conversations.useConversation`
+    - `conversations.useLiveConversation`
     - `conversations/conversation-view.Conversation`
     - `conversations/conversation-view.isDraftEmpty`
     - `conversations/conversation-view.usePromptInsert`

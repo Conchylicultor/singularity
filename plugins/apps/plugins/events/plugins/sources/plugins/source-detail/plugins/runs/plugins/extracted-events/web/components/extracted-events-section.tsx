@@ -8,8 +8,7 @@ import {
   Badge,
   type BadgeVariant,
 } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   useEventSourceRun,
   useRunEvents,
@@ -161,27 +160,25 @@ export function ExtractedEventsSection({
     [],
   );
 
-  // A failed fetch is its own state, never an eternal skeleton: "the list is
-  // unreachable" and "this run touched nothing" are different answers.
-  if (query.isError) {
-    return (
-      <Placeholder tone="error">
-        {getEndpointErrorMessage(query.error)}
-      </Placeholder>
-    );
-  }
-
-  const events = query.data;
+  // The rows only reach the view once the read is ready (`readiness`): a
+  // failed fetch renders its failure with Retry, never an eternal skeleton —
+  // "the list is unreachable" and "this run touched nothing" are different
+  // answers.
+  const events = foldResource(query, {
+    loading: () => EMPTY_EVENTS,
+    error: () => EMPTY_EVENTS,
+    ready: (rows) => rows,
+  });
   const run = runQuery.data;
 
   return (
     <DataView<RunEvent>
       storageKey={RUN_EVENTS_VIEW}
-      rows={events ?? EMPTY_EVENTS}
+      rows={events}
       fields={fields}
       rowKey={(e) => e.id}
       views={["list", "table"]}
-      loading={events === undefined}
+      readiness={query}
       // The same destination the main events list opens: the event's own page,
       // else the page it was extracted from.
       onRowActivate={openEvent}

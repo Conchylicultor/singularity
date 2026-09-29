@@ -81,9 +81,9 @@ describe("useLive — window", () => {
     client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
 
     const { result } = mount(client, () => useLive(c));
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
-    if (r.pending) throw new Error("unreachable");
+    if (r.status !== "ready") throw new Error("unreachable");
     expect(r.data).toEqual(rows(2));
     expect(r.canGrow).toBe(true);
     expect(r.growing).toBe(false);
@@ -145,16 +145,16 @@ describe("useLive — window", () => {
     client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
 
     const { result } = mount(client, () => useLive(c));
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
 
     act(() => {
       const r = result.current;
-      if (r.pending) throw new Error("unreachable");
+      if (r.status !== "ready") throw new Error("unreachable");
       r.loadMore();
     });
     // The limit-4 tuple has no value yet: still settled, on the old rows.
     const mid = result.current;
-    if (mid.pending) throw new Error("grow must not flash pending");
+    if (mid.status !== "ready") throw new Error("grow must not flash loading");
     expect(mid.growing).toBe(true);
     expect(mid.data).toEqual(rows(2));
     expect(mid.canGrow).toBe(false);
@@ -164,23 +164,29 @@ describe("useLive — window", () => {
     });
     await waitFor(() => {
       const r = result.current;
-      expect(!r.pending && !r.growing && r.data.length === 4).toBe(true);
+      expect(r.status === "ready" && !r.growing && r.data.length === 4).toBe(
+        true,
+      );
     });
     const grown = result.current;
-    if (grown.pending) throw new Error("unreachable");
+    if (grown.status !== "ready") throw new Error("unreachable");
     expect(grown.canGrow).toBe(true);
 
     // 4 + 2 clamps to maxLimit 5; a full 5-row window cannot grow further.
-    act(() => grown.loadMore());
+    act(() => {
+      grown.loadMore();
+    });
     act(() => {
       client.setQueryData(queryKeyFor(c.key, { limit: "5" }), rows(5));
     });
     await waitFor(() => {
       const r = result.current;
-      expect(!r.pending && !r.growing && r.data.length === 5).toBe(true);
+      expect(r.status === "ready" && !r.growing && r.data.length === 5).toBe(
+        true,
+      );
     });
     const end = result.current;
-    if (end.pending) throw new Error("unreachable");
+    if (end.status !== "ready") throw new Error("unreachable");
     expect(end.canGrow).toBe(false);
   });
 
@@ -189,9 +195,9 @@ describe("useLive — window", () => {
     const client = makeClient();
     client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(1));
     const { result } = mount(client, () => useLive(c));
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
-    if (r.pending) throw new Error("unreachable");
+    if (r.status !== "ready") throw new Error("unreachable");
     expect(r.canGrow).toBe(false);
   });
 });
@@ -215,18 +221,19 @@ describe("useLive — result identity", () => {
       on: useLive(c, { where: { on: true } }),
     }));
     await waitFor(() => {
-      expect(result.current.all.pending).toBe(false);
-      expect(result.current.on.pending).toBe(false);
+      expect(result.current.all.status).toBe("ready");
+      expect(result.current.on.status).toBe("ready");
     });
     const { all, on } = result.current;
-    if (all.pending || on.pending) throw new Error("unreachable");
+    if (all.status !== "ready" || on.status !== "ready")
+      throw new Error("unreachable");
 
     rerender();
     rerender();
     expect(result.current.all).toBe(all);
     expect(result.current.on).toBe(on);
     const again = result.current.all;
-    if (again.pending) throw new Error("unreachable");
+    if (again.status !== "ready") throw new Error("unreachable");
     expect(again.loadMore).toBe(all.loadMore);
   });
 
@@ -236,9 +243,9 @@ describe("useLive — result identity", () => {
     const key = queryKeyFor(c.key, { limit: "2" });
     client.setQueryData(key, rows(2));
     const { result } = mount(client, () => useLive(c));
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const first = result.current;
-    if (first.pending) throw new Error("unreachable");
+    if (first.status !== "ready") throw new Error("unreachable");
 
     // A fresh array with the same rows: structural sharing keeps `data`.
     act(() => {
@@ -252,7 +259,7 @@ describe("useLive — result identity", () => {
     });
     await waitFor(() => expect(result.current).not.toBe(first));
     const next = result.current;
-    if (next.pending) throw new Error("unreachable");
+    if (next.status !== "ready") throw new Error("unreachable");
     expect(next.data).toEqual(changed);
     expect(next.growing).toBe(false);
     // Same limit: loadMore itself did not change.
@@ -264,13 +271,15 @@ describe("useLive — result identity", () => {
     const client = makeClient();
     client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
     const { result, rerender } = mount(client, () => useLive(c));
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const first = result.current;
-    if (first.pending) throw new Error("unreachable");
+    if (first.status !== "ready") throw new Error("unreachable");
 
-    act(() => first.loadMore());
+    act(() => {
+      first.loadMore();
+    });
     const mid = result.current;
-    if (mid.pending) throw new Error("grow must not flash pending");
+    if (mid.status !== "ready") throw new Error("grow must not flash loading");
     expect(mid.growing).toBe(true);
     expect(mid.data).toEqual(rows(2));
     rerender();
@@ -281,10 +290,12 @@ describe("useLive — result identity", () => {
     });
     await waitFor(() => {
       const r = result.current;
-      expect(!r.pending && !r.growing && r.data.length === 4).toBe(true);
+      expect(r.status === "ready" && !r.growing && r.data.length === 4).toBe(
+        true,
+      );
     });
     const grown = result.current;
-    if (grown.pending) throw new Error("unreachable");
+    if (grown.status !== "ready") throw new Error("unreachable");
     expect(grown.canGrow).toBe(true);
     // The limit moved 2 → 4, so the next grow starts from the new one.
     expect(grown.loadMore).not.toBe(first.loadMore);
@@ -305,8 +316,8 @@ describe("useLive — result identity", () => {
       value: useLive(v),
     }));
     await waitFor(() => {
-      expect(result.current.set.pending).toBe(false);
-      expect(result.current.value.pending).toBe(false);
+      expect(result.current.set.status).toBe("ready");
+      expect(result.current.value.status).toBe("ready");
     });
     const { set, value } = result.current;
     rerender();
@@ -322,22 +333,22 @@ describe("useLive — groupBy", () => {
       count: count - i,
     }));
 
-  it("subscribes on the :groups tuple and goes pending → settled with paging handles", async () => {
+  it("subscribes on the :groups tuple and goes loading → settled with paging handles", async () => {
     const c = collection();
     const client = makeClient();
     const { result } = mount(client, () =>
       useLive(c, { groupBy: "on", limit: 2 }),
     );
-    expect(result.current.pending).toBe(true);
+    expect(result.current.status).toBe("loading");
     act(() => {
       client.setQueryData(
         queryKeyFor(`${c.key}:groups`, { groupBy: "on", limit: "2" }),
         groups(2),
       );
     });
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
-    if (r.pending) throw new Error("unreachable");
+    if (r.status !== "ready") throw new Error("unreachable");
     // Typed: `on` is a boolean column, so a group's value is boolean | null.
     const value: boolean | null = r.data[0]!.value;
     expect(value).toBe(true);
@@ -371,15 +382,15 @@ describe("useLive — groupBy", () => {
     const { result } = mount(client, () =>
       useLive(c, { groupBy: "on", limit: 2 }),
     );
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
 
     act(() => {
       const r = result.current;
-      if (r.pending) throw new Error("unreachable");
+      if (r.status !== "ready") throw new Error("unreachable");
       r.loadMore();
     });
     const mid = result.current;
-    if (mid.pending) throw new Error("grow must not flash pending");
+    if (mid.status !== "ready") throw new Error("grow must not flash loading");
     expect(mid.growing).toBe(true);
     expect(mid.data).toEqual(groups(2));
 
@@ -392,10 +403,12 @@ describe("useLive — groupBy", () => {
     });
     await waitFor(() => {
       const r = result.current;
-      expect(!r.pending && !r.growing && r.data.length === 3).toBe(true);
+      expect(r.status === "ready" && !r.growing && r.data.length === 3).toBe(
+        true,
+      );
     });
     const grown = result.current;
-    if (grown.pending) throw new Error("unreachable");
+    if (grown.status !== "ready") throw new Error("unreachable");
     expect(grown.canGrow).toBe(false); // 3 < 52: every group is loaded
   });
 
@@ -424,41 +437,44 @@ describe("useLive — ids", () => {
       rows(2),
     );
     const { result } = mount(client, () => useLive(c, { ids: ["r1", "r0"] }));
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
-    if (r.pending) throw new Error("unreachable");
+    if (r.status !== "ready") throw new Error("unreachable");
     expect(r.data).toEqual(rows(2));
     expect("canGrow" in r).toBe(false);
   });
 });
 
 describe("useLiveRow", () => {
-  it("goes pending → found", async () => {
+  it("goes loading → found", async () => {
     const c = collection();
     const client = makeClient();
     const { result } = mount(client, () => useLiveRow(c, "r0"));
-    expect(result.current.pending).toBe(true);
+    expect(result.current.status).toBe("loading");
     act(() => {
       client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "r0" }), rows(1));
     });
-    await waitFor(() => expect(result.current.pending).toBe(false));
-    expect(result.current).toEqual({
-      pending: false,
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current).toMatchObject({
+      status: "ready",
       found: true,
       row: rows(1)[0],
     });
   });
 
-  it("goes pending → not found when the server answers with no row", async () => {
+  it("goes loading → not found when the server answers with no row", async () => {
     const c = collection();
     const client = makeClient();
     const { result } = mount(client, () => useLiveRow(c, "nope"));
-    expect(result.current.pending).toBe(true);
+    expect(result.current.status).toBe("loading");
     act(() => {
       client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "nope" }), []);
     });
-    await waitFor(() => expect(result.current.pending).toBe(false));
-    expect(result.current).toEqual({ pending: false, found: false });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current).toMatchObject({
+      status: "ready",
+      found: false,
+    });
   });
 
   it("a null id is not found on the first render, reads nothing, and is not a pending mount", () => {
@@ -473,14 +489,14 @@ describe("useLiveRow", () => {
       seen.push(r);
       return r;
     });
-    expect(seen[0]).toEqual({ pending: false, found: false });
+    expect(seen[0]).toMatchObject({ status: "ready", found: false });
     // The substrate's skip: no subscription at all.
     expect(observe.mock.calls.filter(([key]) => key.startsWith(c.key))).toEqual(
       [],
     );
     observe.mockRestore();
     expect(pendingMountSnapshot().pending).toBe(before);
-    for (const r of seen) expect(r).toEqual({ pending: false, found: false });
+    for (const r of seen) expect(r).toMatchObject({ status: "ready", found: false });
     unmount();
   });
 
@@ -495,23 +511,30 @@ describe("useLiveRow", () => {
       seen.push(r);
       return r;
     });
-    const found = { pending: false, found: true, row: rows(1)[0] };
-    await waitFor(() => expect(result.current).toEqual(found));
+    const found = {
+      status: "ready",
+      found: true,
+      row: rows(1)[0],
+    };
+    await waitFor(() => expect(result.current).toMatchObject(found));
 
     id = null;
     const from = seen.length;
     rerender();
     expect(seen.length).toBeGreaterThan(from);
     for (const r of seen.slice(from)) {
-      expect(r).toEqual({ pending: false, found: false });
+      expect(r).toMatchObject({
+        status: "ready",
+        found: false,
+      });
     }
 
     id = "r0";
     rerender();
-    expect(result.current).toEqual(found);
+    expect(result.current).toMatchObject(found);
   });
 
-  it("a failed load keeps the last row as `stale` on the pending arm — and no stale row when it was absent", async () => {
+  it("a failed load is the error arm, keeping the last row as `stale` — and no stale row when it was absent", async () => {
     const c = collection();
     const client = makeClient();
     const { result, notifications } = mount(client, () => ({
@@ -523,8 +546,8 @@ describe("useLiveRow", () => {
       client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "nope" }), []);
     });
     await waitFor(() => {
-      expect(result.current.hit.pending).toBe(false);
-      expect(result.current.miss.pending).toBe(false);
+      expect(result.current.hit.status).toBe("ready");
+      expect(result.current.miss.status).toBe("ready");
     });
 
     // The one HTTP read path rejects, so a refetch errors the tuple.
@@ -537,11 +560,14 @@ describe("useLiveRow", () => {
     fetch.mockRestore();
 
     await waitFor(() => {
-      expect(result.current.hit.pending).toBe(true);
-      expect(result.current.miss.pending).toBe(true);
+      expect(result.current.hit.status).toBe("error");
+      expect(result.current.miss.status).toBe("error");
     });
     const { hit, miss } = result.current;
-    if (!hit.pending || !miss.pending) throw new Error("unreachable");
+    if (hit.status !== "error" || miss.status !== "error") {
+      throw new Error("unreachable — a failed read is the error arm");
+    }
+    expect(hit.error.kind).toBe("loader-failed");
     expect(hit.error?.message).toBe("late");
     expect(hit.stale).toEqual(rows(1)[0]);
     expect(miss.error?.message).toBe("late");
@@ -554,20 +580,20 @@ describe("useLiveRow", () => {
     const key = queryKeyFor(`${c.key}:rows`, { ids: "r0" });
     const { result, rerender } = mount(client, () => ({
       hit: useLiveRow(c, "r0"),
-      pending: useLiveRow(c, "later"),
+      loading: useLiveRow(c, "later"),
       absent: useLiveRow(c, null),
     }));
-    const { pending, absent } = result.current;
+    const { loading, absent } = result.current;
     act(() => {
       client.setQueryData(key, rows(1));
     });
-    await waitFor(() => expect(result.current.hit.pending).toBe(false));
+    await waitFor(() => expect(result.current.hit.status).toBe("ready"));
     const hit = result.current.hit;
 
     rerender();
     rerender();
     expect(result.current.hit).toBe(hit);
-    expect(result.current.pending).toBe(pending);
+    expect(result.current.loading).toBe(loading);
     expect(result.current.absent).toBe(absent);
 
     // A fresh array with the same row: structural sharing keeps the row.
@@ -581,8 +607,8 @@ describe("useLiveRow", () => {
       client.setQueryData(key, [changed]);
     });
     await waitFor(() => expect(result.current.hit).not.toBe(hit));
-    expect(result.current.hit).toEqual({
-      pending: false,
+    expect(result.current.hit).toMatchObject({
+      status: "ready",
       found: true,
       row: changed,
     });
@@ -600,18 +626,18 @@ describe("a lookup-only collection", () => {
       row: useLiveRow(c, "r0"),
       set: useLive(c, { ids: ["r0"] }),
     }));
-    expect(result.current.row.pending).toBe(true);
+    expect(result.current.row.status).toBe("loading");
     act(() => {
       client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "r0" }), rows(1));
     });
-    await waitFor(() => expect(result.current.row.pending).toBe(false));
-    expect(result.current.row).toEqual({
-      pending: false,
+    await waitFor(() => expect(result.current.row.status).toBe("ready"));
+    expect(result.current.row).toMatchObject({
+      status: "ready",
       found: true,
       row: rows(1)[0],
     });
     const set = result.current.set;
-    if (set.pending) throw new Error("unreachable");
+    if (set.status !== "ready") throw new Error("unreachable");
     expect(set.data).toEqual(rows(1));
   });
 
@@ -631,17 +657,17 @@ describe("a lookup-only collection", () => {
 const Unread = z.object({ errors: z.number(), warnings: z.number() });
 
 describe("useLive — value", () => {
-  it("goes pending → settled on the param-less tuple", async () => {
+  it("goes loading → settled on the param-less tuple", async () => {
     const v = liveValue(`test.use-live.value.${seq++}`, { schema: Unread });
     const client = makeClient();
     const { result } = mount(client, () => useLive(v));
-    expect(result.current.pending).toBe(true);
+    expect(result.current.status).toBe("loading");
     act(() => {
       client.setQueryData(queryKeyFor(v.key, {}), { errors: 1, warnings: 2 });
     });
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
-    if (r.pending) throw new Error("unreachable");
+    if (r.status !== "ready") throw new Error("unreachable");
     expect(r.data).toEqual({ errors: 1, warnings: 2 });
   });
 
@@ -656,7 +682,7 @@ describe("useLive — value", () => {
       warnings: 5,
     });
     const { result } = mount(client, () => useLive(v, { scope: "a" }));
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
   });
 
   it("a hydrated (boot-snapshot) value is settled on its first render", () => {
@@ -671,13 +697,13 @@ describe("useLive — value", () => {
       errors: 3,
       warnings: 0,
     });
-    const seen: boolean[] = [];
+    const seen: string[] = [];
     mount(client, () => {
       const r = useLive(v);
-      seen.push(r.pending);
+      seen.push(r.status);
       return r;
     });
-    expect(seen[0]).toBe(false);
+    expect(seen[0]).toBe("ready");
   });
 
   it("no placeholder: a never-loaded value makes no HTTP fetch on mount (the WS fills it)", () => {
@@ -720,7 +746,7 @@ describe("useLive — value", () => {
     });
   });
 
-  it("null (no subject yet): pending with no error, nothing read, not a pending mount — until params arrive", async () => {
+  it("null (no subject yet): loading with no error, nothing read, not a pending mount — until params arrive", async () => {
     const v = liveValue(`test.use-live.value.${seq++}`, {
       schema: Unread,
       params: ["id"],
@@ -732,7 +758,7 @@ describe("useLive — value", () => {
     const { result, rerender } = mount(client, () =>
       useLive(v, id === null ? null : { id }),
     );
-    expect(result.current).toMatchObject({ pending: true, error: null });
+    expect(result.current).toMatchObject({ status: "loading" });
     expect(observe.mock.calls.filter(([key]) => key === v.key)).toEqual([]);
     expect(pendingMountSnapshot().pending).toBe(before);
     // The skipped query can never fetch: refetch is a no-op.
@@ -758,7 +784,7 @@ describe("useLive — value", () => {
         warnings: 0,
       });
     });
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
   });
 
   it("an absent optional param is one tuple however it is spelled", () => {
@@ -778,7 +804,7 @@ describe("useLive — value", () => {
       useLive(v, { path: "p", scopeId: undefined }),
       useLive(v, { path: "p", scopeId: "" }),
     ]);
-    for (const r of result.current) expect(r.pending).toBe(false);
+    for (const r of result.current) expect(r.status).toBe("ready");
     const subs = observe.mock.calls
       .filter(([key]) => key === v.key)
       .map(([, params]) => params);
@@ -807,8 +833,8 @@ describe("useLive — value", () => {
       renderHook(
         () => {
           const r = [
-            useLive(kept, { path: "a" }).pending,
-            useLive(plain).pending,
+            useLive(kept, { path: "a" }).status !== "ready",
+            useLive(plain).status !== "ready",
           ];
           seen.push(r);
           return r;
@@ -857,5 +883,84 @@ describe("useLive — value", () => {
       useLive(optional, { scopeId: "s" });
     };
     expect(typeof useTypeOnly).toBe("function");
+  });
+});
+
+describe("status arms", () => {
+  it("a window goes loading → ready", async () => {
+    const c = collection();
+    const client = makeClient();
+    const { result } = mount(client, () => useLive(c));
+    expect(result.current.status).toBe("loading");
+    act(() => {
+      client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.status).toBe("ready");
+  });
+
+  it("a grow that fails is the error arm, with the window it grew from as `stale`", async () => {
+    const c = collection();
+    const client = makeClient();
+    client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    const { result, notifications } = mount(client, () => useLive(c));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    act(() => {
+      const r = result.current;
+      if (r.status !== "ready") throw new Error("unreachable");
+      r.loadMore();
+    });
+    expect(result.current.status).toBe("ready"); // growing, on the old rows
+
+    const fetch = vi
+      .spyOn(notifications, "fetchOverHttp")
+      .mockRejectedValue(new Error("grow failed"));
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: queryKeyFor(c.key, { limit: "4" }),
+        exact: true,
+      });
+    });
+    fetch.mockRestore();
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    const r = result.current;
+    if (r.status !== "error") throw new Error("unreachable");
+    expect(r.error.message).toBe("grow failed");
+    expect(r.stale).toEqual(rows(2));
+
+    // Retrying the grown window recovers it.
+    act(() => {
+      client.setQueryData(queryKeyFor(c.key, { limit: "4" }), rows(4));
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    const grown = result.current;
+    if (grown.status !== "ready") throw new Error("unreachable");
+    expect(grown.data).toEqual(rows(4));
+  });
+
+  it("useLiveRow carries refetch on every arm; refetch from the error arm recovers", async () => {
+    const c = collection();
+    const client = makeClient();
+    const { result, notifications } = mount(client, () => useLiveRow(c, "r0"));
+    expect(result.current.status).toBe("loading");
+    expect(typeof result.current.refetch).toBe("function");
+
+    const fail = vi
+      .spyOn(notifications, "fetchOverHttp")
+      .mockRejectedValue(new Error("boom"));
+    await act(async () => {
+      await result.current.refetch();
+    });
+    fail.mockRestore();
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    vi.spyOn(notifications, "fetchOverHttp").mockResolvedValue(rows(1));
+    await act(async () => {
+      await result.current.refetch();
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current).toMatchObject({ found: true, row: rows(1)[0] });
   });
 });

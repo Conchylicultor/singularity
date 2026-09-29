@@ -5,6 +5,7 @@ import type {
   useResolveCell,
   useResolveCellEditor,
 } from "../index";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { EditableCell } from "./editable-cell";
 
 /**
@@ -44,6 +45,18 @@ export function FieldCell({
   resolveEditor,
   display,
 }: FieldCellProps): ReactNode {
+  // A field whose values failed to load has no value to draw — say so, per
+  // cell, rather than draw the decode of `undefined` (an unset-looking cell).
+  if (field.readError) {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        error={field.readError.error}
+        refetch={field.readError.refetch}
+        subject={field.label}
+      />
+    );
+  }
   const value = field.value?.(row);
   const values = field.values?.(row);
   const read = field.cell

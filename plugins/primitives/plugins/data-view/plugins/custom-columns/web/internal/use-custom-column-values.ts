@@ -1,5 +1,9 @@
 import { useCallback, useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   customColumnValues,
@@ -13,12 +17,27 @@ import {
 export type CustomColumnValueIndex = Map<string, Map<string, string>>;
 
 /**
- * A surface's custom-column values: `pending` until the first value lands, then
- * the settled index. A union, so "not loaded yet" can never be read as "no cell
- * has a value" — the caller decides what a cell shows meanwhile.
+ * A surface's custom-column values, as a read: loading until the first value
+ * lands, failed if it cannot load (the last index seen, if any, as `stale`),
+ * then the settled index. A state, so "not loaded yet" can never be read as
+ * "no cell has a value" — the caller decides what a cell shows meanwhile.
  */
-export type CustomColumnValues =
-  { pending: true } | { pending: false; index: CustomColumnValueIndex };
+export type CustomColumnValues = ResourceResult<CustomColumnValueIndex>;
+
+function indexValues(
+  rows: readonly { rowKey: string; columnId: string; value: string }[],
+): CustomColumnValueIndex {
+  const index: CustomColumnValueIndex = new Map();
+  for (const row of rows) {
+    let byColumn = index.get(row.rowKey);
+    if (!byColumn) {
+      byColumn = new Map();
+      index.set(row.rowKey, byColumn);
+    }
+    byColumn.set(row.columnId, row.value);
+  }
+  return index;
+}
 
 /**
  * Subscribe to a surface's custom-column values and index them by
@@ -26,19 +45,7 @@ export type CustomColumnValues =
  */
 export function useCustomColumnValues(dataViewId: string): CustomColumnValues {
   const result = useLive(customColumnValues, { dataViewId });
-  return useMemo((): CustomColumnValues => {
-    if (result.pending) return { pending: true };
-    const index: CustomColumnValueIndex = new Map();
-    for (const row of result.data) {
-      let byColumn = index.get(row.rowKey);
-      if (!byColumn) {
-        byColumn = new Map();
-        index.set(row.rowKey, byColumn);
-      }
-      byColumn.set(row.columnId, row.value);
-    }
-    return { pending: false, index };
-  }, [result]);
+  return useMemo(() => mapResource(result, indexValues), [result]);
 }
 
 /** Upsert (or delete-on-empty) a single custom-column cell value. */

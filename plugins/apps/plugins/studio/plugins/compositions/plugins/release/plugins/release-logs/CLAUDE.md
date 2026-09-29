@@ -20,6 +20,7 @@
     - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/log-channels.LiveLogChannel`
     - `shell/notifications.toast`
 

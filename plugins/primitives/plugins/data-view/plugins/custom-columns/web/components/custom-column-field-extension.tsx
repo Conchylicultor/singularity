@@ -3,6 +3,7 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { resolveTypeChain } from "@plugins/fields/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   getDataViewDescriptor,
   useResolveValueCodec,
@@ -83,6 +84,20 @@ function Inner({
   const deriveFromConfig = useResolveColumnDerive();
   const identities = useFieldIdentities();
 
+  // A failed values read with nothing held: stamped onto every custom field so
+  // its cells render the failure (with Retry) rather than read as unset. A
+  // failure over a held value keeps painting that value (live-state reports it).
+  const readError = useMemo(
+    () =>
+      foldResource(values, {
+        loading: () => undefined,
+        error: (error, stale) =>
+          stale === undefined ? { error, refetch: values.refetch } : undefined,
+        ready: () => undefined,
+      }),
+    [values],
+  );
+
   const fields = useMemo(
     () =>
       defs.map((def): FieldDef<unknown> => {
@@ -109,19 +124,23 @@ function Inner({
           // NOT a literal — the field-type registry is the extension seam; the
           // type is dispatched through the generic cell/editor/filter slots.
           type: def.type,
-          // While the values are still pending a cell reads as unset (the
-          // codec's decode of `undefined`) — deliberately, and the least wrong
-          // option this seam allows: `FieldExtensionProps.render` has no
-          // pending channel, and abstaining (no fields) would drop the columns
-          // and leave a view's filter rule on one dangling, which
-          // `lowerFilterGroup` lowers to TRUE (every row). Same choice, same
-          // reason, as the pages `starred` field.
-          value: (row) =>
-            codec.decode(
-              values.pending
-                ? undefined
-                : values.index.get(rowKeyRef.current(row, 0))?.get(def.id),
-            ),
+          // While the values are still loading a cell reads as unset (the
+          // codec's decode of `undefined`) — deliberately: abstaining (no
+          // fields) would drop the columns and leave a view's filter rule on
+          // one dangling, which `lowerFilterGroup` lowers to TRUE (every row).
+          // Same choice, same reason, as the pages `starred` field. A failed
+          // read keeps the last values seen; with none, `readError` below makes
+          // every cell show the failure instead.
+          value: (row) => {
+            const index = foldResource(values, {
+              loading: () => undefined,
+              error: (_error, stale) => stale,
+              ready: (data) => data,
+            });
+            return codec.decode(
+              index?.get(rowKeyRef.current(row, 0))?.get(def.id),
+            );
+          },
           onEdit: (row, next) =>
             setValue({
               dataViewId: storageKey,
@@ -134,11 +153,13 @@ function Inner({
           config: def.config,
           sortable,
           filterable,
+          ...(readError === undefined ? {} : { readError }),
         };
       }),
     [
       defs,
       values,
+      readError,
       setValue,
       storageKey,
       rowKeyRef,

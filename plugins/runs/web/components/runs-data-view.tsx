@@ -92,7 +92,7 @@ export function RunsDataView({
   // first settled `rev` then refreshes once.
   const tick = useResource(runsRevisionResource);
   const changeTick = matchResource(tick, {
-    pending: () => null,
+    loading: () => null,
     ready: (d) => d.rev,
   });
 
@@ -106,7 +106,7 @@ export function RunsDataView({
   // claim is only ever made once it is known to be true, and there is no loading
   // state to render for a line of copy.
   const everRan = matchResource(tick, {
-    pending: () => true,
+    loading: () => true,
     ready: (d) => d.hasRuns,
   });
 

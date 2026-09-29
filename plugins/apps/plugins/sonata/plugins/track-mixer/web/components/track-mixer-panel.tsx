@@ -8,6 +8,7 @@ import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   FloatingAction,
   FloatingActionFadeIn,
@@ -477,7 +478,16 @@ export function TrackMixerPanel() {
       "TrackMixerPanel rendered without an open song — the section gate (useTrackMixerAvailable) should prevent this.",
     );
   }
-  if (entries.pending) return <Loading variant="rows" count={3} />;
+  if (entries.kind === "pending") return <Loading variant="rows" count={3} />;
+  if (entries.kind === "failed")
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the track views"
+        error={entries.error}
+        refetch={entries.refetch}
+      />
+    );
 
   return (
     <div className="divide-y divide-border/60">

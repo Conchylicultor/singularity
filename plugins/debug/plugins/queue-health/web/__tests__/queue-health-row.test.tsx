@@ -41,6 +41,7 @@ import {
   reachableSlots,
   type HoldClass,
 } from "@plugins/infra/plugins/jobs/core";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import type { QueueClassPulse, QueuePulse, QueueTone } from "../../core";
 import { useQueueHealth } from "../internal/use-queue-health";
 import { QueueGlance } from "../components/queue-glance";
@@ -50,10 +51,17 @@ const NOW = Date.now();
 const refetch = () => Promise.resolve();
 
 function settled(pulse: QueuePulse) {
-  live.result = { pending: false, data: pulse, refetch };
+  live.result = { status: "ready", data: pulse, refetch };
 }
 function pending(error: Error | null) {
-  live.result = { pending: true, error, refetch };
+  live.result =
+    error === null
+      ? { status: "loading", refetch }
+      : {
+          status: "error",
+          error: new ResourceError("loader-failed", error.message, error),
+          refetch,
+        };
 }
 
 function classPulse(

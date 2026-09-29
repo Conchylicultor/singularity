@@ -1,4 +1,5 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { useBookmarkToggle } from "../internal/use-bookmarks";
 import { hostOf } from "../internal/host-of";
@@ -25,10 +26,21 @@ export function BookmarkStar() {
  */
 function UrlBookmarkStar({ url }: { url: string }) {
   const state = useBookmarkToggle(url);
-  if (state.pending) {
+  if (state.status === "loading") {
     return <IconButton icon={starIcon} label="Add bookmark" disabled />;
   }
-  const { bookmarked, toggle } = state;
+  if (state.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={starIcon}
+        subject="this page's bookmark"
+        error={state.error}
+        refetch={state.refetch}
+      />
+    );
+  }
+  const { bookmarked, toggle } = state.data;
   return (
     <IconButton
       icon={starIcon}

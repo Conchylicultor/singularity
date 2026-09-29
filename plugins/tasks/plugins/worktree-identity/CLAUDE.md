@@ -46,6 +46,7 @@ outside `apps/…` it loads in the eager tier, so the row is there at first pain
     - `apps-core/tabs.navigate`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useResource`
     - `shell/health-report.HealthReport`
 

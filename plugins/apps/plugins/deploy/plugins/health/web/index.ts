@@ -14,7 +14,6 @@ export {
   useServerHealth,
   useServerVerified,
 } from "./hooks";
-export type { ServerVerification } from "./hooks";
 export { VerifyConnectionBody } from "./components/verify-connection";
 export {
   ServerStatusBadge,

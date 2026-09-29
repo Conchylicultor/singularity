@@ -5,6 +5,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   type CreateOption,
@@ -185,7 +186,19 @@ export function DataViewShellFrame(props: {
     );
 
   if (!viewModel.ready) {
-    return withoutInstance(<Loading variant="rows" />);
+    const { failure } = viewModel;
+    return withoutInstance(
+      failure === null ? (
+        <Loading variant="rows" />
+      ) : (
+        <ResourceErrorInline
+          variant="block"
+          error={failure.error}
+          refetch={failure.refetch}
+          subject="this view's configuration"
+        />
+      ),
+    );
   }
 
   const { instances, activeId } = viewModel;

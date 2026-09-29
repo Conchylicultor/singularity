@@ -86,6 +86,7 @@ lives inside the tool result, not in a message a rewind can cut at.
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.Input`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/persistent-draft.useDraft`
     - `primitives/persistent-draft.writeDraft`
     - `shell/notifications.toast`

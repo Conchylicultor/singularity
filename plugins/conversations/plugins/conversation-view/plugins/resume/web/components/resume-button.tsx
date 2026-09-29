@@ -1,6 +1,6 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
-import { useConversation } from "@plugins/conversations/web";
+import { useLiveConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   useEndpointMutation,
@@ -16,7 +16,7 @@ export function ResumeButton({
 }: {
   conversation: ConversationRecord;
 }) {
-  const live = useConversation(conversation.id) ?? conversation;
+  const live = useLiveConversation(conversation);
   const resume = useEndpointMutation(resumeConversationEndpoint, {
     onSuccess: () =>
       toast({

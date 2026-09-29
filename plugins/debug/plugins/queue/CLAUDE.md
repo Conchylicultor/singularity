@@ -22,7 +22,6 @@
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
-    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
@@ -37,6 +36,7 @@
     - `primitives/filter-chips.FilterChip`
     - `primitives/filter-chips.useChipFilter`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`

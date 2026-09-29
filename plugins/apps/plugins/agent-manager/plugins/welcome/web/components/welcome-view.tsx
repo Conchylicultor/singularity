@@ -3,6 +3,10 @@ import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversations } from "@plugins/conversations/web";
+import {
+  matchResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { ConversationEntry } from "@plugins/conversations/core";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -28,8 +32,9 @@ export function WelcomeView() {
   };
 
   // The counts and the recents describe the user's conversations, so they
-  // render only once those are known — a pending read shows neither, never a
-  // zero or an empty list it would then take back.
+  // render only once those are known — a loading read shows neither, never a
+  // zero or an empty list it would then take back; a failed one says so once,
+  // where the recents would be.
   return (
     <Center className="h-full p-2xl">
       <Stack align="center" gap="2xl" className="w-full max-w-sm">
@@ -41,22 +46,38 @@ export function WelcomeView() {
           </Text>
         </Stack>
 
-        {!conv.pending && (
-          <ConversationStats
-            active={conv.active}
-            totalGoneCount={conv.totalGoneCount}
-          />
-        )}
+        {matchResource(conv, {
+          loading: () => null,
+          // Said once, below, where the recents would be.
+          error: () => null,
+          ready: (data) => (
+            <ConversationStats
+              active={data.active}
+              totalGoneCount={data.totalGoneCount}
+            />
+          ),
+        })}
 
         {/* New Conversation */}
         <LaunchControl fullWidth openMode="root" />
 
-        {!conv.pending && (
-          <RecentConversations
-            conversations={[...conv.active, ...conv.recentGone].slice(0, 5)}
-            onOpen={openConversation}
-          />
-        )}
+        {matchResource(conv, {
+          loading: () => null,
+          error: (error) => (
+            <ResourceErrorInline
+              variant="inline"
+              subject="your conversations"
+              error={error}
+              refetch={conv.refetch}
+            />
+          ),
+          ready: (data) => (
+            <RecentConversations
+              conversations={[...data.active, ...data.recentGone].slice(0, 5)}
+              onOpen={openConversation}
+            />
+          ),
+        })}
       </Stack>
     </Center>
   );

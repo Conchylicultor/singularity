@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useMemo } from "react";
 import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
@@ -26,7 +27,9 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
   // The assignment isn't known yet: a neutral disc (status dot only), never the
   // title-glyph that means "this conversation has no category icon". With no
   // avatar category chosen there is nothing to wait for.
-  if (avatarCategoryId && rows.pending) {
+  // A failed read is the error glyph (hover names it, click retries), never
+  // the neutral disc, which would read as "still loading" forever.
+  if (avatarCategoryId && rows.status === "loading") {
     return (
       <Avatar
         statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
@@ -34,10 +37,19 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
       />
     );
   }
-  const item =
-    avatarCategoryId && !rows.pending
-      ? rows.data.get(avatarCategoryId)?.item
-      : undefined;
+  if (avatarCategoryId && rows.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the category"
+        error={rows.error}
+        refetch={rows.refetch}
+      />
+    );
+  }
+  let item: string | undefined;
+  if (avatarCategoryId && rows.status === "ready")
+    item = rows.data.get(avatarCategoryId)?.item;
   const avatar = item ? avatars[item] : undefined;
   const hasIcon = avatar?.icon != null;
 

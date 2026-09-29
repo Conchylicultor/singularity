@@ -8,6 +8,7 @@ import type {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
+import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
@@ -301,6 +302,14 @@ export interface FieldDef<TRow> {
   data?: (row: TRow) => unknown;
   /** Custom renderer; falls back to String(value ?? ""). */
   cell?: (row: TRow) => ReactNode;
+  /**
+   * The field's values FAILED to load and no earlier values are held — set by a
+   * field whose values come from a read of its own (a field extension). Every
+   * cell of the field then renders the failure with its Retry instead of a
+   * value, so a failed read never passes for a column of unset cells. Absent
+   * while the values are loading or known.
+   */
+  readError?: { error: Error; refetch?: () => Promise<void> };
   /**
    * Inline-edit write-back. Present → the table cell for this field becomes
    * editable (click-to-edit); absent → the cell stays read-only (the default for
@@ -1095,13 +1104,22 @@ export interface DataViewBaseProps<TRow> {
   selectedRowId?: string;
   emptyState?: ReactNode;
   /**
-   * True while the backing data is still loading. The active view renders
-   * `loadingState` (default: a skeleton) instead of `emptyState`, so a
-   * loading list can never masquerade as a confirmed-empty one.
+   * The state of the read backing `rows` — pass the read itself
+   * (`readiness={result}`: any `useLive` / `useResource` / combined result).
+   * `loading` renders `loadingState` (default: the view's skeleton), `error`
+   * renders `errorState` (default: the failure with Retry), and only `ready`
+   * renders the view — so neither a loading nor a failed list can masquerade
+   * as a confirmed-empty one (`emptyState` needs `ready` and zero rows).
    */
-  loading?: boolean;
+  readiness?: ResourceReadiness;
   /** Override the loading render; default is each view's own skeleton shape. */
   loadingState?: ReactNode;
+  /**
+   * Override the render of a failed read (`readiness.status === "error"`);
+   * default `<ResourceErrorInline variant="block"/>` — the failure's message
+   * with Retry, or Reload when the tab is out of date. Never `emptyState`.
+   */
+  errorState?: ReactNode;
   /** Opaque per-view options channel, keyed by view id. */
   viewOptions?: Record<string, unknown>;
   /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */

@@ -1,4 +1,5 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -34,14 +35,24 @@ export function DefaultProviderRow({ providerId }: Props) {
   if (!provider) return null;
   const icon = provider.icon;
 
-  // Three states, each with its own rendering: the state has not arrived yet
-  // (a spinner, never a guessed "Disconnected"), central does not know the
-  // provider, or the provider's account state.
+  // Four states, each with its own rendering: the state has not arrived yet
+  // (a spinner, never a guessed "Disconnected"), its read failed (the error
+  // control, whose click retries), central does not know the provider, or the
+  // provider's account state.
   let pill: ReactNode = null;
   let details: ReactNode = null;
   let controls: ReactNode;
-  if (authState.pending) {
+  if (authState.status === "loading") {
     controls = <Loading variant="spinner" />;
+  } else if (authState.status === "error") {
+    controls = (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the account state"
+        error={authState.error}
+        refetch={authState.refetch}
+      />
+    );
   } else {
     const status = authState.data.providers[providerId];
     if (status) {

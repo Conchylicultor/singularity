@@ -46,7 +46,7 @@ export function PrototypeSection({ items }: { items: ArtifactItem[] }) {
   const openPane = useOpenPane();
 
   return matchResource(prototypes, {
-    pending: () => <Loading variant="rows" count={items.length} />,
+    loading: () => <Loading variant="rows" count={items.length} />,
     ready: (metas) => (
       <Stack gap="none">
         {items.map((item) => {

@@ -2,6 +2,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ComponentType, type CSSProperties } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
 import type { Block } from "../../core";
 import type { BlockAnchorProps, BlockEditorAPI } from "../types";
@@ -145,9 +146,11 @@ export function BlockRow({
    */
   seat: RailSeat;
 }) {
-  const { focusedBlockId, makeBlockAPI, loadingBelow } = useBlockEditor();
+  const { focusedBlockId, makeBlockAPI, loadingBelow, failedBelow } =
+    useBlockEditor();
   const api = useMemo(() => makeBlockAPI(block.id), [makeBlockAPI, block.id]);
   const isFocused = focusedBlockId === block.id;
+  const belowFailure = failedBelow.get(block.id);
   const selection = useSelectionControl();
 
   const contributions = Editor.Block.useContributions();
@@ -386,6 +389,18 @@ export function BlockRow({
       {loadingBelow.has(block.id) && (
         <div style={{ paddingLeft: BLOCK_INDENT }}>
           <Loading variant="rows" count={2} />
+        </div>
+      )}
+      {/* …and one whose rows FAILED to load says so there, with Retry — never
+          a loading region that never ends. */}
+      {belowFailure !== undefined && (
+        <div style={{ paddingLeft: BLOCK_INDENT }}>
+          <ResourceErrorInline
+            variant="inline"
+            subject="this page's blocks"
+            error={belowFailure.error}
+            refetch={belowFailure.refetch}
+          />
         </div>
       )}
       {dropZone && dropIndicator(dropZone)}

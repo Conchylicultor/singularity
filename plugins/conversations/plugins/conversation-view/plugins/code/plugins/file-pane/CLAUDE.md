@@ -27,6 +27,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+    - `primitives/live-state.foldResource`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

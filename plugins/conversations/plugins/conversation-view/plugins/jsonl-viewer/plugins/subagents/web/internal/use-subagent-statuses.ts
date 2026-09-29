@@ -1,4 +1,6 @@
 import { useLive } from "@plugins/network/plugins/live/web";
+import { combineResources } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
@@ -58,6 +60,8 @@ export interface SubagentEntry {
  */
 export type SubagentStatus =
   | { kind: "pending" }
+  /** A read behind the answer FAILED — render it with Retry, never as a spinner. */
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | {
       kind: "known";
       state: SubagentRunState;
@@ -90,6 +94,11 @@ export type SubagentStatus =
  */
 export type ConversationSubagents =
   | { kind: "pending" }
+  /**
+   * A read behind the set FAILED rather than is still arriving — a surface
+   * renders it as an error with Retry, never as a spinner or an empty set.
+   */
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | {
       kind: "known";
       /** Every sub-agent of the conversation, in start order. */
@@ -139,20 +148,25 @@ export function useConversationSubagents(
   // finished sub-agent as running until it landed: a surface asserting
   // something false about the user's work, which is the whole reason this arm
   // exists.
-  if (activity.pending || events.pending || conversation === null) {
+  const reads = combineResources({ activity, events });
+  if (reads.status === "error") {
+    return { kind: "failed", error: reads.error, refetch: reads.refetch };
+  }
+  if (reads.status === "loading" || conversation === null) {
     return { kind: "pending" };
   }
 
-  const rows = activity.data;
-  const taskNotifications = events.data.filter(
+  const rows = reads.data.activity;
+  const eventList = reads.data.events;
+  const taskNotifications = eventList.filter(
     (e): e is TaskNotificationEvent => e.kind === "task-notification",
   );
-  const agentCalls = agentCallsIn(events.data);
+  const agentCalls = agentCallsIn(eventList);
   const conversationStatus = conversation.status;
 
   const workflowRuns = workflowRunsOf({
     rows,
-    workflowCalls: workflowCallsIn(events.data),
+    workflowCalls: workflowCallsIn(eventList),
     taskNotifications,
     conversationStatus,
   });

@@ -79,12 +79,16 @@ draws `ThemeCard`, `list` draws `ThemeSwatch`.
     - `primitives/data-view.ItemActionProps`
     - `primitives/data-view.ItemActionsDescriptor`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.combineResources`
+    - `primitives/live-state.GateInput`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/syntax-highlight.useDarkMode`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.ThemeSourceContribution`
     - `ui/theme-engine.ThemeSourceEntry`
+    - `ui/theme-engine.ThemeSourceFailure`
     - `ui/theme-engine.transformValues`
     - `ui/theme-engine.useThemes`
     - `ui/theme-engine.useThemeScopeId`

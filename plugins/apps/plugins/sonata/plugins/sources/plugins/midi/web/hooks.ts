@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { songMidiRows, type SongMidiRow } from "../shared/resources";
 
 /**
@@ -11,8 +12,16 @@ import { songMidiRows, type SongMidiRow } from "../shared/resources";
 export function useSongMidiMap(): Map<string, SongMidiRow> {
   const result = useLive(songMidiRows);
   // Accepted pending collapse until Resources item 7 (joined columns on songs).
+  // A failed read keeps its last-seen rows (`stale`), else the same empty map:
+  // the column degrades to "no MIDI", and live-state reports the failure.
   return useMemo(() => {
-    if (result.pending) return new Map<string, SongMidiRow>();
-    return new Map(result.data.map((r) => [r.songId, r]));
+    const index = (rows: readonly SongMidiRow[]) =>
+      new Map(rows.map((r) => [r.songId, r]));
+    return foldResource(result, {
+      loading: () => new Map<string, SongMidiRow>(),
+      error: (_error, stale) =>
+        stale === undefined ? new Map<string, SongMidiRow>() : index(stale),
+      ready: index,
+    });
   }, [result]);
 }

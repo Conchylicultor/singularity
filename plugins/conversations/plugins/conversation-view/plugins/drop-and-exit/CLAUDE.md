@@ -8,12 +8,13 @@
 - Web:
   - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
   - Uses:
-    - `conversations.useConversation`
     - `conversations.useHasActiveSiblings`
+    - `conversations.useLiveConversation`
     - `conversations/conversation-view/exit-menu.ExitMenu`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/ui-kit.DropdownMenuItem`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useCombinedResources`
     - `shell/notifications.toast`
     - `ui/icons.Icon`

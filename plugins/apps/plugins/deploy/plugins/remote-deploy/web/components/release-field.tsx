@@ -81,7 +81,7 @@ export function ReleaseField({
       {matchResource(rows, {
         // Nothing to probe until the rows land, and nothing to fake: the column
         // simply has no answers yet, which `value: null` already says.
-        pending: () => null,
+        loading: () => null,
         error: () => null,
         ready: (loaded) => (
           <CandidateProbes rows={loaded} onResolve={onResolve} />
@@ -114,7 +114,9 @@ function CandidateProbes({
     [rows],
   );
   const health = useServerHealthMap(serverIds);
-  if (health.pending) return null;
+  // Headless: loading or failed, there is no question to ask yet, and the
+  // column simply has no answers (`value: null`) — nothing to fake.
+  if (health.status === "loading" || health.status === "error") return null;
   return (
     <>
       {rows.map((d) => {

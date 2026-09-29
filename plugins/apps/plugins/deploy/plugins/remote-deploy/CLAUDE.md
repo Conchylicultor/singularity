@@ -142,7 +142,10 @@ remote health gate.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/log-channels.LiveLogChannel`

@@ -6,6 +6,7 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { releaseRuns, type ReleaseRun } from "@plugins/release/core";
 
 function StatusBadge({ run }: { run: ReleaseRun }): ReactNode {
@@ -51,7 +52,17 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 export function ReleaseInfo({ runId }: { runId: string }) {
   const result = useLiveRow(releaseRuns, runId);
-  if (result.pending) return <Loading />;
+  if (result.status === "loading") return <Loading />;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the release run"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  }
 
   if (!result.found) {
     return (

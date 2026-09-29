@@ -1,3 +1,4 @@
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ServerDetail } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { useServerVerified } from "@plugins/apps/plugins/deploy/plugins/health/web";
@@ -33,7 +34,13 @@ export default {
       // once, and of the two wrong guesses, a proven server's card left open
       // costs one click, while a card collapsed over a step that needs doing
       // hides the only way forward.
-      useDefaultOpen: ({ server }) => useServerVerified(server) !== "verified",
+      // A failed read seeds open too, for the same reason.
+      useDefaultOpen: ({ server }) =>
+        foldResource(useServerVerified(server), {
+          loading: () => true,
+          error: () => true,
+          ready: (verified) => !verified,
+        }),
       component: SshSetupSection,
     }),
   ],

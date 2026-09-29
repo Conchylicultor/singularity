@@ -21,6 +21,7 @@ import {
   Color,
   ColorPickerPopover,
 } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   FillFromMenu,
@@ -171,7 +172,19 @@ function sameParams(a: ShadowParams, b: ShadowParams): boolean {
  */
 export function ShadowSection() {
   const editor = useTokenGroupEditor(shadowGroup);
-  if (editor.pending) return <Loading variant="rows" count={6} />;
+  if (editor.pending) {
+    if (editor.error !== null) {
+      return (
+        <ResourceErrorInline
+          error={editor.error}
+          refetch={editor.refetch}
+          variant="block"
+          subject="the theme selection"
+        />
+      );
+    }
+    return <Loading variant="rows" count={6} />;
+  }
 
   // The params the scope shows if its own shadow edit were cleared, and the
   // params of that edit (undefined when the scope has none).

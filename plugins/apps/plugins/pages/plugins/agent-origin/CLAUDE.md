@@ -59,6 +59,7 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
   - Uses:
     - `apps/pages/page-tree.PageTree`
     - `network/live.useLive`
+    - `primitives/live-state.foldResource`
   - Exports (types): `AgentPageRow`
   - Exports (values): `AgentPageRowSchema`
 - Server:

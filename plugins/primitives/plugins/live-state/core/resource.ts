@@ -104,9 +104,30 @@ export interface ResourceDescriptor<
    * global resource).
    */
   defaultParams?: P;
+  /**
+   * The params gate: throws `ResourceContractError`
+   * (`@plugins/packages/plugins/resource-protocol/core`) when a subscription's
+   * wire params do not match this declaration. The resource runtime runs it
+   * BEFORE registering a sub or serving an HTTP read, so a mismatched sub — in
+   * practice a tab running an older bundle after a deploy — is refused as
+   * `contract-mismatch` and never re-run by a push. Required, so every factory
+   * decides: `liveValue` checks its declared param names, a `liveCollection`'s
+   * resources run their strict decoders, and the legacy factories below state
+   * {@link acceptAnyParams} by name.
+   */
+  validateParams: (params: Record<string, string>) => void;
   /** Phantom — exists only at the type level so `useResource` can infer `P`. */
   readonly __params?: P;
 }
+
+/**
+ * The params gate of a legacy descriptor (`resourceDescriptor`,
+ * `keyedResourceDescriptor` — the tree, revision-tick and config resources):
+ * accepts any params, because those loaders never declared their param names.
+ * Named, so "this resource validates nothing" is a visible choice rather than
+ * an absent field.
+ */
+export function acceptAnyParams(_params: Record<string, string>): void {}
 
 // Module-level key→descriptor registry. Populated by descriptor-module evaluation
 // (each factory call below runs on import), so a key→descriptor lookup exists before
@@ -156,7 +177,13 @@ export function resourceDescriptor<
   initialData: T,
   opts?: ResourceDescriptorOptions,
 ): ResourceDescriptor<T, P> & { keyed?: never; initialData: T } {
-  const d = { key, schema, initialData, ...opts };
+  const d = {
+    key,
+    schema,
+    initialData,
+    validateParams: acceptAnyParams,
+    ...opts,
+  };
   registerResourceDescriptor(d as ResourceDescriptor<unknown>);
   return d;
 }
@@ -184,7 +211,14 @@ export function keyedResourceDescriptor<
   keyed: { keyOf: (row: unknown) => string };
   initialData: T;
 } {
-  const d = { key, schema, initialData, keyed: { keyOf }, ...opts };
+  const d = {
+    key,
+    schema,
+    initialData,
+    keyed: { keyOf },
+    validateParams: acceptAnyParams,
+    ...opts,
+  };
   registerResourceDescriptor(d as ResourceDescriptor<unknown>);
   return d;
 }

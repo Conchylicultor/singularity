@@ -1,18 +1,20 @@
 /**
- * The load-bearing assumption behind the pending/error gate (D1): React Query
- * v5's `setQueryData` **success** action RESETS `state.error`. If it did not, a
- * WS push after a transient failure would re-settle `pending: false` while
- * `q.error` stayed set — and `useResource` would hand back a settled result next
- * to a live error, exactly the state the type change makes unrepresentable. This
- * suite VERIFIES that reset against a REAL `QueryClient` (not a mock), plus the
- * three derived properties of the widened gate:
+ * `useResource`'s three states against a REAL `QueryClient` (not a mock): a
+ * failure is its own `error` state, never a flavour of loading.
  *
- *   - a first-load failure ⇒ `pending: true`, `error` set, `stale === undefined`;
- *   - a failure AFTER a successful load ⇒ `pending: true`, `error` set,
- *     `stale` = the last good value, and `data` is absent from the result;
+ *   - first render, no value ⇒ `status: "loading"` (and `error: null`);
+ *   - a first-load failure ⇒ `status: "error"`, a typed `ResourceError`, no
+ *     `stale`;
+ *   - a failure AFTER a successful load ⇒ `status: "error"`, `stale` = the last
+ *     good value, and no `data` on the result;
  *   - a subsequent `setQueryData` (the WS push path) clears the error and
- *     re-settles `pending: false`;
- *   - with `{ select }`, `stale` carries the SELECTED slice, not the raw payload.
+ *     returns to `ready` — the load-bearing React Query behavior (its success
+ *     action resets `state.error`);
+ *   - with `{ select }`, `stale` carries the SELECTED slice;
+ *   - `refetch` from the error arm re-runs the load and recovers.
+ *
+ * `pending` (the deprecated pre-`status` spelling) is asserted alongside: true
+ * on both loading and error, false on ready.
  *
  * Harness: a real `NotificationsProvider` over a real `QueryClient`. The ONE HTTP
  * write path — `NotificationsClient.fetchOverHttp`, which backs `useResource`'s
@@ -29,7 +31,9 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({ clientLog: () => {} }));
+vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
+  clientLog: () => {},
+}));
 
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
@@ -41,7 +45,10 @@ import {
   queryKeyFor,
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import {
+  ResourceError,
+  resourceDescriptor,
+} from "@plugins/primitives/plugins/live-state/core";
 
 const rowsResource = resourceDescriptor<number[]>(
   "test.error-gate.rows",
@@ -62,7 +69,9 @@ function makeClient(): QueryClient {
 
 function mount<R>(client: QueryClient, useHook: () => R) {
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>{children}</NotificationsProvider>
+    <NotificationsProvider queryClient={client}>
+      {children}
+    </NotificationsProvider>
   );
   const rendered = renderHook(useHook, { wrapper });
   const notifications = getNotificationsClient();
@@ -79,7 +88,9 @@ async function failNextLoad(
   result: { current: { refetch: () => Promise<void> } },
   message: string,
 ): Promise<void> {
-  vi.spyOn(notifications, "fetchOverHttp").mockRejectedValue(new Error(message));
+  vi.spyOn(notifications, "fetchOverHttp").mockRejectedValue(
+    new Error(message),
+  );
   await act(async () => {
     // The mocked rejection IS the scenario under test, so swallow exactly that
     // one and rethrow anything else (a bare `.catch(() => {})` would hide a
@@ -91,61 +102,73 @@ async function failNextLoad(
   });
 }
 
-describe("useResource — pending absorbs error (D1)", () => {
+describe("useResource — loading / error / ready", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("first-load failure ⇒ pending, error set, stale undefined", async () => {
+  it("no value yet ⇒ loading, with no error", () => {
     const client = makeClient();
-    const { result, notifications } = mount(client, () => useResource(rowsResource));
+    const { result } = mount(client, () => useResource(rowsResource));
+    const r = result.current;
+    expect(r.status).toBe("loading");
+    expect("error" in r).toBe(false);
+  });
+
+  it("first-load failure ⇒ error, typed, with no stale", async () => {
+    const client = makeClient();
+    const { result, notifications } = mount(client, () =>
+      useResource(rowsResource),
+    );
     await failNextLoad(notifications, result, "boom");
 
-    await waitFor(() => {
-      const r = result.current;
-      if (!r.pending) throw new Error("still settled");
-      expect(r.error?.message).toBe("boom");
-    });
+    await waitFor(() => expect(result.current.status).toBe("error"));
     const r = result.current;
-    if (!r.pending) throw new Error("unreachable");
-    expect(r.error?.message).toBe("boom");
+    if (r.status !== "error") throw new Error("unreachable");
+    expect(r.error).toBeInstanceOf(ResourceError);
+    expect(r.error.kind).toBe("loader-failed");
+    expect(r.error.message).toBe("boom");
     expect(r.stale).toBeUndefined();
   });
 
-  it("failure after a successful load ⇒ pending, error set, stale = last good, data absent", async () => {
+  it("failure after a successful load ⇒ error, stale = last good, data absent", async () => {
     const client = makeClient();
-    const { result, notifications } = mount(client, () => useResource(rowsResource));
+    const { result, notifications } = mount(client, () =>
+      useResource(rowsResource),
+    );
 
     act(() => {
       client.setQueryData(rowsKey, [1, 2, 3]);
     });
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     // Narrow a LOCAL, never `result.current` itself: narrowing the property
-    // access pins it to the settled arm for the rest of the block, and the
-    // post-failure reads below would then be typed against the wrong arm.
+    // access pins it to one arm for the rest of the block.
     const beforeFailure = result.current;
-    if (beforeFailure.pending) throw new Error("unreachable — should have settled");
+    if (beforeFailure.status !== "ready") throw new Error("unreachable");
     expect(beforeFailure.data).toEqual([1, 2, 3]);
+    expect(beforeFailure.status).toBe("ready");
 
     await failNextLoad(notifications, result, "late");
 
-    await waitFor(() => expect(result.current.pending).toBe(true));
+    await waitFor(() => expect(result.current.status).toBe("error"));
     const r = result.current;
-    if (!r.pending) throw new Error("unreachable");
-    expect(r.error?.message).toBe("late");
+    if (r.status !== "error") throw new Error("unreachable");
+    expect(r.error.message).toBe("late");
     expect(r.stale).toEqual([1, 2, 3]);
-    // The pending arm exposes no `data` — a stale value can never decide.
+    // The error arm exposes no `data` — a stale value can never decide.
     expect("data" in r).toBe(false);
   });
 
-  it("a subsequent setQueryData (WS push) clears the error and re-settles — the RQ assumption D1 rests on", async () => {
+  it("a subsequent setQueryData (WS push) clears the error and returns to ready — the RQ assumption the gate rests on", async () => {
     const client = makeClient();
-    const { result, notifications } = mount(client, () => useResource(rowsResource));
+    const { result, notifications } = mount(client, () =>
+      useResource(rowsResource),
+    );
 
     act(() => {
       client.setQueryData(rowsKey, [1]);
     });
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     await failNextLoad(notifications, result, "boom");
-    await waitFor(() => expect(result.current.pending).toBe(true));
+    await waitFor(() => expect(result.current.status).toBe("error"));
     // The load-bearing RQ behavior, asserted against the real QueryClient:
     // the error is live BEFORE the push...
     expect(client.getQueryState(rowsKey)?.error).toBeTruthy();
@@ -156,9 +179,10 @@ describe("useResource — pending absorbs error (D1)", () => {
     // ...and the success action RESET it to null — synchronously, on the cache.
     expect(client.getQueryState(rowsKey)?.error).toBeNull();
 
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
-    if (r.pending) throw new Error("unreachable — push should have re-settled");
+    if (r.status !== "ready")
+      throw new Error("unreachable — push should have re-settled");
     expect(r.data).toEqual([1, 2]);
   });
 
@@ -171,17 +195,38 @@ describe("useResource — pending absorbs error (D1)", () => {
     act(() => {
       client.setQueryData(rowsKey, [10, 20, 30]);
     });
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const beforeFailure = result.current;
-    if (beforeFailure.pending) throw new Error("unreachable — should have settled");
+    if (beforeFailure.status !== "ready") throw new Error("unreachable");
     expect(beforeFailure.data).toBe(3);
 
     await failNextLoad(notifications, result, "boom");
 
-    await waitFor(() => expect(result.current.pending).toBe(true));
+    await waitFor(() => expect(result.current.status).toBe("error"));
     const r = result.current;
-    if (!r.pending) throw new Error("unreachable");
+    if (r.status !== "error") throw new Error("unreachable");
     // The SELECTED slice (length), not the raw [10,20,30].
     expect(r.stale).toBe(3);
+  });
+
+  it("refetch from the error arm re-runs the load and recovers", async () => {
+    const client = makeClient();
+    const { result, notifications } = mount(client, () =>
+      useResource(rowsResource),
+    );
+    await failNextLoad(notifications, result, "boom");
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    vi.spyOn(notifications, "fetchOverHttp").mockResolvedValue([7]);
+    const r = result.current;
+    if (r.status !== "error") throw new Error("unreachable");
+    await act(async () => {
+      await r.refetch();
+    });
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    const after = result.current;
+    if (after.status !== "ready") throw new Error("unreachable");
+    expect(after.data).toEqual([7]);
   });
 });

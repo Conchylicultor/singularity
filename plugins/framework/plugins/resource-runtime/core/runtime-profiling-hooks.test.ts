@@ -63,7 +63,12 @@ describe("window membership", () => {
         .sort((a, b) => a[1] - b[1])
         .map(([id, n]) => ({ id, n }));
     h.runtime.defineResource(
-      { key: "win", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "win",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "row_table",
         membership: {

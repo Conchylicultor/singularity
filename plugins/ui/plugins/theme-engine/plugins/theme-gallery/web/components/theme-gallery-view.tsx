@@ -7,6 +7,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { themeFields, themeSearchText } from "../internal/theme-fields";
 import type { ThemeRow } from "../internal/theme-rows";
 import { useThemeGallery } from "../internal/use-theme-gallery";
@@ -58,12 +59,23 @@ export function ThemeGalleryView({
   density?: DataViewDensity;
   itemActions?: ItemActionsDescriptor<ThemeRow>;
 }) {
-  const { state, activate, adoptingKey } = useThemeGallery();
+  const { readiness, state, activate, adoptingKey } = useThemeGallery();
   const rows = state.pending ? NO_ROWS : state.rows;
   const fields = useMemo(() => themeFields(rows), [rows]);
 
   return (
     <Stack gap="sm">
+      {state.pending
+        ? null
+        : state.failures.map((f) => (
+            <ResourceErrorInline
+              key={f.sourceId}
+              variant="inline"
+              subject={`the “${f.sourceId}” themes`}
+              error={f.error}
+              refetch={f.refetch}
+            />
+          ))}
       {!state.pending && state.missing !== undefined ? (
         <MissingThemeNotice
           themeId={state.missing}
@@ -77,7 +89,7 @@ export function ThemeGalleryView({
         rowKey={(r) => r.key}
         defaultView={defaultView}
         density={density}
-        loading={state.pending}
+        readiness={readiness}
         selectedRowId={state.pending ? undefined : state.selectedKey}
         searchAccessor={themeSearchText}
         // Selecting lives here rather than in the card or row, which are only

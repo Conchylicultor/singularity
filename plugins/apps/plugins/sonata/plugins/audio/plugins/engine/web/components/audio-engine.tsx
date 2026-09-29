@@ -58,7 +58,7 @@ function levelOf(
   volumes: SongSetting<Map<string, number>>,
   trackId: string,
 ): number {
-  if (volumes.pending) {
+  if (volumes.kind !== "settled") {
     throw new Error(
       "audio engine: a channel strip was leveled before the track view settled",
     );
@@ -191,7 +191,9 @@ export function AudioEngine() {
   const mutedIds = useMutedTrackIds();
   const mutedKey = useMemo(
     () =>
-      mutedIds.pending
+      // Pending or failed: nothing audible (a failed read is shown by the
+      // player's score gate; the engine plays nothing it cannot vouch for).
+      mutedIds.kind !== "settled"
         ? null
         : [...mutedIds.value].map(encodeURIComponent).sort().join(ENTRY_SEP),
     [mutedIds],
@@ -228,7 +230,7 @@ export function AudioEngine() {
   // sit in any dependency list.
   const inUseKey = useMemo(() => {
     // No strip while the track view is pending (nothing is audible either).
-    if (trackInstrumentMap.pending) return channelKey([]);
+    if (trackInstrumentMap.kind !== "settled") return channelKey([]);
     const instrumentOf = trackInstrumentMap.value;
     const pairs: [string, string][] = [];
     const seen = new Set<string>();
@@ -255,7 +257,7 @@ export function AudioEngine() {
   // re-fire the fader effect on every render. `null` while pending.
   const volumeKey = useMemo(
     () =>
-      trackVolumes.pending
+      trackVolumes.kind !== "settled"
         ? null
         : [...trackVolumes.value]
             .map(

@@ -1,4 +1,8 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type {
+  Query,
+  QueryCacheNotifyEvent,
+  QueryClient,
+} from "@tanstack/react-query";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   SharedWebSocket,
@@ -15,6 +19,68 @@ import { noteResourceWatermark } from "./watermark-registry";
 import { noteResourceTxAcks } from "./tx-ack-registry";
 import { httpStaleDropReportSink } from "./stale-drop-reporter";
 import { updateDelayReportSink } from "./update-delay-reporter";
+import {
+  BUILD_GRAPH_HEADER,
+  DEV_BUILD,
+  parseResourceHttpErrorBody,
+  type ContractVerdict,
+  type SubErrorReason,
+} from "@plugins/packages/plugins/resource-protocol/core";
+import { markResourceContractMismatch } from "./resource-contract-store";
+import { toResourceError } from "./resource-error";
+import {
+  resourceErrorReportSink,
+  type FailingResource,
+} from "./resource-error-reporter";
+import {
+  ResourceHttpError,
+  ResourceStaleReadError,
+} from "./resource-http-errors";
+
+// Re-exported for the transport's own importers (tests, the barrel): the classes
+// live in a dependency-free module so `resource-error.ts` can classify them
+// without importing this whole client.
+export { ResourceHttpError, ResourceStaleReadError };
+
+/**
+ * The build graph this tab's bundle was built from — sent on every `sub` /
+ * `sub-batch` frame and every HTTP read, so the server can tell a tab running
+ * an older bundle (skew — a reload fixes it) from a real contract bug. Read at
+ * call time (tests stub it); `"dev"` where the build injected none.
+ */
+function clientBuild(): string {
+  return import.meta.env.VITE_BUILD_GRAPH ?? DEV_BUILD;
+}
+
+/**
+ * Record a server refusal that means "this bundle does not speak the
+ * resource's contract" into the page-global store the Reload advice reads.
+ * `loader-failed` / `unauthorized` are the server's own failures, not skew.
+ */
+function noteContractRefusal(
+  key: string,
+  reason: SubErrorReason | undefined,
+  verdict: ContractVerdict | undefined,
+): void {
+  if (reason !== "contract-mismatch" && reason !== "unknown-key") return;
+  markResourceContractMismatch({
+    key,
+    reason,
+    ...(verdict !== undefined ? { verdict } : {}),
+  });
+}
+
+/**
+ * A refusal the client must not retry: the same params from the same bundle
+ * are refused the same way every time, so a retry is one more request for
+ * nothing. `useResource`'s retry policy reads it.
+ */
+export function isTerminalResourceError(err: unknown): boolean {
+  return (
+    err instanceof ResourceHttpError &&
+    (err.reason === "contract-mismatch" || err.reason === "unknown-key")
+  );
+}
 
 /**
  * The identity this document's client holds its subscriptions under — minted
@@ -131,47 +197,6 @@ export interface ResourceKey {
   params?: ResourceParams;
 }
 
-/**
- * A resource HTTP GET returned a non-2xx status. Typed so callers can classify
- * it: `useResource`'s `queryFn` lets it propagate to `q.error`, while the
- * cold-start prime swallows it (the WS sub-ack is the source of truth) — both
- * distinct from a schema/parse failure, which is always a real bug surfaced
- * loudly.
- */
-export class ResourceHttpError extends Error {
-  constructor(
-    public readonly key: string,
-    public readonly status: number,
-  ) {
-    super(`Resource ${key} fetch failed: ${status}`);
-    this.name = "ResourceHttpError";
-  }
-}
-
-/**
- * An HTTP resource GET returned a value the version guard rejected as stale, on
- * a `(key, params)` whose cache holds only the descriptor's placeholder (never a
- * server-vouched value). `fetchOverHttp` throws this rather than settling the
- * query with that placeholder (the "Close (state unknown)" wedge) or applying
- * the stale body (which would render old-boot data). React Query's `retry` plus
- * the next `invalidate` frame converge the legitimate same-epoch race; if the
- * retry also loses, `q.error` settles typed and visible. Swallowed by
- * `primeFromHttp` (prime is best-effort; the WS sub-ack is the source of truth).
- */
-export class ResourceStaleReadError extends Error {
-  constructor(
-    public readonly key: string,
-    public readonly bodyVersion: number,
-    public readonly haveVersion: number,
-    public readonly reason: "stale-version" | "stale-epoch",
-  ) {
-    super(
-      `Resource ${key} stale read: body v${bodyVersion} vs have v${haveVersion} (${reason})`,
-    );
-    this.name = "ResourceStaleReadError";
-  }
-}
-
 type ServerMsg =
   // `etag` (conditional revalidation): the fresh content signature accompanying a
   // full value. Present only for a resource that declares `revalidate`; the client
@@ -262,12 +287,15 @@ type ServerMsg =
   // so the client can gate it on a live local sub (the all-tabs fan-out safety)
   // and drive an HTTP-fallback refetch. A pre-upgrade server omits `params`
   // (undefined at runtime); such a legacy frame simply fails the sub gate.
+  // `verdict` rides `contract-mismatch` / `unknown-key`: `skew` means this
+  // tab's bundle is older than the server's — the Reload advice picks it up.
   | {
       kind: "sub-error";
       id?: number;
       key: string;
       params: ResourceParams;
-      reason: string;
+      reason: SubErrorReason;
+      verdict?: ContractVerdict;
     }
   // `flushOpenMs`: how long the server's running flush pass has been open (0
   // when idle). Absent from a server that predates it — read as 0.
@@ -279,6 +307,20 @@ function paramsKey(params: ResourceParams | undefined): string {
   const obj: ResourceParams = {};
   for (const k of keys) obj[k] = params[k]!;
   return JSON.stringify(obj);
+}
+
+/**
+ * The `(key, params)` a live-state query key names — the inverse of
+ * `queryKeyFor` — or null for a key of another shape.
+ */
+function resourceTupleOf(
+  queryKey: readonly unknown[],
+): { key: string; params: ResourceParams } | null {
+  const [key, params, ...rest] = queryKey;
+  if (typeof key !== "string" || rest.length > 0) return null;
+  if (params === undefined) return { key, params: {} };
+  if (typeof params !== "object" || params === null) return null;
+  return { key, params: params as ResourceParams };
 }
 
 export function queryKeyFor(
@@ -488,6 +530,22 @@ export class NotificationsClient {
   /** `pagehide` handler (best-effort tab departure), removed in `destroy()`. */
   private pagehideListener: (() => void) | null = null;
   /**
+   * `${key}\0${paramsKey}` → the live read currently failing on that tuple (its
+   * query holds an error). Kept from the query cache's own events — never from
+   * the hooks — so N observers of one tuple are one entry, one report, one
+   * retry. Read by the health report (`useFailingResources`) and by the
+   * event-driven retry (`retryFailing`).
+   */
+  private failing = new Map<string, FailingResource>();
+  private failingSnapshot: readonly FailingResource[] = [];
+  private failingListeners = new Set<() => void>();
+  private unsubscribeFromQueryCache: () => void;
+  /** `online` / `visibilitychange` handlers (event-driven retry), removed in `destroy()`. */
+  private retryListeners: {
+    online: () => void;
+    visibility: () => void;
+  } | null = null;
+  /**
    * `performance.now()` timestamp the live-state transport FIRST reached the
    * aggregate `"open"` status (null until then). This is the cold-start marker:
    * a resource that mounts before this is set waited on transport bring-up for
@@ -571,7 +629,22 @@ export class NotificationsClient {
         }
       };
       window.addEventListener("pagehide", this.pagehideListener);
+      // Event-driven retry for failed reads — no timer, no polling: the two
+      // moments a failure is likely to have healed are the network coming back
+      // and the user coming back to the tab. Only tuples in error are refetched
+      // (a healthy read is already live over the socket).
+      const visibility = () => {
+        if (document.visibilityState === "visible")
+          this.retryFailing("visible");
+      };
+      const online = () => this.retryFailing("online");
+      this.retryListeners = { online, visibility };
+      window.addEventListener("online", online);
+      document.addEventListener("visibilitychange", visibility);
     }
+    this.unsubscribeFromQueryCache = this.queryClient
+      .getQueryCache()
+      .subscribe((event) => this.noteQueryError(event));
   }
 
   getStatus(): WsStatus {
@@ -784,11 +857,139 @@ export class NotificationsClient {
       window.removeEventListener("pagehide", this.pagehideListener);
       this.pagehideListener = null;
     }
+    if (this.retryListeners !== null) {
+      window.removeEventListener("online", this.retryListeners.online);
+      document.removeEventListener(
+        "visibilitychange",
+        this.retryListeners.visibility,
+      );
+      this.retryListeners = null;
+    }
+    this.unsubscribeFromQueryCache();
     for (const channel of Object.values(this.channels) as SocketChannel[]) {
       for (const timer of channel.pendingTeardown.values()) clearTimeout(timer);
       channel.pendingTeardown.clear();
       channel.ws.close();
     }
+  }
+
+  // --- Failing reads (error bookkeeping, report sink, event-driven retry) ------
+
+  /** Every live read currently failing, one entry per `(key, params)` tuple. */
+  getFailingResources(): readonly FailingResource[] {
+    return this.failingSnapshot;
+  }
+
+  subscribeFailingResources(listener: () => void): () => void {
+    this.failingListeners.add(listener);
+    return () => this.failingListeners.delete(listener);
+  }
+
+  /**
+   * Keep `failing` in step with the query cache: a live-state tuple whose query
+   * gains an error enters it (and is reported ONCE, however many hooks observe
+   * it); one whose error clears — a push, a successful refetch, the
+   * `up-to-date` clear — or whose query is garbage-collected leaves it. Runs on
+   * every cache event, so the common case (no error, nothing failing) returns
+   * before any key work.
+   */
+  private noteQueryError(event: QueryCacheNotifyEvent): void {
+    if (event.type !== "updated" && event.type !== "removed") return;
+    const error = event.type === "removed" ? null : event.query.state.error;
+    if (error === null && this.failing.size === 0) return;
+    const tuple = resourceTupleOf(event.query.queryKey);
+    if (tuple === null) return;
+    const id = `${tuple.key}\0${paramsKey(tuple.params)}`;
+    const had = this.failing.get(id);
+    if (error === null) {
+      if (had === undefined) return;
+      this.failing.delete(id);
+      trace(`error-cleared key=${tuple.key} params=${paramsKey(tuple.params)}`);
+      this.emitFailing();
+      return;
+    }
+    const typed = toResourceError(error);
+    if (had !== undefined) {
+      // Still failing — a retry failed again. Keep the latest error on the
+      // entry (the health row names it) without re-reporting the episode.
+      if (had.error !== typed) {
+        this.failing.set(id, { ...had, error: typed });
+        this.emitFailing();
+      }
+      return;
+    }
+    // Only a tuple THIS client subscribes to is a live read — the query cache
+    // is shared with every other `useQuery` user (endpoints) on the page.
+    if (!this.holdsSub(tuple.key, tuple.params)) return;
+    const entry = { key: tuple.key, params: tuple.params, error: typed };
+    this.failing.set(id, entry);
+    trace(
+      `error key=${tuple.key} params=${paramsKey(tuple.params)} kind=${typed.kind} error=${typed.message}`,
+    );
+    resourceErrorReportSink.emit(entry);
+    this.emitFailing();
+  }
+
+  private emitFailing(): void {
+    this.failingSnapshot = [...this.failing.values()];
+    for (const fn of this.failingListeners) fn();
+  }
+
+  private holdsSub(key: string, params: ResourceParams): boolean {
+    const id = `${key}\0${paramsKey(params)}`;
+    for (const channel of Object.values(this.channels) as SocketChannel[]) {
+      if (channel.subs.has(id)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Refetch every failing read that something still observes — the
+   * `online` / `visibilitychange → visible` retry. Goes through the query
+   * itself (not `refetchQueries`, which skips a disabled query: a `liveValue`
+   * that never got a value is disabled until one lands, and is exactly the read
+   * that most needs the retry). The outcome lands on the query's state, where
+   * the read's `error` arm already renders it — so the promise's rejection is
+   * the query's own business, traced here and nothing more.
+   */
+  private retryFailing(trigger: "online" | "visible"): void {
+    for (const { key, params } of this.failing.values()) {
+      const query = this.queryClient
+        .getQueryCache()
+        .find({ queryKey: queryKeyFor(key, params), exact: true });
+      if (query === undefined || query.getObserversCount() === 0) continue;
+      trace(`retry key=${key} params=${paramsKey(params)} trigger=${trigger}`);
+      void query.fetch().then(
+        () => undefined,
+        (err: unknown) => {
+          trace(
+            `retry failed key=${key} params=${paramsKey(params)} error=${String(err)}`,
+          );
+        },
+      );
+    }
+  }
+
+  /**
+   * A value-less `up-to-date` reply says the value this tab holds is current —
+   * so a failure the tuple's query still carries (an HTTP fallback that failed
+   * while the socket was down) no longer describes it. Clear exactly that
+   * query's error, and nothing else: no data write, so no cache event a value
+   * listener could mistake for a fresh push. `Query.setState` is React Query's
+   * public state seam; this is its one use in live-state.
+   */
+  private clearStaleError(key: string, params: ResourceParams): void {
+    const query: Query | undefined = this.queryClient
+      .getQueryCache()
+      .find({ queryKey: queryKeyFor(key, params), exact: true });
+    if (query === undefined || query.state.error === null) return;
+    query.setState({
+      error: null,
+      status: "success",
+      fetchFailureCount: 0,
+      fetchFailureReason: null,
+    });
+    trace(`up-to-date cleared error key=${key} params=${paramsKey(params)}`);
   }
 
   /** Observer count increased for (key, params). Sub on 0→1. */
@@ -1060,11 +1261,17 @@ export class NotificationsClient {
     // `cache: "no-store"` on BOTH fetches: the browser HTTP cache must never
     // store or transparently 304-revalidate a resource body — a restart-stable
     // ETag would otherwise let it replay an old-boot `{value, version}`.
+    // Every read names this tab's build, so a contract mismatch is judged
+    // skew (reload) or a real bug on the server (the `sub` frame's twin).
+    const build = { [BUILD_GRAPH_HEADER]: clientBuild() };
     let res = await this.fetchImpl(
       url,
       etag !== undefined
-        ? { cache: "no-store", headers: { "If-None-Match": etag } }
-        : { cache: "no-store" },
+        ? {
+            cache: "no-store",
+            headers: { ...build, "If-None-Match": etag },
+          }
+        : { cache: "no-store", headers: build },
     );
     if (res.status === 304) {
       const cached = this.getCachedResource(key, params);
@@ -1076,9 +1283,21 @@ export class NotificationsClient {
         return cached as T;
       // 304 with only a placeholder (or no base): re-fetch unconditionally so a
       // needless 304 never leaves the cache empty/stale, then take the write path.
-      res = await this.fetchImpl(url, { cache: "no-store" });
+      res = await this.fetchImpl(url, { cache: "no-store", headers: build });
     }
-    if (!res.ok) throw new ResourceHttpError(key, res.status);
+    if (!res.ok) {
+      // A failed read carries a typed JSON body (reason + verdict). Read it so
+      // the error names WHY — and so a contract refusal reaches the Reload
+      // advice even when no WS sub-error did (the socket was down).
+      const errBody = parseResourceHttpErrorBody(await readJsonBody(res));
+      noteContractRefusal(key, errBody?.reason, errBody?.verdict);
+      throw new ResourceHttpError(
+        key,
+        res.status,
+        errBody?.reason,
+        errBody?.verdict,
+      );
+    }
     const body = (await res.json()) as {
       value: unknown;
       version: number;
@@ -1400,6 +1619,7 @@ export class NotificationsClient {
       JSON.stringify({
         op: "sub-batch",
         tabId: this.tabId,
+        build: clientBuild(),
         ...(channel.serverEpoch !== undefined
           ? { epoch: channel.serverEpoch }
           : {}),
@@ -1453,6 +1673,9 @@ export class NotificationsClient {
           ? { acks: true }
           : {}),
         tabId: this.tabId,
+        // Per frame: a shared socket's leader relays follower tabs, whose
+        // bundles may differ (see `clientBuild`).
+        build: clientBuild(),
       }),
     );
   }
@@ -1492,11 +1715,23 @@ export class NotificationsClient {
       return;
     }
     if (msg.kind === "sub-error") {
-      console.error(
-        `[notifications] sub-error key=${msg.key} reason=${msg.reason}`,
-      );
       const pk = paramsKey(msg.params);
-      trace(`sub-error key=${msg.key} params=${pk} reason=${msg.reason}`);
+      const verdictTag =
+        msg.verdict !== undefined ? ` verdict=${msg.verdict}` : "";
+      // A skewed contract is the expected face of a deploy under an open tab —
+      // the Reload advice says so; it is not a console error.
+      if (msg.verdict === "skew") {
+        console.warn(
+          `[notifications] sub-error key=${msg.key} reason=${msg.reason}${verdictTag}`,
+        );
+      } else {
+        console.error(
+          `[notifications] sub-error key=${msg.key} reason=${msg.reason}${verdictTag}`,
+        );
+      }
+      trace(
+        `sub-error key=${msg.key} params=${pk} reason=${msg.reason}${verdictTag}`,
+      );
       // Gate on the local sub entry exactly like every other frame: the shared
       // socket broadcasts to every tab, and a pre-upgrade server's params-less
       // frame (`msg.params` undefined) won't match a live sub → safe drop. When
@@ -1514,6 +1749,10 @@ export class NotificationsClient {
         );
         return;
       }
+      // Mark the store first (a contract refusal means this bundle is out of
+      // date), then heal through the one error channel: the HTTP read now gets
+      // the typed 409/404 body, so `q.error` names the reason.
+      noteContractRefusal(msg.key, msg.reason, msg.verdict);
       this.fetchAfterSubError(channel, msg.key, msg.params);
       return;
     }
@@ -1650,7 +1889,10 @@ export class NotificationsClient {
       // still current. Do NOT touch the TanStack cache — the cached value stays.
       // We already adopted `version`/`lastAckVersion` above (so a later real
       // update isn't stale-dropped and the missed-update watchdog sees a clean
-      // ack) and kept the stored etag. Just fire the debug hook.
+      // ack) and kept the stored etag. A failure the query still carries is
+      // no longer true of the value it holds, so it clears (the sticky-error
+      // fix); then fire the debug hook.
+      this.clearStaleError(msg.key, msg.params);
       this.emitDebug();
       return;
     }
@@ -1878,5 +2120,15 @@ export class NotificationsClient {
         this.fetchOverHttp(key, params, origin, schema, "fallback"),
       staleTime: 0,
     });
+  }
+}
+
+/** A failed response's JSON body, or `undefined` when it has none (an older server's plain text). */
+async function readJsonBody(res: Response): Promise<unknown> {
+  try {
+    return (await res.json()) as unknown;
+  } catch (err) {
+    if (err instanceof SyntaxError) return undefined;
+    throw err;
   }
 }

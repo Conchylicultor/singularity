@@ -201,6 +201,7 @@ card, not a collection.
     - `conversations/conversation-ui/row.ConversationRow`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.LiveRowResult`
+    - `network/live.mapRow`
     - `network/live.useLiveRow`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
@@ -208,7 +209,12 @@ card, not a collection.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/launch.LaunchAgentForm`
+    - `primitives/live-state.combineResources`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
     - `tasks/task-status.StatusBadge`
     - `tasks/tasks-core.useTaskConversations`
   - Exports (types):

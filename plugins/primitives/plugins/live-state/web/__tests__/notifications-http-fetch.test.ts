@@ -41,8 +41,15 @@ import {
   NotificationsClient,
   ResourceHttpError,
   ResourceStaleReadError,
+  isTerminalResourceError,
   queryKeyFor,
 } from "../notifications-client";
+import { renderHook } from "@testing-library/react";
+import { BUILD_GRAPH_HEADER } from "@plugins/packages/plugins/resource-protocol/core";
+import {
+  resetResourceContractMismatches,
+  useResourceContractMismatches,
+} from "../resource-contract-store";
 import {
   httpStaleDropReportSink,
   type HttpStaleDropReport,
@@ -700,6 +707,87 @@ describe("NotificationsClient — HTTP fetch path", () => {
       expect(qc.getQueryData(queryKeyFor("nv", {}))).toEqual({ status: "ok" });
       expect(qc.getQueryState(queryKeyFor("nv", {}))?.error).toBeNull();
       unsubscribe();
+    });
+  });
+
+  describe("typed refusals (contract mismatch)", () => {
+    afterEach(() => {
+      resetResourceContractMismatches();
+      vi.unstubAllEnvs();
+    });
+
+    test("every read names this tab's build in the build-graph header", async () => {
+      vi.stubEnv("VITE_BUILD_GRAPH", "graph-x");
+      const { client, fetchQueue, fetchCalls } = await setup();
+      client.observe("k", {}, undefined, pushSchema);
+      fetchQueue.push(
+        makeResponse({ body: { value: { status: "a" }, version: 1 } }),
+      );
+      await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+      expect(
+        (fetchCalls[0]!.init?.headers as Record<string, string>)[
+          BUILD_GRAPH_HEADER
+        ],
+      ).toBe("graph-x");
+    });
+
+    test("a 409 body becomes a typed, terminal ResourceHttpError and marks the store", async () => {
+      const { client, fetchQueue } = await setup();
+      const store = renderHook(() => useResourceContractMismatches());
+      client.observe("hist", {}, undefined, pushSchema);
+      fetchQueue.push(
+        makeResponse({
+          status: 409,
+          body: {
+            reason: "contract-mismatch",
+            verdict: "skew",
+            detail: "params.limit is missing",
+          },
+        }),
+      );
+      let err: unknown;
+      try {
+        await client.fetchOverHttp(
+          "hist",
+          {},
+          undefined,
+          pushSchema,
+          "fallback",
+        );
+      } catch (e) {
+        err = e;
+      }
+      expect(err).toBeInstanceOf(ResourceHttpError);
+      expect(err).toMatchObject({
+        status: 409,
+        reason: "contract-mismatch",
+        verdict: "skew",
+      });
+      // `useResource` does not retry it: the same bundle is refused the same way.
+      expect(isTerminalResourceError(err)).toBe(true);
+      store.rerender();
+      expect(store.result.current).toEqual([
+        { key: "hist", reason: "contract-mismatch", verdict: "skew" },
+      ]);
+    });
+
+    test("a 500 loader failure stays retryable and marks nothing", async () => {
+      const { client, fetchQueue } = await setup();
+      const store = renderHook(() => useResourceContractMismatches());
+      client.observe("k", {}, undefined, pushSchema);
+      fetchQueue.push(
+        makeResponse({ status: 500, body: { reason: "loader-failed" } }),
+      );
+      let err: unknown;
+      try {
+        await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+      } catch (e) {
+        err = e;
+      }
+      expect(err).toMatchObject({ status: 500, reason: "loader-failed" });
+      expect(isTerminalResourceError(err)).toBe(false);
+      store.rerender();
+      expect(store.result.current).toEqual([]);
     });
   });
 });

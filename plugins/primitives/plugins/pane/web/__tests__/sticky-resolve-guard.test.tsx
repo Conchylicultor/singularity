@@ -1,7 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 
-import { Pane, type PaneStore } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  type PaneStore,
+  type ResolveResult,
+} from "@plugins/primitives/plugins/pane/web";
 // The guard is internal to the plugin — `PaneBox` is what the barrel exports, so
 // no layout renderer can paint a pane without its identity/theme stamping. This
 // suite is a unit test of the guard itself, so it reaches the internal file
@@ -19,17 +23,14 @@ const testApp = defineApp({
 });
 
 // Regression: a resolve hook whose live-state resource flips transiently back to
-// `pending` (e.g. an HTTP-fallback refetch failing under memory pressure) must
+// `pending` or `error` (e.g. an HTTP-fallback refetch failing under memory pressure) must
 // NOT unmount the resolved pane — that would destroy scroll/focus/unsaved draft.
 // The guard is sticky-found: once resolved for an identity it stays mounted
-// through later `pending` flips, and only a SETTLED miss downgrades to Not Found.
+// through later `pending` / `error` flips, and only a SETTLED miss downgrades to Not Found.
 
 // A mutable resolve result the test drives frame-by-frame. Every guard render
 // reads the current value, so re-rendering after mutating it exercises a flip.
-let resolveResult: { pending: boolean; found: boolean } = {
-  pending: true,
-  found: false,
-};
+let resolveResult: ResolveResult = { status: "pending" };
 
 // A real defined pane: `Pane.define` registers it in the internal→object map
 // that the Not-Found fallback chrome (`paneObjectFor`) consults. `resolve` reads
@@ -58,7 +59,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  resolveResult = { pending: true, found: false };
+  resolveResult = { status: "pending" };
 });
 
 /** Mount the guard for `id` in a surface. Returned so a case can re-render it. */
@@ -72,12 +73,12 @@ function guard(id: string) {
 
 describe("sticky resolve guard", () => {
   it("keeps the pane mounted when a resolved resource flips back to pending", () => {
-    resolveResult = { pending: false, found: true };
+    resolveResult = { status: "found" };
     const { getByTestId, queryByText, rerender } = render(guard("a"));
     expect(getByTestId("pane-body")).toBeTruthy();
 
     // Transient error: settled resource flips back to pending.
-    resolveResult = { pending: true, found: false };
+    resolveResult = { status: "pending" };
     rerender(guard("a"));
 
     // The pane body is still mounted; no Loading fallback swapped in.
@@ -86,14 +87,14 @@ describe("sticky resolve guard", () => {
   });
 
   it("downgrades to Not Found on a settled miss even after it was found (real deletion)", () => {
-    resolveResult = { pending: false, found: true };
+    resolveResult = { status: "found" };
     const { getByTestId, queryByTestId, getByText, rerender } = render(
       guard("a"),
     );
     expect(getByTestId("pane-body")).toBeTruthy();
 
     // The resource settles with the row gone — a genuine deletion.
-    resolveResult = { pending: false, found: false };
+    resolveResult = { status: "missing" };
     rerender(guard("a"));
 
     expect(queryByTestId("pane-body")).toBeNull();
@@ -102,19 +103,56 @@ describe("sticky resolve guard", () => {
 
   it("resets stickiness when params change (a swap re-roots the pane in place)", () => {
     // Resolve task "a".
-    resolveResult = { pending: false, found: true };
+    resolveResult = { status: "found" };
     const { getByTestId, queryByTestId, getAllByText, queryByText, rerender } =
       render(guard("a"));
     expect(getByTestId("pane-body")).toBeTruthy();
 
     // Swap to task "b" while its resource is still loading. Stickiness from "a"
     // must NOT leak: the guard shows Loading for the new, unresolved identity.
-    resolveResult = { pending: true, found: false };
+    resolveResult = { status: "pending" };
     rerender(guard("b"));
 
     expect(queryByTestId("pane-body")).toBeNull();
     expect(queryByText("Not Found")).toBeNull();
     // "Loading…" appears both as the fallback title and inside <Loading/>.
     expect(getAllByText("Loading…").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the pane mounted when a resolved resource fails transiently", () => {
+    resolveResult = { status: "found" };
+    const { getByTestId, queryByText, rerender } = render(guard("a"));
+    expect(getByTestId("pane-body")).toBeTruthy();
+
+    resolveResult = { status: "error", error: new Error("socket blipped") };
+    rerender(guard("a"));
+
+    expect(getByTestId("pane-body")).toBeTruthy();
+    expect(queryByText(/socket blipped/)).toBeNull();
+  });
+
+  it("renders a failed resolve as the failure with Retry — neither a spinner nor Not Found", () => {
+    const refetch = vi.fn(() => Promise.resolve());
+    resolveResult = {
+      status: "error",
+      error: new Error("boom"),
+      retry: refetch,
+    };
+    const { getByText, queryByTestId, queryByText } = render(guard("a"));
+
+    expect(queryByTestId("pane-body")).toBeNull();
+    expect(queryByText("Not Found")).toBeNull();
+    expect(queryByText("Loading…")).toBeNull();
+    expect(getByText(/boom/)).toBeTruthy();
+
+    fireEvent.click(getByText("Retry"));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no Retry for a failed resolve that cannot refetch", () => {
+    resolveResult = { status: "error", error: new Error("boom") };
+    const { getByText, queryByText } = render(guard("a"));
+    expect(getByText(/boom/)).toBeTruthy();
+    expect(queryByText("Retry")).toBeNull();
   });
 });

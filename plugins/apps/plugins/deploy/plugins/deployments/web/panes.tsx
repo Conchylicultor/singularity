@@ -1,14 +1,21 @@
 import type { ReactElement } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneChrome,
+  resolveRow,
+  type ResolveResult,
+} from "@plugins/primitives/plugins/pane/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
 import { deploymentDetailRoute, deployments } from "../core";
 import { DeploymentDetail } from "./slots";
 
-function useResolveDeployment({ deploymentId }: { deploymentId: string }) {
-  const row = useLiveRow(deployments, deploymentId);
-  if (row.pending) return { pending: true, found: false };
-  return { pending: false, found: row.found };
+function useResolveDeployment({
+  deploymentId,
+}: {
+  deploymentId: string;
+}): ResolveResult {
+  return resolveRow(useLiveRow(deployments, deploymentId));
 }
 
 /** The deployment's composition — the only name a person recognises it by. */
@@ -18,7 +25,9 @@ function useDeploymentTitle({
   deploymentId: string;
 }): string | undefined {
   const row = useLiveRow(deployments, deploymentId);
-  return !row.pending && row.found ? row.row.compositionId : undefined;
+  // Loading or failed: no title of its own yet; the chrome's title stands in.
+  if (row.status === "loading" || row.status === "error") return undefined;
+  return row.found ? row.row.compositionId : undefined;
 }
 
 /**

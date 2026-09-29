@@ -5,6 +5,8 @@ import {
   Pane,
   PaneChrome,
   defineRoute,
+  resolveFrom,
+  type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -41,7 +43,11 @@ type AgentLookup =
 /** One agent from the live agent rows, by id. */
 function useAgentLookup(id: string): AgentLookup {
   const result = useLive(agentRows);
-  if (result.pending) return { status: "pending" };
+  switch (result.status) {
+    case "loading":
+    case "error":
+      return { status: "pending" };
+  }
   const agent = result.data.find((a: Agent) => a.id === id);
   return agent ? { status: "found", agent } : { status: "missing" };
 }
@@ -75,10 +81,10 @@ function useSystemAgentTitle({
   )?.name;
 }
 
-function useResolveAgent({ id }: { id: string }) {
-  const result = useLive(agentRows);
-  if (result.pending) return { pending: true, found: false };
-  return { pending: false, found: result.data.some((a) => a.id === id) };
+function useResolveAgent({ id }: { id: string }): ResolveResult {
+  return resolveFrom(useLive(agentRows), (agents) =>
+    agents.some((a) => a.id === id),
+  );
 }
 
 export const agentDetailPane = Pane.define({

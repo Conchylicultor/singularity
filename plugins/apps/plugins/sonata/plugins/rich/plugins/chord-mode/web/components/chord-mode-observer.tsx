@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import {
   chordModeSetting,
+  useFailSongSetting,
   useMountedSongId,
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -21,15 +22,39 @@ import { chordModes } from "../../shared/resources";
 export function ChordModeObserver() {
   const songId = useMountedSongId();
   const setChordMode = useWriteSongSetting(chordModeSetting);
+  const failSetting = useFailSongSetting(chordModeSetting);
   const row = useLiveRow(chordModes, songId);
   // The row read reduced to the value it settles to — `undefined` while it is
-  // pending — so the effect below runs on a real change only.
-  const enabled = row.pending ? undefined : row.found && row.row.enabled;
+  // loading — so the effect below runs on a real change only.
+  // A failed read settles only from its last-seen row (`stale`); with none the
+  // setting is reported FAILED (below) — never a stand-in value — so the
+  // player shows the failure with Retry instead of waiting forever.
+  let enabled: boolean | undefined;
+  switch (row.status) {
+    case "loading":
+      enabled = undefined;
+      break;
+    case "error":
+      enabled = row.stale?.enabled;
+      break;
+    case "ready":
+      enabled = row.found && row.row.enabled;
+      break;
+  }
 
   useEffect(() => {
     if (enabled === undefined) return;
     setChordMode(songId, enabled);
   }, [songId, enabled, setChordMode]);
+
+  // The read failed with nothing to settle from: the setting is FAILED.
+  const failedError =
+    row.status === "error" && row.stale === undefined ? row.error : undefined;
+  const refetch = row.refetch;
+  useEffect(() => {
+    if (failedError === undefined) return;
+    failSetting(songId, { error: failedError, refetch });
+  }, [songId, failedError, refetch, failSetting]);
 
   return null;
 }

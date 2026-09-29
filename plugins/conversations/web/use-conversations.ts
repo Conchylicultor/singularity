@@ -1,6 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  foldResource,
+  mapResource,
+  combineResources,
   useResource,
   useCombinedResources,
   type ResourceResult,
@@ -27,32 +30,28 @@ import {
 
 export const GonePageSchema = cursorPageSchema(ConversationSchema);
 
-export type ConversationsState =
-  | { pending: true }
-  | {
-      pending: false;
-      active: ConversationEntry[];
-      recentGone: ConversationEntry[];
-      hasMoreGone: boolean;
-      totalGoneCount: number;
-      system: ConversationEntry[];
-    };
+export interface ConversationsData {
+  active: ConversationEntry[];
+  recentGone: ConversationEntry[];
+  hasMoreGone: boolean;
+  totalGoneCount: number;
+  system: ConversationEntry[];
+}
 
-export function useConversations(): ConversationsState {
+/** Every conversation list, as one read: loading, failed, or ready. */
+export function useConversations(): ResourceResult<ConversationsData> {
   const active = useResource(conversationsActiveResource);
   const system = useResource(conversationsSystemResource);
   const gone = useResource(conversationsGoneResource);
   const stats = useLive(conversationsGoneStats);
   const all = useCombinedResources({ active, system, gone, stats });
-  if (all.pending) return { pending: true };
-  return {
-    pending: false,
-    active: all.data.active,
-    recentGone: all.data.gone,
-    system: all.data.system,
-    totalGoneCount: all.data.stats.totalGoneCount,
-    hasMoreGone: all.data.stats.totalGoneCount > RECENT_GONE_LIMIT,
-  };
+  return mapResource(all, (d): ConversationsData => ({
+    active: d.active,
+    recentGone: d.gone,
+    system: d.system,
+    totalGoneCount: d.stats.totalGoneCount,
+    hasMoreGone: d.stats.totalGoneCount > RECENT_GONE_LIMIT,
+  }));
 }
 
 // Point lookup by id. Subscribes to a derived SLICE of each conversations list
@@ -62,7 +61,16 @@ export function useConversations(): ConversationsState {
 // per-conversation toolbar components all observe the same global list. Splitting
 // across the three keyed sub-resources gives strictly better isolation: a status
 // flip on an active row no longer touches the gone/system subscriptions.
-export function useConversation(id: string): ConversationEntry | null {
+//
+// A read, not a nullable row: a list that has the row answers at once (ready,
+// with the row); otherwise it is `loading` until all three lists have answered,
+// `error` if one of them failed, and a ready `null` only when every list
+// answered without this id — so "not loaded yet" and "failed" never reach a
+// caller as "no such conversation". `gate: true` because the three slices feed
+// a readiness gate (see live-state CLAUDE.md, "Slice selectors").
+export function useConversation(
+  id: string,
+): ResourceResult<ConversationEntry | null> {
   const select = useCallback(
     (rows: ConversationEntry[]): ConversationEntry | null =>
       rows.find((x) => x.id === id) ?? null,
@@ -70,16 +78,55 @@ export function useConversation(id: string): ConversationEntry | null {
   );
   const active = useResource(conversationsActiveResource, undefined, {
     select,
+    gate: true,
   });
-  const gone = useResource(conversationsGoneResource, undefined, { select });
+  const gone = useResource(conversationsGoneResource, undefined, {
+    select,
+    gate: true,
+  });
   const system = useResource(conversationsSystemResource, undefined, {
     select,
+    gate: true,
   });
-  // Priority active → gone (recentGone) → system, matching the previous order.
-  const activeHit = active.pending ? null : active.data;
-  const goneHit = gone.pending ? null : gone.data;
-  const systemHit = system.pending ? null : system.data;
-  return activeHit ?? goneHit ?? systemHit ?? null;
+  return useMemo(
+    () => resolveConversation(active, gone, system),
+    [active, gone, system],
+  );
+}
+
+/** One id's row across the three lists: the first hit, else absent once all answered. */
+function resolveConversation(
+  active: ResourceResult<ConversationEntry | null>,
+  gone: ResourceResult<ConversationEntry | null>,
+  system: ResourceResult<ConversationEntry | null>,
+): ResourceResult<ConversationEntry | null> {
+  // Priority active → gone (recentGone) → system, matching the lists' order.
+  for (const list of [active, gone, system]) {
+    if (list.status === "ready" && list.data !== null) return list;
+  }
+  // No hit yet: absent only once every list has answered.
+  return mapResource(
+    combineResources({ active, gone, system }),
+    (): ConversationEntry | null => null,
+  );
+}
+
+/**
+ * The live row of a conversation a surface already holds, else that snapshot.
+ * For a control handed a conversation by its host: while the lists load, when
+ * one failed (its last-seen row first) or while the row moves between them, it
+ * keeps rendering the conversation it was given rather than blanking — the
+ * host owns rendering the read's failure.
+ */
+export function useLiveConversation<T extends { id: string }>(
+  snapshot: T,
+): ConversationEntry | T {
+  const live = useConversation(snapshot.id);
+  return foldResource(live, {
+    loading: () => snapshot,
+    error: (_error, stale) => stale ?? snapshot,
+    ready: (row) => row ?? snapshot,
+  });
 }
 
 // Derived SLICE: does this task have another active conversation? Subscribes
@@ -88,8 +135,8 @@ export function useConversation(id: string): ConversationEntry | null {
 //
 // Returns the gateable result (NOT a bare boolean): the answer decides a
 // DESTRUCTIVE action, so callers must distinguish "loading" from "no sibling"
-// — collapsing pending to `false` is exactly the wrong-default-while-loading
-// bug. `gate: true` makes the pending→settled flip re-render reliably.
+// — collapsing loading to `false` is exactly the wrong-default-while-loading
+// bug. `gate: true` makes the loading→settled flip re-render reliably.
 export function useHasActiveSiblings(
   taskId: string,
   excludeId: string,
@@ -129,8 +176,8 @@ export function useHasActiveSiblingInWorktree(
 }
 
 // The active conversations list. The whole keyed resource IS the active list,
-// so this is a thin pass-through of the resource result; callers gate on
-// `.pending` (never collapse it to a default). Used by the dependencies
+// so this is a thin pass-through of the resource result; callers branch on
+// `.status` (never collapse it to a default). Used by the dependencies
 // button's cross-task picker.
 export function useActiveConversations(): ResourceResult<ConversationEntry[]> {
   return useResource(conversationsActiveResource);
@@ -152,7 +199,14 @@ export function useActiveConversations(): ResourceResult<ConversationEntry[]> {
 export function useConversationById(
   id: string | null,
 ): ConversationEntry | null {
-  const liveConv = useConversation(id ?? "");
+  // This lookup's contract is a row or null (the fallback fetch below answers
+  // "not in any list"), so a list still loading or failed reads as no live row
+  // here — its last-seen row first.
+  const liveConv = foldResource(useConversation(id ?? ""), {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (row) => row,
+  });
   const [held, setHeld] = useState<ConversationEntry | null>(null);
   const q = useQuery({
     queryKey: ["conversation", id],

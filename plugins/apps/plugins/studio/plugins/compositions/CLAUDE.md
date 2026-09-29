@@ -141,6 +141,7 @@ are no per-interaction round-trips.
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
   - Exports (values):

@@ -12,6 +12,7 @@
     - `conversations/effort-provider.EffortSelect`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.LiveRowResult`
+    - `network/live.mapRow`
     - `network/live.useLiveRow`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `shell/notifications.toast`

@@ -53,6 +53,7 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
     - `apps/sonata/primitives/toolbar-control.ToolbarControl`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.transposeSetting`
+    - `apps/sonata/shell.useFailSongSetting`
     - `apps/sonata/shell.useMountedSongId`
     - `apps/sonata/shell.useSonata`
     - `apps/sonata/shell.useSongSetting`
@@ -63,6 +64,7 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values): `saveTranspose`

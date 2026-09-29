@@ -72,6 +72,8 @@ export type {
   PaneStore,
   PaneHeaderItem,
 } from "./pane";
+export { resolveFrom, resolveRow } from "./resolve";
+export type { ResolveResult } from "./resolve";
 export { setHistoryAdapter } from "./history-sink";
 export { appNavSink, type AppNavigator } from "./app-nav-sink";
 export type {

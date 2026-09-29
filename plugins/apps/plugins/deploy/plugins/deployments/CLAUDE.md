@@ -427,11 +427,14 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.ResolveResult`
+    - `primitives/pane.resolveRow`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`

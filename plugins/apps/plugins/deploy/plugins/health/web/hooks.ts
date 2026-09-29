@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+  mapRow,
   useLive,
   useLiveRow,
   type LiveRowResult,
@@ -18,11 +19,12 @@ import { serverHealthRows, type ServerHealthRow } from "../shared";
  * `deploy/servers`'s own whole-set `servers` value) rather than reading the
  * collection's bounded default window and hoping it covers the same rows.
  *
- * `pending` until the read lands — never an empty map: an absent entry means
- * "never checked", which is a claim about the server that a read still loading
- * cannot make. `serverIds` itself may come from a still-pending resource (the
- * caller passes `[]` meanwhile); combine that resource's `pending` with this
- * one's via `useCombinedResources` so the map reads pending until BOTH land.
+ * `loading` until the read lands (`error` if it failed) — never an empty map:
+ * an absent entry means "never checked", which is a claim about the server that
+ * a read still loading cannot make. `serverIds` itself may come from a
+ * still-loading resource (the caller passes `[]` meanwhile); combine that
+ * resource with this one via `useCombinedResources` so the map is ready only
+ * when BOTH land.
  * Each caller decides what its surface shows meanwhile.
  */
 export function useServerHealthMap(
@@ -37,7 +39,8 @@ export function useServerHealthMap(
 }
 
 /**
- * The last probe verdict for one server: `pending` while loading, then
+ * The last probe verdict for one server: `loading`, `error` if the read failed,
+ * then
  * `found: true` with the row, or `found: false` — the server has never been
  * checked.
  */
@@ -46,13 +49,6 @@ export function useServerHealth(
 ): LiveRowResult<ServerHealthRow> {
   return useLiveRow(serverHealthRows, serverId);
 }
-
-/**
- * Whether the server's current key is proven to work — or `"pending"` while
- * the verdict is still loading, which each caller decides for itself rather
- * than reading it as "not verified".
- */
-export type ServerVerification = "pending" | "verified" | "unverified";
 
 /**
  * Whether the server's *current* key is proven to work, from a verdict already
@@ -82,10 +78,16 @@ export function isKeyVerified(
 }
 
 /** {@link isKeyVerified} for one server, read live. */
-export function useServerVerified(server: Server): ServerVerification {
+/**
+ * Whether the server's current key is proven to work, as a read: `loading`
+ * while the verdict is still loading, `error` (with Retry) when its read
+ * failed — each caller decides for itself what its surface shows then, rather
+ * than reading either as "not verified" — and on the ready arm the verdict.
+ */
+export function useServerVerified(server: Server): ResourceResult<boolean> {
   const health = useServerHealth(server.id);
-  if (health.pending) return "pending";
-  return isKeyVerified(health.found ? health.row : null, server)
-    ? "verified"
-    : "unverified";
+  return useMemo(
+    () => mapRow(health, (row) => isKeyVerified(row, server)),
+    [health, server],
+  );
 }

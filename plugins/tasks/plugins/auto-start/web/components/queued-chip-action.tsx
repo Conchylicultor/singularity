@@ -1,16 +1,33 @@
 import { choiceLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTaskAutoStart } from "../hooks";
 import { setAutoStart } from "@plugins/tasks/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const scheduleIcon = symbol("schedule");
 
 export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
   const taskId = row.id;
   const autoStart = useTaskAutoStart(taskId);
   // Nothing while loading, nor for an unarmed task (no marker row): the chip
-  // appears once the task is known to be armed.
-  if (autoStart.pending || !autoStart.found) return null;
+  // appears once the task is known to be armed. A failed read is a small error
+  // icon whose click retries — never silently "not armed".
+  if (autoStart.status === "loading") return null;
+  if (autoStart.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={scheduleIcon}
+        subject="the auto-start state"
+        error={autoStart.error}
+        refetch={autoStart.refetch}
+      />
+    );
+  }
+  if (!autoStart.found) return null;
   const queuedModel = autoStart.row.autoStartModel;
 
   const label = choiceLabel(queuedModel);

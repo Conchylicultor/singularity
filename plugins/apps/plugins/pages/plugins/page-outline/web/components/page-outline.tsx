@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   inDocumentOrder,
   pageBlocks,
@@ -63,8 +64,14 @@ export function PageOutline({ pageId }: { pageId: string }) {
   const content = blockContentScope.useRoot();
   const result = useLive(pageBlocks, { pageId });
   // The last value keeps painting through a transient error; a page never
-  // loaded has no outline yet — `null`, not an empty one.
-  const blocks = result.pending ? result.stale : result.data;
+  // loaded has no outline yet — `null`, not an empty one. A first load that
+  // failed paints no rail either: the rail is an overlay, and the page's own
+  // editor renders the failure.
+  const blocks = foldResource(result, {
+    loading: () => undefined,
+    error: (_error, stale) => stale,
+    ready: (data) => data,
+  });
 
   const entries = useMemo(() => {
     if (blocks === undefined) return null;

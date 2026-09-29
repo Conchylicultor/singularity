@@ -27,6 +27,11 @@ export function useSubagentStatus({
   agentToolEvent: ToolCallEvent | undefined;
 }): SubagentStatus {
   const subagents = useConversationSubagents(conversationId);
-  if (subagents.kind === "pending") return { kind: "pending" };
-  return subagents.statusOf({ toolUseId, agentToolEvent });
+  switch (subagents.kind) {
+    case "pending":
+    case "failed":
+      return subagents;
+    case "known":
+      return subagents.statusOf({ toolUseId, agentToolEvent });
+  }
 }

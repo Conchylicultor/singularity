@@ -1,4 +1,5 @@
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import {
   registerResourceDescriptor,
   type ResourceDescriptor,
@@ -244,6 +245,7 @@ export function liveValue<T>(
     live: "value",
     params,
     ...(optionalParams.length > 0 ? { optionalParams } : {}),
+    validateParams: paramsGate(key, params, optionalParams),
     ...(spec.origin === "central" ? { origin: "central" as const } : {}),
     // A param-less preload has ONE tuple, `{}` — the one `useLive(value)`
     // reads. A param'd one has none: its server half enumerates them.
@@ -285,4 +287,35 @@ function parseParamNames(
     if (optional) optionalParams.push(name);
   }
   return { params, optionalParams };
+}
+
+/**
+ * A value's params gate: the tuple names ONLY declared params, each a string,
+ * and every REQUIRED one. An optional param (`"scopeId?"`) may be absent — the
+ * runtime has already folded its `undefined` / `""` spellings away
+ * (`canonicalParams`) before the gate runs. Without the gate a loader reads
+ * `undefined` for a required param an older (or newer) bundle does not send,
+ * and fails somewhere far from the cause.
+ */
+function paramsGate(
+  key: string,
+  declared: readonly string[],
+  optional: readonly string[],
+): (params: Record<string, string>) => void {
+  const names = new Set(declared);
+  const required = declared.filter((name) => !optional.includes(name));
+  return (params) => {
+    const reject = (detail: string): never => {
+      throw new ResourceContractError(key, `liveValue("${key}"): ${detail}`);
+    };
+    for (const [name, v] of Object.entries(params)) {
+      if (!names.has(name)) reject(`unknown param "${name}"`);
+      if (typeof v !== "string") {
+        reject(`param "${name}" must be a string, got ${JSON.stringify(v)}`);
+      }
+    }
+    for (const name of required) {
+      if (!Object.hasOwn(params, name)) reject(`missing param "${name}"`);
+    }
+  };
 }

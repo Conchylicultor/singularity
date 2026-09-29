@@ -7,7 +7,7 @@ import {
   useResource,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, type ResolveResult } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
   conversationsActiveResource,
@@ -22,14 +22,14 @@ import { useConversationById } from "@plugins/conversations/web";
 import { ConversationView } from "./components/conversation-view";
 import { ConversationTitle } from "./components/conversation-title";
 
-function useResolveConversation({ convId }: { convId: string }) {
+function useResolveConversation({ convId }: { convId: string }): ResolveResult {
   const active = useResource(conversationsActiveResource);
   const gone = useResource(conversationsGoneResource);
   const system = useResource(conversationsSystemResource);
   const resource = useCombinedResources({ active, gone, system });
 
   const inLive =
-    !resource.pending &&
+    resource.status === "ready" &&
     [
       ...resource.data.active,
       ...resource.data.gone,
@@ -37,7 +37,10 @@ function useResolveConversation({ convId }: { convId: string }) {
     ].some((c) => c.id === convId);
 
   // Older gone conversations may not be in the live resource — check via REST.
-  const needsFallback = !resource.pending && !inLive;
+  // A FAILED live read asks REST too: it answers found / not-found on its own,
+  // so a broken subscription cannot leave the pane loading forever.
+  const needsFallback =
+    resource.status === "error" || (resource.status === "ready" && !inLive);
   const fallback = useQuery({
     queryKey: ["conversation-exists", convId],
     queryFn: async () => {
@@ -54,10 +57,15 @@ function useResolveConversation({ convId }: { convId: string }) {
     retry: false,
   });
 
-  if (resource.pending) return { pending: true, found: false };
-  if (inLive) return { pending: false, found: true };
-  if (fallback.isFetching) return { pending: true, found: false };
-  return { pending: false, found: !!fallback.data };
+  if (resource.status === "loading") return { status: "pending" };
+  if (inLive) return { status: "found" };
+  if (fallback.isFetching) return { status: "pending" };
+  // REST could not answer either: the failure, with Retry — never a Not Found
+  // for a conversation that may well exist.
+  if (fallback.isError) {
+    return { status: "error", error: fallback.error, retry: fallback.refetch };
+  }
+  return { status: fallback.data === true ? "found" : "missing" };
 }
 
 export const conversationPane = Pane.define({

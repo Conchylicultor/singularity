@@ -66,8 +66,8 @@ const copiesInFlight = new Map<
  * changes a theme other scopes may be showing unless it is already a custom
  * theme of the user's own.
  *
- * Throws when called before the selection and theme list are known: an editor
- * must not be interactive while they are pending.
+ * Throws when called before the selection and theme list are known, or while
+ * the selection failed to load: an editor must not be interactive then.
  */
 export function useEditTheme(scopeId: string | undefined): ThemeEdits {
   const themes = useThemes();
@@ -86,7 +86,7 @@ export function useEditTheme(scopeId: string | undefined): ThemeEdits {
   // The scope now selects the copy its first edit made: later edits see a
   // custom theme and patch it directly, so the queue entry is done.
   useEffect(() => {
-    if (selection.pending) return;
+    if (selection.status === "loading" || selection.status === "error") return;
     const key = scopeId ?? "";
     const inFlight = copiesInFlight.get(key);
     if (
@@ -103,7 +103,14 @@ export function useEditTheme(scopeId: string | undefined): ThemeEdits {
     theme: Theme;
     themesById: ReadonlyMap<string, Theme>;
   } {
-    if (themes.pending || selection.pending) {
+    if (selection.status === "error") {
+      // Never fork from the painter's fallback: the copy would be selected
+      // over the user's real (unreadable) choice.
+      throw new Error(
+        `[saved-themes] useEditTheme: an edit arrived while the theme selection failed to load (${selection.error.message}) — the editor must not be interactive then.`,
+      );
+    }
+    if (themes.pending || selection.status === "loading") {
       throw new Error(
         "[saved-themes] useEditTheme: an edit arrived before the theme selection and theme list were known — the editor must not be interactive while they are pending.",
       );

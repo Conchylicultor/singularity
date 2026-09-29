@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
@@ -54,13 +57,17 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
 
   const tasksResult = useResource(tasksResource);
   const openPane = useOpenPane();
-  const task = useMemo(
-    () =>
-      tasksResult.pending || !taskId
-        ? null
-        : (tasksResult.data.find((t) => t.id === taskId) ?? null),
-    [tasksResult, taskId],
-  );
+  // Loading shows the bare task id (known from the call, never revised); a
+  // failed read keeps the task as last seen, else the same bare id.
+  const task = useMemo(() => {
+    const tasks = foldResource(tasksResult, {
+      loading: () => null,
+      error: (_error, stale) => stale ?? null,
+      ready: (data) => data,
+    });
+    if (tasks === null || !taskId) return null;
+    return tasks.find((t) => t.id === taskId) ?? null;
+  }, [tasksResult, taskId]);
 
   const openTask = (e: React.MouseEvent) => {
     if (!taskId) return;

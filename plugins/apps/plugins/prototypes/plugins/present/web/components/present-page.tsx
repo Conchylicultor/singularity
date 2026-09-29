@@ -55,7 +55,7 @@ function VersionPresentPage({
 }): ReactNode {
   const history = useLive(prototypeHistory, { name });
   return matchResource(history, {
-    pending: () => <Loading variant="block" />,
+    loading: () => <Loading variant="block" />,
     ready: (h) => {
       const version = h.versions.find((v) => v.sha === sha);
       return version ? (

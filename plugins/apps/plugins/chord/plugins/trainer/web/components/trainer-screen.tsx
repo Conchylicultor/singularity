@@ -127,7 +127,7 @@ export function TrainerScreen() {
         {/* eslint-disable-next-line layout/no-adhoc-layout -- the page's two tracks: the main column and the 316px side panel, which drops below it when the pane is under 1000px wide. A container-query track template, which no layout primitive expresses. */}
         <div className="grid items-start gap-lg @[1000px]:grid-cols-[minmax(0,1fr)_316px]">
           {matchResource(curriculum, {
-            pending: () => <Loading variant="block" />,
+            loading: () => <Loading variant="block" />,
             ready: (c) => <TrainerBody selection={c} />,
           })}
         </div>

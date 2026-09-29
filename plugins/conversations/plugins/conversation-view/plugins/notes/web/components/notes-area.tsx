@@ -7,10 +7,14 @@ export function NotesArea({
 }: {
   conversation: ConversationRecord;
 }) {
-  const { value, onChange, onFocus, onBlur, isVisible, isSaving, pending } =
+  const { value, onChange, onFocus, onBlur, isVisible, isSaving, read } =
     useConversationNote(conversation.id);
 
-  if (pending || !isVisible) return null;
+  // The editor mounts only over a known note: seeded from a not-yet-loaded ""
+  // it would race the real value in. A failed read is reported by the toolbar
+  // toggle (NotesToggleButton), not a second time here.
+  if (read.status === "loading" || read.status === "error" || !isVisible)
+    return null;
 
   return (
     <div className="relative">

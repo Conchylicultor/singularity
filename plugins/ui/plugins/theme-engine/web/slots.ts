@@ -2,6 +2,10 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
 import type {
+  ResourceError,
+  ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import type {
   FixedTheme,
   SubTheme,
   Theme,
@@ -47,22 +51,25 @@ export interface ThemeSourceEntry {
  * each arrives through this slot.
  *
  * - `resident` — themes that exist now and can be selected and painted (the
- *   saved-themes table). `useThemes` returns `undefined` while still loading,
- *   which is distinct from "no themes": the painter injects nothing while any
- *   resident source is pending, so a half-loaded list is never painted as final.
- * - `browse` — a catalog to pick from. An entry becomes selectable only once
- *   `adopt` has saved it, which resolves to the resident theme's id.
+ *   saved-themes table). `useThemes` is a read: `loading` is distinct from "no
+ *   themes" (the painter injects nothing while any resident source is loading,
+ *   so a half-loaded list is never painted as final), and `error` is distinct
+ *   from both (the source's last-known themes — its `stale` — still paint, and
+ *   the failure is carried on `ThemesState.failures` for a surface to render).
+ * - `browse` — a catalog to pick from, read the same way. An entry becomes
+ *   selectable only once `adopt` has saved it, which resolves to the resident
+ *   theme's id.
  */
 export type ThemeSourceContribution =
   | {
       kind: "resident";
       id: string;
-      useThemes: () => Theme[] | undefined;
+      useThemes: () => ResourceResult<Theme[]>;
     }
   | {
       kind: "browse";
       id: string;
-      useEntries: () => ThemeSourceEntry[] | undefined;
+      useEntries: () => ResourceResult<ThemeSourceEntry[]>;
       /**
        * Save the entry and resolve to the resident theme it became — already
        * in `useThemes()` when this settles, so the caller can select it
@@ -71,14 +78,32 @@ export type ThemeSourceContribution =
       adopt: (entryId: string) => Promise<ThemeId>;
     };
 
+/** A theme source whose read failed: which one, why, and how to retry it. */
+export interface ThemeSourceFailure {
+  sourceId: string;
+  error: ResourceError;
+  refetch: () => Promise<void>;
+}
+
 export type ThemesState =
   | { pending: true }
-  | { pending: false; themesById: ReadonlyMap<ThemeId, Theme> };
+  | {
+      pending: false;
+      themesById: ReadonlyMap<ThemeId, Theme>;
+      /**
+       * Resident sources whose read FAILED. Their last-known themes (if any)
+       * are in `themesById`; the rest are unknown. Never a reason to stop
+       * painting — the app would blank — so the state still settles, and a
+       * surface listing themes renders these as errors with Retry.
+       */
+      failures: readonly ThemeSourceFailure[];
+    };
 
 /**
  * Every theme that can be selected right now: the code themes
  * (`ThemeEngine.Theme`) plus every resident source's. Pending while any
- * resident source is still loading.
+ * resident source is still loading; a FAILED source contributes its stale
+ * themes (if any) and a `failures` entry, and never holds the state pending.
  *
  * Two themes claiming one id is a bug, not a precedence rule, so it throws.
  *
@@ -91,34 +116,69 @@ export function useThemes(): ThemesState {
   // ThemeSource contributions are static slot entries; the count never
   // changes, so calling each resident source's hook here keeps hook order stable.
   const resident = ThemeEngine.ThemeSource.useContributions().flatMap((s) =>
-    s.kind === "resident" ? [s.useThemes()] : [],
+    s.kind === "resident" ? [{ id: s.id, read: s.useThemes() }] : [],
   );
   const lists: (readonly Theme[])[] = [];
-  for (const themes of resident) {
-    if (themes === undefined) return THEMES_PENDING;
-    lists.push(themes);
+  const failures: ThemeSourceFailure[] = [];
+  for (const { id, read } of resident) {
+    switch (read.status) {
+      case "loading":
+        return THEMES_PENDING;
+      case "error":
+        lists.push(read.stale ?? NO_THEMES);
+        failures.push({
+          sourceId: id,
+          error: read.error,
+          refetch: read.refetch,
+        });
+        break;
+      case "ready":
+        lists.push(read.data);
+    }
   }
-  return themesStateOf(codeThemes, lists);
+  return themesStateOf(codeThemes, lists, failures);
 }
 
 const THEMES_PENDING: ThemesState = { pending: true };
+const NO_THEMES: readonly Theme[] = [];
 
-// The last state built per code-theme list, with the resident lists it came
-// from: reused while every list is the same object.
+// The last state built per code-theme list, with the resident lists and
+// failures it came from: reused while every one is the same object.
 const builtStates = new WeakMap<
   readonly Theme[],
-  { resident: readonly (readonly Theme[])[]; state: ThemesState }
+  {
+    resident: readonly (readonly Theme[])[];
+    failures: readonly ThemeSourceFailure[];
+    state: ThemesState;
+  }
 >();
+
+function sameFailures(
+  a: readonly ThemeSourceFailure[],
+  b: readonly ThemeSourceFailure[],
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (f, i) =>
+        f.sourceId === b[i]!.sourceId &&
+        f.error === b[i]!.error &&
+        f.refetch === b[i]!.refetch,
+    )
+  );
+}
 
 function themesStateOf(
   codeThemes: readonly Theme[],
   resident: readonly (readonly Theme[])[],
+  failures: readonly ThemeSourceFailure[],
 ): ThemesState {
   const built = builtStates.get(codeThemes);
   if (
     built &&
     built.resident.length === resident.length &&
-    built.resident.every((list, i) => list === resident[i])
+    built.resident.every((list, i) => list === resident[i]) &&
+    sameFailures(built.failures, failures)
   ) {
     return built.state;
   }
@@ -131,8 +191,8 @@ function themesStateOf(
     }
     themesById.set(theme.id, theme);
   }
-  const state: ThemesState = { pending: false, themesById };
-  builtStates.set(codeThemes, { resident, state });
+  const state: ThemesState = { pending: false, themesById, failures };
+  builtStates.set(codeThemes, { resident, failures, state });
   return state;
 }
 

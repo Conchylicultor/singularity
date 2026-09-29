@@ -9,6 +9,7 @@ import {
   matchesFilter,
   or,
 } from "@plugins/network/plugins/live/plugins/filter/core";
+import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import { liveCollection } from "./live-collection";
 
 const RowSchema = z.object({
@@ -553,5 +554,79 @@ describe("groups codec", () => {
         where: '{"and":[{"column":"enabled","op":"eq","operand":true}]}',
       }),
     ).toThrow(/not canonical/);
+  });
+});
+
+describe("which failures are a contract mismatch", () => {
+  // A DECODE failure is a subscription whose params do not match the
+  // declaration (the runtime refuses it as `contract-mismatch`); a declaration
+  // or an encode failure is a programmer error and stays a plain Error.
+  const isContract = (fn: () => unknown): boolean => {
+    try {
+      fn();
+    } catch (err) {
+      return err instanceof ResourceContractError;
+    }
+    throw new Error("expected a throw");
+  };
+
+  it("decode, decodeGroups and the gates throw ResourceContractError", () => {
+    expect(isContract(() => decode({}))).toBe(true);
+    expect(isContract(() => decode({ limit: "100", cursor: "x" }))).toBe(true);
+    expect(isContract(() => decode({ limit: "9999" }))).toBe(true);
+    expect(isContract(() => decode({ limit: "100", where: "not json" }))).toBe(
+      true,
+    );
+    expect(isContract(() => decode({ limit: "100", order: "nope" }))).toBe(
+      true,
+    );
+    expect(
+      isContract(() => decode({ limit: "100", order: '[["id","asc"]]' })),
+    ).toBe(true);
+    expect(isContract(() => sources.groups.groups.decode({}))).toBe(true);
+    expect(
+      isContract(() =>
+        sources.groups.groups.decode({ groupBy: "id", limit: "5" }),
+      ),
+    ).toBe(true);
+    // The incident: a pre-deploy bundle subscribing the window with `{}`.
+    expect(isContract(() => sources.window.validateParams({}))).toBe(true);
+    expect(isContract(() => sources.groups.validateParams({}))).toBe(true);
+    expect(isContract(() => sources.rows.validateParams({}))).toBe(true);
+    expect(
+      isContract(() => sources.rows.validateParams({ ids: "a", x: "1" })),
+    ).toBe(true);
+  });
+
+  it("the gates accept every canonical encoding", () => {
+    expect(() =>
+      sources.window.validateParams(
+        encode({ limit: 5, where: { enabled: true } }),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      sources.groups.validateParams(
+        sources.groups.groups.encode({ groupBy: "status" }),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      sources.rows.validateParams(sources.rows.point.encode(["a", "b"])),
+    ).not.toThrow();
+  });
+
+  it("encode and declaration failures stay plain Errors", () => {
+    expect(isContract(() => encode({ limit: 0 }))).toBe(false);
+    expect(
+      isContract(() =>
+        liveCollection("live-test.contract-decl", {
+          row: RowSchema,
+          id: "id",
+          filterable: {},
+          sortable: ["name"],
+          default: { orderBy: [["name", "asc"]], limit: 0 },
+          maxLimit: 1,
+        }),
+      ),
+    ).toBe(false);
   });
 });

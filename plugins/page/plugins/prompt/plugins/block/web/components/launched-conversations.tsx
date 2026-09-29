@@ -1,6 +1,7 @@
 import { useTaskConversations } from "@plugins/tasks/plugins/tasks-core/web";
 import { ConversationChip } from "@plugins/conversations/plugins/conversation-ui/plugins/chip/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useBlockPromptTasks } from "@plugins/page/plugins/prompt/plugins/link/web";
 
 /**
@@ -24,9 +25,20 @@ export function LaunchedConversations({ blockId }: { blockId: string }) {
 
   // Still loading renders nothing, as a block with no launches does: this is a
   // chip row beside the launch button, where a spinner in place of zero to
-  // three chips would be noise. The join below runs only once the set of tasks
-  // is known.
-  if (links.pending || links.data.length === 0) return null;
+  // three chips would be noise. A failed read says so, in one line. The join
+  // below runs only once the set of tasks is known.
+  if (links.status === "loading") return null;
+  if (links.status === "error") {
+    return (
+      <ResourceErrorInline
+        error={links.error}
+        refetch={links.refetch}
+        variant="inline"
+        subject="this block's launches"
+      />
+    );
+  }
+  if (links.data.length === 0) return null;
 
   return <LaunchedChips taskIds={links.data.map((link) => link.taskId)} />;
 }
@@ -34,7 +46,18 @@ export function LaunchedConversations({ blockId }: { blockId: string }) {
 function LaunchedChips({ taskIds }: { taskIds: readonly string[] }) {
   const convs = useTaskConversations(taskIds);
 
-  if (convs.pending || convs.data.length === 0) return null;
+  if (convs.status === "loading") return null;
+  if (convs.status === "error") {
+    return (
+      <ResourceErrorInline
+        error={convs.error}
+        refetch={convs.refetch}
+        variant="inline"
+        subject="this block's conversations"
+      />
+    );
+  }
+  if (convs.data.length === 0) return null;
 
   return (
     <Cluster gap="xs">

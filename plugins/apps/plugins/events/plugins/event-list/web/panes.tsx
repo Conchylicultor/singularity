@@ -50,7 +50,7 @@ function EventListPaneView(): ReactElement {
   // (no refetch) — the first settled `rev` then refreshes once.
   const tick = useEventsRevision();
   const changeTick = matchResource(tick, {
-    pending: () => null,
+    loading: () => null,
     ready: (d) => d.rev,
   });
   // Activating a row means "show me this event": its own page, else the page it

@@ -153,6 +153,9 @@ here.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.formatRelativeTime`
     - `primitives/slot-render.defineRenderSlot`

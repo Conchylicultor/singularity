@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useState } from "react";
 import {
   chordModeSetting,
@@ -45,7 +46,16 @@ export function ChordModeActions() {
 
   // The card is a player section, so a song is open whenever it shows.
   if (currentSongId === null) return null;
-  if (mode.pending) return <Loading variant="spinner" />;
+  if (mode.kind === "pending") return <Loading variant="spinner" />;
+  if (mode.kind === "failed")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the song's chord mode"
+        error={mode.error}
+        refetch={mode.refetch}
+      />
+    );
   const enabled = mode.value;
   const songId = currentSongId;
 

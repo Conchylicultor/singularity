@@ -43,6 +43,7 @@ inferred key.
   - Uses:
     - `apps/sonata/shell.keyAutoDetectSetting`
     - `apps/sonata/shell.Sonata`
+    - `apps/sonata/shell.useFailSongSetting`
     - `apps/sonata/shell.useMountedSongId`
     - `apps/sonata/shell.useWriteSongSetting`
     - `infra/endpoints.fetchEndpoint`

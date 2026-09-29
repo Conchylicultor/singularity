@@ -11,6 +11,7 @@
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
+    - `primitives/live-state.ResourceErrorInline`
     - `tasks.setAutoStart`
     - `tasks/task-list.Tasks`
   - Exports (types): `TaskAutoStartRow`

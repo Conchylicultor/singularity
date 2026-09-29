@@ -22,7 +22,10 @@
     - `primitives/icon-button.IconButton`
     - `primitives/inline-text.InlineText`
     - `primitives/launch.LaunchControl`
+    - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceView`
+    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/overlay/tooltip.WithTooltip`

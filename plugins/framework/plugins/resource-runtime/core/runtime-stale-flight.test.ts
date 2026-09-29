@@ -63,7 +63,12 @@ function staleFlightHarness(extra: Parameters<typeof createHarness>[0] = {}) {
     ...extra,
   });
   h.runtime.defineResource(
-    { key: "s", schema: rowsSchema, keyed: { keyOf } },
+    {
+      key: "s",
+      schema: rowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    },
     {
       identityTable: "s_table",
       fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -220,7 +225,12 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     let maxLive = 0;
     const h = createHarness({ readSet: () => ["s_table"], sockets: 3 });
     h.runtime.defineResource(
-      { key: "s", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "s",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "s_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -270,7 +280,12 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     const seen: Rows[] = [];
     const h = createHarness({ readSet: () => ["s_table"], sockets: 2 });
     const up = h.runtime.defineResource(
-      { key: "s", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "s",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "s_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -387,7 +402,12 @@ describe("stale-flight refusal — the L2 persist floor", () => {
       },
     });
     h.runtime.defineResource(
-      { key: "s", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "s",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "s_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },

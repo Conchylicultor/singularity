@@ -154,12 +154,16 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
     - `primitives/icon-picker.IconPicker`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneIconAction`
+    - `primitives/pane.resolveFrom`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.useCurrentPane`
     - `primitives/pane.useOpenPane`
     - `primitives/pane.usePaneStore`

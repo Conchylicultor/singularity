@@ -1,9 +1,12 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   Pane,
   PaneChrome,
   useOpenPane,
+  resolveFrom,
+  type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
@@ -30,11 +33,11 @@ export const serversRootPane = Pane.define({
   width: 320,
 });
 
-function useResolveServer({ serverId }: { serverId: string }) {
+function useResolveServer({ serverId }: { serverId: string }): ResolveResult {
   const result = useLive(servers);
-  if (serverId === NEW_SERVER_ID) return { pending: false, found: true };
-  if (result.pending) return { pending: true, found: false };
-  return { pending: false, found: result.data.some((s) => s.id === serverId) };
+  // The create form names no server, so it needs no list to exist.
+  if (serverId === NEW_SERVER_ID) return { status: "found" };
+  return resolveFrom(result, (list) => list.some((s) => s.id === serverId));
 }
 
 /** "Add Server" for the create state, else the server's name once it loads. */
@@ -88,10 +91,22 @@ function ServerDetailBody() {
     );
   }
 
-  if (serversResult.pending) {
+  if (serversResult.status === "loading") {
     return (
       <PaneChrome pane={serverDetailPane}>
         <Loading variant="rows" />
+      </PaneChrome>
+    );
+  }
+  if (serversResult.status === "error") {
+    return (
+      <PaneChrome pane={serverDetailPane} title="Server">
+        <ResourceErrorInline
+          variant="block"
+          subject="the servers"
+          error={serversResult.error}
+          refetch={serversResult.refetch}
+        />
       </PaneChrome>
     );
   }

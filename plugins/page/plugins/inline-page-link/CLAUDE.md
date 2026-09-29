@@ -65,6 +65,9 @@ cannot paint itself outside Lexical is a tsc error.
     - `primitives/css/center.Center`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`

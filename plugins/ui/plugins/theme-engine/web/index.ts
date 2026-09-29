@@ -22,6 +22,7 @@ export type {
   TokenGroupContribution,
   ThemeSourceContribution,
   ThemeSourceEntry,
+  ThemeSourceFailure,
   ThemesState,
 } from "./slots";
 export { useResolvedTheme } from "./use-resolved-theme";

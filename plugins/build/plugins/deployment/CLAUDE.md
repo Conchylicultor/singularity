@@ -248,6 +248,9 @@ convergence mechanisms all missing it) and the design.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (types): `DeploymentReading`

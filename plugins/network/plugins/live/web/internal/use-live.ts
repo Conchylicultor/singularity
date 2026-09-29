@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   useResource,
   type ResourceDescriptor,
+  type ResourceError,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type {
@@ -26,7 +27,7 @@ import type {
 // A `liveValue` is read by the same hook: its result is `ResourceResult<T>`,
 // the states every read already has, so it gets no hook of its own.
 
-/** What a window read adds to its settled arm. */
+/** What a window read adds to its ready arm. */
 export interface LivePaging {
   /** The window is full and below `maxLimit` — `loadMore()` would add rows. */
   canGrow: boolean;
@@ -36,21 +37,49 @@ export interface LivePaging {
   loadMore: () => void;
 }
 
-/** A window read: `ResourceResult<Row[]>` whose settled arm carries the paging handles. */
+/**
+ * A window read: `ResourceResult<Row[]>` whose ready arm carries the paging
+ * handles. A grow that FAILS is the error arm, with the window it grew from as
+ * `stale` — the rows the user was looking at, never a spinner.
+ */
 export type LiveListResult<Row> =
-  | Extract<ResourceResult<Row[]>, { pending: true }>
-  | (Extract<ResourceResult<Row[]>, { pending: false }> & LivePaging);
+  | Extract<ResourceResult<Row[]>, { status: "loading" }>
+  | Extract<ResourceResult<Row[]>, { status: "error" }>
+  | (Extract<ResourceResult<Row[]>, { status: "ready" }> & LivePaging);
 
 /** An explicit id set. Rows come back for the ids that exist; no filter applies. */
 export interface LiveIdsQuery {
   ids: readonly string[];
 }
 
-/** One row by id: loading, found, or determinately absent. */
+/**
+ * One row by id: loading, failed, found, or determinately absent — `ready`
+ * splits on `found`. `pending` is the pre-`status` spelling (see
+ * `ResourceResult`), kept while the tree migrates.
+ */
 export type LiveRowResult<Row> =
-  | { pending: true; error: Error | null; stale?: Row }
-  | { pending: false; found: true; row: Row }
-  | { pending: false; found: false };
+  | {
+      status: "loading";
+      refetch: () => Promise<void>;
+    }
+  | {
+      status: "error";
+      error: ResourceError;
+      /** The row as last seen, if it was ever seen. */
+      stale?: Row;
+      refetch: () => Promise<void>;
+    }
+  | {
+      status: "ready";
+      found: true;
+      row: Row;
+      refetch: () => Promise<void>;
+    }
+  | {
+      status: "ready";
+      found: false;
+      refetch: () => Promise<void>;
+    };
 
 type AnyDescriptor = ResourceDescriptor<unknown, Record<string, string>>;
 
@@ -245,13 +274,16 @@ function useCollection<Row, F, S extends string>(
     shape === null ? (collection.rows as AnyDescriptor) : shape.descriptor;
   const current = useResource(descriptor, params);
 
-  // The list a grow started from, kept subscribed ONLY while the grown one is
-  // loading (then this collapses onto `params`, a shared refcount, and the old
-  // tuple is released).
-  const growing = grow !== null && current.pending && current.error === null;
+  // The list a grow started from, kept subscribed ONLY while the grown one has
+  // no value — loading, or failed before its first (then this collapses onto
+  // `params`, a shared refcount, and the old tuple is released).
+  const growUnsettled =
+    grow !== null &&
+    (current.status === "loading" || current.status === "error");
   const prevParams = useMemo(
-    () => (growing ? (JSON.parse(prevKey) as Record<string, string>) : params),
-    [growing, prevKey, params],
+    () =>
+      growUnsettled ? (JSON.parse(prevKey) as Record<string, string>) : params,
+    [growUnsettled, prevKey, params],
   );
   const previous = useResource(descriptor, prevParams);
 
@@ -269,42 +301,69 @@ function useCollection<Row, F, S extends string>(
     setGrown({ base, from: limit, limit: next });
   }, [base, limit, step, maxLimit, setGrown]);
   const list = useMemo((): LiveListResult<unknown> => {
-    if (growing && !previous.pending) {
-      return {
-        pending: false,
-        data: previous.data as unknown[],
-        refetch: previous.refetch,
-        canGrow: false,
-        growing: true,
-        loadMore,
-      };
+    switch (current.status) {
+      case "ready": {
+        const data = current.data as unknown[];
+        return {
+          ...current,
+          data,
+          canGrow: data.length === limit && limit < maxLimit,
+          growing: false,
+          loadMore,
+        };
+      }
+      case "loading":
+        // A grow in flight stays READY on the rows it grew from — those are
+        // server-vouched and still subscribed — so the list never flashes a
+        // spinner over rows it already rendered.
+        if (growUnsettled && previous.status === "ready") {
+          return {
+            status: "ready",
+            data: previous.data as unknown[],
+            refetch: previous.refetch,
+            canGrow: false,
+            growing: true,
+            loadMore,
+          };
+        }
+        return current as LiveListResult<unknown>;
+      case "error":
+        // A grow that failed before its first value: the error, with the
+        // window it grew from as `stale` (a surface can keep showing it).
+        if (
+          growUnsettled &&
+          current.stale === undefined &&
+          previous.status === "ready"
+        ) {
+          return {
+            status: "error",
+            error: current.error,
+            stale: previous.data as unknown[],
+            refetch: current.refetch,
+          };
+        }
+        return current as LiveListResult<unknown>;
     }
-    if (current.pending) return current as LiveListResult<unknown>;
-    const data = current.data as unknown[];
-    return {
-      ...current,
-      data,
-      canGrow: data.length === limit && limit < maxLimit,
-      growing: false,
-      loadMore,
-    };
-  }, [growing, previous, current, limit, maxLimit, loadMore]);
+  }, [growUnsettled, previous, current, limit, maxLimit, loadMore]);
 
   if (shape === null) return current as ResourceResult<Row[]>;
   return list;
 }
 
-/** The one not-found answer: it carries no row, so every reader shares it. */
-const NOT_FOUND: { pending: false; found: false } = {
-  pending: false,
+/** The null-id answer: no id names no row, and there is nothing to refetch. */
+const NO_ID: LiveRowResult<never> = {
+  status: "ready",
   found: false,
+  refetch: () => Promise.resolve(),
 };
 
 /**
- * Read one row of a live collection by id: `pending`, then `found: true` with
- * the row or `found: false` when the server answered and no such row exists —
- * a determinate answer, never a spinner. Reads the `:rows` point sibling, so it
- * ignores every window filter and bound: it answers "does this row exist".
+ * Read one row of a live collection by id: `loading`, then `ready` with
+ * `found: true` and the row, or `found: false` when the server answered and no
+ * such row exists — a determinate answer, never a spinner — or `error` when the
+ * read failed (with the row as last seen, as `stale`). Reads the `:rows` point
+ * sibling, so it ignores every window filter and bound: it answers "does this
+ * row exist".
  *
  * A `null` id (nothing to look up yet) is `found: false` from the first render
  * and reads nothing (the substrate's skip — no subscription, not a pending
@@ -323,19 +382,32 @@ export function useLiveRow<Row>(
   const absent = id === null;
   // The result keeps its identity until what it is built from changes, like
   // `useLive`'s list result: consumers memoize on it. `useResource`'s own
-  // result changes only with its pending / data / error / stale, and every
-  // not-found answer is the one shared `NOT_FOUND`.
+  // result changes only with its status / data / error / stale.
   return useMemo((): LiveRowResult<Row> => {
     // Determinate without the server: no id names no row.
-    if (absent) return NOT_FOUND;
-    // A one-id tuple's payload is `[row]` or `[]` — its stale one included.
-    if (result.pending) {
-      const stale = result.stale?.[0];
-      return stale === undefined
-        ? { pending: true, error: result.error }
-        : { pending: true, error: result.error, stale };
+    if (absent) return NO_ID;
+    const { refetch } = result;
+    switch (result.status) {
+      case "loading":
+        return result;
+      case "error": {
+        // A one-id tuple's payload is `[row]` or `[]` — its stale one included.
+        const stale = result.stale?.[0];
+        return stale === undefined
+          ? { status: "error", error: result.error, refetch }
+          : {
+              status: "error",
+              error: result.error,
+              stale,
+              refetch,
+            };
+      }
+      case "ready": {
+        const row = result.data[0];
+        return row === undefined
+          ? { status: "ready", found: false, refetch }
+          : { status: "ready", found: true, row, refetch };
+      }
     }
-    const row = result.data[0];
-    return row === undefined ? NOT_FOUND : { pending: false, found: true, row };
   }, [absent, result]);
 }

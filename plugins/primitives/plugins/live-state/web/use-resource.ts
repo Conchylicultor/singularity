@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import {
@@ -16,13 +17,19 @@ import {
   type NonUndefinedGuard,
 } from "@tanstack/react-query";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { NotificationsClient, queryKeyFor } from "./notifications-client";
+import {
+  NotificationsClient,
+  isTerminalResourceError,
+  queryKeyFor,
+} from "./notifications-client";
 import { slowResourceReportSink } from "./slow-resource-reporter";
 import { notePendingMount } from "./pending-mount-tracker";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
+import { toResourceError } from "./resource-error";
 import type { ChannelStatuses } from "./notifications-client";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
-import type { ResourceDescriptor } from "../core";
+import type { FailingResource } from "./resource-error-reporter";
+import type { ResourceDescriptor, ResourceError } from "../core";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 
 type ResourceParams = Record<string, string>;
@@ -40,7 +47,12 @@ function getDefaultQueryClient(): QueryClient {
           staleTime: Infinity,
           refetchOnWindowFocus: false,
           refetchOnReconnect: false,
-          retry: 1,
+          // One retry for a transient failure — never for a contract refusal
+          // (`contract-mismatch` / `unknown-key`): the same bundle sends the
+          // same params and is refused the same way; the Reload advice is the
+          // remedy, not another request.
+          retry: (failureCount, error) =>
+            failureCount < 1 && !isTerminalResourceError(error),
         },
       },
     });
@@ -118,6 +130,23 @@ export function useNotificationsChannelStatuses(): ChannelStatuses {
   const [statuses, setStatuses] = useState(() => client.getChannelStatuses());
   useEffect(() => client.subscribeChannelStatuses(setStatuses), [client]);
   return statuses;
+}
+
+/**
+ * Every live read on this page currently failing — one entry per
+ * `(key, params)` tuple, however many hooks observe it. The health report's
+ * "resources failing" row reads it; it empties as reads recover (a push, a
+ * retry, the `up-to-date` clear).
+ */
+export function useFailingResources(): readonly FailingResource[] {
+  const client = useContext(NotificationsContext);
+  if (!client)
+    throw new Error("useFailingResources must be inside NotificationsProvider");
+  return useSyncExternalStore(
+    (fn) => client.subscribeFailingResources(fn),
+    () => client.getFailingResources(),
+    () => client.getFailingResources(),
+  );
 }
 
 // Accessor for the singleton NotificationsClient — consumers (the live-state
@@ -213,22 +242,37 @@ export function useResourceAcks<P extends ResourceParams = ResourceParams>(
   );
 }
 
-// `pending` means "no trustworthy value" — never-loaded ∪ errored are the same
-// state to a consumer (invariant I1). The settled arm therefore DELIBERATELY
-// OMITS `error`: a value you can read (`data`) is one the server currently
-// vouches for, so `.error` is unreachable once narrowed to settled — reading it
-// is a tsc error, which is the enforcement (a `null`-typed field would not
-// catch it, since `null` is assignable to `Error | null`). Last-known-good under
-// a transient error moves to the opt-in `stale?: T` on the pending arm: named,
-// greppable, and never what a `.data` read reaches.
+// A read is in exactly one of three states, named by `status` (see
+// `../core/resource-status.ts`):
+//
+//   loading — no value yet, no failure: render the loading state;
+//   error   — the read failed: `error` is a typed, NEVER-null `ResourceError`,
+//             and `stale` the last value the server vouched for, if one landed;
+//   ready   — `data` is a value the server currently vouches for.
+//
+// A failure is its own state, never a flavour of loading: a surface that only
+// asks "is it loading?" spins forever on a read that will never load. The ready
+// arm DELIBERATELY OMITS `error` and `stale`: reading either off a narrowed-ready
+// result is a tsc error (a `null`-typed field would catch nothing, since `null`
+// is assignable to `Error | null`).
+//
 export type ResourceResult<T> =
   | {
-      pending: true;
-      error: Error | null;
+      status: "loading";
+      refetch: () => Promise<void>;
+    }
+  | {
+      status: "error";
+      error: ResourceError;
+      /** The last value the server vouched for, if one ever landed. */
       stale?: T;
       refetch: () => Promise<void>;
     }
-  | { pending: false; data: T; refetch: () => Promise<void> };
+  | {
+      status: "ready";
+      data: T;
+      refetch: () => Promise<void>;
+    };
 
 // Optional read options for useResource.
 export interface UseResourceOptions<T, S> {
@@ -284,7 +328,7 @@ const SKIPPED_REFETCH = (): Promise<void> => Promise.resolve();
 const SKIPPED_KEY = "\0skipped";
 
 // AGENT RULE: Never cast the `data` returned by useResource (e.g. `data as Foo[]`).
-// `data` is only accessible after narrowing `result.pending === false`.
+// `data` is only accessible after narrowing to `result.status === "ready"`.
 // The generic T is inferred from the ResourceDescriptor — casting silently hides type
 // mismatches between the resource payload and your assumption.
 //
@@ -294,7 +338,7 @@ const SKIPPED_KEY = "\0skipped";
 // nothing is read: no subscription, no HTTP read or cold-start prime, and no
 // pending-mount count (the page is not waiting on the server for it). The query
 // sits on a per-key skip key whose `queryFn` is React Query's `skipToken`, so no
-// refetch path can run it. The result is the pending arm with no error, for as
+// refetch path can run it. The result is the loading arm, for as
 // long as the params stay `null`.
 export function useResource<T, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
@@ -420,14 +464,16 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   });
 
   // `hasValue` — a real value has landed at least once (`dataUpdatedAt` leaves
-  // epoch 0 only on a successful load). `pending` widens it to "no trustworthy
-  // value": never-loaded OR errored. The widening makes every existing
-  // `if (r.pending)` gate correct under a transient error for free; the
-  // internal branches below key off `hasValue`, not `pending`, so an error does
-  // not re-select `initialData`, re-prime, or re-time the mount→settle metric.
+  // epoch 0 only on a successful load). `settled` narrows it to "a trustworthy
+  // value now": loaded AND not errored. The internal branches below key off
+  // `hasValue`, not `settled`, so an error does not re-select `initialData`,
+  // re-prime, or re-time the mount→settle metric. A skipped read has neither.
   const hasValue = !skipped && q.dataUpdatedAt !== 0;
-  const error = skipped ? null : (q.error as Error | null);
-  const pending = !hasValue || error !== null;
+  // The one typed failure (memoized per raw error, so every observer of the
+  // query shares one `ResourceError` identity).
+  const error =
+    skipped || q.error === null ? null : toResourceError(q.error);
+  const settled = hasValue && error === null;
 
   // Cold-start accelerator: if this resource mounts before the live-state
   // transport has EVER been ready (a cold deep-link — the notifications socket is
@@ -449,8 +495,8 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- gate first-settle transition: a one-way latch deliberately held as state for a (key,params) pair; the unsettled→settled flip MUST cause a re-render so the notifyOnChangeProps select-narrowing takes effect next render — a ref would silently skip that re-render and break the gate; there is no external store to subscribe to and it cannot be derived in render
-    if (gate && !pending && settledKey !== keyStr) setSettledKey(keyStr);
-  }, [gate, pending, settledKey, keyStr]);
+    if (gate && settled && settledKey !== keyStr) setSettledKey(keyStr);
+  }, [gate, settled, settledKey, keyStr]);
 
   // Count this read as "still waiting for data" from mount until its first value
   // lands (the cleanup runs on the `hasValue` flip, on unmount, and on a key
@@ -494,7 +540,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
 
   // Gate transition render (settled, but the select-scoped sub not applied
   // yet): apply the selector manually so callers always see the slice type.
-  // Keyed on `hasValue`, not `pending`: a transient error keeps `pending` true
+  // Keyed on `hasValue`, not `settled`: a transient error unsettles the read
   // while `q.data` still holds the last authoritative value, and re-selecting
   // `initialData` there would blank the slice.
   const data = (
@@ -502,31 +548,27 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
       ? select(q.data as T)
       : q.data
   ) as T | S;
-  // Last-known-good for the pending arm: the SELECTED slice (same expression as
+  // Last-known-good for the error arm: the SELECTED slice (same expression as
   // `data`) once a value has landed, else `undefined` — a first-load failure has
   // no trustworthy value to expose.
   const stale = hasValue ? data : undefined;
   const refetchRef = useLatestRef(q.refetch);
 
-  // The result identity recomputes only on pending/data/error/stale; the
-  // returned `refetch` reads the freshest `q.refetch` off the stable
-  // `refetchRef.current` at call time.
-  return useMemo(
-    (): ResourceResult<T | S> =>
-      skipped
-        ? { pending: true, error: null, refetch: SKIPPED_REFETCH }
-        : pending
-          ? {
-              pending: true,
-              error,
-              stale,
-              refetch: () => refetchRef.current().then(() => {}),
-            }
-          : {
-              pending: false,
-              data,
-              refetch: () => refetchRef.current().then(() => {}),
-            },
-    [skipped, pending, data, error, stale],
-  );
+  // The result identity recomputes only on data/error/stale (which decide the
+  // status); the returned `refetch` reads the freshest `q.refetch` off the
+  // stable `refetchRef.current` at call time. A skipped read (`params ===
+  // null`, no subject yet) is `loading` with nothing to refetch.
+  return useMemo((): ResourceResult<T | S> => {
+    if (skipped) return { status: "loading", refetch: SKIPPED_REFETCH };
+    const refetch = () => refetchRef.current().then(() => {});
+    if (error !== null) {
+      return stale === undefined
+        ? { status: "error", error, refetch }
+        : { status: "error", error, stale, refetch };
+    }
+    if (!hasValue) {
+      return { status: "loading", refetch };
+    }
+    return { status: "ready", data, refetch };
+  }, [skipped, hasValue, data, error, stale]);
 }

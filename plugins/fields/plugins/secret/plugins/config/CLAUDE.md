@@ -40,6 +40,7 @@ The **secret** type's config capability, spanning all four runtimes:
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Input`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Server:

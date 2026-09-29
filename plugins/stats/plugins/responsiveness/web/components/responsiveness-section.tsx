@@ -46,7 +46,7 @@ export function ResponsivenessSection() {
   // and used to refetch in place (the `runs.revision` pattern): a tick in the key
   // would drop the card back to its loading state once a minute.
   const tick = useResource(latencyLedgerRevisionResource);
-  const rev = matchResource(tick, { pending: () => null, ready: (d) => d.rev });
+  const rev = matchResource(tick, { loading: () => null, ready: (d) => d.rev });
   const lastRev = useRef<unknown>(rev);
   useEffect(() => {
     if (lastRev.current === rev) return;

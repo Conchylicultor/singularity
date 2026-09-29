@@ -1,4 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Backlinks } from "@plugins/page/plugins/links/web";
 import { pageBacklinks } from "@plugins/page/plugins/links/core";
 
@@ -20,9 +21,14 @@ export function BacklinksSection({ pageId }: { pageId: string }) {
  * While the value is still pending the card is not painted either: the gate is
  * a boolean the host resolves before painting, and no card is the one answer
  * that claims nothing about the page — the card appears once the backlinks
- * settle non-empty, never an empty card that then fills.
+ * settle non-empty, never an empty card that then fills. A failed read DOES
+ * paint the card: its body renders the failure with Retry.
  */
 export function useHasBacklinks({ pageId }: { pageId: string }): boolean {
   const result = useLive(pageBacklinks, { pageId });
-  return !result.pending && result.data.length > 0;
+  return foldResource(result, {
+    loading: () => false,
+    error: () => true,
+    ready: (links) => links.length > 0,
+  });
 }

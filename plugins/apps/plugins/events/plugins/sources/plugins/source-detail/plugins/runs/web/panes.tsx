@@ -3,6 +3,7 @@ import {
   Pane,
   PaneChrome,
   defineRoute,
+  type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -70,23 +71,20 @@ export const eventSourceRunPane = Pane.define({
   width: 460,
 });
 
-function useResolveRun({ runId }: { runId: string }): {
-  pending: boolean;
-  found: boolean;
-} {
+function useResolveRun({ runId }: { runId: string }): ResolveResult {
   const query = useEventSourceRun(runId);
-  if (query.isPending) return { pending: true, found: false };
+  if (query.isPending) return { status: "pending" };
   // Absence and breakage are different answers, and only the status tells them
   // apart: a 404 is the server stating this run does not exist (swept by
   // retention, or its source deleted), so the route is genuinely stale. Every
-  // other failure — offline, 500, a blipped socket — must NOT discard a deep
-  // link, so it stays pending and the body renders what broke.
+  // other failure — offline, 500, a blipped socket — is the error arm (with
+  // Retry), never a Not Found that would discard a deep link.
   if (query.isError) {
-    const gone =
-      query.error instanceof EndpointError && query.error.status === 404;
-    return { pending: !gone, found: false };
+    return query.error instanceof EndpointError && query.error.status === 404
+      ? { status: "missing" }
+      : { status: "error", error: query.error, retry: query.refetch };
   }
-  return { pending: false, found: true };
+  return { status: "found" };
 }
 
 /** The outcome plus when it ran — how a person picks one run out of a ledger. */

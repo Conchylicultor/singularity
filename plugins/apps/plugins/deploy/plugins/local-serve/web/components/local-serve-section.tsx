@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ReactNode } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -28,7 +29,17 @@ export function LocalServeSection({
 }): ReactNode {
   const deployment = useLiveRow(deployments, deploymentId);
 
-  if (deployment.pending) return <Loading variant="rows" />;
+  if (deployment.status === "loading") return <Loading variant="rows" />;
+  if (deployment.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the deployment"
+        error={deployment.error}
+        refetch={deployment.refetch}
+      />
+    );
+  }
   if (!deployment.found) {
     return (
       <Placeholder tone="error">This deployment no longer exists.</Placeholder>

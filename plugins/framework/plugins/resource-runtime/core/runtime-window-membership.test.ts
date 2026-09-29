@@ -69,7 +69,12 @@ function windowHarness(
   let failFullLoads = false;
   const h = createHarness({ readSet: () => ["row_table"], ...runtimeOpts });
   h.runtime.defineResource(
-    { key: "win", schema: rowsSchema, keyed: { keyOf } },
+    {
+      key: "win",
+      schema: rowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    },
     {
       identityTable: "row_table",
       membership: {
@@ -369,7 +374,12 @@ describe("window membership — persistence exclusion + eviction", () => {
       },
     });
     h.runtime.defineResource(
-      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "rows",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "row_table",
         scopedMembership: {
@@ -504,7 +514,12 @@ function sigHarness(limit: number) {
   let windowIdsOfCalls = 0;
   const h = createHarness({ readSet: () => ["sig_table"] });
   h.runtime.defineResource(
-    { key: "sig", schema: sigRowsSchema, keyed: { keyOf } },
+    {
+      key: "sig",
+      schema: sigRowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    },
     {
       identityTable: "sig_table",
       membership: {
@@ -706,7 +721,12 @@ function pointHarness(runtimeOpts: Parameters<typeof createHarness>[0] = {}) {
     ...runtimeOpts,
   });
   h.runtime.defineResource(
-    { key: "pt", schema: rowsSchema, keyed: { keyOf } },
+    {
+      key: "pt",
+      schema: rowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    },
     {
       identityTable: "pt_table",
       membership: { kind: "point", idsOf },
@@ -824,7 +844,12 @@ describe("point membership — routing by id intersection", () => {
     const idsOf = (p: Record<string, string>) => [p.id ?? ""];
     const h = createHarness({ readSet: () => ["blk_table"], sockets: 2 });
     h.runtime.defineResource(
-      { key: "blk", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "blk",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "blk_table",
         membership: { kind: "point", idsOf },
@@ -906,7 +931,12 @@ describe("membership — registration guards", () => {
       // is the backstop for a caller who casts past the type.
       // @ts-expect-error — `scopedMembership` and `membership` are mutually exclusive arms
       h.runtime.defineResource(
-        { key: "bad", schema: rowsSchema, keyed: { keyOf } },
+        {
+          key: "bad",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
         {
           identityTable: "t",
           scopedMembership: { orderOf: async () => [] },
@@ -941,7 +971,12 @@ describe("membership — registration guards", () => {
       // is the backstop for a caller who casts past the type.
       // @ts-expect-error — `recompute` and `membership` are different arms
       h.runtime.defineResource(
-        { key: "bad3", schema: rowsSchema, keyed: { keyOf } },
+        {
+          key: "bad3",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
         {
           recompute: { kind: "full", reason: "test" },
           membership: { kind: "window", windowIdsOf: async () => [] },
@@ -971,7 +1006,12 @@ describe("membership — registration guards", () => {
 export function scopePolicyMissingArmFixture(
   h: ReturnType<typeof createHarness>,
 ): void {
-  const contract = { key: "fixture", schema: rowsSchema, keyed: { keyOf } };
+  const contract = {
+    key: "fixture",
+    schema: rowsSchema,
+    keyed: { keyOf },
+    validateParams: () => {},
+  };
   // @ts-expect-error — identityTable with no membership / scopedMembership / fanOut
   h.runtime.defineResource(contract, {
     identityTable: "t",

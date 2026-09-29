@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -18,17 +19,29 @@ export function WorkflowNodePaneBody() {
   const { toolUseId, nodeId } = workflowNodePane.useParams();
   const state = useWorkflowNode(convId, toolUseId, nodeId);
 
-  if (state.pending) {
+  if (state.phase === "loading") {
     return (
       <PaneChrome pane={workflowNodePane}>
         <Loading />
       </PaneChrome>
     );
   }
+  if (state.phase === "failed") {
+    return (
+      <PaneChrome pane={workflowNodePane}>
+        <ResourceErrorInline
+          variant="block"
+          subject="the transcript"
+          error={state.error}
+          refetch={state.retry}
+        />
+      </PaneChrome>
+    );
+  }
 
   // A step belongs to a conversation's transcript: opened with no
   // conversation in the route, the pane says so.
-  if (!state.conversation) {
+  if (state.phase === "no-conversation") {
     return (
       <PaneChrome pane={workflowNodePane}>
         <Text as="div" variant="body" className="text-muted-foreground">

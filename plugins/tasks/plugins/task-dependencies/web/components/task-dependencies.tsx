@@ -1,17 +1,22 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { addTaskDependency, type TaskChainTarget } from "@plugins/tasks/core";
 import {
-  addTaskDependency,
-  type TaskChainTarget,
-} from "@plugins/tasks/core";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+  tasksResource,
+  type TaskListItem,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { useTaskCategoryMap } from "@plugins/tasks/plugins/task-category/web";
-import { useTask } from "@plugins/tasks/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   RELATION_DIRECTIONS,
@@ -44,24 +49,31 @@ function targetForSibling(
  * never split the way the read-only lists were.
  */
 export function TaskDependenciesActions({ taskId }: { taskId: string }) {
-  const task = useTask(taskId);
   const tasksResult = useResource(tasksResource);
   const categoryMap = useTaskCategoryMap();
 
-  const deps = task?.dependencies ?? [];
+  // No header actions until the task list is known; a failed read shows none
+  // either — the card's body renders the failure with Retry.
+  if (tasksResult.status === "loading" || tasksResult.status === "error")
+    return null;
+  const tasks = tasksResult.data;
+  const task = tasks.find((t) => t.id === taskId);
+  if (!task) return null;
 
-  const folderCandidate = (() => {
-    if (!task?.folderId || tasksResult.pending) return null;
-    if (deps.includes(task.folderId)) return null;
-    return tasksResult.data.find((t) => t.id === task.folderId) ?? null;
-  })();
+  const folderId = task.folderId;
+  const folderCandidate =
+    !folderId || task.dependencies.includes(folderId)
+      ? null
+      : (tasks.find((t) => t.id === folderId) ?? null);
 
   const addFolderAsDep = async () => {
     if (!folderCandidate) return;
-    await fetchEndpoint(addTaskDependency, { id: taskId }, { body: { dependsOnTaskId: folderCandidate.id } });
+    await fetchEndpoint(
+      addTaskDependency,
+      { id: taskId },
+      { body: { dependsOnTaskId: folderCandidate.id } },
+    );
   };
-
-  if (!task || tasksResult.pending) return null;
 
   const target = targetForSibling(task, categoryMap);
 
@@ -98,7 +110,17 @@ export function TaskDependenciesActions({ taskId }: { taskId: string }) {
 export function TaskDependencies({ taskId }: { taskId: string }) {
   const tasksResult = useResource(tasksResource);
 
-  if (tasksResult.pending) return <Loading variant="rows" />;
+  if (tasksResult.status === "loading") return <Loading variant="rows" />;
+  if (tasksResult.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the dependencies"
+        error={tasksResult.error}
+        refetch={tasksResult.refetch}
+      />
+    );
+  }
 
   const tasks = tasksResult.data;
   const groups = RELATION_DIRECTIONS.map((direction) => ({

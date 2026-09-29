@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import {
+  foldResource,
   useResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -33,9 +34,13 @@ export function useHasDepsCluster({ taskId }: { taskId: string }): boolean {
   const result = useResource(tasksResource);
   // Still loading ⇒ keep the card painted (the body shows its own Loading), so
   // it does not pop in a frame after the pane. `false` here would collapse
-  // "unknown yet" into "definitely a lone task".
-  if (result.pending) return true;
-  return taskClusterIds(result.data, taskId).size > 1;
+  // "unknown yet" into "definitely a lone task". Failed ⇒ painted too: the
+  // body renders the failure with Retry.
+  return foldResource(result, {
+    loading: () => true,
+    error: () => true,
+    ready: (tasks) => taskClusterIds(tasks, taskId).size > 1,
+  });
 }
 
 export function DepsTreeSection({ taskId }: { taskId: string }) {

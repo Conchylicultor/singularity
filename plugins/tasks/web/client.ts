@@ -1,4 +1,8 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   tasksResource,
@@ -36,21 +40,20 @@ export async function setAutoStart(
   await fetchEndpoint(setTaskAutoStart, { id }, { body: { model } });
 }
 
-export function useTask(id: string | null | undefined): TaskListItem | null {
-  const result = useResource(tasksResource);
-  if (!id || result.pending) return null;
-  return result.data.find((t) => t.id === id) ?? null;
-}
-
 /**
- * How many tasks are waiting on a task — pending until the task set is known.
- *
- * A count of `0` is a real answer ("nothing is waiting on it"); the pending arm
- * is what "we don't know yet" looks like, so a surface can render a loading
- * affordance instead of quietly claiming zero.
+ * One task out of the live task list — a resource result whose ready arm is the
+ * task, or `null` when the list is known and holds no such task (or `id` is
+ * empty). Loading and a failed read stay their own states, so a caller never
+ * mistakes "not known yet" or "could not be read" for "no such task".
  */
-export type DependentCountResult =
-  { pending: true } | { pending: false; count: number };
+export function useTask(
+  id: string | null | undefined,
+): ResourceResult<TaskListItem | null> {
+  const result = useResource(tasksResource);
+  return mapResource(result, (tasks) =>
+    id ? (tasks.find((t) => t.id === id) ?? null) : null,
+  );
+}
 
 // One TaskGraph per task-list snapshot, shared by every caller in a render pass.
 // live-state hands out a fresh array whenever the list changes and never mutates
@@ -72,16 +75,18 @@ function graphFor(tasks: readonly TaskListItem[]): TaskGraph {
  * derivation shared by every surface that shows or acts on that count (the
  * conversation Tasks button, the per-row conversation chip, the drop-dependents
  * action), so two of them can never disagree about how many tasks are waiting.
+ *
+ * A resource result over the count: loading until the task set is known, error
+ * when it failed to load. A count of `0` is a real answer ("nothing is waiting
+ * on it"); the loading arm is what "we don't know yet" looks like, so a surface
+ * can render a loading affordance instead of quietly claiming zero.
  */
 export function useActiveDependentCount(
   id: string | null | undefined,
-): DependentCountResult {
+): ResourceResult<number> {
   const result = useResource(tasksResource);
-  if (result.pending) return { pending: true };
-  // No task ⇒ a determinate zero, not an unknown: nothing can wait on it.
-  if (!id) return { pending: false, count: 0 };
-  return {
-    pending: false,
-    count: graphFor(result.data).activeDependents(id).length,
-  };
+  // No task ⇒ zero once the set is known: nothing can wait on it.
+  return mapResource(result, (tasks) =>
+    id ? graphFor(tasks).activeDependents(id).length : 0,
+  );
 }

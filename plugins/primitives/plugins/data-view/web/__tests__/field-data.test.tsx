@@ -164,3 +164,28 @@ describe("pickLeadingField", () => {
     );
   });
 });
+
+describe("FieldDef.readError", () => {
+  it("renders the failure with Retry in place of the value", () => {
+    const refetch = vi.fn(() => Promise.resolve());
+    const { getByRole, queryByTestId } = render(
+      <PluginProvider plugins={[plugin]}>
+        <Harness
+          field={{
+            id: "spec",
+            label: "Spec",
+            type: "spec",
+            data: (r) => r.spec,
+            readError: { error: new Error("values unreachable"), refetch },
+          }}
+          row={ROW}
+        />
+      </PluginProvider>,
+    );
+    // No value is drawn — neither the type cell nor an unset fallback.
+    expect(queryByTestId("spec-cell")).toBeNull();
+    const button = getByRole("button", { name: /values unreachable/ });
+    button.click();
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});

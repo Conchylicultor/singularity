@@ -2,6 +2,7 @@ import {
   Pane,
   PaneChrome,
   useOpenPane,
+  type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { reportsRootRoute, reportDetailRoute } from "@plugins/reports/core";
@@ -20,22 +21,9 @@ export const reportsPane = Pane.define({
   component: ReportsBody,
 });
 
-function useResolveReport({ reportId }: { reportId: string }): {
-  pending: boolean;
-  found: boolean;
-} {
-  const read = useReport(reportId);
-  switch (read.status) {
-    case "found":
-      return { pending: false, found: true };
-    case "missing":
-      return { pending: false, found: false };
-    // A failed read must not discard a deep link: it stays pending and the
-    // body renders what broke.
-    case "pending":
-    case "error":
-      return { pending: true, found: false };
-  }
+function useResolveReport({ reportId }: { reportId: string }): ResolveResult {
+  // The by-id read already answers in the resolve vocabulary.
+  return useReport(reportId);
 }
 
 /** The report's kind once it is read; the pane falls back to "Report" until then. */

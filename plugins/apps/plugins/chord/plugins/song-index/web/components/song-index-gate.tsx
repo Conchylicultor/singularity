@@ -53,7 +53,7 @@ export function SongIndexGate({ children }: { children: ReactNode }) {
   }
 
   return matchResource(status, {
-    pending: () => <Loading />,
+    loading: () => <Loading />,
     error: (err) => (
       <GateFrame>
         <GateFailure

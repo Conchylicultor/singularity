@@ -1,5 +1,8 @@
 import { useCallback, useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import {
   attemptsResource,
@@ -47,7 +50,14 @@ export function useLinkedTask(place: WorktreePlace): LinkedTask {
     gate: true,
   });
 
-  const taskId = attempt.pending ? null : attempt.data;
+  // The title lookup keys off the attempt's task id once it is known; until
+  // then (or when the attempts read failed) it looks nothing up, and the answer
+  // below comes from the attempt read's own state.
+  const taskId = foldResource(attempt, {
+    loading: () => null,
+    error: () => null,
+    ready: (id) => id,
+  });
   const selectTitle = useCallback(
     (tasks: readonly TaskListItem[]) =>
       taskId === null
@@ -61,9 +71,11 @@ export function useLinkedTask(place: WorktreePlace): LinkedTask {
   });
 
   if (checkout === null) return { kind: "none" };
-  if (attempt.pending) return { kind: "pending" };
+  if (attempt.status === "loading") return { kind: "pending" };
+  if (attempt.status === "error") return { kind: "failed" };
   if (attempt.data === null) return { kind: "none" };
-  if (task.pending) return { kind: "pending" };
+  if (task.status === "loading") return { kind: "pending" };
+  if (task.status === "error") return { kind: "failed" };
   if (task.data === null) return { kind: "none" };
   return { kind: "linked", taskId: attempt.data, title: task.data };
 }

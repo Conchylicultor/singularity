@@ -40,7 +40,12 @@ function scopeRecordingHarness() {
   const h = createHarness({ readSet: () => ["row_table"] });
   const loads: string[] = [];
   h.runtime.defineResource(
-    { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+    {
+      key: "rows",
+      schema: rowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    },
     {
       identityTable: "row_table",
       fanOut: { reason: "one param-less tuple — nothing to narrow" },
@@ -136,7 +141,12 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
     let downValue = [{ id: "d", n: 1 }];
     const downLoads: string[] = [];
     h.runtime.defineResource(
-      { key: "down", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "down",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "down_t",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },

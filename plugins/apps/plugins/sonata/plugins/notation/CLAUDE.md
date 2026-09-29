@@ -224,6 +224,7 @@ instrument grouping — while `convert` itself stays pure.
     - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/virtual-rows.useVirtualRows`
 - Server:

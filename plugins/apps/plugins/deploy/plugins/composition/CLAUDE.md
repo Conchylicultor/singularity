@@ -49,6 +49,7 @@ the first.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 

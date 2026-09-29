@@ -159,7 +159,6 @@ export function PrototypeGallery() {
   const renderList = (
     rows: PrototypeGalleryRow[],
     thumbnails: Record<string, ThumbnailState>,
-    loading: boolean,
   ) => (
     <DataView<PrototypeGalleryRow>
       rows={rows}
@@ -168,7 +167,7 @@ export function PrototypeGallery() {
       views={["gallery"]}
       defaultView="gallery"
       storageKey={PROTOTYPES_VIEW}
-      loading={loading}
+      readiness={result}
       selectedRowId={selectedName}
       itemActions={PrototypeCardActions}
       rowTone={(p) => (p.done ? "muted" : "default")}
@@ -199,8 +198,10 @@ export function PrototypeGallery() {
   );
 
   return matchResource(result, {
-    pending: () => renderList([], {}, true),
-    error: () => renderList([], {}, true),
+    // The DataView renders the loading and failed states (`readiness`) under
+    // its stable chrome; only a ready read reaches the view.
+    loading: () => renderList([], {}),
+    error: () => renderList([], {}),
     ready: ({ prototypes, thumbnails, statuses }) =>
       renderList(
         prototypes.map((p) => ({
@@ -208,7 +209,6 @@ export function PrototypeGallery() {
           done: statusOf(statuses, p.name).done,
         })),
         thumbnails,
-        false,
       ),
   });
 }

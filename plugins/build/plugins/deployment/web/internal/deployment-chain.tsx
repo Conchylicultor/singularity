@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
 import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -417,18 +418,19 @@ export function DeploymentChain() {
 function DeploymentChainBody() {
   const reading = useDeployment();
 
-  if (reading.pending) {
-    if (reading.error) {
-      return (
-        <Placeholder tone="error">
-          Failed to read the deployment: {reading.error.message}
-        </Placeholder>
-      );
-    }
-    return <Loading variant="rows" count={2} />;
+  if (reading.status === "loading") return <Loading variant="rows" count={2} />;
+  if (reading.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the deployment"
+        error={reading.error}
+        refetch={reading.refetch}
+      />
+    );
   }
 
-  const { state, carriers } = reading;
+  const { state, carriers } = reading.data;
   const served = servedGraph(carriers);
 
   if (state.kind === "unknown") {

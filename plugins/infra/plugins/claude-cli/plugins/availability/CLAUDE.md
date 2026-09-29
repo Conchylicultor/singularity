@@ -73,6 +73,8 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepCommand`
     - `primitives/setup-steps.StepNote`

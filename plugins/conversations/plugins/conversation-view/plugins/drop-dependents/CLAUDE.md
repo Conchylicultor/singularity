@@ -8,7 +8,7 @@
 - Web:
   - Contributes: `ExitMenu.Item` "drop-dependents" → `DropDependentsItem`
   - Uses:
-    - `conversations.useConversation`
+    - `conversations.useLiveConversation`
     - `conversations/conversation-view/exit-menu.ExitMenu`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/ui-kit.DropdownMenuItem`

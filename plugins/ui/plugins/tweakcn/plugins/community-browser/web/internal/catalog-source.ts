@@ -1,8 +1,12 @@
 import { useMemo } from "react";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  fetchEndpoint,
-  useEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+  combineResources,
+  mapResource,
+  useEndpointResource,
+  type GateInput,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { ThemeId } from "@plugins/ui/plugins/theme-engine/core";
 import {
   useThemes,
@@ -16,31 +20,50 @@ import { applyCatalogTheme, getCatalog } from "../../core";
 /**
  * The community catalog as browse-source entries. An entry already saved
  * carries the saved theme's id, so a picker can show it once (as the saved
- * theme) rather than twice. `undefined` while the catalog or the theme list is
- * still loading.
+ * theme) rather than twice. Loading while the catalog or the theme list is
+ * still loading; a failed catalog read is the error arm (with Retry), never a
+ * forever-loading or empty catalog.
  *
  * The catalog's curated (tweakcn registry) themes have no tags of their own;
  * they are tagged `curated` so a picker can filter on it.
  */
-export function useCatalogEntries(): ThemeSourceEntry[] | undefined {
-  const catalog = useEndpoint(getCatalog, {}).data;
+export function useCatalogEntries(): ResourceResult<ThemeSourceEntry[]> {
+  const catalog = useEndpointResource(getCatalog, {});
   const themes = useThemes();
 
-  return useMemo(() => {
-    if (!catalog || themes.pending) return undefined;
-    const { themesById } = themes;
-    return catalog.themes.map((theme): ThemeSourceEntry => {
-      const savedId = importedThemeId("tweakcn", theme.id);
-      return {
-        id: theme.id,
-        label: theme.name,
-        tags:
-          theme.source === "registry" ? ["curated", ...theme.tags] : theme.tags,
-        preview: tweakcnPalettePreview(theme.cssVars),
-        ...(themesById.has(savedId) ? { savedThemeId: savedId } : {}),
-      };
-    });
-  }, [catalog, themes]);
+  return useMemo(
+    () =>
+      // The theme list only marks entries already saved; while it loads the
+      // catalog waits too, so an entry never flips from "unsaved" to "saved".
+      mapResource(
+        combineResources({ catalog, themes: themesGate(themes.pending) }),
+        ({ catalog: data }) => {
+          const saved = themes.pending ? null : themes.themesById;
+          return data.themes.map((theme): ThemeSourceEntry => {
+            const savedId = importedThemeId("tweakcn", theme.id);
+            return {
+              id: theme.id,
+              label: theme.name,
+              tags:
+                theme.source === "registry"
+                  ? ["curated", ...theme.tags]
+                  : theme.tags,
+              preview: tweakcnPalettePreview(theme.cssVars),
+              ...(saved?.has(savedId) ? { savedThemeId: savedId } : {}),
+            };
+          });
+        },
+      ),
+    [catalog, themes],
+  );
+}
+
+/**
+ * The theme list as a gate input: it cannot fail as a whole (a failing source
+ * rides in its value as a `failures` entry), so it is loading until it settles.
+ */
+function themesGate(pending: boolean): GateInput {
+  return { status: pending ? "loading" : "ready" };
 }
 
 /**

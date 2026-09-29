@@ -5,8 +5,11 @@ import {
   type,
   type Hint,
   defineRoute,
+  resolveFrom,
+  type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Sonata,
@@ -18,7 +21,7 @@ import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { songs } from "../core";
+import { songs, type Song } from "../core";
 import { Library } from "./slots";
 import { SonataLibrarySurface } from "./components/library-surface";
 import { SongTitle } from "./components/song-title-field";
@@ -89,10 +92,16 @@ function useSongTitle(
   const library = useLive(songs);
   // `canonical` stays `undefined` until the value settles — precisely what
   // `pick` reads as "not known yet", so the hint shows through in the meantime
-  // and is superseded the instant the real row (and any rename) arrives.
-  let canonical: string | undefined;
-  if (!library.pending)
-    canonical = library.data.find((s) => s.id === songId)?.title;
+  // and is superseded the instant the real row (and any rename) arrives. A
+  // failed read offers its last-seen list (`stale`), else the hint stays.
+  const titleIn = (list: readonly Song[]) =>
+    list.find((s) => s.id === songId)?.title;
+  const canonical = foldResource(library, {
+    loading: () => undefined,
+    error: (_error, stale) =>
+      stale === undefined ? undefined : titleIn(stale),
+    ready: titleIn,
+  });
   return hint.pick("title", canonical);
 }
 
@@ -103,7 +112,7 @@ function useSongTitle(
  * library click. Source-agnostic: a source with no data for the song returns
  * `undefined` and is skipped.
  */
-function useSonataPlayerResolve({ songId }: { songId: string }) {
+function useSonataPlayerResolve({ songId }: { songId: string }): ResolveResult {
   const library = useLive(songs);
   const sources = Library.Source.useContributions();
   const { setRawMap } = useSonata();
@@ -135,13 +144,10 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
 
   const hydrated = hydratedFor === songId;
   // Not known yet until BOTH the hydration effect above has completed and the
-  // `songs` value has settled — a pending library is never read as "no such
+  // `songs` value has settled — a loading library is never read as "no such
   // song" (a not-found flash on a deep link whose hydration beat the value).
-  if (!hydrated || library.pending) return { pending: true, found: false };
-  return {
-    pending: false,
-    found: library.data.some((s) => s.id === songId),
-  };
+  if (!hydrated) return { status: "pending" };
+  return resolveFrom(library, (list) => list.some((s) => s.id === songId));
 }
 
 /**

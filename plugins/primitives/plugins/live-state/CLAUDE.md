@@ -3,7 +3,8 @@
 ## No Suspense — hydrate, don't suspend
 
 Resource reads are **non-suspending** by design: `useLive` / `useLiveRow` (and
-the `useResource` they are built on) return a `pending` flag and never throw a
+the `useResource` they are built on) return a `status` (`loading` / `error` /
+`ready`) and never throw a
 promise. There is **no `<Suspense>` boundary
 anywhere in the app** — a genuinely suspending read (`React.lazy`,
 `useSuspenseQuery`) must wrap itself in its own. To avoid a first-paint flash of
@@ -14,7 +15,7 @@ every preloaded tuple — config's documents included).
 **Hydration expires unless the resource says otherwise.** React Query garbage-collects a
 query with no mounted observer after `gcTime` (5 min), so a boot-hydrated value for a
 surface the user has not opened yet is dropped, and the next mount reads
-`dataUpdatedAt === 0` — `pending` again, long after boot said the value was known. That is
+`dataUpdatedAt === 0` — `loading` again, long after boot said the value was known. That is
 not a theoretical window: it is why a `<DataView>` opened mid-session could claim
 "No views configured" for the seconds until its sub-ack landed.
 
@@ -51,10 +52,16 @@ result is `{ pending: true, error: null }`. Public spellings: `useLive(value, nu
 `useLiveRow(c, null)` (network/live).
 
 **`initialData` is optional.** It was only ever a typed placeholder seeded at
+<<<<<<< .merge_file_E4EHMP
 `dataUpdatedAt: 0` (always `pending`). A descriptor without one (a `liveValue`, and a
 `liveCollection`'s window, `:rows` and `:groups`) seeds nothing and is still `pending`
 until the first value; its query stays disabled until a value lands, so it makes no
 HTTP fetch on mount (the WS sub-ack fills it). The
+=======
+`dataUpdatedAt: 0` (always `loading`). A descriptor without one (a `liveValue`) seeds
+nothing and is still `loading` until the first value; its query stays disabled until a
+value lands, so it makes no HTTP fetch on mount (the WS sub-ack fills it). The
+>>>>>>> .merge_file_KNVbIM
 exception is an on-demand descriptor (`load: "on-demand"`, the server's `invalidate`
 mode): its value never rides the socket, so HTTP is its read path and it fetches on
 mount. `load` sits on the shared descriptor so server and client cannot disagree.
@@ -68,7 +75,7 @@ tree and tick ones (Resources page items 3 / 7), for their plain
 readers only: no optimistic read takes a placeholder.
 `useOptimisticResource` reads a declaration (a `liveValue`, or a collection's
 `{ ids }`), whose overlay has no base — and no `dispatch` — until a real value
-lands, so it stays `pending` instead.
+lands, so it stays `loading` instead.
 
 For non-resource query data there is `hydrateQuery(queryKey, data)` — a raw
 seeder on the same default client. Don't call it with a hand-built key; go
@@ -209,6 +216,7 @@ report's Connection row). It resets to 0 on any socket status change, so a dead
 server's stall never outlives its connection; listeners fire only when it moves.
 Pinned by `notifications-heartbeat.test.ts`.
 
+<<<<<<< .merge_file_E4EHMP
 **`sub-error` frames carry `params` and heal through the HTTP read.** The
 frame is `{ kind, id?, key, params, reason }`; `params` exists so the
 shared-socket broadcast is gated on the local sub entry exactly like every other
@@ -219,7 +227,34 @@ a query disabled for lack of a placeholder — and **its own outcome** sets
 `q.error` (a 500 loader-failed / 404 unknown-key surfaces as `ResourceHttpError`)
 or heals a transient failure — reusing the single existing error channel rather
 than touching queryClient internals. (Known hole, out of scope: `handleResourceHttp` runs no `authorize`
+=======
+**`sub-error` frames carry `params` and heal through `applyInvalidate`.** The
+frame is `SubErrorFrame` (`packages/resource-protocol`): `{ kind, id?, key,
+params, reason, verdict? }`; `params` exists so the shared-socket broadcast is
+gated on the local sub entry exactly like every other frame (a params-less
+legacy frame won't match a live sub → safe drop). When the entry exists the
+client calls `applyInvalidate(key, params)`: the HTTP fallback refetch runs and
+**its own outcome** sets `q.error` (the failed read's typed JSON body — 500
+`loader-failed`, 404 `unknown-key`, 409 `contract-mismatch` — surfaces as
+`ResourceHttpError` with `reason` / `verdict`) or heals a transient failure —
+reusing the single existing error channel rather than touching queryClient
+internals. (Known hole, out of scope: `handleResourceHttp` runs no `authorize`
+>>>>>>> .merge_file_KNVbIM
 check — moot today with zero `authorize` resources.)
+
+**A contract refusal is version skew, surfaced app-wide.** `contract-mismatch`
+(the params do not match the resource's declaration — see the runtime's params
+gate in `resource-runtime/CLAUDE.md`) and `unknown-key` are what a tab running
+an older bundle sees after a deploy. Both the `sub-error` handler and
+`fetchOverHttp`'s typed error body record them in the page-global
+`resource-contract-store.ts` (`useResourceContractMismatches()`); build's
+`useReloadAdvice` turns the `skew`-verdict ones into the red "out of date"
+Reload segment, so the fix (reload) is offered once, not by every failed read.
+Every `sub` / `sub-batch` frame carries `build` (`VITE_BUILD_GRAPH ?? "dev"`) —
+per frame, because a shared socket's leader relays tabs running other bundles —
+and every HTTP read the `BUILD_GRAPH_HEADER`, so the server can judge the
+verdict. `useResource` does not retry a `contract-mismatch` / `unknown-key`
+error (`isTerminalResourceError`): the same bundle is refused the same way.
 
 ## Resource schemas
 
@@ -518,36 +553,74 @@ Trace gating follows: the always-on `live-state` channel logs only real
 silent there so a per-row list doesn't storm the low-volume channel; `emitDebug()`
 still fires on every change so the live-state-health inspector stays accurate.
 
-## `pending` means "no trustworthy value"; an unknown value is `Resolvable`
+## A read is `loading`, `error` or `ready`; an unknown value is `Resolvable`
 
 Two different things can stand between a consumer and a value; keeping them in
 separate channels is what makes a destructive default unreachable by construction
-rather than by a remembered guard (see
-`research/2026-07-09-global-resource-unknown-value-and-error-gate.md`).
+rather than by a remembered guard.
 
-**The `error` channel — transient.** *"We failed to determine the value; a retry
-may succeed."* `pending` is `!hasValue || error !== null`, so never-loaded and
-errored are one state to a consumer, and the settled arm **deliberately omits
-`error`**:
+**The `error` channel — its own state.** *"We failed to determine the value; a
+retry may succeed."* Every read (`useResource`, `useLive`, `useLiveRow`,
+`useConfigResult`, `combineResources`, `mapResource`) returns three arms named by
+`status`:
 
 ```ts
 type ResourceResult<T> =
-  | { pending: true;  error: Error | null; stale?: T; refetch }
-  | { pending: false; data: T;                        refetch };
+  | { status: "loading"; refetch }                                  // no value, no failure
+  | { status: "error"; error: ResourceError; stale?: T; refetch }   // error is never null
+  | { status: "ready"; data: T; refetch };
 ```
 
-A value you can read is one the server currently vouches for. Reading `.error`
-off a narrowed-settled result is a **tsc error** — that is the enforcement, and
-it is why the field is absent rather than typed `null` (`null` is assignable to
-`Error | null`, so a `null`-typed field would catch nothing). Last-known-good
-under a transient error is the opt-in `stale?: T` on the pending arm: named,
-greppable, and never what a `.data` read reaches; `matchResource`/`ResourceView`
-pass it to the error handler for surfaces that prefer to keep painting. The one
-sanctioned exemption is `useOptimisticResource`: editors keep painting `stale`
-under an error and report it through `error` + `sync-status` rather than blanking
-the document. `ResourceStaleReadError` also lives in this channel — it is
-**thrown**, so the resource stays `pending` (retryable) instead of settling on
-a value nobody vouched for.
+A failure is **not** a flavour of loading. This supersedes the 2026-07-09
+decision (`research/2026-07-09-global-resource-unknown-value-and-error-gate.md`)
+to merge the two into `pending` "so every gate is correct for free": a surface
+that only asks "is it loading?" renders a failure as a spinner forever — the
+build-history incident
+(`research/2026-09-27-global-live-resource-skew-and-error-state.md`). Its value
+invariants stand: the `ready` arm **omits** `error` and `stale` (reading either
+is a tsc error — a `null`-typed field would catch nothing), and last-known-good
+is the opt-in `stale` on the `error` arm, never what a `.data` read reaches.
+
+**`ResourceError`** (`core/resource-status.ts`) is an `Error` subclass with a
+`kind` a surface acts on, derived in ONE place (`web/resource-error.ts`,
+`toResourceError`, memoized per raw error):
+
+| kind | from | remedy |
+|---|---|---|
+| `client-outdated` | `contract-mismatch` / `unknown-key` unless the verdict is `same-build`; a client-side zod rejection | reload the tab |
+| `not-found` | a 404 (or `unknown-key` on the same build) | a bug |
+| `loader-failed` | any other HTTP failure, a `same-build` contract mismatch, anything else thrown | retry, else a bug |
+| `transport` | `fetch`'s `TypeError`, a lost version race (`ResourceStaleReadError`) | retry heals it |
+
+There is no boolean that lumps loading and error together: `status` is the only
+state a result carries, and neither the loading arm nor the ready arm has an
+`error` or a `stale` to read — so a surface that ignores a failed read does not
+compile.
+
+**Failure plumbing, all in `NotificationsClient` (once per page, never per hook):**
+
+- **Sticky-error clear.** A value-less `up-to-date` reply (the same-boot replay
+  answer) says the value this tab holds is current, so it clears that exact
+  tuple's query error via React Query's public `Query.setState` — no data write,
+  no cache event a value listener could mistake for a push.
+- **Event-driven retry, no timers.** `online` and `visibilitychange → visible`
+  refetch only the tuples in error that something still observes (through
+  `query.fetch()`: `refetchQueries` skips a disabled query, and a `liveValue`
+  that never got a value is disabled). Reconnect replay and the error UI's
+  Retry are the other two triggers.
+- **Report sink.** The client watches the query cache and keeps the failing
+  set (`useFailingResources()`); on a tuple's error going none → set it emits
+  `resourceErrorReportSink` once for that episode, however many hooks observe it.
+  `reports/resource-errors` collects it (and owns the "Live reads" health row) —
+  live-state never imports `reports`.
+
+**The one sanctioned exemption is `useOptimisticResource`** (`OptimisticResult`):
+it is named by the same `status`, but once a base has landed a failing read
+stays `ready` — editors keep painting their base under a transient error and
+report it through the ready arm's `error` + `sync-status` rather than blanking
+the document. Its `error` arm is only a first load that failed. Being
+`status`-named, it feeds every gate (`combineResources`, `matchResource`,
+`foldResource`) like any other read, and the result lint rules cover it.
 
 **The value channel — determinate.** *"The server has an answer, and the answer
 is: there is nothing to determine."* A loader branch that **cannot determine**
@@ -559,7 +632,7 @@ liveValue("edited-files", { schema: resolvableSchema(z.array(EditedFileSchema)),
 ```
 
 It settles, renders its `reason`, and stops retrying — where a throw would wedge
-the resource `pending` forever. It never returns the empty value: `[]` must mean
+the resource `loading` forever. It never returns the empty value: `[]` must mean
 *measured, and empty*. `edited-files` and `commits-graph.graph` collapse "no
 worktree" and "worktree reaped mid-compute" onto one `unresolved(…)` via an
 `onWorktree` helper, with `revalidate` returning the matching `"no-worktree"`
@@ -570,60 +643,77 @@ Every *other* git failure still throws.
 
 The resource-payload form of the repo-wide `api-design` rule "Failure must be a
 type, not an absorbable value". "Not loaded yet" is never an `unresolved(…)`: a
-`liveValue` has no placeholder, so it is `pending` until the first value.
+`liveValue` has no placeholder, so it is `loading` until the first value.
 
-## Readiness gates — never collapse `pending` into a default
+## Readiness gates — every state gets its own answer
 
-`useLive` (like the `useResource` under it) returns a discriminated union:
-`.data` does not exist while `pending`. Do **not** defeat it with `r.pending ? [] : r.data` — that collapses
-"still loading" and "genuinely empty" into the same value, and downstream UI
-renders a confidently-wrong state (empty lists, zero counts, destructive default
-button modes) during the load window. The `live-state/no-pending-data-collapse`
-lint rule bans the idiom; its allowlist in `lint/index.ts` is empty — never add
-an entry, fix the collapse instead.
+`.data` does not exist until `status === "ready"`. Do **not** defeat that with
+`r.status === "ready" ? r.data : []`:
+it collapses "still loading", "failed" and "genuinely empty" into one value, and
+downstream UI renders a confidently-wrong state (empty lists, zero counts,
+destructive default button modes). Three lint rules keep it out:
 
-The rule covers **`useConfigResult`** (config_v2) too: it returns this same union, and a
-config's defaults are a *legitimate* value, so collapsing its pending arm produces a wrong
-state that looks exactly like a right one. The plain `useConfig` IS that collapse, kept for
-cosmetic reads — anything deciding what a surface asserts reads `useConfigResult`.
+- `live-state/no-pending-data-collapse` — the collapse itself (allowlist empty —
+  never add an entry).
+- `live-state/no-ready-negation` — on a result binding, `status` may be compared
+  to `"loading"` / `"error"` only: `!== "ready"` and `=== "ready" ? … : …` fold
+  loading and error into one branch. An explicit `switch` fall-through
+  (`case "loading": case "error":`) is allowed — it names both.
+- `live-state/no-handrolled-result` — outside live-state and `network/live`, no
+  hand-written `status: "loading" | "error"` result arm or result union: derive
+  with `mapResource` / `combineResources` so the typed error, `stale` and
+  `refetch` survive.
+
+The rules cover **`useConfigResult`** (config_v2) too: a config's defaults are a
+*legitimate* value, so collapsing its loading arm produces a wrong state that
+looks exactly like a right one. The plain `useConfig` IS that collapse (`stale ??
+defaults`), kept for cosmetic reads — anything deciding what a surface asserts
+reads `useConfigResult`.
 
 Sanctioned patterns, in order of preference:
 
 ```tsx
-// One resource, JSX — children only ever run with settled data.
+// One resource, JSX — children only ever run with ready data; loading renders
+// `fallback` (default <Loading/>), a failure <ResourceErrorInline variant="block"/>.
 <ResourceView resource={songs} fallback={<Loading variant="cards" />}>
   {(rows) => <Grid rows={rows} />}
 </ResourceView>
 
 // One resource, expression position.
-matchResource(songs, { ready: (rows) => …, pending: () => … })
+matchResource(songs, { ready: (rows) => …, loading: () => …, error: (e, stale) => … })
 
-// SEVERAL resources — all-or-nothing, so a view can never render from a
-// half-loaded snapshot. Accepts useLive / useResource / useOptimisticResource results
-// and nested combined results.
+// A plain value (.ts derivation): every handler required, so "what does a failure
+// yield" is written down.
+foldResource(r, { loading: () => …, error: (e, stale) => …, ready: (d) => … })
+
+// SEVERAL resources — precedence error > loading > ready, so a view never renders
+// from a half-loaded snapshot and never spins on a read that failed.
 const all = useCombinedResources({ conv, ranks, tasks });
-if (all.pending) return <Loading variant="rows" />;
-const { conv: c, ranks: r, tasks: t } = all.data;
+switch (all.status) {
+  case "loading": return <Loading variant="rows" />;
+  case "error": return <ResourceErrorInline error={all.error} refetch={all.refetch} variant="block" />;
+  case "ready": …
+}
 
-// Early return — plain narrowing is always fine.
-if (r.pending) return <Loading />;
-
-// List/grid surfaces: DataView's `loading` prop — emptyState requires
-// confirmed-empty, the skeleton renders while loading.
-<DataView rows={rows} loading={result.pending} … />
+// List/grid surfaces: DataView's `readiness` — `emptyState` needs ready + zero
+// rows; loading renders the skeleton, error renders `errorState`.
+<DataView rows={rows} readiness={result} … />
 ```
 
-`<ResourceView>`/`matchResource` default to `<Loading/>` (delayed ~120ms, so a
-warm WS load paints with zero flash) and an error `Placeholder`. Data-dependent
-**action buttons** (label/destructiveness varies with data) render
-disabled-neutral while pending — never a default mode, and especially never the
-destructive one.
+**`<ResourceErrorInline error refetch variant />`** is the one rendering of a
+failure: `block` (a pane or list body), `inline` (a field or card line), `icon`
+(a toolbar control — pass `icon` to keep its face, `subject` to name what
+failed). It offers Retry, or "App updated — reload" for `client-outdated`.
+Data-dependent **action buttons** render disabled-neutral while loading — never a
+default mode, and especially never the destructive one — and the error variant
+when the read failed.
 
-**Domain hooks keep the pending arm.** A hook that narrows a read — one row of
-a collection, one key out of a record — never returns a bare `T | null`: "not
-loaded yet" must stay a state the caller renders, apart from "absent". For one
-row, return `useLiveRow`'s result as is — its settled arms are `found: true`
-(with `row`) and `found: false` (the server answered, no such row):
+**Domain hooks keep every arm.** A hook that narrows a read — one row of a
+collection, one key out of a record — never returns a bare `T | null`: "not
+loaded yet" and "failed" must stay states the caller renders, apart from
+"absent". For one row, return `useLiveRow`'s result as is — its `ready` arm
+splits into `found: true` (with `row`) and `found: false` (the server answered,
+no such row):
 
 ```ts
 export function useTaskAutoStart(
@@ -634,14 +724,13 @@ export function useTaskAutoStart(
 ```
 
 For any other narrowing, return `ResourceResult<T | null>` derived with
-`mapResource(r, fn)`, which maps the settled arm and passes the pending one
-through, so a settled `null` means "absent".
+`mapResource(r, fn)`, which maps the ready arm (and a `stale` value) and passes
+loading and error through, so a ready `null` means "absent".
 
-The lint rule watches `useLive` as well, and flags
-`if (r.pending) return null` in a value-returning function whenever the settled
-return can be `null` too (`?? null` or an optional chain, as in
-`r.data[0] ?? null`). A component's `if (r.pending) return null` before
-rendering JSX stays legal.
+`no-pending-data-collapse` also flags an early `return null` for the
+not-ready states in a value-returning function whenever the ready return can be
+`null` too (`?? null` or an optional chain, as in `r.data[0] ?? null`). A
+component returning `null` while loading before rendering JSX stays legal.
 
 **Gate restriction:** feed only whole-resource results into gates — never a
 `select` result (silent-flip caveat below). For a select-based readiness read,
@@ -676,12 +765,12 @@ present (plain `useResource` is byte-for-byte unchanged):
   resource (the whole struct is reparsed each push): the comparison is on the
   **selected** value, not the payload.
 - **`notifyOnChangeProps: ["data", "error"]`** — `useResource` reads
-  `q.dataUpdatedAt` for its `pending` flag, and `setQueryData` bumps that on
+  `q.dataUpdatedAt` for its `loading` state, and `setQueryData` bumps that on
   **every** push; unscoped, that bump alone re-renders every subscriber (the O(C²)
   storm). Reading `dataUpdatedAt` does not re-enable notifications once
   `notifyOnChangeProps` is an explicit list.
 
-Caveat: with `select`, `pending` flips to `false` **silently** (no re-render) if
+Caveat: with `select`, the read turns `ready` **silently** (no re-render) if
 the selected slice is identical across the initialData→first-real-data boundary.
 Harmless for point lookups — the caller sees the same value either way. Pass a
 **stable** selector (`useCallback`) so it is not re-run every render.
@@ -689,9 +778,9 @@ Harmless for point lookups — the caller sees the same value either way. Pass a
 **`gate: true`** fixes that caveat for select-based READINESS reads (e.g. a
 boolean deciding a destructive button mode): the subscription stays un-scoped
 until the first authoritative value arrives — at most a couple of pushes — so the
-pending→settled flip always re-renders, then narrows to the select-scoped
+loading→ready flip always re-renders, then narrows to the select-scoped
 subscription with steady-state behavior identical to plain `select`. Without it,
-a gate built on a select result can wedge as pending forever.
+a gate built on a select result can wedge as loading forever.
 
 This narrows re-renders, not the WS subscription: N callers of the same
 `(key, params)` still share one refcounted sub (deduped server-side).
@@ -705,7 +794,15 @@ This narrows re-renders, not the WS subscription: N callers of the same
 - Web:
   - Uses:
     - `infra/endpoints.endpointQueryKey`
+    - `infra/endpoints.useEndpoint`
+    - `primitives/css/center.Center`
+    - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
@@ -720,6 +817,8 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `CombinedResources`
     - `DebugSnapshot`
     - `DebugSub`
+    - `FailingResource`
+    - `FoldResourceHandlers`
     - `GateDataOf`
     - `GateInput`
     - `HttpStaleDropReport`
@@ -730,10 +829,16 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `PendingMountSnapshot`
     - `PointParams`
     - `PointResourceDescriptor`
+    - `ResourceContractMismatch`
     - `ResourceDescriptor`
+    - `ResourceErrorInfo`
+    - `ResourceErrorInlineProps`
+    - `ResourceErrorKind`
     - `ResourceKey`
     - `ResourceOrigin`
+    - `ResourceReadiness`
     - `ResourceResult`
+    - `ResourceStatus`
     - `ResourceViewProps`
     - `SlowResourceInfo`
     - `UpdateDelayInfo`
@@ -743,6 +848,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
   - Exports (values):
     - `combineResources`
     - `ensureNotificationsClient`
+    - `foldResource`
     - `getNotificationsClient`
     - `getResourceWatermark`
     - `hasResourceTxAck`
@@ -757,6 +863,9 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `pendingMountSnapshot`
     - `queryKeyFor`
     - `resourceDescriptorByKey`
+    - `ResourceError`
+    - `ResourceErrorInline`
+    - `resourceErrorReportSink`
     - `ResourceStaleReadError`
     - `ResourceView`
     - `slowResourceReportSink`
@@ -764,44 +873,85 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `subscribeResourceTxAcks`
     - `updateDelayReportSink`
     - `useCombinedResources`
+    - `useEndpointResource`
+    - `useFailingResources`
     - `useNotificationsChannelStatuses`
     - `useNotificationsClient`
     - `useNotificationsStatus`
     - `useResource`
     - `useResourceAcks`
+    - `useResourceContractMismatches`
 - Cross-plugin:
   - Imported by:
+    - `active-data`
     - `active-data/attempt`
     - `active-data/page-link`
     - `active-data/prototype`
     - `active-data/task`
     - `active-data/task-link`
+    - `apps/agent-manager/welcome`
     - `apps/browser/bookmarks`
     - `apps/browser/start-page`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
+    - `apps/deploy/analytics/dashboard`
+    - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
+    - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
+    - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
     - `apps/events/events-core`
     - `apps/events/sources`
+    - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/runs/extracted-events`
     - `apps/events/sources/source-field`
     - `apps/mail/mail-core`
+    - `apps/mail/reading-pane`
+    - `apps/mail/shell`
+    - `apps/mail/sync-status`
     - `apps/mail/threads`
+    - `apps/pages/agent-origin`
+    - `apps/pages/history`
     - `apps/pages/page-author`
+    - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`
+    - `apps/pages/starred`
+    - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/canvas`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/sonata/library`
+    - `apps/sonata/notation`
+    - `apps/sonata/piano-roll`
+    - `apps/sonata/playback-history`
+    - `apps/sonata/rich/chord-mode`
+    - `apps/sonata/rich/key-readout`
+    - `apps/sonata/rich/rhythm-controls`
+    - `apps/sonata/songsheet`
+    - `apps/sonata/sources/midi`
+    - `apps/sonata/track-mixer`
+    - `apps/sonata/transpose`
     - `apps/studio/compositions/release`
+<<<<<<< .merge_file_E4EHMP
+=======
+    - `apps/studio/compositions/release/release-artifact`
+    - `apps/studio/compositions/release/release-info`
+    - `apps/studio/compositions/release/release-logs`
+    - `auth`
+    - `auth/apple-signing/setup-wizard`
+    - `auth/google-maps/setup-wizard`
+    - `auth/google/setup-wizard`
+>>>>>>> .merge_file_KNVbIM
     - `build`
+    - `build/build-info`
     - `build/deployment`
+    - `build/serve-composition`
     - `code-explorer/code-api`
     - `config_v2`
     - `config_v2/settings`
@@ -809,62 +959,118 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/agents`
     - `conversations/all-conversations`
     - `conversations/conversation-category`
+    - `conversations/conversation-preprompt`
+    - `conversations/conversation-progress`
     - `conversations/conversation-view`
+    - `conversations/conversation-view/allow-monitor`
+    - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/code`
+    - `conversations/conversation-view/code/file-pane`
+    - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
+    - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-and-exit`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/event-counter`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+    - `conversations/conversation-view/notes`
     - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/push-and-exit`
+    - `conversations/conversation-view/running-agents`
+    - `conversations/conversation-view/tasks-panel`
+    - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
     - `conversations/effort-provider`
     - `conversations/model-provider`
     - `conversations/recover`
     - `conversations/summary`
+    - `debug/boot-profile`
+    - `debug/claude-cli-calls`
+    - `debug/config-orphans`
     - `debug/latency-ledger`
     - `debug/live-state-health`
     - `debug/queue`
     - `debug/queue-health`
     - `debug/reports`
+    - `debug/sentinel`
     - `debug/slow-ops`
+    - `fields/secret/config`
     - `framework/web-core`
     - `infra/boot-snapshot`
+    - `infra/claude-cli/availability`
     - `infra/health`
     - `infra/query-resource`
+    - `integrations/gmail`
+    - `integrations/google-maps`
     - `network/live`
+    - `page/annotations/agent-notes`
+    - `page/annotations/agent-notes/agent-page`
+    - `page/annotations/agent-notes/authorship`
     - `page/annotations/instructions/instructions-page`
+    - `page/annotations/todo`
     - `page/annotations/todo/task-link`
     - `page/editor`
     - `page/inline-page-link`
     - `page/links`
     - `page/page-link`
+    - `page/prompt/block`
+    - `plugin-meta/composition`
     - `plugin-meta/plugin-health`
+    - `primitives/data-view`
+    - `primitives/data-view/custom-columns`
+    - `primitives/data-view/view-core`
+    - `primitives/data-view/view-order`
     - `primitives/optimistic-mutation`
+    - `primitives/pane`
     - `release`
     - `reports`
     - `reports/live-state-stale-drop`
+    - `reports/resource-errors`
+    - `review`
     - `review/code-review`
+    - `review/plugin-changes`
     - `runs`
+    - `shell/notifications`
     - `stats/responsiveness`
     - `tasks`
     - `tasks/attempt-view`
     - `tasks/attempt-work`
+    - `tasks/auto-start`
     - `tasks/task-category`
     - `tasks/task-dependencies`
     - `tasks/task-deps-tree`
     - `tasks/task-description`
     - `tasks/task-detail`
     - `tasks/task-draft-form`
+    - `tasks/task-events`
     - `tasks/task-graph`
+    - `tasks/task-header`
     - `tasks/task-list`
     - `tasks/tasks-core`
     - `tasks/worktree-identity`
+    - `ui/theme-engine`
     - `ui/theme-engine/saved-themes`
+    - `ui/theme-engine/theme-gallery`
+    - `ui/tokens/categorical`
+    - `ui/tokens/chart`
+    - `ui/tokens/color-adjust`
+    - `ui/tokens/color-palette`
+    - `ui/tokens/density`
+    - `ui/tokens/font-family`
+    - `ui/tokens/scrollbar`
+    - `ui/tokens/shadow`
+    - `ui/tokens/shape`
+    - `ui/tokens/sidebar-metrics`
+    - `ui/tokens/sidebar-palette`
+    - `ui/tokens/type-scale`
+    - `ui/tweakcn/community-browser`
 - Core:
   - Exports (types):
     - `PointParams`
@@ -872,8 +1078,11 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `Resolvable`
     - `ResourceDescriptor`
     - `ResourceDescriptorOptions`
+    - `ResourceErrorKind`
     - `ResourceOrigin`
     - `ResourcePreload`
+    - `ResourceReadiness`
+    - `ResourceStatus`
     - `WindowParams`
     - `WindowResourceDescriptor`
     - `WindowSelector`
@@ -885,12 +1094,15 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `resolved`
     - `resourceDescriptor`
     - `resourceDescriptorByKey`
+    - `ResourceError`
     - `tolerantEnum`
     - `unresolved`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/live-state/web/testing`
+    - `markResourceContractMismatch` — Record that the server refused `key` for this tab.
     - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).
     - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).
     - `NotificationsClient`
+    - `resetResourceContractMismatches` — Forget every mismatch — tests only (via `web/testing`).
 
 <!-- AUTOGENERATED:END -->

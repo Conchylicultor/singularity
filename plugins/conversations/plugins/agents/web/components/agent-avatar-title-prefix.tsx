@@ -1,4 +1,5 @@
 import {
+  ResourceErrorInline,
   useResource,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -30,7 +31,17 @@ export function AgentAvatarTitlePrefix() {
 
   if (!conversation || conversation.kind !== "agent") return null;
   // Render disabled-neutral button while both resources load — never a wrong default.
-  if (combined.pending) {
+  if (combined.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the agent"
+        error={combined.error}
+        refetch={combined.refetch}
+      />
+    );
+  }
+  if (combined.status === "loading") {
     return (
       <button
         type="button"

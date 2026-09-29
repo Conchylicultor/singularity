@@ -15,6 +15,7 @@
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `tasks/task-detail.taskDetailPane`

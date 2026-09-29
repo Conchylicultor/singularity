@@ -254,6 +254,7 @@ code, that is the bug this section exists to prevent.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.foldResource`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/relative-time.RelativeTime`
     - `shell/toast.showToast`

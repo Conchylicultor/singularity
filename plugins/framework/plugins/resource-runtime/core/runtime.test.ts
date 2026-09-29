@@ -221,6 +221,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
         key: "rows",
         schema: z.array(z.object({ id: z.string(), n: z.number() })),
         keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+        validateParams: () => {},
       },
       {
         // Identity table = the resource's own table, so a row UPDATE scopes.
@@ -265,6 +266,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
         key: "rows",
         schema: z.array(z.object({ id: z.string(), n: z.number() })),
         keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+        validateParams: () => {},
       },
       {
         // Intentionally unscoped: no `identityTable`, so a change's row-ids are not
@@ -324,6 +326,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
         key: "down",
         schema: z.array(z.object({ id: z.string(), n: z.number() })),
         keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+        validateParams: () => {},
       },
       {
         identityTable: "down_t",
@@ -380,6 +383,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
         key: "down",
         schema: z.array(z.object({ id: z.string(), n: z.number() })),
         keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+        validateParams: () => {},
       },
       {
         identityTable: "down_t",
@@ -448,6 +452,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
         key: "down",
         schema: z.array(z.object({ id: z.string(), n: z.number() })),
         keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+        validateParams: () => {},
       },
       {
         identityTable: "down_t",
@@ -511,6 +516,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
         key: "down",
         schema: z.array(z.object({ id: z.string(), n: z.number() })),
         keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+        validateParams: () => {},
       },
       {
         identityTable: "down_t",
@@ -653,6 +659,7 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
     key: "rows",
     schema: z.array(z.object({ id: z.string(), n: z.number() })),
     keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+    validateParams: () => {},
   };
 
   test("a keyed contract drives a scoped row delta without restating mode/keyOf", async () => {
@@ -689,7 +696,7 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
   test("a non-keyed contract honors serverOpts.mode (push)", async () => {
     const h = createHarness();
     h.runtime.defineResource(
-      { key: "n", schema: z.number() },
+      { key: "n", schema: z.number(), validateParams: () => {} },
       { mode: "push", loader: async () => 1 },
     );
     await h.subscribe("n");
@@ -1033,7 +1040,12 @@ describe("preloadedKeys — the registry's half of the preload-declare boot asse
     const { runtime } = createHarness();
     // Two-arg forms: the flag rides the shared descriptor (the contract).
     runtime.defineResource(
-      { key: "value", schema: z.number(), preload: "boot" },
+      {
+        key: "value",
+        schema: z.number(),
+        preload: "boot",
+        validateParams: () => {},
+      },
       { mode: "push", loader: () => 1 },
     );
     runtime.defineResource(
@@ -1041,6 +1053,7 @@ describe("preloadedKeys — the registry's half of the preload-declare boot asse
         key: "keyed",
         schema: z.array(z.object({ id: z.string() })),
         keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+        validateParams: () => {},
         preload: "boot-and-keep",
       },
       {
@@ -1050,7 +1063,12 @@ describe("preloadedKeys — the registry's half of the preload-declare boot asse
       },
     );
     runtime.defineExternalResource(
-      { key: "external", schema: z.number(), preload: "boot" },
+      {
+        key: "external",
+        schema: z.number(),
+        preload: "boot",
+        validateParams: () => {},
+      },
       { mode: "push", loader: () => 1 },
     );
     // The flat external form carries it on the definition itself.
@@ -1069,7 +1087,7 @@ describe("preloadedKeys — the registry's half of the preload-declare boot asse
       loader: () => 1,
     });
     runtime.defineResource(
-      { key: "plain-contract", schema: z.number() },
+      { key: "plain-contract", schema: z.number(), validateParams: () => {} },
       { mode: "push", loader: () => 1 },
     );
 

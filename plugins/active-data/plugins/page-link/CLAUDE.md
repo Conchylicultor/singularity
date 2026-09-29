@@ -47,6 +47,7 @@ read-surface chip for a bare id written anywhere active-data renders.
     - `apps/pages/page-tree.useOpenBlockTarget`
     - `page/editor.PageIcon`
     - `primitives/css/link-chip.LinkChip`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useResource`
     - `primitives/text-editor/inline-chip.inlineChip`
     - `primitives/text-editor/inline-chip.InlineChip`

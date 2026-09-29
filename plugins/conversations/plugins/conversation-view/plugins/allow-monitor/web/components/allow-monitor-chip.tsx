@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { allowFiles } from "../../shared";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -13,8 +14,19 @@ export function AllowMonitorChip() {
   const { convId } = conversationPane.useParams();
   const result = useLive(allowFiles, { id: convId });
   // An alarm, not a data display: nothing to show until the server has said a
-  // bypass file exists.
-  if (result.pending) return null;
+  // bypass file exists. A failed read is shown, though: silence would claim no
+  // bypass is active when nobody could check.
+  if (result.status === "loading") return null;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={warningIcon}
+        subject="the guard-bypass files"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
   const files = result.data.allowFiles;
   if (files.length === 0) return null;
 

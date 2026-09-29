@@ -16,6 +16,7 @@
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/inline.Inline`
+    - `primitives/live-state.ResourceErrorInline`
     - `ui/segmented-progress-bar.SegmentedProgressBar`
 - Server:
   - Contributes:

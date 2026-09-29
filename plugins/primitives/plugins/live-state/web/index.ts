@@ -11,8 +11,10 @@ export {
   useNotificationsChannelStatuses,
   useNotificationsClient,
   getNotificationsClient,
+  useFailingResources,
 } from "./use-resource";
 export { hydrateEndpoint } from "./hydrate-endpoint";
+export { useEndpointResource } from "./use-endpoint-resource";
 export { slowResourceReportSink } from "./slow-resource-reporter";
 export type { SlowResourceInfo } from "./slow-resource-reporter";
 export { updateDelayReportSink } from "./update-delay-reporter";
@@ -27,12 +29,21 @@ export {
   combineResources,
   useCombinedResources,
   mapResource,
+  foldResource,
 } from "./resource-utils";
 export type {
   GateInput,
   GateDataOf,
   CombinedResources,
+  FoldResourceHandlers,
 } from "./resource-utils";
+export { ResourceErrorInline } from "./components/resource-error-inline";
+export type { ResourceErrorInlineProps } from "./components/resource-error-inline";
+export { resourceErrorReportSink } from "./resource-error-reporter";
+export type {
+  ResourceErrorInfo,
+  FailingResource,
+} from "./resource-error-reporter";
 export { matchResource, ResourceView } from "./components/resource-view";
 export type {
   MatchResourceHandlers,
@@ -46,6 +57,8 @@ export {
 export { getResourceWatermark } from "./watermark-registry";
 export { hasResourceTxAck, subscribeResourceTxAcks } from "./tx-ack-registry";
 export { httpStaleDropReportSink } from "./stale-drop-reporter";
+export { useResourceContractMismatches } from "./resource-contract-store";
+export type { ResourceContractMismatch } from "./resource-contract-store";
 export type { HttpStaleDropReport } from "./stale-drop-reporter";
 export type {
   ResourceKey,
@@ -56,9 +69,12 @@ export type {
   LeaderInfo,
   MissedFrame,
 } from "./notifications-client";
-export { resourceDescriptorByKey } from "../core";
+export { resourceDescriptorByKey, ResourceError } from "../core";
 export type {
   ResourceDescriptor,
+  ResourceErrorKind,
+  ResourceReadiness,
+  ResourceStatus,
   ResourceOrigin,
   WindowResourceDescriptor,
   PointResourceDescriptor,

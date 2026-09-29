@@ -52,10 +52,12 @@ export function placeOf(namespace: Namespace | null): WorktreePlace {
 
 /**
  * The task this checkout is working on, as a state: `pending` while the
- * attempts / tasks are still loading is its own answer, never "no task".
+ * attempts / tasks are still loading is its own answer, never "no task" — and
+ * so is `failed`, when one of those reads failed.
  */
 export type LinkedTask =
   | { kind: "pending" }
+  | { kind: "failed" }
   | { kind: "none" }
   | { kind: "linked"; taskId: string; title: string };
 

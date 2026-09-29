@@ -1,11 +1,16 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useRef, type ReactElement, type ReactNode } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   PaneChrome,
   useOpenPane,
+  resolveFrom,
+  type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
@@ -65,10 +70,10 @@ const READING_MEASURE = cn("mx-auto w-full max-w-4xl");
 // bodies reference them. The component identifiers below are hoisted function
 // declarations, so the forward reference is safe at runtime.
 
-function useResolvePage({ pageId }: { pageId: string }) {
-  const result = useResource(pagesResource);
-  if (result.pending) return { pending: true, found: false };
-  return { pending: false, found: result.data.some((d) => d.id === pageId) };
+function useResolvePage({ pageId }: { pageId: string }): ResolveResult {
+  return resolveFrom(useResource(pagesResource), (pages) =>
+    pages.some((d) => d.id === pageId),
+  );
 }
 
 export const pageDetailPane = Pane.define({
@@ -111,12 +116,19 @@ export const pagesTreePane = Pane.define({
   // so opening a page from here titles the tab with the page.
 });
 
-function useResolveBlock({ blockId }: { blockId: string }) {
+function useResolveBlock({ blockId }: { blockId: string }): ResolveResult {
   const target = useBlockTarget(blockId);
-  if (target.kind === "pending") return { pending: true, found: false };
-  // A failed lookup is FOUND here on purpose: the body then renders the error,
-  // where a not-found would claim the block does not exist.
-  return { pending: false, found: target.kind !== "missing" };
+  switch (target.kind) {
+    case "pending":
+      return { status: "pending" };
+    case "error":
+      return { status: "error", error: target.error };
+    case "missing":
+      return { status: "missing" };
+    case "page":
+    case "block":
+      return { status: "found" };
+  }
 }
 
 export const blockDetailPane = Pane.define({
@@ -147,11 +159,17 @@ function PagesTreeBody(): ReactElement {
   );
 }
 
-/** The page's title from the global pages resource, or undefined while loading. */
+/**
+ * The page's title from the global pages resource, or undefined while loading
+ * or failed (the tab then shows the chrome's pageId fallback).
+ */
 function usePageTitle({ pageId }: { pageId: string }): string | undefined {
   const result = useResource(pagesResource);
-  if (result.pending) return undefined;
-  const page = result.data.find((d) => d.id === pageId);
+  const page = foldResource(result, {
+    loading: () => undefined,
+    error: () => undefined,
+    ready: (pages) => pages.find((d) => d.id === pageId),
+  });
   return page ? pageData(page).title : undefined;
 }
 
@@ -436,8 +454,13 @@ function BlockBody({
 function useBlockCrumb(pageId: string, blockId: string, type: string): string {
   const label = useBlockTypeLabel(type);
   const blocks = useLive(pageBlocks, { pageId });
-  if (blocks.pending) return label;
-  const block = blocks.data.find((b) => b.id === blockId);
+  // Not known yet, or failed: the type's label — the editor below reads the
+  // same feed and renders the failure.
+  const block = foldResource(blocks, {
+    loading: () => undefined,
+    error: () => undefined,
+    ready: (list) => list.find((b) => b.id === blockId),
+  });
   const text = block === undefined ? "" : textOf(block).trim();
   return text === "" ? label : text;
 }

@@ -31,6 +31,7 @@ disagreeing is the design, not drift.
     - `primitives/graph-canvas.GraphCanvasEdge`
     - `primitives/graph-canvas.GraphCanvasGroup`
     - `primitives/graph-canvas.GraphCanvasNode`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`

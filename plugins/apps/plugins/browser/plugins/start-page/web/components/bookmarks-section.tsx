@@ -2,7 +2,7 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { browserBookmarks } from "@plugins/apps/plugins/browser/plugins/bookmarks/web";
@@ -18,10 +18,32 @@ import { LinkTile } from "./link-tile";
 export function BookmarksSection() {
   const { navigate } = useBrowserNav();
   const result = useLive(browserBookmarks);
+  switch (result.status) {
+    case "loading":
+      return null;
+    case "error":
+      // A failed read is said under its heading — never the silent nothing a
+      // still-loading (or empty) list renders.
+      return (
+        <Stack gap="sm">
+          <SectionLabel>Bookmarks</SectionLabel>
+          <ResourceErrorInline
+            variant="inline"
+            subject="bookmarks"
+            error={result.error}
+            refetch={result.refetch}
+          />
+        </Stack>
+      );
+    case "ready":
+      break;
+  }
+  const bookmarks = result.data;
+  if (bookmarks.length === 0) return null;
   // A grow in flight reports `canGrow: false` (the grown window's size is not
   // known yet), so the button stays up — loading — while `growing`.
   const more =
-    !result.pending && (result.canGrow || result.growing) ? (
+    result.canGrow || result.growing ? (
       <Button
         variant="ghost"
         loading={result.growing}
@@ -31,26 +53,20 @@ export function BookmarksSection() {
       </Button>
     ) : null;
 
-  return matchResource(result, {
-    pending: () => null,
-    ready: (bookmarks) => {
-      if (bookmarks.length === 0) return null;
-      return (
-        <Stack gap="sm">
-          <SectionLabel>Bookmarks</SectionLabel>
-          <Grid minCellWidth="8.5rem" gap="sm">
-            {bookmarks.map((b) => (
-              <LinkTile
-                key={b.id}
-                url={b.url}
-                label={b.title}
-                onClick={() => navigate(b.url)}
-              />
-            ))}
-          </Grid>
-          {more}
-        </Stack>
-      );
-    },
-  });
+  return (
+    <Stack gap="sm">
+      <SectionLabel>Bookmarks</SectionLabel>
+      <Grid minCellWidth="8.5rem" gap="sm">
+        {bookmarks.map((b) => (
+          <LinkTile
+            key={b.id}
+            url={b.url}
+            label={b.title}
+            onClick={() => navigate(b.url)}
+          />
+        ))}
+      </Grid>
+      {more}
+    </Stack>
+  );
 }

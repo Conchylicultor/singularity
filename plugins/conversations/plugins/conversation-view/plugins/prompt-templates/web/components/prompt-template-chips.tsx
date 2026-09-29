@@ -19,10 +19,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import {
-  useConversation,
-  useConversationById,
-} from "@plugins/conversations/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useConfig } from "@plugins/config_v2/web";
 import {
@@ -105,7 +102,9 @@ export function FloatingTemplateChips({
 }: PromptEditorActionProps) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const live = useConversation(convId) ?? conversation;
+  // `useConversationById` already answers with the live row whenever a
+  // conversations list holds it (the fetched row only while none does).
+  const live = conversation;
   const { templates, pinnedCount } = useConfig(promptTemplatesConfig);
 
   // The same gate the prompt input applies to Enter — a template send IS a turn

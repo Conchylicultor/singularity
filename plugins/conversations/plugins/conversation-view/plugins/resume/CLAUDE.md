@@ -7,7 +7,7 @@
 - Description: Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
 - Web:
   - Uses:
-    - `conversations.useConversation`
+    - `conversations.useLiveConversation`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/icon-button.IconButton`

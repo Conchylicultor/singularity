@@ -41,7 +41,9 @@ const closeIcon = symbol("close");
  */
 export function PageCover({ pageId }: { pageId: string }) {
   const result = useResource(pagesResource);
-  if (result.pending) return null;
+  // Loading or failed: no band. The cover is decoration, and the page body
+  // reads the same resource and renders the failure.
+  if (result.status === "loading" || result.status === "error") return null;
   const page = result.data.find((d) => d.id === pageId);
   if (!page) return null;
   return <PageCoverInner page={page} pageId={pageId} />;

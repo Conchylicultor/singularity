@@ -39,6 +39,7 @@ agent manager's conversation rows and view switcher) sizes it with the same
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/spacing.Stack`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

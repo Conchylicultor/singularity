@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useMemo, useState } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   isHostedToolbar,
   type DataViewRenderProps,
@@ -16,6 +17,7 @@ import {
 import { DataViewSlots } from "../slots";
 import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { useServerDataSource } from "../internal/use-server-data-source";
+import { resolveBodyState } from "../internal/body-state";
 import {
   useFilterController,
   type FilterController,
@@ -144,8 +146,9 @@ function DataViewBodyInner<TRow>(
     rowActivation,
     selectedRowId,
     emptyState,
-    loading,
     loadingState,
+    readiness,
+    errorState,
     hierarchy,
     viewOptions,
     manualOrder,
@@ -426,7 +429,9 @@ function DataViewBodyInner<TRow>(
   const effectiveState = server
     ? { ...activeState, sort: [], filter: null, query: "", fold }
     : { ...activeState, fold };
-  const effectiveLoading = server ? server.loading : loading;
+  // What renders in place of the view, if anything: server error > failed
+  // read > loading > the view (see `resolveBodyState`).
+  const bodyState = resolveBodyState({ server, readiness });
 
   // The fold line's controls, handed to every view — present exactly when a fold
   // is in effect, so a view never draws a line for a rule that is suspended.
@@ -584,15 +589,23 @@ function DataViewBodyInner<TRow>(
                 caches, inline editors, and local tree expand state are per-instance
                 and must not leak between two instances of the same view type. */}
             <ControlSizeProvider key={activeViewId} size="xs">
-              {server?.error ? (
+              {bodyState.kind === "server-error" ? (
                 <Placeholder tone="error">
-                  {server.error instanceof FilterError
-                    ? `This filter is too large to run: ${server.error.message}`
-                    : server.error instanceof UnavailableFilterRuleError
-                      ? server.error.message
-                      : `Couldn't load: ${server.error.message}`}
+                  {bodyState.error instanceof FilterError
+                    ? `This filter is too large to run: ${bodyState.error.message}`
+                    : bodyState.error instanceof UnavailableFilterRuleError
+                      ? bodyState.error.message
+                      : `Couldn't load: ${bodyState.error.message}`}
                 </Placeholder>
-              ) : effectiveLoading ? (
+              ) : bodyState.kind === "error" ? (
+                (errorState ?? (
+                  <ResourceErrorInline
+                    error={bodyState.error.error}
+                    refetch={bodyState.error.refetch}
+                    variant="block"
+                  />
+                ))
+              ) : bodyState.kind === "loading" ? (
                 (loadingState ?? (
                   <Loading
                     variant={activeInstance.viewType.loadingVariant ?? "rows"}

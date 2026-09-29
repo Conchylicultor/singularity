@@ -26,6 +26,7 @@
     - `primitives/cursor-pagination.InfiniteScrollFooter`
     - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`

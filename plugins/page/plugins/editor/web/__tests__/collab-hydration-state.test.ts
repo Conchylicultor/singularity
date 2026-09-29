@@ -59,10 +59,15 @@ vi.mock("@plugins/primitives/plugins/networking/web", () => ({
 // The block's `blockDocs` row as `useLiveRow` hands it over: pending until the
 // test delivers a stored state.
 let rowValue:
-  | { pending: true; error: null }
-  | { pending: false; found: true; row: { state: string } } = {
-  pending: true,
-  error: null,
+  | { status: "loading"; refetch: () => Promise<void> }
+  | {
+      status: "ready";
+      found: true;
+      row: { state: string };
+      refetch: () => Promise<void>;
+    } = {
+  status: "loading",
+  refetch: () => Promise.resolve(),
 };
 vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
@@ -110,7 +115,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   fetchEndpointMock.mockReset();
   fetchEndpointMock.mockResolvedValue({ state: EMPTY_DOC_STATE });
-  rowValue = { pending: true, error: null };
+  rowValue = { status: "loading", refetch: () => Promise.resolve() };
 });
 
 afterEach(() => {
@@ -491,9 +496,10 @@ test("refetch() re-reads the server without dropping the session or re-attaching
 
   act(() => {
     rowValue = {
-      pending: false,
+      status: "ready",
       found: true,
       row: { state: toBase64(docStateFor([{ text: "hello" }])) },
+      refetch: () => Promise.resolve(),
     };
     rerender();
   });
@@ -549,9 +555,10 @@ test("rehydrate() DOES re-attach — and the everRendered latch survives it", as
   });
   act(() => {
     rowValue = {
-      pending: false,
+      status: "ready",
       found: true,
       row: { state: toBase64(docStateFor([{ text: "hello" }])) },
+      refetch: () => Promise.resolve(),
     };
     rerender();
   });

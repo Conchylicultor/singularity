@@ -1,10 +1,13 @@
 import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { starredPages } from "../../shared/resources";
 
-/** The favorites: not known yet, or the starred page ids. */
-export type StarredPageIds =
-  { pending: true } | { pending: false; ids: ReadonlySet<string> };
+/** The favorites: not known yet, failed, or the starred page ids. */
+export type StarredPageIds = ResourceResult<ReadonlySet<string>>;
 
 /**
  * The starred page ids of the bounded favorites window.
@@ -22,8 +25,12 @@ export type StarredPageIds =
  */
 export function useStarredPageIds(): StarredPageIds {
   const result = useLive(starredPages);
-  return useMemo(() => {
-    if (result.pending) return { pending: true };
-    return { pending: false, ids: new Set(result.data.map((r) => r.blockId)) };
-  }, [result]);
+  return useMemo(
+    () =>
+      mapResource(
+        result,
+        (rows): ReadonlySet<string> => new Set(rows.map((r) => r.blockId)),
+      ),
+    [result],
+  );
 }

@@ -1,13 +1,20 @@
 import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceView,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
 import { getTask as getTaskEndpoint } from "@plugins/tasks/core";
-import { taskDetail, type Task } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  taskDetail,
+  type Task,
+  type TaskListItem,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   useFlushAll,
@@ -22,7 +29,7 @@ function TaskDescriptionInner({
   detailTask,
 }: {
   taskId: string;
-  task: NonNullable<ReturnType<typeof useTask>>;
+  task: TaskListItem;
   detailTask: Task | null;
 }) {
   const flushAll = useFlushAll();
@@ -70,19 +77,21 @@ export function TaskDescription({ taskId }: { taskId: string }) {
   // description) from the per-id detail value, which stays live across tabs.
   const detail = useLive(taskDetail, { id: taskId });
 
-  if (!task) return null;
+  const all = useCombinedResources({ task, detail });
 
   // Wait for the detail payload before showing the editor: seeding useEditableField
   // from a not-yet-loaded "" and letting the user type would race the real value in.
   return (
-    <ResourceView resource={detail}>
-      {(detailTask) => (
-        <TaskDescriptionInner
-          taskId={taskId}
-          task={task}
-          detailTask={detailTask}
-        />
-      )}
+    <ResourceView resource={all}>
+      {({ task: row, detail: detailTask }) =>
+        row === null ? null : (
+          <TaskDescriptionInner
+            taskId={taskId}
+            task={row}
+            detailTask={detailTask}
+          />
+        )
+      }
     </ResourceView>
   );
 }

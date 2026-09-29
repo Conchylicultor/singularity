@@ -6,8 +6,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import { threadMessages } from "../core";
 import { MessageList } from "./components/message-list";
@@ -36,7 +35,11 @@ function useThreadTitle({
 }): string | undefined {
   // Same window the pane body reads (newest first), so this shares its subscription.
   const result = useLive(threadMessages, { where: { threadId } });
-  if (result.pending) return undefined;
+  switch (result.status) {
+    case "loading":
+    case "error":
+      return undefined;
+  }
   // The subject is stable across a thread; the oldest LOADED message carries it
   // (in a thread longer than the window that is a reply, so its "Re:" form).
   return result.data.at(-1)?.subject?.trim() || "(no subject)";
@@ -48,16 +51,22 @@ function ThreadPaneView(): ReactNode {
   // first); `loadMore` grows it backwards in time.
   const result = useLive(threadMessages, { where: { threadId } });
 
-  if (result.pending) {
+  if (result.status === "loading") {
     return (
       <PaneChrome pane={threadPane}>
-        {result.error ? (
-          <Center axis="both">
-            <Placeholder tone="error">Couldn’t load this thread.</Placeholder>
-          </Center>
-        ) : (
-          <Loading variant="rows" />
-        )}
+        <Loading variant="rows" />
+      </PaneChrome>
+    );
+  }
+  if (result.status === "error") {
+    return (
+      <PaneChrome pane={threadPane}>
+        <ResourceErrorInline
+          variant="block"
+          subject="this thread"
+          error={result.error}
+          refetch={result.refetch}
+        />
       </PaneChrome>
     );
   }

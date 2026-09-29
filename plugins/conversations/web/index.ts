@@ -6,17 +6,15 @@ export {
   useConversations,
   useConversation,
   useConversationById,
+  useLiveConversation,
   useHasActiveSiblings,
   useHasActiveSiblingInWorktree,
   useActiveConversations,
   GonePageSchema,
 } from "./use-conversations";
-export type { ConversationsState } from "./use-conversations";
 export default {
   collapsed: true,
   description: "Conversation domain: shared hooks and client-side API.",
   loadBearing: true,
-  contributions: [
-    ConfigV2.WebRegister({ descriptor: autoAnswerConfig }),
-  ],
+  contributions: [ConfigV2.WebRegister({ descriptor: autoAnswerConfig })],
 } satisfies PluginDefinition;

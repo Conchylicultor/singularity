@@ -354,6 +354,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/optimistic-mutation.OptimisticSettled`

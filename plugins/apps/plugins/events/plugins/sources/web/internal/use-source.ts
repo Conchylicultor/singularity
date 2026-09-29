@@ -27,12 +27,14 @@ export type SourceLookup =
  */
 export function useEventSource(sourceId: string): SourceLookup {
   const result = useEventSourceRow(sourceId);
-  if (result.pending) {
-    return result.error
-      ? { status: "error", error: result.error }
-      : { status: "pending" };
+  switch (result.status) {
+    case "loading":
+      return { status: "pending" };
+    case "error":
+      return { status: "error", error: result.error };
+    case "ready":
+      return result.found
+        ? { status: "found", source: result.row }
+        : { status: "missing" };
   }
-  return result.found
-    ? { status: "found", source: result.row }
-    : { status: "missing" };
 }

@@ -45,6 +45,7 @@ Consumers read only the generic aggregate:
   - Contributes: `Tasks.Fields` "category" → `CategoryField`
   - Uses:
     - `infra/endpoints.useEndpoint`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.useResource`
     - `tasks/task-list.Tasks`
   - Exports (types): `TaskCategoryRow`

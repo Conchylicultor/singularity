@@ -3,6 +3,8 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
 import { useTaskConversations } from "@plugins/tasks/plugins/tasks-core/web";
 import { StatusBadge } from "@plugins/tasks/plugins/task-status/web";
@@ -29,7 +31,22 @@ export function TodoDispatch({
   /** Dismisses the popover this panel was opened in. */
   close: () => void;
 }) {
-  const dispatched = useTodoTaskState(blockId);
+  const state = useTodoTaskState(blockId);
+
+  // Whether the card was dispatched decides what the panel offers ("Dispatch"
+  // vs "Dispatch another" under its task), so neither is claimed before the
+  // answer — and a failed read says so, with Retry.
+  if (state.status === "loading") return <Loading variant="spinner" />;
+  if (state.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the card's task"
+        error={state.error}
+        refetch={state.refetch}
+      />
+    );
+  const dispatched = state.data;
 
   return (
     <Stack gap="md">
@@ -102,7 +119,17 @@ function DispatchedTask({
  */
 function LatestRun({ taskId, onOpen }: { taskId: string; onOpen: () => void }) {
   const runs = useTaskConversations([taskId]);
-  if (runs.pending) return null;
+  if (runs.status === "loading") return null;
+  if (runs.status === "error") {
+    return (
+      <ResourceErrorInline
+        error={runs.error}
+        refetch={runs.refetch}
+        variant="inline"
+        subject="the latest run"
+      />
+    );
+  }
 
   const latest = runs.data.at(-1);
   if (!latest) return null;

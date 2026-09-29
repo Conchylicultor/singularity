@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { agentNotesAuthors, type AgentNotesAuthor } from "../shared/schemas";
 
 /**
@@ -33,14 +36,8 @@ export function useAgentNotesCreator(
   blockId: string,
 ): ResourceResult<AgentNotesAuthor | null> {
   const result = useAgentNotesAuthors(blockId);
-  return useMemo(() => {
-    if (result.pending) {
-      return { pending: true, error: result.error, refetch: result.refetch };
-    }
-    return {
-      pending: false,
-      data: result.data[0] ?? null,
-      refetch: result.refetch,
-    };
-  }, [result]);
+  return useMemo(
+    () => mapResource(result, (authors) => authors[0] ?? null),
+    [result],
+  );
 }

@@ -86,6 +86,12 @@ migrate (Resources page item 3).
     - `primitives/data-view.defineItemActions`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
+<<<<<<< .merge_file_zd5yPw
+=======
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
+>>>>>>> .merge_file_SAyjfy
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
@@ -95,6 +101,8 @@ migrate (Resources page item 3).
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneIconAction`
+    - `primitives/pane.resolveFrom`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor.TextEditor`

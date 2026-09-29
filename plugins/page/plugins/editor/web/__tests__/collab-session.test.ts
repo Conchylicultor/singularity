@@ -45,7 +45,10 @@ vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
 }));
 vi.mock("@plugins/network/plugins/live/web", () => ({
-  useLiveRow: vi.fn(() => ({ pending: true, error: null })),
+  useLiveRow: vi.fn(() => ({
+    status: "loading",
+    refetch: () => Promise.resolve(),
+  })),
 }));
 
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";

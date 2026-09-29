@@ -7,7 +7,7 @@ import {
   Button,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   useBrowserNav,
   Favicon,
@@ -28,10 +28,31 @@ const closeIcon = symbol("close");
 export function BookmarksBar() {
   const { navigate } = useBrowserNav();
   const { result, remove } = useBookmarks();
+  switch (result.status) {
+    case "loading":
+      return null;
+    case "error":
+      // A failed read is said, in the bar's own row — never the silent
+      // nothing a still-loading (or empty) list renders.
+      return (
+        <Bar tier="pane">
+          <ResourceErrorInline
+            variant="inline"
+            subject="bookmarks"
+            error={result.error}
+            refetch={result.refetch}
+          />
+        </Bar>
+      );
+    case "ready":
+      break;
+  }
+  const bookmarks = result.data;
+  if (bookmarks.length === 0) return null;
   // A grow in flight reports `canGrow: false` (the grown window's size is not
   // known yet), so the button stays up — loading — while `growing`.
   const more =
-    !result.pending && (result.canGrow || result.growing) ? (
+    result.canGrow || result.growing ? (
       <Button
         variant="ghost"
         loading={result.growing}
@@ -41,41 +62,35 @@ export function BookmarksBar() {
       </Button>
     ) : null;
 
-  return matchResource(result, {
-    pending: () => null,
-    ready: (bookmarks) => {
-      if (bookmarks.length === 0) return null;
-      return (
-        <Bar tier="pane">
-          <Stack direction="row" gap="2xs" align="center">
-            {/* eslint-disable-next-line data-view/no-adhoc-row-list -- bookmarks bar chrome strip */}
-            {bookmarks.map((b) => (
-              <Row
-                key={b.id}
-                size="sm"
-                hover="muted"
-                className="w-auto"
-                title={b.title}
-                icon={<Favicon url={b.url} size={14} />}
-                onClick={() => navigate(b.url)}
-                actions={
-                  <ControlSizeProvider size="xs">
-                    <IconButton
-                      icon={closeIcon}
-                      label="Remove bookmark"
-                      tooltip="Remove bookmark"
-                      onClick={() => void remove(b.id)}
-                    />
-                  </ControlSizeProvider>
-                }
-              >
-                <Text>{hostOf(b.url)}</Text>
-              </Row>
-            ))}
-            {more}
-          </Stack>
-        </Bar>
-      );
-    },
-  });
+  return (
+    <Bar tier="pane">
+      <Stack direction="row" gap="2xs" align="center">
+        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- bookmarks bar chrome strip */}
+        {bookmarks.map((b) => (
+          <Row
+            key={b.id}
+            size="sm"
+            hover="muted"
+            className="w-auto"
+            title={b.title}
+            icon={<Favicon url={b.url} size={14} />}
+            onClick={() => navigate(b.url)}
+            actions={
+              <ControlSizeProvider size="xs">
+                <IconButton
+                  icon={closeIcon}
+                  label="Remove bookmark"
+                  tooltip="Remove bookmark"
+                  onClick={() => void remove(b.id)}
+                />
+              </ControlSizeProvider>
+            }
+          >
+            <Text>{hostOf(b.url)}</Text>
+          </Row>
+        ))}
+        {more}
+      </Stack>
+    </Bar>
+  );
 }

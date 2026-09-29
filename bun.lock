@@ -3467,6 +3467,10 @@
       "name": "@singularity/plugin-packages-macrotask-yield",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/resource-protocol": {
+      "name": "@singularity/plugin-packages-resource-protocol",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/retry": {
       "name": "@singularity/plugin-packages-retry",
       "version": "0.0.1",
@@ -4922,6 +4926,10 @@
     },
     "plugins/reports/plugins/render-loop": {
       "name": "@singularity/plugin-reports-render-loop",
+      "version": "0.0.1",
+    },
+    "plugins/reports/plugins/resource-errors": {
+      "name": "@singularity/plugin-reports-resource-errors",
       "version": "0.0.1",
     },
     "plugins/reports/plugins/theme-resolution": {
@@ -7607,6 +7615,8 @@
 
     "@singularity/plugin-packages-macrotask-yield": ["@singularity/plugin-packages-macrotask-yield@workspace:plugins/packages/plugins/macrotask-yield"],
 
+    "@singularity/plugin-packages-resource-protocol": ["@singularity/plugin-packages-resource-protocol@workspace:plugins/packages/plugins/resource-protocol"],
+
     "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
 
     "@singularity/plugin-packages-semaphore": ["@singularity/plugin-packages-semaphore@workspace:plugins/packages/plugins/semaphore"],
@@ -8272,6 +8282,8 @@
     "@singularity/plugin-reports-plugin-load-errors": ["@singularity/plugin-reports-plugin-load-errors@workspace:plugins/reports/plugins/plugin-load-errors"],
 
     "@singularity/plugin-reports-render-loop": ["@singularity/plugin-reports-render-loop@workspace:plugins/reports/plugins/render-loop"],
+
+    "@singularity/plugin-reports-resource-errors": ["@singularity/plugin-reports-resource-errors@workspace:plugins/reports/plugins/resource-errors"],
 
     "@singularity/plugin-reports-theme-resolution": ["@singularity/plugin-reports-theme-resolution@workspace:plugins/reports/plugins/theme-resolution"],
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   registerResourceDescriptor,
@@ -46,6 +47,10 @@ import type {
 // `liveValue`: a window or id set not loaded yet is `pending`, never `[]`. So
 // each is minted here and registered directly, not through
 // `keyedResourceDescriptor`, whose placeholder is a required argument.
+//
+// A failed DECODE throws `ResourceContractError` (a subscription's params do
+// not match the declaration — the runtime refuses it as `contract-mismatch`); a
+// failed declaration or encode stays a plain `Error`, a programmer error.
 
 function assertWindowLimit(limit: number, context: string): void {
   if (!Number.isSafeInteger(limit) || limit <= 0) {
@@ -64,7 +69,11 @@ function keyedRows<Row, P extends Record<string, string>>(
   key: string,
   rowSchema: ZodParser<Row>,
   pkField: keyof Row & string,
-  opts: { preload?: ResourcePreload } = {},
+  opts: {
+    preload?: ResourcePreload;
+    /** The params gate — see `ResourceDescriptor.validateParams`. */
+    validateParams: (params: Record<string, string>) => void;
+  },
 ): ResourceDescriptor<Row[], P> & {
   keyed: { keyOf: (row: unknown) => string };
   initialData?: never;
@@ -105,7 +114,8 @@ export function windowQueryResourceDescriptor<Row>(
   const decode = (params: Record<string, string>): { limit: number } => {
     const raw = params.limit;
     if (raw === undefined || !/^[1-9][0-9]*$/.test(raw)) {
-      throw new Error(
+      throw new ResourceContractError(
+        key,
         `windowQueryResourceDescriptor("${key}").decode: params.limit must be a ` +
           `canonical positive-integer string, got ${JSON.stringify(raw)}`,
       );
@@ -113,7 +123,10 @@ export function windowQueryResourceDescriptor<Row>(
     return { limit: Number(raw) };
   };
 
-  const d = keyedRows<Row, WindowParams>(key, rowSchema, pkField, rest);
+  const d = keyedRows<Row, WindowParams>(key, rowSchema, pkField, {
+    ...rest,
+    validateParams: (params: Record<string, string>) => void decode(params),
+  });
   return Object.assign(d, {
     defaultParams: encode(),
     window: { defaultLimit, encode, decode },
@@ -149,14 +162,31 @@ export function pointQueryResourceDescriptor<Row>(
   const decode = (params: Record<string, string>): string[] => {
     const raw = params.ids;
     if (raw === undefined) {
-      throw new Error(
+      throw new ResourceContractError(
+        key,
         `pointQueryResourceDescriptor("${key}").decode: params.ids is missing — a ` +
           `point subscription has no meaning without an id set`,
       );
     }
     return raw === "" ? [] : raw.split(",");
   };
+  // The gate is stricter than `decode` (which, as the membership `idsOf`, reads
+  // only `ids`): a point tuple is exactly `{ ids }`, so any other key is a
+  // subscription this declaration never minted.
+  const validateParams = (params: Record<string, string>): void => {
+    for (const k of Object.keys(params)) {
+      if (k !== "ids") {
+        throw new ResourceContractError(
+          key,
+          `pointQueryResourceDescriptor("${key}"): unknown param "${k}"`,
+        );
+      }
+    }
+    decode(params);
+  };
 
-  const d = keyedRows<Row, PointParams>(key, rowSchema, pkField);
+  const d = keyedRows<Row, PointParams>(key, rowSchema, pkField, {
+    validateParams,
+  });
   return Object.assign(d, { point: { encode, decode }, queryPk: pkField });
 }

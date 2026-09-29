@@ -117,6 +117,7 @@ view, which only it reads. A read is `SongSetting<T>` =
     - `SonataContextValue`
     - `SonataSection`
     - `SongSetting`
+    - `SongSettingFailure`
     - `SongSettingKey`
     - `TransportClock`
   - Exports (values):
@@ -135,6 +136,7 @@ view, which only it reads. A read is `SongSetting<T>` =
     - `useCursorApi`
     - `useCursorBeat`
     - `useCursorSelector`
+    - `useFailSongSetting`
     - `useHasChords`
     - `useHasDerivedChord`
     - `useHasVoicedChords`

@@ -39,10 +39,12 @@ const onDemand: ResourceDescriptor<{ n: number }> = {
   key: "test.on-demand.value",
   schema: Count,
   load: "on-demand",
+  validateParams: () => {},
 };
 const pushed: ResourceDescriptor<{ n: number }> = {
   key: "test.pushed.value",
   schema: Count,
+  validateParams: () => {},
 };
 
 function makeClient(): QueryClient {
@@ -82,9 +84,9 @@ describe("useResource — placeholder-less descriptors", () => {
     const { result, fetchOverHttp } = mount(makeClient(), { n: 7 }, () =>
       useResource(onDemand),
     );
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
-    if (r.pending) throw new Error("unreachable");
+    if (r.status !== "ready") throw new Error("unreachable");
     expect(r.data).toEqual({ n: 7 });
     expect(fetchOverHttp).toHaveBeenCalledWith(
       onDemand.key,
@@ -100,11 +102,11 @@ describe("useResource — placeholder-less descriptors", () => {
     const { result, fetchOverHttp } = mount(client, { n: 1 }, () =>
       useResource(pushed),
     );
-    expect(result.current.pending).toBe(true);
+    expect(result.current.status).toBe("loading");
     act(() => {
       client.setQueryData(queryKeyFor(pushed.key, undefined), { n: 2 });
     });
-    await waitFor(() => expect(result.current.pending).toBe(false));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(fetchOverHttp).not.toHaveBeenCalled();
   });
 });

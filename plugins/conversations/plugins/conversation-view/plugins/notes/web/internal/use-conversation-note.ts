@@ -1,17 +1,24 @@
 import { useCallback, useEffect } from "react";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  useLiveRow,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import {
   useEditableField,
   type EditableField,
 } from "@plugins/primitives/plugins/editable-field/web";
-import { conversationNoteRows } from "../../shared";
+import { conversationNoteRows, type ConversationNote } from "../../shared";
 import { upsertNote, deleteNote } from "./api";
 import { useIsOpen, setIsOpen, toggleIsOpen } from "./notes-visibility-store";
 
 export interface ConversationNoteState extends EditableField<string> {
   isVisible: boolean;
   noteExists: boolean;
-  pending: boolean;
+  /**
+   * The note row's read — loading, failed, or ready. Render its `error` arm
+   * as an error (never as "still loading").
+   */
+  read: LiveRowResult<ConversationNote>;
   toggleVisible: () => void;
 }
 
@@ -19,12 +26,15 @@ export function useConversationNote(
   conversationId: string,
 ): ConversationNoteState {
   const note = useLiveRow(conversationNoteRows, conversationId);
-  // While pending, serverNote stays "" so useEditableField (which must run
-  // unconditionally) has a valid initial value. Consumers gate on `pending`
-  // to avoid showing a blank note before the row settles. On the settled arm
+  // Until the row is ready, serverNote stays "" so useEditableField (which must
+  // run unconditionally) has a valid initial value. Consumers gate on `read`
+  // to avoid showing a blank note before the row settles. On the ready arm
   // `found: false` means this conversation has no note.
-  const serverNote = !note.pending && note.found ? note.row.notes : "";
-  const noteExists = !note.pending && serverNote.trim().length > 0;
+  // Loading and error both seed "" — the editor needs a value either way, and
+  // `read` tells the consumer which of the two it is.
+  let serverNote = "";
+  if (note.status === "ready" && note.found) serverNote = note.row.notes;
+  const noteExists = note.status === "ready" && serverNote.trim().length > 0;
   const isManuallyOpen = useIsOpen(conversationId);
 
   const handleSave = useCallback(
@@ -59,7 +69,7 @@ export function useConversationNote(
     ...field,
     isVisible: noteExists || isManuallyOpen,
     noteExists,
-    pending: note.pending,
+    read: note,
     toggleVisible,
   };
 }

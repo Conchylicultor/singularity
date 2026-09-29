@@ -66,8 +66,14 @@ export function useHasVoicedChords(): boolean {
   const authored = useHasAuthoredChord();
   const anyChord = useHasChords();
   const chordMode = useSongSetting(chordModeSetting);
-  // Pending chord mode means the song's settings are still loading, so the
-  // score is empty and has no chords to voice either way (`scorePending`).
-  if (chordMode.pending) return false;
-  return authored || (chordMode.value && anyChord);
+  // Pending (or failed) chord mode means the song's settings are not all
+  // settled, so the score is empty and has no chords to voice either way
+  // (`scorePending` / `scoreFailure`).
+  switch (chordMode.kind) {
+    case "pending":
+    case "failed":
+      return false;
+    case "settled":
+      return authored || (chordMode.value && anyChord);
+  }
 }

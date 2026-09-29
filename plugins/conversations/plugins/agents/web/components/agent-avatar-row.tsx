@@ -1,4 +1,8 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useCombinedResources,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
@@ -14,10 +18,22 @@ import { agentLaunchesResource, agentRows } from "../../shared/resources";
 export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
   const launchesResult = useResource(agentLaunchesResource);
   const agentsResult = useLive(agentRows);
+  const combined = useCombinedResources({
+    launches: launchesResult,
+    agents: agentsResult,
+  });
   if (conv.kind !== "agent" || !conv.taskId) return null;
-  if (launchesResult.pending || agentsResult.pending) return null;
-  const launches = launchesResult.data;
-  const agents = agentsResult.data;
+  if (combined.status === "loading") return null;
+  if (combined.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the agent"
+        error={combined.error}
+        refetch={combined.refetch}
+      />
+    );
+  const { launches, agents } = combined.data;
   const launch = launches.find((l) => l.taskId === conv.taskId);
   const agent = launch ? agents.find((a) => a.id === launch.agentId) : null;
   return (

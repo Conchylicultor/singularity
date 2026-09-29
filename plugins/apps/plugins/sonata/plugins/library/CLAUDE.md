@@ -171,13 +171,18 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
     - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Hint`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.resolveFrom`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.type`
     - `primitives/pane.useOpenPane`
     - `primitives/pane.usePaneStore`

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { getVersion } from "@plugins/history/plugins/engine/core";
@@ -53,7 +54,17 @@ export function PageVersionPreview({
   // Gate on both async sources: the diff requires the current blocks settled,
   // and collapsing `pending` into `[]` would render a confidently-wrong diff
   // during the load window (banned by live-state/no-pending-data-collapse).
-  if (version.isLoading || current.pending) {
+  if (current.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the current page"
+        error={current.error}
+        refetch={current.refetch}
+      />
+    );
+  }
+  if (version.isLoading || current.status === "loading") {
     return <Loading variant="rows" count={6} />;
   }
   if (!snap) {

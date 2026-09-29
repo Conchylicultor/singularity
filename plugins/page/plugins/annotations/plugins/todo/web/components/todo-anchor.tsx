@@ -4,6 +4,7 @@ import type {
   BlockEditorAPI,
 } from "@plugins/page/plugins/editor/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   TodoDispatch,
   useTodoTask,
@@ -12,6 +13,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const playArrowIcon = symbol("play-arrow");
+const errorIcon = symbol("error");
 
 /**
  * The TODO card's name, in the top-right corner of its box — and the way an
@@ -86,7 +88,7 @@ function DispatchableTodoAnchor({
 
   // Until the link is known, the name only: offering "Launch" on a card that
   // was already dispatched would misstate it, so the action waits.
-  if (link.pending) {
+  if (link.status === "loading") {
     return (
       <ContainerCornerLabel
         blockId={blockId}
@@ -96,7 +98,31 @@ function DispatchableTodoAnchor({
       />
     );
   }
-  const dispatched = link.found;
+  // A failed read still cannot offer "Launch" (it may misstate the card), so
+  // the trigger opens the failure with its retry instead — unless the link was
+  // seen before the failure, which only ever holds a dispatched card.
+  if (link.status === "error" && link.stale === undefined) {
+    return (
+      <ContainerCornerLabel
+        blockId={blockId}
+        editor={editor}
+        name="Todo"
+        className="text-warning/80"
+        action={<Icon icon={errorIcon} className="size-3 text-destructive" />}
+        triggerLabel="Couldn't load this card's dispatch"
+        width="md"
+        sections={() => (
+          <ResourceErrorInline
+            error={link.error}
+            refetch={link.refetch}
+            variant="block"
+            subject="this card's dispatch"
+          />
+        )}
+      />
+    );
+  }
+  const dispatched = link.status === "error" || link.found;
 
   return (
     <ContainerCornerLabel

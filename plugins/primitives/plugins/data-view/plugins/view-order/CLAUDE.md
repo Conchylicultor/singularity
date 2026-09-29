@@ -215,6 +215,9 @@ set). Identical posture to `data_view_custom_values`.
     - `network/live.useLive`
     - `primitives/data-view.DataViewSlots`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
   - Exports (types): `RowOrderState`
   - Exports (values):
     - `useRowOrder`

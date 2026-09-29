@@ -32,6 +32,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
     - `primitives/pane.defineRoute`

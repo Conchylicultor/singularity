@@ -1,6 +1,10 @@
 import { useEffect, useMemo } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
+  useEndpointResource,
+  type ResourceError,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
   deserializeEdgeGraph,
   explainInclusion,
   flattenManifest,
@@ -251,8 +255,10 @@ export function useImpact(node: PluginNode): ImpactResult | null {
  * BROWSER from the edge graph and the manifests — the same derivation as
  * {@link useAppExclusions}, for any composition rather than main's.
  *
- * Three states, none of them a guess:
+ * Four states, none of them a guess:
  * - `pending` — the graph has not arrived; nothing is known yet.
+ * - `failed` — the graph could not be read: rendered with its Retry, never
+ *   left as a `pending` that never ends.
  * - `unknown-composition` — no manifest answers to `name` (renamed or removed).
  * - `ready` — `included` is membership in the resolved bundle, `extends` and
  *   the base exclusions folded in.
@@ -262,6 +268,7 @@ export function useImpact(node: PluginNode): ImpactResult | null {
  */
 export type CompositionInclusion =
   | { kind: "pending" }
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | { kind: "unknown-composition" }
   | { kind: "ready"; included: boolean };
 
@@ -303,10 +310,14 @@ export function useCompositionIncludes(
   name: string | null,
   pluginId: PluginId,
 ): CompositionInclusion {
-  const { data } = useEndpoint(getCompositionData, {});
-  const graph = graphFor(data);
+  const read = useEndpointResource(getCompositionData, {});
   const items = useManifestItems();
-  if (name === null || !graph) return PENDING_INCLUSION;
+  if (name === null) return PENDING_INCLUSION;
+  if (read.status === "loading") return PENDING_INCLUSION;
+  if (read.status === "error")
+    return { kind: "failed", error: read.error, refetch: read.refetch };
+  const graph = graphFor(read.data);
+  if (!graph) return PENDING_INCLUSION;
   const bundle = bundleOf(graph, items, name);
   if (!bundle) return { kind: "unknown-composition" };
   return { kind: "ready", included: bundle.has(pluginId) };

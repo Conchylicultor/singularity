@@ -18,6 +18,7 @@ import {
   useScopedUndoRedo,
 } from "@plugins/primitives/plugins/undo-redo/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { resolveDropParent } from "@plugins/primitives/plugins/tree/core";
 import {
@@ -79,6 +80,7 @@ import { useBlockHandles, useBlockOpContext } from "./internal/block-handles";
 import { scopeAdmits } from "./internal/zoom-scope";
 import {
   useMemoryBlockStore,
+  type BelowFailure,
   type BlockStore,
   type SettledBlockStore,
 } from "./block-store";
@@ -361,6 +363,12 @@ interface BlockEditorContextValue {
    * (`BlockEditorProviderGate`), so every row here is real.
    */
   loadingBelow: ReadonlySet<string>;
+  /**
+   * Rows below which an expanded nested page's first load FAILED (see
+   * `SettledBlockStore.failedBelow`): the row renders the failure, with Retry,
+   * under itself. Disjoint from {@link loadingBelow}.
+   */
+  failedBelow: ReadonlyMap<string, BelowFailure>;
   /**
    * Optional allowlist of insertable block `type`s. When set, block-type pickers
    * (add-block menu, gutter `+`, slash menu) offer only these types. Undefined
@@ -759,7 +767,8 @@ type ProviderInnerProps = {
 /**
  * The gate between a store that can still be loading and the provider, whose
  * hooks read the rows, the authoritative rows and `dispatch` unconditionally:
- * while the store is pending it renders the editor's loading state, and it
+ * while the store is pending it renders the editor's loading state (or the
+ * failure, when its first load failed), and it
  * mounts the provider only with a settled store. The provider's `store` prop is
  * the settled arm, so a store that can be pending reaches it only through here
  * (tsc); the memory store is settled from the start.
@@ -773,7 +782,20 @@ export function BlockEditorProviderGate({
   store,
   ...props
 }: Omit<ProviderInnerProps, "store"> & { store: BlockStore }) {
-  if (store.pending) return <Loading variant="rows" />;
+  if (store.pending) {
+    // A failed first load is its own state, never an endless loading one.
+    if (store.error !== null) {
+      return (
+        <ResourceErrorInline
+          error={store.error}
+          refetch={store.refetch}
+          variant="block"
+          subject="this page"
+        />
+      );
+    }
+    return <Loading variant="rows" />;
+  }
   return <BlockEditorProviderInner store={store} {...props} />;
 }
 
@@ -2389,6 +2411,7 @@ export function BlockEditorProviderInner({
       serverIds,
       rowTruthOf,
       loadingBelow: store.loadingBelow,
+      failedBelow: store.failedBelow,
       enabledBlockTypes,
       allowAttachments: serverSync,
       serverSync,
@@ -2434,6 +2457,7 @@ export function BlockEditorProviderInner({
       serverIds,
       rowTruthOf,
       store.loadingBelow,
+      store.failedBelow,
       enabledBlockTypes,
       serverSync,
       focusedBlockId,

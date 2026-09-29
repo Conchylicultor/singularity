@@ -1,5 +1,11 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import {
   PluginProvider,
   type LoadedPlugin,
@@ -73,7 +79,7 @@ afterEach(cleanup);
 
 describe("hosted toolbar — shell", () => {
   it("renders the loading state through the frame, with no options and no band", () => {
-    const { container } = renderShell({ ready: false } as ViewModel, [
+    const { container } = renderShell({ ready: false, failure: null }, [
       { id: "new", label: "New thing", onSelect: () => {} },
     ]);
 
@@ -87,6 +93,20 @@ describe("hosted toolbar — shell", () => {
     expect((container.firstElementChild as HTMLElement).className).toContain(
       hoverRevealGroup,
     );
+  });
+
+  it("renders a failed config load as the failure with Retry, not a skeleton", () => {
+    const refetch = vi.fn(() => Promise.resolve());
+    renderShell({
+      ready: false,
+      failure: { error: new Error("config unreachable"), refetch },
+    });
+
+    const frame = screen.getByTestId("frame");
+    expect(frame.textContent).toMatch(/config unreachable/);
+    expect(lastParts!.options).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it("renders the no-views placeholder through the frame", () => {

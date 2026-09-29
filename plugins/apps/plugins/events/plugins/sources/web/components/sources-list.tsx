@@ -7,7 +7,6 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEventSources } from "@plugins/apps/plugins/events/plugins/events-core/web";
@@ -167,17 +166,14 @@ export function SourcesList(): ReactNode {
     [types, openPane],
   );
 
-  const renderList = (
-    sources: EventSource[],
-    loading: boolean,
-  ): ReactElement => (
+  const renderList = (sources: EventSource[]): ReactElement => (
     <DataView<EventSource>
       storageKey={SOURCES_VIEW}
       rows={sources}
       fields={fields}
       rowKey={(s) => s.id}
       views={["list", "table"]}
-      loading={loading}
+      readiness={result}
       creators={creators}
       itemActions={EventSourceActions}
       selectedRowId={selectedId}
@@ -197,14 +193,13 @@ export function SourcesList(): ReactNode {
     />
   );
 
-  // One render path for loading and ready: while loading the DataView paints its
-  // own skeleton and the toolbar (search / +) stays put, so a loading list can
-  // never masquerade as a confirmed-empty one. A broken subscription is NOT
-  // folded into that — it gets its own visible message rather than an eternal
-  // skeleton the user reads as "no sources".
+  // One render path for every state: the DataView paints its own skeleton while
+  // loading and the failure (with Retry) when the subscription broke
+  // (`readiness`), and the toolbar (search / +) stays put — so neither a loading
+  // nor a failed list can masquerade as a confirmed-empty one.
   return matchResource(result, {
-    pending: () => renderList([], true),
-    error: (error) => <Placeholder tone="error">{error.message}</Placeholder>,
-    ready: (sources) => renderList(sources, false),
+    loading: () => renderList([]),
+    error: () => renderList([]),
+    ready: (sources) => renderList(sources),
   });
 }

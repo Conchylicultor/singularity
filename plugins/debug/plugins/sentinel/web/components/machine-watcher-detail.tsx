@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -119,13 +120,17 @@ export function MachineWatcherDetail() {
   const result = useLive(sentinelVitals);
   // Drives "Updated 3s ago" and notices a reading going stale between pushes.
   const now = useNow(1_000);
-  if (result.pending) {
-    return result.error === null ? (
-      <Loading label="Reading the machine watcher…" />
-    ) : (
-      <Text variant="caption" tone="muted">
-        Couldn&apos;t load the machine watcher&apos;s latest reading.
-      </Text>
+  if (result.status === "loading") {
+    return <Loading label="Reading the machine watcher…" />;
+  }
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the machine watcher's latest reading"
+        error={result.error}
+        refetch={result.refetch}
+      />
     );
   }
   return <MachineWatcherDetailView vitals={result.data} now={now} />;

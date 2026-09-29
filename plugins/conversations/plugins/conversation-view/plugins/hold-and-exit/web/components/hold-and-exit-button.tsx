@@ -1,7 +1,7 @@
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
-import { useConversation } from "@plugins/conversations/web";
+import { useLiveConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { holdAndExit } from "../../shared";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -14,7 +14,7 @@ export function HoldAndExitItem({
 }: {
   conversation: ConversationRecord;
 }) {
-  const live = useConversation(conversation.id) ?? conversation;
+  const live = useLiveConversation(conversation);
   const { mutate, isPending } = useEndpointMutation(holdAndExit, {
     onSuccess: () =>
       toast({

@@ -42,7 +42,10 @@ export function ChangeAnswersAction({ event }: { event: JsonlEvent }) {
 function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
   const { convId } = conversationPane.useParams();
   const eventsResult = useLive(jsonlEvents, { id: convId });
-  if (eventsResult.pending) return null;
+  // A failed read offers no rewind, deliberately: this is an optional row
+  // action, and the question card on the same row renders that read's failure.
+  if (eventsResult.status === "loading" || eventsResult.status === "error")
+    return null;
   // Only an answer sent from here is a message a rewind can cut at; one given
   // in the terminal lives inside the tool result.
   const answerTurn = findAnswerTurn(eventsResult.data, event.toolUseId);

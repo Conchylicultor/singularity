@@ -43,13 +43,16 @@ verdict is loading, and the SSH-setup card seeds open.
     - `apps/deploy/servers.Servers`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveRowResult`
+    - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live.useLiveRow`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
@@ -59,7 +62,6 @@ verdict is loading, and the SSH-setup card seeds open.
   - Exports (types):
     - `ServerHealthRow`
     - `ServerStatus`
-    - `ServerVerification`
     - `SshCheckResult`
   - Exports (values):
     - `checkServerSsh`

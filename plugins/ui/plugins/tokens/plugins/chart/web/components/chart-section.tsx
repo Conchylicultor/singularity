@@ -1,4 +1,5 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   TokenRows,
@@ -10,7 +11,19 @@ const KEYS = Object.keys(chartGroup.schema);
 
 export function ChartSection({ search }: { search: string }) {
   const editor = useTokenGroupEditor(chartGroup);
-  if (editor.pending) return <Loading variant="rows" count={KEYS.length} />;
+  if (editor.pending) {
+    if (editor.error !== null) {
+      return (
+        <ResourceErrorInline
+          error={editor.error}
+          refetch={editor.refetch}
+          variant="block"
+          subject="the theme selection"
+        />
+      );
+    }
+    return <Loading variant="rows" count={KEYS.length} />;
+  }
   return (
     <Stack gap="2xs">
       <TokenRows

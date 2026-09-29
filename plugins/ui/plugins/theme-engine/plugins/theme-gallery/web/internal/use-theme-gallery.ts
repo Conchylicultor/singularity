@@ -4,6 +4,11 @@ import { Apps } from "@plugins/apps-core/web";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
+  combineResources,
+  type GateInput,
+} from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import {
   resolveTheme,
   themeSelectionConfig,
   type Theme,
@@ -15,6 +20,7 @@ import {
   useThemes,
   useThemeScopeId,
   useThemeSelections,
+  type ThemeSourceFailure,
 } from "@plugins/ui/plugins/theme-engine/web";
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
 import {
@@ -36,9 +42,22 @@ export type ThemeGalleryState =
       missing: ThemeId | undefined;
       /** The name the gallery uses for the scope it is picking for. */
       scopeLabel: string;
+      /**
+       * Theme sources (resident or browse) whose read FAILED: the rows hold
+       * every theme that could be read, and the gallery says which source
+       * could not be, with its Retry.
+       */
+      failures: readonly ThemeSourceFailure[];
     };
 
 export interface ThemeGallery {
+  /**
+   * Whether the gallery can show its rows: loading, ready, or FAILED (the
+   * scope's selection could not be read) with its retry — what the DataView
+   * renders its loading / error chrome from.
+   */
+  readiness: ResourceReadiness;
+  /** The rows once `readiness` is ready; pending while loading or failed. */
   state: ThemeGalleryState;
   /** Select the row's theme for the scope — saving a catalog entry first. */
   activate: (row: ThemeRow) => Promise<void>;
@@ -89,8 +108,17 @@ function previewOf(
  * gesture that selects one.
  *
  * Pending until the theme list, every catalog, and every scope's selection are
- * known — the gallery renders a loading state until then, never a partial list.
+ * known — the gallery renders a loading state until then, never a partial list
+ * — and an error (with retry) when the scope's selection failed to load.
  */
+/**
+ * A theme-engine state that cannot fail as a whole (a failing source rides in
+ * its value as a `failures` entry), as a gate input: loading until it settles.
+ */
+function settledGate(state: { pending: boolean }): GateInput {
+  return { status: state.pending ? "loading" : "ready" };
+}
+
 export function useThemeGallery(): ThemeGallery {
   const scopeId = useThemeScopeId();
   const themes = useThemes();
@@ -102,12 +130,25 @@ export function useThemeGallery(): ThemeGallery {
   const selectTheme = useSetConfig(themeSelectionConfig, { scopeId });
   const [adoptingKey, setAdoptingKey] = useState<string | null>(null);
 
+  const readiness = useMemo(
+    () =>
+      combineResources({
+        themes: settledGate(themes),
+        browse: settledGate(browse),
+        selections: settledGate(selections),
+        selection,
+      }),
+    [themes, browse, selections, selection],
+  );
+
   const state = useMemo((): ThemeGalleryState => {
     if (
       themes.pending ||
       browse.pending ||
       selections.pending ||
-      selection.pending
+      // Loading or failed: no rows either way — `readiness` tells them apart.
+      selection.status === "loading" ||
+      selection.status === "error"
     ) {
       return { pending: true };
     }
@@ -121,12 +162,16 @@ export function useThemeGallery(): ThemeGallery {
     });
     const selected = selection.data.theme;
     const exists = themesById.has(selected);
+    // A selection absent while a resident source failed is unknown, not
+    // missing — the failure notice is the honest message (see useResolvedTheme).
+    const missing = exists || themes.failures.length > 0 ? undefined : selected;
     return {
       pending: false,
       rows,
       selectedKey: exists ? residentRowKey(selected) : undefined,
-      missing: exists ? undefined : selected,
+      missing,
       scopeLabel: scopeLabel(scopeId),
+      failures: [...themes.failures, ...browse.failures],
     };
   }, [themes, browse, selections, selection, scopeLabel, scopeId]);
 
@@ -159,5 +204,5 @@ export function useThemeGallery(): ThemeGallery {
     }
   };
 
-  return { state, activate, adoptingKey };
+  return { readiness, state, activate, adoptingKey };
 }

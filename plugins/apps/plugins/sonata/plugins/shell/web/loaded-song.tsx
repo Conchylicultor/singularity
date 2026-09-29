@@ -1,7 +1,11 @@
 import { useMemo, type ReactNode } from "react";
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 import { Sonata } from "./slots";
-import type { SongSetting, SongSettingKey } from "./song-setting";
+import type {
+  SongSetting,
+  SongSettingFailure,
+  SongSettingKey,
+} from "./song-setting";
 
 /**
  * The song a Sonata surface has loaded — its id, its content (every source's
@@ -22,16 +26,25 @@ interface LoadedSong {
   generation: number;
   /** Each source's raw input, by source id. */
   rawById: Readonly<Record<string, unknown>>;
-  /** The song's settled settings — a setting not in here is pending. */
+  /** The song's settled settings — a setting not in here is pending (or failed). */
   settings: ReadonlyMap<SongSettingKey<unknown>, unknown>;
+  /**
+   * Settings whose observer's read FAILED with no last-known value to settle
+   * from. A later settled write clears the entry.
+   */
+  failures: ReadonlyMap<SongSettingKey<unknown>, SongSettingFailure>;
 }
 
 const loadedSongStore = defineScopedStore<LoadedSong | null>(null);
 
 const NO_RAW: Readonly<Record<string, unknown>> = {};
 const NO_SETTINGS: ReadonlyMap<SongSettingKey<unknown>, unknown> = new Map();
+const NO_FAILURES: ReadonlyMap<
+  SongSettingKey<unknown>,
+  SongSettingFailure
+> = new Map();
 /** The one pending value, shared, so a still-pending read changes nothing a reader sees. */
-const PENDING: { pending: true } = { pending: true };
+const PENDING: { kind: "pending" } = { kind: "pending" };
 
 /**
  * Provides one Sonata surface's loaded song. Mounted in `SonataLayout` ABOVE
@@ -65,6 +78,7 @@ export function useLoadSong(): (
               generation: (prev?.generation ?? 0) + 1,
               rawById,
               settings: NO_SETTINGS,
+              failures: NO_FAILURES,
             },
       ),
     [api],
@@ -128,9 +142,10 @@ function useRegisteredSettings(): ReadonlySet<SongSettingKey<unknown>> {
 }
 
 /**
- * `key`'s state in `loaded`: its value once written; else pending while the
- * composition registers it; else — nothing in this composition persists it —
- * its `absent` value, which is then the truth.
+ * `key`'s state in `loaded`: its value once written; else its failure, when its
+ * observer reported one; else pending while the composition registers it;
+ * else — nothing in this composition persists it — its `absent` value, which
+ * is then the truth.
  */
 function readSetting<T>(
   loaded: LoadedSong | null,
@@ -139,15 +154,27 @@ function readSetting<T>(
 ): SongSetting<T> {
   if (loaded !== null && loaded.settings.has(key)) {
     // The value was written through `useWriteSongSetting(key)`, typed `T`.
-    return { pending: false, value: loaded.settings.get(key) as T };
+    return { kind: "settled", value: loaded.settings.get(key) as T };
+  }
+  const failure = loaded?.failures.get(key);
+  if (failure !== undefined && registered.has(key)) {
+    return { kind: "failed", ...failure };
   }
   if (registered.has(key)) return PENDING;
-  return { pending: false, value: key.absent };
+  return { kind: "settled", value: key.absent };
 }
 
 function sameSetting<T>(a: SongSetting<T>, b: SongSetting<T>): boolean {
-  if (a.pending || b.pending) return a.pending === b.pending;
-  return Object.is(a.value, b.value);
+  switch (a.kind) {
+    case "pending":
+      return b.kind === "pending";
+    case "failed":
+      return (
+        b.kind === "failed" && a.error === b.error && a.refetch === b.refetch
+      );
+    case "settled":
+      return b.kind === "settled" && Object.is(a.value, b.value);
+  }
 }
 
 /**
@@ -185,7 +212,42 @@ export function useWriteSongSetting<T>(
         }
         const settings = new Map(prev.settings);
         settings.set(key, value);
-        return { ...prev, settings };
+        if (!prev.failures.has(key)) return { ...prev, settings };
+        const failures = new Map(prev.failures);
+        failures.delete(key);
+        return { ...prev, settings, failures };
+      }),
+    [api, key],
+  );
+}
+
+/**
+ * Report that `songId`'s value of one setting could not be read — its
+ * observer's read failed with no last-known value to settle from. The setting
+ * then reads `failed` (and so does every gate waiting on it) until a value is
+ * written. Dropped unless `songId` is the loaded song, and ignored once the
+ * setting holds a value: a settled value is never un-settled by a failure.
+ */
+export function useFailSongSetting<T>(
+  key: SongSettingKey<T>,
+): (songId: string, failure: SongSettingFailure) => void {
+  const api = loadedSongStore.useStoreApi();
+  return useMemo(
+    () => (songId: string, failure: SongSettingFailure) =>
+      api.setState((prev) => {
+        if (prev === null || prev.songId !== songId) return prev;
+        if (prev.settings.has(key)) return prev;
+        const held = prev.failures.get(key);
+        if (
+          held !== undefined &&
+          held.error === failure.error &&
+          held.refetch === failure.refetch
+        ) {
+          return prev;
+        }
+        const failures = new Map(prev.failures);
+        failures.set(key, failure);
+        return { ...prev, failures };
       }),
     [api, key],
   );
@@ -200,7 +262,7 @@ function sameValues<V extends object>(
   a: SongSetting<V>,
   b: SongSetting<V>,
 ): boolean {
-  if (a.pending || b.pending) return a.pending === b.pending;
+  if (a.kind !== "settled" || b.kind !== "settled") return sameSetting(a, b);
   const av = a.value as Record<string, unknown>;
   const bv = b.value as Record<string, unknown>;
   return Object.keys(av).every((k) => Object.is(av[k], bv[k]));
@@ -210,8 +272,10 @@ function sameValues<V extends object>(
  * The loaded song's values of `keys` — pending until EVERY setting the
  * composition registers has settled for it, not only these: nothing of the
  * song may render or play while any of its settings is still loading (a muted
- * track audible). A setting nobody registers is never waited on, and reads as
- * its `absent` value. Re-renders only when that gate flips or one of `keys`'
+ * track audible). A registered setting whose read FAILED makes the whole gate
+ * `failed` (precedence failed > pending, like `combineResources`), so a surface
+ * shows the failure with Retry instead of waiting forever. A setting nobody
+ * registers is never waited on, and reads as its `absent` value. Re-renders only when that gate flips or one of `keys`'
  * values changes — never for another setting's value (a fader move).
  *
  * `keys` must be stable (a module constant).
@@ -223,16 +287,21 @@ export function useSettledSongSettings<
   return loadedSongStore.useSelector(
     (loaded): SongSetting<SongSettingValues<K>> => {
       if (loaded === null) return PENDING;
+      let unsettled = false;
       for (const key of registered) {
-        if (!loaded.settings.has(key)) return PENDING;
+        if (loaded.settings.has(key)) continue;
+        const failure = loaded.failures.get(key);
+        if (failure !== undefined) return { kind: "failed", ...failure };
+        unsettled = true;
       }
+      if (unsettled) return PENDING;
       const value: Record<string, unknown> = {};
       for (const [name, key] of Object.entries(keys)) {
         const setting = readSetting(loaded, key, registered);
-        if (setting.pending) return PENDING;
+        if (setting.kind !== "settled") return PENDING;
         value[name] = setting.value;
       }
-      return { pending: false, value: value as SongSettingValues<K> };
+      return { kind: "settled", value: value as SongSettingValues<K> };
     },
     [keys, registered],
     sameValues,

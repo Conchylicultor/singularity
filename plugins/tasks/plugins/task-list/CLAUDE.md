@@ -24,6 +24,7 @@
     - `primitives/data-view.defineItemActions`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchControl`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`

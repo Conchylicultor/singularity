@@ -53,10 +53,17 @@ export function useBlockedReason(deployment: Deployment): string | null {
   // Gated, not collapsed to an empty map: until the run state has arrived we do
   // not know whether something is already running on this box, and launching a
   // second converge into that gap is exactly what the exclusivity rule forbids.
-  if (runsResult.pending) return "Loading deploy state…";
+  if (runsResult.status === "loading") return "Loading deploy state…";
+  // A failed read is a reason too — never a green light, never a spinner.
+  if (runsResult.status === "error") {
+    return `Couldn't load deploy state: ${runsResult.error.message}`;
+  }
   // Gated, not read as "never verified": a server whose verdict has not loaded
   // may well be verified, and saying otherwise sends the user to re-verify it.
-  if (health.pending) return "Loading server health…";
+  if (health.status === "loading") return "Loading server health…";
+  if (health.status === "error") {
+    return `Couldn't load server health: ${health.error.message}`;
+  }
 
   const busy = runningOnServer(runsResult.data, deployment.serverId);
   if (busy) {

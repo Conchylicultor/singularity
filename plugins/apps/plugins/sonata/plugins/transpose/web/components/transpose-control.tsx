@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -53,12 +54,20 @@ export function TransposeControl() {
     <ToolbarControl
       icon={<Icon icon={swapVertIcon} className="size-3.5" />}
       tooltip="Transpose — shift the whole song by semitones"
-      disabled={transpose.pending || !hasScore}
+      disabled={transpose.kind !== "settled" || !hasScore}
     >
-      {transpose.pending ? (
+      {transpose.kind === "pending" ? (
         <Inset x="sm">
           <Loading variant="block" className="h-4 w-20" />
         </Inset>
+      ) : transpose.kind === "failed" ? (
+        <ResourceErrorInline
+          variant="icon"
+          icon={swapVertIcon}
+          subject="the song's transpose"
+          error={transpose.error}
+          refetch={transpose.refetch}
+        />
       ) : (
         <TransposeStepper semitones={transpose.value} disabled={!hasScore} />
       )}

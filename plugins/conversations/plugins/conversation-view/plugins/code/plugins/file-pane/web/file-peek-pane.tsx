@@ -9,6 +9,7 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   useResolvedFile,
   FileDisambiguation,
@@ -68,13 +69,17 @@ function FilePeekPaneBody() {
       : filePath;
 
   const filesResult = useEditedFiles(convId ?? null);
-  // `status` is a derived renderer hint, so an unknown file set (pending or an
-  // unresolved worktree) safely defaults to "clean" — no display surface here.
-  const status =
-    filesResult.pending || !filesResult.data.resolved
-      ? "clean"
-      : (filesResult.data.value.find((f) => f.path === effectivePath)?.status ??
-        "clean");
+  // `status` is a derived renderer hint, so an unknown file set (loading, a
+  // failed read, or an unresolved worktree) safely defaults to "clean" — no
+  // display surface here; the file content itself is a separate read.
+  const status = foldResource(filesResult, {
+    loading: () => "clean" as const,
+    error: () => "clean" as const,
+    ready: (files) =>
+      files.resolved
+        ? (files.value.find((f) => f.path === effectivePath)?.status ?? "clean")
+        : "clean",
+  });
   const renderers = useFileRenderers({ path: effectivePath, status });
 
   // The header's title and renderer tabs read this (see file-peek-header): the

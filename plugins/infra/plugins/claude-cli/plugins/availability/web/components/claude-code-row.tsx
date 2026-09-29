@@ -2,6 +2,10 @@ import { useEffect } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
   Steps,
   Step,
   StepCommand,
@@ -31,7 +35,17 @@ export function ClaudeCodeActions() {
 /** The expanded row: what is wrong, and the commands that fix it. */
 export function ClaudeCodeDetail() {
   const result = useClaudeCodeStatus();
-  if (result.pending) return null;
+  if (result.status === "loading") return null;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="Claude Code's status"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  }
   const s = result.data;
   switch (s.kind) {
     case "ready":
@@ -86,11 +100,16 @@ export function ClaudeCodeDetail() {
  */
 export function RecheckOnReturn() {
   const result = useClaudeCodeStatus();
-  const blocked =
-    !result.pending &&
-    (result.data.kind === "missing" ||
-      result.data.kind === "signed-out" ||
-      result.data.kind === "unreadable");
+  // Only a KNOWN block re-checks on return; a status still loading or that
+  // failed to load has nothing to re-check against.
+  const blocked = foldResource(result, {
+    loading: () => false,
+    error: () => false,
+    ready: (s) =>
+      s.kind === "missing" ||
+      s.kind === "signed-out" ||
+      s.kind === "unreadable",
+  });
   useEffect(() => {
     if (!blocked) return;
     const onFocus = () => {

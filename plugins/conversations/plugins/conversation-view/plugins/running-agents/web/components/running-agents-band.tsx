@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo } from "react";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   DataView,
@@ -287,7 +288,7 @@ const BAND_TOOLBAR: HostedToolbar = {
  *
  * Nothing renders until the reads have landed, and nothing renders when no
  * sub-agent is working: an empty band would be a claim, and chrome around
- * nothing is worse than no band.
+ * nothing is worse than no band. A failed read renders the failure with Retry.
  */
 export function RunningAgentsBand({
   conversation,
@@ -320,7 +321,19 @@ export function RunningAgentsBand({
     };
   }, [rows]);
 
-  if (state.kind === "pending" || rows.length === 0) return null;
+  if (state.kind === "pending") return null;
+  // A failed read is not "nothing working": say so, with Retry, in the band's
+  // own place above the prompt box.
+  if (state.kind === "failed")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the running agents"
+        error={state.error}
+        refetch={state.refetch}
+      />
+    );
+  if (rows.length === 0) return null;
 
   return (
     <BandChromeContext.Provider value={chrome}>

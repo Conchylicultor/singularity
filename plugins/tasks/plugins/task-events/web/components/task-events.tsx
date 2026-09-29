@@ -1,6 +1,10 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
@@ -101,7 +105,19 @@ function AttemptPushList({
   githubBase: string | null;
 }) {
   const pushesQ = useLive(pushRows, { where: { attemptId } });
-  if (pushesQ.pending) return null;
+  if (pushesQ.status === "loading") return null;
+  if (pushesQ.status === "error") {
+    return (
+      <li>
+        <ResourceErrorInline
+          variant="inline"
+          subject="this attempt's pushes"
+          error={pushesQ.error}
+          refetch={pushesQ.refetch}
+        />
+      </li>
+    );
+  }
   return (
     <>
       {pushesQ.data.map((push) => (
@@ -119,14 +135,29 @@ function AttemptPushList({
  */
 export function useHasTaskAttempts({ taskId }: { taskId: string }): boolean {
   const attempts = useTaskAttempts(taskId);
-  return !attempts.pending && attempts.data.length > 0;
+  // A failed read keeps the card painted: its body renders the failure.
+  return foldResource(attempts, {
+    loading: () => false,
+    error: () => true,
+    ready: (list) => list.length > 0,
+  });
 }
 
 export function TaskPushes({ taskId }: { taskId: string }) {
   const attempts = useTaskAttempts(taskId);
   const githubBase = useGithubBase();
 
-  if (attempts.pending) return <Loading variant="rows" />;
+  if (attempts.status === "loading") return <Loading variant="rows" />;
+  if (attempts.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the pushes"
+        error={attempts.error}
+        refetch={attempts.refetch}
+      />
+    );
+  }
   if (attempts.data.length === 0) {
     return (
       <Text as="p" variant="body" tone="muted">
@@ -148,7 +179,17 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
   const attempts = useTaskAttempts(taskId);
   const opener = useConversationOpener();
 
-  if (attempts.pending) return <Loading variant="rows" />;
+  if (attempts.status === "loading") return <Loading variant="rows" />;
+  if (attempts.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the attempts"
+        error={attempts.error}
+        refetch={attempts.refetch}
+      />
+    );
+  }
   if (attempts.data.length === 0) {
     return (
       <Text as="p" variant="body" tone="muted">

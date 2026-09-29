@@ -5,6 +5,10 @@ import {
   $isTextNode,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  foldResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   CaretTriggerMenu,
@@ -19,6 +23,8 @@ import {
 } from "@plugins/page/plugins/editor/web";
 import { $createPageLinkInlineNode } from "./page-link-inline-node";
 import { createLinkedPage } from "../internal/create-linked-page";
+
+const NO_OPTIONS: readonly PageOption[] = [];
 
 /**
  * Inline, Notion-style `[[` page-mention typeahead, built on the shared
@@ -74,9 +80,14 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   });
 
   const pageOptionsResult = usePageOptions(caret.query, { allowCreate: true });
-  // Settled options drive keyboard nav; [] while pending is safe — itemCount is
-  // 0 (not interactive) then, and the menu shows a spinner, not "No pages found".
-  const options = pageOptionsResult.pending ? [] : pageOptionsResult.options;
+  // Settled options drive keyboard nav; [] while loading or failed is safe —
+  // itemCount is 0 (not interactive) then, and the menu shows a spinner or the
+  // failure, not "No pages found".
+  const options = foldResource(pageOptionsResult, {
+    loading: () => NO_OPTIONS,
+    error: () => NO_OPTIONS,
+    ready: (ready) => ready,
+  });
 
   const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(
     caret,
@@ -97,16 +108,17 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
       padding="xs"
       maxHeight="md"
     >
-      {pageOptionsResult.pending ? (
-        <Loading variant="rows" />
-      ) : (
-        <PageOptionsList
-          options={pageOptionsResult.options}
-          activeIndex={activeIndex}
-          onCommit={commit}
-          onHoverIndex={setActiveIndex}
-        />
-      )}
+      {matchResource(pageOptionsResult, {
+        loading: () => <Loading variant="rows" />,
+        ready: (ready) => (
+          <PageOptionsList
+            options={ready}
+            activeIndex={activeIndex}
+            onCommit={commit}
+            onHoverIndex={setActiveIndex}
+          />
+        ),
+      })}
     </CaretTriggerMenu>
   );
 }

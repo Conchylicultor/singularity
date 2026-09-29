@@ -1,12 +1,15 @@
 import { useContext } from "react";
+import { useConfigResult } from "@plugins/config_v2/web";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import type {
-  ColorAdjustment,
-  GroupValues,
-  Theme,
-  ThemeId,
-  TokenGroupDescriptor,
-  TokenGroupFragment,
+import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import {
+  themeSelectionConfig,
+  type ColorAdjustment,
+  type GroupValues,
+  type Theme,
+  type ThemeId,
+  type TokenGroupDescriptor,
+  type TokenGroupFragment,
 } from "@plugins/ui/plugins/theme-engine/core";
 import {
   useResolvedTheme,
@@ -16,8 +19,38 @@ import {
 import { useEditTheme } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
 import { TokenModeContext, type TokenMode } from "./token-mode-context";
 
+/**
+ * An editor that cannot be used yet: still loading (`error: null`), or the
+ * scope's theme selection FAILED to load — the painter keeps painting its
+ * fallback then, but an editor must not fork from that fallback (the copy
+ * would be selected over the user's real choice), so it renders the failure
+ * with `refetch` as the retry.
+ */
+export type EditorNotReady =
+  | { pending: true; error: null }
+  | { pending: true; error: ResourceError; refetch: () => Promise<void> };
+
+const EDITOR_LOADING: EditorNotReady = { pending: true, error: null };
+
+// The scope's selection read, reduced to what blocks an editor: its failure.
+// `useResolvedTheme` folds that failure into a paintable theme, which is right
+// for the painter and wrong for an editor.
+function useSelectionFailure(
+  scopeId: string | undefined,
+): EditorNotReady | null {
+  const selection = useConfigResult(themeSelectionConfig, { scopeId });
+  if (selection.status === "error") {
+    return {
+      pending: true,
+      error: selection.error,
+      refetch: selection.refetch,
+    };
+  }
+  return null;
+}
+
 export type TokenGroupEditor =
-  | { pending: true }
+  | EditorNotReady
   | {
       pending: false;
       /** The light/dark the editor shows and writes. */
@@ -53,8 +86,9 @@ export type TokenGroupEditor =
  * resolves to and writes through `useEditTheme` — the one place theme edits
  * land. A section never touches config or a theme row itself.
  *
- * Pending while the scope's theme is not known yet: an editor must render its
- * loading state then, because `useEditTheme` refuses to act on an unknown theme.
+ * Pending while the scope's theme is not known yet, or while its selection
+ * failed to load (`error` set): an editor must render its loading state or the
+ * failure then, because `useEditTheme` refuses to act on an unknown theme.
  */
 export function useTokenGroupEditor(
   group: TokenGroupDescriptor,
@@ -64,8 +98,10 @@ export function useTokenGroupEditor(
   const resolved = useResolvedTheme(scopeId);
   const themes = useThemes();
   const edits = useEditTheme(scopeId);
+  const failure = useSelectionFailure(scopeId);
 
-  if (resolved.pending || themes.pending) return { pending: true };
+  if (failure !== null) return failure;
+  if (resolved.pending || themes.pending) return EDITOR_LOADING;
 
   const { themesById } = themes;
   const theme = themeOf(themesById, resolved.themeId);
@@ -98,7 +134,7 @@ export function useTokenGroupEditor(
 }
 
 export type ColorAdjustEditor =
-  | { pending: true }
+  | EditorNotReady
   | {
       pending: false;
       /** The adjustment the scope's theme paints through (its own, or inherited). */
@@ -116,7 +152,9 @@ export function useColorAdjustEditor(): ColorAdjustEditor {
   const scopeId = useThemeScopeId();
   const resolved = useResolvedTheme(scopeId);
   const edits = useEditTheme(scopeId);
-  if (resolved.pending) return { pending: true };
+  const failure = useSelectionFailure(scopeId);
+  if (failure !== null) return failure;
+  if (resolved.pending) return EDITOR_LOADING;
   return {
     pending: false,
     adjustment: resolved.theme.colorAdjust,

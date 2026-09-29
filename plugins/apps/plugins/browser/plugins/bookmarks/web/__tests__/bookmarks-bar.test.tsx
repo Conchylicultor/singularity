@@ -37,6 +37,7 @@ vi.mock("@plugins/apps/plugins/browser/plugins/shell/web", () => ({
 }));
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import type { BookmarkRow } from "../../core";
 import { BookmarksBar } from "../components/bookmarks-bar";
 
@@ -53,7 +54,7 @@ function settled(
   paging: { canGrow: boolean; growing: boolean },
 ) {
   state.result = {
-    pending: false,
+    status: "ready",
     data: rows,
     refetch,
     ...paging,
@@ -64,7 +65,7 @@ function settled(
 }
 
 beforeEach(() => {
-  state.result = { pending: true, error: null, refetch };
+  state.result = { status: "loading", refetch };
   state.queries = [];
   state.loadMore = 0;
 });
@@ -79,6 +80,17 @@ describe("BookmarksBar", () => {
     expect(state.queries.length).toBeGreaterThan(0);
     expect(state.queries.every((q) => q === undefined)).toBe(true);
     expect(container.innerHTML).toBe("");
+  });
+
+  it("says a failed read, with Retry, instead of rendering nothing", () => {
+    state.result = {
+      status: "error",
+      error: new ResourceError("loader-failed", "boom", null),
+      refetch,
+    };
+    render(<BookmarksBar />);
+    expect(screen.getByText(/Couldn't load bookmarks: boom/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeDefined();
   });
 
   it("renders nothing when there are no bookmarks", () => {

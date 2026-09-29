@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
   defineDataView,
@@ -46,7 +47,17 @@ export function Backlinks({ documentId }: BacklinksProps) {
     [],
   );
 
-  if (result.pending) return null;
+  if (result.status === "loading") return null;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        error={result.error}
+        refetch={result.refetch}
+        variant="block"
+        subject="the pages linking here"
+      />
+    );
+  }
   const rows = result.data;
   if (rows.length === 0) return null;
 

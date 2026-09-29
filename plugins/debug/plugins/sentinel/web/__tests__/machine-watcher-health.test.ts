@@ -18,7 +18,7 @@ function settled(
   watch: SentinelWatch,
   duress: SentinelStatusValue["duress"] = null,
 ): ResourceResult<SentinelStatusValue> {
-  return { pending: false, data: { watch, duress }, refetch };
+  return { status: "ready", data: { watch, duress }, refetch };
 }
 
 function recorded(
@@ -32,7 +32,10 @@ function recorded(
 describe("Machine watcher health row", () => {
   it("is unknown — not ok — while loading", () => {
     expect(
-      machineWatcherVerdict({ pending: true, error: null, refetch }),
+      machineWatcherVerdict({
+        status: "loading",
+        refetch,
+      }),
     ).toEqual({ state: "unknown" });
   });
 

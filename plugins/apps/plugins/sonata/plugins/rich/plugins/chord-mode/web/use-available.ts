@@ -9,11 +9,17 @@ import {
  * when the mode is already on, so a stale "on" (say, after the song's MIDI was
  * re-imported and detection now finds nothing) can always be switched off.
  * While the mode is pending the song's settings are still loading, so the score
- * is empty and there is no card to offer yet.
+ * is empty and there is no card to offer yet; a failed read leaves the score
+ * empty too, and the player's score gate shows that failure.
  */
 export function useChordModeAvailable(): boolean {
   const hasDerived = useHasDerivedChord();
   const enabled = useSongSetting(chordModeSetting);
-  if (enabled.pending) return false;
-  return hasDerived || enabled.value;
+  switch (enabled.kind) {
+    case "pending":
+    case "failed":
+      return false;
+    case "settled":
+      return hasDerived || enabled.value;
+  }
 }

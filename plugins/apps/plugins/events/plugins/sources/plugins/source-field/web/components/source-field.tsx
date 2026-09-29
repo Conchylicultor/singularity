@@ -62,7 +62,7 @@ export function SourceField({
   // offers no choices yet. The read's error surfaces on the Sources surface,
   // which is the only place it is actionable.
   return matchResource(result, {
-    pending: () => <SourceOptions sources={NO_SOURCES} render={render} />,
+    loading: () => <SourceOptions sources={NO_SOURCES} render={render} />,
     error: () => <SourceOptions sources={NO_SOURCES} render={render} />,
     ready: (sources) => <SourceOptions sources={sources} render={render} />,
   });

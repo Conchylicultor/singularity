@@ -13,10 +13,12 @@
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
+    - `primitives/live-state.combineResources`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
-  - Exports (types): `ConversationsState`
   - Exports (values):
     - `GonePageSchema`
     - `useActiveConversations`
@@ -25,6 +27,7 @@
     - `useConversations`
     - `useHasActiveSiblingInWorktree`
     - `useHasActiveSiblings`
+    - `useLiveConversation`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "auto-answer"

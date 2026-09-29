@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type {
@@ -94,7 +95,16 @@ export function AgentsList({
   const result = useLive(agentRows);
   const openPane = useOpenPane();
 
-  if (result.pending) return <Loading variant="rows" />;
+  if (result.status === "loading") return <Loading variant="rows" />;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the agents"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
 
   const rows = result.data;
 

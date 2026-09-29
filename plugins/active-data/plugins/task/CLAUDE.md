@@ -37,6 +37,8 @@ gets a `useId()`-derived Lexical namespace.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/launch.LaunchControl`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`

@@ -195,6 +195,32 @@ ruleTester.run(
       },
     ],
     invalid: [
+      // The `status` spelling of the same collapse — both branch orders.
+      {
+        code: `
+          const r = useLive(rows);
+          const xs = r.status !== "ready" ? [] : r.data;
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
+      {
+        code: `
+          const r = useLive(rows);
+          const xs = r.status === "ready" ? r.data : [];
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
+      // …and its statement form.
+      {
+        code: `
+          function useRows() {
+            const r = useResource(rowsResource);
+            if (r.status !== "ready") return [];
+            return r.data;
+          }
+        `,
+        errors: [{ messageId: "pendingCollapseReturn" }],
+      },
       // A title hook returning null (not the contract's undefined) is still flagged.
       {
         code: `

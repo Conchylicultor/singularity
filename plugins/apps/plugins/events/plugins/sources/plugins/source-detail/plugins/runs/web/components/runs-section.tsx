@@ -4,8 +4,7 @@ import {
   defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEventSourceRuns } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import type { EventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/core";
@@ -116,23 +115,20 @@ export function SourceRunsSection({
     [],
   );
 
-  // A failed fetch is its own state, never an eternal skeleton: "the ledger is
-  // unreachable" and "this source has never run" are different answers to the
-  // question this card exists to settle.
-  if (query.isError) {
-    return (
-      <Placeholder tone="error">
-        {getEndpointErrorMessage(query.error)}
-      </Placeholder>
-    );
-  }
-
-  const runs = query.data;
+  // The rows only reach the view once the read is ready (`readiness`): a
+  // failed fetch renders its failure with Retry, never an eternal skeleton —
+  // "the ledger is unreachable" and "this source has never run" are different
+  // answers to the question this card exists to settle.
+  const runs = foldResource(query, {
+    loading: () => EMPTY_RUNS,
+    error: () => EMPTY_RUNS,
+    ready: (rows) => rows,
+  });
 
   return (
     <DataView<EventSourceRun>
       storageKey={RUNS_VIEW}
-      rows={runs ?? EMPTY_RUNS}
+      rows={runs}
       fields={fields}
       rowKey={(r) => r.id}
       itemActions={RunActions}
@@ -157,7 +153,7 @@ export function SourceRunsSection({
         )
       }
       views={["list", "table"]}
-      loading={runs === undefined}
+      readiness={query}
       viewOptions={{
         list: {
           size: "sm",

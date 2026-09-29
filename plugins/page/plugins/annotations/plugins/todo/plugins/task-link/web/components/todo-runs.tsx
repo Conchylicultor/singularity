@@ -1,4 +1,5 @@
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { ConversationChip } from "@plugins/conversations/plugins/conversation-ui/plugins/chip/web";
 import { useTaskConversations } from "@plugins/tasks/plugins/tasks-core/web";
 import { useTodoTask } from "../hooks";
@@ -34,9 +35,18 @@ import { useTodoTask } from "../hooks";
  */
 export function TodoRuns({ blockId }: { blockId: string }) {
   const link = useTodoTask(blockId);
-  // Nothing while loading, nothing when not dispatched.
-  if (link.pending || !link.found) return null;
-  return <DispatchedRuns taskId={link.row.taskId} />;
+  // Nothing while loading, nothing when not dispatched. A failed read keeps the
+  // link it last saw, else nothing: the card's anchor renders the failure.
+  switch (link.status) {
+    case "loading":
+      return null;
+    case "error":
+      return link.stale === undefined ? null : (
+        <DispatchedRuns taskId={link.stale.taskId} />
+      );
+    case "ready":
+      return link.found ? <DispatchedRuns taskId={link.row.taskId} /> : null;
+  }
 }
 
 /**
@@ -51,7 +61,18 @@ function DispatchedRuns({ taskId }: { taskId: string }) {
   // rendered the same, decided separately. A placeholder strip at the foot of
   // every dispatched card on a freshly-opened page would be noise, and the
   // window is one round trip wide.
-  if (runs.pending || runs.data.length === 0) return null;
+  if (runs.status === "loading") return null;
+  if (runs.status === "error") {
+    return (
+      <ResourceErrorInline
+        error={runs.error}
+        refetch={runs.refetch}
+        variant="inline"
+        subject="this card's runs"
+      />
+    );
+  }
+  if (runs.data.length === 0) return null;
 
   return (
     <Cluster gap="xs">

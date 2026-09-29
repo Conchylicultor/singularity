@@ -1,5 +1,8 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   useOpenPane,
@@ -46,11 +49,16 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
     // ancestors) would leave the pane rendering a page that is no longer in the
     // tree — so fall back to the Pages landing surface (the empty route
     // re-resolves to the app's index pane). The `onUndo` hook re-opens it, so
-    // Cmd+Z puts the user back exactly where they were.
+    // Cmd+Z puts the user back exactly where they were. With the pages list
+    // unknown (loading or failed) the ancestry cannot be told, so the pane is
+    // left as it is.
     const reopenId =
       openPageId !== undefined &&
-      !pages.pending &&
-      isSelfOrPageAncestor(pages.data, pageId, openPageId)
+      foldResource(pages, {
+        loading: () => false,
+        error: () => false,
+        ready: (list) => isSelfOrPageAncestor(list, pageId, openPageId),
+      })
         ? openPageId
         : undefined;
 

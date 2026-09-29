@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -188,6 +189,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     play,
     stop,
     scorePending,
+    scoreFailure,
   } = useSonata();
 
   // Seed the live zoom from the persisted global on load (and reflect a
@@ -312,7 +314,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // and scroll never touch it (the scene maps it to pixels with one transform).
   const visuals = useMemo(
     () =>
-      colorMap.pending || hiddenIds.pending
+      colorMap.kind !== "settled" || hiddenIds.kind !== "settled"
         ? NO_VISUALS
         : buildNoteVisuals({
             score,
@@ -325,7 +327,10 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
           }),
     [score, plane, hiddenIds, colorMap, speller, tempoScale],
   );
-  const viewPending = scorePending || colorMap.pending || hiddenIds.pending;
+  // A failed track-view read also fails the score gate (`scoreFailure`);
+  // unsettled views otherwise read as still loading.
+  const viewPending =
+    scorePending || colorMap.kind !== "settled" || hiddenIds.kind !== "settled";
 
   // Bar markers in authored seconds (the canvas grid + bar numbers' input).
   const barMarkers = useMemo(
@@ -651,6 +656,18 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
                     details.
                   </Text>
                 </Stack>
+              </Center>
+            </Layer>
+          ) : scoreFailure !== null ? (
+            /* A setting could not be read: not "no notes", not a spinner. */
+            <Layer>
+              <Center className="h-full w-full">
+                <ResourceErrorInline
+                  variant="block"
+                  subject="the song's settings"
+                  error={scoreFailure.error}
+                  refetch={scoreFailure.refetch}
+                />
               </Center>
             </Layer>
           ) : viewPending ? (

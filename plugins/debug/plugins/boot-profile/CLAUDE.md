@@ -104,6 +104,8 @@ unbounded.
     - `primitives/data-table.DataTable`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.useEndpointResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`

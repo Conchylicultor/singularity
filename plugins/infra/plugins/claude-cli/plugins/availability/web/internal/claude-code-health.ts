@@ -14,10 +14,9 @@ import { claudeCodeProblem, type ClaudeCodeStatus } from "../../core";
 export function claudeCodeVerdict(
   result: ResourceResult<ClaudeCodeStatus>,
 ): HealthStatus {
-  if (result.pending) {
-    return result.error === null
-      ? { state: "unknown" }
-      : { state: "unknown", summary: "Couldn't load Claude Code's status" };
+  if (result.status === "loading") return { state: "unknown" };
+  if (result.status === "error") {
+    return { state: "unknown", summary: "Couldn't load Claude Code's status" };
   }
   const s = result.data;
   switch (s.kind) {

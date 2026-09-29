@@ -26,8 +26,16 @@ committed `theme.jsonc` does it in git (the website's: `{ "theme": "equin" }`).
   - `browse`: a catalog (tweakcn's community themes). An entry becomes a theme
     once its `adopt` saves it into a resident source.
 
+Each source's hook (`useThemes` / `useEntries`) returns a `ResourceResult`
+(`useEndpointResource` for an endpoint-backed one), so a failed read is its own
+state, never a forever-loading or empty list.
+
 `useThemes()` = code themes + every resident source, pending while any resident
-source loads. A code theme's id is a bare word and a stored one's is
+source loads. A resident source whose read FAILED never holds it pending — the
+app would blank: its last-known themes (`stale`) still count, and it is listed
+in `failures`, which the gallery renders with Retry. A selection absent while a
+source failed paints Default without being reported `missing` (whether it
+exists is unknown). The gallery's browse listings follow the same rule. A code theme's id is a bare word and a stored one's is
 `<source>:<key>`, so they cannot collide; a duplicate id throws.
 
 ## How a theme resolves (`core/resolve-theme.ts`)
@@ -161,6 +169,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `primitives/css/ui-kit.fixedThemeScope`
     - `primitives/css/ui-kit.subThemeScope`
     - `primitives/css/ui-kit.themeScopeSelectors`
+    - `primitives/live-state.foldResource`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):
     - `ColorMode`
@@ -171,6 +180,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `ThemeSelectionsState`
     - `ThemeSourceContribution`
     - `ThemeSourceEntry`
+    - `ThemeSourceFailure`
     - `ThemesState`
     - `TokenGroupContribution`
     - `VariantGroupContribution`

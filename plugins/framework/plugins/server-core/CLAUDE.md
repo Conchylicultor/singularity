@@ -314,6 +314,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `scopedResourceIdentities`
     - `seedPersistedSnapshot`
     - `serverCollectedDir`
+    - `setClientBuildIdentity`
     - `setErrorReporter`
     - `setFatalReporter`
     - `setFeedExemptTables`

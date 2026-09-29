@@ -108,6 +108,7 @@ plus a per-song reset.
     - `apps/sonata/shell.defineSongSetting`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.SongSetting`
+    - `apps/sonata/shell.useFailSongSetting`
     - `apps/sonata/shell.useMountedSongId`
     - `apps/sonata/shell.useSonata`
     - `apps/sonata/shell.useSongSetting`
@@ -129,6 +130,8 @@ plus a per-song reset.
     - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/optimistic-mutation.enqueueResourceWrite`
     - `primitives/overlay/floating-action.FloatingAction`

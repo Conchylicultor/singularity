@@ -2,7 +2,10 @@ import { useState, type ReactNode } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   useActiveViewId,
@@ -51,21 +54,26 @@ const STORAGE_KEY = "deploy.remote-deploy.output";
  * when this surface has no opinion about which tab to show.
  *
  * `null` is a genuine absence, not a stand-in for a not-yet-loaded value: still
- * loading, no run recorded, and a finished run all mean the same thing to the
- * caller — *fall back to the persisted choice*. There is no state a
- * loaded-but-empty answer would render differently from a pending one, which is
- * the condition under which collapsing them is safe.
+ * loading, a failed read, no run recorded, and a finished run all mean the same
+ * thing to the caller — *fall back to the persisted choice*. There is no state
+ * a loaded-but-empty answer would render differently from a loading or failed
+ * one, which is the condition under which collapsing them is safe.
  */
 function followedChannel(
   runs: ResourceResult<Record<string, DeployRun>>,
   deploymentId: string,
 ): string | null {
-  if (runs.pending) return null;
-  const run = runs.data[deploymentId];
-  if (run?.status !== "running" || run.phase === null) return null;
-  // The middle leg of an `update` writes to a DIFFERENT channel from the two
-  // that surround it.
-  return run.phase === "build" ? RELEASE_LOG_CHANNEL : DEPLOY_LOG_CHANNEL;
+  return foldResource(runs, {
+    loading: () => null,
+    error: () => null,
+    ready: (byId) => {
+      const run = byId[deploymentId];
+      if (run?.status !== "running" || run.phase === null) return null;
+      // The middle leg of an `update` writes to a DIFFERENT channel from the
+      // two that surround it.
+      return run.phase === "build" ? RELEASE_LOG_CHANNEL : DEPLOY_LOG_CHANNEL;
+    },
+  });
 }
 
 /**

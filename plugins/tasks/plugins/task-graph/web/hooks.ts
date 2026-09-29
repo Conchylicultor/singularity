@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   tasksResource,
   TaskGraph as TaskGraphValue,
@@ -15,25 +18,36 @@ export interface TaskClosure {
 
 /**
  * The task's dependency closure, or `null` while the task list is still
- * loading — NOT an empty closure, which is a task with no edges and means
+ * loading (or failed to load) — NOT an empty closure, which is a task with no edges and means
  * something else entirely (it decides whether the section is painted at all).
  */
 export function useTaskClosure(taskId: string): TaskClosure | null {
   const result = useResource(tasksResource);
   return useMemo((): TaskClosure | null => {
-    if (result.pending) return null;
-    const allTasks = result.data;
-    const byId = new Map(allTasks.map((t) => [t.id, t]));
-    const root = byId.get(taskId);
-    // closure() excludes the queried id; re-include the root so it renders.
-    const ids = TaskGraphValue.from(allTasks)
-      .closure(taskId, { includeGroups: true })
-      .map((n) => n.id);
-    const closure = [...(root ? [taskId] : []), ...ids]
-      .map((id) => byId.get(id))
-      .filter((t): t is TaskListItem => !!t);
-    return { closure, allTasks };
+    return foldResource(result, {
+      loading: () => null,
+      // The graph is an optional section: a failed task list paints no card
+      // (the task list's own surfaces report the failure).
+      error: () => null,
+      ready: (allTasks) => closureOf(allTasks, taskId),
+    });
   }, [taskId, result]);
+}
+
+function closureOf(
+  allTasks: readonly TaskListItem[],
+  taskId: string,
+): TaskClosure {
+  const byId = new Map(allTasks.map((t) => [t.id, t]));
+  const root = byId.get(taskId);
+  // closure() excludes the queried id; re-include the root so it renders.
+  const ids = TaskGraphValue.from(allTasks)
+    .closure(taskId, { includeGroups: true })
+    .map((n) => n.id);
+  const closure = [...(root ? [taskId] : []), ...ids]
+    .map((id) => byId.get(id))
+    .filter((t): t is TaskListItem => !!t);
+  return { closure, allTasks };
 }
 
 /**

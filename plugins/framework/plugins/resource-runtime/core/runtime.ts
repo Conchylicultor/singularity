@@ -5,6 +5,14 @@ import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
+  BUILD_GRAPH_HEADER,
+  ResourceContractError,
+  contractVerdict,
+  type ContractVerdict,
+  type ResourceHttpErrorBody,
+  type SubErrorFrame,
+} from "@plugins/packages/plugins/resource-protocol/core";
+import {
   buildSnapshot,
   diffKeyedFull,
   diffKeyedScoped as diffKeyedScopedPure,
@@ -376,6 +384,13 @@ export interface ResourceDefinition<
    */
   authorize?: (params: P) => boolean | Promise<boolean>;
   /**
+   * The params gate — see `ResourceContract.validateParams`. Required on the
+   * two-arg form (the contract carries it); optional only on the flat
+   * `defineResource({...})` form, which predates it and declares no param
+   * names — absent there ⇒ any params are accepted.
+   */
+  validateParams?: (params: ResourceParams) => void;
+  /**
    * Preload marker (`"boot"` / `"boot-and-keep"`), threaded from the shared
    * client descriptor through the two-arg `defineResource`/`defineExternalResource`
    * form onto the returned `Resource`. Pure metadata: it does not affect
@@ -533,6 +548,17 @@ export interface ResourceContract<
   preload?: "boot" | "boot-and-keep";
   /** Optional param names — see `ResourceDefinition.optionalParams`. */
   optionalParams?: readonly string[];
+  /**
+   * The params gate, declared once on the shared descriptor: throws
+   * `ResourceContractError` when a subscription's wire params do not match
+   * the declaration. The runtime runs it BEFORE `authorize`, the sub
+   * registration and any read (WS and HTTP alike), so a mismatched sub — a tab
+   * running an older bundle after a deploy — is refused as
+   * `contract-mismatch` and never registered: no push, revalidate or scoped
+   * recompute ever reruns it. Required so every descriptor factory decides
+   * (the legacy ones state `acceptAnyParams` by name).
+   */
+  validateParams: (params: ResourceParams) => void;
   /** Phantom — carries `P` for inference, mirroring the client descriptor. */
   readonly __params?: P;
 }
@@ -656,6 +682,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     onLastUnsubscribe: opts.onLastUnsubscribe,
     revalidate: opts.revalidate,
     authorize: opts.authorize,
+    validateParams: contract.validateParams,
   };
 }
 
@@ -919,7 +946,55 @@ interface RegistryEntry {
    * if it resolves falsy.
    */
   authorize?: (params: ResourceParams) => boolean | Promise<boolean>;
+  /**
+   * The params gate (see `ResourceContract.validateParams`). Always present: a
+   * flat-form definition without one gets `acceptAnyParams`.
+   */
+  validateParams: (params: ResourceParams) => void;
 }
+
+/**
+ * The params gate of a flat-form definition that declares none: the flat form
+ * names no params, so nothing can be checked. Named so the choice is visible.
+ */
+function acceptAnyParams(_params: ResourceParams): void {}
+
+/**
+ * Every frame `sendJson` sends — one socket, one frame. (The broadcast frames
+ * — update, delta, invalidate, ack — go through `broadcastJson`.)
+ */
+type ServerFrame =
+  | { kind: "ping"; flushOpenMs: number }
+  | SubErrorFrame
+  | {
+      kind: "up-to-date";
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      version: number;
+      epoch: string;
+    }
+  | {
+      kind: "up-to-date-batch";
+      epoch: string;
+      entries: Array<{
+        id?: number;
+        key: string;
+        params: ResourceParams;
+        version: number;
+      }>;
+    }
+  | {
+      kind: "sub-ack";
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      value: unknown;
+      version: number;
+      etag?: string;
+      watermark?: string;
+      epoch: string;
+    };
 
 /**
  * One socket-held subscription record for a (key, paramsKey): the params object
@@ -1071,6 +1146,17 @@ export interface ResourceRuntimeOptions {
    * `subShortCircuits`. server: optional metric hook; central / omitted: no-op.
    */
   onStaleFlightSupersede?: (key: string) => void;
+  /**
+   * The build graph this process serves (the web bundle built alongside it),
+   * for judging a contract mismatch: a client whose `build` differs is running
+   * an older bundle (`skew` — expected, a reload fixes it, only warned), one
+   * whose build matches has a real bug (`same-build` — reported). Must be the
+   * graph read at BOOT, not a fresh read: the build swaps the served dist
+   * before it restarts this process, and the code answering is the boot
+   * build's. `null` = unknown. server: boot-injected by `build/server-build-id`
+   * through `setClientBuildIdentity`; central: omit (every verdict `unknown`).
+   */
+  serverBuildGraph?: () => string | null;
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
   /** Fired once per push to >=1 subscriber, with whether the push carried a content change.
@@ -1644,6 +1730,116 @@ export function createResourceRuntime(
       );
     }
     return canonical;
+  }
+
+  // ── Contract mismatch (see `ResourceContract.validateParams`) ──────────
+  // A subscription whose params do not match its declaration is, after a
+  // deploy, almost always a tab still running the previous bundle: expected,
+  // and fixed by a reload. So the gate refuses it before it registers, and the
+  // verdict decides whether anyone is told: `skew` only warns; `same-build` /
+  // `unknown` report, because a current client failing decode is a real bug.
+
+  /** Judge a mismatch against the client's build and apply the reporting policy. */
+  function rejectContract(
+    key: string,
+    params: ResourceParams,
+    err: ResourceContractError,
+    clientBuild: string | undefined,
+  ): ContractVerdict {
+    const verdict = contractVerdict(
+      clientBuild,
+      opts.serverBuildGraph?.() ?? null,
+    );
+    if (verdict === "skew") {
+      console.warn(
+        `[resources] contract mismatch (skew) for ${key} params=${paramsKey(params)}: ${err.message}`,
+      );
+    } else {
+      reportLoaderError(`contract mismatch (${verdict}) for ${key}`, err);
+    }
+    return verdict;
+  }
+
+  /**
+   * The verdict an unknown key carries: a key the server no longer (or does
+   * not yet) serve is the other face of skew. Never reported — a client naming
+   * a key is not a server fault.
+   */
+  function unknownKeyVerdict(clientBuild: string | undefined): ContractVerdict {
+    return contractVerdict(clientBuild, opts.serverBuildGraph?.() ?? null);
+  }
+
+  /**
+   * Run `entry`'s params gate for a WS sub. On a refusal it sends the
+   * `sub-error` itself and returns true; the caller must then neither
+   * authorize, register nor load. A gate that throws something other than
+   * `ResourceContractError` is a bug in the gate: reported, refused as
+   * `loader-failed`.
+   */
+  function refuseSubParams(
+    ws: ServerWebSocket<WsData>,
+    entry: RegistryEntry,
+    id: number | undefined,
+    params: ResourceParams,
+    clientBuild: string | undefined,
+  ): boolean {
+    try {
+      entry.validateParams(params);
+      return false;
+    } catch (err) {
+      if (err instanceof ResourceContractError) {
+        const verdict = rejectContract(entry.key, params, err, clientBuild);
+        sendJson(ws, {
+          kind: "sub-error",
+          id,
+          key: entry.key,
+          params,
+          reason: "contract-mismatch",
+          verdict,
+        });
+      } else {
+        reportLoaderError(`validateParams failed for ${entry.key}`, err);
+        sendJson(ws, {
+          kind: "sub-error",
+          id,
+          key: entry.key,
+          params,
+          reason: "loader-failed",
+        });
+      }
+      return true;
+    }
+  }
+
+  /**
+   * The backstop for a gate gap: a REGISTERED tuple whose loader (or window /
+   * point decode) threw `ResourceContractError` — the gate let through params
+   * the loader refuses. Left registered, every push would rerun it and fail
+   * again, so the tuple is dropped from every socket holding it, each holder
+   * is told `contract-mismatch`, and it is ALWAYS reported (it is a bug in the
+   * gate, whatever the client's build). Returns false for any other error, so
+   * the caller's own failure handling runs.
+   */
+  function evictOnContractError(
+    entry: RegistryEntry,
+    params: ResourceParams,
+    err: unknown,
+  ): boolean {
+    if (!(err instanceof ResourceContractError)) return false;
+    reportLoaderError(
+      `contract mismatch past the params gate for ${entry.key} (validateParams accepted params the loader refuses)`,
+      err,
+    );
+    unregisterTupleEverywhere(entry.key, params, (state) =>
+      sendJson(state.ws, {
+        kind: "sub-error",
+        key: entry.key,
+        params,
+        reason: "contract-mismatch",
+        verdict: "unknown",
+      }),
+    );
+    return true;
   }
 
   function paramsKey(params: ResourceParams): string {
@@ -2329,6 +2525,7 @@ export function createResourceRuntime(
         ((params: ResourceParams) => Promise<string>) | undefined,
       authorize: def.authorize as
         ((params: ResourceParams) => boolean | Promise<boolean>) | undefined,
+      validateParams: def.validateParams ?? acceptAnyParams,
     };
     registry.set(def.key, entry);
 
@@ -2514,7 +2711,7 @@ export function createResourceRuntime(
     return ackSubscribersFor(key, paramsKey(params)).length > 0;
   }
 
-  function sendJson(ws: ServerWebSocket<WsData>, obj: unknown): void {
+  function sendJson(ws: ServerWebSocket<WsData>, obj: ServerFrame): void {
     try {
       ws.send(JSON.stringify(obj));
       // eslint-disable-next-line promise-safety/no-bare-catch
@@ -3081,6 +3278,7 @@ export function createResourceRuntime(
             )));
         valueComputed = true;
       } catch (err) {
+        if (evictOnContractError(entry, params, err)) return;
         reportLoaderError(`loader failed for ${entry.key}`, err);
         return; // never ship or cascade a torn read; snapshot untouched — and no ack (no false ack on failure)
       }
@@ -3250,6 +3448,7 @@ export function createResourceRuntime(
         refillRows = v as unknown[];
         loaderRan = true;
       } catch (err) {
+        if (evictOnContractError(entry, params, err)) return;
         reportLoaderError(`loader failed for ${entry.key}`, err);
         await drainMembershipFull(entry, pendingEntry, persisted); // never ship torn membership
         return;
@@ -3350,6 +3549,7 @@ export function createResourceRuntime(
               )
             : runWindowIds(entry, membership, params));
         } catch (err) {
+          if (evictOnContractError(entry, params, err)) return;
           reportLoaderError(`windowIdsOf failed for ${entry.key}`, err);
           await drainMembershipFull(entry, pendingEntry, persisted);
           return;
@@ -3384,6 +3584,7 @@ export function createResourceRuntime(
             }
             loaderRan = true;
           } catch (err) {
+            if (evictOnContractError(entry, params, err)) return;
             reportLoaderError(`loader failed for ${entry.key}`, err);
             await drainMembershipFull(entry, pendingEntry, persisted);
             return;
@@ -3406,6 +3607,7 @@ export function createResourceRuntime(
               )
             : runWindowIds(entry, membership, params));
         } catch (err) {
+          if (evictOnContractError(entry, params, err)) return;
           reportLoaderError(`orderOf failed for ${entry.key}`, err);
           await drainMembershipFull(entry, pendingEntry, persisted);
           return;
@@ -3669,6 +3871,7 @@ export function createResourceRuntime(
               )));
           valueComputed = true;
         } catch (err) {
+          if (evictOnContractError(entry, params, err)) continue;
           reportLoaderError(`loader failed for ${entry.key}`, err);
           // Skip sending and cascading on loader failure — otherwise we'd
           // invalidate downstream state based on a torn read. Never persist on
@@ -3762,6 +3965,7 @@ export function createResourceRuntime(
                     pendingEntry.lastNotifyAt,
                   )));
             } catch (err) {
+              if (evictOnContractError(entry, params, err)) continue;
               reportLoaderError(`loader failed for ${entry.key}`, err);
               continue;
             }
@@ -3954,6 +4158,11 @@ export function createResourceRuntime(
         // The sending tab's id (per-tab sub bookkeeping — see `SocketSubRecord`).
         // Optional; an untagged frame lands in the legacy `""` bucket.
         tabId?: string;
+        // The build graph the sending tab's bundle was built from, on `sub` /
+        // `sub-batch` — per frame, because a shared socket's leader relays
+        // follower tabs that may run different bundles. Judges a contract
+        // mismatch (`rejectContract`); absent from a bundle that predates it.
+        build?: string;
         // Client-requested standalone ack frames (see `SocketSubRecord.ackTabs`):
         // on `op: "sub"` / a `sub-batch` entry it restates the tab's current
         // flag (absent = off); on `op: "sub-acks"` it flips it on a held sub.
@@ -4083,10 +4292,12 @@ export function createResourceRuntime(
       epoch?: string;
       tabId?: string;
       acks?: boolean;
+      build?: string;
     },
   ): Promise<void> {
     const { id, key, params = {}, etag: clientEtag } = m;
     if (!key) return;
+    const build = typeof m.build === "string" ? m.build : undefined;
     const entry = registry.get(key);
     if (!entry) {
       sendJson(state.ws, {
@@ -4095,9 +4306,13 @@ export function createResourceRuntime(
         key,
         params,
         reason: "unknown-key",
+        verdict: unknownKeyVerdict(build),
       });
       return;
     }
+    // The params gate — before authorize and before the sub registers, so a
+    // refused sub leaves no trace a push could rerun.
+    if (refuseSubParams(state.ws, entry, id, params, build)) return;
     // Subscription-authorization seam (deferred; single-instance-per-user — see
     // research/2026-07-02-global-adr-single-instance-per-user.md). Runs before
     // any side effect (refcount bump, onFirstSubscribe, loader read) so a refused
@@ -4285,6 +4500,9 @@ export function createResourceRuntime(
       // instead of running with `parent: null`. Gated by the read-admission cap.
       ({ value, etag, watermark } = await gatedRead(entry, params, freshEtag));
     } catch (err) {
+      // A gate gap: the tuple is registered, so evict it everywhere (which
+      // tells this socket too) rather than leave every push re-failing.
+      if (evictOnContractError(entry, params, err)) return;
       reportLoaderError(`loader failed for ${key}`, err);
       sendJson(state.ws, {
         kind: "sub-error",
@@ -4353,6 +4571,7 @@ export function createResourceRuntime(
     m: {
       tabId?: string;
       epoch?: string;
+      build?: string;
       complete?: boolean;
       entries?: Array<{
         id?: number;
@@ -4365,6 +4584,7 @@ export function createResourceRuntime(
     },
   ): void {
     const tabId = typeof m.tabId === "string" ? m.tabId : "";
+    const build = typeof m.build === "string" ? m.build : undefined;
     const entries = Array.isArray(m.entries) ? m.entries : [];
 
     // Pass 1 — synchronous registration of every entry.
@@ -4380,13 +4600,14 @@ export function createResourceRuntime(
     }> = [];
     // Keys retained by the reconciliation, including entries routed through the
     // full per-sub path (authorize) whose registration is deferred — dropping
-    // them here would 1→0→1 them before their own handleSub registers.
+    // them here would 1→0→1 them before their own handleSub registers. A
+    // refused entry (unknown key, params gate) is NOT retained: it never
+    // registers, and a record the tab held for it before is released.
     const retained = new Set<string>();
     for (const e of entries) {
       if (!e.key) continue;
       const params = e.params ?? {};
       const pk = paramsKey(params);
-      retained.add(`${e.key}\0${pk}`);
       const entry = registry.get(e.key);
       if (!entry) {
         sendJson(state.ws, {
@@ -4395,9 +4616,12 @@ export function createResourceRuntime(
           key: e.key,
           params,
           reason: "unknown-key",
+          verdict: unknownKeyVerdict(build),
         });
         continue;
       }
+      if (refuseSubParams(state.ws, entry, e.id, params, build)) continue;
+      retained.add(`${e.key}\0${pk}`);
       if (entry.authorize) {
         // The authorization seam must run BEFORE any side effect (see
         // `handleSub`), so an authorized entry cannot be pre-registered here —
@@ -4412,6 +4636,7 @@ export function createResourceRuntime(
           epoch: m.epoch,
           tabId,
           acks: e.acks,
+          build,
         });
         continue;
       }
@@ -4504,9 +4729,36 @@ export function createResourceRuntime(
     if (!rec.tabs.delete(tabId)) return;
     rec.ackTabs.delete(tabId);
     if (rec.tabs.size > 0) return;
+    unregisterSubOnSocket(state, key, pk);
+  }
+
+  // Drop a socket's whole record for (key, pk) — every tab holding it — and
+  // release the socket-level refcount. Returns whether the socket held it.
+  function unregisterSubOnSocket(
+    state: SocketState,
+    key: string,
+    pk: string,
+  ): boolean {
+    const inner = state.subs.get(key);
+    const rec = inner?.get(pk);
+    if (!inner || !rec) return false;
     inner.delete(pk);
     if (inner.size === 0) state.subs.delete(key);
     releaseSubRefcount(key, pk, rec.params);
+    return true;
+  }
+
+  // Drop (key, params) from every socket that holds it, calling `onDropped`
+  // for each (after the record is gone).
+  function unregisterTupleEverywhere(
+    key: string,
+    params: ResourceParams,
+    onDropped: (state: SocketState) => void,
+  ): void {
+    const pk = paramsKey(params);
+    for (const state of sockets.values()) {
+      if (unregisterSubOnSocket(state, key, pk)) onDropped(state);
+    }
   }
 
   // `op: "sub-acks"` — flip one tab's ack request on a sub it already holds on
@@ -4618,21 +4870,40 @@ export function createResourceRuntime(
     params: Record<string, string>,
   ): Promise<Response> {
     const key = params.key;
-    if (!key) return new Response("Not found", { status: 404 });
+    const build = req.headers.get(BUILD_GRAPH_HEADER) ?? undefined;
+    if (!key) return httpError(404, { reason: "unknown-key" });
     if (key === "_debug") return handleResourcesDebug();
     const entry = registry.get(key);
-    if (!entry) return new Response("Unknown resource", { status: 404 });
+    if (!entry) {
+      return httpError(404, {
+        reason: "unknown-key",
+        verdict: unknownKeyVerdict(build),
+      });
+    }
     // Everything past the registry lookup — the revalidate signature and its 304
     // included — runs inside `wrapHttp` (server: an `http` entry span), so a
     // conditional GET is measured even when it never reaches a loader. Wrapped
     // only after the lookup, so the span label only ever names a registered key.
-    const serve = () => serveResourceHttp(req, entry);
+    const serve = () => serveResourceHttp(req, entry, build);
     return opts.wrapHttp ? opts.wrapHttp(key, serve) : serve();
+  }
+
+  // A failed read's JSON body (see `ResourceHttpErrorBody`): the client reads
+  // the typed reason instead of a bare status. `no-store`, like every body here.
+  function httpError(status: number, body: ResourceHttpErrorBody): Response {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+      },
+    });
   }
 
   async function serveResourceHttp(
     req: Request,
     entry: RegistryEntry,
+    build: string | undefined,
   ): Promise<Response> {
     const key = entry.key;
     const url = new URL(req.url);
@@ -4640,6 +4911,23 @@ export function createResourceRuntime(
     for (const [k, v] of url.searchParams) rawParams[k] = v;
     // `?scopeId=` names the same tuple as no `scopeId` for an optional param.
     const resourceParams = canonicalTuple(entry, rawParams);
+
+    // The params gate, exactly as on the WS path — a mismatch is a 409 with
+    // its verdict, never a loader run (and never a 500 crash report).
+    try {
+      entry.validateParams(resourceParams);
+    } catch (err) {
+      if (!(err instanceof ResourceContractError)) {
+        reportLoaderError(`validateParams failed for ${key}`, err);
+        return httpError(500, { reason: "loader-failed" });
+      }
+      const verdict = rejectContract(key, resourceParams, err, build);
+      return httpError(409, {
+        reason: "contract-mismatch",
+        verdict,
+        detail: err.message,
+      });
+    }
 
     // Conditional revalidation: compute the signature ONCE, BEFORE the value, and
     // use it for the If-None-Match/304 short-circuit — a match means the caller's
@@ -4694,8 +4982,16 @@ export function createResourceRuntime(
         freshEtag,
       ));
     } catch (err) {
+      if (err instanceof ResourceContractError) {
+        evictOnContractError(entry, resourceParams, err);
+        return httpError(409, {
+          reason: "contract-mismatch",
+          verdict: "unknown",
+          detail: err.message,
+        });
+      }
       reportLoaderError(`loader failed for ${key}`, err);
-      return new Response("Loader failed", { status: 500 });
+      return httpError(500, { reason: "loader-failed" });
     }
     // `no-store` forbids the browser HTTP cache from storing this body — the
     // structural cure for the cache-poisoning wedge (a restart-stable ETag let the

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { openPane, Pane, type } from "./pane";
+import type { ResolveResult } from "./resolve";
 import { defineApp, defineRoute } from "../core";
 
 // ---------------------------------------------------------------------------
@@ -114,9 +115,8 @@ const routeChild = Pane.define({
   app: testApp,
   // OWN params — the resolve guard is handed `entry.params`, which
   // `extractOwnParams` filtered to this pane's own segment names.
-  resolve: ({ cid }: { cid: string }) => ({
-    pending: false,
-    found: cid !== "",
+  resolve: ({ cid }: { cid: string }): ResolveResult => ({
+    status: cid !== "" ? "found" : "missing",
   }),
   component: Dummy,
 });

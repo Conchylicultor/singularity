@@ -79,7 +79,7 @@ export function AttemptChip({
   );
 
   return matchResource(result, {
-    pending: () => rawChip,
+    loading: () => rawChip,
     ready: ({ attempts, tasks }) => {
       const attempt = attempts.find((a) => a.id === attemptId);
       if (!attempt) return rawChip;

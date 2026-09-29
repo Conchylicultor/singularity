@@ -1,9 +1,9 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   useLive,
   type LiveListResult,
 } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   FilterChip,
   FilterGroup,
@@ -85,7 +85,8 @@ export function CallsView() {
         <SourceChips value={sourceChip.value} onPick={sourceChip.setValue} />
         {/* An empty Fill absorbs the slack, so the count sits flush right. */}
         <Fill />
-        {!calls.pending && (
+        {/* The count only once the window is known; a failure says so below. */}
+        {calls.status === "ready" && (
           <Text
             as="div"
             variant="caption"
@@ -97,12 +98,15 @@ export function CallsView() {
         )}
       </Stack>
       <Scroll axis="both" fill>
-        {calls.pending ? (
-          calls.error ? (
-            <Placeholder tone="error">{calls.error.message}</Placeholder>
-          ) : (
-            <Loading />
-          )
+        {calls.status === "loading" ? (
+          <Loading />
+        ) : calls.status === "error" ? (
+          <ResourceErrorInline
+            variant="block"
+            subject="the calls"
+            error={calls.error}
+            refetch={calls.refetch}
+          />
         ) : calls.data.length === 0 ? (
           <Center className="h-full">
             <Text as="div" variant="body" className="text-muted-foreground">
@@ -126,7 +130,7 @@ export function CallsView() {
 function CallList({
   list,
 }: {
-  list: Extract<LiveListResult<ClaudeCliCall>, { pending: false }>;
+  list: Extract<LiveListResult<ClaudeCliCall>, { status: "ready" }>;
 }) {
   const scroll = useInfiniteScroll({
     hasNextPage: list.canGrow,
@@ -160,11 +164,15 @@ function SourceChips({
   onPick: (source: string) => void;
 }) {
   const sources = useLive(claudeCliCalls, { groupBy: "sourceName" });
-  if (sources.pending) {
-    return sources.error ? (
-      <Placeholder tone="error">{sources.error.message}</Placeholder>
-    ) : (
-      <Loading variant="spinner" />
+  if (sources.status === "loading") return <Loading variant="spinner" />;
+  if (sources.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the sources"
+        error={sources.error}
+        refetch={sources.refetch}
+      />
     );
   }
   // `source_name` is NOT NULL, so no NULL group ever comes back.

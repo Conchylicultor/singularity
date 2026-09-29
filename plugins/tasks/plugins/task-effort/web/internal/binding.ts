@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { mapRow } from "@plugins/network/plugins/live/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import type { LaunchBinding } from "@plugins/tasks/plugins/launch-options/web";
@@ -25,10 +26,6 @@ export function useTaskEffortBinding(
     [taskId],
   );
 
-  if (result.pending) return { pending: true };
-  return {
-    pending: false,
-    value: result.found ? result.row.level : null,
-    onChange,
-  };
+  // An absent row is "no thinking mode chosen"; loading / error pass through.
+  return mapRow(result, (row) => ({ value: row?.level ?? null, onChange }));
 }

@@ -473,12 +473,45 @@ read path stay floor-less and keep coalescing (*Flight freshness* above).
 client's cross-boot 4-case guard matrix (`live-state/CLAUDE.md`). For that guard
 only; the HTTP path still has no version short-circuit.
 
-**`sub-error` frames carry `params`.** All four send sites include `params`
+**`sub-error` frames carry `params`.** Every send site includes `params`
 alongside `key`: the shared-socket client broadcasts every frame to every tab, so
 it must gate `sub-error` on the local sub entry exactly like `update`/`delta`,
 which requires matching params. A params-less legacy frame matches no live sub and
 is safely dropped. On a match the client runs its HTTP fallback read on that
 query (`fetchAfterSubError`) — see `live-state/CLAUDE.md`.
+
+## The params gate: a contract mismatch is version skew, not a crash
+
+Every resource carries `validateParams(params)` — required on `ResourceContract`,
+so every descriptor factory decides (`liveValue`: exact declared names;
+`liveCollection`'s window / `:rows` / `:groups`: their strict decoders; the
+legacy factories: `acceptAnyParams` by name). It throws `ResourceContractError`
+(`packages/resource-protocol`) when a tuple does not match the declaration —
+after a deploy, a tab still running the previous bundle. Only the flat
+`defineResource({...})` form may omit it (it declares no params; absent ⇒ any).
+
+- **Gate first.** `handleSub` / `handleSubBatch` run it BEFORE `authorize` and
+  `registerSubOnSocket`; a refusal sends `sub-error reason:"contract-mismatch"`
+  with a `verdict` and never registers, so no push, revalidate or scoped path
+  reruns it. A refused batch entry is not `retained`. HTTP answers 409 (and 404
+  for an unknown key, 500 `loader-failed` for any other throw) with a
+  `ResourceHttpErrorBody` JSON body, `no-store`.
+- **The verdict decides reporting** (`rejectContract`): the client's `build`
+  (frame field / `BUILD_GRAPH_HEADER`) against `serverBuildGraph()` — absent ⇒
+  `skew`, `"dev"` or unknown server graph ⇒ `unknown`, different ⇒ `skew`, equal
+  ⇒ `same-build`. `skew` is only `console.warn`ed; `same-build` / `unknown` go
+  through `reportLoaderError` (a current bundle failing decode is a real bug).
+  The server binds `serverBuildGraph` to the graph memoized at boot
+  (`setClientBuildIdentity`, registered by `build/server-build-id`); central
+  binds none, so its verdicts are `unknown`.
+- **Backstop.** A `ResourceContractError` out of a REGISTERED tuple's loader /
+  membership read (read path, push paths, HTTP) is a gate gap:
+  `evictOnContractError` drops the tuple from every socket
+  (`unregisterTupleEverywhere`), tells each holder `contract-mismatch` /
+  `unknown`, and always reports.
+- Declaration-time and encode failures stay plain `Error`s — they are
+  programmer errors and must crash loudly. Pinned by
+  `runtime-contract-mismatch.test.ts`.
 
 ## Profiling seams (all optional; central binds none)
 
@@ -558,6 +591,12 @@ and those plugins' `CLAUDE.md`.
   - Uses:
     - `packages/canonical-params.canonicalParams`
     - `packages/inflight.createInflight`
+    - `packages/resource-protocol.BUILD_GRAPH_HEADER`
+    - `packages/resource-protocol.contractVerdict`
+    - `packages/resource-protocol.ContractVerdict`
+    - `packages/resource-protocol.ResourceContractError`
+    - `packages/resource-protocol.ResourceHttpErrorBody`
+    - `packages/resource-protocol.SubErrorFrame`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `DefineResourceInput`

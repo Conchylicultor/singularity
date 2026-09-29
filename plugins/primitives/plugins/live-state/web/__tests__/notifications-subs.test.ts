@@ -44,6 +44,11 @@ import {
 import { NotificationsClient } from "../notifications-client";
 import { getResourceWatermark } from "../watermark-registry";
 import { hasResourceTxAck } from "../tx-ack-registry";
+import {
+  resetResourceContractMismatches,
+  useResourceContractMismatches,
+} from "../resource-contract-store";
+import { renderHook } from "@testing-library/react";
 
 // SUB_KEEPALIVE_MS is not exported; keep the literal in sync with
 // notifications-client.ts (the deferred-teardown gc window).
@@ -482,6 +487,66 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       reason: "unknown-key",
     });
     expect(fetchQuery).not.toHaveBeenCalled();
+  });
+
+  // Contract mismatch: the server refused the sub because this bundle's params
+  // do not match the declaration. The client records it for the Reload advice
+  // and still heals through the one error channel (the HTTP refetch then gets
+  // the typed 409 body).
+  describe("contract-mismatch sub-error", () => {
+    afterEach(() => resetResourceContractMismatches());
+
+    test("marks the contract store with its verdict, then refetches as before", async () => {
+      const { client, socket, qc } = await setup();
+      const fetchQuery = vi.spyOn(qc, "prefetchQuery").mockResolvedValue();
+      const store = renderHook(() => useResourceContractMismatches());
+      client.observe("hist", { limit: "5" }, undefined, pushSchema);
+      socket.serverSend({
+        kind: "sub-error",
+        key: "hist",
+        params: { limit: "5" },
+        reason: "contract-mismatch",
+        verdict: "skew",
+      });
+      expect(fetchQuery).toHaveBeenCalledTimes(1);
+      store.rerender();
+      expect(store.result.current).toEqual([
+        { key: "hist", reason: "contract-mismatch", verdict: "skew" },
+      ]);
+    });
+
+    test("a loader-failed sub-error is the server's own failure: the store stays empty", async () => {
+      const { client, socket } = await setup();
+      const store = renderHook(() => useResourceContractMismatches());
+      client.observe("k2", {}, undefined, pushSchema);
+      socket.serverSend({
+        kind: "sub-error",
+        key: "k2",
+        params: {},
+        reason: "loader-failed",
+      });
+      store.rerender();
+      expect(store.result.current).toEqual([]);
+    });
+
+    test("every sub and sub-batch frame names this tab's build", async () => {
+      vi.stubEnv("VITE_BUILD_GRAPH", "graph-x");
+      try {
+        const { client, socket, hub } = await setup();
+        client.observe("b1", {}, undefined, pushSchema);
+        expect(subFrames(socket, "b1")[0]!.build).toBe("graph-x");
+        // Reconnect → the replay is one sub-batch, which names the build too.
+        socket.serverClose();
+        await vi.advanceTimersByTimeAsync(500);
+        const socket2 = hub.server.all().find((x) => x.readyState === 0)!;
+        socket2.open();
+        const batches = socket2.sentJson().filter((m) => m.op === "sub-batch");
+        expect(batches).toHaveLength(1);
+        expect(batches[0]!.build).toBe("graph-x");
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
   });
 
   test("legacy params-less sub-error frame → dropped safely (no throw, no fetch)", async () => {

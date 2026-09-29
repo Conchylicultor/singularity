@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
+  ResourceErrorInline,
   ResourceView,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -108,17 +109,13 @@ function resolveRef(
       kind: "known",
       agentToolEvent,
       status:
-        subagents.kind === "pending"
-          ? { kind: "pending" }
-          : subagents.statusOf({ toolUseId: ref.key, agentToolEvent }),
+        subagents.kind === "known"
+          ? subagents.statusOf({ toolUseId: ref.key, agentToolEvent })
+          : subagents,
     };
   }
-  if (subagents.kind === "pending") {
-    return {
-      kind: "known",
-      status: { kind: "pending" },
-      agentToolEvent: undefined,
-    };
+  if (subagents.kind === "pending" || subagents.kind === "failed") {
+    return { kind: "known", status: subagents, agentToolEvent: undefined };
   }
   const entry = subagents.entries.find((e) => e.row.agentId === ref.key);
   if (entry === undefined) return { kind: "missing" };
@@ -275,7 +272,9 @@ function SubagentReportCard({
   /** Only a finished sub-agent has handed anything back. */
   finished: boolean;
 }) {
-  if (!finished || transcript.pending) return null;
+  // A failed transcript read is rendered once, by the transcript body below.
+  if (!finished || transcript.status === "loading") return null;
+  if (transcript.status === "error") return null;
   const report = subagentReport({
     requestShape,
     agentToolEvent,
@@ -353,15 +352,27 @@ function SubagentPaneContent({
   /** The parent transcript, already arrived. */
   parentEvents: JsonlEvent[];
 }) {
-  const resolved = resolveRef(
-    useConversationSubagents(conversationId),
-    subagent,
-    parentEvents,
-  );
+  const subagents = useConversationSubagents(conversationId);
+  const resolved = resolveRef(subagents, subagent, parentEvents);
   const transcript = useLive(subagentTranscript, {
     id: conversationId,
     ...subagent,
   });
+
+  // The sub-agent set could not be read: say so, with Retry — never a status
+  // that stays "pending" forever.
+  if (subagents.kind === "failed") {
+    return (
+      <PaneMessage>
+        <ResourceErrorInline
+          variant="block"
+          subject="the sub-agents"
+          error={subagents.error}
+          refetch={subagents.refetch}
+        />
+      </PaneMessage>
+    );
+  }
 
   if (resolved.kind === "missing") {
     return (
@@ -423,10 +434,22 @@ function SubagentTranscript({
   transcript: ResourceResult<SubagentTranscript>;
   status: SubagentStatus;
 }) {
-  if (transcript.pending) {
+  if (transcript.status === "loading") {
     return (
       <BodyMessage>
         <Loading />
+      </BodyMessage>
+    );
+  }
+  if (transcript.status === "error") {
+    return (
+      <BodyMessage>
+        <ResourceErrorInline
+          variant="block"
+          subject="the sub-agent transcript"
+          error={transcript.error}
+          refetch={transcript.refetch}
+        />
       </BodyMessage>
     );
   }

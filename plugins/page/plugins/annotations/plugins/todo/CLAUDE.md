@@ -85,7 +85,12 @@ reachable.
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
     - `primitives/css/row.Row`
+<<<<<<< .merge_file_tMuvTm
     - `ui/icons.Icon`
+=======
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
+>>>>>>> .merge_file_JOiu1R
   - Exports (values): `todoBlock`
 - Server:
   - Contributes: `page.block-data` "todo"

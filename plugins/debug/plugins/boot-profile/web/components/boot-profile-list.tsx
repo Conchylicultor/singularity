@@ -1,10 +1,9 @@
 import { useMemo, type ReactElement } from "react";
 import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+  foldResource,
+  useEndpointResource,
+} from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -29,27 +28,25 @@ type BootTraceItem = {
 // the detail pane. Fetched on open (NOT polled); saved traces only change on an
 // explicit Copy permalink click or the 30-day sweep.
 export function BootProfileList(): ReactElement {
-  const { data, error, isLoading } = useEndpoint(listBootTraces, {});
-
-  if (error) {
-    return (
-      <Inset pad="lg">
-        <Placeholder tone="error">{getEndpointErrorMessage(error)}</Placeholder>
-      </Inset>
-    );
-  }
-
-  return (
-    <BootProfileTable rows={data?.items ?? []} loading={isLoading} />
-  );
+  const traces = useEndpointResource(listBootTraces, {});
+  // The DataView renders the loading and failed states (`readiness`); only a
+  // ready read's rows reach the view.
+  const rows = foldResource(traces, {
+    loading: () => NO_TRACES,
+    error: () => NO_TRACES,
+    ready: (d) => d.items,
+  });
+  return <BootProfileTable rows={rows} readiness={traces} />;
 }
+
+const NO_TRACES: readonly BootTraceItem[] = [];
 
 function BootProfileTable({
   rows,
-  loading,
+  readiness,
 }: {
   rows: readonly BootTraceItem[];
-  loading: boolean;
+  readiness: ResourceReadiness;
 }): ReactElement {
   const openPane = useOpenPane();
 
@@ -99,14 +96,14 @@ function BootProfileTable({
       rowKey={(r) => r.id}
       views={["list"]}
       storageKey={BOOT_PROFILES_VIEW}
-      loading={loading}
+      readiness={readiness}
       onRowActivate={(r) =>
         openPane(bootProfileDetailPane, { id: r.id }, { mode: "push" })
       }
       emptyState={
         <>
-          No saved boot traces yet. Use Copy permalink on the Boot Profile page to
-          save one.
+          No saved boot traces yet. Use Copy permalink on the Boot Profile page
+          to save one.
         </>
       }
     />

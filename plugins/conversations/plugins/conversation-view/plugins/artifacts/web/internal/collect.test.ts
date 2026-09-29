@@ -31,17 +31,9 @@ const EVENTS: JsonlEvent[] = [
 ];
 
 describe("collectArtifacts", () => {
-  test("a transcript that has not arrived is pending, not empty", () => {
-    const result = collectArtifacts([kindOn("doc", "Read", "referenced")], {
-      pending: true,
-    });
-    expect(result).toEqual({ pending: true });
-  });
-
-  test("no registered kinds settles at zero rather than staying pending", () => {
-    const result = collectArtifacts([], { pending: false, data: EVENTS });
+  test("no registered kinds settles at zero", () => {
+    const result = collectArtifacts([], EVENTS);
     expect(result).toEqual({
-      pending: false,
       byKind: new Map(),
       total: 0,
       made: new Map(),
@@ -55,10 +47,8 @@ describe("collectArtifacts", () => {
         kindOn("read", "Read", "referenced"),
         kindOn("write", "Write", "created"),
       ],
-      { pending: false, data: EVENTS },
+      EVENTS,
     );
-    if (result.pending) throw new Error("expected settled");
-
     expect(result.total).toBe(3);
     expect(result.byKind.get("read")?.map((i) => i.key)).toEqual(["a"]);
     expect(result.byKind.get("write")?.map((i) => i.key)).toEqual(["a", "b"]);
@@ -70,10 +60,8 @@ describe("collectArtifacts", () => {
         kindOn("looked", "Read", "referenced", "consumed"),
         kindOn("made", "Write", "created"),
       ],
-      { pending: false, data: EVENTS },
+      EVENTS,
     );
-    if (result.pending) throw new Error("expected settled");
-
     // Three artifacts in the panel, two of them the conversation's own work.
     expect(result.total).toBe(3);
     expect(result.count).toBe(2);
@@ -84,10 +72,8 @@ describe("collectArtifacts", () => {
   test("a conversation that only looked has something to list, nothing to count", () => {
     const result = collectArtifacts(
       [kindOn("looked", "Read", "referenced", "consumed")],
-      { pending: false, data: EVENTS },
+      EVENTS,
     );
-    if (result.pending) throw new Error("expected settled");
-
     expect(result.total).toBe(1);
     expect(result.count).toBe(0);
   });
@@ -98,10 +84,8 @@ describe("collectArtifacts", () => {
         kindOn("read", "Read", "referenced"),
         kindOn("write", "Write", "created"),
       ],
-      { pending: false, data: EVENTS },
+      EVENTS,
     );
-    if (result.pending) throw new Error("expected settled");
-
     // The read-only kind is listed, but draws nothing on the button.
     expect(result.byKind.get("read")?.length).toBe(1);
     expect(result.made.has("read")).toBe(false);
@@ -125,19 +109,15 @@ describe("collectArtifacts", () => {
             ]
           : [],
     };
-    const result = collectArtifacts([docs], { pending: false, data: EVENTS });
-    if (result.pending) throw new Error("expected settled");
-
+    const result = collectArtifacts([docs], EVENTS);
     expect(result.made.get("doc")).toBe(2);
   });
 
   test("repeat sightings inside one kind collapse to one item", () => {
-    const result = collectArtifacts([kindOn("write", "Write", "created")], {
-      pending: false,
-      data: [...EVENTS, toolCall("Write", "2026-09-19T10:03:00Z", "a")],
-    });
-    if (result.pending) throw new Error("expected settled");
-
+    const result = collectArtifacts(
+      [kindOn("write", "Write", "created")],
+      [...EVENTS, toolCall("Write", "2026-09-19T10:03:00Z", "a")],
+    );
     expect(result.total).toBe(2);
     expect(result.byKind.get("write")?.[0]?.lastAt).toBe(
       "2026-09-19T10:03:00Z",
@@ -152,8 +132,8 @@ describe("collectArtifacts", () => {
         { kind: "yours", key: "x", relation: "created", at: event.at },
       ],
     };
-    expect(() =>
-      collectArtifacts([liar], { pending: false, data: EVENTS }),
-    ).toThrow(/emitted a hit for kind "yours"/);
+    expect(() => collectArtifacts([liar], EVENTS)).toThrow(
+      /emitted a hit for kind "yours"/,
+    );
   });
 });

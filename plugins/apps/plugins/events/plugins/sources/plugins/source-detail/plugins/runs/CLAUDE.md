@@ -70,10 +70,12 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
     - `primitives/data-view.defineItemActions`
     - `primitives/data-view.FieldDef`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/live-state.foldResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.ResolveResult`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`

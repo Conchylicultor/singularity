@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useState } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -12,7 +13,6 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -184,19 +184,27 @@ function FilterChips({
   const types = useLive(notifications, { groupBy: "type" });
   const variants = useLive(notifications, { groupBy: "variant" });
 
-  if (types.pending || variants.pending) {
-    const error =
-      (types.pending ? types.error : null) ??
-      (variants.pending ? variants.error : null);
+  // Precedence error > loading: one failed read fails the row, even while
+  // the other still loads.
+  if (types.status === "error" || variants.status === "error") {
+    const failed = types.status === "error" ? types : variants;
     return (
       <div className="px-md py-xs border-b" data-testid="notification-chips">
-        {error ? (
-          <Placeholder tone="error">
-            Couldn&apos;t load filters: {error.message}
-          </Placeholder>
-        ) : (
-          <Loading label="Loading filters…" />
+        {failed.status === "error" && (
+          <ResourceErrorInline
+            variant="inline"
+            subject="filters"
+            error={failed.error}
+            refetch={failed.refetch}
+          />
         )}
+      </div>
+    );
+  }
+  if (types.status === "loading" || variants.status === "loading") {
+    return (
+      <div className="px-md py-xs border-b" data-testid="notification-chips">
+        <Loading label="Loading filters…" />
       </div>
     );
   }
@@ -294,7 +302,9 @@ function NotificationList({
         ? { where: { variant: "error" } }
         : { where: { type: filter.type } },
   );
-  const settled = result.pending ? null : result;
+  // Only a ready window has paging handles; the arms below render the rest.
+  const settled =
+    result.status === "loading" || result.status === "error" ? null : result;
   const scroll = useInfiniteScroll({
     hasNextPage: settled?.canGrow ?? false,
     isFetchingNextPage: settled?.growing ?? false,
@@ -306,13 +316,15 @@ function NotificationList({
   });
   const dismissOne = useEndpointMutation(dismissNotification);
 
-  if (result.pending) {
-    return result.error ? (
-      <Placeholder tone="error">
-        Couldn&apos;t load notifications: {result.error.message}
-      </Placeholder>
-    ) : (
-      <Loading variant="rows" count={4} />
+  if (result.status === "loading") return <Loading variant="rows" count={4} />;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="notifications"
+        error={result.error}
+        refetch={result.refetch}
+      />
     );
   }
 

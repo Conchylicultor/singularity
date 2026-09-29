@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -27,7 +28,17 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
   const workResult = useLive(attemptWork, { attemptId });
   const { isOpen, toggle } = convCommitsGraphPane.useToggle({});
 
-  if (workResult.pending) return null;
+  if (workResult.status === "loading") return null;
+  if (workResult.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={altRouteIcon}
+        subject="the branch standing"
+        error={workResult.error}
+        refetch={workResult.refetch}
+      />
+    );
 
   const work = workResult.data;
   // Nothing to measure ⇒ a determinate non-value. Show a muted `—` with the

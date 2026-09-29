@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useMemo } from "react";
 import {
   keyAutoDetectSetting,
@@ -25,7 +26,16 @@ export function KeyReadoutActions() {
 
   const entries = useMemo(() => collectKeyEntries(score), [score]);
 
-  if (keyAutoDetect.pending) return <Loading variant="spinner" />;
+  if (keyAutoDetect.kind === "pending") return <Loading variant="spinner" />;
+  if (keyAutoDetect.kind === "failed")
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="the song's key mode"
+        error={keyAutoDetect.error}
+        refetch={keyAutoDetect.refetch}
+      />
+    );
   const autoDetect = keyAutoDetect.value;
 
   // Show the toggle only for songs that carry an authored key to override — or

@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { LaunchOptionDef } from "../core";
 import { defineSlotFacade } from "@plugins/framework/plugins/web-sdk/core";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 
 /**
  * What every launch control receives. Controlled on purpose: the HOST owns
@@ -17,14 +18,16 @@ export interface LaunchControlProps<V> {
 }
 
 /**
- * A control bound to an existing task's persisted value. While the value is
- * still loading the binding is `{ pending: true }` and carries NO value: the
- * host shows a loading state in the control's place, so a picker can never
- * show (and let you click) a stand-in like "Off" before the task's real value
- * is known.
+ * A control bound to an existing task's persisted value, as a resource result.
+ * While the value is still loading (or its read failed) the binding carries NO
+ * value: the host shows a loading state — or the failure, with Retry — in the
+ * control's place, so a picker can never show (and let you click) a stand-in
+ * like "Off" before the task's real value is known.
  */
-export type LaunchBinding<V> =
-  { pending: true } | { pending: false; value: V; onChange: (next: V) => void };
+export type LaunchBinding<V> = ResourceResult<{
+  value: V;
+  onChange: (next: V) => void;
+}>;
 
 /**
  * How an option draws itself on a composer bar — as a pill, instead of as the

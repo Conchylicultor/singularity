@@ -63,6 +63,7 @@ Design: [`research/2026-09-15-page-agent-page-follow-ups.md`](../../../../../../
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.useControlSize`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
 

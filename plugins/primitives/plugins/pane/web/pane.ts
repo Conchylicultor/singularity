@@ -34,16 +34,19 @@ import {
 } from "./history-sink";
 import { appNavSink, navigateApp } from "./app-nav-sink";
 import { definePaneHeaderSlot, type PaneHeaderSlot } from "./header-slot";
+import type { ResolveResult } from "./resolve";
 
 export type { PaneHeaderItem } from "./components/pane-header-item";
 
 // ---------------------------------------------------------------------------
 // Resolve hook — mandatory for parameterized panes, opt-out with `false`.
+// The answer's vocabulary (`ResolveResult`) and its builders live in
+// `./resolve`.
 // ---------------------------------------------------------------------------
 
 export type ResolveHook<Params extends Record<string, string>> = (
   params: Params,
-) => { pending: boolean; found: boolean };
+) => ResolveResult;
 
 let nextInstanceId = 0;
 

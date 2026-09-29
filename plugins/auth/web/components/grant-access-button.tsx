@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useAccountStatus } from "../hooks";
 import { currentWorktreeName, startConnectFlow } from "../connect";
@@ -26,6 +30,15 @@ export function GrantAccessButton(props: {
   } = props;
   const status = useAccountStatus(providerId);
   const [busy, setBusy] = useState(false);
+  // The already-granted scopes, once known (`[]`-equivalent `undefined` when
+  // the provider has no account). Until then the union cannot be computed —
+  // and granting without it would let the callback's full-replace DROP scopes —
+  // so the button waits (disabled) and a failed read offers its Retry instead.
+  const grantedScopes = foldResource(status, {
+    loading: () => null,
+    error: () => null,
+    ready: (account) => account?.scopes,
+  });
 
   async function handleGrant() {
     setBusy(true);
@@ -33,7 +46,7 @@ export function GrantAccessButton(props: {
       const result = await startConnectFlow({
         providerId,
         worktree: currentWorktreeName(),
-        scopes: mergeScopes(status?.scopes, scopes),
+        scopes: mergeScopes(grantedScopes ?? undefined, scopes),
       });
       if (result.ok) {
         toast({
@@ -62,8 +75,23 @@ export function GrantAccessButton(props: {
     }
   }
 
+  if (status.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the account's granted scopes"
+        error={status.error}
+        refetch={status.refetch}
+      />
+    );
+
   return (
-    <Button variant={variant} loading={busy} onClick={handleGrant}>
+    <Button
+      variant={variant}
+      loading={busy}
+      disabled={status.status === "loading"}
+      onClick={handleGrant}
+    >
       {label}
     </Button>
   );

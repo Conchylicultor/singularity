@@ -7,7 +7,11 @@ import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { useActiveDataBinding } from "@plugins/active-data/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  ResourceErrorInline,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
@@ -54,8 +58,27 @@ export function TaskCard({
   // Wait for the binding to load before rendering anything destructive — the
   // editable card collapses to a chip once we know the persisted state, so
   // showing the card during load would briefly invite a duplicate Create.
-  if (binding.enabled && binding.pending) return null;
-  const value = binding.pending ? null : binding.value;
+  // A failed read renders the failure instead: showing the card would invite
+  // the same duplicate Create.
+  if (binding.enabled) {
+    if (binding.value.status === "loading") return null;
+    if (binding.value.status === "error") {
+      return (
+        <ResourceErrorInline
+          variant="inline"
+          subject="this task card"
+          error={binding.value.error}
+          refetch={binding.value.refetch}
+        />
+      );
+    }
+  }
+  // Not enabled ⇒ no identity, so nothing is persisted: the editable card.
+  const value = foldResource(binding.value, {
+    loading: () => null,
+    error: () => null,
+    ready: (v) => v,
+  });
 
   if (value?.launchedConvId && value.taskId) {
     return (
@@ -162,7 +185,17 @@ export function TaskCard({
 function LaunchedAttempts({ taskId }: { taskId: string }) {
   const attempts = useTaskAttempts(taskId);
 
-  if (attempts.pending) return <Loading variant="text" />;
+  if (attempts.status === "loading") return <Loading variant="text" />;
+  if (attempts.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the attempts"
+        error={attempts.error}
+        refetch={attempts.refetch}
+      />
+    );
+  }
 
   if (attempts.data.length === 0) {
     return (
@@ -208,7 +241,17 @@ function TaskChip({ taskId }: { taskId: string }) {
   const tasksResult = useResource(tasksResource);
   const openPane = useOpenPane();
   if (!conversation) return null;
-  if (tasksResult.pending) return null;
+  if (tasksResult.status === "loading") return null;
+  if (tasksResult.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the task"
+        error={tasksResult.error}
+        refetch={tasksResult.refetch}
+      />
+    );
+  }
   const task = tasksResult.data.find((t) => t.id === taskId);
   const title = task?.title.trim() || "Untitled task";
   return (

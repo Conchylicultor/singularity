@@ -35,6 +35,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/diff-view.DiffOrImageView`
+    - `primitives/live-state.combineResources`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `review.ReviewSlots`

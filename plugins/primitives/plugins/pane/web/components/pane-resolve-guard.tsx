@@ -2,6 +2,7 @@ import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -28,7 +29,7 @@ export function PaneResolveGuard({ pane, params }: Props) {
   // re-roots a pane in place — new params, SAME mounted guard — so without the
   // key the sticky-found memory would leak from one resource to the next. The
   // key gives React a fresh guard instance (fresh `sawFound`) per identity,
-  // making that leak structurally impossible; a transient `pending` flip keeps
+  // making that leak structurally impossible; a transient `pending`/`error` flip keeps
   // the identity stable, so the instance — and its stickiness — survives.
   return (
     <StickyResolveGuard
@@ -53,17 +54,20 @@ function resolveIdentity(
 }
 
 /**
- * Sticky-found resolve gate. Once the resource has resolved (`found`) for this
- * identity, the real pane stays mounted through any later transient `pending`
- * flip — e.g. an HTTP-fallback refetch failing under host memory pressure flips
- * a long-settled resource back to `pending`. Swapping in the loading fallback
- * there would unmount the pane and destroy the user's scroll, focus, and
- * unsaved editor draft (the debounce timer is cleared on unmount without
- * flushing), then remount cold on recovery.
+ * Sticky-found resolve gate. Once the entity has resolved (`found`) for this
+ * identity, the real pane stays mounted through any later `pending` or `error`
+ * flip — e.g. an HTTP-fallback refetch failing under host memory pressure.
+ * Swapping in a fallback there would unmount the pane and destroy the user's
+ * scroll, focus, and unsaved editor draft (the debounce timer is cleared on
+ * unmount without flushing), then remount cold on recovery. The mounted body
+ * reads its own data and renders that failure where it lands.
  *
- * The gate only downgrades on a SETTLED miss (`!pending && !found`): a resource
- * genuinely deleted while its pane is open still surfaces Not Found — stickiness
- * masks transient errors, never real deletion.
+ * Before the first `found`, each state gets its own chrome: `pending` a
+ * spinner, `error` the failure with its Retry (ResourceErrorInline), and a
+ * determinate miss Not Found. The gate downgrades a found pane only on a
+ * SETTLED miss (`missing`): a resource genuinely deleted while its
+ * pane is open still surfaces Not Found — stickiness masks transient failures,
+ * never real deletion.
  */
 function StickyResolveGuard({
   pane,
@@ -76,7 +80,8 @@ function StickyResolveGuard({
   component: ComponentType;
   params: Record<string, string>;
 }) {
-  const { pending, found } = resolve(params);
+  const result = resolve(params);
+  const found = result.status === "found";
 
   // `sawFound` latches true the first time this identity resolves. Adjusting
   // state during render (guarded by `!sawFound`) is React's sanctioned pattern
@@ -84,26 +89,43 @@ function StickyResolveGuard({
   const [sawFound, setSawFound] = useState(false);
   if (found && !sawFound) setSawFound(true);
 
-  if (found || (sawFound && pending)) return <Component />;
+  if (found || (sawFound && result.status !== "missing")) return <Component />;
 
-  if (pending) {
-    return (
-      <FallbackChrome pane={pane} title="Loading…">
-        <Loading />
-      </FallbackChrome>
-    );
+  switch (result.status) {
+    case "pending":
+      return (
+        <FallbackChrome pane={pane} title="Loading…">
+          <Loading />
+        </FallbackChrome>
+      );
+    case "error": {
+      const { retry } = result;
+      return (
+        <FallbackChrome pane={pane} title="Couldn't load">
+          <ResourceErrorInline
+            variant="block"
+            error={result.error}
+            refetch={
+              retry === undefined ? undefined : () => retry().then(() => {})
+            }
+          />
+        </FallbackChrome>
+      );
+    }
+    case "missing":
+      return (
+        <FallbackChrome pane={pane} title="Not Found">
+          <Placeholder tone="error">
+            This resource couldn't be found.
+          </Placeholder>
+        </FallbackChrome>
+      );
   }
-
-  return (
-    <FallbackChrome pane={pane} title="Not Found">
-      <Placeholder tone="error">This resource couldn't be found.</Placeholder>
-    </FallbackChrome>
-  );
 }
 
 /**
- * Minimal chrome header for resolve-guard fallback states (Loading / Not
- * Found). The resolved resource is absent, so the real pane component — and
+ * Minimal chrome header for resolve-guard fallback states (Loading /
+ * Couldn't load / Not Found). The resolved resource is absent, so the real pane component — and
  * its `Actions` contributions — never render. We still want the standard
  * navigation controls (promote and especially × close) so the pane can be
  * dismissed. Mirrors `PaneChrome`'s control logic and gating but omits the

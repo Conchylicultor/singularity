@@ -111,7 +111,15 @@ contributor that hands a conflict to an agent.
     - `primitives/data-view.HierarchyConfig`
     - `primitives/diff-view.TextDiff`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.useCombinedResources`
+<<<<<<< .merge_file_LYtdqx
+=======
+    - `primitives/live-state.useEndpointResource`
+    - `primitives/live-state.useResource`
+>>>>>>> .merge_file_qo1xum
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`

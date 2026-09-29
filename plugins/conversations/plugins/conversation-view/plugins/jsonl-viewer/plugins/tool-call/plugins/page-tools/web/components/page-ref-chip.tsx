@@ -1,5 +1,8 @@
 import type React from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -36,7 +39,8 @@ function BlockIdBadge({ id }: { id: string }) {
  * which the pages resource (pages only) will never carry. Either way the row
  * still has to name its target, so it falls back to the raw id.
  *
- * The same id is what it shows while the pages resource is still loading: the
+ * The same id is what it shows while the pages resource is still loading (or
+ * failed with nothing seen before): the
  * id is known from the call itself and is never revised, so it is the honest
  * partial answer rather than a placeholder standing in for one.
  */
@@ -54,9 +58,15 @@ export function PageRefChip({
   // No id at all means the call carried no target — an empty chip would be
   // chrome standing in for information the row does not have.
   if (!id) return null;
-  if (pagesResult.pending) return <BlockIdBadge id={id} />;
+  // A failed read keeps the pages as last seen, else falls back to the same
+  // raw id — the honest partial answer, as while loading.
+  const rows = foldResource(pagesResult, {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (data) => data,
+  });
+  if (rows === null) return <BlockIdBadge id={id} />;
 
-  const rows = pagesResult.data;
   const page =
     (pageId ? rows.find((row) => row.id === pageId) : undefined) ??
     (blockId ? rows.find((row) => row.id === blockId) : undefined);

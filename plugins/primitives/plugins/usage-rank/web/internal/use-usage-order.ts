@@ -125,8 +125,10 @@ export function useUsageOrder(
   if (held === null || held.stamp !== stamp) {
     // New window (context switched, or the key set itself changed): re-seed.
     snapshot = { stamp, order: seedOrder(namespace, keys), settled: false };
-  } else if (!held.settled && !result.pending) {
+  } else if (!held.settled && result.status === "ready") {
     // The one and only re-derivation for this window: server truth landed.
+    // (A failed read keeps the seed order — usage ranking is a nicety, and the
+    // seed is already a complete, usable order.)
     const stats = indexStats(namespace, keys, result.data);
     snapshot = {
       stamp,

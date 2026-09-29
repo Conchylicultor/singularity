@@ -27,6 +27,8 @@
     - `infra/endpoints.fetchEndpoint`
     - `primitives/data-view.defineItemActions`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.combineResources`
+    - `primitives/live-state.ResourceReadiness`
     - `primitives/live-state.useResource`
     - `primitives/optimistic-mutation.useOptimisticResource`
 

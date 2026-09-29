@@ -9,7 +9,10 @@ import {
   useEndpoint,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configValues, removeDescriptorScope } from "@plugins/config_v2/core";
@@ -111,7 +114,7 @@ export function ConfigDetail() {
 }
 
 // All-or-nothing gate over values + conflicts + tiers — none is boot-hydrated
-// for an arbitrary scope, so all render pending on first paint. Gating the whole
+// for an arbitrary scope, so all render loading on first paint. Gating the whole
 // body avoids a flash of wrong tier badges or a transiently-absent conflict
 // banner. The selected scope (undefined = Base) is local state owned here, above
 // the gate, so a tab switch re-keys every read and re-gates atomically. We read
@@ -157,21 +160,23 @@ function ConfigDetailInner({
         scopeId={scopeId}
         onSelectScope={setScopeId}
       />
-      {gated.pending ? (
-        <Loading />
-      ) : (
-        <ConfigDetailBody
-          // Re-key on path+scope so the body remounts (transient UI flags re-init
-          // to false) on a fresh editing context — no props-to-state mirror effect.
-          key={registration.storePath + ":" + (scopeId ?? "")}
-          registration={registration}
-          scopeId={scopeId}
-          onSelectScope={setScopeId}
-          values={gated.data.values}
-          conflict={gated.data.conflict}
-          tiers={gated.data.tiers}
-        />
-      )}
+      {/* A failed read renders the default block error with Retry. */}
+      {matchResource(gated, {
+        loading: () => <Loading />,
+        ready: ({ values, conflict, tiers }) => (
+          <ConfigDetailBody
+            // Re-key on path+scope so the body remounts (transient UI flags re-init
+            // to false) on a fresh editing context — no props-to-state mirror effect.
+            key={registration.storePath + ":" + (scopeId ?? "")}
+            registration={registration}
+            scopeId={scopeId}
+            onSelectScope={setScopeId}
+            values={values}
+            conflict={conflict}
+            tiers={tiers}
+          />
+        ),
+      })}
     </Stack>
   );
 }

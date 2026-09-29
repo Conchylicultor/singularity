@@ -30,7 +30,12 @@ describe("bootPluginGraph — the preload-declare assert", () => {
             // and contributes no Resource.Declare.
             loader: async () => {
               defineResource(
-                { key, schema: z.number(), preload: "boot" },
+                {
+                  key,
+                  schema: z.number(),
+                  preload: "boot",
+                  validateParams: () => {},
+                },
                 { mode: "push", loader: () => 1 },
               );
               return {

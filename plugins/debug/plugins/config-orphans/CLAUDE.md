@@ -25,6 +25,8 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.useEndpointResource`
     - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`

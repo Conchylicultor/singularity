@@ -9,7 +9,14 @@ import { configConflictLocations } from "@plugins/config_v2/core";
  */
 export function ConfigConflictDot() {
   const result = useLive(configConflictLocations);
-  const hasConflicts = !result.pending && Object.keys(result.data).length > 0;
-  if (!hasConflicts) return null;
-  return <span className="block size-2 rounded-full bg-warning" />;
+  // A decoration, not a surface: loading and a failed read both paint nothing
+  // (the Config pane itself shows the error), never a claim of "no conflicts".
+  switch (result.status) {
+    case "loading":
+    case "error":
+      return null;
+    case "ready":
+      if (Object.keys(result.data).length === 0) return null;
+      return <span className="block size-2 rounded-full bg-warning" />;
+  }
 }

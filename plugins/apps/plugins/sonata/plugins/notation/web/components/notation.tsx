@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -124,7 +125,7 @@ function systemForBeat(systems: SystemPlan[], beat: number): number {
 function NotationInner({ score }: NotationProps) {
   const { showChordSymbols, splitPitch, staffLayout, separateVoices } =
     useConfig(notationConfig);
-  const { seekTo, isPlaying, scorePending } = useSonata();
+  const { seekTo, isPlaying, scorePending, scoreFailure } = useSonata();
   const cursor = useCursorApi();
 
   // Drop hidden tracks (track-mixer) before engraving, and pass the visible
@@ -133,10 +134,15 @@ function NotationInner({ score }: NotationProps) {
   // in), and the surface shows the loading state below.
   const hiddenTrackIds = useHiddenTrackIds();
   const trackEntries = useTrackMixerEntries();
+  // A failed track-view read also fails the score gate (the track view is a
+  // registered setting), so `scoreFailure` covers it; unsettled views
+  // otherwise read as still loading.
   const viewPending =
-    scorePending || hiddenTrackIds.pending || trackEntries.pending;
+    scorePending ||
+    hiddenTrackIds.kind !== "settled" ||
+    trackEntries.kind !== "settled";
   const visibleScore = useMemo<Score>(() => {
-    if (hiddenTrackIds.pending) return { ...score, notes: [] };
+    if (hiddenTrackIds.kind !== "settled") return { ...score, notes: [] };
     const hidden = hiddenTrackIds.value;
     if (hidden.size === 0) return score;
     return {
@@ -149,7 +155,8 @@ function NotationInner({ score }: NotationProps) {
   // joined with the track-mixer's display name (honors a user rename). Filtered
   // to the visible tracks so a hidden track never forms a part.
   const trackMeta = useMemo(() => {
-    if (hiddenTrackIds.pending || trackEntries.pending) return [];
+    if (hiddenTrackIds.kind !== "settled" || trackEntries.kind !== "settled")
+      return [];
     const hidden = hiddenTrackIds.value;
     const nameById = new Map(
       trackEntries.value.map((e) => [e.trackId, e.name]),
@@ -318,6 +325,19 @@ function NotationInner({ score }: NotationProps) {
     [seekTo],
   );
 
+  if (scoreFailure !== null) {
+    // A setting could not be read: say so, not "no notes" nor a spinner.
+    return (
+      <Center className="h-full w-full bg-background">
+        <ResourceErrorInline
+          variant="block"
+          subject="the song's settings"
+          error={scoreFailure.error}
+          refetch={scoreFailure.refetch}
+        />
+      </Center>
+    );
+  }
   if (viewPending) {
     // The song's settings are still loading: not "no notes".
     return (

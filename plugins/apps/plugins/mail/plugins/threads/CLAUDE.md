@@ -92,6 +92,7 @@ cycle) — the `/mail` landing repoint is the route STRING `/mail/threads`.
     - `primitives/css/text.Text`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/pane.defineRoute`

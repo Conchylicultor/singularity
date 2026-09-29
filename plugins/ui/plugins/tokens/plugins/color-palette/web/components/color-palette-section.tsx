@@ -4,6 +4,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   TokenRows,
@@ -55,6 +56,16 @@ const GROUPS: GroupDef[] = [
 export function ColorPaletteSection({ search }: { search: string }) {
   const editor = useTokenGroupEditor(colorPaletteGroup);
   if (editor.pending) {
+    if (editor.error !== null) {
+      return (
+        <ResourceErrorInline
+          error={editor.error}
+          refetch={editor.refetch}
+          variant="block"
+          subject="the theme selection"
+        />
+      );
+    }
     return <Loading variant="rows" count={GROUPS.length} />;
   }
 

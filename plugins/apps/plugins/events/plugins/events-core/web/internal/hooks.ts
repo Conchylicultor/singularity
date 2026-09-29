@@ -5,6 +5,8 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import {
   useResource,
+  foldResource,
+  useEndpointResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -73,7 +75,7 @@ export function useEventsRevision(): ResourceResult<{ rev: string }> {
  * the tick into the hook makes forgetting it impossible.
  */
 export function useEventSourceRuns(sourceId: string, limit?: number) {
-  const query = useEndpoint(
+  const query = useEndpointResource(
     listEventSourceRuns,
     { id: sourceId },
     limit === undefined ? undefined : { query: { limit } },
@@ -85,7 +87,14 @@ export function useEventSourceRuns(sourceId: string, limit?: number) {
   const tick = useResource(eventRunsRevisionResource, undefined, {
     select: selectRev,
   });
-  const rev = tick.pending ? null : tick.data;
+  // A failed tick has nothing to say either: the runs query keeps rendering
+  // what it last fetched (and surfaces its own failures), and the tick's
+  // failure is reported by live-state itself.
+  const rev = foldResource(tick, {
+    loading: () => null,
+    error: () => null,
+    ready: (r) => r,
+  });
   const { refetch } = query;
   // Compared against the last revision acted on, not just watched as a dep: the
   // effect must fire once per genuine change, and never re-fire on a re-render
@@ -118,7 +127,7 @@ export function useEventSourceRun(runId: string) {
  * run's event set is closed, so there is nothing to keep fresh.
  */
 export function useRunEvents(runId: string, limit?: number) {
-  return useEndpoint(
+  return useEndpointResource(
     listRunEvents,
     { runId },
     limit === undefined ? undefined : { query: { limit } },

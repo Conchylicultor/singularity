@@ -1,7 +1,11 @@
+import {
+  foldResource,
+  useCombinedResources,
+  useEndpointResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useCallback, useMemo } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
@@ -40,17 +44,32 @@ export function ConfigNav() {
   const registrations = useConfigRegistrations();
   const openPane = useOpenPane();
 
-  const { data: payload, isPending } = useEndpoint(getPluginTree, {});
+  const treeRes = useEndpointResource(getPluginTree, {});
+  // Rows are built only for a ready tree; `readiness` (below) renders the
+  // loading and failed states, so neither ever reaches the view as a value.
+  const payload = foldResource(treeRes, {
+    loading: () => undefined,
+    error: () => undefined,
+    ready: (tree) => tree,
+  });
 
   // Modified/conflict state, read once data-level (no per-row config hooks).
-  // While either map is pending its answer is `undefined` — not known yet — and
-  // the whole nav renders its loading state (`loading` below): the Modified /
+  // While either map is loading (or failed) its answer is `undefined` — not
+  // known — and the whole nav renders its loading or error state (`readiness`
+  // below): the Modified /
   // Conflict fields decide which rows a view's filter keeps (the authored
   // "Conflicts" view is `conflict is true`), so rendering rows before both maps
   // land would show that view as confirmed-empty — "no conflicts" — while the
   // answer is still unknown.
   const modifiedRes = useLive(configModifiedCounts);
   const conflictRes = useConflictMap();
+  // The nav is ready only when all three are: the plugin tree and both maps.
+  // Precedence error > loading.
+  const readiness = useCombinedResources({
+    tree: treeRes,
+    modified: modifiedRes,
+    conflict: conflictRes,
+  });
 
   // Keyed by the canonical DOT-form plugin id. `reg.pluginId` is already dot and
   // equals `PluginNode.id`, so no slash→dot bridging is needed.
@@ -108,8 +127,13 @@ export function ConfigNav() {
   const modifiedCountOf = useCallback(
     (row: ConfigNavRow): number | undefined => {
       if (!row.registration) return 0;
-      if (modifiedRes.pending) return undefined;
-      return modifiedRes.data[row.registration.storePath] ?? 0;
+      const storePath = row.registration.storePath;
+      return foldResource(modifiedRes, {
+        loading: () => undefined,
+        // Not known: the nav renders the failure through `readiness`.
+        error: () => undefined,
+        ready: (counts) => counts[storePath] ?? 0,
+      });
     },
     [modifiedRes],
   );
@@ -117,8 +141,13 @@ export function ConfigNav() {
   const conflictOf = useCallback(
     (row: ConfigNavRow): ConfigV2ConflictLocations | null | undefined => {
       if (!row.registration) return null;
-      if (conflictRes.pending) return undefined;
-      return conflictRes.data[row.registration.storePath] ?? null;
+      const storePath = row.registration.storePath;
+      return foldResource(conflictRes, {
+        loading: () => undefined,
+        // Not known: the nav renders the failure through `readiness`.
+        error: () => undefined,
+        ready: (map) => map[storePath] ?? null,
+      });
     },
     [conflictRes],
   );
@@ -216,7 +245,7 @@ export function ConfigNav() {
       rowKey={(r) => r.id}
       views={["tree"]}
       storageKey={CONFIG_NAV_VIEW}
-      loading={isPending || modifiedRes.pending || conflictRes.pending}
+      readiness={readiness}
       hierarchy={configHierarchy}
       selectedRowId={selectedRowId}
       onRowActivate={handleActivate}

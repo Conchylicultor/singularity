@@ -143,7 +143,7 @@ export function ReleaseHistorySection({ id }: { id: string }): ReactElement {
   // a null tick (no refetch) — the first settled `rev` then refreshes once.
   const tick = useResource(releaseRunsRevisionResource);
   const changeTick = matchResource(tick, {
-    pending: () => null,
+    loading: () => null,
     ready: (d) => d.rev,
   });
 

@@ -1,3 +1,4 @@
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -14,9 +15,20 @@ export function SummarizeButton() {
   const latestResult = useLatestConversationSummary(convId);
   const { isOpen, toggle } = convSummaryPane.useToggle({});
 
-  // Render disabled-neutral while pending — badge depends on data so we must
+  if (latestResult.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        icon={autoAwesomeIcon}
+        subject="the summary"
+        error={latestResult.error}
+        refetch={latestResult.refetch}
+      />
+    );
+  }
+  // Render disabled-neutral while loading — badge depends on data so we must
   // not flash the wrong (no-badge) state during the load window.
-  if (latestResult.pending) {
+  if (latestResult.status === "loading") {
     return (
       <Button
         variant={isOpen ? "secondary" : "ghost"}

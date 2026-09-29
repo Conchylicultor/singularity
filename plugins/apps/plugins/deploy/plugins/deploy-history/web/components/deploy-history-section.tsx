@@ -217,7 +217,7 @@ export function DeployHistorySection({
   // settled `rev` then refreshes once.
   const tick = useResource(deployRunsRevisionResource);
   const changeTick = matchResource(tick, {
-    pending: () => null,
+    loading: () => null,
     ready: (d) => d.rev,
   });
 

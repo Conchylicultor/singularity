@@ -55,11 +55,13 @@ export function PagesSidebar() {
 
   // target page id → the pages that link to it. Feeds the tree's alias edges,
   // so a page linked from another page shows up as a reference child of the
-  // linking page. While the edges are still loading the tree simply renders
-  // without aliases (they pop in — never a wrong hierarchy).
+  // linking page. While the edges are still loading — or when their read
+  // failed — the tree simply renders without aliases (they pop in — never a
+  // wrong hierarchy; the aliases are an enrichment, the pages read is the
+  // tree).
   const linkSourcesByTarget = useMemo(() => {
     const map = new Map<string, string[]>();
-    if (links.pending) return map;
+    if (links.status === "loading" || links.status === "error") return map;
     for (const edge of links.data) {
       if (edge.sourcePageId === edge.targetPageId) continue;
       const sources = map.get(edge.targetPageId);
@@ -69,12 +71,12 @@ export function PagesSidebar() {
     return map;
   }, [links]);
 
-  // Build rows only under the not-pending guard (never the `pending ? [] : data`
+  // Build rows only under the ready guard (never the `pending ? [] : data`
   // collapse that makes loading look like a confirmed-empty tree); the DataView
-  // gets `loading={result.pending}`, so the switcher chrome paints immediately
-  // and only the body shows the skeleton.
+  // gets `readiness={result}`, so the switcher chrome paints immediately and
+  // only the body shows the skeleton — or the failure, with Retry.
   let rows: PageRow[] = [];
-  if (!result.pending) {
+  if (result.status === "ready") {
     rows = result.data;
   }
 
@@ -84,7 +86,7 @@ export function PagesSidebar() {
   // Keyed on `result` (stable between pushes), not the per-render `rows` array.
   const pagesById = useMemo(() => {
     const map = new Map<string, PageRow>();
-    if (result.pending) return map;
+    if (result.status === "loading" || result.status === "error") return map;
     for (const b of result.data) map.set(b.id, b);
     return map;
   }, [result]);
@@ -153,7 +155,7 @@ export function PagesSidebar() {
     <Scroll fill className="py-xs">
       <DataView<PageRow>
         rows={rows}
-        loading={result.pending}
+        readiness={result}
         fields={[
           {
             id: "title",

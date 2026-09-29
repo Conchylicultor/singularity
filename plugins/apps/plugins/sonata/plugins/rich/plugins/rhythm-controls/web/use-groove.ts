@@ -15,6 +15,12 @@ import {
   DEFAULT_CHORD_FIGURATION_ID,
 } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  combineResources,
+  mapResource,
+  type GateInput,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { rhythms } from "../shared/resources";
 import { useSaveRhythm } from "./actions";
 
@@ -30,24 +36,25 @@ export interface GrooveFields {
   chordFigurationId: string;
 }
 
+/** A known groove: the resolved fields, whether it is on, and its writer. */
+export type GrooveState = GrooveFields & {
+  /** Enabled ⇔ the loaded song's `grooveSetting` holds a groove. */
+  enabled: boolean;
+  /**
+   * Optimistically drive playback (the setting) and persist. Pass `on=false`
+   * to disable (setting cleared to `null`); the observer re-affirms the same
+   * value on the next push.
+   */
+  commit: (next: GrooveFields, on: boolean) => void;
+};
+
 /**
  * The resolved groove for the open song, plus the optimistic-commit writer —
- * or `pending` while the song's groove is not known yet (the controls render a
- * loading state, never the default patterns standing in for the song's own).
+ * `loading` while the song's groove is not known yet (the controls render a
+ * loading state, never the default patterns standing in for the song's own),
+ * `error` when the song's rhythm row failed to load.
  */
-export type Groove =
-  | { pending: true }
-  | (GrooveFields & {
-      pending: false;
-      /** Enabled ⇔ the loaded song's `grooveSetting` holds a groove. */
-      enabled: boolean;
-      /**
-       * Optimistically drive playback (the setting) and persist. Pass `on=false`
-       * to disable (setting cleared to `null`); the observer re-affirms the same
-       * value on the next push.
-       */
-      commit: (next: GrooveFields, on: boolean) => void;
-    });
+export type Groove = ResourceResult<GrooveState>;
 
 /**
  * Single source of the open song's groove, shared by the section BODY
@@ -92,22 +99,39 @@ export function useGroove(): Groove {
     [setGroove, saveRhythm, currentSongId],
   );
 
-  if (store.pending || row.pending) return { pending: true };
-  const live = store.value;
-  const persisted = row.found ? row.row : null;
-  return {
-    pending: false,
-    enabled: live !== null,
-    bass: live?.hands.bass ?? persisted?.bass ?? defaultBassPattern(),
-    chord: live?.hands.chord ?? persisted?.chord ?? defaultChordPattern(),
-    bassFigurationId:
-      live?.bassFigurationId ??
-      persisted?.bassPatternId ??
-      DEFAULT_BASS_FIGURATION_ID,
-    chordFigurationId:
-      live?.chordFigurationId ??
-      persisted?.chordPatternId ??
-      DEFAULT_CHORD_FIGURATION_ID,
-    commit,
-  };
+  // Both halves gate the groove: the setting (a SongSetting — pending, failed
+  // or settled) and the row read — loading until both have settled, and a
+  // failure of either fails the groove. The setting enters the combine through
+  // its state alone, so its failure keeps its error.
+  const setting: GateInput =
+    store.kind === "failed"
+      ? { status: "error", error: store.error }
+      : { status: store.kind === "settled" ? "ready" : "loading" };
+  const gate = combineResources({ setting, row });
+  return mapResource(gate, (): GrooveState => {
+    // `gate` is ready ⇒ both halves are settled.
+    if (
+      store.kind !== "settled" ||
+      row.status === "loading" ||
+      row.status === "error"
+    ) {
+      throw new Error("useGroove: a ready gate over an unsettled input");
+    }
+    const live = store.value;
+    const persisted = row.found ? row.row : null;
+    return {
+      enabled: live !== null,
+      bass: live?.hands.bass ?? persisted?.bass ?? defaultBassPattern(),
+      chord: live?.hands.chord ?? persisted?.chord ?? defaultChordPattern(),
+      bassFigurationId:
+        live?.bassFigurationId ??
+        persisted?.bassPatternId ??
+        DEFAULT_BASS_FIGURATION_ID,
+      chordFigurationId:
+        live?.chordFigurationId ??
+        persisted?.chordPatternId ??
+        DEFAULT_CHORD_FIGURATION_ID,
+      commit,
+    };
+  });
 }
