@@ -281,4 +281,68 @@ describe("SharedWebSocket", () => {
     bSocket.open();
     expect(hub.server.openSockets()).toHaveLength(1);
   });
+
+  // A leader that dies or freezes broadcasts no "close", so its followers never
+  // leave OPEN. The new leader's socket is a NEW server connection holding none
+  // of their state, so every follower must re-dispatch onopen (NotificationsClient
+  // replays its subs there) — the crash-1781222633896-s41myj wedge: followers
+  // stayed bound to the dead connection and every sub went silently stale.
+  for (const failover of ["freeze", "kill"] as const) {
+    test(`leader ${failover} failover re-dispatches onopen to an already-open follower`, async () => {
+      const hub = createTransportHub();
+      const tabA = hub.tab();
+      const swsA = track(new SharedWebSocket(URL_PATH, tabA.hooks));
+      await flush();
+      hub.server.all()[0]!.open();
+      expect(swsA.isLeader).toBe(true);
+
+      const tabB = hub.tab();
+      const swsB = track(new SharedWebSocket(URL_PATH, tabB.hooks));
+      const tabC = hub.tab();
+      const swsC = track(new SharedWebSocket(URL_PATH, tabC.hooks));
+      let bOpens = 0;
+      let cOpens = 0;
+      swsB.onopen = () => {
+        bOpens++;
+      };
+      swsC.onopen = () => {
+        cOpens++;
+      };
+      await flush();
+      expect(bOpens).toBe(1);
+      expect(cOpens).toBe(1);
+
+      if (failover === "freeze") {
+        hub.freeze(tabA);
+        await vi.advanceTimersByTimeAsync(hub.timeoutMs);
+      } else {
+        hub.kill(tabA);
+        await flush();
+      }
+      const leader = swsB.isLeader ? swsB : swsC;
+      const follower = leader === swsB ? swsC : swsB;
+      expect(leader.isLeader).toBe(true);
+      expect(follower.isLeader).toBe(false);
+      // On a kill no "close" ever reaches the follower. (On a freeze both
+      // followers race the steal, so the loser may pass through demotion.)
+      if (failover === "kill") expect(follower.status).toBe("open");
+
+      hub.server
+        .all()
+        .find((s) => s.readyState === 0)!
+        .open();
+      await flush();
+      // Both tabs are now bound to the new connection: the leader via its own
+      // socket, the still-OPEN follower via the relayed open's new identity.
+      expect(bOpens).toBe(2);
+      expect(cOpens).toBe(2);
+
+      // …and a later tab join still re-broadcasts the SAME connection: no
+      // re-dispatch to either.
+      track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+      await flush();
+      expect(bOpens).toBe(2);
+      expect(cOpens).toBe(2);
+    });
+  }
 });

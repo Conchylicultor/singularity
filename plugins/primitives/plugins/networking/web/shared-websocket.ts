@@ -33,7 +33,7 @@ export interface SharedWebSocketHooks {
 type WsRelayMsg =
   | { kind: "rx"; data: string }
   | { kind: "tx"; data: string }
-  | { kind: "open" }
+  | { kind: "open"; conn: string }
   | { kind: "close" };
 
 export class SharedWebSocket {
@@ -57,6 +57,14 @@ export class SharedWebSocket {
   private reconnect = new ReconnectSchedule();
   private closed = false;
   private lastStatus: WsStatus | null = null;
+  /**
+   * Identity of the server connection this tab last dispatched `onopen` for —
+   * the one its consumers' state (NotificationsClient's subs) is registered
+   * on. Every real socket open mints a fresh id, carried on the leader's
+   * `open` relay. `null` = not bound to any connection (never opened, or a
+   * `close` / demotion since).
+   */
+  private boundConn: string | null = null;
 
   constructor(url: string | URL, hooks?: SharedWebSocketHooks) {
     this.url = typeof url === "string" ? url : url.toString();
@@ -95,22 +103,31 @@ export class SharedWebSocket {
               this.dispatchMessage(msg.data);
               break;
             case "open": {
-              // The leader rebroadcasts "open" to ALL followers whenever a new tab
-              // joins (onFollowerJoined below). A follower already at OPEN must
-              // NOT re-dispatch onopen: consumers treat onopen as "fresh
-              // connection, replay state" (NotificationsClient replays its whole
-              // sub set), so an unconditional dispatch made every existing tab
-              // re-replay on every tab join. A genuine reconnect still
-              // dispatches, because the leader's "close" broadcast reset this
-              // follower to CONNECTING first.
-              const wasOpen = this.readyState === SharedWebSocket.OPEN;
+              // Consumers treat onopen as "fresh connection, replay state"
+              // (NotificationsClient replays its whole sub set onto it), so it
+              // dispatches exactly once per server connection — decided by the
+              // connection's identity, not by this tab's readyState:
+              //  - the leader rebroadcasts "open" for the SAME connection to
+              //    ALL followers whenever a tab joins (onFollowerJoined below);
+              //    an already-bound follower must not re-replay on every join;
+              //  - a NEW connection must always dispatch, even to a follower
+              //    that never left OPEN. A leader that dies or freezes
+              //    broadcasts no "close", so on failover the new leader's
+              //    socket is the first thing followers hear — and the server
+              //    holds none of their subs on it. Gating on readyState
+              //    stranded every follower's subs until the next
+              //    missed-update probe.
               this.readyState = SharedWebSocket.OPEN;
               this.setStatus("open");
               publishNetDiag({ type: "ws-open", url: this.url });
-              if (!wasOpen) this.dispatchOpen();
+              if (msg.conn !== this.boundConn) {
+                this.boundConn = msg.conn;
+                this.dispatchOpen();
+              }
               break;
             }
             case "close":
+              this.boundConn = null;
               this.readyState = SharedWebSocket.CONNECTING;
               this.setStatus("reconnecting");
               publishNetDiag({ type: "ws-close", url: this.url });
@@ -120,8 +137,11 @@ export class SharedWebSocket {
           }
         },
         onFollowerJoined: () => {
-          if (this.ws?.readyState === SharedWebSocket.OPEN) {
-            this.election.broadcast({ kind: "open" });
+          if (
+            this.ws?.readyState === SharedWebSocket.OPEN &&
+            this.boundConn !== null
+          ) {
+            this.election.broadcast({ kind: "open", conn: this.boundConn });
           }
         },
       },
@@ -138,6 +158,7 @@ export class SharedWebSocket {
    */
   private onDemoted(): void {
     this.teardownWs();
+    this.boundConn = null;
     this.readyState = SharedWebSocket.CONNECTING;
     this.setStatus("reconnecting");
   }
@@ -218,9 +239,11 @@ export class SharedWebSocket {
         }
         /* eslint-enable promise-safety/no-bare-catch */
       }
+      const conn = crypto.randomUUID();
+      this.boundConn = conn;
       this.setStatus("open");
       publishNetDiag({ type: "ws-open", url: this.url });
-      this.election.broadcast({ kind: "open" });
+      this.election.broadcast({ kind: "open", conn });
       this.dispatchOpen();
     };
 
@@ -242,6 +265,7 @@ export class SharedWebSocket {
 
     ws.onclose = () => {
       this.ws = null;
+      this.boundConn = null;
       if (this.closed) return;
       this.readyState = SharedWebSocket.CONNECTING;
       this.setStatus("reconnecting");
