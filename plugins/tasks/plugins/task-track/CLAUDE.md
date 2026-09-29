@@ -3,9 +3,12 @@
 Per-task **track** — `main` or `sidequest`. Design:
 `research/2026-09-27-tasks-track-main-vs-sidequest.md`.
 
-- **Main**: the next steps of a feature. Chained into the dependency graph and
-  auto-started when an agent files them (`add_task` with `track: "main"`).
-- **Sidequest**: an independent follow-up (caveat, bug, cleanup). Runs after
+- **Main**: on a feature's critical path — the feature is unfinished until it
+  is done. Chained into the dependency graph and auto-started when an agent
+  files them (`add_task` with `track: "main"`).
+- **Sidequest**: off the critical path — any follow-up the feature can ship
+  without (caveat, bug, cleanup). Being a follow-up never makes a task main;
+  only the critical path does. Runs after
   the task it was filed from, is never spliced into that task's chain, and is
   never auto-started by an agent. A human may still arm one from the task
   detail's auto-start picker, and may switch a task's track from the detail
