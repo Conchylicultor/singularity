@@ -13,12 +13,7 @@ import {
 } from "@plugins/ui/plugins/icons/server";
 import { buildSprite } from "./build-sprite";
 import { ICON_MANIFEST } from "./icon-manifest.generated";
-import {
-  PACKAGE,
-  setIdentity,
-  readSet,
-  withSymbolSets,
-} from "./symbol-sets";
+import { PACKAGE, setIdentity, readSet, withSymbolSets } from "./symbol-sets";
 
 /**
  * Where each sprite's glyphs come from. Every symbol sprite is built from BOTH
@@ -37,11 +32,7 @@ function setOf(key: SpriteKey): SetKey {
  */
 export const manifestHash: string = createHash("sha256")
   .update(JSON.stringify(ICON_MANIFEST))
-  .update(
-    Object.values(PACKAGE)
-      .map(setIdentity)
-      .join("\n"),
-  )
+  .update(Object.values(PACKAGE).map(setIdentity).join("\n"))
   .digest("hex")
   .slice(0, 16);
 function brandSprite(brands: IconifyJSON): Map<SpriteKey, string> {

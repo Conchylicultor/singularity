@@ -10,11 +10,7 @@ import { PACKAGE, setIdentity, withSymbolSets } from "./symbol-sets";
  * sets — so a runtime-symbols URL carrying it can be cached forever.
  */
 export const symbolsHash: string = createHash("sha256")
-  .update(
-    [PACKAGE.regular, PACKAGE.light]
-      .map(setIdentity)
-      .join("\n"),
-  )
+  .update([PACKAGE.regular, PACKAGE.light].map(setIdentity).join("\n"))
   .digest("hex")
   .slice(0, 16);
 
