@@ -33,7 +33,10 @@ import {
 } from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-import type { OpRecord } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import {
+  WAIT_KINDS,
+  type OpRecord,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 
 /**
  * How far back a just-finished op still counts as the thing the caller meant.
@@ -61,10 +64,8 @@ function isPidAlive(pid: number): boolean {
   }
 }
 
-function liveByKind(ops: WorktreeOpInfo[]): Map<OpKind, { opId: string }> {
-  const out = new Map<OpKind, { opId: string }>();
-  for (const o of ops) if (o.opId) out.set(o.op, { opId: o.opId });
-  return out;
+function liveOpIds(ops: WorktreeOpInfo[]): Set<string> {
+  return new Set(ops.flatMap((o) => (o.opId ? [o.opId] : [])));
 }
 
 function recordsById(): Map<string, OpRecord> {
@@ -139,7 +140,8 @@ function progressReporter(): (a: AwaitedOp) => void {
   return (a) => {
     const wait = readOpenWait(a.opId);
     const line = wait
-      ? `  ${a.op}: waiting on ${wait.kind} since ${wait.startedAt}`
+      ? `  ${a.op}: ${WAIT_KINDS[wait.kind].sentence(wait.reason)}` +
+        `${wait.cycle > 0 ? ` · requeue #${wait.cycle}` : ""} since ${wait.startedAt}`
       : `  ${a.op}: working`;
     if (last.get(a.opId) === line) return;
     last.set(a.opId, line);
@@ -173,9 +175,8 @@ const run: CliAction<[string[]], { maxWait?: string; arm?: string }> = async (
 
   // ── arm ──────────────────────────────────────────────────────────────────
   // Capture (kind, opId, pid) now. Everything after this decides about THESE
-  // runs: a second op of the same kind overwrites the single marker file, and
-  // without the frozen ids a wait would silently start reporting on the newer
-  // one.
+  // runs: an op started after arming is not the one the caller meant, and
+  // without the frozen ids a wait would silently start reporting on it too.
   const startedAt = Date.now();
   let awaited: AwaitedOp[] = [];
   const armOnce = async (): Promise<boolean> => {
@@ -258,7 +259,7 @@ const run: CliAction<[string[]], { maxWait?: string; arm?: string }> = async (
   const settled = async (): Promise<boolean> => {
     states = decideStates(
       awaited,
-      liveByKind(await listWorktreeOps(slug)),
+      liveOpIds(await listWorktreeOps(slug)),
       recordsById(),
       isPidAlive,
     );

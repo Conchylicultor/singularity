@@ -92,6 +92,7 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
     - `apps/mail/threads`
     - `conversations/all-conversations`
     - `conversations/summary`
+    - `debug/profiling/op-log/op-store`
     - `infra/claude-cli`
     - `infra/trash`
     - `network/live`

@@ -326,7 +326,6 @@ run everywhere.
     - `code-explorer/file-resolve`
     - `config_v2`
     - `conversations/conversation-progress`
-    - `conversations/conversation-view/op-status`
     - `conversations/runtime-tmux`
     - `conversations/transcript-watcher`
     - `debug/boot-watchdog`

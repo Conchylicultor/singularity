@@ -1,11 +1,21 @@
 import { describe, expect, test } from "bun:test";
-import {
-  foldOpRecords,
-  groupByOpId,
-  openWaitOf,
-  sumWaits,
-} from "./internal/fold";
-import type { RawOpRecord } from "./internal/types";
+import { foldOpLines, sumWaits, toOpRecords } from "./internal/fold";
+import type { OpRecord, OpWaitSpan, RawOpRecord } from "./internal/types";
+
+// LEGACY snapshot lines (pre-v2 CLIs): these must keep folding exactly as they
+// did before the v2 event format, until Phase 5 removes them. The v2 event
+// stream is covered in fold-v2.test.ts.
+
+const foldOpRecords = (raw: RawOpRecord[], now: number): OpRecord[] =>
+  toOpRecords(foldOpLines(raw).values(), now);
+
+/** A wait's geometry only — legacy lines carry no reason / cycle / result. */
+const spans = (ws: readonly (OpWaitSpan | undefined)[]): OpWaitSpan[] =>
+  ws.map((w) => ({
+    kind: w!.kind,
+    startMs: w!.startMs,
+    durationMs: w!.durationMs,
+  }));
 
 // `now` is injected into every fold, so these tests pin the live-bar synthesis
 // against a fixed clock rather than a real one.
@@ -144,7 +154,7 @@ describe("foldOpRecords — waiting synth", () => {
 
     const [rec] = foldOpRecords(raw, T0 + 30_000);
     expect(rec!.outcome).toBe("waiting");
-    expect(rec!.waits).toEqual([
+    expect(spans(rec!.waits)).toEqual([
       { kind: "host-grant", startMs: 0, durationMs: 30_000 },
     ]);
     expect(rec!.waitMs).toBe(30_000);
@@ -169,7 +179,7 @@ describe("foldOpRecords — waiting synth", () => {
 
     const [rec] = foldOpRecords(raw, T0 + 62_000);
     expect(rec!.outcome).toBe("waiting");
-    expect(rec!.waits).toEqual([
+    expect(spans(rec!.waits)).toEqual([
       { kind: "build-lock", startMs: 0, durationMs: 2_000 },
       { kind: "duress-valve", startMs: 2_000, durationMs: 60_000 },
     ]);
@@ -179,7 +189,7 @@ describe("foldOpRecords — waiting synth", () => {
   test("requested with no open wait still renders, with a growing total", () => {
     const [rec] = foldOpRecords([requested()], T0 + 4_000);
     expect(rec!.outcome).toBe("waiting");
-    expect(rec!.waits).toEqual([]);
+    expect(spans(rec!.waits)).toEqual([]);
     expect(rec!.waitMs).toBe(0);
     expect(rec!.totalMs).toBe(4_000);
   });
@@ -265,7 +275,7 @@ describe("foldOpRecords — running synth", () => {
     expect(rec!.outcome).toBe("running");
     // The re-stamped `requested` is a superset of granted's snapshot and wins.
     expect(rec!.waits).toHaveLength(2);
-    expect(rec!.waits[1]).toEqual({
+    expect(spans([rec!.waits[1]])[0]).toEqual({
       kind: "duress-valve",
       startMs: 60_000,
       durationMs: 30_000,
@@ -296,7 +306,7 @@ describe("foldOpRecords — running synth", () => {
 
     const [rec] = foldOpRecords(raw, T0 + 360_000); // parked 5 min in the grant
     expect(rec!.outcome).toBe("running"); // NOT flipped back to "waiting"
-    expect(rec!.waits).toEqual([
+    expect(spans(rec!.waits)).toEqual([
       { kind: "build-lock", startMs: 0, durationMs: 1_000 },
       { kind: "host-grant", startMs: 60_000, durationMs: 300_000 }, // growing
     ]);
@@ -325,7 +335,7 @@ describe("foldOpRecords — running synth", () => {
       },
     ];
     const [rec] = foldOpRecords(raw, T0 + 2_000);
-    expect(rec!.waits).toEqual([
+    expect(spans(rec!.waits)).toEqual([
       { kind: "build-lock", startMs: 0, durationMs: 1_000 },
     ]);
   });
@@ -394,7 +404,7 @@ describe("foldOpRecords — interleaved concurrent writers", () => {
     expect(byId.get("check-1")!.holdMs).toBe(8_000);
     // build: last requested re-stamp wins → waiting on host-grant
     expect(byId.get("op-1")!.outcome).toBe("waiting");
-    expect(byId.get("op-1")!.waits).toEqual([
+    expect(spans(byId.get("op-1")!.waits)).toEqual([
       { kind: "host-grant", startMs: 500, durationMs: 9_500 },
     ]);
   });
@@ -421,7 +431,7 @@ describe("partial final line", () => {
     const [rec] = foldOpRecords(raw, T0);
     expect(rec!.opId).toBe("bare");
     expect(rec!.branch).toBe("bare"); // falls back to the id, like the push reader
-    expect(rec!.waits).toEqual([]);
+    expect(spans(rec!.waits)).toEqual([]);
     expect(rec!.outcome).toBe("waiting");
   });
 
@@ -487,7 +497,7 @@ describe("a build-shaped sequence end-to-end", () => {
   test("all 5 waits survive at their true offsets, not packed head-to-tail", () => {
     const [rec] = foldOpRecords(raw, T0 + 999_999);
     expect(rec!.outcome).toBe("success");
-    expect(rec!.waits).toEqual(buildWaits);
+    expect(spans(rec!.waits)).toEqual(buildWaits);
     expect(rec!.waitMs).toBe(80_000);
     expect(rec!.totalMs).toBe(200_000);
 
@@ -526,7 +536,7 @@ describe("a build-shaped sequence end-to-end", () => {
     const [rec] = foldOpRecords(midFlight, T0 + 422_000); // 5 min into the grant
     expect(rec!.outcome).toBe("running");
     expect(rec!.waits).toHaveLength(5);
-    expect(rec!.waits[4]).toEqual({
+    expect(spans([rec!.waits[4]])[0]).toEqual({
       kind: "host-grant",
       startMs: 122_000,
       durationMs: 300_000,
@@ -674,36 +684,49 @@ describe("foldOpRecords — the op-kind vocabulary", () => {
   });
 });
 
-describe("openWaitOf — is the op parked right now?", () => {
+describe("legacy open wait — is the op parked right now?", () => {
   const hostGrant = {
     kind: "host-grant" as const,
     startMs: 500,
     startedAt: at(500),
   };
+  const openWaitOf = (raw: RawOpRecord[]) =>
+    foldOpLines(raw).get("op-1")!.openWait;
 
   test("the freshest requested stamp's open wait", () => {
-    const g = groupByOpId([
-      requested({
-        openWait: { kind: "build-lock", startMs: 0, startedAt: at(0) },
-      }),
-      requested({ openWait: hostGrant }),
-    ]).get("op-1")!;
-    expect(openWaitOf(g)).toEqual(hostGrant);
+    expect(
+      openWaitOf([
+        requested({
+          openWait: { kind: "build-lock", startMs: 0, startedAt: at(0) },
+        }),
+        requested({ openWait: hostGrant }),
+      ]),
+    ).toEqual({ ...hostGrant, reason: null, cycle: 0 });
   });
 
   test("a closed wait re-stamps null: the op is working", () => {
-    const g = groupByOpId([
-      requested({ openWait: hostGrant }),
-      requested({ openWait: null }),
-    ]).get("op-1")!;
-    expect(openWaitOf(g)).toBeNull();
+    expect(
+      openWaitOf([
+        requested({ openWait: hostGrant }),
+        requested({ openWait: null }),
+      ]),
+    ).toBeNull();
   });
 
   test("a terminal line closes every wait", () => {
-    const g = groupByOpId([
-      requested({ openWait: hostGrant }),
-      { phase: "completed", opId: "op-1", outcome: "error" },
-    ]).get("op-1")!;
-    expect(openWaitOf(g)).toBeNull();
+    const [rec] = foldOpRecords(
+      [
+        requested({ openWait: hostGrant }),
+        { phase: "completed", opId: "op-1", outcome: "error" },
+      ],
+      T0,
+    );
+    expect(rec!.openWait).toBeNull();
+    expect(
+      openWaitOf([
+        requested({ openWait: hostGrant }),
+        { phase: "completed", opId: "op-1", outcome: "error" },
+      ]),
+    ).toBeNull();
   });
 });

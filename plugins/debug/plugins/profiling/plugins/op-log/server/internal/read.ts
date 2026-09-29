@@ -1,13 +1,12 @@
 import {
-  foldOpRecords,
-  groupByOpId,
-  openWaitOf,
-  orphanedOps,
+  foldOpLines,
+  toOpRecords,
+  type OpFoldState,
+  type OpLine,
   type OpenWait,
   type OpRecord,
-  type RawOpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
-import { appendOpLog, opLogSink } from "./jsonl";
+import { opLogSink } from "./jsonl";
 
 /**
  * Read the live op log through its own sink's bounded reader.
@@ -15,16 +14,22 @@ import { appendOpLog, opLogSink } from "./jsonl";
  * BOUND: the reader's 8 MB default byte budget, and `includeRotated` deliberately
  * NOT set — this is a recent-ops view (the Gantt / stats window), so stitching
  * `op-log.jsonl.1`/`.2` back in would put the memory straight back. With the one
- * sink left, that 8 MB budget is the whole per-request bound.
+ * sink left, that 8 MB budget is the whole per-request bound. The v2 terminal is
+ * self-contained, so an op whose head was clipped still folds to a full record.
  *
  * `missing` is folded to `[]` HERE, as one visible line rather than absorbed by
  * the reader: on a fresh host nothing has ever run, which is a legitimate empty
  * history and not a failure.
  */
-function readRawOpRecords(): RawOpRecord[] {
-  const result = opLogSink.readJsonlTail<RawOpRecord>();
+function readOpLines(): OpLine[] {
+  const result = opLogSink.readJsonlTail<OpLine>();
   if (result.kind === "missing") return []; // no op has ever run on this host
   return result.records;
+}
+
+/** Every op in the live log, folded through the one reducer. */
+export function readOpStates(): Map<string, OpFoldState> {
+  return foldOpLines(readOpLines());
 }
 
 /**
@@ -33,10 +38,9 @@ function readRawOpRecords(): RawOpRecord[] {
  *
  * `Date.now()` is read ONCE here and injected into the fold, so all in-flight
  * bars on one read share a single clock (and so the fold stays pure/testable).
- * That clock is what makes the bars grow on refresh — no polling is added.
  */
 export function readOpRecords(): OpRecord[] {
-  return foldOpRecords(readRawOpRecords(), Date.now());
+  return toOpRecords(readOpStates().values(), Date.now());
 }
 
 /**
@@ -46,70 +50,7 @@ export function readOpRecords(): OpRecord[] {
  * queued from one that is stuck.
  */
 export function readOpenWait(opId: string): OpenWait | null {
-  const group = groupByOpId(readRawOpRecords()).get(opId);
-  return group ? openWaitOf(group) : null;
-}
-
-/**
- * Close out orphaned in-flight ops by appending a terminal interrupted record
- * for each. ONE reconciler for all three kinds, replacing the two near-identical
- * `finalizeOrphanedPushes` / `finalizeOrphanedBuilds`.
- *
- * A hard kill (SIGKILL/OOM/power loss) cannot run the CLI's `write()`, leaving a
- * `requested` (and maybe a `granted`) with no terminal; this stamps a real
- * terminal so the op stops being recomputed as live on every read, while
- * preserving it as an interrupted trace.
- *
- * `isActive(opSlug)` guards against closing an op that is still genuinely
- * running. Liveness is keyed on the OP SLUG (basename of the worktree root) —
- * the record's one identity field. A null slug is treated as inactive, matching
- * the reconciler it replaces.
- *
- * APPENDS, never rewrites: concurrent CLI processes are writing this same file,
- * so a rewrite would race them. Callers must still ensure a single reconciler
- * (gate on the main backend).
- *
- * There is exactly one log to reconcile — the op log — and this is its only
- * reconciler.
- *
- * Returns the number of records finalized.
- *
- * SAFE under the bounded read: an op whose `requested` head was clipped away by
- * the byte budget yields a group with no `requested`, and the `if (!base)
- * continue;` below skips it rather than finalizing it from a partial view. That
- * guard used to be merely defensive; the bound makes it load-bearing. The cost of
- * the bound is that such an op is not reconciled on this pass — it simply stays
- * as-is, which is strictly better than stamping an invented terminal.
- */
-export async function finalizeOrphanedOps(
-  isActive: (slug: string) => Promise<boolean>,
-): Promise<number> {
-  const orphans = orphanedOps(readRawOpRecords());
-  let finalized = 0;
-  for (const g of orphans) {
-    // `orphanedOps` only yields groups with a `requested`, so this is total.
-    const base = g.requested;
-    if (!base) continue;
-    if (await isActive(base.opSlug ?? "")) continue;
-
-    appendOpLog({
-      ...base,
-      phase: "completed",
-      grantedAt: g.granted?.grantedAt ?? base.requestedAt,
-      completedAt: null,
-      // Whatever waits were on record stand; an open wait had no end, so it is
-      // dropped rather than clocked to an invented instant.
-      waits: g.granted?.waits ?? base.waits ?? [],
-      openWait: null,
-      // No real end ⇒ no real duration. The Gantt renders these as a
-      // fixed-width interrupted marker, not a bar.
-      holdMs: 0,
-      totalMs: 0,
-      outcome: "error",
-      interrupted: true,
-      steps: [],
-    } satisfies RawOpRecord);
-    finalized++;
-  }
-  return finalized;
+  const state = readOpStates().get(opId);
+  if (!state || state.closedBy !== null) return null;
+  return state.openWait;
 }

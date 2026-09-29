@@ -588,6 +588,8 @@ grouped under the wave or item that removes it
     - `conversations/summary`
     - `database/query-deadline`
     - `debug/claude-cli-calls`
+    - `debug/profiling/op-log/op-store`
+    - `debug/profiling/ops`
     - `debug/queue`
     - `debug/queue-health`
     - `debug/sentinel`

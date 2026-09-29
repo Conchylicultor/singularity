@@ -3,24 +3,13 @@ import {
   type Dirent,
   mkdirSync,
   openSync,
-  readFileSync,
   renameSync,
   rmSync,
-  writeFileSync,
+  writeSync,
 } from "node:fs";
-import {
-  type FileHandle,
-  mkdir,
-  open,
-  readdir,
-  readFile,
-} from "node:fs/promises";
+import { type FileHandle, open, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
-import {
-  pushPool,
-  pushSlotPath,
-} from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   worktreesDir,
   worktreeDataDir,
@@ -28,62 +17,44 @@ import {
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 
-// A per-worktree, crash-safe marker for a long-running operation (build, push,
-// check, test, e2e — the `OpKind` vocabulary declared once in this plugin's
-// core) that will eventually finish and resume the agent. The conversation
-// status poller treats a tmux pane in the CLI "shell" state as `working` ONLY
-// while one of these markers is live for its worktree — every other never-ending
-// background shell (dev server, `tail -f`, a build whose completion marker never
-// matched) falls through to the idle/waiting reading instead of looking busy
-// forever. Markers are keyed on the worktree directory basename, which the
-// writers (`./singularity build` / `push` / `check` / `test` / `run <e2e>`, via
-// `basename(getWorktreeRoot())`) and the reader (runtime-tmux, via
-// `basename(worktreePath)`) all agree on.
+// A per-op, crash-safe liveness marker for a long-running operation (build,
+// push, check, test, e2e — the `OpKind` vocabulary declared once in this
+// plugin's core). It answers exactly one question: "is this op's process still
+// running?" What the op is DOING (queued, parked on a wait, working) is the op
+// log's business — the marker carries no phase.
 //
-// The marker's op IS the op kind: one vocabulary, declared as data in
-// `worktree/core` (`OP_KINDS`), which op-log, the op-status banner and the Gantt
-// all read. Adding a kind is one edit there; this module has nothing to add.
+// The file is `worktrees/<slug>/ops/<opId>.json` = {v:2, kind, opId, pid,
+// startedAt}, and its writer holds a kernel `flock` on it for the op's whole
+// life. The lock IS the liveness: the kernel drops it when the process dies —
+// SIGKILL, OOM and power loss included — and no pid is ever consulted, so pid
+// reuse cannot make a dead op look alive. A reader probes with a non-blocking
+// try-lock: failing to take it ⇒ the op is running; taking it ⇒ the writer is
+// gone, and the reader reaps the file.
+//
+// One file per op (not per (worktree, kind)): two checks in one worktree are two
+// markers, so neither overwrites the other and every reader sees both.
+//
+// Consumers: the tmux status poller (a pane in the CLI "shell" state reads as
+// `working` only while one of these is live for its worktree), `./singularity
+// await`, the stop guard, and the op-store orphan reconciler. Markers are keyed
+// on the checkout's namespace, which every writer (`build` / `push` / direct
+// ops) and reader agrees on.
 export type WorktreeOp = OpKind;
 
-// The closed set of known op types, for validating a marker's self-reported op
-// when reading it back (a marker written by an older/garbage writer that names
-// an unknown op falls back to "build").
 const KNOWN_OPS: readonly WorktreeOp[] = OP_KIND_IDS;
-
-// Every op is written up-front in the "waiting-for-lock" phase (before it
-// requests its lock) and flipped to "running" the moment the lock is granted, so
-// an op queued behind another reads as genuinely-queued rather than running. A
-// push waits on the global push lock; a build/check waits on the per-worktree
-// build lock (build) or the host build slot (direct check).
-export type WorktreeOpPhase = "waiting-for-lock" | "running";
 
 export interface WorktreeOpInfo {
   slug: string;
   op: WorktreeOp;
-  // The CLI process running the op. Every marker already carries it (it is the
-  // liveness key markerInfoFromParsed probes), and it is the ONLY stable handle
-  // on the running process — so it is surfaced rather than dropped. Without it a
-  // consumer that needs process identity (to `sample`/`ps` a suspect op by hand)
-  // would have to re-parse the marker files itself, re-deriving paths this
-  // module owns.
+  // The CLI process running the op — the stable handle a consumer needs to
+  // `sample`/`ps` a suspect op, and `await`'s fallback death check.
   pid: number;
-  // The op-log id of the run this marker stands for, or null for a marker
-  // written before the field existed. The marker answers "is something running";
-  // the op-log answers "what did it end as" — and this is the only thing that
-  // joins the two. Without it a reader has to guess by (slug, kind, time), which
-  // picks the wrong run exactly when it matters: `ops/<op>.json` is ONE file per
-  // (worktree, kind), so a second check in the same worktree overwrites the
-  // first's marker and the timestamps no longer separate them.
+  // The op-log id of the run this marker stands for. Always set on a v2
+  // marker; null only for a legacy per-kind marker an older CLI wrote without
+  // one. The marker answers "is it running", the op log "what did it end as" —
+  // and this is the join.
   opId: string | null;
   startedAt: string;
-  phase: WorktreeOpPhase;
-  // The instant this op's "running" phase began — i.e. when waiting ended and
-  // work started. null while still waiting. For builds/checks it is stamped into
-  // the marker by setWorktreeOpPhase on the lock grant; for pushes it is derived
-  // from the holder file's `acquiredAt` (see derivePushPhases), which overrides
-  // whatever the marker carries. Lets the UI clock work time separately from the
-  // wait spent queued for the lock.
-  runningAt: string | null;
 }
 
 // Op markers are keyed by the same slug the spec dir carries, and a slug reaches
@@ -93,13 +64,91 @@ function opsDir(slug: string): string {
   return join(worktreeDataDir(asNamespace(slug)), "ops");
 }
 
-function opFile(slug: string, op: WorktreeOp): string {
-  return join(opsDir(slug), `${op}.json`);
+function opFile(slug: string, opId: string): string {
+  return join(opsDir(slug), `${opId}.json`);
 }
 
-// Mirrors isPidAlive in @plugins/build/server: signal 0 probes existence without
-// delivering anything. EPERM means the pid is alive but owned by another user —
-// still alive for our purposes.
+// A marker in the making: written, locked, then renamed into place. Readers
+// never probe these — a probe landing between the writer's open and its flock
+// would steal the lock and fail the writer's start.
+const TMP_SUFFIX = ".tmp";
+// A temp file older than this was orphaned by a writer that died between
+// create and rename (a microsecond window); only then is it reaped.
+const STALE_TMP_MS = 60_000;
+
+/** The held marker of one running op. */
+export interface WorktreeOpMarker {
+  readonly path: string;
+  /**
+   * Unlink the marker and drop its lock. Call it AFTER the op's terminal event
+   * is in the op log: a reader that sees the marker gone must find the verdict
+   * already written, never an op that looks killed. Idempotent.
+   */
+  release(): void;
+}
+
+/**
+ * Publish this process's liveness marker for op `opId` and hold its lock until
+ * `release()` (or process death — the kernel releases it either way).
+ *
+ * Written to a temp file, locked, then renamed into place, so a reader only
+ * ever sees a complete file that is already locked. The fd is opened
+ * close-on-exec (Bun/libuv open every fd `O_CLOEXEC`), so a child the op spawns
+ * does not inherit it: the lock ends with THIS process, however long a child
+ * lingers. (The marker test pins that.)
+ *
+ * `opId` is required: every writer mints one for the op log before it writes
+ * its marker, and a marker without it is a live op nobody can look up the
+ * outcome of.
+ */
+export function markWorktreeOpStart(
+  slug: string,
+  op: WorktreeOp,
+  opId: string,
+): WorktreeOpMarker {
+  const dir = opsDir(slug);
+  mkdirSync(dir, { recursive: true });
+  const path = opFile(slug, opId);
+  const tmp = `${path}.${process.pid}${TMP_SUFFIX}`;
+  const fd = openSync(tmp, "w");
+  try {
+    if (!flockTry(fd))
+      throw new Error(
+        `worktree-op: could not lock a marker file this process just created (${tmp})`,
+      );
+    writeSync(
+      fd,
+      JSON.stringify({
+        v: 2,
+        kind: op,
+        opId,
+        pid: process.pid,
+        startedAt: new Date().toISOString(),
+      }),
+    );
+    renameSync(tmp, path);
+  } catch (err) {
+    closeSync(fd);
+    rmSync(tmp, { force: true });
+    throw err;
+  }
+  let released = false;
+  return {
+    path,
+    release: () => {
+      if (released) return;
+      released = true;
+      // Unlink first, then close: a reader that opened the file before the
+      // unlink and takes the lock after the close only reaps an already-gone
+      // path.
+      rmSync(path, { force: true });
+      closeSync(fd);
+    },
+  };
+}
+
+// Signal 0 probes existence without delivering anything. EPERM: alive, but
+// another user's. Only for LEGACY markers — a v2 marker's liveness is its lock.
 function isPidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -109,171 +158,119 @@ function isPidAlive(pid: number): boolean {
   }
 }
 
-// Single-file marker semantics: one `<op>.json` per (worktree, op), so when two
-// ops of the same kind overlap in one worktree (a build queued behind another
-// build) the newest overwrites the file. The accepted display consequence is
-// that the newest (queued) op is what the UI shows during the overlap; the
-// ownership guards in setWorktreeOpPhase/clearWorktreeOp keep the finishing op
-// from mutating the file the newer op now owns.
-// `opId` is REQUIRED, not optional. Every writer already mints one for the
-// op-log before it writes its marker (build's buildId, push's pushId,
-// withDirectOp's opId), and a marker without it is a live op nobody can look up
-// the outcome of — the gap `./singularity await` exists to close. Required means
-// a future op kind cannot reintroduce that gap by forgetting an argument.
-export function markWorktreeOpStart(
-  slug: string,
-  op: WorktreeOp,
-  opId: string,
-  phase: WorktreeOpPhase = "running",
-): void {
-  mkdirSync(opsDir(slug), { recursive: true });
-  writeFileSync(
-    opFile(slug, op),
-    JSON.stringify({
-      op,
-      pid: process.pid,
-      opId,
-      startedAt: new Date().toISOString(),
-      phase,
-    }),
-  );
-}
-
-// Rewrite an existing marker's phase, preserving pid/startedAt (and any
-// runningAt). No-op if the marker is gone (op already finished and cleared) or
-// names another pid — a lock-acquiring build must not flip a marker a newer
-// queued build now owns. Flipping to "running" stamps `runningAt` (the lock-grant
-// instant) once: the first waiting→running transition wins, so a re-flip can't
-// reset the work clock.
-export function setWorktreeOpPhase(
-  slug: string,
-  op: WorktreeOp,
-  phase: WorktreeOpPhase,
-): void {
-  const path = opFile(slug, op);
-  let raw: string;
-  try {
-    raw = readFileSync(path, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
-    throw err;
-  }
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(raw) as Record<string, unknown>;
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return;
-  }
-  if (typeof parsed.pid === "number" && parsed.pid !== process.pid) return;
-  const runningAt =
-    phase === "running" && typeof parsed.runningAt !== "string"
-      ? new Date().toISOString()
-      : parsed.runningAt;
-  writeFileSync(path, JSON.stringify({ ...parsed, phase, runningAt }));
-}
-
-// Remove a marker ONLY if it still names this process — a finishing op must not
-// delete a marker a newer queued op now owns (a second build overwrites the
-// single file with its own pid while queued behind us on the build lock, then we
-// exit and would otherwise reap its live marker). An absent, unreadable, or
-// garbage marker is reaped unconditionally (safe reap). Mirrors clearPushHolder.
-export function clearWorktreeOp(slug: string, op: WorktreeOp): void {
-  const path = opFile(slug, op);
-  try {
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as MarkerJson;
-    if (typeof parsed.pid === "number" && parsed.pid !== process.pid) return;
-  } catch (err) {
-    if (!isReapableReadError(err)) throw err;
-    // absent / unreadable / garbage → fall through to the safe reap.
-  }
-  rmSync(path, { force: true });
-}
-
-// A caught read error we should treat as "reap the marker" rather than propagate:
-// an fs error (ENOENT, EACCES, …) or garbled JSON (SyntaxError). A genuinely
-// unexpected error (code == null and not a SyntaxError) is re-thrown by callers.
-function isReapableReadError(err: unknown): boolean {
-  return (
-    (err as NodeJS.ErrnoException).code != null || err instanceof SyntaxError
-  );
-}
-
 type MarkerJson = {
+  v?: unknown;
+  kind?: unknown;
   op?: unknown;
   pid?: unknown;
   opId?: unknown;
   startedAt?: unknown;
-  phase?: unknown;
-  runningAt?: unknown;
 };
 
-// Pure: turn a parsed marker into its WorktreeOpInfo, or null if it names a dead
-// pid (a caller reaps the file on null). No IO — shared by the sync and async
-// marker readers.
-function markerInfoFromParsed(
+function opOf(raw: unknown): WorktreeOp {
+  return KNOWN_OPS.includes(raw as WorktreeOp) ? (raw as WorktreeOp) : "build";
+}
+
+function infoFromParsed(
   slug: string,
   parsed: MarkerJson,
 ): WorktreeOpInfo | null {
-  if (typeof parsed.pid !== "number" || !isPidAlive(parsed.pid)) return null;
+  if (typeof parsed.pid !== "number") return null;
   return {
     slug,
-    op: KNOWN_OPS.includes(parsed.op as WorktreeOp)
-      ? (parsed.op as WorktreeOp)
-      : "build",
+    // v2 names it `kind`; a legacy marker `op`.
+    op: opOf(parsed.v === 2 ? parsed.kind : parsed.op),
     pid: parsed.pid,
-    // Back-compat: a marker written before the field carries no run id, and a
-    // reader must be able to tell that from "this run has no id" — hence null
-    // rather than "".
     opId: typeof parsed.opId === "string" ? parsed.opId : null,
     startedAt:
       typeof parsed.startedAt === "string"
         ? parsed.startedAt
         : new Date(0).toISOString(),
-    // Back-compat: markers written before the phase field default to "running".
-    phase: parsed.phase === "waiting-for-lock" ? "waiting-for-lock" : "running",
-    // Builds/checks stamp their own runningAt on the lock grant; for pushes it is
-    // overridden by derivePushPhases from the authoritative holder file.
-    runningAt: typeof parsed.runningAt === "string" ? parsed.runningAt : null,
   };
 }
 
-// Parse one marker file, reaping it if dead or unparseable, so a SIGKILLed
-// build/push (which can't run its own cleanup) self-heals on the next read.
-// Returns the live marker's data, or null if the marker was reclaimed. ASYNC so
-// the marker scan yields the event loop (readFile runs on the libuv threadpool)
-// instead of blocking a runtime — shared by every marker reader
-// (isWorktreeOpActive, the flush-cycle loader). Reaping still uses rmSync: it
-// only fires for already-dead markers, and the write/clear TOCTOU is inherent to
-// the marker scheme — the async read doesn't worsen it. isPidAlive stays sync (a
-// signal syscall, not IO).
-async function readLiveMarkerAsync(
-  slug: string,
-  path: string,
-): Promise<WorktreeOpInfo | null> {
-  let parsed: MarkerJson;
+/** What a probe of one marker file found. */
+type Probe =
+  | { kind: "live"; info: WorktreeOpInfo }
+  | { kind: "dead" }
+  | { kind: "absent" };
+
+// Probe one marker file, reaping it when its op is gone. v2: the try-lock is
+// the answer. Legacy (`<kind>.json`, written by a CLI from before per-op
+// markers): its pid. ASYNC so a scan yields the event loop (open/read run on the
+// libuv threadpool); the flock itself is a non-blocking syscall.
+async function probeMarker(slug: string, path: string): Promise<Probe> {
+  let handle: FileHandle;
   try {
-    parsed = JSON.parse(await readFile(path, "utf8")) as MarkerJson;
+    handle = await open(path, "r");
   } catch (err) {
-    if (!isReapableReadError(err)) throw err;
-    // Unreadable/garbage marker — reclaim it.
-    rmSync(path, { force: true });
-    return null;
+    if ((err as NodeJS.ErrnoException).code === "ENOENT")
+      return { kind: "absent" };
+    throw err;
   }
-  const info = markerInfoFromParsed(slug, parsed);
-  if (!info) rmSync(path, { force: true }); // dead pid — reclaim.
-  return info;
+  let reap = false;
+  try {
+    const text = await handle.readFile("utf8");
+    let parsed: MarkerJson;
+    try {
+      parsed = JSON.parse(text) as MarkerJson;
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
+      // A v2 marker is renamed in whole, so garbage is a legacy torn write or
+      // junk: reclaim it — unless someone holds its lock.
+      reap = flockTry(handle.fd);
+      return reap ? { kind: "dead" } : { kind: "absent" };
+    }
+    if (parsed.v === 2) {
+      // Taking the lock ⇒ its holder is gone. Keep it until the unlink below,
+      // so nothing else can judge the file mid-reap.
+      if (flockTry(handle.fd)) {
+        reap = true;
+        return { kind: "dead" };
+      }
+      const info = infoFromParsed(slug, parsed);
+      return info ? { kind: "live", info } : { kind: "dead" };
+    }
+    const info = infoFromParsed(slug, parsed);
+    if (info && isPidAlive(info.pid)) return { kind: "live", info };
+    reap = true;
+    return { kind: "dead" };
+  } finally {
+    if (reap) rmSync(path, { force: true });
+    await handle.close();
+  }
+}
+
+async function reapIfStaleTmp(path: string): Promise<void> {
+  try {
+    const s = await stat(path);
+    if (Date.now() - s.mtimeMs > STALE_TMP_MS) rmSync(path, { force: true });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+}
+
+/**
+ * Is op `opId` running? `live` (its v2 marker is locked), `dead` (the marker
+ * was there and unlocked — reaped now), or `absent` (no v2 marker for it: never
+ * written, already released, or already reaped). For a caller that must tell
+ * "the op died" from "this op never had a per-op marker" — the reconciler,
+ * while ops from older CLIs are still in the log.
+ */
+export async function probeWorktreeOp(
+  slug: string,
+  opId: string,
+): Promise<"live" | "dead" | "absent"> {
+  return (await probeMarker(slug, opFile(slug, opId))).kind;
 }
 
 // Every live op marker for ONE worktree. Reaps dead or unparseable markers as it
-// scans. ASYNC for the same reason as its two callers: the scan must yield the
-// event loop (readdir/readFile on the libuv threadpool) rather than block a
-// runtime under filesystem IO contention; per-file reads run in parallel.
+// scans; per-file probes run in parallel.
 //
-// The one scan, so the three questions asked of these markers — "is anything
-// running here" (the tmux status poller), "what is running everywhere" (the
-// op-status loader) and "is MY op still running" (`./singularity await`) — read
-// the directory the same way and reap on the same rule.
+// The one scan, so the questions asked of these markers — "is anything running
+// here" (the tmux status poller), "what is running everywhere" (the stop guard)
+// and "is MY op still running" (`./singularity await`) — read the directory the
+// same way and reap on the same rule.
 export async function listWorktreeOps(slug: string): Promise<WorktreeOpInfo[]> {
   const dir = opsDir(slug);
   let files: string[];
@@ -283,22 +280,26 @@ export async function listWorktreeOps(slug: string): Promise<WorktreeOpInfo[]> {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
-  const infos = await Promise.all(
-    files.map((f) => readLiveMarkerAsync(slug, join(dir, f))),
+  const probes = await Promise.all(
+    files.map(async (f): Promise<Probe> => {
+      const path = join(dir, f);
+      if (f.endsWith(TMP_SUFFIX)) {
+        await reapIfStaleTmp(path);
+        return { kind: "absent" };
+      }
+      return probeMarker(slug, path);
+    }),
   );
-  return infos.filter((i): i is WorktreeOpInfo => i !== null);
+  return probes.flatMap((p) => (p.kind === "live" ? [p.info] : []));
 }
 
-// True iff any op marker for this worktree names a live pid.
+// True iff any op marker for this worktree is live.
 export async function isWorktreeOpActive(slug: string): Promise<boolean> {
   return (await listWorktreeOps(slug)).length > 0;
 }
 
-// Every live op marker across all worktrees, parsed into WorktreeOpInfo. Reaps
-// dead/garbage markers as it scans, like isWorktreeOpActive. ASYNC: this runs
-// inside the op-status loader (the shared flush cycle), so every IO must yield
-// the event loop rather than block it. Per-slug scans run in parallel for lower
-// wall-clock latency; the only caller is resolveActiveWorktreeOps.
+// Every live op marker across all worktrees. Reaps as it scans, like
+// listWorktreeOps; per-slug scans run in parallel.
 export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
   let entries: Dirent[];
   try {
@@ -311,223 +312,10 @@ export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
     entries.map(async (entry): Promise<WorktreeOpInfo[]> => {
       // worktreesDir() holds both worktree directories AND per-worktree gateway
       // registration files (`<slug>.json`); only directories carry an ops/
-      // subdir, so descending into a `.json` file would throw ENOTDIR. Skip
-      // non-dirs.
+      // subdir, so descending into a `.json` file would throw ENOTDIR.
       if (!entry.isDirectory()) return [];
       return listWorktreeOps(entry.name);
     }),
   );
   return perSlug.flat();
-}
-
-// ---------------------------------------------------------------------------
-// Push-lock ownership: one source of truth
-// ---------------------------------------------------------------------------
-//
-// A push marker's stored `phase` is a per-process *self-assertion* and cannot be
-// trusted to say who holds the global push lock: a hard-killed push (SIGKILL/OOM)
-// leaves a stale "running" marker, and pid-liveness reaping is defeated by PID
-// reuse — so two markers can read "running" at once, or none can. The kernel
-// flock on the push pool's `slot-0.lock` (held only by the CLI push process,
-// auto-released on death)
-// is the ONLY crash-safe, PID-reuse-proof truth for "is a push running". This
-// module derives each push marker's displayed phase from two authoritative inputs:
-//
-//   - existence of a running push  → the kernel flock probe (`pushLockHeld`)
-//   - identity of the holder       → a single global holder file (one file ⇒ at
-//                                     most one running slug ⇒ two-running is
-//                                     structurally impossible)
-//
-// The holder file is written by whoever holds the flock (in the CLI's
-// onLockAcquired) and removed on release; the server only reads it.
-
-// The push mutex is the `push` host-pool's single slot file (declared via
-// `defineHostPool({ id: "push", size: 1 })` in host-admission). Its slot-0 lock
-// IS the push mutex, so this probe must read the pool's OWN slot-0 — which it
-// now does, by asking the pool, instead of rebuilding the path here and asking a
-// comment to keep the two spellings equal. The CLI push acquires the pool; this
-// probes the same kernel flock it holds, keeping the op-status derivation
-// authoritative.
-//
-// The holder file sits in that SAME directory, for the same reason: it is the
-// identity companion to `slot-0.lock`, and one directory with one owner is what
-// keeps "is a push running" and "who is running it" from drifting apart. It is
-// not re-declared here — this reads host-admission's own declaration.
-const PUSH_HOLDER_PATH = pushPool.slots.file("push-holder.json");
-
-export interface PushHolder {
-  slug: string;
-  pid: number;
-  pushId: string;
-  acquiredAt: string;
-}
-
-// True iff some process currently holds the push flock. Crash-proof and
-// PID-reuse-proof: asks the kernel directly. Probes non-blocking and releases
-// immediately on success (open in append mode so we never truncate the lock
-// file the CLI may be holding). When the lock is held the probe fails fast
-// without acquiring, so it never disturbs the real holder.
-export function pushLockHeld(lockPath: string = pushSlotPath()): boolean {
-  pushPool.slots.ensure();
-  let fd: number;
-  try {
-    fd = openSync(lockPath, "a");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return false;
-  }
-  try {
-    // Failing to take it ⇒ EWOULDBLOCK ⇒ someone else holds it.
-    return !flockTry(fd);
-  } finally {
-    closeSync(fd); // releases the flock if we happened to acquire it
-  }
-}
-
-// Async twin of pushLockHeld for the flush-cycle loader: the file open/close is
-// IO and runs on the libuv threadpool, but the flock() probe itself is a fast,
-// non-blocking syscall (LOCK_NB) — not IO wait — so it stays a synchronous FFI
-// call. Identical semantics to the sync version: ENOENT on open ⇒ false; a
-// failed take ⇒ held; always release/close.
-async function pushLockHeldAsync(
-  lockPath: string = pushSlotPath(),
-): Promise<boolean> {
-  await mkdir(pushPool.slots.path, { recursive: true });
-  let handle: FileHandle;
-  try {
-    handle = await open(lockPath, "a");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return false;
-  }
-  try {
-    // Failing to take it ⇒ EWOULDBLOCK ⇒ someone else holds it.
-    return !flockTry(handle.fd);
-  } finally {
-    await handle.close(); // releases the flock if we happened to acquire it
-  }
-}
-
-// Atomically publish the holder identity (temp + rename) so a reader never sees
-// a torn write. Called by the flock holder the instant the lock is granted. The
-// path defaults to the real holder file; tests pass a temp path.
-export function writePushHolder(
-  holder: PushHolder,
-  path: string = PUSH_HOLDER_PATH,
-): void {
-  pushPool.slots.ensure();
-  const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(holder));
-  renameSync(tmp, path);
-}
-
-// Pure: validate a parsed holder blob into a PushHolder, or null if malformed.
-// No IO — shared by the sync and async holder readers.
-function holderFromParsed(parsed: Partial<PushHolder>): PushHolder | null {
-  if (
-    typeof parsed.slug !== "string" ||
-    typeof parsed.pid !== "number" ||
-    typeof parsed.pushId !== "string"
-  ) {
-    return null;
-  }
-  return {
-    slug: parsed.slug,
-    pid: parsed.pid,
-    pushId: parsed.pushId,
-    acquiredAt:
-      typeof parsed.acquiredAt === "string"
-        ? parsed.acquiredAt
-        : new Date(0).toISOString(),
-  };
-}
-
-export function readPushHolder(
-  path: string = PUSH_HOLDER_PATH,
-): PushHolder | null {
-  try {
-    return holderFromParsed(
-      JSON.parse(readFileSync(path, "utf8")) as Partial<PushHolder>,
-    );
-  } catch (err) {
-    if (!isReapableReadError(err)) throw err;
-    return null; // absent or unparseable
-  }
-}
-
-// Async twin of readPushHolder for the flush-cycle loader (readFile on the libuv
-// threadpool). Identical semantics: absent/unparseable/malformed ⇒ null.
-async function readPushHolderAsync(
-  path: string = PUSH_HOLDER_PATH,
-): Promise<PushHolder | null> {
-  try {
-    return holderFromParsed(
-      JSON.parse(await readFile(path, "utf8")) as Partial<PushHolder>,
-    );
-  } catch (err) {
-    if (!isReapableReadError(err)) throw err;
-    return null; // absent or unparseable
-  }
-}
-
-// Remove the holder file ONLY if it still names this push — a late-dying waiter
-// (or a previous holder whose exit handler fires after the next holder took
-// over) must not delete the current holder's file.
-export function clearPushHolder(
-  pushId: string,
-  path: string = PUSH_HOLDER_PATH,
-): void {
-  const holder = readPushHolder(path);
-  if (holder && holder.pushId !== pushId) return;
-  rmSync(path, { force: true });
-}
-
-export interface DerivePushDeps {
-  isAlive: (pid: number) => boolean;
-  lockHeld: () => boolean;
-}
-
-// Pure: given the live op markers and the current holder file, return the markers
-// with each PUSH marker's phase set to the DERIVED truth. Builds pass through
-// untouched (they never contend on the push lock). At most one slug can be
-// "running" — the one the single holder file names, and only when its pid is
-// alive AND the kernel confirms the lock is genuinely held (the only check that
-// survives PID reuse). Every other push is "waiting-for-lock".
-//
-// The running push also gets `runningAt` set to the holder's `acquiredAt` (when
-// the lock was granted) so the UI can clock push time from there rather than
-// from `startedAt`, which includes the time spent queued for the lock.
-export function derivePushPhases(
-  markers: WorktreeOpInfo[],
-  holder: PushHolder | null,
-  deps: DerivePushDeps,
-): WorktreeOpInfo[] {
-  const running =
-    holder && deps.isAlive(holder.pid) && deps.lockHeld() ? holder : null;
-  return markers.map((m) => {
-    if (m.op !== "push") return m;
-    const isRunning = m.slug === running?.slug;
-    return {
-      ...m,
-      phase: isRunning ? "running" : "waiting-for-lock",
-      runningAt: isRunning && running ? running.acquiredAt : null,
-    };
-  });
-}
-
-// Composition used by the op-status resource loader: scan live markers, read the
-// holder file, and derive push phases against the real pid/flock predicates.
-// ASYNC and fully off the event loop — this is the flush-cycle path, so it must
-// never do synchronous IO. The three reads run in parallel; the flock probe is
-// pre-resolved to a boolean so derivePushPhases (pure, sync) can consume it.
-export async function resolveActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
-  const [markers, holder, lockHeld] = await Promise.all([
-    listActiveWorktreeOps(),
-    readPushHolderAsync(),
-    pushLockHeldAsync(),
-  ]);
-  return derivePushPhases(markers, holder, {
-    isAlive: isPidAlive,
-    lockHeld: () => lockHeld,
-  });
 }

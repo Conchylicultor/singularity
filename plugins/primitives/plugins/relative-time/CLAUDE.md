@@ -48,6 +48,7 @@ dense-list spelling for a trailing time column, where "ago" is implied.
     - `debug/config-orphans`
     - `debug/health-monitor`
     - `debug/live-state-health`
+    - `debug/profiling/ops`
     - `debug/reports`
     - `debug/sentinel`
     - `debug/slow-ops/cluster`

@@ -25,6 +25,7 @@
     - `useConversation`
     - `useConversationById`
     - `useConversations`
+    - `useConversationTitleBySlug`
     - `useHasActiveSiblingInWorktree`
     - `useHasActiveSiblings`
     - `useLiveConversation`
@@ -259,6 +260,7 @@
     - `conversations/runtime-api`
     - `conversations/runtime-tmux`
     - `conversations/summary`
+    - `debug/profiling/ops`
     - `improve`
     - `page/annotations/agent-notes/agent-page`
     - `review`
@@ -345,7 +347,7 @@
       - **`model`** — Displays the conversation model as a colored chip in the toolbar.
       - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
       - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
-      - **`op-status`** — Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to the worktree-ops live value. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
+      - **`op-status`** — Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own clock) or the work it is doing, total elapsed and the waited / worked split, expandable into the global push queue and every other in-flight op. Also a sidebar row chip flagging the same op (hourglass while parked in a wait).
       - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000`, on the page its task was filed from when one was attached (else `/`).
       - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
       - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.

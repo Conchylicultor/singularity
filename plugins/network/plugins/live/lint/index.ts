@@ -57,7 +57,6 @@ export default {
       "plugins/active-data/plugins/attempt/web/components/attempt-chip.tsx",
       "plugins/tasks/plugins/worktree-identity/web/internal/use-worktree-identity.ts",
       // · conversations-active, conversations-gone, conversations-system
-      "plugins/conversations/plugins/conversation-view/plugins/op-status/web/components/op-status-banner.tsx",
       "plugins/conversations/plugins/conversation-view/web/panes.tsx",
       "plugins/conversations/web/use-conversations.ts",
       // · conversations-active, conversations-gone, tasks

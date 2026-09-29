@@ -37,8 +37,9 @@ instead of receiving it from the rebase's `--exec`.
 ## The critical section
 
 Everything from the fetch onward runs inside `withPushLock`, which holds the
-single slot of the `push` host pool — `~/.singularity/locks/push/slot-0.lock`,
-the same file the server-side `pushLockHeld` probe reads. At most one push runs
+single slot of the `push` host pool — `~/.singularity/locks/push/slot-0.lock`.
+Who holds it and who queues on it is read from the op log (the push's
+`push-mutex` wait and its `granted`), not from the lock file. At most one push runs
 host-wide, so two agents can never race on `main`. Inside that mutex the order is
 load-bearing:
 

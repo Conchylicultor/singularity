@@ -72,19 +72,19 @@ export function isTerminalOutcome(o: OpOutcome): o is TerminalOutcome {
  * Where each awaited op stands, from the three readings taken together.
  *
  * Pure, and deliberately ordered: **the op-log record wins over the marker.**
- * The marker is cleared and the terminal record written in the same exit
- * handler, marker first (`direct-op.ts`), so there is a window in which the
- * marker is gone and the verdict is a microsecond away. A reader that took the
- * marker's absence as the end would hit that window and report `vanished` on a
- * perfectly healthy op. Asking the authority first removes the window instead of
- * racing it.
+ * Every writer appends its terminal BEFORE it releases its marker, so the
+ * verdict is on disk by the time the marker goes; asking the log first means a
+ * marker read a moment late can never outvote it.
+ *
+ * `live` is the set of opIds whose marker is live right now (one flocked
+ * `ops/<opId>.json` per op, so two ops of one kind are two entries).
  *
  * `pidAlive` is injected rather than called here so this stays testable without
  * spawning processes.
  */
 export function decideStates(
   awaited: readonly AwaitedOp[],
-  live: ReadonlyMap<string, { opId: string }>,
+  live: ReadonlySet<string>,
   records: ReadonlyMap<string, OpRecord>,
   pidAlive: (pid: number) => boolean,
 ): OpState[] {
@@ -99,14 +99,13 @@ export function decideStates(
         interrupted: record.interrupted,
       };
 
-    // Still marked live under its own id — plainly running.
-    if (live.get(a.op)?.opId === a.opId)
-      return { kind: "running", op: a.op, opId: a.opId };
+    // Its marker is still locked — plainly running.
+    if (live.has(a.opId)) return { kind: "running", op: a.op, opId: a.opId };
 
-    // The marker is gone or now names a NEWER op of the same kind (the file is
-    // one per (worktree, kind), so a second check overwrites the first's). Our
-    // process is the thing that settles it: alive means the verdict is still
-    // coming, dead means it never will.
+    // No live marker and no verdict. For a per-op marker that means its process
+    // died; a legacy per-kind marker (an older CLI's, overwritten by the next
+    // op of the same kind) says nothing, so the process settles it: alive means
+    // the verdict is still coming, dead means it never will.
     return pidAlive(a.pid)
       ? { kind: "running", op: a.op, opId: a.opId }
       : { kind: "vanished", op: a.op, opId: a.opId, pid: a.pid };

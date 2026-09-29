@@ -1,0 +1,121 @@
+import { type ReactElement, type ReactNode } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
+  opsHistory,
+  type OpRow,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
+import {
+  FIVE_MINUTES,
+  TWENTY_MINUTES,
+  ceilTo,
+  floorTo,
+} from "../internal/op-groups";
+import { LiveOpGantt, type OpWindow } from "./live-op-gantt";
+
+// One worktree's ops can span every other worktree's around them; the span is
+// read in two steps. First that worktree's own ops; their span ± 20 min is the
+// span, floored / ceiled to 5 min so the second tuple is stable. While one of
+// them is still in flight its end grows with `now`, so the span is left
+// open-ended rather than re-keyed every tick.
+function windowOf(rows: readonly OpRow[]): OpWindow | null {
+  let startMs = Infinity;
+  let endMs = -Infinity;
+  let open = false;
+  for (const r of rows) {
+    const requested = r.requestedAt.getTime();
+    startMs = Math.min(startMs, requested);
+    if (r.closedBy === null) open = true;
+    else endMs = Math.max(endMs, requested + r.totalMs);
+  }
+  if (startMs === Infinity) return null;
+  return {
+    startMs: floorTo(startMs - TWENTY_MINUTES, FIVE_MINUTES),
+    endMs: open
+      ? null
+      : ceilTo(Math.max(endMs, startMs) + TWENTY_MINUTES, FIVE_MINUTES),
+  };
+}
+
+function WindowGantt({
+  span,
+  worktree,
+  empty,
+}: {
+  span: OpWindow;
+  worktree: string;
+  empty: ReactNode;
+}): ReactElement {
+  const start = new Date(span.startMs).toISOString();
+  // An op overlaps the span when it was requested inside it, or requested
+  // before it and completed inside it.
+  const overlaps = {
+    or: [
+      { column: "requestedAt", op: "gte", operand: start },
+      { column: "completedAt", op: "gte", operand: start },
+    ],
+  } as const;
+  const result = useLive(opsHistory, {
+    where:
+      span.endMs === null
+        ? overlaps
+        : {
+            and: [
+              overlaps,
+              {
+                column: "requestedAt",
+                op: "lte",
+                operand: new Date(span.endMs).toISOString(),
+              },
+            ],
+          },
+    limit: 2000,
+  });
+  if (result.status === "loading") return <Loading label="Loading ops…" />;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the ops around this worktree"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  return (
+    <LiveOpGantt
+      rows={result.data}
+      span={span}
+      highlightWorktree={worktree}
+      empty={empty}
+    />
+  );
+}
+
+/**
+ * The op Gantt scoped to one worktree: its ops, and every other op that ran
+ * alongside them (± 20 min), so contention reads in context. `empty` renders
+ * when the worktree has no recorded op.
+ */
+export function WorktreeOpGantt({
+  worktree,
+  empty,
+}: {
+  worktree: string;
+  empty: ReactNode;
+}): ReactElement {
+  const own = useLive(opsHistory, { where: { opSlug: worktree }, limit: 2000 });
+  if (own.status === "loading") return <Loading label="Loading ops…" />;
+  if (own.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="this worktree's ops"
+        error={own.error}
+        refetch={own.refetch}
+      />
+    );
+  const span = windowOf(own.data);
+  if (span === null) return <>{empty}</>;
+  return <WindowGantt span={span} worktree={worktree} empty={empty} />;
+}

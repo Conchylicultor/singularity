@@ -1,21 +1,39 @@
 // `OpKind` is NOT re-exported here: it is `infra/worktree/core`'s declaration,
 // and a barrel surfacing another plugin's symbol hides the real dependency.
 export type {
+  LegacyOpenWait,
+  OpClosedBy,
+  OpEvent,
+  OpEventKind,
+  OpFoldState,
+  OpIdentity,
+  OpLine,
+  OpLiveTimes,
   OpOutcome,
   OpRecord,
   OpStep,
+  OpSummary,
   OpWait,
+  OpWaitSpan,
   OpenWait,
   OutcomeByKind,
   RawOpRecord,
   TerminalOutcome,
   WaitKind,
+  WaitKindMeta,
+  WaitResult,
 } from "./internal/types";
-export type { OpGroup } from "./internal/fold";
+export { WAIT_KINDS } from "./internal/types";
 export {
-  foldOpRecords,
-  groupByOpId,
-  openWaitOf,
+  applyOpEvent,
+  emptyOpState,
+  foldOpLines,
+  isOpEvent,
+  isTerminalState,
+  liveTimes,
   orphanedOps,
+  reconcilerCompletedEvent,
   sumWaits,
+  toOpRecord,
+  toOpRecords,
 } from "./internal/fold";

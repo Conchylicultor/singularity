@@ -15,11 +15,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import { applyPluginMoves } from "@plugins/plugin-meta/plugins/relocate/core";
-import type {
-  Lane,
-  GrantHooks,
-} from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { type ValveDeps } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { adaptiveTimeoutMs } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import {
   SERVER_CORE_RELATIVE,
@@ -28,6 +24,7 @@ import {
 import {
   buildAndPublishWebDist,
   type ArtifactHooks,
+  type HeavyAdmission,
   type HeavyJob,
   type StepResult,
   type WebDistTarget,
@@ -94,7 +91,7 @@ export interface DeployNamespaceOptions {
   background: boolean;
   /** Validation, shared with the frontend job's ONE host grant. First target only. */
   companions: HeavyJob[];
-  admission: { gated: boolean; deps: ValveDeps; grantHooks?: GrantHooks };
+  admission: HeavyAdmission;
   /** `--no-restart`: publish the artifacts and leave the gateway alone. */
   restart: boolean;
   onSteps: (steps: StepResult[]) => void;

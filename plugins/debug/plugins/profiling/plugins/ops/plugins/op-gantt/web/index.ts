@@ -4,6 +4,7 @@ export {
   OpGantt,
   opFillClass,
   waitFillClass,
+  waitLabel,
   type OpGanttProps,
   type OpData,
   type OpEntry,

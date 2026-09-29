@@ -146,8 +146,8 @@ construction). There is no second list of pool ids to keep in sync: a pool that 
 in the table gets a lock directory, and a pool that is not gets a loud throw from
 `defineHostPool` instead of an unowned directory nobody can enumerate.
 
-`pool.slots` exposes that directory, which is how a consumer that must name one
-specific slot file reaches it. The only one today is the push mutex — see below.
+`pool.slots` exposes that directory, for a consumer that must name one specific
+slot file. None does today.
 
 A `laned` pool MUST also pass an explicit `backgroundLimit` (the `background`
 lane's slot window); `defineHostPool` throws otherwise, since silently falling
@@ -211,18 +211,16 @@ network, and it takes an interactive CPU grant separately for its nested
 checks — the pool bounds how many pushes there are, the grant pays for their
 work.
 
-Its single slot file IS the push mutex, and `worktree/server`'s op-status probe
-must read that exact file. It now does so by asking the pool —
-`pushSlotPath()` returns `pushPool.slots.file("slot-0.lock")`, and `pushLockHeld`
-defaults to it — rather than rebuilding the path at both ends with a comment
-asking the two spellings to stay equal.
+Its single slot file IS the push mutex. Nothing outside the pool reads it: who
+holds the mutex and who queues on it is the op log's answer (a push's
+`push-mutex` wait and its `granted`), which is what the op-status banner renders.
+The old holder file and its flock probe (`pushLockHeld`) are gone.
 
 ## `hostOccupancy()`
 
 `hostOccupancy()` probes every registered pool's slots and reports
-`{ id, held, size }` per pool. Probing uses the `pushLockHeld` technique
-(`worktree-op.ts`): a non-blocking `flock(LOCK_EX|LOCK_NB)` that releases
-immediately, which detects a holder even on a separate fd in the same process
+`{ id, held, size }` per pool. Probing is a non-blocking
+`flock(LOCK_EX|LOCK_NB)` that releases immediately, which detects a holder even on a separate fd in the same process
 (flock attaches to the open file description, not the process).
 
 Probes run **serially** — across pools and within each pool — because probing a
@@ -253,7 +251,6 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `hostOccupancy`
     - `inheritedGrant`
     - `pushPool`
-    - `pushSlotPath`
     - `withHostGrant`
 - Cross-plugin:
   - Imported by:

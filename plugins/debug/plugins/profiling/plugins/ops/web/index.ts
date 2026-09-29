@@ -5,12 +5,11 @@ import { OpSection } from "./components/op-section";
 import { opDetailPane } from "./panes";
 
 export { opDetailPane } from "./panes";
-export { useOpClick } from "./internal/use-op-click";
-export { getOpProfiling } from "../shared/endpoints";
+export { WorktreeOpGantt } from "./components/worktree-op-gantt";
 
 export default {
   description:
-    "Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt.",
+    "Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane — all computed client-side from opsHistory rows.",
   contributions: [
     Profiling.Section({
       id: "ops",

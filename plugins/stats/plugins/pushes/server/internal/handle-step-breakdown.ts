@@ -1,12 +1,16 @@
+import { sql } from "drizzle-orm";
+import { z } from "zod";
+import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getPushesStepBreakdown } from "../../shared/endpoints";
-import { readCompletedPushes } from "./read-pushes";
-import { keyFor } from "./buckets";
+import { completedPushes, msToSeconds } from "./read-pushes";
 
-// Keyed on the step names the push CLI emits. Those names were NOT changed by
-// the op-log cutover — `push.ts` still marks the same steps — so this table
-// keeps grouping both new and legacy records. Anything unmapped falls to "other".
-const STEP_GROUPS: Record<string, string> = {
+type StepGroup = "fetch" | "rebase" | "checks" | "push" | "other";
+
+// Keyed on the step names the push CLI emits; anything unmapped falls to
+// "other". Grouped here rather than in SQL so the table stays one readable map.
+const STEP_GROUPS: Record<string, StepGroup> = {
   fetch: "fetch",
   "ff-main": "fetch",
   rebase: "rebase",
@@ -18,43 +22,67 @@ const STEP_GROUPS: Record<string, string> = {
   normalize: "other",
 };
 
-export const handleStepBreakdown = implement(getPushesStepBreakdown, async ({ query }) => {
-  const bucket = query.bucket ?? "day";
-  const records = readCompletedPushes();
-
-  const buckets = new Map<
-    string,
-    { sums: Record<string, number>; count: number }
-  >();
-
-  for (const r of records) {
-    // See handle-throughput.ts on `requestedAt` vs the legacy `startedAt`.
-    const k = keyFor(r.requestedAt, bucket);
-    let entry = buckets.get(k);
-    if (!entry) {
-      entry = { sums: { fetch: 0, rebase: 0, checks: 0, push: 0, other: 0 }, count: 0 };
-      buckets.set(k, entry);
-    }
-    entry.count++;
-    for (const step of r.steps) {
-      const group = STEP_GROUPS[step.name] ?? "other";
-      entry.sums[group] = (entry.sums[group] ?? 0) + step.durationMs;
-    }
-  }
-
-  const avgSeconds = (entry: { sums: Record<string, number>; count: number }, group: string) =>
-    Math.round(((entry.sums[group] ?? 0) / entry.count / 1000) * 100) / 100;
-
-  const points = [...buckets.entries()]
-    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-    .map(([date, entry]) => ({
-      bucket: date,
-      fetch: avgSeconds(entry, "fetch"),
-      rebase: avgSeconds(entry, "rebase"),
-      checks: avgSeconds(entry, "checks"),
-      push: avgSeconds(entry, "push"),
-      other: avgSeconds(entry, "other"),
-    }));
-
-  return { points };
+// One row per (bucket, step name), plus the bucket's push count — a bucket
+// whose pushes recorded no step still appears (name null) so its average is 0,
+// not missing.
+const Row = z.object({
+  bucket: z.string(),
+  pushes: z.coerce.number(),
+  name: z.string().nullable(),
+  ms: z.coerce.number().nullable(),
 });
+
+// Avg seconds per push spent in each step group, per bucket.
+export const handleStepBreakdown = implement(
+  getPushesStepBreakdown,
+  async ({ query }) => {
+    const rows = await executeRows(db, {
+      label: "stats-pushes:step-breakdown",
+      row: Row,
+      query: sql`
+        WITH p AS ${completedPushes(query.bucket ?? "day")},
+             n AS (SELECT bucket, count(*)::int AS pushes FROM p GROUP BY bucket),
+             s AS (
+               SELECT p.bucket, step->>'name' AS name,
+                      sum((step->>'durationMs')::float8) AS ms
+                 FROM p CROSS JOIN LATERAL jsonb_array_elements(p.steps) AS step
+                GROUP BY 1, 2
+             )
+        SELECT n.bucket, n.pushes, s.name, s.ms
+          FROM n LEFT JOIN s USING (bucket)
+         ORDER BY n.bucket`,
+    });
+
+    const buckets = new Map<
+      string,
+      { pushes: number; sums: Record<StepGroup, number> }
+    >();
+    for (const r of rows) {
+      let entry = buckets.get(r.bucket);
+      if (!entry) {
+        entry = {
+          pushes: r.pushes,
+          sums: { fetch: 0, rebase: 0, checks: 0, push: 0, other: 0 },
+        };
+        buckets.set(r.bucket, entry);
+      }
+      if (r.name !== null && r.ms !== null)
+        entry.sums[STEP_GROUPS[r.name] ?? "other"] += r.ms;
+    }
+
+    const avg = (
+      e: { pushes: number; sums: Record<StepGroup, number> },
+      g: StepGroup,
+    ) => msToSeconds(e.sums[g] / e.pushes);
+    return {
+      points: [...buckets.entries()].map(([bucket, e]) => ({
+        bucket,
+        fetch: avg(e, "fetch"),
+        rebase: avg(e, "rebase"),
+        checks: avg(e, "checks"),
+        push: avg(e, "push"),
+        other: avg(e, "other"),
+      })),
+    };
+  },
+);

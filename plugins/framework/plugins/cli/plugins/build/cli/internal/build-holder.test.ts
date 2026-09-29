@@ -47,6 +47,8 @@ test("an open declared wait is waiting (the 2026-09-16 host-grant queue)", () =>
       kind: "host-grant",
       startMs: 115_453,
       startedAt: "2026-09-16T22:02:03.914Z",
+      reason: null,
+      cycle: 0,
     },
     files,
   );

@@ -13,8 +13,9 @@ recording — and the whole lifecycle of a **direct op**.
 `check`, `test` and an `e2e` script run (`./singularity run plugins/…/e2e/x.ts`)
 are the same op shape: nothing to lock but the host CPU grant. Before
 `direct-op.ts` the check command hand-rolled the sequence — identity, the
-broadcast banner, the interrupted-predecessor warning, the lane, the worktree op
-marker (`waiting-for-lock` → `running`), the op-log profiler (`requested` →
+broadcast banner, the interrupted-predecessor warning, the lane, the per-op
+liveness marker (a flocked `ops/<opId>.json`, published before `requested` and
+released only after `completed` is appended), the op-log profiler (`requested` →
 `granted` → `completed`), a graceful exit on a catchable fatal signal with
 signal-origin attribution, and the grant — and `test` / `e2e` would have been
 the second and third copies. It is one function:

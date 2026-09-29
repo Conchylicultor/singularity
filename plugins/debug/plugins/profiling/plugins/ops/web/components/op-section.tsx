@@ -1,39 +1,36 @@
-import { useEffect, type ReactElement } from "react";
-import { useProfilingContext } from "@plugins/debug/plugins/profiling/web";
-import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { OpGantt } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useOpClick } from "../internal/use-op-click";
-import { getOpProfiling } from "../../shared/endpoints";
+import type { ReactElement } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useNow } from "@plugins/primitives/plugins/relative-time/web";
+import { opsHistory } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
+import { FIVE_MINUTES, floorTo } from "../internal/op-groups";
+import { LiveOpGantt } from "./live-op-gantt";
 
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+/**
+ * The Debug > Profiling op Gantt: every op requested in the last 24 h, live.
+ * The cutoff is floored to 5 min so the subscription tuple changes at most
+ * every 5 min (a minute ticker drives it; the rows themselves are pushed).
+ */
 export function OpSection(): ReactElement | null {
-  const { refreshKey } = useProfilingContext();
-  const { data, refetch } = useEndpoint(getOpProfiling, {});
-  const openPane = useOpenPane();
-  const onOpClick = useOpClick();
+  const now = useNow(60_000);
+  const cutoff = new Date(floorTo(now - TWENTY_FOUR_HOURS, FIVE_MINUTES));
+  const result = useLive(opsHistory, {
+    where: { requestedAt: { gte: cutoff.toISOString() } },
+    limit: 2000,
+  });
 
-  // refetch is not a state setter, so this effect is clean (no set-state-in-effect).
-  useEffect(() => {
-    void refetch();
-  }, [refetch, refreshKey]);
-
-  if (!data || data.groups.length === 0) return null;
-
-  return (
-    <OpGantt
-      groups={data.groups}
-      totalMs={data.totalMs}
-      onOpClick={onOpClick}
-      onWorktreeClick={(worktree, conversationId) => {
-        if (conversationId != null) {
-          openPane(conversationPane, { convId: conversationId }, { mode: "push" });
-        } else {
-          const attemptId = worktree.split("/").pop() ?? worktree;
-          openPane(attemptPane, { attemptId }, { mode: "push" });
-        }
-      }}
-    />
-  );
+  if (result.status === "loading") return <Loading label="Loading ops…" />;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the ops"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  return <LiveOpGantt rows={result.data} empty={null} />;
 }

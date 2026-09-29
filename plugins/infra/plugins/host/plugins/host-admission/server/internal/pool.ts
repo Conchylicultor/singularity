@@ -21,11 +21,10 @@ const { symbols: ffi } = dlopen(
 const LOCK_EX = 2;
 const LOCK_NB = 4;
 
-// True iff some process currently holds this slot's flock. The `pushLockHeld`
-// technique (worktree-op.ts): a non-blocking `flock(LOCK_EX|LOCK_NB)` probe that
-// releases immediately. flock attaches to the open file DESCRIPTION, not the
-// process, so this detects a holder even on a separate fd in the SAME process
-// (proven by worktree-op.test.ts). Open in append mode so a probe never
+// True iff some process currently holds this slot's flock: a non-blocking
+// `flock(LOCK_EX|LOCK_NB)` probe that releases immediately. flock attaches to the
+// open file DESCRIPTION, not the process, so this detects a holder even on a
+// separate fd in the SAME process (the worktree-op marker test pins that). Open in append mode so a probe never
 // truncates a lock file a holder may be using; a non-zero flock return means
 // EWOULDBLOCK ⇒ someone else holds it.
 function slotHeld(slotPath: string): boolean {

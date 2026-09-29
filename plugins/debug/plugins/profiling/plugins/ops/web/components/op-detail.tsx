@@ -11,8 +11,22 @@ import {
 import {
   opFillClass,
   waitFillClass,
+  waitLabel,
 } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  toOpRecord,
+  type OpRecord,
+  type OpStep,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import {
+  opRowToFoldState,
+  opsHistory,
+  type OpRow,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { stripAttemptBranchPrefix } from "@plugins/infra/plugins/worktree/core";
 import {
   Badge,
@@ -32,8 +46,6 @@ import {
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type { OpDetail, OpStepWire } from "../../shared/endpoints";
-import { getOpDetail } from "../../shared/endpoints";
 import { opDetailPane } from "../panes";
 
 function outcomeVariant(
@@ -71,7 +83,7 @@ function Stat({
  * to gap (the op working between its waits) and to repeat a kind (a build
  * re-queuing for the host grant across duress requeue cycles).
  */
-function OpTimeline({ op }: { op: OpDetail }): ReactElement {
+function OpTimeline({ op }: { op: OpRecord }): ReactElement {
   const bars = useMemo(
     () => [
       {
@@ -136,7 +148,7 @@ function OpStepsGantt({
   holdMs,
   colorClass,
 }: {
-  steps: OpStepWire[];
+  steps: OpStep[];
   holdMs: number;
   colorClass: string;
 }): ReactElement {
@@ -181,45 +193,68 @@ function OpStepsGantt({
 
 export function OpDetailBody(): ReactElement {
   const { opId } = opDetailPane.useParams();
-  const openPane = useOpenPane();
-  const { data, error } = useEndpoint(getOpDetail, { opId });
-
-  const branchShort = data ? stripAttemptBranchPrefix(data.branch) : opId;
+  const result = useLiveRow(opsHistory, opId);
 
   return (
     <PaneChrome pane={opDetailPane}>
-      {!data ? (
-        <Placeholder tone={error ? "error" : "muted"}>
-          {error ? "Op not found." : "Loading…"}
-        </Placeholder>
+      {result.status === "loading" ? (
+        <Loading />
+      ) : result.status === "error" ? (
+        <ResourceErrorInline
+          variant="inline"
+          subject="this op"
+          error={result.error}
+          refetch={result.refetch}
+        />
+      ) : !result.found ? (
+        <Placeholder tone="muted">Op not found.</Placeholder>
+      ) : result.row.closedBy === null ? (
+        <LiveOpDetail row={result.row} />
       ) : (
-        <Stack gap="lg" className="p-lg">
-          <Cluster gap="sm">
-            <Badge colorClass={`${opFillClass(data.kind)}/15`}>
-              {formatStatusLabel(data.kind)}
-            </Badge>
-            <Text as="span" variant="body" className="truncate font-mono">
-              {branchShort}
-            </Text>
-            <Badge variant={outcomeVariant(data.outcome)}>
-              {formatStatusLabel(data.outcome)}
-            </Badge>
-            {/* The lane explains WHY the op waited: interactive draws from a
-                reserved host-CPU floor, background does not. */}
-            {data.lane && (
-              <Badge variant="muted">{formatStatusLabel(data.lane)} lane</Badge>
-            )}
-            {data.mode === "from-main" && (
-              <Badge variant="warning">from main</Badge>
-            )}
-            {data.interrupted && (
-              <Badge variant="destructive">interrupted</Badge>
-            )}
-          </Cluster>
+        <OpDetailView row={result.row} now={0} />
+      )}
+    </PaneChrome>
+  );
+}
 
-          {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 3-column hairline stat grid: the 1px (gap-px) gaps reveal the bg-border as cell separators, a hairline technique the Grid gap ramp can't express */}
-          <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border bg-border">
-            {/* Wait is the DERIVED sum of every wait; Work is the rest of the
+// An in-flight op's span, open wait and hold grow with `now`; a closed op's
+// record does not depend on it, so only the in-flight view ticks.
+function LiveOpDetail({ row }: { row: OpRow }): ReactElement {
+  const now = useNow(1000);
+  return <OpDetailView row={row} now={now} />;
+}
+
+function OpDetailView({ row, now }: { row: OpRow; now: number }): ReactElement {
+  const openPane = useOpenPane();
+  const data = toOpRecord(opRowToFoldState(row), now);
+  if (!data) return <Placeholder tone="muted">Op not found.</Placeholder>;
+  const branchShort = stripAttemptBranchPrefix(data.branch);
+  return (
+    <Stack gap="lg" className="p-lg">
+      <Cluster gap="sm">
+        <Badge colorClass={`${opFillClass(data.kind)}/15`}>
+          {formatStatusLabel(data.kind)}
+        </Badge>
+        <Text as="span" variant="body" className="truncate font-mono">
+          {branchShort}
+        </Text>
+        <Badge variant={outcomeVariant(data.outcome)}>
+          {formatStatusLabel(data.outcome)}
+        </Badge>
+        {/* The lane explains WHY the op waited: interactive draws from a
+                reserved host-CPU floor, background does not. */}
+        {data.lane && (
+          <Badge variant="muted">{formatStatusLabel(data.lane)} lane</Badge>
+        )}
+        {data.mode === "from-main" && (
+          <Badge variant="warning">from main</Badge>
+        )}
+        {data.interrupted && <Badge variant="destructive">interrupted</Badge>}
+      </Cluster>
+
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 3-column hairline stat grid: the 1px (gap-px) gaps reveal the bg-border as cell separators, a hairline technique the Grid gap ramp can't express */}
+      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border bg-border">
+        {/* Wait is the DERIVED sum of every wait; Work is the rest of the
                 span. Wait + Work == Total exactly, for every kind, because the
                 waits are disjoint intervals inside the span.
 
@@ -229,68 +264,64 @@ export function OpDetailBody(): ReactElement {
                 next to "Wait" reads as work and would overstate a stalled
                 build's real work by the whole queue time. `holdMs` is still on
                 the wire for anyone who wants the entry-ticket hold. */}
-            <Stat label="Wait" value={data.waitMs} />
-            <Stat
-              label="Work"
-              value={Math.max(0, data.totalMs - data.waitMs)}
-            />
-            <Stat label="Total" value={data.totalMs} />
-          </div>
+        <Stat label="Wait" value={data.waitMs} />
+        <Stat label="Work" value={Math.max(0, data.totalMs - data.waitMs)} />
+        <Stat label="Total" value={data.totalMs} />
+      </div>
 
-          <OpTimeline op={data} />
+      <OpTimeline op={data} />
 
-          <Stack gap="xs">
-            <SectionLabel as="span">Waits</SectionLabel>
-            {data.waits.length > 0 ? (
-              <Cluster gap="xs">
-                {data.waits.map((w, i) => (
-                  <Badge
-                    key={`${w.kind}:${i}`}
-                    colorClass={`${waitFillClass(w.kind)}/15`}
-                    title={`+${formatDuration(w.startMs)} into the op`}
-                  >
-                    {formatStatusLabel(w.kind)} {formatDuration(w.durationMs)}
-                  </Badge>
-                ))}
-              </Cluster>
-            ) : (
-              <Placeholder tone="muted">
-                Never blocked (or logged before wait attribution).
-              </Placeholder>
-            )}
-          </Stack>
+      <Stack gap="xs">
+        <SectionLabel as="span">Waits</SectionLabel>
+        {data.waits.length > 0 ? (
+          <Cluster gap="xs">
+            {data.waits.map((w, i) => (
+              <Badge
+                key={`${w.kind}:${i}`}
+                colorClass={`${waitFillClass(w.kind)}/15`}
+                title={`${waitLabel(w)} · +${formatDuration(w.startMs)} into the op`}
+              >
+                {formatStatusLabel(w.kind)} {formatDuration(w.durationMs)}
+                {w.cycle > 0 && ` · #${w.cycle}`}
+              </Badge>
+            ))}
+          </Cluster>
+        ) : (
+          <Placeholder tone="muted">
+            Never blocked (or logged before wait attribution).
+          </Placeholder>
+        )}
+      </Stack>
 
-          {data.conversationId && (
-            <Text
-              as="button"
-              variant="caption"
-              className={cn(
-                selfClass("start"),
-                "font-medium text-primary hover:underline",
-              )}
-              onClick={() =>
-                openPane(
-                  conversationPane,
-                  { convId: data.conversationId! },
-                  { mode: "push" },
-                )
-              }
-            >
-              Open conversation →
-            </Text>
+      {data.conversationId && (
+        <Text
+          as="button"
+          variant="caption"
+          className={cn(
+            selfClass("start"),
+            "font-medium text-primary hover:underline",
           )}
-
-          {data.steps.length > 0 ? (
-            <OpStepsGantt
-              steps={data.steps}
-              holdMs={data.holdMs}
-              colorClass={opFillClass(data.kind)}
-            />
-          ) : (
-            <Placeholder tone="muted">No step breakdown recorded.</Placeholder>
-          )}
-        </Stack>
+          onClick={() =>
+            openPane(
+              conversationPane,
+              { convId: data.conversationId! },
+              { mode: "push" },
+            )
+          }
+        >
+          Open conversation →
+        </Text>
       )}
-    </PaneChrome>
+
+      {data.steps.length > 0 ? (
+        <OpStepsGantt
+          steps={data.steps}
+          holdMs={data.holdMs}
+          colorClass={opFillClass(data.kind)}
+        />
+      ) : (
+        <Placeholder tone="muted">No step breakdown recorded.</Placeholder>
+      )}
+    </Stack>
   );
 }

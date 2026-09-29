@@ -20,15 +20,19 @@ function record(opId: string, outcome: OpRecord["outcome"]): OpRecord {
     lane: null,
     mode: null,
     buildId: null,
+    pid: null,
     requestedAt: "2026-09-20T00:00:00.000Z",
     grantedAt: "2026-09-20T00:00:00.000Z",
     completedAt: null,
     waits: [],
     waitMs: 0,
+    openWait: null,
+    cycle: 0,
     holdMs: 0,
     totalMs: 0,
     outcome,
     interrupted: false,
+    closedBy: null,
     steps: [],
   };
 }
@@ -38,8 +42,7 @@ const awaited = (op: OpKind, opId: string, pid = 111): AwaitedOp => ({
   opId,
   pid,
 });
-const liveMap = (entries: [OpKind, string][]) =>
-  new Map(entries.map(([op, opId]) => [op, { opId }]));
+const liveMap = (opIds: string[]) => new Set(opIds);
 const recordMap = (rs: OpRecord[]) => new Map(rs.map((r) => [r.opId, r]));
 const alive = () => true;
 const dead = () => false;
@@ -50,7 +53,7 @@ describe("decideStates", () => {
   test("a marker still naming our run is running", () => {
     const states = decideStates(
       [awaited("check", "a")],
-      liveMap([["check", "a"]]),
+      liveMap(["a"]),
       recordMap([record("a", "running")]),
       alive,
     );
@@ -60,7 +63,7 @@ describe("decideStates", () => {
   test("a terminal record ends it, and carries the outcome", () => {
     const states = decideStates(
       [awaited("check", "a")],
-      liveMap([["check", "a"]]),
+      liveMap(["a"]),
       recordMap([record("a", "failed")]),
       alive,
     );
@@ -70,11 +73,11 @@ describe("decideStates", () => {
   });
 
   test("the record wins over a marker that is still there", () => {
-    // The exit handler clears the marker and writes the record in that order,
-    // so the two disagree for an instant. The verdict is the authority.
+    // The terminal is appended before the marker is released, so the two
+    // disagree for an instant. The verdict is the authority.
     const states = decideStates(
       [awaited("check", "a")],
-      liveMap([["check", "a"]]),
+      liveMap(["a"]),
       recordMap([record("a", "success")]),
       alive,
     );
@@ -91,10 +94,10 @@ describe("decideStates", () => {
     expect(one(states).kind).toBe("running");
   });
 
-  test("a newer op of the same kind overwrote the marker: ours still decides on its own pid", () => {
+  test("another op of the same kind is live: ours still decides on its own pid", () => {
     const states = decideStates(
       [awaited("check", "a")],
-      liveMap([["check", "b-is-newer"]]),
+      liveMap(["b-is-other"]),
       recordMap([]),
       alive,
     );

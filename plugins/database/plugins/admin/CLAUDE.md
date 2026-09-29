@@ -243,7 +243,6 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `database/query`
     - `debug/boot-profile`
     - `debug/latency-ledger`
-    - `debug/profiling/ops`
     - `debug/slow-ops`
     - `debug/slow-ops/cluster`
     - `debug/timeline`

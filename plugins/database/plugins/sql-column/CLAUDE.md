@@ -304,6 +304,7 @@ export const bytea = (name: string) =>
     - `conversations/agents`
     - `conversations/conversation-category`
     - `debug/latency-ledger`
+    - `debug/profiling/op-log/op-store`
     - `fields/json/storage`
     - `fields/tags/storage`
     - `fields/text/storage`

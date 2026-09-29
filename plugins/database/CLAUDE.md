@@ -306,6 +306,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `debug/boot-profile`
     - `debug/latency-ledger`
     - `debug/profiling/boot-bench`
+    - `debug/profiling/op-log/op-store`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `history/engine`
@@ -347,6 +348,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `search/engine`
     - `shell/notifications`
     - `stats/cost`
+    - `stats/pushes`
     - `tasks`
     - `tasks/auto-start`
     - `tasks/task-category`

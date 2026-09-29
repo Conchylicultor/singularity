@@ -91,8 +91,6 @@ import {
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import {
   markWorktreeOpStart,
-  setWorktreeOpPhase,
-  clearWorktreeOp,
   writeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
@@ -643,6 +641,13 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     lane,
     buildId,
   });
+  // This build's liveness marker (see worktree-op.ts): a flocked
+  // `ops/<buildId>.json`, published BEFORE `requested` so the op log never
+  // holds a build no marker vouches for, and released in finalizeBuild only
+  // AFTER the terminal is appended. The tmux status poller keeps the agent's
+  // pane "working" while it is held; a SIGKILL drops the lock with the process
+  // and the op-store reconciler closes the build as interrupted.
+  const marker = markWorktreeOpStart(name, "build", buildId);
   profiler.markRequested();
 
   // The CLI-side build_runs ledger writer, against THIS CHECKOUT's own
@@ -656,15 +661,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // drops the pool.
   const recorder = createBuildRunRecorder(name);
 
-  // Mark this worktree as having a build in flight so the conversation
-  // status poller keeps the agent's pane reading as "working" while the
-  // CLI "shell" status persists (see worktree-op.ts). Written up-front as
-  // "waiting-for-lock" and flipped to "running" once the per-worktree build
-  // lock is granted below, so a build queued behind another reads as queued
-  // rather than running. Cleared in finalizeBuild below, which runs on
-  // every graceful exit.
-  markWorktreeOpStart(name, "build", buildId, "waiting-for-lock");
-
   // Guarantee a terminal record on every *graceful* exit path — a thrown
   // build step, process.exit(1), or SIGINT/SIGTERM. Without this, any
   // failure before the explicit success/failure writes below leaves a
@@ -672,7 +668,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // ever-growing fake bar with no real end time. The exit handler captures
   // the true end timestamp. Only a hard kill (SIGKILL/OOM/power loss) —
   // which can't run handlers — legitimately leaves a record open; those are
-  // the orphans `finalizeOrphanedOps` closes as "interrupted".
+  // the orphans the op-store reconciler closes as "interrupted".
   // Mirrors the on-exit lock release in acquireCheckoutLock above.
   //
   // The deploy receipts this build owns, ONE PER TARGET NAMESPACE. A receipt
@@ -709,7 +705,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   ): Promise<void> => {
     if (buildFinalized) return;
     buildFinalized = true;
-    clearWorktreeOp(name, "build");
     // Stamp every STILL-OPEN receipt's terminal status. Synchronous, so the
     // exit-hook backstop lands it too — and a SIGKILL, which runs no hook at
     // all, is exactly what leaves a receipt at `running` with a dead pid.
@@ -744,6 +739,9 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     finishBuildProgress(success);
     profiler.complete(success ? "success" : "failed");
     profiler.write();
+    // Only now: the verdict is in the log, so a reader that sees the marker
+    // gone finds the terminal rather than an op that looks killed.
+    marker.release();
     // Release the DB pools LAST, after every synchronous durable write
     // above. The process.on("exit") backstop below can run this sync body
     // but cannot await — that's fine: the profile / log / op record is
@@ -882,9 +880,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   );
   const webDir = resolve(root, WEB_CORE_RELATIVE);
   await profiler.wait("build-lock", () => acquireArtifactLock(webDir));
-  // Build lock granted — flip the marker from waiting to running so the UI
-  // clocks build time from here, not from the queued wait.
-  setWorktreeOpPhase(name, "build", "running");
   // The build lock is this build's ENTRY ticket, so this is where it stops
   // queuing and starts its own work. It is NOT done waiting: the duress
   // valve and the host grant below are both post-`granted`, and are where a
@@ -1340,13 +1335,15 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   const baseValveDeps = createValveDeps();
   const valveDeps: ValveDeps = {
     ...baseValveDeps,
+    // The latch's trip reason and how the hold ended (cleared / fail-open)
+    // ride on the wait itself, so a surface can say WHY a build is held.
     onHoldStart: (reason) => {
       baseValveDeps.onHoldStart(reason);
-      profiler.waitStart("duress-valve");
+      profiler.waitStart("duress-valve", reason);
     },
     onHoldEnd: (outcome) => {
       baseValveDeps.onHoldEnd(outcome);
-      profiler.waitEnd();
+      profiler.waitEnd(outcome);
     },
   };
 
@@ -1531,6 +1528,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         gated,
         deps: valveDeps,
         grantHooks: profiler.grantHooks(),
+        onRequeue: () => profiler.requeue(),
       },
       restart: opts.restart,
       onSteps,

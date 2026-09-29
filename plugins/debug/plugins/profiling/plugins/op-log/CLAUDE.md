@@ -32,19 +32,46 @@ painted at their true offsets inside the op's span, never packed head-to-tail.
 `waitMs` survives as a **derived** read-model field (`sum(waits)`) so the stats
 panes keep working.
 
-## The three phases, and why `requested` is re-stamped
+## The event stream (v2) and the one reducer
 
-| phase | written when | carries |
+Since 2026-09-29 the writer emits **change-only events**, one line per state
+change — see
+[`research/2026-09-29-global-unified-op-status.md`](../../../../../../research/2026-09-29-global-unified-op-status.md):
+
+| event | written when | carries |
 |---|---|---|
-| `requested` | before the first wait, **and again on every wait open/close** | full identity, `requestedAt`, closed `waits`, `openWait` |
-| `granted` | the op stops queuing for its ENTRY ticket and starts its own work | `opId`, `grantedAt`, `waits[]` so far |
-| `completed` | terminal | everything + the **accumulated** `waits[]` + `outcome` + `steps` |
+| `requested` | once, before the first wait | full identity + `pid` |
+| `wait-start` | a wait opens | `wait`, `reason` (e.g. the duress trip cause), `cycle` |
+| `wait-end` | a wait closes | `startMs`, `durationMs`, `result` (`acquired` / `cleared` / `fail-open` / `aborted`), and `reason` + `cycle` again so it is self-contained (a fast-path grant emits one with no `wait-start`) |
+| `requeue` | a build released its grant to re-hold at the duress valve | the new `cycle` |
+| `granted` | the op stops queuing for its ENTRY ticket | — |
+| `completed` | terminal, `by: "self"` or `"reconciler"` | a **self-contained summary**: identity, times, every wait, outcome, steps |
 
-Fold at read time per `opId`: **terminal wins**; `requested` only → synthetic
-`outcome: "waiting"`; `requested + granted` → `"running"` with a growing
-`holdMs`. In **both** in-flight cases the wait list is the closed waits plus any
-`openWait`, clocked against the reader's `now` — which is what makes bars grow on
-refresh, with no polling added.
+Every event carries a per-op `seq`, the wall instant `at`, and `t` (monotonic ms
+since `requested`, the clock every wait offset is on).
+
+`core/internal/fold.ts` is the ONE reducer every reader uses —
+`applyOpEvent(state, line)` / `foldOpLines(lines)` → `OpFoldState` (plain data
+that maps onto a DB row), `toOpRecord(state, now)` → the read model, and
+`liveTimes(state, now)` → waited vs worked. Rules: a terminal wins and every
+line after it is ignored; a non-terminal event applies only when
+`seq > lastSeq` (re-ingest is idempotent); an op whose `requested` was clipped
+away is *headless* and renders nothing until its self-contained terminal.
+
+**Who reads what.** Every UI surface — the op-status banner and chip, the
+Ops Gantt and detail, the stats/pushes charts — reads the DB fold the
+[`op-store`](plugins/op-store/CLAUDE.md) child keeps (`opsInFlight` /
+`opsHistory`, `op_log_ops`). `readOpRecords()` / `readOpenWait()` (this
+plugin's `server` barrel, a direct fold of the file) remain for the CLI only —
+`./singularity await` — which must never depend on the DB.
+
+**Legacy lines** (a pre-v2 CLI's `phase: requested | granted | completed`
+snapshots, `requested` re-stamped on every wait open/close) still fold, with the
+old semantics, until Phase 5 of the plan removes them: the freshest `requested`
+wins for identity and the open wait, and between re-stamps and the `granted`
+snapshot the longer wait list wins — wait lists only append, so the longer one
+is by construction the newer (`requested.waits ?? granted.waits` would let a
+never-re-stamped `waits: []` clobber a populated `granted` list).
 
 ### `granted` does not mean "will never block again"
 
@@ -67,33 +94,21 @@ The outcome stays `"running"` while parked in a post-grant wait; it does **not**
 flip back to `"waiting"`. The op *has* been admitted, the Gantt maps both states
 to the same pulse treatment, so the flip would buy nothing and would lie.
 
-Both in-flight branches share one `liveWaitsOf` helper. That sharing is
+Both in-flight branches share one `liveWaits` helper. That sharing is
 load-bearing: the two branches having their own copies is exactly how the
 post-`granted` waits came to be dropped in the first place.
 
-**Wait lists only ever append**, so where a `requested` re-stamp and the
-`granted` snapshot disagree, the longer list is by construction the newer one.
-(`requested.waits ?? granted.waits` will not do: a `requested` that never
-re-stamped carries `waits: []` — present and empty — which would clobber a
-populated `granted` list and silently drop the wait.)
-
-`requested` is re-stamped rather than written once because the reader can only
-attribute an in-flight op's wait from what is already **on disk**. Written once,
-it could only ever name the first resource an op declared — which for a build
-(build-lock, then minutes of duress-valve and host-grant) is the wrong one
-exactly when it matters. Re-stamping is append-only and costs ≤ 2 lines per wait.
-
-`foldOpRecords(raw, now)` takes `now` as a **parameter**; it never reads the
-clock. That is what makes the live synthesis testable (`core/fold.test.ts`).
+`toOpRecord` and `liveTimes` take `now` as a **parameter**; they never read the
+clock. That is what makes the live synthesis testable (`core/fold.test.ts` for
+legacy lines, `core/fold-v2.test.ts` for the event stream).
 
 ## One identity field: `opSlug`
 
 A record names exactly one thing — the checkout the op ran in — and `opSlug` is
 it: `basename(worktree root)`, the op-marker slug `isWorktreeOpActive()` reads.
 Every writer derives it from its own git root (`checkoutNamespace(root)`), so it
-is true for the process that wrote the line. `finalizeOrphanedOps` probes it for
-liveness (a null slug is inactive), and the profiling reader groups a Gantt row
-on it.
+is true for the process that wrote the line. The op-store reconciler reads the
+slug's markers for liveness, and the profiling reader groups a Gantt row on it.
 
 The record used to carry a second field, `worktree`, read from the
 `SINGULARITY_WORKTREE` environment variable — and the reader preferred it. An
@@ -115,8 +130,8 @@ identity.
 `OpKind` **is** the worktree op marker's kind: one declaration, `OP_KINDS` in
 `infra/worktree/core`, which this plugin and the marker primitive
 (`infra/worktree/server`) both import — identical by construction, not by
-convention. Those markers are ephemeral by design (one file per op, overwritten,
-no history) so they cannot *be* the durable store — but the durable store speaks
+convention. Those markers are ephemeral by design (one flocked file per op,
+deleted when it ends, no history) so they cannot *be* the durable store — but the durable store speaks
 their vocabulary rather than inventing a second one. This barrel deliberately
 does not re-export `OpKind`; import it from worktree's `core`. `OutcomeByKind`
 is keyed on it, so a kind added there without an outcome vocabulary here is a
@@ -134,41 +149,60 @@ a `SyntaxError` is skipped, anything else rethrows.
 
 ## Plugin reference
 
-- Description: Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader, and the single orphan reconciler.
+- Description: Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, and the merged file reader. Its op-store child ingests it into the DB and owns the orphan reconciler.
 - Core:
   - Uses:
     - `infra/worktree.OP_KIND_IDS`
     - `infra/worktree.OpKind`
   - Exports (types):
+    - `LegacyOpenWait`
+    - `OpClosedBy`
     - `OpenWait`
-    - `OpGroup`
+    - `OpEvent`
+    - `OpEventKind`
+    - `OpFoldState`
+    - `OpIdentity`
+    - `OpLine`
+    - `OpLiveTimes`
     - `OpOutcome`
     - `OpRecord`
     - `OpStep`
+    - `OpSummary`
     - `OpWait`
+    - `OpWaitSpan`
     - `OutcomeByKind`
     - `RawOpRecord`
     - `TerminalOutcome`
     - `WaitKind`
+    - `WaitKindMeta`
+    - `WaitResult`
   - Exports (values):
-    - `foldOpRecords`
-    - `groupByOpId`
-    - `openWaitOf`
+    - `applyOpEvent`
+    - `emptyOpState`
+    - `foldOpLines`
+    - `isOpEvent`
+    - `isTerminalState`
+    - `liveTimes`
     - `orphanedOps`
+    - `reconcilerCompletedEvent`
     - `sumWaits`
+    - `toOpRecord`
+    - `toOpRecords`
+    - `WAIT_KINDS`
 - Cross-plugin:
-  - Imported by:
-    - `debug/profiling/ops`
-    - `stats/pushes`
+  - Imported by: `debug/profiling/op-log/op-store`
 - Server:
   - Exports (types):
     - `OpProfiler`
     - `OpProfilerOptions`
   - Exports (values):
+    - `appendOpLog`
     - `createOpProfiler`
-    - `finalizeOrphanedOps`
     - `OP_LOG_FILE`
     - `readOpenWait`
     - `readOpRecords`
+    - `readOpStates`
+- Sub-plugins:
+  - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
 
 <!-- AUTOGENERATED:END -->

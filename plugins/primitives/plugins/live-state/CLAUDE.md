@@ -977,6 +977,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `debug/config-orphans`
     - `debug/latency-ledger`
     - `debug/live-state-health`
+    - `debug/profiling/ops`
     - `debug/queue`
     - `debug/queue-health`
     - `debug/reports`

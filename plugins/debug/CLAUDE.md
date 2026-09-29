@@ -32,8 +32,10 @@
       - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
       - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
       - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
-      - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader, and the single orphan reconciler.
-      - **`ops`** — Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).
+      - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, and the merged file reader. Its op-store child ingests it into the DB and owns the orphan reconciler.
+        - Plugins:
+          - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
+      - **`ops`** — Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane — all computed client-side from opsHistory rows.
         - Plugins:
           - **`op-gantt`** — Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset.
       - **`runtime`** — Runtime HTTP/DB/loader profiling tables in the Gantt debug pane. Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.

@@ -123,6 +123,7 @@ are in `infra/entities/server/internal/`
     - `conversations/conversations-view/grouped`
     - `database`
     - `database/migrations`
+    - `debug/profiling/op-log/op-store`
     - `infra/entities`
     - `page/editor`
     - `page/editor-collab`

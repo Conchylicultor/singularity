@@ -4,7 +4,10 @@ import type {
   Lane,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
-import type { RawOpRecord } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import type {
+  OpEvent,
+  OpSummary,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { withDirectOp, type DirectOpDeps } from "./direct-op";
 
@@ -39,9 +42,15 @@ async function rejection(p: Promise<unknown>): Promise<Error> {
   throw new Error("expected the promise to reject, but it resolved");
 }
 
+/** The terminal summary, or undefined when no `completed` event landed. */
+function terminalOf(records: OpEvent[]): OpSummary | undefined {
+  const last = records.find((r) => r.e === "completed");
+  return last?.e === "completed" ? last.summary : undefined;
+}
+
 function makeHarness(opts: { inherited?: Grant; slug?: string } = {}) {
   const events: string[] = [];
-  const records: RawOpRecord[] = [];
+  const records: OpEvent[] = [];
   const exitHandlers: (() => void)[] = [];
   const slug = asNamespace(opts.slug ?? "wt-a");
   const deps: DirectOpDeps = {
@@ -66,16 +75,29 @@ function makeHarness(opts: { inherited?: Grant; slug?: string } = {}) {
     publishLane: (interactive) => {
       events.push(`lane:${interactive ? "interactive" : "background"}`);
     },
+    // The requested / completed events land in `events` too, so the ORDER
+    // against the marker (publish before `requested`, release after
+    // `completed`) is asserted, not assumed.
     createOpProfiler: (kind, o) =>
-      createOpProfiler(kind, { ...o, sink: (r) => records.push(r) }),
-    markWorktreeOpStart: (_slug, op, _opId, phase) => {
-      events.push(`marker:${op}:${phase}`);
-    },
-    setWorktreeOpPhase: (_slug, op, phase) => {
-      events.push(`marker:${op}:${phase}`);
-    },
-    clearWorktreeOp: (_slug, op) => {
-      events.push(`marker:${op}:clear`);
+      createOpProfiler(kind, {
+        ...o,
+        sink: (r) => {
+          records.push(r);
+          if (r.e === "requested" || r.e === "completed")
+            events.push(`log:${r.e}`);
+        },
+      }),
+    markWorktreeOpStart: (_slug, op, _opId) => {
+      events.push(`marker:${op}:publish`);
+      let released = false;
+      return {
+        path: "/dev/null",
+        release: () => {
+          if (released) return;
+          released = true;
+          events.push(`marker:${op}:release`);
+        },
+      };
     },
     onExit: (fn) => exitHandlers.push(fn),
     installFatalSignalExit: (opId) => {
@@ -103,28 +125,33 @@ describe("withDirectOp — top-level path", () => {
     );
     expect(outcome).toBe("success");
     expect(seen).toEqual(["body:2:false:background"]);
+    // The marker is published BEFORE `requested` and released only AFTER
+    // `completed` is in the log: a reader never sees a logged op without a
+    // locked marker unless its process died.
     expect(h.events).toEqual([
       "broadcasts:test",
       "predecessor:wt-a",
       "lane:background",
-      "marker:test:waiting-for-lock",
+      "marker:test:publish",
+      "log:requested",
       "signals:armed",
       "acquire:background:4",
-      "marker:test:running",
       "release",
-      "marker:test:clear",
+      "log:completed",
+      "marker:test:release",
     ]);
-    // The op-log side: requested (re-stamped around the grant wait), granted,
-    // and — once the exit handler fires — completed with the outcome.
-    expect(h.records.map((r) => r.phase)).toContain("granted");
-    for (const fn of h.exitHandlers) fn();
-    const completed = h.records.find((r) => r.phase === "completed");
+    expect(h.records.map((r) => r.e)).toContain("granted");
+    const completed = terminalOf(h.records);
     expect(completed?.kind).toBe("test");
     expect(completed?.outcome).toBe("success");
-    expect(completed?.waits?.map((w) => w.kind)).toEqual(["host-grant"]);
-    // The exit handler also clears the marker (the `process.exit` inside a
-    // body path, which skips the finally).
-    expect(h.events.filter((e) => e === "marker:test:clear")).toHaveLength(2);
+    expect(completed?.waits.map((w) => w.kind)).toEqual(["host-grant"]);
+    // The exit handler (the `process.exit` inside a body path, which skips the
+    // finally) is idempotent: no second terminal, no second release.
+    for (const fn of h.exitHandlers) fn();
+    expect(h.events.filter((e) => e.startsWith("log:completed"))).toHaveLength(
+      1,
+    );
+    expect(h.events.filter((e) => e === "marker:test:release")).toHaveLength(1);
   });
 
   test("the main worktree is the interactive origin", async () => {
@@ -134,7 +161,7 @@ describe("withDirectOp — top-level path", () => {
     expect(h.events).toContain("acquire:interactive:1");
   });
 
-  test("a failed body is stamped failed; a throwing body still clears the marker", async () => {
+  test("a failed body is stamped failed; a throwing body still writes its terminal, then releases", async () => {
     const h = makeHarness();
     const outcome = await withDirectOp(
       "check",
@@ -144,9 +171,7 @@ describe("withDirectOp — top-level path", () => {
     );
     expect(outcome).toBe("failed");
     for (const fn of h.exitHandlers) fn();
-    expect(h.records.find((r) => r.phase === "completed")?.outcome).toBe(
-      "failed",
-    );
+    expect(terminalOf(h.records)?.outcome).toBe("failed");
 
     const h2 = makeHarness();
     const err = await rejection(
@@ -160,12 +185,12 @@ describe("withDirectOp — top-level path", () => {
       ),
     );
     expect(err.message).toBe("boom");
-    expect(h2.events.at(-1)).toBe("marker:check:clear");
+    expect(h2.events.slice(-2)).toEqual([
+      "log:completed",
+      "marker:check:release",
+    ]);
     // No outcome was stamped, so the terminal record lands as "error".
-    for (const fn of h2.exitHandlers) fn();
-    expect(h2.records.find((r) => r.phase === "completed")?.outcome).toBe(
-      "error",
-    );
+    expect(terminalOf(h2.records)?.outcome).toBe("error");
   });
 
   test("a top-level op mints its own id; an adopted id is honoured", async () => {

@@ -146,6 +146,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `debug/claude-cli-calls`
     - `debug/live-state-health`
     - `debug/memory`
+    - `debug/profiling/ops`
     - `debug/queue`
     - `debug/queue-health`
     - `debug/read-set`

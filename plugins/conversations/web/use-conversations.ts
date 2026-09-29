@@ -231,3 +231,56 @@ export function useConversationById(
   const inTransit = id !== null && q.isPending;
   return inTransit && held?.id === id ? held : null;
 }
+
+// A worktree's slug is the basename of its checkout path — the key the op log
+// (`opSlug`) and the op markers file a worktree under, and by the basename
+// invariant the attempt id. Derived by hand: no node:path in the browser.
+function worktreeSlugOf(worktreePath: string): string {
+  const parts = worktreePath.split("/").filter(Boolean);
+  return parts[parts.length - 1] ?? worktreePath;
+}
+
+const EMPTY_TITLES: Readonly<Record<string, string>> = {};
+
+// One conversation list as a partial slug → title map.
+function titleMapOf(rows: ConversationEntry[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const c of rows) {
+    const title = c.title?.trim();
+    if (title) map[worktreeSlugOf(c.worktreePath)] = title;
+  }
+  return map;
+}
+
+/**
+ * Worktree slug → the human title of a conversation that ran in it, so a
+ * surface listing worktrees (the op-status queue, the Ops Gantt rows) reads as
+ * task names rather than attempt ids. A pure client-side lookup over the three
+ * live conversation lists (in the agent-manager, the main-DB set).
+ *
+ * Cosmetic by design: while a list loads, or if one failed, the map is empty and
+ * every label falls back to its slug — the caller's own read renders its own
+ * failure. Each list is subscribed through a `select` slice, so a status flip
+ * in the lists re-renders the caller only when a mapping actually changes.
+ */
+export function useConversationTitleBySlug(): Readonly<Record<string, string>> {
+  const active = useResource(conversationsActiveResource, undefined, {
+    select: titleMapOf,
+  });
+  const gone = useResource(conversationsGoneResource, undefined, {
+    select: titleMapOf,
+  });
+  const system = useResource(conversationsSystemResource, undefined, {
+    select: titleMapOf,
+  });
+  return useMemo(() => {
+    if (
+      active.status === "ready" &&
+      gone.status === "ready" &&
+      system.status === "ready"
+    )
+      // A live `active` title wins over a stale gone / system one.
+      return { ...system.data, ...gone.data, ...active.data };
+    return EMPTY_TITLES;
+  }, [active, gone, system]);
+}

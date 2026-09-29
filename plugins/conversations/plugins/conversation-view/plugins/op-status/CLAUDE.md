@@ -1,107 +1,85 @@
 # op-status
 
-Surfaces the worktree's in-flight long-running operation — `Build in progress`,
-`Push in progress`, `Push queued — waiting for lock`, `Check in progress`, `Test
-in progress`, `E2E in progress` — in two places:
+Surfaces the worktree's in-flight long-running operation (build / push / check /
+test / e2e) in two places:
 
-- a **banner** above the prompt input (with a live-ticking elapsed timer), and
-- a compact **sidebar row chip** (one icon per kind, an hourglass while queued)
-  so an op is visible from the conversation list without opening the
-  conversation.
+- a **banner** above the prompt input, and
+- a compact **sidebar row chip** (one icon per kind, an hourglass while parked
+  in a wait), so an op is visible from the conversation list without opening
+  the conversation.
 
-Fills the gap where a build/push/check/test/e2e run (or a push stuck behind the
-global push lock) was indistinguishable from the agent merely "working".
-
-The kinds, their nouns ("Build") and busy verbs ("Building") are `OP_KINDS` in
-`infra/worktree/core` — one declaration the marker, the op-log, the wire schema
-here (`z.enum(OP_KIND_IDS)`), the banner's sentences and the chip's icon map all
-read. Adding a kind there is the whole edit on the wire and in the sentences;
-the chip's `Record<OpKind, IconType>` and the server's rank table are type
-errors until they have an entry.
+A web-only plugin: it reads the op-store's `opsInFlight` live collection
+(`debug/profiling/op-log/plugins/op-store/core`) — the DB fold of `op-log.jsonl`
+— and owns no server state. Plan:
+`research/2026-09-29-global-unified-op-status.md` §6.
 
 ## How it works
 
-- The op CLI commands write a per-worktree op marker at
-  `~/.singularity/worktrees/<slug>/ops/<kind>.json` (owned by the `worktree`
-  primitive). Every marker carries a `phase`: `waiting-for-lock` while it
-  queues for its lock, flipped to `running` the instant the lock is granted (a
-  push waits on the global push lock; a build on the per-worktree
-  `.build.lock`; a check, a test or an e2e run on the host CPU grant). On the
-  flip the marker stamps its own `runningAt` (except pushes, whose `runningAt`
-  is derived from the authoritative holder file). A direct op's marker
-  (`check` / `test` / `e2e`, via `withDirectOp` in op-runtime) is written
-  **only by a top-level run** — one nested inside another op (a build's or a
-  push's check) is already covered by that op's marker, so it writes none.
-  Clearing a marker is
-  **ownership-guarded**: a finishing op only deletes the file while it still
-  names its own pid, so a build queued behind another (which overwrote the
-  single `build.json` with its own pid) is not clobbered when the earlier build
-  exits.
-- The full `{ slug → op }` map is ONE live value, `worktreeOps`
-  (`shared/schemas.ts`, key `worktree-ops`), declared with `preload: "boot"` so
-  the boot snapshot hydrates it and the banner and chips paint settled. Its
-  truth is on disk, so the server serves it from the external arm
-  (`serveValue(worktreeOps, { source: "external" })` in
-  `server/internal/resource.ts`; `...worktreeOpsServed.declare` in the
-  contributions).
-- This plugin's server watches that marker tree with `createFileWatcher`
-  (mirrors `@plugins/infra/git/git-watcher`) and calls
-  `worktreeOpsServed.notify()` on every marker change. No polling — markers
-  change via discrete filesystem events. The watcher lives for the plugin's
-  lifetime (`onReady` / `onShutdown`), not a `whileSubscribed`: a preloaded
-  value must stay fresh with no tab subscribed.
-- The banner reads it with `useLive(worktreeOps)`, keys off
-  `basename(conversation.worktreePath)` (the same key the status poller uses),
-  and renders the matching op. The elapsed `mm:ss` is a presentational 1s
-  ticker — the op state itself is push-driven.
-- The **sidebar chip** (`Item.Chips` contribution) shares the same source of
-  truth via the `useWorktreeOp(conversationId)` hook: it resolves the row's
-  conversation → `worktreePath` → slug (the shared `slugOf` helper) and reads
-  the same `worktreeOps` value. The hook returns a
-  `ResourceResult<WorktreeOp | null>` (`mapResource` over the value), so a map
-  that has not loaded — or failed to — never reads as "idle": a ready `null` is
-  the settled "no op". The chip renders nothing while loading or for idle
-  worktrees, the failure as an error icon with Retry, and a
-  single **muted icon** otherwise — no chip, no label: the distinct icon (wrench
-  = building, up-arrow = pushing, flask = checking, checklist = testing,
-  open-in-browser = e2e, hourglass = any op waiting for its lock), not color or
-  text, carries the state, with a tooltip for the full phrasing. Keeps the
-  dense list row quiet.
-- The banner is a toggle: clicking it expands a list of **every** in-flight op
-  across all worktrees (the value already carries the full `{ slug → op }`
-  map). The list reconstructs the global push-lock queue — the running push that
-  holds the lock is `#1`, the `waiting-for-lock` pushes follow in request order
-  (`startedAt`) — then lists every other kind (builds, checks, tests, e2e
-  runs), which serialize per-worktree or on the host grant and don't contend on
-  the global lock so they carry no queue position. The current
-  worktree's row is highlighted. Each row resolves its worktree slug (the
-  attempt id) to a human conversation title via the live `conversations`
-  resource — in the agent-manager that's the full main-DB set, so this stays a
-  pure client-side lookup with no cross-worktree query; rows with no match fall
-  back to the slug.
+- **One subscription.** `useOpsInFlight()` is `useLive(opsInFlight)` with the
+  default tuple — every in-flight op on the host, boot-preloaded so the banner
+  and chips paint settled. The banner and every chip share it and filter by
+  worktree slug on the client (`opSlugOf(row)`: `opSlug`, else the last
+  segment of a legacy line's branch). The slug of a conversation is
+  `basename(worktreePath)`.
+- **Which op a worktree shows** (`opsOfSlug`): by `OP_RANK` (push > check >
+  build > test / e2e), then oldest. The banner adds `+N others` for the rest of
+  the host's in-flight ops.
+- **The state line** (`stateLine`, `web/internal/op-lines.ts`) is the one
+  wording every surface renders:
+  - parked in a wait (`openWait != null`): `{Kind} — {WAIT_KINDS[kind].sentence(reason)}`,
+    `· requeue #N` when the wait's cycle is past 0, then the wait's own clock —
+    e.g. `Build — held: host under duress (loadRatio) · requeue #6 · 12:03`;
+  - working: `{Kind} — {progressive}` (`Build — Building`).
 
-## Boundary notes
+  The right side is the op's total elapsed and, once it has waited at all,
+  `waited X · worked Y` — both from op-log's `liveTimes`, the one derivation of
+  the split. The banner's **warning tone means "parked in a wait"**, before the
+  grant or after it (a build waiting on the duress valve after its lock is as
+  stuck as one waiting for the lock).
+- **The expanded list** (`buildQueue`) reconstructs the global push queue —
+  `#1` the push holding the mutex (`grantedAt` set), then the pushes parked on
+  the mutex by `openWait.startedAt`, then any push not at the mutex yet — then
+  every other op by `requestedAt`, each with the same state line. The current
+  worktree's row is highlighted; rows are labelled with a conversation title via
+  `useConversationTitleBySlug()` (`conversations/web`), falling back to the slug.
+- **The chip** (`Item.Chips`) reads the same subscription through
+  `useWorktreeOp(conversationId)`, a `ResourceResult<OpRow | null>`: loading or
+  failed never reads as "idle". It shows the hourglass whenever the op is
+  parked in a wait, else the kind's icon (wrench = build, up-arrow = push,
+  flask = check, checklist = test, open-in-browser = e2e); the tooltip is the
+  state line, ticking only while the tooltip is open.
+- **Clocks** are a presentational 1 s `useNow` ticker; the op state itself is
+  pushed by the change feed on `op_log_ops`.
 
-- The marker read/write primitive (`markWorktreeOpStart`, `setWorktreeOpPhase`,
-  `listActiveWorktreeOps`, `worktreesDir`) lives in
-  `@plugins/infra/plugins/worktree/server`. This plugin only consumes it; it
-  owns the live value, the watcher, the banner, and the row chip.
-- The banner renders through the `Conversation.AbovePromptInput` slot (alongside
-  the turn-summary card); the chip renders through `Item.Chips` (alongside the
-  conversation-progress bar). One plugin, two views over the same op value —
-  mirrors how `conversation-progress` owns both a toolbar segment and a row chip.
+The kinds, nouns and busy verbs are `OP_KINDS` (`infra/worktree/core`); the
+chip's `Record<OpKind, IconRef>` and `OP_RANK` are type errors until a new kind
+has an entry.
+
+## Verifying it end to end
+
+`e2e/op-status-waits.ts` drives a synthetic op through the real writers and
+asserts what the banner, the sidebar chip and the op detail pane show at each
+state (parked on the duress valve at requeue #2 → working → completed, then a
+SIGKILLed op with no terminal). The op is `scripts/synthetic-op.ts`, a separate
+process, because an `e2e` script may not import `server` barrels and because
+killing a real process is the honest way to test a death. Its steps are driven
+by a control file it watches. The interrupted close of the killed op is appended only by MAIN's
+reconciler, so that assertion runs only with `--main-reconciles`; without it the
+script says so, skips it, and closes the dead op through the helper's `close`
+mode (the reconciler's own terminal event) so no dead row lingers.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to the worktree-ops live value. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
+- Description: Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own clock) or the work it is doing, total elapsed and the waited / worked split, expandable into the global push queue and every other in-flight op. Also a sidebar row chip flagging the same op (hourglass while parked in a wait).
 - Web:
   - Contributes:
     - `Conversation.AbovePromptInput` → `OpStatusBanner`
     - `Item.Chips` → `OpStatusChip`
   - Uses:
     - `conversations.useConversation`
+    - `conversations.useConversationTitleBySlug`
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.Conversation`
     - `network/live.useLive`
@@ -118,28 +96,9 @@ errors until they have an entry.
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/relative-time.formatElapsed`
     - `primitives/relative-time.useNow`
     - `ui/icons.Icon`
-- Server:
-  - Contributes: `resource.declare` "worktree-ops"
-  - Uses:
-    - `infra/file-watcher.createFileWatcher`
-    - `infra/file-watcher.FileWatcher`
-    - `infra/paths.worktreesDir`
-    - `infra/worktree.resolveActiveWorktreeOps`
-    - `infra/worktree.WorktreeOp`
-    - `network/live.serveValue`
-  - Resources: `worktree-ops` (push)
-- Shared:
-  - Exports (types):
-    - `WorktreeOp`
-    - `WorktreeOpsPayload`
-  - Exports (values):
-    - `worktreeOps`
-    - `WorktreeOpSchema`
-    - `WorktreeOpsPayloadSchema`
 
 <!-- AUTOGENERATED:END -->

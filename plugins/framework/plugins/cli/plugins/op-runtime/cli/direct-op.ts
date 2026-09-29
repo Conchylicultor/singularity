@@ -17,11 +17,7 @@ import {
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 import type { OpKind } from "@plugins/infra/plugins/worktree/core";
-import {
-  markWorktreeOpStart,
-  setWorktreeOpPhase,
-  clearWorktreeOp,
-} from "@plugins/infra/plugins/worktree/server";
+import { markWorktreeOpStart } from "@plugins/infra/plugins/worktree/server";
 import {
   createOpProfiler,
   type OpProfiler,
@@ -37,7 +33,7 @@ import { publishLane } from "./lane";
 // grant: `check`, `test`, and an `e2e` script run. Before this file the whole
 // sequence lived inline in the check command, and `test` / `e2e` needed the
 // identical sequence: identity, the broadcast banner, the interrupted
-// predecessor, the lane, the worktree op marker (waiting-for-lock → running),
+// predecessor, the lane, the per-op liveness marker,
 // the op-log profiler (requested → granted → completed), a graceful exit on a
 // catchable fatal signal with signal-origin attribution, and the grant itself —
 // or the parent's INHERITED grant when this process is nested inside another op.
@@ -103,8 +99,6 @@ export interface DirectOpDeps {
   publishLane: (isInteractiveOrigin: boolean) => void;
   createOpProfiler: typeof createOpProfiler;
   markWorktreeOpStart: typeof markWorktreeOpStart;
-  setWorktreeOpPhase: typeof setWorktreeOpPhase;
-  clearWorktreeOp: typeof clearWorktreeOp;
   /** Register an exit-time cleanup (`process.on("exit", …)`). */
   onExit: (fn: () => void) => void;
   installFatalSignalExit: (opId: string, slug: Namespace) => void;
@@ -149,8 +143,6 @@ const realDeps: DirectOpDeps = {
   publishLane,
   createOpProfiler,
   markWorktreeOpStart,
-  setWorktreeOpPhase,
-  clearWorktreeOp,
   onExit: (fn) => process.on("exit", fn),
   // The tap arms here, and its sink is a direct op's ONLY record of a death: a
   // direct op owns no deploy receipt, so without the line an externally-killed
@@ -164,12 +156,15 @@ const realDeps: DirectOpDeps = {
  * Run `body` as a direct op of `kind`.
  *
  * Sequence, on the top-level path: broadcasts → identity → interrupted
- * predecessor → lane → profiler `requested` + marker `waiting-for-lock` + exit
+ * predecessor → lane → locked liveness marker → profiler `requested` + exit
  * handler + fatal-signal exit → host grant (its queue recorded as a
- * `host-grant` wait) → marker `running` + profiler `granted` → `body` →
- * profiler `completed`. The marker is cleared on every graceful exit — the
- * `finally` below, and the exit handler for a `process.exit` inside `body` —
- * and a SIGKILL self-heals through the marker's pid-liveness check.
+ * `host-grant` wait) → profiler `granted` → `body` → profiler `completed` →
+ * marker released. The marker is published BEFORE `requested` and released
+ * AFTER `completed` is appended, on every graceful exit — the `finally` below,
+ * and the exit handler for a `process.exit` inside `body` — so a reader never
+ * sees an op in the log with no marker unless its process really died. A
+ * SIGKILL drops the marker's flock with the process, and the op-store
+ * reconciler closes the op as interrupted.
  *
  * On the NESTED path (a parent's grant in the environment) only the lane is
  * published — not-clobbered, so the parent's classification wins — and `body`
@@ -224,22 +219,26 @@ export async function withDirectOp<K extends OpKind>(
     ? undefined
     : deps.createOpProfiler(kind, { opId, branch, opSlug: slug, lane });
 
+  // The marker first, THEN `requested`: an op in the log with no locked marker
+  // is one the reconciler closes as interrupted. The terminal is appended
+  // before the release for the same reason (see `finish`).
+  const marker = nested
+    ? undefined
+    : deps.markWorktreeOpStart(slug, kind, opId);
+  // The terminal record then the release, on every graceful exit — including a
+  // `process.exit(1)` inside `body`, which skips the `finally`. Idempotent (both
+  // halves are), and an outcome already stamped by `complete()` wins; a path
+  // that exits without one lands as "error", which is the truth about it.
+  const finish = (): void => {
+    profiler?.write();
+    marker?.release();
+  };
   if (!nested) {
     profiler?.markRequested();
-    // Written up-front as "waiting-for-lock" and flipped to "running" once the
-    // grant is held, so an op queued for its grant reads as queued.
-    deps.markWorktreeOpStart(slug, kind, opId, "waiting-for-lock");
-    deps.onExit(() => {
-      deps.clearWorktreeOp(slug, kind);
-      // The terminal record, on every graceful exit — including a
-      // `process.exit(1)` inside `body`, which skips the `finally`. Idempotent,
-      // and an outcome already stamped by `complete()` wins; a path that exits
-      // without one lands as "error", which is the truth about it.
-      profiler?.write();
-    });
+    deps.onExit(finish);
     // Catchable fatal signals → graceful exit so the exit handler above runs
     // (the wrapper's orphan SIGTERM tears this worker down cleanly). SIGKILL is
-    // uncatchable; the marker's pid-liveness check is the self-heal there.
+    // uncatchable; the kernel drops the marker's flock with the process.
     deps.installFatalSignalExit(opId, slug);
   }
 
@@ -254,11 +253,8 @@ export async function withDirectOp<K extends OpKind>(
 
   try {
     const runUnder = async (grant: Grant): Promise<OutcomeByKind[K]> => {
-      // The grant is now held — on the top-level path this runs only after
-      // acquisition; flip the marker (a no-op when nested, where the parent
-      // owns the status). The host grant IS a direct op's entry ticket: it does
-      // no further waiting after this point.
-      if (!nested) deps.setWorktreeOpPhase(slug, kind, "running");
+      // The grant is now held. The host grant IS a direct op's entry ticket: it
+      // does no further waiting after this point.
       profiler?.markGranted();
       const outcome = await body(grant, ctx);
       profiler?.complete(outcome);
@@ -273,6 +269,6 @@ export async function withDirectOp<K extends OpKind>(
           runUnder,
         );
   } finally {
-    if (!nested) deps.clearWorktreeOp(slug, kind);
+    finish();
   }
 }

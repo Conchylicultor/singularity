@@ -300,6 +300,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `conversations/conversation-view/jsonl-viewer/outline`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
+    - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/rewind`
     - `conversations/conversations-view/data-view/queue`

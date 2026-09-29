@@ -1,117 +1,36 @@
 import { test, expect } from "bun:test";
 import {
-  closeSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
-  openSync,
   readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { dlopen } from "bun:ffi";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import {
   asNamespace,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
+import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 import {
-  clearPushHolder,
-  clearWorktreeOp,
-  derivePushPhases,
+  isWorktreeOpActive,
   listActiveWorktreeOps,
+  listWorktreeOps,
   markWorktreeOpStart,
-  pushLockHeld,
-  readPushHolder,
-  setWorktreeOpPhase,
-  writePushHolder,
-  type PushHolder,
-  type WorktreeOp,
-  type WorktreeOpInfo,
+  probeWorktreeOp,
 } from "./worktree-op";
 
-// --- helpers ---------------------------------------------------------------
+// The marker functions resolve their path from the real worktreeDataDir(slug);
+// there is no path injection. So each test uses a throwaway random slug (never
+// a real worktree), writes under the real worktrees dir, and reaps the whole
+// slug dir in a finally.
 
-function pushMarker(slug: string): WorktreeOpInfo {
-  return {
-    slug,
-    op: "push",
-    pid: 1234,
-    opId: "op-1",
-    startedAt: "2026-06-07T00:00:00.000Z",
-    phase: "running",
-    runningAt: null,
-  };
-}
-function buildMarker(slug: string): WorktreeOpInfo {
-  return {
-    slug,
-    op: "build",
-    pid: 1234,
-    opId: "op-1",
-    startedAt: "2026-06-07T00:00:00.000Z",
-    phase: "running",
-    runningAt: null,
-  };
-}
-function checkMarker(slug: string): WorktreeOpInfo {
-  return {
-    slug,
-    op: "check",
-    pid: 1234,
-    opId: "op-1",
-    startedAt: "2026-06-07T00:00:00.000Z",
-    phase: "running",
-    runningAt: null,
-  };
-}
-function holder(slug: string, pid = 1234, pushId = "p-1"): PushHolder {
-  return { slug, pid, pushId, acquiredAt: "2026-06-07T00:00:00.000Z" };
-}
-const alive = () => true;
-const dead = () => false;
-const phaseOf = (out: WorktreeOpInfo[], slug: string) =>
-  out.find((m) => m.slug === slug)?.phase;
+const opsDirOf = (slug: Namespace) => join(worktreeDataDir(slug), "ops");
 
-// --- op-marker fs helpers --------------------------------------------------
-//
-// The marker read/write functions resolve their path from the real
-// worktreeDataDir(slug); no path injection. So each test uses a throwaway random
-// slug (never a real worktree), writes under the real WORKTREES_DIR, and reaps
-// the whole slug dir in a finally.
-
-function markerPath(slug: Namespace, op: WorktreeOp): string {
-  return join(worktreeDataDir(slug), "ops", `${op}.json`);
-}
-function writeRawMarker(
-  slug: Namespace,
-  op: WorktreeOp,
-  data: Record<string, unknown>,
-): void {
-  mkdirSync(join(worktreeDataDir(slug), "ops"), { recursive: true });
-  writeFileSync(markerPath(slug, op), JSON.stringify(data));
-}
-function readRawMarker(
-  slug: Namespace,
-  op: WorktreeOp,
-): Record<string, unknown> {
-  return JSON.parse(readFileSync(markerPath(slug, op), "utf8")) as Record<
-    string,
-    unknown
-  >;
-}
-function withTempSlug(fn: (slug: Namespace) => void): void {
-  const slug = asNamespace(`op-test-${randomUUID()}`);
-  try {
-    fn(slug);
-  } finally {
-    rmSync(worktreeDataDir(slug), { recursive: true, force: true });
-  }
-}
-async function withTempSlugAsync(
+async function withTempSlug(
   fn: (slug: Namespace) => Promise<void>,
 ): Promise<void> {
   const slug = asNamespace(`op-test-${randomUUID()}`);
@@ -121,287 +40,194 @@ async function withTempSlugAsync(
     rmSync(worktreeDataDir(slug), { recursive: true, force: true });
   }
 }
-// A live pid that is never this process — pid 1 (init/launchd) is always alive
-// and isPidAlive treats its EPERM as alive, so a marker naming it is not reaped.
-const OTHER_LIVE_PID = 1;
 
-// --- derivePushPhases: the core correctness logic --------------------------
+function writeRaw(slug: Namespace, file: string, data: unknown): string {
+  mkdirSync(opsDirOf(slug), { recursive: true });
+  const path = join(opsDirOf(slug), file);
+  writeFileSync(path, typeof data === "string" ? data : JSON.stringify(data));
+  return path;
+}
 
-test("exactly one push runs — the slug the holder names; two-running impossible", () => {
-  const out = derivePushPhases(
-    [pushMarker("A"), pushMarker("B")],
-    holder("A"),
-    {
-      isAlive: alive,
-      lockHeld: () => true,
-    },
-  );
-  expect(phaseOf(out, "A")).toBe("running");
-  expect(phaseOf(out, "B")).toBe("waiting-for-lock");
-  expect(out.filter((m) => m.phase === "running")).toHaveLength(1);
-  // The running push carries the lock-acquired instant; the waiter does not.
-  expect(out.find((m) => m.slug === "A")?.runningAt).toBe(
-    "2026-06-07T00:00:00.000Z",
-  );
-  expect(out.find((m) => m.slug === "B")?.runningAt).toBeNull();
-});
+// --- the held marker --------------------------------------------------------
 
-test("dead holder pid → nobody running, all waiting", () => {
-  const out = derivePushPhases(
-    [pushMarker("A"), pushMarker("B")],
-    holder("A"),
-    {
-      isAlive: dead,
-      lockHeld: () => true, // must be ignored once pid is dead
-    },
-  );
-  expect(phaseOf(out, "A")).toBe("waiting-for-lock");
-  expect(phaseOf(out, "B")).toBe("waiting-for-lock");
-});
-
-test("PID-reuse ghost: holder pid alive but lock is free → all waiting", () => {
-  // This is the case today's code displays as "running" forever.
-  const out = derivePushPhases(
-    [pushMarker("A"), pushMarker("B")],
-    holder("A"),
-    {
-      isAlive: alive,
-      lockHeld: () => false, // kernel says lock is free → holder is a ghost
-    },
-  );
-  expect(phaseOf(out, "A")).toBe("waiting-for-lock");
-  expect(phaseOf(out, "B")).toBe("waiting-for-lock");
-});
-
-test("holder alive AND lock genuinely held → that slug runs", () => {
-  const out = derivePushPhases([pushMarker("A")], holder("A"), {
-    isAlive: alive,
-    lockHeld: () => true,
-  });
-  expect(phaseOf(out, "A")).toBe("running");
-});
-
-test("no holder file → all pushes waiting", () => {
-  const out = derivePushPhases([pushMarker("A"), pushMarker("B")], null, {
-    isAlive: alive,
-    lockHeld: () => true,
-  });
-  expect(out.every((m) => m.phase === "waiting-for-lock")).toBe(true);
-});
-
-test("build markers pass through untouched (no lock contention)", () => {
-  const out = derivePushPhases(
-    [buildMarker("A"), pushMarker("B")],
-    holder("B"),
-    {
-      isAlive: alive,
-      lockHeld: () => true,
-    },
-  );
-  expect(phaseOf(out, "A")).toBe("running"); // build unchanged
-  expect(phaseOf(out, "B")).toBe("running"); // push is the holder
-});
-
-test("check markers pass through untouched (no lock contention)", () => {
-  const out = derivePushPhases(
-    [checkMarker("A"), pushMarker("B")],
-    holder("B"),
-    {
-      isAlive: alive,
-      lockHeld: () => true,
-    },
-  );
-  expect(out.find((m) => m.slug === "A")?.op).toBe("check"); // op preserved
-  expect(phaseOf(out, "A")).toBe("running"); // check unchanged
-  expect(phaseOf(out, "B")).toBe("running"); // push is the holder
-});
-
-// --- pushLockHeld: the kernel flock probe (real FFI, throwaway path) --------
-
-test("pushLockHeld reflects real flock state on a temp lock file", () => {
-  const dir = mkdtempSync(join(tmpdir(), "op-lock-"));
-  const lockPath = join(dir, "push.lock");
-  try {
-    expect(pushLockHeld(lockPath)).toBe(false); // nobody holds it
-
-    // Hold the flock from this test on a separate fd; a separate-fd probe
-    // contends even within one process.
-    const { symbols } = dlopen(
-      process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
-      { flock: { args: ["i32", "i32"], returns: "i32" } },
-    );
-    const flock = symbols.flock as (fd: number, op: number) => number;
-    const fd = openSync(lockPath, "a");
-    expect(flock(fd, 2)).toBe(0); // LOCK_EX
-    expect(pushLockHeld(lockPath)).toBe(true); // now held
-
-    closeSync(fd); // release
-    expect(pushLockHeld(lockPath)).toBe(false);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-// --- holder file fs adapters (temp path) -----------------------------------
-
-test("holder write/read round-trips and clear is pushId-guarded", () => {
-  const dir = mkdtempSync(join(tmpdir(), "op-holder-"));
-  const path = join(dir, "push-holder.json");
-  try {
-    writePushHolder(holder("A", 42, "px"), path);
-    expect(readPushHolder(path)).toEqual(holder("A", 42, "px"));
-
-    // A different push must NOT delete the current holder's file.
-    clearPushHolder("py", path);
-    expect(readPushHolder(path)).not.toBeNull();
-
-    // The owning push clears it.
-    clearPushHolder("px", path);
-    expect(readPushHolder(path)).toBeNull();
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-// --- clearWorktreeOp: ownership-guarded reap -------------------------------
-
-test("clearWorktreeOp removes a marker owned by this process", () => {
-  withTempSlug((slug) => {
-    markWorktreeOpStart(slug, "build", "op-1"); // stamps process.pid
-    expect(existsSync(markerPath(slug, "build"))).toBe(true);
-    clearWorktreeOp(slug, "build");
-    expect(existsSync(markerPath(slug, "build"))).toBe(false);
-  });
-});
-
-test("clearWorktreeOp leaves a marker a newer op (another live pid) now owns", () => {
-  withTempSlug((slug) => {
-    // A queued build overwrote the single build.json with its own pid; the
-    // earlier build must not delete it on exit.
-    writeRawMarker(slug, "build", {
-      op: "build",
-      pid: OTHER_LIVE_PID,
-      startedAt: "2026-06-07T00:00:00.000Z",
-      phase: "running",
-    });
-    clearWorktreeOp(slug, "build");
-    expect(existsSync(markerPath(slug, "build"))).toBe(true);
-  });
-});
-
-test("clearWorktreeOp still reaps a garbage/unparseable marker", () => {
-  withTempSlug((slug) => {
-    mkdirSync(join(worktreeDataDir(slug), "ops"), { recursive: true });
-    writeFileSync(markerPath(slug, "build"), "{ not json");
-    clearWorktreeOp(slug, "build");
-    expect(existsSync(markerPath(slug, "build"))).toBe(false);
-  });
-});
-
-// --- setWorktreeOpPhase: ownership guard + runningAt stamp -----------------
-
-test("setWorktreeOpPhase is a no-op when the marker names another pid", () => {
-  withTempSlug((slug) => {
-    writeRawMarker(slug, "build", {
-      op: "build",
-      pid: OTHER_LIVE_PID,
-      startedAt: "2026-06-07T00:00:00.000Z",
-      phase: "waiting-for-lock",
-    });
-    setWorktreeOpPhase(slug, "build", "running");
-    const raw = readRawMarker(slug, "build");
-    expect(raw.phase).toBe("waiting-for-lock"); // untouched
-    expect(raw.runningAt).toBeUndefined();
-  });
-});
-
-test("setWorktreeOpPhase stamps runningAt once and preserves pid/startedAt on re-flip", () => {
-  withTempSlug((slug) => {
-    markWorktreeOpStart(slug, "build", "op-1", "waiting-for-lock");
-    const started = readRawMarker(slug, "build").startedAt;
-
-    setWorktreeOpPhase(slug, "build", "running");
-    const first = readRawMarker(slug, "build");
-    expect(first.phase).toBe("running");
-    expect(first.pid).toBe(process.pid);
-    expect(first.startedAt).toBe(started);
-    expect(typeof first.runningAt).toBe("string");
-
-    // A second flip must not reset the work clock (first transition wins).
-    setWorktreeOpPhase(slug, "build", "running");
-    const second = readRawMarker(slug, "build");
-    expect(second.runningAt).toBe(first.runningAt);
-    expect(second.startedAt).toBe(started);
-    expect(second.pid).toBe(process.pid);
-  });
-});
-
-// --- marker read path: a stored runningAt surfaces in the parsed info ------
-
-test("listActiveWorktreeOps surfaces a build's stored runningAt", async () => {
-  await withTempSlugAsync(async (slug) => {
-    writeRawMarker(slug, "build", {
-      op: "build",
-      pid: process.pid,
-      startedAt: "2026-06-07T00:00:00.000Z",
-      phase: "running",
-      runningAt: "2026-06-07T00:00:05.000Z",
-    });
-    const mine = (await listActiveWorktreeOps()).find((m) => m.slug === slug);
-    expect(mine).toBeDefined();
-    expect(mine?.op).toBe("build");
-    expect(mine?.runningAt).toBe("2026-06-07T00:00:05.000Z");
-  });
-});
-
-test("derivePushPhases overrides a push marker's stored runningAt from the holder", () => {
-  // A push marker may carry a stale/self-asserted runningAt; the holder file is
-  // the authority, so a running push takes the holder's acquiredAt.
-  const stale: WorktreeOpInfo = {
-    slug: "A",
-    op: "push",
-    pid: 1234,
-    opId: "op-1",
-    startedAt: "2026-06-07T00:00:00.000Z",
-    phase: "running",
-    runningAt: "1999-01-01T00:00:00.000Z",
-  };
-  const out = derivePushPhases([stale], holder("A"), {
-    isAlive: alive,
-    lockHeld: () => true,
-  });
-  expect(out.find((m) => m.slug === "A")?.runningAt).toBe(
-    "2026-06-07T00:00:00.000Z",
-  );
-});
-
-// --- marker read path: the op-kind vocabulary -----------------------------
-
-test("listActiveWorktreeOps reads a test and an e2e marker back as themselves", async () => {
-  await withTempSlugAsync(async (slug) => {
-    for (const op of ["test", "e2e"] as const) {
-      writeRawMarker(slug, op, {
-        op,
+test("a held marker is one v2 file per op, read back live", async () => {
+  await withTempSlug(async (slug) => {
+    const marker = markWorktreeOpStart(slug, "build", "op-1");
+    try {
+      expect(marker.path).toBe(join(opsDirOf(slug), "op-1.json"));
+      const raw = JSON.parse(readFileSync(marker.path, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      expect(raw).toMatchObject({
+        v: 2,
+        kind: "build",
+        opId: "op-1",
         pid: process.pid,
-        startedAt: "2026-06-07T00:00:00.000Z",
-        phase: "waiting-for-lock",
       });
+      expect(typeof raw.startedAt).toBe("string");
+
+      // The probe opens its own file description, so the lock this process
+      // holds on another one reads as held.
+      const ops = await listWorktreeOps(slug);
+      expect(ops).toEqual([
+        {
+          slug,
+          op: "build",
+          pid: process.pid,
+          opId: "op-1",
+          startedAt: raw.startedAt as string,
+        },
+      ]);
+      expect(await probeWorktreeOp(slug, "op-1")).toBe("live");
+      expect(await isWorktreeOpActive(slug)).toBe(true);
+      // Probing never disturbs the holder, and never reaps a live marker.
+      expect(existsSync(marker.path)).toBe(true);
+    } finally {
+      marker.release();
     }
-    const mine = (await listActiveWorktreeOps()).filter((m) => m.slug === slug);
-    expect(mine.map((m) => m.op).sort()).toEqual(["e2e", "test"]);
-    expect(mine.every((m) => m.phase === "waiting-for-lock")).toBe(true);
+    expect(existsSync(marker.path)).toBe(false);
+    expect(await probeWorktreeOp(slug, "op-1")).toBe("absent");
+    expect(await isWorktreeOpActive(slug)).toBe(false);
   });
 });
 
-test("a marker naming an unknown op still falls back to build", async () => {
-  await withTempSlugAsync(async (slug) => {
-    writeRawMarker(slug, "build", {
-      op: "deploy",
+test("two ops of one kind are two markers — neither overwrites the other", async () => {
+  await withTempSlug(async (slug) => {
+    const a = markWorktreeOpStart(slug, "check", "op-a");
+    const b = markWorktreeOpStart(slug, "check", "op-b");
+    try {
+      const ids = (await listWorktreeOps(slug)).map((o) => o.opId).sort();
+      expect(ids).toEqual(["op-a", "op-b"]);
+      a.release();
+      expect((await listWorktreeOps(slug)).map((o) => o.opId)).toEqual([
+        "op-b",
+      ]);
+    } finally {
+      a.release(); // idempotent
+      b.release();
+    }
+  });
+});
+
+test("an unlocked v2 marker is a dead op: reported dead once, then reaped", async () => {
+  await withTempSlug(async (slug) => {
+    const path = writeRaw(slug, "op-dead.json", {
+      v: 2,
+      kind: "push",
+      opId: "op-dead",
+      // A LIVE pid on purpose: v2 liveness is the lock, never the pid.
       pid: process.pid,
-      startedAt: "2026-06-07T00:00:00.000Z",
+      startedAt: "2026-09-29T00:00:00.000Z",
+    });
+    expect(await probeWorktreeOp(slug, "op-dead")).toBe("dead");
+    expect(existsSync(path)).toBe(false);
+    expect(await probeWorktreeOp(slug, "op-dead")).toBe("absent");
+  });
+});
+
+// --- the transition: legacy per-kind markers ---------------------------------
+
+test("a legacy per-kind marker is live while its pid is, and reaped when not", async () => {
+  await withTempSlug(async (slug) => {
+    writeRaw(slug, "build.json", {
+      op: "build",
+      pid: process.pid,
+      opId: "legacy-1",
+      startedAt: "2026-09-29T00:00:00.000Z",
       phase: "running",
     });
-    const mine = (await listActiveWorktreeOps()).find((m) => m.slug === slug);
-    expect(mine?.op).toBe("build");
+    const dead = writeRaw(slug, "check.json", {
+      op: "check",
+      pid: 2 ** 22 + 12345, // above macOS/Linux pid_max: never a live pid
+      opId: "legacy-2",
+      startedAt: "2026-09-29T00:00:00.000Z",
+    });
+    const mine = await listActiveWorktreeOps();
+    const here = mine.filter((m) => m.slug === slug);
+    expect(here.map((m) => [m.op, m.opId])).toEqual([["build", "legacy-1"]]);
+    expect(existsSync(dead)).toBe(false);
+    // A legacy marker has no per-op file, so a per-op probe says so.
+    expect(await probeWorktreeOp(slug, "legacy-1")).toBe("absent");
+  });
+});
+
+test("a legacy marker naming an unknown op falls back to build; garbage is reaped", async () => {
+  await withTempSlug(async (slug) => {
+    writeRaw(slug, "build.json", { op: "deploy", pid: process.pid });
+    const junk = writeRaw(slug, "test.json", "{ not json");
+    const ops = await listWorktreeOps(slug);
+    expect(ops.map((o) => [o.op, o.opId])).toEqual([["build", null]]);
+    expect(existsSync(junk)).toBe(false);
+  });
+});
+
+test("a marker still being written is never probed; an orphaned one is reaped when stale", async () => {
+  await withTempSlug(async (slug) => {
+    const fresh = writeRaw(slug, "op-x.json.123.tmp", "{}");
+    const stale = writeRaw(slug, "op-y.json.456.tmp", "{}");
+    const old = new Date(Date.now() - 5 * 60_000);
+    utimesSync(stale, old, old);
+    expect(await listWorktreeOps(slug)).toEqual([]);
+    expect(existsSync(fresh)).toBe(true);
+    expect(existsSync(stale)).toBe(false);
+  });
+});
+
+// --- process death ----------------------------------------------------------
+
+// The whole point of the flock: the kernel drops it when the holder dies, even
+// by SIGKILL — and a child the holder spawned does NOT keep it (Bun/libuv open
+// every fd close-on-exec), so a lingering grandchild cannot make a dead op look
+// alive. Spawns a real holder process that spawns a `sleep`, then kills the
+// holder only.
+test("SIGKILL of the holder releases the marker even while its child lives on", async () => {
+  await withTempSlug(async (slug) => {
+    const ready = join(worktreeDataDir(slug), "ready.json");
+    const modulePath = join(import.meta.dir, "worktree-op.ts");
+    const script = `
+      import { writeFileSync } from "node:fs";
+      import { markWorktreeOpStart } from ${JSON.stringify(modulePath)};
+      markWorktreeOpStart(${JSON.stringify(slug)}, "build", "op-killed");
+      const child = Bun.spawn(["sleep", "60"], { stdio: ["ignore", "ignore", "ignore"] });
+      writeFileSync(${JSON.stringify(ready)}, JSON.stringify({ child: child.pid }));
+      await Bun.sleep(60_000);
+    `;
+    let kill: ((signal?: number | NodeJS.Signals) => void) | undefined;
+    const exited = spawnPassthrough([process.execPath, "-e", script], {
+      onSpawn: (c) => {
+        kill = c.kill;
+      },
+    });
+    let grandchild: number | undefined;
+    try {
+      // Bounded wait for the holder to publish (a test-only readiness gate).
+      const deadline = Date.now() + 15_000;
+      while (!existsSync(ready)) {
+        if (Date.now() > deadline) throw new Error("holder never got ready");
+        await Bun.sleep(25);
+      }
+      grandchild = (
+        JSON.parse(readFileSync(ready, "utf8")) as { child: number }
+      ).child;
+      expect(await probeWorktreeOp(slug, "op-killed")).toBe("live");
+
+      kill?.("SIGKILL");
+      const result = await exited;
+      expect(result.signalCode).toBe("SIGKILL");
+      // The grandchild is still running — and holds nothing.
+      expect(() => process.kill(grandchild as number, 0)).not.toThrow();
+      expect(await probeWorktreeOp(slug, "op-killed")).toBe("dead");
+      expect(await listWorktreeOps(slug)).toEqual([]);
+    } finally {
+      kill?.("SIGKILL");
+      if (grandchild !== undefined) {
+        try {
+          process.kill(grandchild, "SIGKILL");
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
+        }
+      }
+    }
   });
 });

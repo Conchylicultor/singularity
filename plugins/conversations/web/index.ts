@@ -10,6 +10,7 @@ export {
   useHasActiveSiblings,
   useHasActiveSiblingInWorktree,
   useActiveConversations,
+  useConversationTitleBySlug,
   GonePageSchema,
 } from "./use-conversations";
 export default {

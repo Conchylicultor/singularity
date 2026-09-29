@@ -16,9 +16,10 @@ import {
   stripAttemptBranchPrefix,
   type OpKind,
 } from "@plugins/infra/plugins/worktree/core";
-import type {
-  OpWait,
-  WaitKind,
+import {
+  WAIT_KINDS,
+  type OpWait,
+  type WaitKind,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import {
   formatDuration,
@@ -34,9 +35,9 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 
 /**
- * One op on the Gantt — structurally the wire's `OpEntry`
- * (`debug/profiling/ops`'s `shared/endpoints.ts`), restated here because
- * `shared/` is plugin-private and a Gantt must stay renderable from any source.
+ * One op on the Gantt, positioned on the chart's axis — `debug/profiling/ops`
+ * projects each stored op (`op-store`'s `opsHistory` row, through op-log's
+ * `toOpRecord`) onto this; the Gantt itself stays renderable from any source.
  * The two enums are IMPORTED (`OpKind` from worktree's `core`, `WaitKind` from
  * op-log's) rather than re-typed, so the fill maps below are exhaustive by
  * construction.
@@ -48,7 +49,11 @@ export interface OpEntry {
   startMs: number;
   /** The op's FULL span: waits + the work gaps between them + the final hold. */
   totalMs: number;
-  /** Each entry's `startMs` is relative to THIS op's start. May gap; may repeat a kind. */
+  /**
+   * Each entry's `startMs` is relative to THIS op's start. May gap; may repeat
+   * a kind. An in-flight op's open wait is the last entry, clocked to the
+   * reader's `now`.
+   */
   waits: OpWait[];
   holdMs: number;
   outcome: string;
@@ -198,6 +203,20 @@ function opStatus(op: OpEntry): EventStatus {
     default:
       return "failed";
   }
+}
+
+/**
+ * A wait's hover label: its kind, the writer's reason (the duress latch's trip
+ * cause) and the requeue cycle it belonged to — the "why" behind the hue.
+ */
+export function waitLabel(wait: OpWait): string {
+  const reason = wait.reason ? ` — ${wait.reason}` : "";
+  const cycle = wait.cycle > 0 ? ` · requeue #${wait.cycle}` : "";
+  const result =
+    wait.result === "fail-open" || wait.result === "aborted"
+      ? ` · ${wait.result}`
+      : "";
+  return `${WAIT_KINDS[wait.kind].label} wait${reason}${cycle}${result}`;
 }
 
 // Hard-killed ops have no known end, so there is no duration to scale a bar
@@ -489,7 +508,7 @@ function OpBar({
         const waitSpan: Span = {
           id: `wait:${op.opId}:${i}`,
           phase: worktree,
-          label: `${wait.kind} wait`,
+          label: waitLabel(wait),
           startMs: op.startMs + wait.startMs,
           durationMs: wait.durationMs,
         };

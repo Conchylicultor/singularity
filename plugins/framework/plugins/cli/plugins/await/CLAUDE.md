@@ -42,21 +42,23 @@ Three records, none of them new:
 
 | question | record |
 |---|---|
-| is my op still running? | the op marker `~/.singularity/worktrees/<slug>/ops/<op>.json` (`infra/worktree`) |
+| is my op still running? | the op's flocked marker `~/.singularity/worktrees/<slug>/ops/<opId>.json` (`infra/worktree`) |
 | what did it decide? | the op log's terminal record for that `opId` (`debug/profiling/op-log`) |
 | what is it blocked on? | `readOpenWait(opId)` — the same feed the build lock prints from |
 | build / test detail | the deploy receipt, and `test-status.json` |
 
-**The op log wins over the marker.** The exit handler clears the marker and
-writes the terminal record in that order (`op-runtime/cli/direct-op.ts`), so for
-an instant the marker is gone and the verdict is microseconds away. Asking the
-authority first removes that window instead of racing it — `core/decide.ts`
-encodes the precedence, and a test pins it.
+**The op log wins over the marker.** Every writer appends its terminal record
+BEFORE it releases its marker, so the verdict is on disk by the time the marker
+goes; asking the log first means a marker read a moment late can never outvote
+it — `core/decide.ts` encodes the precedence, and a test pins it.
 
 The marker's `opId` is what joins the two, and it is **required** on
-`markWorktreeOpStart`: `ops/<op>.json` is one file per (worktree, kind), so a
-second `check` overwrites the first's marker and timestamps no longer separate
-the runs. Frozen at arm time, a wait always reports on the run it armed on.
+`markWorktreeOpStart`. There is one marker per op, held under a kernel `flock`
+for the op's life, so two `check`s in one checkout are two markers, and a
+SIGKILLed op's marker reads dead the instant the process is gone. Frozen at arm
+time, a wait always reports on the runs it armed on. Legacy per-kind
+`ops/<kind>.json` markers from an older CLI are still read (pid liveness), and
+for those the op's own pid settles "gone" vs "verdict coming".
 
 ## The four exits
 

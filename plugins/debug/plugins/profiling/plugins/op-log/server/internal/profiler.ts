@@ -4,22 +4,28 @@ import type {
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 import type {
-  OpenWait,
+  OpEvent,
   OpStep,
+  OpSummary,
   OpWait,
   OutcomeByKind,
-  RawOpRecord,
   WaitKind,
+  WaitResult,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import { appendOpLog } from "./jsonl";
 
-// The writer. Generalizes `cli/bin/push-profiler.ts` (whose shape this copies:
-// same three phases, same `steps` bracketing, same `complete` + `write` split)
-// to every op kind, and adds the wait list the push profiler's scalar `waitMs`
-// could not express.
+// The writer. Emits the v2 change-only event stream (see
+// research/2026-09-29-global-unified-op-status.md): one line per state CHANGE —
+// `requested`, `wait-start`, `wait-end`, `requeue`, `granted` — and a
+// self-contained `completed` summary as the terminal. Nothing is re-stamped: the
+// reducer in `../../core` folds the deltas back into one state per op.
+//
+// Every event carries a per-op `seq` (so re-ingest is idempotent), the wall
+// instant `at`, and `t` — monotonic ms since `requested`, the clock every wait
+// offset is measured on so a wall-clock step cannot bend a duration.
 //
 // Every method is a closure, never a `this`-dependent method: the push command
-// already passes `profiler.markLockRequested` as a bare function reference, so a
+// passes `profiler.markLockRequested`-style bare references around, so a
 // `this`-bound method would break at the first call site it is handed to.
 
 /** Identity a caller must supply; the rest is derived by the profiler. */
@@ -32,10 +38,9 @@ export interface OpProfilerOptions {
   branch: string;
   /**
    * `basename(worktree root)` — the op-marker slug, and THE identity of the
-   * checkout this op ran in: the liveness key `finalizeOrphanedOps` probes and
+   * checkout this op ran in: the liveness key the orphan reconciler probes and
    * the key the profiling reader groups a Gantt row on. Pass
-   * `checkoutNamespace(root)` — the caller's own git root — so the record names
-   * the checkout that really did the work.
+   * `checkoutNamespace(root)` — the caller's own git root.
    */
   opSlug: string | null;
   /** Which reserved-floor lane the op draws from. */
@@ -45,34 +50,40 @@ export interface OpProfilerOptions {
   /** build only — joins the record to its `build-profile-<id>.json` spans. */
   buildId?: string | null;
   /**
-   * Where each record lands. Defaults to appending to the real `OP_LOG_FILE`.
+   * Where each event lands. Defaults to appending to the real `OP_LOG_FILE`.
    * Injectable so a test can drive the profiler against an in-memory sink and
-   * assert the record shape — the clock-pairing invariant `markGranted` /
-   * `recordStep` maintain in particular — without touching the user's real log.
+   * assert the event stream without touching the user's real log.
    */
-  sink?: (record: RawOpRecord) => void;
+  sink?: (event: OpEvent) => void;
 }
 
 export interface OpProfiler<K extends OpKind> {
-  /** Append the up-front `requested` record. Call once, before the first wait. */
+  /**
+   * Append the `requested` event. Call once, before the first wait; any other
+   * event emits it first if it has not been, so the log always has identity.
+   */
   markRequested(): void;
   /**
-   * Open a wait on `kind`. Re-stamps the `requested` record so an op parked here
-   * renders as blocked ON THIS RESOURCE, not on whatever it declared first.
+   * Open a wait on `kind`, with the cause when the writer knows one (the duress
+   * latch's trip reason). Carries the current requeue cycle.
    */
-  waitStart(kind: WaitKind): void;
-  /** Close the currently-open wait. No-op if none is open. */
-  waitEnd(): void;
-  /** Bracket `fn` as a wait of `kind` — `waitStart` / `waitEnd` with a `finally`. */
+  waitStart(kind: WaitKind, reason?: string | null): void;
+  /** Close the currently-open wait with how it ended. No-op if none is open. */
+  waitEnd(result?: WaitResult): void;
+  /** Bracket `fn` as a wait of `kind`: `acquired` on return, `aborted` on throw. */
   wait<T>(kind: WaitKind, fn: () => Promise<T>): Promise<T>;
+  /**
+   * The op released what it had queued for and goes round again (a build's
+   * duress requeue). Bumps the cycle every later wait carries.
+   */
+  requeue(): void;
   /**
    * Hooks to hand to `withHostGrant({ lane, max, hooks })`. Records the grant
    * queue as a `host-grant` wait. Safe to call per requeue cycle: each acquire
-   * produces its OWN wait entry, which is the un-merging the old single
-   * `acquireHostGrant` span could not do.
+   * produces its OWN wait entry.
    */
   grantHooks(): GrantHooks;
-  /** The primary grant is held and work starts: append `granted` + final waits. */
+  /** The primary grant is held and work starts: append `granted`. */
   markGranted(): void;
   stepStart(name: string): void;
   stepEnd(name: string): void;
@@ -102,8 +113,16 @@ export interface OpProfiler<K extends OpKind> {
   recordStep(name: string, durationMs: number, startedAtPerfMs: number): void;
   /** Record the terminal outcome. `write()` is what lands it. */
   complete(outcome: OutcomeByKind[K]): void;
-  /** Append the terminal `completed` record. Idempotent. */
+  /** Append the self-contained terminal `completed` event. Idempotent. */
   write(): void;
+}
+
+/** The open wait, in the writer's own terms (`startT` on the monotonic clock). */
+interface OpenWaitState {
+  kind: WaitKind;
+  startT: number;
+  reason: string | null;
+  cycle: number;
 }
 
 export function createOpProfiler<K extends OpKind>(
@@ -111,10 +130,16 @@ export function createOpProfiler<K extends OpKind>(
   opts: OpProfilerOptions,
 ): OpProfiler<K> {
   const conversationId = process.env.SINGULARITY_CONVERSATION_ID ?? null;
-  const sink = opts.sink ?? ((record: RawOpRecord) => appendOpLog(record));
+  const sink = opts.sink ?? ((event: OpEvent) => appendOpLog(event));
 
   const requestedAt = new Date();
   const requestedMs = requestedAt.getTime();
+  /** The monotonic reading paired with `requestedAt` — `t`'s zero. */
+  const requestedPerfMs = performance.now();
+  /** Monotonic ms since `requested`, on the integer grid every offset uses. */
+  const tNow = (): number =>
+    Math.max(0, Math.round(performance.now() - requestedPerfMs));
+
   let grantedAt: Date | undefined;
   /**
    * `performance.now()` sampled at the same instant as `grantedAt`. The two are
@@ -125,40 +150,31 @@ export function createOpProfiler<K extends OpKind>(
   let grantedPerfMs: number | undefined;
   let completedAt: Date | undefined;
   let outcome: OutcomeByKind[K] | undefined;
+  let requestedWritten = false;
   let written = false;
+  let seq = 0;
+  let cycle = 0;
 
   const waits: OpWait[] = [];
-  let openWait: OpenWait | null = null;
+  let openWait: OpenWaitState | null = null;
 
   const steps: OpStep[] = [];
   const stepStarts = new Map<string, number>();
 
   // `OpStep.startMs` is an offset from `grantedAt` (see core/internal/types.ts).
-  // Both step writers resolve it through one of these two, so the invariant has
-  // one home per clock rather than being re-derived at each writer. Before
-  // `markGranted` there is no reference instant yet, so the step pins to 0; not
-  // clamped otherwise, because a genuinely-negative offset is a real signal, not
-  // noise to hide.
-  //
-  // Rounded so every step lands on the same integer-ms grid as `holdMs` and the
-  // waits, whatever clock it came in on (the monotonic clock reads fractional) —
-  // the same call `pushBuildSpan` makes.
+  // Before `markGranted` there is no reference instant yet, so the step pins to
+  // 0; not clamped otherwise, because a genuinely-negative offset is a real
+  // signal. Rounded onto the same integer-ms grid as the waits.
 
   /** For `stepEnd`, whose instants are `Date.now()` — same clock as `grantedAt`. */
   const stepOffsetWall = (startedAtMs: number): number =>
     grantedAt ? Math.round(startedAtMs - grantedAt.getTime()) : 0;
 
-  /**
-   * For `recordStep`, whose instants are `performance.now()`. Subtracts against
-   * `grantedPerfMs` — the monotonic reading taken in `markGranted`, i.e. at the
-   * SAME instant as `grantedAt` — so the offset never crosses clocks.
-   */
+  /** For `recordStep`, whose instants are `performance.now()`. */
   const stepOffsetPerf = (startedAtPerfMs: number): number =>
     grantedPerfMs != null ? Math.round(startedAtPerfMs - grantedPerfMs) : 0;
 
-  const identity = (): RawOpRecord => ({
-    phase: "requested",
-    opId: opts.opId,
+  const identity = () => ({
     kind,
     opSlug: opts.opSlug,
     branch: opts.branch,
@@ -166,63 +182,103 @@ export function createOpProfiler<K extends OpKind>(
     lane: opts.lane ?? null,
     mode: opts.mode ?? null,
     buildId: opts.buildId ?? null,
-    requestedAt: requestedAt.toISOString(),
-    waits: [...waits],
-    openWait,
   });
 
-  // Land the full identity plus the wait state so far. Called up-front and again
-  // on every wait open/close: three phases, but `requested` is the one that is
-  // re-stamped, because the reader can only attribute an in-flight op's wait
-  // from what is already on disk.
-  const stampRequested = (): void => {
-    sink(identity());
+  type Body = OpEvent extends infer E
+    ? E extends OpEvent
+      ? Omit<E, "v" | "opId" | "seq" | "at" | "t">
+      : never
+    : never;
+
+  const emit = (
+    body: Body,
+    t: number = tNow(),
+    at: Date = new Date(),
+  ): void => {
+    seq++;
+    sink({
+      v: 2,
+      opId: opts.opId,
+      seq,
+      at: at.toISOString(),
+      t,
+      ...body,
+    } as OpEvent);
   };
 
-  const closeOpenWait = (): void => {
+  const markRequested = (): void => {
+    if (requestedWritten) return;
+    requestedWritten = true;
+    emit({ e: "requested", ...identity(), pid: process.pid }, 0, requestedAt);
+  };
+
+  /** Every non-requested event goes through here, so identity always lands first. */
+  const emitAfterRequested = (body: Body): void => {
+    markRequested();
+    emit(body);
+  };
+
+  const closeOpenWait = (result: WaitResult): void => {
     if (!openWait) return;
-    waits.push({
-      kind: openWait.kind,
-      startMs: openWait.startMs,
-      durationMs: Math.max(
-        0,
-        Date.now() - new Date(openWait.startedAt).getTime(),
-      ),
-    });
+    const open = openWait;
     openWait = null;
+    const endT = tNow();
+    const closed: OpWait = {
+      kind: open.kind,
+      startMs: open.startT,
+      durationMs: Math.max(0, endT - open.startT),
+      reason: open.reason,
+      cycle: open.cycle,
+      result,
+    };
+    waits.push(closed);
+    emitAfterRequested({
+      e: "wait-end",
+      wait: closed.kind,
+      startMs: closed.startMs,
+      durationMs: closed.durationMs,
+      result,
+      reason: closed.reason,
+      cycle: closed.cycle,
+    });
   };
 
-  const waitStart = (waitKind: WaitKind): void => {
+  const waitStart = (
+    waitKind: WaitKind,
+    reason: string | null = null,
+  ): void => {
     // An unclosed previous wait would otherwise be lost; close it rather than
     // silently dropping the interval.
-    closeOpenWait();
-    const now = new Date();
-    openWait = {
-      kind: waitKind,
-      startMs: Math.max(0, now.getTime() - requestedMs),
-      startedAt: now.toISOString(),
-    };
-    stampRequested();
+    closeOpenWait("aborted");
+    openWait = { kind: waitKind, startT: tNow(), reason, cycle };
+    emitAfterRequested({ e: "wait-start", wait: waitKind, reason, cycle });
   };
 
-  const waitEnd = (): void => {
-    if (!openWait) return;
-    closeOpenWait();
-    stampRequested();
+  const waitEnd = (result: WaitResult = "acquired"): void => {
+    closeOpenWait(result);
   };
 
   return {
-    markRequested: stampRequested,
+    markRequested,
     waitStart,
     waitEnd,
 
     async wait<T>(waitKind: WaitKind, fn: () => Promise<T>): Promise<T> {
       waitStart(waitKind);
+      let result: WaitResult = "aborted";
       try {
-        return await fn();
+        const value = await fn();
+        result = "acquired";
+        return value;
       } finally {
-        waitEnd();
+        waitEnd(result);
       }
+    },
+
+    requeue: () => {
+      closeOpenWait("aborted");
+      cycle++;
+      emitAfterRequested({ e: "requeue", cycle, cause: "duress" });
     },
 
     grantHooks: (): GrantHooks => ({
@@ -231,37 +287,43 @@ export function createOpProfiler<K extends OpKind>(
       onWaitStart: () => waitStart("host-grant"),
       onAcquired: (waitMs: number) => {
         if (openWait?.kind === "host-grant") {
-          waitEnd();
+          waitEnd("acquired");
           return;
         }
         // Fast path — `onWaitStart` never fired, so `waitMs` is ≈0 by
         // construction. Only record a segment if the pool actually measured one,
-        // so the bar is not littered with zero-width noise.
+        // so the bar is not littered with zero-width noise — and then as ONE
+        // self-contained `wait-end`, with no `wait-start` before it.
         if (waitMs <= 0) return;
-        waits.push({
+        const durationMs = Math.round(waitMs);
+        const closed: OpWait = {
           kind: "host-grant",
-          startMs: Math.max(0, Date.now() - waitMs - requestedMs),
-          durationMs: waitMs,
+          startMs: Math.max(0, tNow() - durationMs),
+          durationMs,
+          reason: null,
+          cycle,
+          result: "acquired",
+        };
+        waits.push(closed);
+        emitAfterRequested({
+          e: "wait-end",
+          wait: closed.kind,
+          startMs: closed.startMs,
+          durationMs,
+          result: "acquired",
+          reason: null,
+          cycle,
         });
-        stampRequested();
       },
     }),
 
     markGranted: () => {
-      closeOpenWait();
+      closeOpenWait("acquired");
       // Both clocks, one instant — see `grantedPerfMs`. Kept adjacent so they
       // cannot drift apart.
       grantedAt = new Date();
       grantedPerfMs = performance.now();
-      // Minimal: identity already landed on the `requested` record. This is what
-      // flips the synthesized row from "waiting" to "running" and freezes the
-      // wait list at its final value.
-      sink({
-        phase: "granted",
-        opId: opts.opId,
-        grantedAt: grantedAt.toISOString(),
-        waits: [...waits],
-      } satisfies RawOpRecord);
+      emitAfterRequested({ e: "granted" });
     },
 
     stepStart: (name: string) => {
@@ -297,24 +359,27 @@ export function createOpProfiler<K extends OpKind>(
       // `process.on("exit")` guard, so it can genuinely be called twice.
       if (written) return;
       written = true;
-      closeOpenWait();
+      closeOpenWait("aborted");
+      markRequested();
 
-      // An op killed before `markGranted` has no real grant instant; treat the
-      // request instant as the grant so `holdMs` is 0 rather than negative.
-      const granted = grantedAt ?? requestedAt;
       const completed = completedAt ?? new Date();
-
-      sink({
+      // An op that ended before `markGranted` never held anything: hold is 0.
+      const summary: OpSummary = {
         ...identity(),
-        phase: "completed",
-        grantedAt: granted.toISOString(),
+        pid: process.pid,
+        requestedAt: requestedAt.toISOString(),
+        grantedAt: grantedAt?.toISOString() ?? null,
         completedAt: completed.toISOString(),
-        openWait: null,
-        holdMs: Math.max(0, completed.getTime() - granted.getTime()),
+        waits: [...waits],
+        holdMs: grantedAt
+          ? Math.max(0, completed.getTime() - grantedAt.getTime())
+          : 0,
         totalMs: Math.max(0, completed.getTime() - requestedMs),
         outcome: outcome ?? "error",
-        steps,
-      } satisfies RawOpRecord);
+        interrupted: false,
+        steps: [...steps],
+      };
+      emit({ e: "completed", by: "self", summary }, tNow(), completed);
     },
   };
 }

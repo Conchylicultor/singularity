@@ -20,13 +20,7 @@ import {
   withHostGrant,
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import {
-  markWorktreeOpStart,
-  setWorktreeOpPhase,
-  clearWorktreeOp,
-  writePushHolder,
-  clearPushHolder,
-} from "@plugins/infra/plugins/worktree/server";
+import { markWorktreeOpStart } from "@plugins/infra/plugins/worktree/server";
 import {
   spawnCaptured,
   spawnPassthrough,
@@ -301,9 +295,9 @@ async function getCurrentBranch(): Promise<string> {
 }
 
 // The push mutex is the `push` host-pool (host-admission): `pushPool.run(fn)`
-// holds its single slot file — `~/.singularity/locks/push/slot-0.lock`, the same
-// file the server-side `pushLockHeld` probe reads — for the whole critical
-// section, so at most one push runs host-wide. This folds the last hand-rolled
+// holds its single slot file — `~/.singularity/locks/push/slot-0.lock` — for the
+// whole critical section, so at most one push runs host-wide. Who holds it and
+// who queues on it is read from the op log (`push-mutex` waits, `granted`). This folds the last hand-rolled
 // FFI flock onto the shared primitive: the size-1 fan-out is a single
 // `flock-wait` child (off the event loop), and the "waiting for lock" line moves
 // to the pool's `onWaitStart` hook. `onLockRequested` fires before the acquire
@@ -407,28 +401,30 @@ const pushAction: CliAction<
     mode: opts.fromMain ? "from-main" : "worktree",
   });
 
-  // Mark this worktree as having a push in flight so the conversation status
-  // poller keeps the agent's pane reading as "working" for the push duration
-  // despite the CLI "shell" status. Written up-front — BEFORE the lock wait —
-  // so a push that queues behind another push reads as "working" while it
-  // waits its turn, not "waiting": a queued push is genuinely in progress.
-  // (The marker pid is this process, which stays alive throughout the wait.)
-  // Cleared on every graceful exit — normal completion, every process.exit(1)
-  // failure path, and thrown errors — via the on-exit handler; a SIGKILLed
-  // push self-heals via the marker's pid-liveness check.
-  markWorktreeOpStart(opSlug, "push", pushId, "waiting-for-lock");
+  // This push's liveness marker (see worktree-op.ts): a flocked
+  // `ops/<pushId>.json`, held for the process's life — BEFORE the lock wait,
+  // so a push queued behind another reads as "working" (a queued push is
+  // genuinely in progress), and before `requested`, so the op log never holds
+  // a push no marker vouches for. Released on every graceful exit — normal
+  // completion, every process.exit(1) failure path, thrown errors — by the
+  // exit handler, AFTER the terminal is appended. A SIGKILLed push drops the
+  // lock with the process, and the op-store reconciler closes it.
+  const marker = markWorktreeOpStart(opSlug, "push", pushId);
+  // Set once the push contends for the mutex: a push that fails before that
+  // point writes no op record at all — it never contended for anything.
+  let requested = false;
   process.on("exit", () => {
-    clearWorktreeOp(opSlug, "push");
-    // Only removes the holder file if it still names THIS push (guards
-    // against a late-firing exit handler deleting the next holder's file).
-    clearPushHolder(pushId);
+    // The terminal (idempotent — a path that already wrote one keeps it; one
+    // that exits without an outcome lands as "error"), THEN the release.
+    if (requested) profiler.write();
+    marker.release();
   });
 
-  // Catchable fatal signals → graceful exit so the exit handler above
-  // (clearWorktreeOp + clearPushHolder) runs — e.g. the wrapper's orphan
-  // SIGTERM tears this worker down cleanly. SIGKILL is uncatchable; the
-  // holder's pid-liveness check is the self-heal there. The signal→exit-code
-  // map is shared with `build` and `check`; see ../fatal-signals.ts.
+  // Catchable fatal signals → graceful exit so the exit handler above runs —
+  // e.g. the wrapper's orphan SIGTERM tears this worker down cleanly. SIGKILL
+  // is uncatchable; the kernel drops the marker's lock with the process. The
+  // signal→exit-code map is shared with `build` and `check`; see
+  // ../fatal-signals.ts.
   //
   // The tap arms here too, and the sink is this command's ONLY record of a
   // death — a push owns no deploy receipt. It is also the op where an
@@ -440,22 +436,11 @@ const pushAction: CliAction<
   // ever holds the lock. A failure BEFORE this point writes no record at
   // all — it never contended for anything.
   const onLockRequested = (): void => {
+    requested = true;
     profiler.markRequested();
     profiler.waitStart("push-mutex");
   };
   const onLockAcquired = (): void => {
-    // Lock granted — publish this push as the single global lock holder. The
-    // op-status resource DERIVES "running" from this holder file + the kernel
-    // flock, so this is the authoritative signal (immune to a stale marker
-    // left by a hard-killed peer). The marker phase flip below is now just an
-    // advisory hint AND the filesystem event that wakes the op watcher.
-    writePushHolder({
-      slug: opSlug,
-      pid: process.pid,
-      pushId,
-      acquiredAt: new Date().toISOString(),
-    });
-    setWorktreeOpPhase(opSlug, "push", "running");
     // The mutex — this push's ENTRY ticket — is held and its own work
     // starts. It is not done waiting: `runRebasedChecks` still queues for a
     // host grant, which lands as a further `host-grant` wait.

@@ -13,22 +13,13 @@ export {
 export { withWorktreeMutateSlot } from "./internal/mutate-gate";
 export {
   type WorktreeOp,
-  type WorktreeOpPhase,
   type WorktreeOpInfo,
-  type PushHolder,
-  type DerivePushDeps,
+  type WorktreeOpMarker,
   markWorktreeOpStart,
-  setWorktreeOpPhase,
-  clearWorktreeOp,
+  probeWorktreeOp,
   isWorktreeOpActive,
   listWorktreeOps,
   listActiveWorktreeOps,
-  resolveActiveWorktreeOps,
-  derivePushPhases,
-  pushLockHeld,
-  readPushHolder,
-  writePushHolder,
-  clearPushHolder,
 } from "./internal/worktree-op";
 export {
   type WorktreeSpec,

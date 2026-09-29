@@ -106,7 +106,7 @@ import {
  *   - `waitForPg` / `waitForWorktreeDatabase` — live cluster readiness.
  *   - the `build_runs` run-ledger (mint + close) and build-progress log.
  *   - every gateway HTTP call (`writeWorktreeSpec`, restart, health probes).
- *   - worktree-op markers (`markWorktreeOpStart` / `setWorktreeOpPhase`).
+ *   - the worktree-op liveness marker (`markWorktreeOpStart`).
  *   - the per-namespace deploy sequence (`./deploy-namespace.ts`): the
  *     `composition.json` provenance marker, the database, the spec, the restart.
  *   - `propagateConfigToUser` — same function, different sink per caller (build
@@ -821,6 +821,19 @@ export function webDistPath(target: WebDistTarget): string {
     : worktreeArtifacts.webDist(target.name);
 }
 
+/** How the heavy section is admitted: the duress valve, then the host grant. */
+export interface HeavyAdmission {
+  gated: boolean;
+  deps: ValveDeps;
+  grantHooks?: GrantHooks;
+  /**
+   * Fires each time duress tripped while queued and the grant was released to
+   * re-hold at the valve; `cycle` is the 1-based requeue count. The op log
+   * records it so every later wait carries its cycle.
+   */
+  onRequeue?: (cycle: number) => void;
+}
+
 export interface BuildWebDistOptions {
   root: string;
   /**
@@ -877,7 +890,7 @@ export interface BuildWebDistOptions {
    * as build's own array did.
    */
   companions: HeavyJob[];
-  admission: { gated: boolean; deps: ValveDeps; grantHooks?: GrantHooks };
+  admission: HeavyAdmission;
   /**
    * Fires the instant the heavy section completes — BEFORE the failure check
    * and before anything is published — with the same array the result carries.
@@ -1049,7 +1062,7 @@ export async function buildAndPublishWebDist(
       "build:setup",
       "wait for host CPU grant",
     );
-    for (;;) {
+    for (let cycle = 0; ;) {
       const outcome = await holdThroughValve(
         { gated: opts.admission.gated },
         opts.admission.deps,
@@ -1068,9 +1081,11 @@ export async function buildAndPublishWebDist(
         },
       );
       if (result !== REQUEUE) return result;
+      cycle++;
+      opts.admission.onRequeue?.(cycle);
       hooks.log(
-        "build admission: duress tripped while queued for the host grant — " +
-          "released the grant, re-holding at the valve...",
+        `build admission: duress tripped while queued for the host grant — ` +
+          `released the grant, re-holding at the valve (requeue #${cycle})...`,
       );
     }
   };

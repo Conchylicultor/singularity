@@ -1,9 +1,5 @@
-import { useMemo, useState } from "react";
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useState } from "react";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -14,165 +10,59 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  conversationsActiveResource,
-  conversationsGoneResource,
-  conversationsSystemResource,
-} from "@plugins/tasks/plugins/tasks-core/core";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
-import { OP_KINDS } from "@plugins/infra/plugins/worktree/core";
+import { useConversationTitleBySlug } from "@plugins/conversations/web";
 import {
   formatElapsed,
   useNow,
 } from "@plugins/primitives/plugins/relative-time/web";
-import { worktreeOps, type WorktreeOp } from "../../shared";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import {
+  buildQueue,
+  opsOfSlug,
+  slugOf,
+  splitLine,
+  stateLine,
+  timesOf,
+  type QueueRow,
+} from "../internal/op-lines";
+import { useOpsInFlight } from "../internal/use-worktree-op";
 
 const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 const hourglassEmptyIcon = symbol("hourglass-empty");
 
-// The op markers are keyed on the worktree directory basename, exactly how the
-// status poller keys them (`basename(worktreePath)`). Avoid node:path in the
-// browser — derive the basename by hand.
-function slugOf(worktreePath: string): string {
-  const parts = worktreePath.split("/").filter(Boolean);
-  return parts[parts.length - 1] ?? worktreePath;
+// Parked in a wait → hourglass (warning tone); working → spinner.
+function StateIcon({
+  waiting,
+  className,
+}: {
+  waiting: boolean;
+  className?: string;
+}) {
+  return waiting ? (
+    <Icon
+      icon={hourglassEmptyIcon}
+      className={cn("size-3.5", rigidClass(), className)}
+    />
+  ) : (
+    <Spinner className={cn("size-3.5", rigidClass())} />
+  );
 }
 
-// Map each worktree slug → a human-friendly conversation title, so the op queue
-// reads as task names rather than opaque attempt ids. Built from the live
-// conversations resource (in the agent-manager that's the full main-DB set);
-// rows with no match (e.g. the main `singularity` build, or a push from a
-// conversation outside the recent window) fall back to the slug.
-const EMPTY_TITLES: Record<string, string> = {};
-
-// Build a partial slug→title map from one conversation list.
-function titleMapOf(rows: ConversationRecord[]): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const c of rows) {
-    const title = c.title?.trim();
-    if (title) map[slugOf(c.worktreePath)] = title;
-  }
-  return map;
-}
-
-function useTitleBySlug(): Record<string, string> {
-  // Subscribe to a derived SLICE — the per-resource slug→title map — via
-  // `select`, so the banner re-renders only when a mapping actually changes
-  // (structural sharing deep-compares the Record), not on every status flip in
-  // the conversations list. One select per keyed sub-resource keeps the lists
-  // independent.
-  const active = useResource(conversationsActiveResource, undefined, {
-    select: titleMapOf,
-  });
-  const gone = useResource(conversationsGoneResource, undefined, {
-    select: titleMapOf,
-  });
-  const system = useResource(conversationsSystemResource, undefined, {
-    select: titleMapOf,
-  });
-  return useMemo(() => {
-    if (
-      active.status === "ready" &&
-      gone.status === "ready" &&
-      system.status === "ready"
-    )
-      // Spread order matches the previous [...system, ...recentGone, ...active]:
-      // a live `active` title wins over a stale gone/system one.
-      return { ...system.data, ...gone.data, ...active.data };
-    // Loading or failed alike: the titles are cosmetic labels on the other
-    // worktrees' rows, which fall back to their slug — the op map itself (the
-    // banner's real read) renders its own failure.
-    return EMPTY_TITLES;
-  }, [active, gone, system]);
-}
-
-// The instant the op's CURRENT phase began. A running op (of any kind) clocks
-// its work time from when its lock was granted (`runningAt`); a waiting op
-// clocks from `startedAt`. So the live timer always measures the phase shown,
-// never wait + work lumped together.
-function phaseStartedAt(op: WorktreeOp): number {
-  return new Date(op.runningAt ?? op.startedAt).getTime();
-}
-
-// How long a now-running op spent queued for its lock before work started
-// (startedAt → runningAt). null when the op isn't running or never actually
-// waited. Applies to any op: a push waits on the global push lock, a build on
-// its per-worktree lock, a check/test/e2e on the host grant — all stamp
-// `runningAt` on the grant.
-function waitedMs(op: WorktreeOp): number | null {
-  if (op.phase !== "running" || !op.runningAt) return null;
-  const ms =
-    new Date(op.runningAt).getTime() - new Date(op.startedAt).getTime();
-  return ms > 1000 ? ms : null;
-}
-
-// The sentence is one template over the kind's noun, so every kind phrases the
-// same way and a kind added to `OP_KINDS` reads correctly here with no edit.
-function summaryLabel(op: WorktreeOp): string {
-  const { label } = OP_KINDS[op.op];
-  return op.phase === "waiting-for-lock"
-    ? `${label} queued — waiting for lock`
-    : `${label} in progress`;
-}
-
-const byStartedAt = (a: WorktreeOp, b: WorktreeOp): number =>
-  new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime();
-
-// One row in the expanded list. `queuePos` is the 1-based position in the global
-// push lock queue (the running push that holds the lock is #1); null for every
-// other kind, which serializes per-worktree or on the host grant and never
-// contends on the global lock.
-interface OpRow {
-  op: WorktreeOp;
-  queuePos: number | null;
-  isSelf: boolean;
-}
-
-// Build the ordered view: the global push queue first (lock holder, then the
-// waiting pushes in request order), then every other op (builds, checks, tests,
-// e2e runs), which serialize per-worktree or on the host grant and don't
-// contend on the global push lock. Push is the ONLY kind on a global queue, so
-// "not a push" is the whole definition of the second group.
-function buildRows(ops: WorktreeOp[], selfSlug: string): OpRow[] {
-  const pushes = ops.filter((o) => o.op === "push");
-  const running = pushes.filter((o) => o.phase === "running").sort(byStartedAt);
-  const waiting = pushes
-    .filter((o) => o.phase === "waiting-for-lock")
-    .sort(byStartedAt);
-  const unqueued = ops.filter((o) => o.op !== "push").sort(byStartedAt);
-
-  const queue = [...running, ...waiting];
-  const pushRows: OpRow[] = queue.map((op, i) => ({
-    op,
-    queuePos: i + 1,
-    isSelf: op.slug === selfSlug,
-  }));
-  const unqueuedRows: OpRow[] = unqueued.map((op) => ({
-    op,
-    queuePos: null,
-    isSelf: op.slug === selfSlug,
-  }));
-  return [...pushRows, ...unqueuedRows];
-}
-
-function OpRowView({
-  row,
+function QueueRowView({
+  item,
   title,
   now,
 }: {
-  row: OpRow;
-  title?: string;
+  item: QueueRow;
+  title: string | undefined;
   now: number;
 }) {
-  const { op, queuePos, isSelf } = row;
-  const waiting = op.phase === "waiting-for-lock";
-  const elapsed = formatElapsed(now - phaseStartedAt(op));
-  const waited = waitedMs(op);
-  const phaseText = waiting ? "Waiting for lock" : OP_KINDS[op.op].progressive;
-
+  const { row, slug, queuePos, isSelf } = item;
+  const times = timesOf(row, now);
+  const split = splitLine(times);
   return (
     <Text
       as="div"
@@ -192,19 +82,12 @@ function OpRowView({
         ) : (
           <Rigid as="span" className="w-6" />
         )}
-        {waiting ? (
-          <Icon
-            icon={hourglassEmptyIcon}
-            className={cn("size-3.5 text-warning", rigidClass())}
-          />
-        ) : (
-          <Spinner className={cn("size-3.5", rigidClass())} />
-        )}
+        <StateIcon waiting={row.openWait !== null} className="text-warning" />
         <Fill as="span" className="truncate">
           {title ? (
             <span className="truncate">{title}</span>
           ) : (
-            <span className="font-mono">{op.slug}</span>
+            <span className="font-mono">{slug}</span>
           )}
           {isSelf && (
             // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own
@@ -213,15 +96,12 @@ function OpRowView({
             </span>
           )}
         </Fill>
-        <span className={cn("text-muted-foreground", rigidClass())}>
-          {phaseText}
+        <span className={cn("truncate text-muted-foreground", rigidClass())}>
+          {stateLine(row, now)}
         </span>
-        {waited !== null && (
-          <span
-            className={cn("text-muted-foreground/70", rigidClass())}
-            title="Time spent queued for the push lock before pushing started"
-          >
-            waited {formatElapsed(waited)}
+        {split !== null && (
+          <span className={cn("text-muted-foreground/70", rigidClass())}>
+            {split}
           </span>
         )}
         <span
@@ -230,20 +110,28 @@ function OpRowView({
             rigidClass(),
           )}
         >
-          {elapsed}
+          {formatElapsed(times.elapsedMs)}
         </span>
       </Stack>
     </Text>
   );
 }
 
+/**
+ * The worktree's in-flight op above the prompt input, off the one host-wide
+ * `opsInFlight` read. The state line is the reducer's: the wait the op is
+ * parked in (with its reason, requeue cycle and own clock) or the work it is
+ * doing; the right side is the total elapsed and the waited / worked split. The
+ * warning tone means "parked in a wait" — before the grant or after it.
+ */
 export function OpStatusBanner({
   conversation,
 }: {
   conversation: ConversationRecord;
 }) {
-  const result = useLive(worktreeOps);
-  const titleBySlug = useTitleBySlug();
+  const result = useOpsInFlight();
+  const titleBySlug = useConversationTitleBySlug();
+  // A presentational 1 s ticker for the clocks; the op state itself is pushed.
   const now = useNow(1000);
   const [expanded, setExpanded] = useState(false);
 
@@ -254,26 +142,26 @@ export function OpStatusBanner({
     return (
       <ResourceErrorInline
         variant="inline"
-        subject="the worktree ops"
+        subject="the in-flight ops"
         error={result.error}
         refetch={result.refetch}
       />
     );
-  const ops = Object.values(result.data);
-  const rows = buildRows(ops, selfSlug);
-  const op = result.data[selfSlug];
+  const mine = opsOfSlug(result.data, selfSlug);
+  const op = mine[0];
   if (!op) return null;
 
-  const queued = op.phase === "waiting-for-lock";
-  const elapsed = formatElapsed(now - phaseStartedAt(op));
-  const waited = waitedMs(op);
+  const rows = buildQueue(result.data, selfSlug);
+  const waiting = op.openWait !== null;
+  const times = timesOf(op, now);
+  const split = splitLine(times);
   const others = rows.length - 1;
 
   return (
     <Text as="div" variant="caption">
       <Clip
         className={`rounded-md border ${
-          queued
+          waiting
             ? "border-warning/40 bg-warning/10 text-warning"
             : "border-border bg-muted/30 text-foreground"
         }`}
@@ -289,26 +177,18 @@ export function OpStatusBanner({
             align="center"
             className="px-md py-sm"
           >
-            {queued ? (
-              <Icon
-                icon={hourglassEmptyIcon}
-                className={cn("size-3.5", rigidClass())}
-              />
-            ) : (
-              <Spinner className={cn("size-3.5", rigidClass())} />
-            )}
-            <Fill as="span">{summaryLabel(op)}</Fill>
+            <StateIcon waiting={waiting} />
+            <Fill as="span" className="truncate">
+              {stateLine(op, now)}
+            </Fill>
             {others > 0 && (
               <span className={cn("text-muted-foreground", rigidClass())}>
                 +{others} other{others === 1 ? "" : "s"}
               </span>
             )}
-            {waited !== null && (
-              <span
-                className={cn("text-muted-foreground/70", rigidClass())}
-                title="Time spent queued for the push lock before pushing started"
-              >
-                waited {formatElapsed(waited)}
+            {split !== null && (
+              <span className={cn("text-muted-foreground/70", rigidClass())}>
+                {split}
               </span>
             )}
             <span
@@ -317,28 +197,21 @@ export function OpStatusBanner({
                 rigidClass(),
               )}
             >
-              {elapsed}
+              {formatElapsed(times.elapsedMs)}
             </span>
-            {expanded ? (
-              <Icon
-                icon={keyboardArrowUpIcon}
-                className={cn("size-4 text-muted-foreground", rigidClass())}
-              />
-            ) : (
-              <Icon
-                icon={keyboardArrowDownIcon}
-                className={cn("size-4 text-muted-foreground", rigidClass())}
-              />
-            )}
+            <Icon
+              icon={expanded ? keyboardArrowUpIcon : keyboardArrowDownIcon}
+              className={cn("size-4 text-muted-foreground", rigidClass())}
+            />
           </Stack>
         </button>
         {expanded && (
           <div className="border-t border-border/60 bg-background/40 py-xs text-foreground">
-            {rows.map((row) => (
-              <OpRowView
-                key={`${row.op.op}:${row.op.slug}`}
-                row={row}
-                title={titleBySlug[row.op.slug]}
+            {rows.map((item) => (
+              <QueueRowView
+                key={item.row.opId}
+                item={item}
+                title={titleBySlug[item.slug]}
                 now={now}
               />
             ))}
