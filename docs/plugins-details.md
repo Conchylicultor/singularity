@@ -20274,6 +20274,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
           - `stats/cost`
           - `tasks`
+          - `toolchain`
       - Server:
         - Exports (types):
           - `AppIdentity`
@@ -36086,6 +36087,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/tasks-core.getTask`
     - Register: `defineJob('toolchain.detect-outdated')`
   - Core:
+    - Uses: `infra/paths.HOME_DIR`
     - Exports (types):
       - `GateResult`
       - `ToolHold`
@@ -36094,9 +36096,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (values):
       - `compareVersions`
       - `confirmedFailures`
+      - `findMiseBin`
       - `HOLDS`
       - `isExactRelease`
       - `lockProblems`
+      - `miseBin`
       - `newFailures`
       - `parseMiseLock`
       - `parseMiseToolRequests`

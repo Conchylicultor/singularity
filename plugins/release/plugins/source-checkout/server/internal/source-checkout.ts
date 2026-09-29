@@ -22,6 +22,7 @@ import {
   withWorktreeMutateSlot,
   WorktreeGitTimeoutError,
 } from "@plugins/infra/plugins/worktree/server";
+import { findMiseBin } from "@plugins/toolchain/core";
 import { releaseCheckoutsDir } from "../../data-dirs";
 
 // Bounds for every git child, mirroring `infra/worktree`'s values and for the
@@ -337,20 +338,17 @@ async function assertCheckoutAt(root: string, sha: string): Promise<void> {
  * runs from inside it do not refuse an untrusted config. The machine-global
  * `trusted_config_paths` covers only `.claude/worktrees`.
  *
- * Best-effort, like `infra/worktree`'s `setupWorktree`: mise may not be on this
- * process's PATH at all (ENOENT), and on a machine where it is not needed the
- * inner build still works. A trust that RAN and failed is printed, never
- * swallowed — if the build then fails on an untrusted config, the reason is on
- * screen.
+ * Best-effort: mise may not be installed at all (`findMiseBin` returns
+ * `null`), and on a machine where it is not needed the inner build still
+ * works. A trust that RAN and failed is printed, never swallowed — if the
+ * build then fails on an untrusted config, the reason is on screen.
  */
 async function trustMiseConfig(root: string): Promise<void> {
-  const r = await spawnCaptured(["mise", "trust", join(root, "mise.toml")], {
+  const bin = findMiseBin();
+  if (bin === null) return;
+  const r = await spawnCaptured([bin, "trust", join(root, "mise.toml")], {
     timeoutMs: MISE_TRUST_TIMEOUT_MS,
-  }).catch((err: unknown) => {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
   });
-  if (r === null) return;
   if (r.timedOut || r.exitCode !== 0) {
     console.warn(
       `  mise trust ${root}/mise.toml did not succeed ` +

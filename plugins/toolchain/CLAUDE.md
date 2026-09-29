@@ -65,6 +65,7 @@ move proven before it lands.
     - `tasks/tasks-core.getTask`
   - Register: `defineJob('toolchain.detect-outdated')`
 - Core:
+  - Uses: `infra/paths.HOME_DIR`
   - Exports (types):
     - `GateResult`
     - `ToolHold`
@@ -73,9 +74,11 @@ move proven before it lands.
   - Exports (values):
     - `compareVersions`
     - `confirmedFailures`
+    - `findMiseBin`
     - `HOLDS`
     - `isExactRelease`
     - `lockProblems`
+    - `miseBin`
     - `newFailures`
     - `parseMiseLock`
     - `parseMiseToolRequests`

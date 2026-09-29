@@ -1,21 +1,6 @@
-import { existsSync } from "fs";
-import { dirname, join } from "path";
+import { dirname } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
-
-/**
- * The `mise` binary. Looked up on PATH, then at its installer's default
- * location — an agent shell often has mise's shims on PATH but not mise itself.
- */
-function miseBin(): string {
-  const onPath = Bun.which("mise");
-  if (onPath !== null) return onPath;
-  const installed = join(HOME_DIR, ".local", "bin", "mise");
-  if (existsSync(installed)) return installed;
-  throw new Error(
-    `mise is not installed (not on PATH, not at ${installed}). Install it: https://mise.jdx.dev`,
-  );
-}
+import { miseBin } from "@plugins/toolchain/core";
 
 /**
  * Runs `mise <args>` for the checkout at `root`, seeing ONLY that checkout's

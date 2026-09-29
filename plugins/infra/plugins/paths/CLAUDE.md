@@ -362,6 +362,7 @@ run everywhere.
     - `stats/commits`
     - `stats/cost`
     - `tasks`
+    - `toolchain`
 - Server:
   - Exports (types):
     - `AppIdentity`

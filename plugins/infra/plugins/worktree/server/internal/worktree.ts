@@ -43,7 +43,6 @@ const PRUNE_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as l
 const REMOVE_TIMEOUT_MS = 300_000; // ~250x the 1.2 s p50; still frees the flock inside one hourly tick
 const LOCK_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as prune
 const REF_TIMEOUT_MS = 60_000; // one ref read, same starvation exposure as list
-const MISE_TRUST_TIMEOUT_MS = 30_000;
 
 // A git subprocess in this file blew its bound and was KILLED. Its own type,
 // not a bare Error, because the distinction is load-bearing for callers: a
@@ -420,8 +419,8 @@ export async function setupWorktree(
 
   const branch = attemptBranchName(id);
   // Gate ONLY the heavy checkout subprocess host-wide (the 77 MB / 8385-file disk
-  // offender). The idempotent existsSync early-return and `mise trust` stay
-  // outside the gate — they are cheap and must not hold a slot.
+  // offender). The idempotent existsSync early-return stays outside the gate —
+  // it is cheap and must not hold a slot.
   await withWorktreeMutateSlot(async () => {
     // Converge from a half-finished earlier try instead of assuming all-or-nothing.
     // The branch is created before the checkout is written, so a killed add
@@ -440,26 +439,6 @@ export async function setupWorktree(
     // rather than after the gate is released.
     await ensureWorktreeLocked(repoRoot, wtPath, signal);
   }, signal);
-  // Trust the mise config so agents can run build commands without hitting
-  // "config file is not trusted" errors. No-op if mise is not installed.
-  //
-  // Best-effort: mise may not be installed at all, and a missing trust only costs
-  // the agent one prompt later. What the empty catch swallows is now bounded — with
-  // `timeoutMs` the only thing it can hide is a genuine "mise is absent or broken"
-  // throw, never a child hanging forever behind an empty catch.
-  try {
-    await spawnCaptured(["mise", "trust", `${wtPath}/mise.toml`], {
-      timeoutMs: MISE_TRUST_TIMEOUT_MS,
-      signal,
-    });
-    // eslint-disable-next-line promise-safety/no-bare-catch
-  } catch {}
-  // The empty catch above is exactly the shape that would absorb an abort:
-  // `spawnCaptured` reports one by THROWING `signal.reason`, so without this line
-  // a caller told to stop would be told instead that the setup succeeded. Re-raise
-  // it outside the catch, which is only entitled to swallow "mise is absent or
-  // broken".
-  signal?.throwIfAborted();
 }
 
 export async function removeWorktree(
