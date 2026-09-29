@@ -26701,6 +26701,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/breadcrumb-separator/slash`
               - `ui/segmented-progress-bar/arc`
               - `ui/segmented-progress-bar/pie`
+              - `ui/tab-bar`
               - `ui/tokens/shadow`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
           - Web:
@@ -36660,6 +36661,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/dynamic-enum/config.DynamicEnum`
           - `primitives/css/center.Center`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/ui-kit.cn`
           - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
           - `primitives/slot-render.renderIsolated`

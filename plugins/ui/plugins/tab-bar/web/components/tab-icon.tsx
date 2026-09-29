@@ -3,6 +3,8 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 export interface TabIconProps {
   icon?: IconRef;
@@ -32,12 +34,18 @@ export interface TabIconProps {
  * label leaf only, so an em-relative icon would scale off the strip's inherited
  * 16px and render at 18.4px, visibly bigger than the `+` and the action-bar
  * buttons sharing the same chrome row.
+ *
+ * The icon is rigid: it is a flex child of the tab's line, so a long label
+ * pressing against the tab's `max-w-*` would otherwise shrink the glyph below
+ * 16px — long-titled tabs showed smaller icons than short-titled ones. Only the
+ * `<Text>` label gives way.
  */
 export function TabIcon({ icon, badge: Badge }: TabIconProps) {
   if (!icon) return null;
-  if (!Badge) return <Icon icon={icon} className="size-4" />;
+  if (!Badge)
+    return <Icon icon={icon} className={cn("size-4", rigidClass())} />;
   return (
-    <Center as="span" className="relative">
+    <Center as="span" className={cn("relative", rigidClass())}>
       <Icon icon={icon} className="size-4" />
       <Pin to="top-right" offset="2xs" outset decorative>
         <Badge />

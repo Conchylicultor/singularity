@@ -28,6 +28,7 @@ needing a DOM handle wraps `<Tab>` in its own element.
     - `fields/dynamic-enum/config.DynamicEnum`
     - `primitives/css/center.Center`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
     - `primitives/slot-render.renderIsolated`
