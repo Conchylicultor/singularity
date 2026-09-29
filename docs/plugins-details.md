@@ -18286,6 +18286,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/link`
               - `page/image`
               - `page/inline-date`
+              - `page/map`
               - `page/page-reference`
               - `page/place`
               - `page/prompt/block`
@@ -19199,6 +19200,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/request-origin/agent-write-ledger`
           - `infra/secrets`
           - `infra/trash`
+          - `integrations/google-maps`
           - `integrations/hooktheory`
           - `page/annotations/agent-access`
           - `page/annotations/agent-notes/agent-page`
@@ -19636,6 +19638,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/corpus-index`
           - `infra/git/git-watcher`
           - `infra/jobs/supervised-job`
+          - `integrations/google-maps`
           - `plugin-meta/plugin-tree`
           - `reports/outbox`
       - Server:
@@ -21158,29 +21161,77 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
-    - **`google-maps`** — Google Maps Platform access broker (web): reactive readiness state plus the 'set up Google Maps' affordance consumers render in place of routing the user to Settings. Google Maps Platform access broker (server): getMapsKey() reads the stored API key via the shared auth/central store, so consumers never import @plugins/auth.
+    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane. Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key + optional Map ID) as a live value, with its write/clear endpoints.
       - Web:
+        - Slots: `google-maps-live-map-setup.actions` ← `primitives.pane`
+        - Contributes: `Pane.Register` "google-maps-live-map-setup"
         - Uses:
+          - `auth.accountsRoute`
           - `auth.useAuthState`
           - `auth/google-maps/setup-wizard.googleMapsSetupPane`
+          - `infra/endpoints.fetchEndpoint`
+          - `infra/endpoints.getEndpointErrorMessage`
+          - `network/live.useLive`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.Input`
           - `primitives/live-state.foldResource`
           - `primitives/live-state.ResourceError`
           - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
+          - `primitives/pane.Pane`
+          - `primitives/setup-steps.Step`
+          - `primitives/setup-steps.StepCommand`
+          - `primitives/setup-steps.StepDone`
+          - `primitives/setup-steps.StepLink`
+          - `primitives/setup-steps.StepNote`
+          - `primitives/setup-steps.Steps`
+          - `primitives/setup-steps.StepState`
         - Exports (types):
           - `MapsAccess`
           - `MapsAccessBlocker`
+          - `MapsAccessCapability`
+          - `MapsBrowserConfigState`
         - Exports (values):
           - `MAPS_BLOCKER_BODY`
           - `MapsAccessAction`
+          - `MapsMapAccessAction`
           - `useMapsAccess`
+          - `useMapsBrowserConfig`
       - Server:
-        - Uses: `auth.getTokenFromCentral`
+        - Contributes: `resource.declare` "google-maps.browser-config"
+        - Uses:
+          - `auth.getTokenFromCentral`
+          - `infra/endpoints.implement`
+          - `infra/file-watcher.createFileWatcher`
+          - `network/live.serveValue`
         - Exports (types): `MapsKeyResult`
         - Exports (values): `getMapsKey`
+        - Resources: `google-maps.browser-config` (push)
+        - Routes:
+          - `POST /api/google-maps/browser-config`
+          - `DELETE /api/google-maps/browser-config`
+      - Core:
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
+        - Exports (types):
+          - `MapsBrowserConfigInput`
+          - `MapsBrowserConfigValue`
+        - Exports (values):
+          - `BROWSER_KEY_PATTERN`
+          - `clearMapsBrowserConfig`
+          - `mapsBrowserConfig`
+          - `MapsBrowserConfigInputSchema`
+          - `MapsBrowserConfigValueSchema`
+          - `setMapsBrowserConfig`
       - Cross-plugin:
-        - Imported by: `page/place/google`
+        - Imported by:
+          - `map/google`
+          - `page/place/google`
       - Plugins:
         - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
           - Cross-plugin:
@@ -21389,6 +21440,65 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/full-pane`
           - `layouts/miller`
 
+- **`map`** — Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType.
+  - Web:
+    - Slots:
+      - `GeoMap.Renderer` ← `map.google`
+      - `GeoMap.Pin` ← `page.place.map-layer`
+    - Uses:
+      - `primitives/css/center.Center`
+      - `primitives/css/placeholder.Placeholder`
+      - `primitives/css/ui-kit.cn`
+      - `primitives/loading.Loading`
+      - `primitives/slot-render.defineDispatchSlot`
+      - `primitives/slot-render.renderIsolated`
+    - Exports (types):
+      - `MapPinProps`
+      - `MapRendererContribution`
+      - `MapRendererProps`
+      - `MapRendererReadiness`
+      - `MapViewProps`
+    - Exports (values):
+      - `GeoMap`
+      - `MapView`
+  - Cross-plugin:
+    - Imported by:
+      - `map/google`
+      - `page/map`
+      - `page/place/map-layer`
+  - Core:
+    - Exports (types):
+      - `LatLng`
+      - `MapArea`
+      - `MapBounds`
+      - `MapCamera`
+      - `MapOverlay`
+      - `MapPath`
+      - `MapPin`
+      - `MapStrokeStyle`
+      - `MapTone`
+    - Exports (values):
+      - `cameraFor`
+      - `MAP_TONE_TOKEN`
+      - `overlayPositions`
+      - `positionsKey`
+      - `SINGLE_POINT_ZOOM`
+  - Plugins:
+    - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as AdvancedMarkers holding each pin's contributed content, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them only when the set of positions changes, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
+      - Web:
+        - Contributes: `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
+        - Uses:
+          - `integrations/google-maps.MapsMapAccessAction`
+          - `integrations/google-maps.useMapsAccess`
+          - `integrations/google-maps.useMapsBrowserConfig`
+          - `map.GeoMap`
+          - `primitives/css/center.Center`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/latest-ref.useLatestRef`
+          - `primitives/lazy-component.lazyComponent`
+          - `primitives/loading.Loading`
+
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
     - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
@@ -21585,6 +21695,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/git/git-watcher`
           - `infra/jobs`
           - `infra/trash`
+          - `integrations/google-maps`
           - `page/annotations/agent-notes/authorship`
           - `page/annotations/todo/task-link`
           - `page/editor`
@@ -22481,7 +22592,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
-          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.map`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
           - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.BlockMenuItem` ← `page.open-as-page`
@@ -22612,6 +22723,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageIconProps`
           - `PageOption`
           - `PageOptionsResult`
+          - `SelectionControl`
           - `TextBlockLayoutProps`
           - `UndoConflictReason`
           - `UndoConflictReport`
@@ -22668,6 +22780,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useGroupedInsertableBlocks`
           - `useInsertableBlocks`
           - `usePageOptions`
+          - `useSelectionControl`
           - `useSetFrameHover`
           - `useVoidCaret`
       - Server:
@@ -22986,6 +23099,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/inline-date`
           - `page/inline-page-link`
           - `page/links`
+          - `page/map`
           - `page/markdown-apply`
           - `page/math/equation`
           - `page/math/inline`
@@ -23435,6 +23549,49 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `page/inline-page-link`
           - `page/page-link`
+    - **`map`** — Map block type: draws every located item on the page on an interactive map (through the map primitive), with overlays derived on each render from the page's blocks by contributed PageMap.Layer functions — so the map cannot drift from the page and names no block type. Clicking a pin scrolls to and selects the block it stands for; items a layer cannot place yet are counted under the map. Map block type: registers its (empty) `data` schema at the server write boundary.
+      - Web:
+        - Slots: `PageMap.Layer` ← `page.place.map-layer`
+        - Contributes: `Editor.Block` "map" → `MapBlock`
+        - Uses:
+          - `map.MapView`
+          - `page/editor.BLOCK_INSET`
+          - `page/editor.blockContentScope`
+          - `page/editor.BlockRendererProps`
+          - `page/editor.blockRowIn`
+          - `page/editor.Editor`
+          - `page/editor.useBlockEditor`
+          - `page/editor.useSelectionControl`
+          - `primitives/css/clip.clipClasses`
+          - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/surface.Surface`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/dom/scroll-reveal.revealElement`
+        - Exports (types): `PageMapLayerContribution`
+        - Exports (values): `PageMap`
+      - Server:
+        - Contributes: `page.block-data` "map"
+        - Uses: `page/editor.Editor`
+      - Core:
+        - Uses:
+          - `page/editor.defineBlock`
+          - `ui/icons.symbol`
+        - Exports (types):
+          - `MapData`
+          - `PageMapLayerResult`
+          - `PageMapLayerSpec`
+          - `PageMapOverlay`
+          - `PageMapView`
+        - Exports (values):
+          - `derivePageMap`
+          - `MAP_TYPE`
+          - `mapBlock`
+          - `MapDataSchema`
+      - Cross-plugin:
+        - Imported by: `page/place/map-layer`
     - **`markdown-apply`** — Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the block-scoped read, the structural patch, and the per-block text edits (written through page/block-text-write). Audience-agnostic — the agent-facing tools over it are page/annotations/agent-access.
       - Server:
         - Uses:
@@ -23792,6 +23949,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Register: `definePlaceProvider('google')`
           - Shared:
             - Exports (values): `GOOGLE_PLACE_PROVIDER_ID`
+        - **`map-layer`** — Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not dropped), and the place pin itself — a bubble with the location icon and the truncated name that grows and takes the primary tone when active.
+          - Web:
+            - Contributes:
+              - `PageMap.Layer` "place"
+              - `GeoMap.Pin` → `PlacePin`
+            - Uses:
+              - `map.GeoMap`
+              - `page/map.PageMap`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/surface.Surface`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `ui/icons.Icon`
     - **`prompt`** — Umbrella for the `/prompt` page block: the task↔block link data layer and the block type that launches agents from a page.
       - Plugins:
         - **`block`** — Prompt block type: block text plus a launch control that turns it into an agent run, and chips for the conversations it launched. Prompt block type: registers its `data` schema (plain block text) at the server write boundary.
@@ -25831,6 +26003,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/avatar/config`
               - `fields/bool/inline`
               - `layouts/route-fallback`
+              - `map`
+              - `map/google`
               - `page/audio`
               - `page/bookmark`
               - `page/container`
@@ -25924,6 +26098,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/tags/table`
               - `page/bookmark`
               - `page/code-block`
+              - `page/map`
               - `page/math/equation`
               - `primitives/app-shell`
               - `primitives/data-view/gallery`
@@ -26280,6 +26455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/link`
               - `page/inline-date`
               - `page/place`
+              - `page/place/map-layer`
               - `page/prompt/block`
               - `plugin-meta/facets/registrations/render-detail`
               - `plugin-meta/facets/resources/render-detail`
@@ -26613,6 +26789,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/link`
               - `page/inline-date`
               - `page/place`
+              - `page/place/map-layer`
               - `page/prompt/block`
               - `plugin-meta/facets/db-schema/render-detail`
               - `plugin-meta/facets/registrations/render-detail`
@@ -26845,10 +27022,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/stall`
               - `debug/worktree-cleanup`
               - `history/dialog`
+              - `map`
               - `page/attachment-block`
               - `page/bookmark`
               - `page/editor`
               - `page/inline-page-link`
+              - `page/map`
               - `page/page-link`
               - `page/place`
               - `primitives/cursor-pagination`
@@ -26958,6 +27137,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/file`
               - `page/formatting/link`
               - `page/place`
+              - `page/place/map-layer`
               - `plugin-meta/facets/db-schema/render-detail`
               - `plugin-meta/facets/registrations/render-detail`
               - `plugin-meta/facets/resources/render-detail`
@@ -27436,8 +27616,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/tags/table`
               - `history/dialog`
               - `infra/events-test`
+              - `integrations/google-maps`
               - `layouts/miller`
               - `layouts/route-fallback`
+              - `map/google`
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
               - `page/attachment-block`
@@ -27452,6 +27634,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/link`
               - `page/image`
               - `page/inline-date`
+              - `page/map`
               - `page/math/inline`
               - `page/page-link`
               - `page/place`
@@ -27707,7 +27890,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/json/config`
               - `infra/events-test`
               - `page/editor`
+              - `page/map`
               - `page/place`
+              - `page/place/map-layer`
               - `page/read-only-view`
               - `primitives/collapsible-wrap`
               - `primitives/css/card`
@@ -27967,7 +28152,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `history/dialog`
               - `infra/claude-cli`
               - `infra/events-test`
+              - `integrations/google-maps`
               - `layouts/route-fallback`
+              - `map/google`
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
               - `page/bookmark`
@@ -27978,10 +28165,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/color`
               - `page/formatting/link`
               - `page/inline-date`
+              - `page/map`
               - `page/math/equation`
               - `page/math/inline`
               - `page/page-link`
               - `page/place`
+              - `page/place/map-layer`
               - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`
@@ -28486,6 +28675,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `integrations/youtube`
               - `layouts/miller`
               - `layouts/route-fallback`
+              - `map`
               - `page/attachment-block`
               - `page/audio`
               - `page/bookmark`
@@ -28499,9 +28689,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/link`
               - `page/image`
               - `page/inline-date`
+              - `page/map`
               - `page/math/equation`
               - `page/math/inline`
               - `page/place`
+              - `page/place/map-layer`
               - `page/prompt/block`
               - `page/read-only-view`
               - `page/video`
@@ -29928,6 +30120,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/code/file-pane/raw`
               - `conversations/conversation-view/jsonl-viewer`
               - `page/editor`
+              - `page/map`
               - `primitives/command-palette`
               - `primitives/outline/rail`
               - `primitives/tree`
@@ -30397,6 +30590,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops`
           - `integrations/youtube`
           - `layouts/miller`
+          - `map/google`
           - `page/code-block`
           - `page/editor`
           - `page/url-paste`
@@ -30522,6 +30716,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/piano-roll/fx-core`
           - `apps/sonata/piano-roll/fx-ripples`
           - `apps/sonata/piano-roll/fx-shatter`
+          - `map/google`
           - `page/math/render`
           - `primitives/graph-canvas`
           - `primitives/markdown`
@@ -30960,7 +31155,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/worktree-cleanup`
           - `fields/secret/config`
           - `history/dialog`
+          - `integrations/google-maps`
           - `layouts/route-fallback`
+          - `map`
+          - `map/google`
           - `page/annotations/agent-notes/agent-page`
           - `page/annotations/instructions/instructions-page`
           - `page/annotations/todo/task-link`
@@ -31650,7 +31848,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Contributes:
           - `plugin-conv-side.actions` "title" → `PaneTitleItem`
           - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -31740,6 +31938,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `traceDetailPane.Actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
           - `eventsTestPane.Actions` "title" → `PaneTitleItem`
+          - `google-maps-live-map-setup.actions` "title" → `PaneTitleItem`
           - `pluginViewPane.Actions` "title" → `PaneTitleItem`
           - `layoutLabPane.Actions` "title" → `PaneTitleItem`
           - `convReviewPane.Actions` "title" → `PaneTitleItem`
@@ -32498,6 +32697,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `auth/google-maps/setup-wizard`
           - `auth/google/setup-wizard`
           - `infra/claude-cli/availability`
+          - `integrations/google-maps`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
       - Web:
         - Slots: `Shortcuts.Shortcut` ← `apps-core.surface.floating`, `apps-core.surface.solo`, `reorder.edit-mode`
@@ -32620,6 +32820,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling`
           - `debug/trace/engine`
           - `improve`
+          - `map`
           - `page/editor`
           - `page/page-reference`
           - `plugin-meta/specimens`
@@ -33544,7 +33745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×211: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.WebRegister` ×212: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -33574,7 +33775,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×210: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.Register` ×211: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -36811,11 +37012,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/heading/heading-3`
           - `page/image`
           - `page/inline-date`
+          - `page/map`
           - `page/math/equation`
           - `page/numbered-list`
           - `page/open-as-page`
           - `page/page-link`
           - `page/place`
+          - `page/place/map-layer`
           - `page/prompt/block`
           - `page/quote`
           - `page/read-only-view`

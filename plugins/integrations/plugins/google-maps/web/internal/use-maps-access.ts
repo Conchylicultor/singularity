@@ -115,4 +115,3 @@ function useMapAccess(): MapsAccess {
 
 /** Nothing to retry: the browser-config read has not failed. */
 async function noRefetch(): Promise<void> {}
-}

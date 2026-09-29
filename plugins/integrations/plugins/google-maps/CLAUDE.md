@@ -119,15 +119,12 @@ over:
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-<<<<<<< .merge_file_Rqa5Da
+    - `primitives/css/ui-kit.Input`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceErrorInline`
-=======
-    - `primitives/css/ui-kit.Input`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
->>>>>>> .merge_file_XbLBCo
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/setup-steps.Step`
