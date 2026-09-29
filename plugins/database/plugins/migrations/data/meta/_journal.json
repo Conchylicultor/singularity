@@ -1894,9 +1894,23 @@
     },
     {
       "version": "7",
+      "when": 1790533427000,
+      "tag": "20260927_182347_81e713f0__remap_saved_icons_to_symbols",
+      "hash": "81e713f0",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
       "when": 1790685756000,
       "tag": "20260929_124236_93a812f7__merged_20260929_1242",
       "hash": "93a812f7",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1790691529000,
+      "tag": "20260929_141849_2cb1db7d__merged_20260929_1418",
+      "hash": "2cb1db7d",
       "breakpoints": true
     }
   ]

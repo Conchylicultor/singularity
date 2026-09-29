@@ -33,6 +33,17 @@ generates **no migration at all**.
   `View.getContributions()`. In one transaction it `DROP VIEW IF EXISTS`s every
   view in **reverse** dependency order and `CREATE VIEW`s them in forward order.
   Any failure throws and blocks boot.
+- `dropDerivedViews(db)` (server) drops every view **live** in `public`, in one
+  statement, before pending migrations apply — the migrations runner calls it
+  in the first pending migration's transaction, and the `migration-applies-clean`
+  dry-run mirrors it. A live view would otherwise block any migration that drops
+  or retypes a column it reads, and neither drizzle-kit (which never sees views)
+  nor a hand edit (push regenerates schema migrations) can put a `DROP VIEW` in
+  front of it. The rebuild then finds views missing and recreates them. It drops
+  the live set, not the declared one, because the view in the way is the one the
+  previous code created. On a hot-swap restart this widens the window where the
+  previous backend has no views from "the rebuild" to "migrations + rebuild", only
+  on boots with pending migrations.
 - The view set is an argument, not read inside the rebuild, because the
   `migration-applies-clean` check also rebuilds the views (in its rolled-back
   dry-run on main's DB) from a process that never boots. It gathers the same set
@@ -105,6 +116,7 @@ and re-export it from `core/index.ts`. See
   - Uses: `primitives/log-channels.defineLogSink`
   - Exports (types): `DeclaredView`
   - Exports (values):
+    - `dropDerivedViews`
     - `rebuildDerivedViews`
     - `relationIdentityBase`
     - `View`

@@ -8668,6 +8668,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (types):
       - `ConfigDescriptor`
       - `ConfigListVisitor`
+      - `ConfigMigration`
       - `ConfigProxy`
       - `ConfigSource`
       - `ConfigV2ConflictEntry`
@@ -8715,6 +8716,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `configV2ValuesSchema`
       - `configValues`
       - `defineConfig`
+      - `defineConfigMigration`
       - `deleteScope`
       - `effective`
       - `forkDescriptorScope`
@@ -8784,6 +8786,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `backup/targets/local`
       - `build`
       - `config_v2/config-link`
+      - `config_v2/ledger`
       - `config_v2/settings`
       - `conversations`
       - `conversations/conversation-category`
@@ -8814,7 +8817,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/host/duress`
       - `integrations/gmail`
       - `plugin-meta/composition`
-      - `plugin-meta/relocate`
       - `primitives/data-view`
       - `primitives/data-view/custom-columns`
       - `primitives/data-view/view-core`
@@ -8931,6 +8933,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FieldShape`
           - `FieldShapeProps`
           - `FieldShapeRenderer`
+    - **`ledger`** — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the @hash chain.
+      - Core:
+        - Uses:
+          - `config_v2.APP_SCOPE_DIR`
+          - `config_v2.computeHash`
+          - `config_v2.ConfigDescriptor`
+          - `config_v2.JsonValue`
+        - Exports (types):
+          - `AppliedConfigMigration`
+          - `ConfigLedgerEntry`
+        - Exports (values):
+          - `APPLIED_CONFIG_MIGRATIONS_FILE`
+          - `applyConfigMigrations`
+          - `configTextHash`
+          - `parseConfigText`
+          - `rewriteConfigFiles`
+          - `runConfigLedger`
+          - `walkConfigFiles`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/codegen`
+          - `plugin-meta/relocate`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.
       - Web:
         - Slots:
@@ -9407,7 +9431,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource.compileEdges`
           - `infra/query-resource.rel`
           - `network/live.serveValue`
-          - `primitives/icon-picker.resolveIconSvgNodesJson`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
@@ -9419,6 +9442,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/tasks-core.conversationsView`
           - `tasks/tasks-core.createTask`
           - `tasks/tasks-core.listConversationsForDisplay`
+          - `ui/icons/sprites.defineSavedIconSource`
         - DB schema:
           - `plugins/conversations/plugins/agents/server/internal/rollup-table.ts`
           - `plugins/conversations/plugins/agents/server/internal/schema.ts`
@@ -9457,6 +9481,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.defineEndpoint`
           - `primitives/rank.RankSchema`
           - `tasks/tasks-core.ConversationStatusSchema`
+          - `ui/icons/saved-names.SavedSymbolNameSchema`
         - Exports (types):
           - `Agent`
           - `AgentLaunch`
@@ -9594,6 +9619,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
+          - `config_v2.watchConfig`
           - `conversations.conversationTurnCompleted`
           - `conversations.readConversationTurns`
           - `database.db`
@@ -9608,6 +9634,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getConversation`
+          - `ui/icons/sprites.defineSavedIconSource`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
         - Exports (types): `CategoryDescriptor`
         - Exports (values):
@@ -9668,6 +9695,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations.conversationCreated`
           - `conversations/preprompts.resolvePrepromptItem`
+          - `database.db`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
@@ -9675,6 +9705,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-preprompt.getTaskPreprompt`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getConversation`
+          - `ui/icons/sprites.defineSavedIconSource`
         - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
         - Exports (values):
@@ -12573,6 +12604,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
+          - `config_v2.watchConfig`
+          - `ui/icons/sprites.defineSavedIconSource`
         - Exports (values):
           - `resolvePreprompt`
           - `resolvePrepromptItem`
@@ -12891,6 +12924,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/agents`
       - `conversations/all-conversations`
       - `conversations/conversation-category`
+      - `conversations/conversation-preprompt`
       - `conversations/conversation-progress`
       - `conversations/conversations-view/grouped`
       - `conversations/conversations-view/queue`
@@ -12924,6 +12958,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `page/annotations/todo/task-link`
       - `page/attachment-block`
       - `page/block-text-write`
+      - `page/callout`
       - `page/editor`
       - `page/editor-collab`
       - `page/inline-date`
@@ -13206,6 +13241,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/log-channels.defineLogSink`
         - Exports (types): `DeclaredView`
         - Exports (values):
+          - `dropDerivedViews`
           - `rebuildDerivedViews`
           - `relationIdentityBase`
           - `View`
@@ -13322,6 +13358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database/derived-views.DeclaredView`
+          - `database/derived-views.dropDerivedViews`
           - `database/derived-views.rebuildDerivedViews`
           - `primitives/log-channels.defineLogSink`
         - Exports (values):
@@ -13468,7 +13505,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/chord/video-availability`
+          - `conversations/conversation-preprompt`
           - `conversations/session-chain`
+          - `page/callout`
+          - `page/editor`
           - `page/links`
           - `tasks/tasks-core`
       - Server:
@@ -15822,10 +15862,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `defineFieldType`
       - `fieldSchemaWithDefault`
       - `fieldsToZodObject`
-      - `getFieldResolver`
       - `nullable`
       - `pickMeta`
-      - `registerFieldResolver`
       - `resolveTypeChain`
   - Plugins:
     - **`avatar`** — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
@@ -15836,10 +15874,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.SavedSymbolName`
           - `ui/icons.symbol`
-        - Exports (types):
-          - `AvatarSpec`
-          - `SvgNode`
+        - Exports (types): `AvatarSpec`
         - Exports (values):
           - `avatarFieldType`
           - `avatarIdentity`
@@ -15860,13 +15897,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `fields.FieldDef`
               - `fields.FieldMeta`
-              - `fields.getFieldResolver`
               - `fields.pickMeta`
               - `fields/avatar.avatarFieldType`
               - `fields/avatar.AvatarSpec`
-              - `fields/avatar.SvgNode`
+              - `primitives/icon-picker.symbolNameForClassic`
+              - `ui/icons/saved-names.isSavedSymbolName`
+              - `ui/icons/saved-names.SavedSymbolNameSchema`
             - Exports (types): `AvatarFieldDef`
-            - Exports (values): `avatarField`
+            - Exports (values):
+              - `avatarField`
+              - `migrateClassicAvatar`
         - **`table`** — Avatar field type: data-view table cell (icon + color disc) plus the avatarFieldDef authoring helper.
           - Web:
             - Contributes: `DataViewSlots.Cell` "avatar" → `AvatarCell`
@@ -17801,6 +17841,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.REVIEW_MARKER`
               - `config_v2.stringifyConfigValue`
               - `config_v2.withOverrideLegend`
+              - `config_v2/ledger.AppliedConfigMigration`
+              - `config_v2/ledger.applyConfigMigrations`
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/plugin-id.asPath`
               - `framework/plugin-id.asPluginId`
@@ -22105,12 +22147,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `calloutBlock`
       - Server:
         - Contributes: `page.block-data` "callout"
-        - Uses: `page/editor.Editor`
+        - Uses:
+          - `database.db`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
+          - `page/editor.Editor`
+          - `page/editor.liveBlocks`
+          - `ui/icons/sprites.defineSavedIconSource`
       - Core:
         - Uses:
           - `page/container.defineContainerBlock`
-          - `page/editor.SvgNodeSchema`
           - `ui/icons.symbol`
+          - `ui/icons/saved-names.SavedSymbolNameSchema`
         - Exports (types): `CalloutColor`
         - Exports (values):
           - `CALLOUT_COLORS`
@@ -22271,7 +22319,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/dom/dom-selection.selectionRect`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
-          - `primitives/icon-picker.SvgIcon`
           - `primitives/latest-ref.useEventCallback`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/live-state.liveStateSocketKind`
@@ -22425,6 +22472,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database.db`
           - `database/derived-updated-at.deriveUpdatedAt`
           - `database/sql-column.parsedJson`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/events.defineTriggerEvent`
@@ -22435,6 +22484,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
+          - `ui/icons/sprites.defineSavedIconSource`
         - DB schema:
           - `plugins/page/plugins/editor/server/internal/tables-events.ts`
           - `plugins/page/plugins/editor/server/internal/tables.ts`
@@ -22511,6 +22561,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/tree.isDescendant`
           - `primitives/tree.selectionRoots`
           - `primitives/tree.subtreeIds`
+          - `ui/icons/saved-names.SavedSymbolNameSchema`
         - Exports (types):
           - `Block`
           - `BlockAudience`
@@ -22654,7 +22705,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SetPageKindBodySchema`
           - `sortMarks`
           - `splitRuns`
-          - `SvgNodeSchema`
           - `textBlockSchema`
           - `textDataSchema`
           - `textOf`
@@ -23157,8 +23207,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `network/live.liveValue`
-          - `page/editor.SvgNodeSchema`
           - `primitives/live-state.resourceDescriptor`
+          - `ui/icons/saved-names.SavedSymbolNameSchema`
         - Exports (types):
           - `BacklinkRow`
           - `PageLinkEdge`
@@ -24751,8 +24801,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`relocate`** — `./singularity plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
       - Core:
         - Uses:
-          - `config_v2.computeHash`
-          - `config_v2.JsonValue`
+          - `config_v2/ledger.rewriteConfigFiles`
+          - `config_v2/ledger.runConfigLedger`
+          - `config_v2/ledger.walkConfigFiles`
           - `framework/plugin-id.asPath`
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.PluginId`
@@ -24993,7 +25044,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/sidebar-framing`
       - Core:
         - Exports (types): `SidebarFramingProps`
-    - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
+    - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
         - Uses:
           - `primitives/css/cluster.Cluster`
@@ -25004,7 +25055,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DensityControlled`
           - `primitives/css/ui-kit.useControlSize`
           - `primitives/icon-picker.IconPicker`
-          - `primitives/icon-picker.SvgIcon`
           - `ui/icons.Icon`
         - Exports (types):
           - `AvatarColorPick`
@@ -25019,8 +25069,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AvatarPresentationProvider`
           - `avatarSoftClass`
           - `DEFAULT_AGENT_AVATAR`
-      - Server:
-        - Uses: `primitives/icon-picker.resolveIconSvgNodes`
       - Cross-plugin:
         - Imported by:
           - `apps/mail/reading-pane`
@@ -30010,7 +30058,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
           - `ui/theme-engine/theme-gallery`
-    - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
+    - **`icon-picker`** — Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.
       - Web:
         - Uses:
           - `primitives/css/center.Center`
@@ -30022,35 +30070,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/loading.Loading`
-        - Exports (types):
-          - `FullIconCategory`
-          - `FullIconEntry`
-          - `FullIconSet`
-          - `IconPickerProps`
-          - `IconSelection`
-          - `SvgIconProps`
-          - `SvgNode`
+          - `primitives/virtual-rows.VirtualRows`
+          - `ui/icons.Icon`
+        - Exports (types): `IconPickerProps`
+        - Exports (values): `IconPicker`
+      - Core:
+        - Uses: `ui/icons/saved-names.parseSavedSymbolName`
         - Exports (values):
-          - `extractSvgNodes`
-          - `IconPicker`
-          - `loadFullIconSet`
-          - `SvgIcon`
+          - `CLASSIC_SYMBOL_NAMES`
+          - `symbolNameForClassic`
       - Cross-plugin:
         - Imported by:
           - `apps/pages/page-tree`
-          - `conversations/agents`
+          - `fields/avatar/config`
           - `page/callout`
-          - `page/editor`
           - `primitives/avatar`
-      - Server:
-        - Exports (values):
-          - `resolveIconSvgNodes`
-          - `resolveIconSvgNodesJson`
-      - Core:
-        - Exports (types): `SvgNode`
-        - Exports (values):
-          - `ICON_SVG_MAP`
-          - `svgNodesToString`
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
       - Web:
         - Slots: `InlineTextWalkerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -32944,6 +32978,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/gallery`
           - `primitives/data-view/icons`
           - `primitives/data-view/list`
+          - `primitives/icon-picker`
           - `primitives/tree`
 
 - **`release`** — Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
@@ -36393,6 +36428,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/expandable`
           - `primitives/folder-picker`
           - `primitives/icon-button`
+          - `primitives/icon-picker`
           - `primitives/launch`
           - `primitives/overlay/image-viewer`
           - `primitives/pane`
@@ -36434,12 +36470,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/icons`
           - `ui/tokens/shadow`
       - Web:
-        - Exports (types): `IconProps`
+        - Exports (types):
+          - `IconProps`
+          - `RuntimeSymbolEntry`
         - Exports (values):
+          - `hasRuntimeSymbol`
           - `hasSprite`
           - `Icon`
           - `IconScopeProvider`
           - `IconSpriteSheet`
+          - `installRuntimeSymbolLoader`
+          - `provideRuntimeSymbols`
           - `provideSprite`
           - `useIconStyle`
           - `usePublishIconStyle`
@@ -36461,6 +36502,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `IconShape`
           - `IconStyle`
           - `IconWeight`
+          - `RuntimeSymbolRef`
+          - `SavedSymbolName`
           - `SpriteKey`
           - `StyleKey`
           - `SymbolName`
@@ -36480,22 +36523,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `isStyleKey`
           - `parseStyleKey`
           - `resolveSymbolStyle`
+          - `runtimeSymbol`
+          - `runtimeSymbolId`
           - `styleKeyOf`
           - `symbol`
           - `symbolId`
       - Shared:
+        - Exports (types): `SymbolNameList`
         - Exports (values):
           - `brandNames`
           - `ICON_SET_PACKAGES`
           - `installedSetVersions`
           - `readIconSet`
           - `readInputsHash`
+          - `readListInputsHash`
+          - `renderSymbolNameList`
           - `renderSymbolNames`
+          - `SYMBOL_NAME_LIST_REL_PATH`
           - `SYMBOL_NAMES_REL_PATH`
           - `symbolBaseNames`
           - `symbolNamesInputsHash`
       - Plugins:
-        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks. Builds the icon sprites from the Iconify JSON for the manifest's names — one <svg> of <symbol id="ms-<styleKey>-<name>"> per style key (material-symbols at 400, material-symbols-light at 300) plus a brands sprite — and serves the default style's as the resident icons.sprites value and every one at GET /api/icons/sprite/:hash/:key, immutable.
+        - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/agents`
+              - `fields/avatar/config`
+              - `page/callout`
+              - `page/editor`
+              - `page/links`
+              - `primitives/icon-picker`
+          - Core:
+            - Exports (values):
+              - `allSavedSymbolNames`
+              - `isSavedSymbolName`
+              - `parseSavedSymbolName`
+              - `SavedSymbolNameSchema`
+        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks. Builds the icon sprites from the Iconify JSON for the manifest's names — one <svg> of <symbol id="ms-<styleKey>-<name>"> per style key (material-symbols at 400, material-symbols-light at 300) plus a brands sprite — and serves the default style's as the resident icons.sprites value and every one at GET /api/icons/sprite/:hash/:key, immutable. Saved (user-picked) icons are runtime symbols: the resident icons.saved-sprites value draws every name a defineSavedIconSource source reports in the default style, and GET /api/icons/symbols/:hash/:key?names= serves any saved names in any style, immutable.
           - Web:
             - Contributes: `Core.Root` → `IconSpriteHost`
             - Uses:
@@ -36503,27 +36567,53 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live.useLive`
               - `ui/icons.hasSprite`
               - `ui/icons.IconSpriteSheet`
+              - `ui/icons.installRuntimeSymbolLoader`
+              - `ui/icons.provideRuntimeSymbols`
               - `ui/icons.provideSprite`
               - `ui/icons.useWantedStyleKeys`
           - Server:
-            - Contributes: `resource.declare` "icons.sprites"
+            - Contributes:
+              - `resource.declare` "icons.sprites"
+              - `resource.declare` "icons.saved-icons-changed"
+              - `resource.declare` "icons.saved-sprites"
             - Uses:
               - `network/live.serveValue`
               - `ui/icons.resolveIcon`
               - `ui/icons.resolveSymbol`
               - `ui/icons.SymbolSets`
-            - Resources: `icons.sprites` (push)
-            - Routes: `GET /api/icons/sprite/:hash/:key`
+            - Exports (types): `SavedIconSource`
+            - Exports (values): `defineSavedIconSource`
+            - Resources:
+              - `icons.saved-icons-changed` (push)
+              - `icons.saved-sprites` (push)
+              - `icons.sprites` (push)
+            - Routes:
+              - `GET /api/icons/sprite/:hash/:key`
+              - `GET /api/icons/symbols/:hash/:key`
           - Core:
             - Uses:
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
-            - Exports (types): `IconSprites`
+            - Exports (types):
+              - `IconSprites`
+              - `SavedIconSprites`
             - Exports (values):
               - `IconSpritesSchema`
               - `residentSprites`
+              - `runtimeSymbolsEndpoint`
+              - `savedIconsChanged`
+              - `savedIconSprites`
+              - `SavedIconSpritesSchema`
               - `spriteEndpoint`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/agents`
+              - `conversations/conversation-category`
+              - `conversations/conversation-preprompt`
+              - `conversations/preprompts`
+              - `page/callout`
+              - `page/editor`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.arc`, `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.pie`, `ui.segmented-progress-bar.segmented`

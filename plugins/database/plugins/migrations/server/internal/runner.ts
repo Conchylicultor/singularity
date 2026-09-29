@@ -4,6 +4,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
+  dropDerivedViews,
   rebuildDerivedViews,
   type DeclaredView,
 } from "@plugins/database/plugins/derived-views/server";
@@ -172,9 +173,14 @@ export async function runMigrations(db: NodePgDatabase): Promise<void> {
       );
     }
 
-    for (const m of toApply) {
+    for (const [i, m] of toApply.entries()) {
       log.publish(`[migrate] applying ${m.file}`);
       await db.transaction(async (tx) => {
+        // Live views would block a migration that drops or retypes a column
+        // they read; they are rebuilt from source right after migrations, so
+        // drop the whole layer first — atomically with the first migration, so
+        // a failure there leaves the views in place.
+        if (i === 0) await dropDerivedViews(tx);
         await tx.execute(drizzleSql.raw(m.sqlText));
         await tx.execute(
           drizzleSql`INSERT INTO ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (hash, file) VALUES (${m.hash}, ${m.file})`,
@@ -233,6 +239,9 @@ export async function dryRunPendingMigrations(
       // to ACQUIRE a lock so the dry-run can never queue behind live traffic.
       await tx.execute(drizzleSql`SET LOCAL lock_timeout = '1s'`);
       await tx.execute(drizzleSql`SET LOCAL statement_timeout = '60s'`);
+      // Mirror runMigrations: the live view layer is dropped before the pending
+      // migrations and rebuilt after them.
+      await dropDerivedViews(tx);
       for (const m of pending) {
         try {
           await tx.execute(drizzleSql.raw(m.sqlText));

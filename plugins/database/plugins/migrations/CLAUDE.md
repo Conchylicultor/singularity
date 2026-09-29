@@ -101,6 +101,15 @@ Make the backfill idempotent (`ON CONFLICT DO NOTHING`, guarded `UPDATE … WHER
 it is re-hashed and re-applied whenever its content changes. Worked example —
 `data/20260808_014745_0e6cb898__backfill_conversation_category_rows.sql`.
 
+## Views never block a migration
+
+Plain views are derived code (`database/derived-views`), rebuilt from source after
+migrations. Before the first pending migration applies, the runner drops every
+live `public` view (`dropDerivedViews`, in that migration's transaction), so a
+migration that drops or retypes a column a view reads just works. Never hand-add
+a `DROP VIEW` to a schema migration: push regenerates schema migrations and
+refuses hand-edited ones.
+
 ## Pre-push verification
 
 The only way a migration "breaks main" is by erroring during boot
@@ -113,8 +122,9 @@ before push:
   connection** (the ~99% case).
 - **Slow path** — otherwise it opens a direct connection to the live **main** DB
   and calls `dryRunPendingMigrations` (`server/internal/runner.ts`), which replays
-  only the pending delta (every pending migration in **one** transaction, so a
-  later one sees an earlier one's DDL, then `rebuildDerivedViews`) and **always
+  only the pending delta (`dropDerivedViews`, then every pending migration in
+  **one** transaction, so a later one sees an earlier one's DDL, then
+  `rebuildDerivedViews`) and **always
   rolls back** via a sentinel throw. The check process never boots, so it hands
   the dry-run the view set itself, read from main's server barrels
   (`check/internal/declared-views.ts`) — `View.getContributions()` throws there. Applying against main's real schema + data
@@ -257,6 +267,7 @@ only agreement that matters.
 - Server:
   - Uses:
     - `database/derived-views.DeclaredView`
+    - `database/derived-views.dropDerivedViews`
     - `database/derived-views.rebuildDerivedViews`
     - `primitives/log-channels.defineLogSink`
   - Exports (values):

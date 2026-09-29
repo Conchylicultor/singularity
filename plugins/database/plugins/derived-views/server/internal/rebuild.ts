@@ -145,3 +145,42 @@ export async function rebuildDerivedViews(
     );
   });
 }
+
+// Drops every plain view that is LIVE in the `public` schema, ahead of pending
+// migrations. Views are derived code rebuilt from source right after migrations
+// (`rebuildDerivedViews`), so nothing is lost — but while they exist, a migration
+// that drops or retypes a column a live view reads fails ("cannot drop column …
+// because other objects depend on it"). drizzle-kit never sees the views, so it
+// cannot order a DROP VIEW itself, and push regenerates schema migrations, so a
+// hand-added DROP VIEW never survives. Dropping the whole layer first makes that
+// class of failure impossible.
+//
+// The LIVE set, not the declared one: the view in the way is the one the
+// previous code created, which the current declarations may no longer name.
+// Every public view is derived (plain views left the migration layer in
+// `views_as_derived_code`); other schemas (graphile_worker) are untouched.
+//
+// One statement naming every view, so Postgres resolves dependents among them
+// with no ordering and no CASCADE. `rebuildDerivedViews` then sees views missing
+// and rebuilds regardless of its stored signature.
+export async function dropDerivedViews(db: NodePgDatabase): Promise<void> {
+  const rows = await executeRows(db, {
+    // `information_schema.views.table_name` is a domain over `name`; the cast
+    // keeps the decoded type the one the schema declares.
+    query: drizzleSql.raw(
+      `SELECT table_name::text AS table_name FROM information_schema.views WHERE table_schema = 'public'`,
+    ),
+    row: z.object({ table_name: z.string() }),
+    label: "derived-views: list live views to drop",
+  });
+  if (rows.length === 0) return;
+  const names = rows.map((r) => r.table_name);
+  log.publish(
+    `[derived-views] dropping ${names.length} live view(s) before migrations: ${names.join(", ")}`,
+  );
+  await db.execute(
+    drizzleSql.raw(
+      `DROP VIEW IF EXISTS ${names.map((n) => `"public"."${n.replaceAll('"', '""')}"`).join(", ")}`,
+    ),
+  );
+}

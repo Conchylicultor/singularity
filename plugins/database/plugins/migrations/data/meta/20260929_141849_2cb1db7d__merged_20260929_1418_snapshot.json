@@ -1,6 +1,6 @@
 {
-  "id": "cf4e31f8-848b-4ab9-8b46-924a87a37526",
-  "prevId": "b2eefa36-a84b-471d-87b8-12fb5da0e1f3",
+  "id": "f4a70ad8-b907-4ca1-8c50-f04402b76267",
+  "prevId": "31eea3cc-6172-46fa-afd6-c3963278c4b1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -950,12 +950,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "visitors": {
-          "name": "visitors",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "visits": {
           "name": "visits",
           "type": "integer",
@@ -1158,6 +1152,140 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.analytics_visit_members": {
+      "name": "analytics_visit_members",
+      "schema": "",
+      "columns": {
+        "visit_id": {
+          "name": "visit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "day": {
+          "name": "day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "visitor_id": {
+          "name": "visitor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dim": {
+          "name": "dim",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "analytics_visit_members_level_idx": {
+          "name": "analytics_visit_members_level_idx",
+          "columns": [
+            {
+              "expression": "dim",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "value",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "day",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analytics_visit_members_day_idx": {
+          "name": "analytics_visit_members_day_idx",
+          "columns": [
+            {
+              "expression": "day",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "analytics_visit_members_visit_id_dim_value_pk": {
+          "name": "analytics_visit_members_visit_id_dim_value_pk",
+          "columns": [
+            "visit_id",
+            "dim",
+            "value"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.analytics_visitor_links": {
+      "name": "analytics_visitor_links",
+      "schema": "",
+      "columns": {
+        "day": {
+          "name": "day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hash": {
+          "name": "hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "visitor_id": {
+          "name": "visitor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "analytics_visitor_links_day_hash_pk": {
+          "name": "analytics_visitor_links_day_hash_pk",
+          "columns": [
+            "day",
+            "hash"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.analytics_visits": {
       "name": "analytics_visits",
       "schema": "",
@@ -1169,8 +1297,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "visitor_hash": {
-          "name": "visitor_hash",
+        "visitor_id": {
+          "name": "visitor_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -1319,11 +1447,11 @@
         }
       },
       "indexes": {
-        "analytics_visits_hash_last_at_idx": {
-          "name": "analytics_visits_hash_last_at_idx",
+        "analytics_visits_visitor_last_at_idx": {
+          "name": "analytics_visits_visitor_last_at_idx",
           "columns": [
             {
-              "expression": "visitor_hash",
+              "expression": "visitor_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
