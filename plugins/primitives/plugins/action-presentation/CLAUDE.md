@@ -55,6 +55,20 @@ registration into the nearest item scope, the `useReportPopupOpen` shape.
 + `"|"` + `yields`), never object identity — call sites pass an inline literal,
 so identity churns every render and would thrash the region's ledger.
 
+## One declarer per item — `ActionFormShield`
+
+A region mounts one channel per ITEM, and every `useActionForm` below it
+declares into that channel, replacing whatever was declared before. So a widget
+that declares its own ladder and renders `IconButton`s inside itself (a version
+stepper's ‹ ›) has them declare `["row"]` over it, and which ladder the item
+ends up with depends on effect order — the stepper lost its `compact` rung and
+was relocated whole. Wrap such a widget's inner controls in
+`<ActionFormShield>`: below it there is no region, so they render at `"full"`
+and declare nothing. The bar also ignores the release of a declaration that has
+since been replaced, so an inner control unmounting can no longer reset a
+still-mounted widget's ladder. Detecting a second live declarer loudly is not
+done yet.
+
 ## Holds
 
 `useHoldShrink(active)` freezes an item's assignment while a live interaction is
@@ -118,12 +132,14 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
     - `YieldEagerness`
   - Exports (values):
     - `ActionFormProvider`
+    - `ActionFormShield`
     - `PanelActionRow`
     - `useActionForm`
     - `useHoldShrink`
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/prototypes/canvas`
     - `apps/website/improve`
     - `primitives/adaptive-bar`
     - `primitives/icon-button`

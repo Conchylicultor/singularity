@@ -14,7 +14,10 @@ import {
   ActionFormProvider,
   type ItemFormChannel,
 } from "@plugins/primitives/plugins/action-presentation/web";
-import { useRegionForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  useRegionForwardedAttrs,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import {
@@ -31,6 +34,15 @@ export interface AdaptiveBarItemProps {
    * rather than silently moving the wrong element.
    */
   id: string;
+  /**
+   * Classes on the occupant's own container, which travels with it — docked in
+   * the row, parked in the panel. For a trait of the occupant as a whole that
+   * a wrapper inside it cannot carry, because a wrapper is an element even when
+   * the widget renders nothing, and an empty occupant is judged by its
+   * container having no child element. Merged after the container's rigidity,
+   * which it cannot remove.
+   */
+  className?: string;
   children: ReactNode;
 }
 
@@ -54,12 +66,13 @@ export interface AdaptiveBarItemProps {
  */
 export function AdaptiveBarItem({
   id,
+  className,
   children,
 }: AdaptiveBarItemProps): ReactElement {
   const registry = useContext(BarRegistryContext);
   if (registry === null || registry.editMode) return <>{children}</>;
   return (
-    <PortaledBarItem registry={registry} id={id}>
+    <PortaledBarItem registry={registry} id={id} className={className}>
       {children}
     </PortaledBarItem>
   );
@@ -85,10 +98,12 @@ export function AdaptiveBarItem({
 function PortaledBarItem({
   registry,
   id,
+  className,
   children,
 }: {
   registry: BarRegistry;
   id: string;
+  className: string | undefined;
   children: ReactNode;
 }): ReactElement {
   const [container] = useState(() => {
@@ -113,6 +128,11 @@ function PortaledBarItem({
     el.className = rigidClass();
     return el;
   });
+  useLayoutEffect(() => {
+    // Stamped like the forwarded attributes below: the container is not a
+    // React element, so nothing else can carry the occupant's own classes.
+    container.setAttribute("class", cn(rigidClass(), className));
+  }, [container, className]);
   // The REGION bag, not the popup one: this container is still part of the
   // region it was rendered in, whether docked in the row or parked in the
   // panel, so it keeps a region-only value (a theme sub-theme) a popup drops.

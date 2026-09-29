@@ -46,6 +46,12 @@ its children so `slot-render` draws no cell of its own (the bar's container IS
 each item's box), and it docks against the anchor's parent so the wrapper chain
 between them is invisible.
 
+`<AdaptiveBar.Item className>` puts classes on the occupant's own container,
+which travels with it between the row and the panel — for a trait of the whole
+occupant (a hover reveal) that a wrapper inside it cannot carry: a wrapper is an
+element even when the widget renders nothing, so the occupant would never read
+as empty. The container's rigidity is always kept.
+
 ## `<AdaptiveBar.Yield>` — the row's give
 
 At most **one** child per bar that is excluded from the fit ledger: never
@@ -866,6 +872,7 @@ rendered.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/prototypes/canvas`
     - `apps/sonata`
     - `conversations/conversation-view/prompt-templates`
     - `primitives/pane`

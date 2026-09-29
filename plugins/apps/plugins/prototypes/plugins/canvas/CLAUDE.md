@@ -211,6 +211,13 @@ canvas as surface-scoped plain keys (silent while a text field has focus):
 
 A selected frame shows its header actions; the others reveal them on hover.
 
+A frame's header is as wide as its screen, so on a crowded canvas it runs out
+of room. It is an `AdaptiveBar`: the name ellipsizes to its floor, the version
+stepper shrinks to its bare `v14` label (the list still opens; `[` / `]` still
+step), and the actions that still do not fit move behind a `⋯`. The hover
+reveal hides an action only while it sits in the row
+(`hoverRevealTargetInAnchor`), so one in the `⋯` panel is visible there.
+
 ## The URL
 
 The URL names only the prototype: `proto/<id>` (what the CLI prints). What is
@@ -300,6 +307,9 @@ navigation, so it starts from nothing remembered.
     - `apps-core/tabs.navigate`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
+    - `primitives/action-presentation.ActionFormShield`
+    - `primitives/action-presentation.useActionForm`
+    - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
@@ -334,6 +344,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/hover-reveal.hoverRevealTargetInAnchor`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`

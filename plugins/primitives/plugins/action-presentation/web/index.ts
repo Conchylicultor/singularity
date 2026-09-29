@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export {
   ActionFormProvider,
+  ActionFormShield,
   useActionForm,
   useHoldShrink,
   type ActionForm,

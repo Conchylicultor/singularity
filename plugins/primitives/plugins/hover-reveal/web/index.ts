@@ -5,6 +5,7 @@ export {
   hoverRevealGroup,
   hoverRevealTarget,
   hoverRevealTargetWithGroupFocus,
+  hoverRevealTargetInAnchor,
 } from "./internal/group-reveal";
 
 export default {

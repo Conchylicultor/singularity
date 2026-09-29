@@ -74,6 +74,29 @@ export function ActionFormProvider({
   );
 }
 
+/**
+ * Keeps the controls inside a widget from speaking for its item.
+ *
+ * A region mounts one channel per ITEM, and every `useActionForm` below it
+ * declares into that one channel — so a widget that declares its own ladder
+ * and renders `IconButton`s inside itself (a stepper's ‹ ›) has them declare
+ * `["row"]` over it, and whichever effect ran last decides what the item can
+ * shrink to. Wrap the widget's inner controls in this: below it there is no
+ * region, so they render at `"full"` and declare nothing, and the widget's own
+ * ladder is the item's.
+ */
+export function ActionFormShield({
+  children,
+}: {
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <ItemFormChannelContext.Provider value={null}>
+      {children}
+    </ItemFormChannelContext.Provider>
+  );
+}
+
 /** Shared empty rung list, so `useLatestRef`'s value is stable when nothing is declared. */
 const NO_RUNGS: readonly Exclude<ActionForm, "full">[] = [];
 

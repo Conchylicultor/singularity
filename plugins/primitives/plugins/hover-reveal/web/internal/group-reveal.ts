@@ -25,6 +25,17 @@ export const hoverRevealTarget =
   "group-hover/hover-reveal:opacity-100 group-hover/hover-reveal:pointer-events-auto " +
   "focus-within:opacity-100 focus-within:pointer-events-auto";
 
+// Anchored variant (OPT-IN): hides ONLY while inside an idle anchor — outside
+// any anchor it is simply visible. For an affordance that can leave its anchor
+// while mounted: an adaptive bar relocates an occupant into its body-portaled
+// `⋯` panel, where the default target (hidden unless an anchor ABOVE it is
+// hovered) would be an invisible, unclickable row. Same self-scoped focus
+// reveal, same opacity ⇄ pointer-events coupling and `select-none`.
+export const hoverRevealTargetInAnchor =
+  "select-none transition-opacity " +
+  "group-[:not(:hover)]/hover-reveal:not-focus-within:opacity-0 " +
+  "group-[:not(:hover)]/hover-reveal:not-focus-within:pointer-events-none";
+
 // Group-focus variant (OPT-IN): reveals on anchor hover OR when ANY descendant
 // of the anchor is focused (`group-focus-within`). Use this ONLY when the anchor
 // hosts a dedicated *trigger* — distinct from the target and not general content

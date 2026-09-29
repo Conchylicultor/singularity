@@ -11,6 +11,7 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   documentOptions,
@@ -233,7 +234,7 @@ function FrameCard({
               meta={meta}
               name={name}
               resolution={resolution}
-              actionsClassName={selected ? undefined : cn(hoverRevealTarget)}
+              revealActions={!selected}
             />
             <SelectableScreen
               selected={selected}
@@ -348,12 +349,14 @@ function SwipeFrames({
               }}
             >
               <Stack direction="row" gap="lg" align="center">
-                <FrameHeader
-                  frame={a}
-                  meta={meta}
-                  name={names(a)}
-                  resolution={resolutionA}
-                />
+                <Fill>
+                  <FrameHeader
+                    frame={a}
+                    meta={meta}
+                    name={names(a)}
+                    resolution={resolutionA}
+                  />
+                </Fill>
                 <Text
                   variant="caption"
                   tone="faint"
@@ -361,12 +364,14 @@ function SwipeFrames({
                 >
                   ← drag →
                 </Text>
-                <FrameHeader
-                  frame={b}
-                  meta={meta}
-                  name={names(b)}
-                  resolution={resolutionB}
-                />
+                <Fill>
+                  <FrameHeader
+                    frame={b}
+                    meta={meta}
+                    name={names(b)}
+                    resolution={resolutionB}
+                  />
+                </Fill>
               </Stack>
               <div className="relative" style={{ width, height }}>
                 {screenB}

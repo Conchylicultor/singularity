@@ -17,6 +17,10 @@ import { showToast } from "@plugins/shell/plugins/toast/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
+  ActionFormShield,
+  useActionForm,
+} from "@plugins/primitives/plugins/action-presentation/web";
+import {
   prototypeHistory,
   restorePrototypeVersion,
   type PrototypeHistory,
@@ -52,20 +56,33 @@ export interface VersionStepperProps {
  *
  * Pending history renders disabled arrows over a loading label — never a "v0"
  * that is really "not loaded yet".
+ *
+ * In a bar that runs out of room (a narrow canvas frame's header) it shrinks to
+ * its compact form: the bare `v14` label, still opening the version list, with
+ * no arrows and no floor — `[` / `]` still step the selected frame. It gives up
+ * room late, after its neighbours, since it is what a frame's header is for.
  */
 export function VersionStepper(props: VersionStepperProps): ReactElement {
   const history = useLive(prototypeHistory, { name: props.name });
+  const compact =
+    useActionForm({ shrinksTo: ["compact"], yields: "late" }) === "compact";
+  // The stepper's own ladder is its item's: its ‹ › and label are parts of
+  // it, not occupants that may each declare a form of their own.
   return (
     <ControlSizeProvider size="xs">
-      {matchResource(history, {
-        pending: () => <PendingStepper />,
-        error: (err) => (
-          <Text variant="caption" tone="destructive" title={err.message}>
-            History unavailable
-          </Text>
-        ),
-        ready: (h) => <ReadyStepper history={h} {...props} />,
-      })}
+      <ActionFormShield>
+        {matchResource(history, {
+          pending: () => <PendingStepper compact={compact} />,
+          error: (err) => (
+            <Text variant="caption" tone="destructive" title={err.message}>
+              History unavailable
+            </Text>
+          ),
+          ready: (h) => (
+            <ReadyStepper history={h} compact={compact} {...props} />
+          ),
+        })}
+      </ActionFormShield>
     </ControlSizeProvider>
   );
 }
@@ -97,13 +114,21 @@ function Pill({
   );
 }
 
-function PendingStepper(): ReactElement {
+function PendingStepper({ compact }: { compact: boolean }): ReactElement {
+  const label = (
+    <Button
+      variant="ghost"
+      disabled
+      className={compact ? undefined : LABEL_WIDTH}
+    >
+      <Loading variant="block" className={compact ? "h-3 w-6" : "h-3 w-12"} />
+    </Button>
+  );
+  if (compact) return <Pill past={false}>{label}</Pill>;
   return (
     <Pill past={false}>
       <IconButton icon={chevronLeftIcon} label="Previous version" disabled />
-      <Button variant="ghost" disabled className={LABEL_WIDTH}>
-        <Loading variant="block" className="h-3 w-12" />
-      </Button>
+      {label}
       <IconButton icon={chevronRightIcon} label="Next version" disabled />
     </Pill>
   );
@@ -115,7 +140,12 @@ function ReadyStepper({
   shown,
   show,
   compare,
-}: VersionStepperProps & { history: PrototypeHistory }): ReactElement {
+  compact,
+}: VersionStepperProps & {
+  history: PrototypeHistory;
+  /** The bare label: no arrows, no floor, no `· latest` suffix. */
+  compact: boolean;
+}): ReactElement {
   const [open, setOpen] = useState(false);
   const { model, current, prev, next, go, stepBack, stepForward } =
     useVersionStepping(history, { shown, show });
@@ -140,6 +170,57 @@ function ReadyStepper({
     [shownSha, compare],
   );
 
+  const list = (
+    <InlinePopover
+      open={open}
+      onOpenChange={setOpen}
+      align="start"
+      width="lg"
+      maxHeight="xl"
+      tooltip={<StepTooltip step={current} />}
+      trigger={
+        <Button
+          variant="ghost"
+          className={cn(!compact && LABEL_WIDTH, "rounded-full")}
+        >
+          <StepLabel step={current} compact={compact} />
+        </Button>
+      }
+    >
+      <Stack gap="xs">
+        <Text variant="eyebrow" tone="faint">
+          Versions
+        </Text>
+        <VersionListFrameContext value={listFrame}>
+          <VersionList
+            history={history}
+            selected={shownSha}
+            onPick={(version) => {
+              const step = model.steps.find(
+                (s) => s.kind === "version" && s.version.sha === version.sha,
+              );
+              go(step ?? null);
+              setOpen(false);
+            }}
+          />
+        </VersionListFrameContext>
+        {restorable !== null ? (
+          <Button
+            variant="secondary"
+            className="text-warning"
+            onClick={() => {
+              setOpen(false);
+              confirmRestore(name, restorable, show);
+            }}
+          >
+            <Icon icon={historyIcon} />
+            Make v{restorable.n} the latest
+          </Button>
+        ) : null}
+      </Stack>
+    </InlinePopover>
+  );
+  if (compact) return <Pill past={past}>{list}</Pill>;
   return (
     <Pill past={past}>
       <IconButton
@@ -148,51 +229,7 @@ function ReadyStepper({
         disabled={prev === null}
         onClick={stepBack}
       />
-      <InlinePopover
-        open={open}
-        onOpenChange={setOpen}
-        align="start"
-        width="lg"
-        maxHeight="xl"
-        tooltip={<StepTooltip step={current} />}
-        trigger={
-          <Button variant="ghost" className={cn(LABEL_WIDTH, "rounded-full")}>
-            <StepLabel step={current} />
-          </Button>
-        }
-      >
-        <Stack gap="xs">
-          <Text variant="eyebrow" tone="faint">
-            Versions
-          </Text>
-          <VersionListFrameContext value={listFrame}>
-            <VersionList
-              history={history}
-              selected={shownSha}
-              onPick={(version) => {
-                const step = model.steps.find(
-                  (s) => s.kind === "version" && s.version.sha === version.sha,
-                );
-                go(step ?? null);
-                setOpen(false);
-              }}
-            />
-          </VersionListFrameContext>
-          {restorable !== null ? (
-            <Button
-              variant="secondary"
-              className="text-warning"
-              onClick={() => {
-                setOpen(false);
-                confirmRestore(name, restorable, show);
-              }}
-            >
-              <Icon icon={historyIcon} />
-              Make v{restorable.n} the latest
-            </Button>
-          ) : null}
-        </Stack>
-      </InlinePopover>
+      {list}
       <IconButton
         icon={chevronRightIcon}
         label="Next version"
@@ -203,10 +240,28 @@ function ReadyStepper({
   );
 }
 
-/** `v14 · latest` (the suffix dimmed) — or `v11` in the past-version colour. */
-function StepLabel({ step }: { step: VersionStep | null }): ReactElement {
+/**
+ * `v14 · latest` (the suffix dimmed) — or `v11` in the past-version colour.
+ * Compact drops the suffix: `v14`, `Live`.
+ */
+function StepLabel({
+  step,
+  compact,
+}: {
+  step: VersionStep | null;
+  compact: boolean;
+}): ReactElement {
   if (step === null) {
     return <span className="text-warning">Unknown</span>;
+  }
+  if (compact) {
+    return step.kind === "unsaved" ? (
+      <span>Live</span>
+    ) : (
+      <span className={cn("tabular-nums", !step.live && "text-warning")}>
+        v{step.version.n}
+      </span>
+    );
   }
   if (step.kind === "unsaved") {
     return (

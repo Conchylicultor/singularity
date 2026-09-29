@@ -34,6 +34,7 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `hoverRevealClass`
     - `hoverRevealGroup`
     - `hoverRevealTarget`
+    - `hoverRevealTargetInAnchor`
     - `hoverRevealTargetWithGroupFocus`
     - `useHoverReveal`
 - Cross-plugin:

@@ -1,12 +1,11 @@
 import type { ReactElement } from "react";
+import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { hoverRevealTargetInAnchor } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import type { CanvasFrame } from "../internal/canvas-model";
 import { FRAME_HEAD } from "../internal/layout";
@@ -20,16 +19,23 @@ export const FRAME_HEADER_GAP = FRAME_HEAD - FRAME_HEADER_HEIGHT;
 
 /**
  * A frame's header: its name, what it shows (the version stepper for
- * the prototype, the source's tag otherwise), and — revealed on hover, or while
- * it is selected — its actions. One line at a fixed height, so the canvas can
- * subtract it from the room a frame's screen gets.
+ * the prototype, the source's tag otherwise), and its actions. One line at a
+ * fixed height, so the canvas can subtract it from the room a frame's screen
+ * gets.
+ *
+ * The header is exactly as wide as the frame's screen, which on a crowded
+ * canvas is narrow — so it is an adaptive bar: the name ellipsizes down to its
+ * floor, the stepper shrinks to its bare label, and the actions that still do
+ * not fit move behind a `⋯`. `revealActions` hides the actions until the frame
+ * is hovered, but only while they sit in the row — one relocated into the
+ * `⋯` panel is shown there as itself.
  */
 export function FrameHeader({
   frame,
   meta,
   name,
   resolution,
-  actionsClassName,
+  revealActions = false,
 }: {
   frame: CanvasFrame;
   meta: PrototypeMeta;
@@ -37,34 +43,41 @@ export function FrameHeader({
   name: string;
   /** What a source frame resolved to — `null` for a prototype frame. */
   resolution: FrameResolution | null;
-  /** The actions' reveal classes (hover-revealed unless selected). */
-  actionsClassName?: ClassName;
+  /** Show the actions in the row only while the frame is hovered. */
+  revealActions?: boolean;
 }): ReactElement {
+  const row = { frame, meta };
   return (
     <ControlSizeProvider size="xs">
       <Line style={{ height: FRAME_HEADER_HEIGHT }}>
-        <Stack direction="row" gap="sm" align="center" className="w-full">
-          <Text variant="label">{name}</Text>
-          <span className={rigidClass()}>
+        <AdaptiveBar gap="sm" label="Frame actions">
+          <AdaptiveBar.Yield>
+            <Text variant="label">{name}</Text>
+          </AdaptiveBar.Yield>
+          <AdaptiveBar.Item id="shows">
             {frame.kind === "prototype" ? (
               <FrameVersion frame={frame} name={meta.name} />
             ) : resolution?.status === "found" ? (
               <Badge variant="success">{resolution.tag}</Badge>
             ) : null}
-          </span>
+          </AdaptiveBar.Item>
           <Fill />
-          <Stack
-            direction="row"
-            gap="none"
-            align="center"
-            className={actionsClassName}
-          >
-            <PrototypeFrameActions.Row
-              row={{ frame, meta }}
-              hasChildren={false}
-            />
-          </Stack>
-        </Stack>
+          <PrototypeFrameActions.Render>
+            {(item) => {
+              const Action = item.component;
+              return (
+                <AdaptiveBar.Item
+                  id={item.id}
+                  className={
+                    revealActions ? hoverRevealTargetInAnchor : undefined
+                  }
+                >
+                  <Action row={row} hasChildren={false} />
+                </AdaptiveBar.Item>
+              );
+            }}
+          </PrototypeFrameActions.Render>
+        </AdaptiveBar>
       </Line>
     </ControlSizeProvider>
   );

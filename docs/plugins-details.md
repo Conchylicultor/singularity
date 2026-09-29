@@ -3791,6 +3791,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tabs.navigate`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
+              - `primitives/action-presentation.ActionFormShield`
+              - `primitives/action-presentation.useActionForm`
+              - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/column.Column`
@@ -3825,6 +3828,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/hover-reveal.hoverRevealGroup`
               - `primitives/hover-reveal.hoverRevealTarget`
+              - `primitives/hover-reveal.hoverRevealTargetInAnchor`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
@@ -24802,12 +24806,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `YieldEagerness`
         - Exports (values):
           - `ActionFormProvider`
+          - `ActionFormShield`
           - `PanelActionRow`
           - `useActionForm`
           - `useHoldShrink`
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
+          - `apps/prototypes/canvas`
           - `apps/website/improve`
           - `primitives/adaptive-bar`
           - `primitives/icon-button`
@@ -24850,6 +24856,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
+          - `apps/prototypes/canvas`
           - `apps/sonata`
           - `conversations/conversation-view/prompt-templates`
           - `primitives/pane`
@@ -29855,6 +29862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `hoverRevealClass`
           - `hoverRevealGroup`
           - `hoverRevealTarget`
+          - `hoverRevealTargetInAnchor`
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:

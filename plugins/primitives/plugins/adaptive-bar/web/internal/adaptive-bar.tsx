@@ -752,6 +752,13 @@ function AdaptiveBarShell({
         return () => {
           const live = entriesRef.current.get(id);
           if (live !== entry) return;
+          // Only the declaration still in force may withdraw itself. A second
+          // declarer on one item (a control nested inside a widget that forgot
+          // `ActionFormShield`) replaces the first; letting ITS release reset
+          // the item would wipe the ladder of a widget that is still mounted
+          // and still declaring — which is how a stepper lost its compact rung
+          // the moment its arrows unmounted.
+          if (live.ladder !== ladder) return;
           live.ladder = DEFAULT_LADDER;
           putLadder(id, DEFAULT_LADDER);
           bump();
