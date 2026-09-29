@@ -3,7 +3,7 @@ import { runtimeSymbolId, type StyleKey } from "@plugins/ui/plugins/icons/core";
 import { resolveSymbol } from "@plugins/ui/plugins/icons/server";
 import { allSavedSymbolNames } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { buildSymbol, wrapSprite } from "./build-sprite";
-import { PACKAGE, installedVersion, withSymbolSets } from "./symbol-sets";
+import { PACKAGE, setIdentity, withSymbolSets } from "./symbol-sets";
 
 /**
  * What a runtime symbol's drawing is a function of — the two Material Symbols
@@ -12,7 +12,7 @@ import { PACKAGE, installedVersion, withSymbolSets } from "./symbol-sets";
 export const symbolsHash: string = createHash("sha256")
   .update(
     [PACKAGE.regular, PACKAGE.light]
-      .map((pkg) => `${pkg}@${installedVersion(pkg)}`)
+      .map(setIdentity)
       .join("\n"),
   )
   .digest("hex")

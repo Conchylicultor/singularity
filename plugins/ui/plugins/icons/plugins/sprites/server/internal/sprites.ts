@@ -15,7 +15,7 @@ import { buildSprite } from "./build-sprite";
 import { ICON_MANIFEST } from "./icon-manifest.generated";
 import {
   PACKAGE,
-  installedVersion,
+  setIdentity,
   readSet,
   withSymbolSets,
 } from "./symbol-sets";
@@ -39,7 +39,7 @@ export const manifestHash: string = createHash("sha256")
   .update(JSON.stringify(ICON_MANIFEST))
   .update(
     Object.values(PACKAGE)
-      .map((pkg) => `${pkg}@${installedVersion(pkg)}`)
+      .map(setIdentity)
       .join("\n"),
   )
   .digest("hex")

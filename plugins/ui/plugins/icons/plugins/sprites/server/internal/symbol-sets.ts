@@ -1,28 +1,20 @@
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
 import type { IconifyJSON } from "@iconify/types";
 import type { SymbolSets } from "@plugins/ui/plugins/icons/server";
+import { ICON_SETS, type IconSetSource } from "./icon-sets";
 
-/** The installed Iconify packages the sprites are built from. */
-export const PACKAGE = {
-  regular: "@iconify-json/material-symbols",
-  light: "@iconify-json/material-symbols-light",
-  brands: "@iconify-json/simple-icons",
-} as const;
+/**
+ * The Iconify sets the sprites are built from, embedded in the build (see
+ * `icon-sets.js`) — never looked up in node_modules at runtime.
+ */
+export const PACKAGE = ICON_SETS;
 
-function packageFile(pkg: string, file: string): string {
-  return fileURLToPath(import.meta.resolve(`${pkg}/${file}`));
+/** `<package>@<version>`: what a sprite built from `pkg` is a function of. */
+export function setIdentity(pkg: IconSetSource): string {
+  return `${pkg.name}@${pkg.version}`;
 }
 
-export function installedVersion(pkg: string): string {
-  const { version } = JSON.parse(
-    readFileSync(packageFile(pkg, "package.json"), "utf8"),
-  ) as { version: string };
-  return version;
-}
-
-export async function readSet(pkg: string): Promise<IconifyJSON> {
-  return (await Bun.file(packageFile(pkg, "icons.json")).json()) as IconifyJSON;
+export async function readSet(pkg: IconSetSource): Promise<IconifyJSON> {
+  return (await Bun.file(pkg.file).json()) as IconifyJSON;
 }
 
 interface Lease {
