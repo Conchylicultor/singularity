@@ -4,6 +4,11 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
+import {
+  DEFAULT_TASK_TRACK,
+  TRACK_META,
+  type TaskTrack,
+} from "@plugins/tasks/plugins/task-track/core";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
@@ -16,6 +21,8 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 type AddTaskInput = {
   title: string;
   description?: string;
+  /** Absent on calls made before tracks existed — those tasks are main-track. */
+  track?: TaskTrack;
   relation?: "followup" | "prerequisite" | "independent";
   target?: string;
   autostart: string | null;
@@ -43,6 +50,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const result = parseResult(event);
   const taskId = result?.task_id;
   const autostart = input.autostart ?? result?.autostart ?? null;
+  const track = TRACK_META[input.track ?? DEFAULT_TASK_TRACK];
 
   const tasksResult = useResource(tasksResource);
   const openPane = useOpenPane();
@@ -63,6 +71,9 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const summary = (
     <Stack as="span" direction="row" align="center" gap="sm">
       <Text as="span">{input.title}</Text>
+      <Badge variant="muted" className={rigidClass()} title={track.hint}>
+        {track.label}
+      </Badge>
       {autostart ? (
         <Badge variant="success" className={rigidClass()}>
           auto-launch {modelDisplayLabel(autostart)}
