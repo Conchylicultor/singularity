@@ -91,6 +91,8 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `fields/avatar/config`
     - `fields/bool/inline`
     - `layouts/route-fallback`
+    - `map`
+    - `map/google`
     - `page/audio`
     - `page/bookmark`
     - `page/container`

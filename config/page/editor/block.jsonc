@@ -1,4 +1,4 @@
-// @hash 1a3493eca9ad
+// @hash 6f5d621eaee6
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -44,7 +44,8 @@
       "page.file:file",
       "page.bookmark:bookmark",
       "page.embed:embed",
-      "page.place:place"
+      "page.place:place",
+      "page.map:map"
     ]},
     { "type": "header", "label": "Advanced", "items": [
       "page.prompt.block:prompt",

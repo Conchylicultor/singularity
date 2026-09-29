@@ -362,6 +362,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `infra/request-origin/agent-write-ledger`
     - `infra/secrets`
     - `infra/trash`
+    - `integrations/google-maps`
     - `integrations/hooktheory`
     - `page/annotations/agent-access`
     - `page/annotations/agent-notes/agent-page`

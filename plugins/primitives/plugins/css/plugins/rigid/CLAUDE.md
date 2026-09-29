@@ -122,6 +122,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `page/file`
     - `page/formatting/link`
     - `page/place`
+    - `page/place/map-layer`
     - `plugin-meta/facets/db-schema/render-detail`
     - `plugin-meta/facets/registrations/render-detail`
     - `plugin-meta/facets/resources/render-detail`

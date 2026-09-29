@@ -79,6 +79,7 @@ attribute type carries.
     - `page/formatting/link`
     - `page/inline-date`
     - `page/place`
+    - `page/place/map-layer`
     - `page/prompt/block`
     - `plugin-meta/facets/db-schema/render-detail`
     - `plugin-meta/facets/registrations/render-detail`

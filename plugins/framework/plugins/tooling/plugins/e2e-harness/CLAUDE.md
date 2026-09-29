@@ -324,6 +324,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `page/formatting/link`
     - `page/image`
     - `page/inline-date`
+    - `page/map`
     - `page/page-reference`
     - `page/place`
     - `page/prompt/block`

@@ -297,6 +297,7 @@ the outcome too, with no separate code path.
     - `debug/profiling`
     - `debug/trace/engine`
     - `improve`
+    - `map`
     - `page/editor`
     - `page/page-reference`
     - `plugin-meta/specimens`

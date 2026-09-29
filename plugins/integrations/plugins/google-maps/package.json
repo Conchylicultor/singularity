@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-integrations-google-maps",
-  "description": "Google Maps Platform access broker: the API key on the server, the reactive readiness state and the setup affordance on the web, so consumers never import @plugins/auth directly.",
+  "description": "Google Maps Platform access broker: the server-only Places key, the public browser config (Maps JavaScript API key + Map ID) for the live map, per-capability readiness and the setup affordances on the web, so consumers never import @plugins/auth directly.",
   "private": true,
   "version": "0.0.1"
 }

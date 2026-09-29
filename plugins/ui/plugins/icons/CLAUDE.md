@@ -362,11 +362,13 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
     - `page/heading/heading-3`
     - `page/image`
     - `page/inline-date`
+    - `page/map`
     - `page/math/equation`
     - `page/numbered-list`
     - `page/open-as-page`
     - `page/page-link`
     - `page/place`
+    - `page/place/map-layer`
     - `page/prompt/block`
     - `page/quote`
     - `page/read-only-view`

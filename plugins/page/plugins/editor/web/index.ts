@@ -88,6 +88,11 @@ export { TextBlockLayout } from "./components/text-block-layout";
 export type { TextBlockLayoutProps } from "./components/text-block-layout";
 export { useBlockEditor, useEditorScope } from "./block-editor-context";
 export type { EditorScope } from "./block-editor-context";
+// Imperative block selection, for a block that reveals ANOTHER block — the map
+// block selecting the place whose pin was clicked. `null` outside a selection
+// layer (a read-only surface).
+export { useSelectionControl } from "./selection-control";
+export type { SelectionControl } from "./selection-control";
 // `BlockCaretHost` is deliberately NOT exported: it is what the editor mounts
 // around a `caret: "editor"` block's row, and a block that could mount one for
 // itself could equally forget to — which is the whole class of bug the `caret`

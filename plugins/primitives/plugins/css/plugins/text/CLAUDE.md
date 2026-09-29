@@ -493,7 +493,9 @@ to reconcile them; they never needed reconciling.
     - `history/dialog`
     - `infra/claude-cli`
     - `infra/events-test`
+    - `integrations/google-maps`
     - `layouts/route-fallback`
+    - `map/google`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
     - `page/bookmark`
@@ -504,10 +506,12 @@ to reconcile them; they never needed reconciling.
     - `page/formatting/color`
     - `page/formatting/link`
     - `page/inline-date`
+    - `page/map`
     - `page/math/equation`
     - `page/math/inline`
     - `page/page-link`
     - `page/place`
+    - `page/place/map-layer`
     - `page/prompt/block`
     - `page/read-only-view`
     - `page/sub-page`

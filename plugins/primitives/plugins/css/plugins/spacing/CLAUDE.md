@@ -293,8 +293,10 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `fields/tags/table`
     - `history/dialog`
     - `infra/events-test`
+    - `integrations/google-maps`
     - `layouts/miller`
     - `layouts/route-fallback`
+    - `map/google`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
     - `page/attachment-block`
@@ -309,6 +311,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `page/formatting/link`
     - `page/image`
     - `page/inline-date`
+    - `page/map`
     - `page/math/inline`
     - `page/page-link`
     - `page/place`

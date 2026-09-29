@@ -41,6 +41,7 @@ moved (see `apps/prototypes/files`).
     - `infra/corpus-index`
     - `infra/git/git-watcher`
     - `infra/jobs/supervised-job`
+    - `integrations/google-maps`
     - `plugin-meta/plugin-tree`
     - `reports/outbox`
 - Server:

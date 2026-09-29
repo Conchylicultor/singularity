@@ -3832,7 +3832,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
 - Description: Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 - Web:
   - Slots:
-    - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+    - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.map`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
     - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
     - `Editor.TurnInto` ← `page.turn-into-page`
     - `Editor.BlockMenuItem` ← `page.open-as-page`
@@ -3963,6 +3963,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageIconProps`
     - `PageOption`
     - `PageOptionsResult`
+    - `SelectionControl`
     - `TextBlockLayoutProps`
     - `UndoConflictReason`
     - `UndoConflictReport`
@@ -4019,6 +4020,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useGroupedInsertableBlocks`
     - `useInsertableBlocks`
     - `usePageOptions`
+    - `useSelectionControl`
     - `useSetFrameHover`
     - `useVoidCaret`
 - Server:
@@ -4337,6 +4339,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/inline-date`
     - `page/inline-page-link`
     - `page/links`
+    - `page/map`
     - `page/markdown-apply`
     - `page/math/equation`
     - `page/math/inline`

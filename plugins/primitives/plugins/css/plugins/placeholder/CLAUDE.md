@@ -69,10 +69,12 @@
     - `debug/trace/stall`
     - `debug/worktree-cleanup`
     - `history/dialog`
+    - `map`
     - `page/attachment-block`
     - `page/bookmark`
     - `page/editor`
     - `page/inline-page-link`
+    - `page/map`
     - `page/page-link`
     - `page/place`
     - `primitives/cursor-pagination`

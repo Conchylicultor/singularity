@@ -4,25 +4,39 @@ import {
   foldResource,
   type ResourceError,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useMapsBrowserConfig } from "./use-maps-browser-config";
 
 /**
- * The ONE thing standing between the user and working Google Maps lookups.
- * Consumers branch on this rather than re-deriving a precedence, so every Maps
- * surface offers the same next step and `MapsAccessAction` can render it.
+ * What a Maps surface needs to work. The two use DIFFERENT credentials, and
+ * neither implies the other:
  *
- * There is exactly one arm today — an api-key provider has no scope ladder to
- * climb, unlike Gmail's disabled → disconnected → scopes. It stays a named union
- * so a second prerequisite (a separate public Embed key, when the live map
- * lands) is an added arm rather than a reshaped API.
+ * - `"places"` — address lookups, proxied through the server with the Places
+ *   key held in the secrets store (server-only, never sent to a browser).
+ * - `"map"` — the interactive live map, drawn in the browser by the Maps
+ *   JavaScript API with the public browser key. It needs ONLY that key: a map
+ *   can render with no Places key at all.
  */
-export type MapsAccessBlocker = "not-configured";
+export type MapsAccessCapability = "places" | "map";
+
+/**
+ * The ONE thing standing between the user and a working Maps capability.
+ * Consumers branch on this rather than re-deriving a precedence, so every Maps
+ * surface offers the same next step and the access actions can render it.
+ *
+ * Each arm belongs to exactly one capability:
+ * - `"not-configured"` — no Places key stored (`"places"`).
+ * - `"no-browser-key"` — no public browser key on this machine (`"map"`).
+ */
+export type MapsAccessBlocker = "not-configured" | "no-browser-key";
 
 export interface MapsAccess {
-  /** An API key has been stored and verified. */
+  /** The credential this capability needs is stored. For `"places"` that is
+   *  the Places key; for `"map"` it is the browser key. */
   configured: boolean;
-  /** Same as `configured` — nothing else gates a Maps call today. */
+  /** Same as `configured` — nothing else gates either capability today. */
   ready: boolean;
-  /** The auth state has not arrived yet — distinct from "arrived, no such provider". */
+  /** The state the answer depends on has not arrived yet — distinct from
+   *  "arrived, nothing stored". */
   loading: boolean;
   /**
    * The auth state failed to load — whether a key is configured is unknown, so
@@ -35,7 +49,15 @@ export interface MapsAccess {
   blocker: MapsAccessBlocker | null;
 }
 
-export function useMapsAccess(): MapsAccess {
+export function useMapsAccess(capability: MapsAccessCapability): MapsAccess {
+  // Both reads run on every call — hooks cannot be conditional — and each is one
+  // small shared subscription, so the unused one costs nothing worth branching on.
+  const places = usePlacesAccess();
+  const map = useMapAccess();
+  return capability === "places" ? places : map;
+}
+
+function usePlacesAccess(): MapsAccess {
   // Read the whole auth state rather than `useAccountStatus`, which answers
   // `null` for TWO different questions: "the state has not arrived yet" and
   // "the state arrived and names no such provider". Collapsing them leaves a
@@ -73,4 +95,24 @@ export function useMapsAccess(): MapsAccess {
     blocker:
       !loading && error === null && !configured ? "not-configured" : null,
   };
+}
+
+function useMapAccess(): MapsAccess {
+  // A stored browser key is not a verified one: it cannot be checked from the
+  // server (it is referrer-restricted), so a wrong key reads "configured" here
+  // and fails in the renderer's `gm_authFailure` instead.
+  const config = useMapsBrowserConfig();
+  const configured = config.kind === "set";
+  return {
+    configured,
+    ready: configured,
+    loading: config.kind === "loading",
+    error: config.kind === "error" ? config.error : null,
+    refetch: config.kind === "error" ? config.refetch : noRefetch,
+    blocker: config.kind === "unset" ? "no-browser-key" : null,
+  };
+}
+
+/** Nothing to retry: the browser-config read has not failed. */
+async function noRefetch(): Promise<void> {}
 }

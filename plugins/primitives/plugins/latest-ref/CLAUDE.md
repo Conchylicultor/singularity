@@ -47,6 +47,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `debug/slow-ops`
     - `integrations/youtube`
     - `layouts/miller`
+    - `map/google`
     - `page/code-block`
     - `page/editor`
     - `page/url-paste`

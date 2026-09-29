@@ -17,6 +17,7 @@
     - `apps/sonata/piano-roll/fx-core`
     - `apps/sonata/piano-roll/fx-ripples`
     - `apps/sonata/piano-roll/fx-shatter`
+    - `map/google`
     - `page/math/render`
     - `primitives/graph-canvas`
     - `primitives/markdown`

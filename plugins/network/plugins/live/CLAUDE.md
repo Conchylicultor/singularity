@@ -598,6 +598,7 @@ grouped under the wave or item that removes it
     - `infra/git/git-watcher`
     - `infra/jobs`
     - `infra/trash`
+    - `integrations/google-maps`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
     - `page/editor`

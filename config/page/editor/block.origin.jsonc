@@ -1,4 +1,4 @@
-// @hash 1a3493eca9ad
+// @hash 6f5d621eaee6
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -23,6 +23,7 @@
     "page.heading.heading-2:heading-2",
     "page.heading.heading-3:heading-3",
     "page.image:image",
+    "page.map:map",
     "page.math.equation:equation",
     "page.numbered-list:numbered-list",
     "page.page-link:page-link",

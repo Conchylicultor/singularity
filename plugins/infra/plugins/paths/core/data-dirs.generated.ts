@@ -39,6 +39,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/request-origin/plugins/agent-write-ledger", id: "infra.request-origin.agent-write-ledger", loader: () => import("@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/data-dirs"), dependsOn: [] },
+  { pluginPath: "integrations/plugins/google-maps", id: "integrations.google-maps", loader: () => import("@plugins/integrations/plugins/google-maps/data-dirs"), dependsOn: [] },
   { pluginPath: "packages/plugins/signal-origin", id: "packages.signal-origin", loader: () => import("@plugins/packages/plugins/signal-origin/data-dirs"), dependsOn: [] },
   { pluginPath: "packages/plugins/signal-origin/plugins/sink", id: "packages.signal-origin.sink", loader: () => import("@plugins/packages/plugins/signal-origin/plugins/sink/data-dirs"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/data-dirs"), dependsOn: [] },

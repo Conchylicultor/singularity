@@ -337,6 +337,12 @@
       "parent": null
     },
     {
+      "paneId": "google-maps-live-map-setup",
+      "segment": "google-maps/live-map",
+      "appIndex": false,
+      "parent": "accounts"
+    },
+    {
       "paneId": "google-maps-setup",
       "segment": "google-maps/setup",
       "appIndex": false,

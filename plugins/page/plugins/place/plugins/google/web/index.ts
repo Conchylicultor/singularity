@@ -19,7 +19,7 @@ export default {
       // block never learns that the blocker is a key — it just renders whatever
       // the provider says will fix it.
       AccessAction: MapsAccessAction,
-      useReady: () => useMapsAccess().ready,
+      useReady: () => useMapsAccess("places").ready,
     }),
   ],
 } satisfies PluginDefinition;

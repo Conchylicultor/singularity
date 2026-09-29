@@ -3431,6 +3431,17 @@
       "name": "@singularity/plugin-layouts-route-fallback",
       "version": "0.0.1",
     },
+    "plugins/map": {
+      "name": "@singularity/plugin-map",
+      "version": "0.0.1",
+    },
+    "plugins/map/plugins/google": {
+      "name": "@singularity/plugin-map-google",
+      "version": "0.0.1",
+      "dependencies": {
+        "@vis.gl/react-google-maps": "^1.10.1",
+      },
+    },
     "plugins/network": {
       "name": "@singularity/plugin-network",
       "version": "0.0.1",
@@ -3706,6 +3717,10 @@
       "name": "@singularity/plugin-page-links",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/map": {
+      "name": "@singularity/plugin-page-map",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/markdown-apply": {
       "name": "@singularity/plugin-page-markdown-apply",
       "version": "0.0.1",
@@ -3762,6 +3777,10 @@
     },
     "plugins/page/plugins/place/plugins/google": {
       "name": "@singularity/plugin-page-place-google",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/place/plugins/map-layer": {
+      "name": "@singularity/plugin-page-place-map-layer",
       "version": "0.0.1",
     },
     "plugins/page/plugins/prompt": {
@@ -5596,6 +5615,8 @@
     "@fontsource-variable/cascadia-code": ["@fontsource-variable/cascadia-code@5.2.2", "", {}, "sha512-5Sn7CySADZaPggdZ9wXnC0CKdLfca+7G7ipaSWSOXFQvAxnH+zKnflktVAVj5A3loP8ZAs72w7+v/RCwOnPpaQ=="],
 
     "@fontsource-variable/inter": ["@fontsource-variable/inter@5.2.8", "", {}, "sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ=="],
+
+    "@googlemaps/js-api-loader": ["@googlemaps/js-api-loader@2.1.3", "", { "dependencies": { "@types/google.maps": "^3.65.3" } }, "sha512-1t6umwRufEGzIPjHPjPeuuY1dCal0zU2bZeomkf4OA0MprFdlKCnXY3zeFkzDaCvKjwbFubeapm61P5+EbrAoA=="],
 
     "@graphile/logger": ["@graphile/logger@0.2.0", "", {}, "sha512-jjcWBokl9eb1gVJ85QmoaQ73CQ52xAaOCF29ukRbYNl6lY+ts0ErTaDYOBlejcbUs2OpaiqYLO5uDhyLFzWw4w=="],
 
@@ -7597,6 +7618,10 @@
 
     "@singularity/plugin-layouts-route-fallback": ["@singularity/plugin-layouts-route-fallback@workspace:plugins/layouts/plugins/route-fallback"],
 
+    "@singularity/plugin-map": ["@singularity/plugin-map@workspace:plugins/map"],
+
+    "@singularity/plugin-map-google": ["@singularity/plugin-map-google@workspace:plugins/map/plugins/google"],
+
     "@singularity/plugin-network": ["@singularity/plugin-network@workspace:plugins/network"],
 
     "@singularity/plugin-network-live": ["@singularity/plugin-network-live@workspace:plugins/network/plugins/live"],
@@ -7717,6 +7742,8 @@
 
     "@singularity/plugin-page-links": ["@singularity/plugin-page-links@workspace:plugins/page/plugins/links"],
 
+    "@singularity/plugin-page-map": ["@singularity/plugin-page-map@workspace:plugins/page/plugins/map"],
+
     "@singularity/plugin-page-markdown-apply": ["@singularity/plugin-page-markdown-apply@workspace:plugins/page/plugins/markdown-apply"],
 
     "@singularity/plugin-page-math": ["@singularity/plugin-page-math@workspace:plugins/page/plugins/math"],
@@ -7740,6 +7767,8 @@
     "@singularity/plugin-page-place": ["@singularity/plugin-page-place@workspace:plugins/page/plugins/place"],
 
     "@singularity/plugin-page-place-google": ["@singularity/plugin-page-place-google@workspace:plugins/page/plugins/place/plugins/google"],
+
+    "@singularity/plugin-page-place-map-layer": ["@singularity/plugin-page-place-map-layer@workspace:plugins/page/plugins/place/plugins/map-layer"],
 
     "@singularity/plugin-page-prompt": ["@singularity/plugin-page-prompt@workspace:plugins/page/plugins/prompt"],
 
@@ -8605,6 +8634,8 @@
 
     "@types/estree-jsx": ["@types/estree-jsx@1.0.5", "", { "dependencies": { "@types/estree": "*" } }, "sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg=="],
 
+    "@types/google.maps": ["@types/google.maps@3.66.4", "", {}, "sha512-t01LM0VeIsUOZWno7ABUv4XL82RalnhRGaTzWykPUtQ+hHT39vsIekeU+roqEaibwebpYIjS7dslx51HwG95nw=="],
+
     "@types/hast": ["@types/hast@3.0.4", "", { "dependencies": { "@types/unist": "*" } }, "sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ=="],
 
     "@types/interpret": ["@types/interpret@1.1.4", "", { "dependencies": { "@types/node": "*" } }, "sha512-r+tPKWHYqaxJOYA3Eik0mMi+SEREqOXLmsooRFmc6GHv7nWUDixFtKN+cegvsPlDcEZd9wxsdp041v2imQuvag=="],
@@ -8656,6 +8687,8 @@
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.59.2", "", { "dependencies": { "@typescript-eslint/types": "8.59.2", "eslint-visitor-keys": "^5.0.0" } }, "sha512-NwjLUnGy8/Zfx23fl50tRC8rYaYnM52xNRYFAXvmiil9yh1+K6aRVQMnzW6gQB/1DLgWt977lYQn7C+wtgXZiA=="],
 
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.0", "", {}, "sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g=="],
+
+    "@vis.gl/react-google-maps": ["@vis.gl/react-google-maps@1.10.1", "", { "dependencies": { "@googlemaps/js-api-loader": "^2.1.1", "@types/google.maps": "^3.65.5", "fast-equals": "^6.0.2" }, "peerDependencies": { "react": ">=16.8.0 || ^19.0 || ^19.0.0-rc", "react-dom": ">=16.8.0 || ^19.0 || ^19.0.0-rc" } }, "sha512-2a6Bv04WcJIVN7IIjqygzVrmWKIgTXn/lmMdjeRWbKxX5FV6/Y3LhFScGJAKfAKqoAYIG6s31CWebhFUQdmBsw=="],
 
     "@vitejs/plugin-react": ["@vitejs/plugin-react@4.7.0", "", { "dependencies": { "@babel/core": "^7.28.0", "@babel/plugin-transform-react-jsx-self": "^7.27.1", "@babel/plugin-transform-react-jsx-source": "^7.27.1", "@rolldown/pluginutils": "1.0.0-beta.27", "@types/babel__core": "^7.20.5", "react-refresh": "^0.17.0" }, "peerDependencies": { "vite": "^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0" } }, "sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA=="],
 
@@ -9037,7 +9070,7 @@
 
     "fast-deep-equal": ["fast-deep-equal@3.1.3", "", {}, "sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q=="],
 
-    "fast-equals": ["fast-equals@5.4.0", "", {}, "sha512-jt2DW/aNFNwke7AUd+Z+e6pz39KO5rzdbbFCg2sGafS4mk13MI7Z8O5z9cADNn5lhGODIgLwug6TZO2ctf7kcw=="],
+    "fast-equals": ["fast-equals@6.0.4", "", {}, "sha512-JiBeR0k76FIahi9zAtQR7X1jgZDKLE+fs5S9ryjOGYZWZCOcm8QiwgeahkFvaboS3i6PkGBopRznHKuKhm9zpg=="],
 
     "fast-glob": ["fast-glob@3.3.3", "", { "dependencies": { "@nodelib/fs.stat": "^2.0.2", "@nodelib/fs.walk": "^1.2.3", "glob-parent": "^5.1.2", "merge2": "^1.3.0", "micromatch": "^4.0.8" } }, "sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg=="],
 
@@ -10134,6 +10167,8 @@
     "prompts/kleur": ["kleur@3.0.3", "", {}, "sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w=="],
 
     "prop-types/react-is": ["react-is@16.13.1", "", {}, "sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ=="],
+
+    "react-smooth/fast-equals": ["fast-equals@5.4.0", "", {}, "sha512-jt2DW/aNFNwke7AUd+Z+e6pz39KO5rzdbbFCg2sGafS4mk13MI7Z8O5z9cADNn5lhGODIgLwug6TZO2ctf7kcw=="],
 
     "restore-cursor/onetime": ["onetime@7.0.0", "", { "dependencies": { "mimic-function": "^5.0.0" } }, "sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ=="],
 

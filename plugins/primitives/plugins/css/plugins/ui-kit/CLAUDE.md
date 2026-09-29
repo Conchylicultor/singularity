@@ -663,6 +663,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `integrations/youtube`
     - `layouts/miller`
     - `layouts/route-fallback`
+    - `map`
     - `page/attachment-block`
     - `page/audio`
     - `page/bookmark`
@@ -676,9 +677,11 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `page/formatting/link`
     - `page/image`
     - `page/inline-date`
+    - `page/map`
     - `page/math/equation`
     - `page/math/inline`
     - `page/place`
+    - `page/place/map-layer`
     - `page/prompt/block`
     - `page/read-only-view`
     - `page/video`
