@@ -1,0 +1,9 @@
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { UpdaterDeclare } from "@plugins/infra/plugins/deps/plugins/updates/server";
+import { miseUpdater } from "../core";
+
+export default {
+  description:
+    "The mise toolchain as an updater: contributes `mise` to the updater registry, so the daily deps.detect-outdated job files its upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.",
+  contributions: [UpdaterDeclare({ updater: miseUpdater })],
+} satisfies ServerPluginDefinition;

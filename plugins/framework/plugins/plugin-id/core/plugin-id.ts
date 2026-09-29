@@ -66,7 +66,8 @@ export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
  *  nothing imports it. `check/` and `lint/` are collected by the check runner
  *  and the ESLint config, `facet/` by the facet pipeline, `fixtures/`,
  *  `vite/` and `prewarm/` by their own collected dirs; `bin/` and `scripts/`
- *  are run by path.
+ *  are run by path; `python/` holds one uv project (`pyproject.toml`, `uv.lock`)
+ *  that `infra/deps`' python kind installs and runs, and holds no TypeScript.
  *
  *  Together with `RUNTIME_FOLDERS` this is the whole folder vocabulary a
  *  plugin may contain (plus `plugins/`, which holds child plugins, not code).
@@ -81,6 +82,7 @@ export const LEAF_FOLDERS = [
   "fixtures",
   "vite",
   "prewarm",
+  "python",
 ] as const;
 export type LeafFolder = (typeof LEAF_FOLDERS)[number];
 

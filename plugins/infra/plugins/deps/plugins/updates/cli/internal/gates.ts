@@ -7,7 +7,8 @@ import { runtimePath } from "@plugins/infra/plugins/launcher/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { readTestStatus } from "@plugins/framework/plugins/cli/plugins/test/core";
-import type { GateResult, ToolSpec } from "@plugins/toolchain/core";
+import type { GateResult } from "../../core/internal/compare";
+import type { UpdaterSmoke } from "../../core/internal/updater";
 
 /**
  * The environment every gate runs in: this process's, with PATH as the runtime
@@ -94,15 +95,15 @@ export async function runTests(
   return { gate: "tests", failures };
 }
 
-/** One tool's smoke test. A failure is the smoke test's own name. */
+/** One smoke test. A failure is the smoke test's own name. */
 export async function runSmoke(
   root: string,
-  smoke: ToolSpec["smoke"][number],
+  smoke: UpdaterSmoke,
 ): Promise<GateResult> {
   console.log(`\n$ ${smoke.argv.join(" ")}   (smoke: ${smoke.name})`);
   const result = await spawnCaptured([...smoke.argv], {
     cwd: join(root, smoke.cwd ?? "."),
-    env: gateEnv(),
+    env: { ...gateEnv(), ...smoke.env },
     mergeStderr: true,
     timeoutMs: smoke.timeoutMs,
   });
@@ -116,16 +117,14 @@ export async function runSmoke(
   return { gate: `smoke: ${smoke.name}`, failures: ok ? [] : [smoke.name] };
 }
 
-/** Every gate a toolchain change must pass: checks, tests, and the moved tools' smoke tests. */
+/** Every gate a move must pass: checks, tests, and the moved inputs' smoke tests. */
 export async function runAllGates(
   root: string,
   slug: Namespace,
-  moved: readonly ToolSpec[],
+  smoke: readonly UpdaterSmoke[],
 ): Promise<GateResult[]> {
   const results = [await runChecks(root, slug), await runTests(root, slug)];
-  for (const tool of moved) {
-    for (const smoke of tool.smoke) results.push(await runSmoke(root, smoke));
-  }
+  for (const s of smoke) results.push(await runSmoke(root, s));
   return results;
 }
 
@@ -133,7 +132,7 @@ export async function runAllGates(
 export async function retryGates(
   root: string,
   slug: Namespace,
-  moved: readonly ToolSpec[],
+  smokes: readonly UpdaterSmoke[],
   suspected: readonly GateResult[],
 ): Promise<GateResult[]> {
   const results: GateResult[] = [];
@@ -154,13 +153,31 @@ export async function retryGates(
         ),
       );
     } else {
-      const smoke = moved
-        .flatMap((t) => t.smoke)
-        .find((s) => gate === `smoke: ${s.name}`);
+      const smoke = smokes.find((s) => gate === `smoke: ${s.name}`);
       if (smoke === undefined)
         throw new Error(`No smoke test behind gate "${gate}"`);
       results.push(await runSmoke(root, smoke));
     }
   }
   return results;
+}
+
+/**
+ * The gates an upgrade runs, as one seam: the real ones spawn
+ * `./singularity check` / `test` and the smoke commands; the runner's tests
+ * hand fakes.
+ */
+export interface Gates {
+  all(smoke: readonly UpdaterSmoke[]): Promise<GateResult[]>;
+  retry(
+    smoke: readonly UpdaterSmoke[],
+    suspected: readonly GateResult[],
+  ): Promise<GateResult[]>;
+}
+
+export function realGates(root: string, slug: Namespace): Gates {
+  return {
+    all: (smoke) => runAllGates(root, slug, smoke),
+    retry: (smoke, suspected) => retryGates(root, slug, smoke, suspected),
+  };
 }

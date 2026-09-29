@@ -496,6 +496,7 @@ serves them.
     - `debug/session-divergence`
     - `debug/slow-ops/cluster`
     - `debug/worktree-cleanup`
+    - `infra/deps/updates`
     - `page/annotations/todo/task-link`
     - `page/prompt/block`
     - `page/prompt/link`
@@ -514,7 +515,6 @@ serves them.
     - `tasks/task-source-url`
     - `tasks/task-title`
     - `tasks/task-track`
-    - `toolchain`
   - Extended by:
     - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
     - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)

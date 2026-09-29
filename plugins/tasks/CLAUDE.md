@@ -136,6 +136,7 @@
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-dependents`
     - `conversations/conversation-view/tasks-panel`
+    - `infra/deps/updates`
     - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
     - `tasks/task-description`
@@ -143,7 +144,6 @@
     - `tasks/task-graph`
     - `tasks/task-header`
     - `tasks/task-list`
-    - `toolchain`
 - Sub-plugins:
   - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge tint, dot tint and sentence-case label, so a chip and a badge for the same attempt cannot disagree.
   - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.

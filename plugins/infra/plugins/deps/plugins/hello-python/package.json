@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-infra-deps-hello-python",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A tiny real python/ uv project (numpy only) declared as the on-demand dependency `hello-python`: the deps python kind's end-to-end proof, deleted once the audio pipeline lands as the first real consumer."
+}

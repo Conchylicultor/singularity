@@ -3196,6 +3196,26 @@
       "name": "@singularity/plugin-infra-corpus-index",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/deps": {
+      "name": "@singularity/plugin-infra-deps",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/hello-python": {
+      "name": "@singularity/plugin-infra-deps-hello-python",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/mise": {
+      "name": "@singularity/plugin-infra-deps-mise",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/python": {
+      "name": "@singularity/plugin-infra-deps-python",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/updates": {
+      "name": "@singularity/plugin-infra-deps-updates",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/endpoints": {
       "name": "@singularity/plugin-infra-endpoints",
       "version": "0.0.1",
@@ -7507,6 +7527,16 @@
     "@singularity/plugin-infra-claude-cli-availability": ["@singularity/plugin-infra-claude-cli-availability@workspace:plugins/infra/plugins/claude-cli/plugins/availability"],
 
     "@singularity/plugin-infra-corpus-index": ["@singularity/plugin-infra-corpus-index@workspace:plugins/infra/plugins/corpus-index"],
+
+    "@singularity/plugin-infra-deps": ["@singularity/plugin-infra-deps@workspace:plugins/infra/plugins/deps"],
+
+    "@singularity/plugin-infra-deps-hello-python": ["@singularity/plugin-infra-deps-hello-python@workspace:plugins/infra/plugins/deps/plugins/hello-python"],
+
+    "@singularity/plugin-infra-deps-mise": ["@singularity/plugin-infra-deps-mise@workspace:plugins/infra/plugins/deps/plugins/mise"],
+
+    "@singularity/plugin-infra-deps-python": ["@singularity/plugin-infra-deps-python@workspace:plugins/infra/plugins/deps/plugins/python"],
+
+    "@singularity/plugin-infra-deps-updates": ["@singularity/plugin-infra-deps-updates@workspace:plugins/infra/plugins/deps/plugins/updates"],
 
     "@singularity/plugin-infra-endpoints": ["@singularity/plugin-infra-endpoints@workspace:plugins/infra/plugins/endpoints"],
 

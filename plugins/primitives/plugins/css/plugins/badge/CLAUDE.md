@@ -172,6 +172,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `fields/enum/table`
     - `fields/tags/inline`
     - `fields/tags/table`
+    - `infra/deps`
     - `infra/events-test`
     - `page/annotations/instructions/instructions-page`
     - `page/editor`

@@ -62,3 +62,6 @@ skills-lock.json
 .claude/scheduled_tasks.lock
 .allow-main
 .git-diff-main-reminded
+
+# Python bytecode from `python/` uv projects (infra/deps python kind)
+__pycache__/

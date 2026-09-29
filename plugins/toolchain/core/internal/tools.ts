@@ -112,6 +112,25 @@ export const TOOLS: readonly ToolSpec[] = [
       },
     ],
   },
+  {
+    // Python's package manager, the runtime of `infra/deps`' python kind: it
+    // downloads its own CPython and installs each `python/` project's env on
+    // first use. The one piece of the Python stack small enough (~35 MB) to
+    // give everyone.
+    name: "uv",
+    versionArgv: ["uv", "--version"],
+    versionPattern: /^uv (\d+\.\d+\.\d+)/,
+    // A `python/` project's `uv sync --frozen` / `uv lock` are exercised by the
+    // test suite and the `uv` updater's own smoke tests; this proves the
+    // binary itself runs.
+    smoke: [
+      {
+        name: "uv runs",
+        argv: ["uv", "--version"],
+        timeoutMs: MINUTE,
+      },
+    ],
+  },
 ];
 
 /**

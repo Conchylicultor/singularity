@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-toolchain",
   "version": "0.0.1",
   "private": true,
-  "description": "Keeps the mise toolchain (bun, go, tmux, rust) on its latest releases: the declared tools with their floors and holds, the toolchain:resolved check, the `toolchain upgrade` command that gates a new version behind a before/after check+test comparison, and the daily job that files the auto-started task running it."
+  "description": "The mise toolchain (bun, go, tmux, rust, uv) this checkout runs: the declared tools with their floors and holds, the lock parsing, the toolchain:resolved check, and `toolchain upgrade` \u2014 the alias of `deps upgrade mise` (the loop itself lives in infra/deps)."
 }

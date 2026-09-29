@@ -214,6 +214,7 @@ presence only — **no re-exports**; import from `core/`.
     - `framework/tooling/checks`
     - `framework/tooling/checks/type-check`
     - `framework/tooling/format`
+    - `infra/deps/mise`
     - `infra/git/remotes`
     - `infra/paths`
     - `reports/outbox`

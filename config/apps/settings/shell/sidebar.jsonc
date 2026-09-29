@@ -1,4 +1,4 @@
-// @hash 31729cc1d140
+// @hash d83ddba194e7
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
   "items": [
     "apps.settings.config:config",
     "apps.settings.accounts:accounts",
-    "apps.settings.appearance:appearance"
+    "apps.settings.appearance:appearance",
+    "infra.deps:dependencies"
   ]
 }

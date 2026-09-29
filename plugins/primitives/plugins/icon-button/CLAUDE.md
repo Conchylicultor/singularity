@@ -130,6 +130,7 @@ icon+count button it stands in for — carries a per-site
     - `debug/worktree-cleanup`
     - `fields/enum/column-config`
     - `infra/claude-cli/availability`
+    - `infra/deps`
     - `infra/events-test`
     - `page/editor`
     - `page/formatting/color`

@@ -29,7 +29,7 @@ Agents work in isolated git worktrees automatically created before starting. The
 
 RULES:
 
-- NEVER run `./singularity push` unless instructed to. The user needs to review your code first. (A Toolchain-category upgrade task counts as that instruction: its own text says when it may push. See `plugins/toolchain`.)
+- NEVER run `./singularity push` unless instructed to. The user needs to review your code first. (A Dependencies-category upgrade task — or a legacy Toolchain-category one — counts as that instruction: its own text says when it may push. See `plugins/infra/plugins/deps/plugins/updates`.)
 - NEVER commit files yourself (this will create branch conflicts). Always use `./singularity push -m "commit message"`
 - **Always rebase, never merge** (`git rebase origin/main`). Never `git merge origin/main`, and never `git reset` a branch onto `main` — that deletes the commits in between. One exception: `./singularity upstream merge` (see Upstream), where a rebase would replay the whole local history on every update.
 - NEVER run `drizzle-kit generate` or the migration runner manually — always go through `./singularity build`.

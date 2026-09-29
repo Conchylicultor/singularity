@@ -102,6 +102,9 @@ export default defineBoundaries({
     fixtures: ["web", "core"],
     vite: ["core"],
     prewarm: ["core", "shared"],
+    // One uv project (`infra/deps/plugins/python`): Python source plus
+    // `pyproject.toml` / `uv.lock`. It holds no TypeScript, so it imports nothing.
+    python: [],
   },
 
   runtimeExceptions: [

@@ -33,6 +33,7 @@ bun = "latest"
 go = "latest"
 tmux = "latest"
 rust = "latest"  # cargo + rustc for the Tauri desktop release shell (tauri/); end users need none of this
+uv = "latest"    # Python projects (`python/` folders), installed on demand by infra/deps; uv fetches its own CPython
 
 [tasks.setup]
 description = "Trust every worktree's mise.toml, stop shims auto-installing, and set the git hooks (idempotent)"

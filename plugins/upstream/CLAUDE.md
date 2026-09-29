@@ -30,8 +30,8 @@ Debug → Reports holds a row with an **Investigate** button, and pressing it is
 what mints the task — carrying the merge instructions from `merge-prompt.ts`.
 Nothing merges anything on its own, and nothing touches a working tree.
 
-That is the whole difference from `plugins/toolchain`, whose daily job files an
-auto-started task: a toolchain that has fallen behind is a chore with a proven
+That is the whole difference from `infra/deps/updates`, whose daily job files an
+auto-started task: a dependency that has fallen behind is a chore with a proven
 gate, and an upstream merge is a change to the user's own trunk that only they
 decide to take.
 

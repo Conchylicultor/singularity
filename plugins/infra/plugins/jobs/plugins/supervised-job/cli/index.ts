@@ -4,6 +4,12 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 // invocation has no business evaluating.
 import { SUPERVISED_EXEC_COMMAND } from "../core/internal/exec-command";
 
+// The CLI mint of an ExecContext (see core/internal/exec-context.ts). It lives in
+// this `cli` barrel on purpose: no `server/` file may import a `cli` barrel, so a
+// request handler has no way to spell it. The file imports nothing, so the
+// declaration stays light.
+export { cliExecContext } from "../core/internal/exec-context";
+
 /**
  * The child half of a supervised task: boot the plugin graph in `exec` mode,
  * run ONE registered task, exit with its status.

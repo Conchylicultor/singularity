@@ -1,14 +1,15 @@
 # toolchain
 
-Keeps the mise toolchain (bun, go, tmux, rust) on its latest releases, with every
-move proven before it lands.
+Keeps the mise toolchain (bun, go, tmux, rust, uv) on its latest releases, with
+every move proven before it lands.
 
 - `mise.toml` requests `latest` for every tool. `mise.lock` (committed) records
   the exact release that runs. mise reads it through its shims, per checkout, so
   a worktree can run a new release while main keeps its own.
 - `core/`: `TOOLS` (how to probe each tool's version, its `floor` with the
   reason, its smoke tests) and `HOLDS` (releases to skip, each with an upstream
-  issue). Plus the pure lock parsing and before/after comparison.
+  issue). Plus the pure lock parsing (`lockProblems`, `setLockedVersion`,
+  `addLockedTool` for a tool `mise.toml` has just started declaring).
 - `check/`: `toolchain:resolved`. Every tool requests `latest`. The lock records
   one exact release per tool, at or above its floor and not held. The runtime
   PATH resolves each tool to that release. A tool absent from the runtime PATH
@@ -16,27 +17,27 @@ move proven before it lands.
   says to activate mise rather than blaming something that shadows it. Whether a
   tool is installed at all is checked earlier, at `mise install` time, by the
   doctor (`framework/cli/plugins/doctor`).
-- `cli/`: `./singularity toolchain upgrade [--tool a,b]`. Updates mise itself.
-  Picks the newest non-held release of each tool, then runs the gates (every
-  check with no cache, every test, and the moved tools' smoke tests) on the
-  current releases. Then it installs the new releases side by side, rewrites
-  the lock, and runs the gates again. A failure only the new releases have, and
-  that fails again on a retry, is a regression: the lock is put back. The
-  verdict goes to `toolchain-upgrade.json` in the worktree data dir. Refuses to
-  run in the main checkout.
-- `server/`: the daily `toolchain.detect-outdated` job (main only) runs
-  `mise outdated --json`. It files one auto-started task in the Toolchain
-  category when something is newer and no toolchain task is still open. That
-  task's text permits its agent to push on an `upgraded` verdict with an `ok`
-  build.
+- **The upgrade loop lives in `infra/deps`.** `infra/deps/plugins/mise` is the
+  `mise` updater (mise self-update, ls-remote, side-by-side install, `mise lock`)
+  and `infra/deps/plugins/updates` the generic gated runner and the daily
+  `deps.detect-outdated` job that files the auto-started task (Dependencies
+  category). `cli/` keeps `./singularity toolchain upgrade [--tool a,b]` as an
+  alias of `./singularity deps upgrade mise`; its receipt is
+  `deps-upgrade-mise.json` in the worktree data dir. Refuses the main checkout.
+- `server/` only registers the legacy Toolchain task category, so tasks filed
+  before the move still render under it.
+- **Adding a tool**: its `TOOLS` entry plus `<tool> = "latest"` in `mise.toml`,
+  then `./singularity toolchain upgrade` records its first lock entry.
 
 ## Traps
 
 - **Never run bare `mise lock` in a worktree.** A worktree sits inside the main
   checkout, so mise loads main's `mise.toml` as a parent config, and
   `mise lock` rewrites the parent's lock too (seen on mise 2026.4.28: it moved
-  main's go from 1.24.13 to 1.27.1). `shared/mise.ts` sets
-  `MISE_CEILING_PATHS` for this. `mise install` is safe.
+  main's go from 1.24.13 to 1.27.1). `infra/deps/plugins/mise/core/internal/mise.ts`
+  sets `MISE_CEILING_PATHS` for this. `mise install` leaves the parent alone,
+  but in a worktree whose `mise.toml` declares a tool the lock lacks it WRITES
+  that entry into the worktree's `mise.lock` — let the upgrade record it.
 - **Never `mise upgrade`.** It uninstalls the previous release, which is still
   the one main and every other worktree run.
 - The runtime only obeys the lock because `launcher/core`'s `runtimePath`
@@ -50,41 +51,33 @@ move proven before it lands.
 
 ## Plugin reference
 
-- Description: Daily toolchain.detect-outdated job: when main's toolchain has a newer release than mise.lock records, files one auto-started task (Toolchain category) whose agent runs `./singularity toolchain upgrade` and pushes on an `upgraded` verdict.
+- Description: Registers the legacy Toolchain task category, so upgrade tasks filed before the toolchain loop moved onto infra/deps' updater runner still render under it. New upgrade tasks are filed by deps.detect-outdated under Dependencies.
 - Server:
   - Contributes: `taskCategory` "toolchain"
-  - Uses:
-    - `database.db`
-    - `infra/jobs.defineJob`
-    - `primitives/log-channels.Log`
-    - `tasks.armTaskAutoStart`
-    - `tasks/task-category.setTaskCategory`
-    - `tasks/task-category.TaskCategory`
-    - `tasks/task-category.tasksCategory`
-    - `tasks/tasks-core.createTask`
-    - `tasks/tasks-core.getTask`
-  - Register: `defineJob('toolchain.detect-outdated')`
+  - Uses: `tasks/task-category.TaskCategory`
 - Core:
   - Uses: `infra/paths.HOME_DIR`
   - Exports (types):
-    - `GateResult`
     - `ToolHold`
     - `ToolSmoke`
     - `ToolSpec`
   - Exports (values):
+    - `addLockedTool`
     - `compareVersions`
-    - `confirmedFailures`
     - `findMiseBin`
     - `HOLDS`
     - `isExactRelease`
     - `lockProblems`
     - `miseBin`
-    - `newFailures`
     - `parseMiseLock`
     - `parseMiseToolRequests`
     - `setLockedVersion`
     - `TOOLCHAIN_CATEGORY_ID`
     - `TOOLS`
     - `upgradeTarget`
+- Cli:
+  - Uses: `infra/deps/updates.upgradeThisWorktree`
+- Cross-plugin:
+  - Imported by: `infra/deps/mise`
 
 <!-- AUTOGENERATED:END -->

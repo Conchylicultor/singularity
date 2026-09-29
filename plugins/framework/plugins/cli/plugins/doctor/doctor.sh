@@ -133,7 +133,7 @@ else
   fi
 
   # The ceiling keeps a worktree from also reading main's mise.toml (see
-  # plugins/toolchain/shared/mise.ts).
+  # plugins/infra/plugins/deps/plugins/mise/core/internal/mise.ts).
   if ! MISE_CEILING_PATHS="${PWD%/*}" "$mise_bin" install --dry-run-code >/dev/null 2>&1; then
     tools="$(MISE_CEILING_PATHS="${PWD%/*}" "$mise_bin" ls --missing 2>/dev/null | while read -r name version _; do printf '%s ' "$name@$version"; done)"
     miss "Toolchain not installed: ${tools:-see \`mise ls --missing\`}" \

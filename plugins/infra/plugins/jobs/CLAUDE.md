@@ -676,6 +676,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `debug/slow-ops`
     - `improve`
     - `infra/attachments`
+    - `infra/deps`
+    - `infra/deps/updates`
     - `infra/events`
     - `infra/events-test`
     - `infra/jobs/deadline-audit`
@@ -688,7 +690,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `stats/cost`
     - `tasks/auto-start`
     - `tasks/task-title`
-    - `toolchain`
     - `upstream`
 - Test helpers:
   - Server: `@plugins/infra/plugins/jobs/server/testing`

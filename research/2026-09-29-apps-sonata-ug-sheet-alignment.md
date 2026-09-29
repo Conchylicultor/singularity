@@ -109,9 +109,14 @@ so it can start early on the guessed timing if parallelism is wanted.
 
 Get from a `videoId` to cached **beat features**.
 
-- A `uv`-managed Python environment provisioned at install time (see
-  `framework/tooling/provision`), and a way to run a Python entrypoint as a
-  supervised job with JSON in and out. Models are cached in a data dir.
+- The Python runtime is now **on demand**, not provisioned at install time: it
+  is `infra/deps` ([`2026-09-29-infra-deps-v2.md`](2026-09-29-infra-deps-v2.md)).
+  A `python/` uv project declared with `defineDep({ source: pythonEnv(…) })`
+  is installed the first time a feature needs it (`ensureDep` in a supervised
+  job's `run` body, `requestDep` from a request), and `runPython` runs an
+  entrypoint with JSON in and out. uv itself is a mise tool. A's audio half
+  (yt-dlp, the extractor, the beat-features job) is a follow-up built on top of
+  it, replacing the `hello-python` placeholder dep. Models are cached in a data dir.
 - yt-dlp: download a video's audio into a cache keyed by `videoId`, bounded by
   a retention sweep.
 - Beat/downbeat tracking and per-beat chroma (candidates: Beat This!, madmom,

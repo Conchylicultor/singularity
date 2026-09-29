@@ -69,6 +69,7 @@ bound them instead.
     - `isWorktreeOpActive`
     - `listActiveWorktreeOps`
     - `listWorktreeOps`
+    - `listWorktreePaths`
     - `markWorktreeOpStart`
     - `namespaceCollision`
     - `probeNamespace`
@@ -100,6 +101,7 @@ bound them instead.
     - `debug/profiling/op-log`
     - `debug/profiling/ops`
     - `debug/worktree-cleanup`
+    - `infra/deps`
     - `infra/git/git-watcher`
     - `infra/launcher`
     - `infra/worktree/reclaim`

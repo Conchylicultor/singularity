@@ -190,6 +190,8 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "debug.trace.pane.trace-detail.actions", pluginId: "debug.trace.pane", configName: "trace-detail.actions" },
   { slotId: "debug.trace.pane.traces.actions", pluginId: "debug.trace.pane", configName: "traces.actions" },
   { slotId: "debug.worktree-cleanup.worktree-cleanup.actions", pluginId: "debug.worktree-cleanup", configName: "worktree-cleanup.actions" },
+  { slotId: "infra.deps.dependencies.actions", pluginId: "infra.deps", configName: "dependencies.actions" },
+  { slotId: "infra.deps.item-actions", pluginId: "infra.deps", configName: "item-actions" },
   { slotId: "infra.events-test.events-test.actions", pluginId: "infra.events-test", configName: "events-test.actions" },
   { slotId: "integrations.google-maps.google-maps-live-map-setup.actions", pluginId: "integrations.google-maps", configName: "google-maps-live-map-setup.actions" },
   { slotId: "page.editor.block", pluginId: "page.editor", configName: "block" },

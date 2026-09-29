@@ -2,6 +2,7 @@ export { findMiseBin, miseBin } from "./internal/mise-bin";
 export { HOLDS, TOOLCHAIN_CATEGORY_ID, TOOLS } from "./internal/tools";
 export type { ToolHold, ToolSmoke, ToolSpec } from "./internal/tools";
 export {
+  addLockedTool,
   compareVersions,
   isExactRelease,
   lockProblems,
@@ -10,5 +11,3 @@ export {
   setLockedVersion,
   upgradeTarget,
 } from "./internal/versions";
-export { confirmedFailures, newFailures } from "./internal/compare";
-export type { GateResult } from "./internal/compare";

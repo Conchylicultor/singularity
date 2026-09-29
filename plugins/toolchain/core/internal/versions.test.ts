@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  addLockedTool,
   compareVersions,
   lockProblems,
   parseMiseLock,
@@ -80,12 +81,13 @@ describe("parseMiseToolRequests", () => {
 
 describe("lockProblems", () => {
   const all = (request: string) =>
-    new Map(["bun", "go", "tmux", "rust"].map((t) => [t, request]));
+    new Map(["bun", "go", "tmux", "rust", "uv"].map((t) => [t, request]));
   const locked = new Map([
     ["bun", ["1.4.2"]],
     ["go", ["1.24.13"]],
     ["tmux", ["3.7c"]],
     ["rust", ["1.98.1"]],
+    ["uv", ["0.12.19"]],
   ]);
 
   test("a sound pair has no problems", () => {
@@ -110,6 +112,16 @@ describe("lockProblems", () => {
     bad.set("rust", ["stable"]);
     expect(lockProblems(all("latest"), bad)).toHaveLength(3);
   });
+  test("a newly declared tool may be unlocked only when the caller allows it", () => {
+    const fresh = new Map(locked);
+    fresh.delete("uv");
+    expect(lockProblems(all("latest"), fresh).join("\n")).toContain(
+      "mise.lock records no version for uv",
+    );
+    expect(
+      lockProblems(all("latest"), fresh, { unlockedAllowed: new Set(["uv"]) }),
+    ).toEqual([]);
+  });
   test("a declared tool the plugin does not list is a problem", () => {
     const requests = all("latest");
     requests.set("node", "latest");
@@ -117,6 +129,19 @@ describe("lockProblems", () => {
     withNode.set("node", ["22.1.0"]);
     expect(lockProblems(requests, withNode).join("\n")).toContain(
       '"node", which plugins/toolchain/core does not list',
+    );
+  });
+});
+
+describe("addLockedTool", () => {
+  test("appends a first entry that parses back, and refuses a second", () => {
+    const text = '[[tools.bun]]\nversion = "1.4.2"\nbackend = "core:bun"\n';
+    const added = addLockedTool(text, "uv", "0.12.19", "aqua:astral-sh/uv");
+    expect(added).toContain('backend = "aqua:astral-sh/uv"');
+    expect(parseMiseLock(added).get("uv")).toEqual(["0.12.19"]);
+    expect(parseMiseLock(added).get("bun")).toEqual(["1.4.2"]);
+    expect(() => addLockedTool(added, "uv", "0.12.20", "x")).toThrow(
+      "already has",
     );
   });
 });

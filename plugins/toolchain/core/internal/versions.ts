@@ -100,6 +100,23 @@ export function setLockedVersion(
 }
 
 /**
+ * `mise.lock` with a first entry for `tool` at `version`, for a tool
+ * `mise.toml` has just started declaring: the version and the backend
+ * (`mise tool <name> --backend`) — `mise lock` fills in the per-platform
+ * subtables afterwards, but not a missing backend line.
+ */
+export function addLockedTool(
+  text: string,
+  tool: string,
+  version: string,
+  backend: string,
+): string {
+  if (parseMiseLock(text).has(tool))
+    throw new Error(`mise.lock already has a [[tools.${tool}]] entry`);
+  return `${text.replace(/\n*$/, "")}\n\n[[tools.${tool}]]\nversion = "${version}"\nbackend = "${backend}"\n`;
+}
+
+/**
  * The `key = "value"` requests in `mise.toml`'s `[tools]` table. Anchored to the
  * table, so a same-named key under another section is never read as a tool.
  */
@@ -125,6 +142,15 @@ export function parseMiseToolRequests(text: string): Map<string, string> {
 export function lockProblems(
   requests: ReadonlyMap<string, string>,
   locked: ReadonlyMap<string, readonly string[]>,
+  opts: {
+    /**
+     * Tools the caller is about to lock for the first time (the upgrade, when
+     * `mise.toml` declares a tool the lock does not record yet): "no version
+     * recorded" is not a problem for them. The check never passes this — a
+     * pushed lock records every tool.
+     */
+    unlockedAllowed?: ReadonlySet<string>;
+  } = {},
 ): string[] {
   const problems: string[] = [];
   const known = new Set(TOOLS.map((t) => t.name));
@@ -148,6 +174,8 @@ export function lockProblems(
   for (const [tool] of requests) {
     const versions = locked.get(tool) ?? [];
     const version = versions[0];
+    if (versions.length === 0 && opts.unlockedAllowed?.has(tool) === true)
+      continue;
     if (versions.length !== 1 || version === undefined) {
       problems.push(
         versions.length === 0

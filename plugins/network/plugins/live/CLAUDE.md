@@ -594,6 +594,7 @@ grouped under the wave or item that removes it
     - `fields/secret/config`
     - `infra/claude-cli`
     - `infra/claude-cli/availability`
+    - `infra/deps`
     - `infra/events`
     - `infra/git/git-watcher`
     - `infra/jobs`

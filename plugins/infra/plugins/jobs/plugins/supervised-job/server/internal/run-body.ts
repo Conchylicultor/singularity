@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { recordRunError } from "./builtin-ledger";
+import {
+  supervisedRunExecContext,
+  type ExecContext,
+} from "../../core/internal/exec-context";
 import { defineSupervisedTask, type SupervisedTask } from "./task/registry";
 
 /** What a `run` body is handed in its child process. */
@@ -13,6 +17,11 @@ export interface SupervisedRunContext {
    * `stream` only chooses the fd; the transcript merges both.
    */
   readonly log: (line: string, stream?: "stdout" | "stderr") => void;
+  /**
+   * Proof this body runs in its own process, off every backend's event loop —
+   * what a function doing long, blocking or heavy work (`ensureDep`) demands.
+   */
+  readonly exec: ExecContext;
 }
 
 /** The payload a `run` body's child receives, as one JSON argv word. */
@@ -57,7 +66,11 @@ export function defineRunBodyTask<S extends z.ZodType>(opts: {
     run: async ({ runId, input }) => {
       const parsed: z.infer<S> = opts.input.parse(input);
       try {
-        await opts.run(parsed, { runId, log });
+        await opts.run(parsed, {
+          runId,
+          log,
+          exec: supervisedRunExecContext(),
+        });
       } catch (err) {
         if (!opts.recordErrors) throw err;
         try {

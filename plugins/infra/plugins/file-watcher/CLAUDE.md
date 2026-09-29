@@ -39,6 +39,7 @@ moved (see `apps/prototypes/files`).
     - `conversations/transcript-watcher`
     - `debug/sentinel`
     - `infra/corpus-index`
+    - `infra/deps`
     - `infra/git/git-watcher`
     - `infra/jobs/supervised-job`
     - `integrations/google-maps`

@@ -986,6 +986,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `framework/web-core`
     - `infra/boot-snapshot`
     - `infra/claude-cli/availability`
+    - `infra/deps`
     - `infra/health`
     - `infra/query-resource`
     - `integrations/gmail`

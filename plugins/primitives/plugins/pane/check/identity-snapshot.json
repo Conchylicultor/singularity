@@ -265,6 +265,12 @@
       "parent": null
     },
     {
+      "paneId": "dependencies",
+      "segment": "dependencies",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "deploy-deployment-detail",
       "segment": "dep/:deploymentId",
       "appIndex": false,

@@ -110,6 +110,14 @@ async function worktreeListPaths(
     .map((l) => l.slice("worktree ".length).trim());
 }
 
+/**
+ * Every checkout git tracks on this machine, as absolute paths (the main
+ * worktree first). Throws on a git failure, never an empty list.
+ */
+export function listWorktreePaths(signal?: AbortSignal): Promise<string[]> {
+  return worktreeListPaths([GIT, "worktree", "list", "--porcelain"], signal);
+}
+
 // The main worktree root (parent of all `.claude/worktrees/*`), not the
 // current worktree — `git rev-parse --show-toplevel` would return the latter
 // when the server runs inside a worktree.

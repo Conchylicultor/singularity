@@ -79,6 +79,7 @@ export const ICON_MANIFEST: {
     "delete",
     "delete-forever",
     "delete-sweep",
+    "deployed-code",
     "description",
     "desktop-windows",
     "difference",

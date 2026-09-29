@@ -312,6 +312,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `improve`
     - `infra/attachments`
     - `infra/claude-cli`
+    - `infra/deps/updates`
     - `infra/entity-extensions`
     - `infra/events`
     - `infra/events-test`
@@ -353,7 +354,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `tasks/task-title`
     - `tasks/task-track`
     - `tasks/tasks-core`
-    - `toolchain`
     - `ui/theme-engine/saved-themes`
 - Core:
   - Exports (types):

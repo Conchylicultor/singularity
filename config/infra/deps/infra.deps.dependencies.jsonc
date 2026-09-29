@@ -1,0 +1,18 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "view": { "type": "table", "sort": [{ "fieldId": "id", "direction": "asc" }] }
+    },
+    {
+      "id": "list",
+      "name": "List",
+      "view": { "type": "list", "sort": [{ "fieldId": "id", "direction": "asc" }] }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}
