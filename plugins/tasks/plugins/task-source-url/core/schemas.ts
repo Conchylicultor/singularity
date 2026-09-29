@@ -15,7 +15,8 @@ const AttemptSourceUrlSchema = z.object({ url: z.string().nullable() });
 export type AttemptSourceUrl = z.infer<typeof AttemptSourceUrlSchema>;
 
 // Keyed by attempt: an attempt id is its worktree, which is what a caller
-// opening the app holds. `url: null` = the task was filed without a page.
+// opening the app holds. The stored URL wins; without one, the url of the
+// first `<ui-context>` in the task's prompt. `url: null` = neither exists.
 export const getAttemptSourceUrl = defineEndpoint({
   route: "GET /api/task-source-url/by-attempt/:attemptId",
   response: AttemptSourceUrlSchema,

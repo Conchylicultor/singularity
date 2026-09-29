@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Attach page URL), stored as data rather than only as prompt text, and read back by attempt.
+- Description: Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Attach page URL), stored as data rather than only as prompt text, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
 - Web:
   - Uses: `infra/endpoints.useEndpoint`
   - Exports (values): `useAttemptSourceUrl`
