@@ -38,23 +38,21 @@ export type StoredTaskTrack = (typeof STORED_TASK_TRACKS)[number];
 /**
  * How each track presents — the one source every badge reads, so the task
  * list, the task detail and the conversation header cannot disagree.
- * `variant` is the Badge / enum-chip tint; `chipClass` is the same tint with
- * the border colour a bordered header chip also needs.
+ * `variant` is the Badge / enum-chip tint (the conversation header's chip is
+ * muted, so it takes only the label).
  */
 export const TRACK_META: Record<
   TaskTrack,
-  { label: string; hint: string; variant: BadgeVariant; chipClass: string }
+  { label: string; hint: string; variant: BadgeVariant }
 > = {
   main: {
     label: "Main",
     hint: "Main track: on the feature's critical path, chained and auto-started.",
     variant: "primary",
-    chipClass: "bg-primary/15 text-primary border-primary/30",
   },
   sidequest: {
     label: "Sidequest",
     hint: "Sidequest: off the critical path. Never spliced into the chain, never auto-started by an agent.",
     variant: "info",
-    chipClass: "bg-info/15 text-info border-info/30",
   },
 };
