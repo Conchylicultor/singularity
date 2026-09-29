@@ -338,6 +338,14 @@ export const compositionsConfig = defineConfig({
           // floor (`Canvas`, near-black) above the page instead of the page's
           // own top edge. equin.ai shipped that way.
           "primitives.dom.overscroll-hint",
+          // Icons: `<Icon>` draws `<use href>` into a sprite sheet that
+          // `ui.icons.sprites` mounts, and `ui.tokens.icons` publishes each
+          // scope's icon style. Both are wired into `ui.icons`, never imported
+          // by it, so a bundle that draws icons does not pull them in: without
+          // them every icon renders as an empty box. equin.ai shipped that way —
+          // the header's Improve sparkle was blank.
+          "ui.icons.sprites",
+          "ui.tokens.icons",
         ]),
 
         // ── Packs: reusable contributor sets apps opt into via `extends` ────────
