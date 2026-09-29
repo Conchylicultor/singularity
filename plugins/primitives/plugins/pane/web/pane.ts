@@ -353,7 +353,13 @@ export interface PaneInternal {
    * another's (`Pane.define({ actions })`).
    */
   actionsSlot: PaneHeaderSlot;
-  resolve?: ResolveHook<Record<string, string>> | false;
+  /**
+   * The pane's resolve hook, from `Pane.define({ resolve })`. Hook-named on
+   * purpose: the React Compiler memoizes a plain-named call whose inputs did
+   * not change, which would skip the hook's own hooks on a re-render (React
+   * #311). The `use` prefix makes every caller's call site a hook call.
+   */
+  useResolve?: ResolveHook<Record<string, string>> | false;
   /**
    * The pane's title, from `Pane.define({ title })` — see {@link PaneTitleSpec}.
    * Read through {@link usePaneTitle} (text) and the header's title item
@@ -2485,8 +2491,10 @@ function define(
   // name one slot twice, which the declaration pass rejects.
   const actionsSlot = args.actions ?? definePaneHeaderSlot();
 
-  const resolve =
-    "resolve" in args ? (args.resolve as PaneInternal["resolve"]) : undefined;
+  const useResolve =
+    "resolve" in args
+      ? (args.resolve as PaneInternal["useResolve"])
+      : undefined;
 
   const internal: PaneInternal = {
     id,
@@ -2498,7 +2506,7 @@ function define(
     chrome: normalizeChrome(args.chrome),
     width: args.width,
     actionsSlot,
-    resolve,
+    useResolve,
     title: normalizeTitle(args.title),
     optionDefaults: args.options ?? {},
     titleOwner: args.titleOwner ?? false,

@@ -21,7 +21,7 @@ interface Props {
 }
 
 export function PaneResolveGuard({ pane, params }: Props) {
-  if (!pane.resolve) {
+  if (!pane.useResolve) {
     const Component = pane.component;
     return <Component />;
   }
@@ -35,7 +35,7 @@ export function PaneResolveGuard({ pane, params }: Props) {
     <StickyResolveGuard
       key={resolveIdentity(pane.id, params)}
       pane={pane}
-      resolve={pane.resolve}
+      useResolve={pane.useResolve}
       component={pane.component}
       params={params}
     />
@@ -71,16 +71,22 @@ function resolveIdentity(
  */
 function StickyResolveGuard({
   pane,
-  resolve,
+  useResolve,
   component: Component,
   params,
 }: {
   pane: PaneInternal;
-  resolve: ResolveHook<Record<string, string>>;
+  /**
+   * Hook-named so the React Compiler treats the call as a hook: a plain
+   * `resolve(params)` gets memoized on (resolve, params), and the render-phase
+   * `setSawFound` re-pass then skips the resolve hook's hooks — the next
+   * `useState` lands on a slot without a queue (React #311).
+   */
+  useResolve: ResolveHook<Record<string, string>>;
   component: ComponentType;
   params: Record<string, string>;
 }) {
-  const result = resolve(params);
+  const result = useResolve(params);
   const found = result.status === "found";
 
   // `sawFound` latches true the first time this identity resolves. Adjusting
