@@ -117,6 +117,7 @@ function TaskDraftFormContent({
   setSubmitting,
   url,
   setOpen,
+  closeAfterSubmit,
   resetForm,
   relate,
   hasAmbientRelate,
@@ -137,6 +138,7 @@ function TaskDraftFormContent({
   setSubmitting: (v: boolean) => void;
   url: string;
   setOpen: (next: boolean) => void;
+  closeAfterSubmit: () => void;
   resetForm: () => void;
   relate: TaskDraftRelate | undefined;
   hasAmbientRelate: boolean;
@@ -254,7 +256,7 @@ function TaskDraftFormContent({
       });
       onSuccess?.(outcome.taskIds ?? []);
       resetForm();
-      setOpen(false);
+      closeAfterSubmit();
     } catch (err) {
       toast({
         type: "task",
@@ -391,11 +393,24 @@ export function TaskDraftPopover({
     applyInsert(insert.text);
   }, [insert, applyInsert]);
 
+  // Where focus goes when the popover closes. A dismissal (Esc, Cancel, a click
+  // outside) hands it back to the trigger — the keyboard user keeps their place.
+  // A submit does not: the popover finished its job, and a trigger refocused
+  // right after a keyboard shortcut (mod+Enter) matches :focus-visible, so the
+  // button would light up with a focus ring for no reason. Read by base-ui at
+  // the moment the popup unmounts, so the flag set just before closing wins.
+  const returnFocusOnCloseRef = useRef(true);
+  const closeAfterSubmit = () => {
+    returnFocusOnCloseRef.current = false;
+    setOpen(false);
+  };
+
   // On the open transition, snapshot the current URL (what "Attach page URL"
-  // attaches) and focus the last card.
+  // attaches), focus the last card, and re-arm focus return for this session.
   const wasOpenRef = useRef(false);
   useEffect(() => {
     if (open && !wasOpenRef.current) {
+      returnFocusOnCloseRef.current = true;
       setUrl(window.location.href);
       setAutoFocusId(cards.at(-1)?.localId ?? null);
     }
@@ -422,6 +437,7 @@ export function TaskDraftPopover({
       onOpenChange={setOpen}
       trigger={trigger}
       tooltip={tooltip}
+      finalFocus={() => returnFocusOnCloseRef.current}
     >
       <ResourceView
         resource={tasksResult}
@@ -439,6 +455,7 @@ export function TaskDraftPopover({
             setSubmitting={setSubmitting}
             url={url}
             setOpen={setOpen}
+            closeAfterSubmit={closeAfterSubmit}
             resetForm={resetForm}
             relate={relate}
             hasAmbientRelate={hasAmbientRelate}
