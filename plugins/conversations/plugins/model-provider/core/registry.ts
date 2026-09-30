@@ -28,6 +28,7 @@ export const ConversationModelSchema = z.enum([
   "opus-4-8",
   "opus-4-7",
   "opus-4-6",
+  "sonnet-5-5",
   "sonnet-5",
   "sonnet-4-6",
   "haiku-4-5",
@@ -63,6 +64,11 @@ const MODEL_DEFS: Record<
   "opus-4-8": { cliFlag: "claude-opus-4-8", family: "opus", version: "4.8" },
   "opus-4-7": { cliFlag: "claude-opus-4-7", family: "opus", version: "4.7" },
   "opus-4-6": { cliFlag: "claude-opus-4-6", family: "opus", version: "4.6" },
+  "sonnet-5-5": {
+    cliFlag: "claude-sonnet-5-5",
+    family: "sonnet",
+    version: "5.5",
+  },
   "sonnet-5": { cliFlag: "claude-sonnet-5", family: "sonnet", version: "5" },
   "sonnet-4-6": {
     cliFlag: "claude-sonnet-4-6",

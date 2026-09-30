@@ -1,7 +1,7 @@
-// @hash d5ca6813499d
+// @hash 1cf56ece6cac
 {
   // Model fired by the launch button and pre-selected in the dropdown. A family ("opus") always runs its newest version.
-  // Allowed values: "fable", "opus", "sonnet", "fable-5-1", "fable-5", "opus-5-5", "opus-5", "opus-4-8", "opus-4-7", "opus-4-6", "sonnet-5", "sonnet-4-6"
+  // Allowed values: "fable", "opus", "sonnet", "fable-5-1", "fable-5", "opus-5-5", "opus-5", "opus-4-8", "opus-4-7", "opus-4-6", "sonnet-5-5", "sonnet-5", "sonnet-4-6"
   "defaultModel": "opus",
   "visibleModels": {
     "fable": true,
@@ -14,6 +14,7 @@
     "opus-4-8": false,
     "opus-4-7": false,
     "opus-4-6": false,
+    "sonnet-5-5": false,
     "sonnet-5": false,
     "sonnet-4-6": false
   }
