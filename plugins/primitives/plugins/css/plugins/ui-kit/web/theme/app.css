@@ -860,10 +860,24 @@
 
 /* Floating-bar safe area — right inset that clears the global floating action
  * bar (a fixed top-right overlay). Width is owned + published by the
- * floating-bar plugin as --floating-bar-safe-area; it falls back to the chrome
+ * global-action-bar plugin (while it floats, i.e. in solo) as
+ * --floating-bar-safe-area; it falls back to the chrome
  * pad when the bar is hidden (config off / a toolbar-hosting app), so an app
  * header never sits under the bar without hand-reserving a pr-14. */
 @utility pr-floating-bar { padding-right: var(--floating-bar-safe-area, var(--chrome-pad-x)); } /* twmerge: extend pr */
+
+/* Floating-bar band — the header row the floating bar sits in, so the bar is
+ * centred on that header's own line whatever its height, tier or theme. The
+ * header that reserves the safe area (`Bar` with `endSafeArea`) names itself
+ * the anchor; the bar's fixed band spans the anchor's top and height through
+ * CSS anchor positioning, and its child centres with `my-auto`. With no anchor
+ * (a surface with no top header, or a browser without anchor positioning) the
+ * fallbacks give a zero-height band at the corner offset: the auto margins meet
+ * negative free space, resolve to 0, and the bar hangs from `0.5rem` — the old
+ * `top-2`. The last visible anchor in tree order wins; a `display: none`
+ * keep-alive tab's header cannot be one. */
+@utility anchor-floating-bar-band { anchor-name: --floating-bar-band; } /* twmerge: standalone -- Names this box as an anchor; no built-in group sets anchor-name. */
+@utility floating-bar-band { position-anchor: --floating-bar-band; top: anchor(top, 0.5rem); height: anchor-size(height, 0px); } /* twmerge: standalone -- Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor. */
 
 /* Control-panel geometry — the one grid every data-control panel (filter, sort,
  * view settings, …) is drawn on, owned by the `control-panel` primitive. The

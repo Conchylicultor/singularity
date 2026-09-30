@@ -37,7 +37,9 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
    * Reserve the floating-action-bar safe area on the right (`pr-floating-bar`).
    * Defaults on for `chrome` (unchanged behavior), off for `pane`. The pane
    * tier opts in when its header IS the surface's top chrome and sits at the
-   * right edge, so the global floating bar doesn't occlude its actions.
+   * right edge, so the global floating bar doesn't occlude its actions. It
+   * also names the bar the floating bar's anchor (`anchor-floating-bar-band`),
+   * so the floating bar is centred on this bar's line.
    */
   endSafeArea?: boolean;
   /**
@@ -104,7 +106,9 @@ export function Bar({
       className={cn(
         "gap-sm border-b",
         TIER_CLASS[tier],
-        safe && SAFE_AREA_CLASS[tier],
+        // The bar reserving the floating bar's room is also the row it sits
+        // in: naming it the band's anchor centres the bar on this line.
+        safe && [SAFE_AREA_CLASS[tier], "anchor-floating-bar-band"],
         overflow === "visible" ? "overflow-visible" : "overflow-hidden",
         className,
       )}

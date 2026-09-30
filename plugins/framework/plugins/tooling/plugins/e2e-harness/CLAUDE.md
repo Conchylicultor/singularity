@@ -370,6 +370,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `reorder`
     - `reorder/node-types`
     - `reports`
+    - `shell/global-action-bar`
     - `shell/notifications`
     - `shell/toast`
     - `tasks/auto-start`

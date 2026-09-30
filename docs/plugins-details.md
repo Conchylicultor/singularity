@@ -18489,6 +18489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder`
               - `reorder/node-types`
               - `reports`
+              - `shell/global-action-bar`
               - `shell/notifications`
               - `shell/toast`
               - `tasks/auto-start`
@@ -30593,6 +30594,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/terminal`
               - `reorder`
               - `screenshot`
+              - `shell/global-action-bar`
               - `shell/toast`
         - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
           - Web:
@@ -35393,6 +35395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/dom/element-size.useResizeObserver`
           - `primitives/embed.isChromelessDocument`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/floating-action.FloatingAction`

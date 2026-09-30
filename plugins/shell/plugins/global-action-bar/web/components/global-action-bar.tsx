@@ -12,6 +12,7 @@ import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { HealthReportButton } from "@plugins/shell/plugins/health-report/web";
 import { actionBarConfig } from "../../shared/config";
 import { useActionBarPinned } from "../internal/use-action-bar-pinned";
+import { useFloatingBarSafeArea } from "../internal/use-floating-bar-safe-area";
 
 /**
  * The always-visible leading item: the health report's dot, at the bar's `sm`
@@ -22,6 +23,22 @@ function HealthItem() {
     <ControlSizeProvider size="sm">
       <HealthReportButton />
     </ControlSizeProvider>
+  );
+}
+
+/**
+ * The floating bar's collapsed trigger: the health dot, publishing the room it
+ * occupies at the viewport's right edge as the safe area (see
+ * {@link useFloatingBarSafeArea}). Mounted only while the floating bar is, so
+ * the reservation exists exactly as long as the bar does.
+ */
+function FloatingTrigger() {
+  const ref = useFloatingBarSafeArea();
+  return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- measurement box around the trigger: the safe area is read off its left edge
+    <span ref={ref} className="inline-flex">
+      <HealthItem />
+    </span>
   );
 }
 
@@ -49,21 +66,31 @@ export function FloatingActionBarHost() {
     // wears the chrome's fixed theme, exactly as the docked strip does inside
     // the tab bar. `none` because the floating panel paints its own card.
     <Theme name={chromeThemeScope} surface="none">
-      <FloatingAction
-        // eslint-disable-next-line layout/no-adhoc-layout -- viewport-corner fixed overlay anchored top-right (outside any transformed ancestor)
-        className="fixed top-2 right-3 z-popover"
-        anchor="top-right"
-        variant="ghost"
-        // The health dot and the action row are different heights; centering
-        // them keeps the dot on the row's centre line as the panel widens.
-        align="center"
-        trigger={<HealthItem />}
-      >
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
-        <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
-          <ActionBar.Item.Render />
-        </FloatingActionFadeIn>
-      </FloatingAction>
+      {/* The band: fixed at the right edge, spanning the header row that
+          reserves the bar's room (CSS anchor positioning, see
+          `floating-bar-band` in app.css), so `my-auto` centres the bar on that
+          header's line at any header height. No header → it hangs at 0.5rem. */}
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- viewport-edge fixed band anchored to the surface-edge header (outside any transformed ancestor) */}
+      <div className="floating-bar-band fixed right-3 z-popover flex flex-col">
+        <FloatingAction
+          // `relative` so the morphing panel anchors to this hitbox; `shrink-0`
+          // so the zero-height fallback band cannot squash it (its only child
+          // is absolute, so its min-content height is 0).
+          // eslint-disable-next-line layout/no-adhoc-layout -- positioning box of the floating hitbox inside its anchored band (centring + no-squash mechanics, not a layout role)
+          className="relative my-auto shrink-0"
+          anchor="top-right"
+          variant="ghost"
+          // The health dot and the action row are different heights; centering
+          // them keeps the dot on the row's centre line as the panel widens.
+          align="center"
+          trigger={<FloatingTrigger />}
+        >
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
+          <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
+            <ActionBar.Item.Render />
+          </FloatingActionFadeIn>
+        </FloatingAction>
+      </div>
     </Theme>
   );
 }
