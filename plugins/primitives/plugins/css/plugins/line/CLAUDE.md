@@ -59,6 +59,7 @@ attribute type carries.
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/code/file-pane`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

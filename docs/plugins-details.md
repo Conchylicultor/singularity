@@ -9452,6 +9452,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/exit-menu`
       - `conversations/conversation-view/fork-session`
       - `conversations/conversation-view/hold-and-exit`
+      - `conversations/conversation-view/jsonl-viewer/background-shells`
       - `conversations/conversation-view/jsonl-viewer/file-path`
       - `conversations/conversation-view/jsonl-viewer/subagents`
       - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
@@ -10097,6 +10098,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/fork-conversation`
           - `conversations/conversation-view/fork-session`
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -10784,6 +10786,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
@@ -11110,6 +11113,87 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `ui/icons.Icon`
+            - **`background-shells`** — The background-shell surfaces: every background Bash shell of a conversation and its state (useConversationShells, folded from the transcript the view already holds), its live output tail (useShellOutput), the one state chip every surface shows, and the read-only output pane that streams it. Serves the live tail of one background shell's output file: resolves the file from the conversation's own transcript (never from the browser), checks its shape, reads its last 64 KB per change, and watches it with a per-write (kqueue) file watcher while subscribed.
+              - Web:
+                - Slots: `shellOutputPane.Actions` ← `primitives.pane`
+                - Contributes:
+                  - `Pane.Register` "shell-output"
+                  - `TaskNotification.Open` "background-shell"
+                - Uses:
+                  - `conversations.useConversationById`
+                  - `conversations/conversation-view.conversationPane`
+                  - `conversations/conversation-view/jsonl-viewer/task-notification.TaskNotification`
+                  - `network/live.useLive`
+                  - `primitives/copy-to-clipboard.CopyButton`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/grow.growClass`
+                  - `primitives/css/inline.Inline`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/pin.Pin`
+                  - `primitives/css/rigid.rigidClass`
+                  - `primitives/css/scroll.Scroll`
+                  - `primitives/css/spacing.Inset`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/status-dot.StatusDot`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/dom/auto-scroll.JumpToBottomButton`
+                  - `primitives/dom/auto-scroll.useStickyScroll`
+                  - `primitives/live-state.combineResources`
+                  - `primitives/live-state.ResourceErrorInline`
+                  - `primitives/live-state.ResourceResult`
+                  - `primitives/loading.Loading`
+                  - `primitives/pane.defineRoute`
+                  - `primitives/pane.Pane`
+                  - `primitives/pane.PaneChrome`
+                  - `primitives/pane.useOpenPane`
+                  - `primitives/relative-time.ElapsedTime`
+                  - `primitives/relative-time.formatElapsed`
+                - Exports (types):
+                  - `ConversationShells`
+                  - `ShellStateDisplay`
+                - Exports (values):
+                  - `shellOutputPane`
+                  - `ShellStateChip`
+                  - `shellStateDisplay`
+                  - `useConversationShells`
+                  - `useShellOutput`
+              - Server:
+                - Contributes: `resource.declare` "background-shell-output"
+                - Uses:
+                  - `conversations/transcript-watcher.readJsonlEventsFromChain`
+                  - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+                  - `infra/file-watcher.createFileWatcher`
+                  - `network/live.serveValue`
+                - Resources: `background-shell-output` (push)
+              - Core:
+                - Uses:
+                  - `conversations.hasLiveProcess`
+                  - `network/live.liveValue`
+                - Exports (types):
+                  - `BackgroundShell`
+                  - `BackgroundShellsInput`
+                  - `BackgroundShellState`
+                  - `ShellLaunch`
+                  - `ShellOutput`
+                - Exports (values):
+                  - `backgroundShellsOf`
+                  - `BASH_TOOL_NAME`
+                  - `exitCodeOfSummary`
+                  - `lastOutputLine`
+                  - `parseShellAck`
+                  - `SHELL_ID_PATTERN`
+                  - `SHELL_OUTPUT_TAIL_BYTES`
+                  - `shellLaunchesIn`
+                  - `shellLaunchOf`
+                  - `shellOutput`
+                  - `ShellOutputSchema`
+                  - `stripAnsi`
+                  - `terminalText`
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
+                  - `conversations/conversation-view/running-agents`
             - **`code-listing`** — Renders code with syntax highlighting and a line-number gutter. `CodeListing` takes actual code; `CatNListing` is the `cat -n` entry point, for callers whose content is literally `cat -n` tool output.
               - Web:
                 - Uses:
@@ -11431,18 +11515,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.EventLine`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `ui/icons.Icon`
-            - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
+            - **`task-notification`** — Renders background task completion notifications in the JSONL viewer, with a button onto the finished task that the owning plugin contributes through TaskNotification.Open (first claim wins).
               - Web:
+                - Slots: `TaskNotification.Open` ← `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`
                 - Contributes: `JsonlViewer.EventRenderer` "task-notification" → `TaskNotificationRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.EventLine`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
                   - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
                   - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/pane.useOpenPane`
+                - Exports (types):
+                  - `TaskNotificationClaim`
+                  - `TaskNotificationEvent`
+                  - `TaskNotificationOpenContribution`
+                  - `TaskNotificationTarget`
+                - Exports (values): `TaskNotification`
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/background-shells`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
             - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "teammate-message" → `TeammateMessageRow`
@@ -11520,6 +11614,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
                       - `Pane.Register` "agent-report"
+                      - `TaskNotification.Open` "sub-agent"
                     - Uses:
                       - `conversations/conversation-view.conversationPane`
                       - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
@@ -11527,7 +11622,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/subagents.SubagentLastStep`
                       - `conversations/conversation-view/jsonl-viewer/subagents.SubagentPaneBody`
                       - `conversations/conversation-view/jsonl-viewer/subagents.subagentStateDisplay`
+                      - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
                       - `conversations/conversation-view/jsonl-viewer/subagents.useSubagentStatus`
+                      - `conversations/conversation-view/jsonl-viewer/task-notification.TaskNotification`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `conversations/model-provider.familyClass`
@@ -11550,9 +11647,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `ui/icons.Icon`
                     - Exports (values): `agentReportPane`
                   - Cross-plugin:
-                    - Imported by:
-                      - `conversations/conversation-view/jsonl-viewer/task-notification`
-                      - `conversations/conversation-view/running-agents`
+                    - Imported by: `conversations/conversation-view/running-agents`
                   - Core:
                     - Exports (types): `AgentInput`
                     - Exports (values):
@@ -11621,13 +11716,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Bash" → `BashToolView`
                     - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                      - `conversations/conversation-view/jsonl-viewer/background-shells.shellOutputPane`
+                      - `conversations/conversation-view/jsonl-viewer/background-shells.ShellStateChip`
+                      - `conversations/conversation-view/jsonl-viewer/background-shells.useConversationShells`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/badge.Badge`
                       - `primitives/css/clip.Clip`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                      - `primitives/icon-button.IconButton`
+                      - `primitives/live-state.ResourceErrorInline`
+                      - `primitives/pane.useOpenPane`
                       - `primitives/select-scope.ContentScope`
                 - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
                   - Web:
@@ -12281,6 +12384,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Conversation.AbovePromptInput` → `RunningAgentsBand`
             - Uses:
               - `conversations/conversation-view.Conversation`
+              - `conversations/conversation-view/jsonl-viewer/background-shells.shellOutputPane`
+              - `conversations/conversation-view/jsonl-viewer/background-shells.shellStateDisplay`
+              - `conversations/conversation-view/jsonl-viewer/background-shells.useConversationShells`
+              - `conversations/conversation-view/jsonl-viewer/background-shells.useShellOutput`
               - `conversations/conversation-view/jsonl-viewer/subagents.SubagentDuration`
               - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
@@ -13023,6 +13130,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `backup/sources/transcripts`
           - `conversations`
           - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/transcript-api`
           - `conversations/transcript-retention`
@@ -20209,6 +20317,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2`
           - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/code`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/transcript-watcher`
           - `debug/profiling/op-log/op-store`
           - `debug/sentinel`
@@ -22318,6 +22427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/drop-and-exit`
           - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
@@ -26417,6 +26527,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/copy-id`
           - `apps/studio/compositions/release/release-logs`
           - `apps/website/pages/download`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `page/code-block`
@@ -26501,6 +26612,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
@@ -27122,6 +27234,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
@@ -27244,6 +27357,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `debug/profiling`
               - `debug/timeline`
               - `primitives/css/fill`
@@ -27300,6 +27414,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-preprompt`
               - `conversations/conversation-progress`
               - `conversations/conversation-ui/item`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/file-path`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
               - `conversations/conversation-view/op-status`
@@ -27475,6 +27590,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/code/file-pane`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -27626,6 +27742,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/songsheet`
               - `conversations/conversation-view/jsonl-viewer/assistant-text`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/jsonl-viewer/user-image`
@@ -27817,6 +27934,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
@@ -28011,6 +28129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
               - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
               - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/code-listing`
               - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
@@ -28254,6 +28373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
               - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
               - `conversations/conversation-view/jsonl-viewer/subagents`
@@ -28519,6 +28639,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/agents`
               - `conversations/conversation-category`
               - `conversations/conversation-ui/item`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/task-notification`
               - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/tasks-panel`
@@ -28791,6 +28912,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
               - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/code-listing`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/event-counter`
@@ -29321,6 +29443,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
               - `conversations/conversation-view/jsonl-viewer/file-path`
@@ -30744,6 +30867,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-progression`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/outline`
               - `debug/logs`
               - `layouts/miller`
@@ -31162,6 +31286,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/task-notification`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/push-profiling`
           - `conversations/conversation-view/resume`
@@ -31636,11 +31761,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/dependent-count`
           - `conversations/conversation-view/drop-and-exit`
           - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/notes`
@@ -31866,6 +31993,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/code/file-pane/raw`
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/track`
@@ -32584,7 +32712,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Contributes:
           - `plugin-conv-side.actions` "title" → `PaneTitleItem`
           - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -32643,6 +32771,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversationPane.Actions` "title" → `PaneTitleItem`
           - `filePeekPane.Actions` "title" → `PaneTitleItem`
           - `conv-commits-graph.actions` "title" → `PaneTitleItem`
+          - `shellOutputPane.Actions` "title" → `PaneTitleItem`
           - `agentReportPane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `conv-push-profiling.actions` "title" → `PaneTitleItem`
@@ -32890,10 +33019,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/artifacts/skill`
           - `conversations/conversation-view/code/file-pane`
           - `conversations/conversation-view/commits-graph`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/file-path`
-          - `conversations/conversation-view/jsonl-viewer/task-notification`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -33171,6 +33301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item`
           - `conversations/conversation-view/artifacts`
           - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/op-status`
           - `conversations/conversation-view/running-agents`
@@ -34489,7 +34620,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×216: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.WebRegister` ×217: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -34519,7 +34650,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×215: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.Register` ×216: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`

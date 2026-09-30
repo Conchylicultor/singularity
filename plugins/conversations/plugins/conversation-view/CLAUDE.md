@@ -74,6 +74,7 @@
     - `conversations/conversation-view/fork-conversation`
     - `conversations/conversation-view/fork-session`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/event-counter`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

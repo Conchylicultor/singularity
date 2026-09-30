@@ -150,6 +150,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "conversations.conversation-view.commits-graph.conv-commits-graph.actions", pluginId: "conversations.conversation-view.commits-graph", configName: "conv-commits-graph.actions" },
   { slotId: "conversations.conversation-view.conversation.actions", pluginId: "conversations.conversation-view", configName: "conversation.actions" },
   { slotId: "conversations.conversation-view.exit-menu.item", pluginId: "conversations.conversation-view.exit-menu", configName: "item" },
+  { slotId: "conversations.conversation-view.jsonl-viewer.background-shells.shell-output.actions", pluginId: "conversations.conversation-view.jsonl-viewer.background-shells", configName: "shell-output.actions" },
   { slotId: "conversations.conversation-view.jsonl-viewer.overlay", pluginId: "conversations.conversation-view.jsonl-viewer", configName: "overlay" },
   { slotId: "conversations.conversation-view.jsonl-viewer.pending-prompt-action", pluginId: "conversations.conversation-view.jsonl-viewer", configName: "pending-prompt-action" },
   { slotId: "conversations.conversation-view.jsonl-viewer.row-actions.item", pluginId: "conversations.conversation-view.jsonl-viewer.row-actions", configName: "item" },

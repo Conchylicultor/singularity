@@ -21,6 +21,7 @@
     - `apps/prototypes/copy-id`
     - `apps/studio/compositions/release/release-logs`
     - `apps/website/pages/download`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `page/code-block`

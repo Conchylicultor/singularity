@@ -10,6 +10,10 @@ import type {
   WorkflowRunEntry,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
 import type { SubagentEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
+import type {
+  BackgroundShell,
+  BackgroundShellState,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/core";
 
 /** How long a sub-agent that has stopped stays on screen before it leaves. */
 export const DONE_LINGER_MS = 3000;
@@ -17,6 +21,11 @@ export const DONE_LINGER_MS = 3000;
 /** The parent key a workflow run's row goes by, and its agents point at. */
 export function workflowRowKey(runId: string): string {
   return `workflow:${runId}`;
+}
+
+/** The key a background shell's row goes by. */
+export function shellRowKey(shellId: string): string {
+  return `shell:${shellId}`;
 }
 
 /** What every row of the band says, whichever kind of thing it is. */
@@ -27,9 +36,11 @@ interface RowBase {
   /** The type cell: what kind of agent it is. */
   type: string;
   description: string;
-  state: SubagentRunState;
   startedAt: Date;
-  /** `null` while it is still running. */
+  /**
+   * When it stopped. `null` while it is still running — and for a shell that
+   * ended without reporting, whose end nothing on record dates.
+   */
   endedAt: Date | null;
 }
 
@@ -46,6 +57,7 @@ interface RowBase {
  */
 export interface AgentBandRow extends RowBase {
   kind: "agent";
+  state: SubagentRunState;
   /**
    * The sub-agent's own id — stable for as long as it exists, and the key its
    * report pane opens by. Every sub-agent has one, whoever spawned it, so every
@@ -81,6 +93,7 @@ export interface AgentBandRow extends RowBase {
  */
 export interface WorkflowBandRow extends RowBase {
   kind: "workflow";
+  state: SubagentRunState;
   /** {@link workflowRowKey} of the run. */
   key: string;
   /** Always top-level: the conversation launched the run. */
@@ -92,8 +105,27 @@ export interface WorkflowBandRow extends RowBase {
   runId: string;
 }
 
-/** One line of the band: a sub-agent, or the workflow run some sit under. */
-export type RunningAgentRow = AgentBandRow | WorkflowBandRow;
+/**
+ * One background shell (`Bash` with `run_in_background`). Read from the
+ * background-shells plugin's fold — state, start and end — never re-derived.
+ * It spawns nothing, so it is always a top-level leaf.
+ */
+export interface ShellBandRow extends RowBase {
+  kind: "shell";
+  /** {@link shellRowKey} of the shell. */
+  key: string;
+  parentKey: null;
+  /** Always "shell". */
+  type: string;
+  /** The call's `description`, else its command. */
+  description: string;
+  state: BackgroundShellState;
+  shellId: string;
+  command: string;
+}
+
+/** One line of the band: a sub-agent, the workflow run some sit under, or a background shell. */
+export type RunningAgentRow = AgentBandRow | WorkflowBandRow | ShellBandRow;
 
 /** One sub-agent, flattened for the band. */
 export function agentRow(entry: SubagentEntry): AgentBandRow {
@@ -157,36 +189,85 @@ export function workflowRow(run: WorkflowRunEntry): WorkflowBandRow {
   };
 }
 
-/** What the band is drawn from: the sub-agents plugin's `known` reading. */
+/** One background shell, flattened for the band. */
+export function shellRow(shell: BackgroundShell): ShellBandRow {
+  return {
+    kind: "shell",
+    key: shellRowKey(shell.shellId),
+    parentKey: null,
+    type: "shell",
+    description: shell.description ?? shell.command,
+    state: shell.state,
+    startedAt: shell.startedAt,
+    endedAt: shell.endedAt,
+    shellId: shell.shellId,
+    command: shell.command,
+  };
+}
+
+/**
+ * What the band is drawn from: the sub-agents plugin's `known` reading, and the
+ * background-shells plugin's.
+ */
 export interface BandSource {
   entries: readonly SubagentEntry[];
   workflowRuns: readonly WorkflowRunEntry[];
+  shells: readonly BackgroundShell[];
+}
+
+/**
+ * `later` slotted into `rows` by start: each goes ahead of the first row that
+ * started after it. Both are already in start order, so this is a merge.
+ */
+function mergeByStart(
+  rows: readonly RunningAgentRow[],
+  later: readonly RunningAgentRow[],
+): RunningAgentRow[] {
+  const merged: RunningAgentRow[] = [];
+  let next = 0;
+  for (const row of rows) {
+    while (next < later.length && later[next]!.startedAt <= row.startedAt) {
+      merged.push(later[next++]!);
+    }
+    merged.push(row);
+  }
+  return merged.concat(later.slice(next));
 }
 
 /**
  * Every row the band could draw: the sub-agents in the order they arrive (start
  * order — the sibling order the band's ranks are minted from), with each run's
- * row slotted in ahead of the first sub-agent that started after it.
+ * row, then each background shell's, slotted in ahead of the first row that
+ * started after it.
  *
  * A merge, not a sort: the sub-agents' own order is the subagents plugin's to
  * give, and re-sorting it here would be a second opinion about it.
  */
-function bandRows({ entries, workflowRuns }: BandSource): RunningAgentRow[] {
-  const runs = workflowRuns.map(workflowRow);
-  const rows: RunningAgentRow[] = [];
-  let next = 0;
-  for (const agent of entries.map(agentRow)) {
-    while (next < runs.length && runs[next]!.startedAt <= agent.startedAt) {
-      rows.push(runs[next++]!);
-    }
-    rows.push(agent);
-  }
-  return rows.concat(runs.slice(next));
+function bandRows({
+  entries,
+  workflowRuns,
+  shells,
+}: BandSource): RunningAgentRow[] {
+  return mergeByStart(
+    mergeByStart(entries.map(agentRow), workflowRuns.map(workflowRow)),
+    shells.map(shellRow),
+  );
 }
 
-/** Is this row still on screen at `now`? */
+/**
+ * Is this row still on screen at `now`? While it runs, and for
+ * {@link DONE_LINGER_MS} after its recorded end.
+ *
+ * A row that has stopped with NO recorded end — a background shell that ended
+ * without reporting (the conversation exited, which kills its shells, and no
+ * notification dates it) — is not shown. Lingering needs an instant to count
+ * from, and inventing one ("when the band noticed") would be the band deriving
+ * a fact the transcript does not hold; showing it forever would be a claim that
+ * it is still worth watching.
+ */
 function isShown(row: RunningAgentRow, now: number): boolean {
-  return row.endedAt === null || row.endedAt.getTime() + DONE_LINGER_MS > now;
+  if (row.state.kind === "running") return true;
+  return row.endedAt !== null && row.endedAt.getTime() + DONE_LINGER_MS > now;
 }
 
 /**
@@ -262,8 +343,13 @@ export function nextLingerExpiry(
 
 /** What the band's summary line says about the rows under it. */
 export interface RunningAgentsSummary {
-  /** How many are still working. Lingering rows are not counted — they stopped. */
+  /** How many sub-agents are still working. Lingering rows are not counted — they stopped. */
   running: number;
+  /**
+   * How many background shells are still running. Counted apart from
+   * `running`: a shell is not an agent, and the header names each.
+   */
+  shellsRunning: number;
   /**
    * How many workflow runs are still going. Counted apart from `running`: a run
    * between phases has no agent live, yet the band must not read "All agents
@@ -271,7 +357,7 @@ export interface RunningAgentsSummary {
    */
   runsGoing: number;
   /**
-   * When the longest-running one started; `null` when none is running.
+   * When the longest-running agent or shell started; `null` when none is running.
    *
    * An instant, not a duration: the clock that turns it into "4:06" ticks
    * inside the one component that shows it (`ElapsedTime`), so the band — and
@@ -285,15 +371,15 @@ export function summarizeAgents(
 ): RunningAgentsSummary {
   // Agents only: a workflow run is not an agent working, and counting it would
   // say "4 agents working" over three.
-  const running = rows.filter(
-    (row) => row.kind === "agent" && row.state.kind === "running",
-  );
+  const going = (kind: RunningAgentRow["kind"]) =>
+    rows.filter((row) => row.kind === kind && row.state.kind === "running");
+  const agents = going("agent");
+  const shells = going("shell");
   return {
-    running: running.length,
-    runsGoing: rows.filter(
-      (row) => row.kind === "workflow" && row.state.kind === "running",
-    ).length,
-    longestSince: running.reduce<Date | null>(
+    running: agents.length,
+    shellsRunning: shells.length,
+    runsGoing: going("workflow").length,
+    longestSince: [...agents, ...shells].reduce<Date | null>(
       (earliest, row) =>
         earliest === null || row.startedAt < earliest
           ? row.startedAt

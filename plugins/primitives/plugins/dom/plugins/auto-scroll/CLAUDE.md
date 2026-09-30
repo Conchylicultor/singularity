@@ -138,6 +138,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-progression`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/outline`
     - `debug/logs`
     - `layouts/miller`

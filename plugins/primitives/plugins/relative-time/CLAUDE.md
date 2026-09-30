@@ -40,6 +40,7 @@ dense-list spelling for a trailing time column, where "ago" is implied.
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/running-agents`

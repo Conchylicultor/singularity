@@ -35,6 +35,7 @@ moved (see `apps/prototypes/files`).
     - `config_v2`
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/code`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/transcript-watcher`
     - `debug/profiling/op-log/op-store`
     - `debug/sentinel`

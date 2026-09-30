@@ -1581,6 +1581,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-tool-output-notice",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-background-shells",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing",
       "version": "0.0.1",
@@ -2700,6 +2704,10 @@
     },
     "plugins/framework/plugins/cli/plugins/upstream": {
       "name": "@singularity/plugin-framework-cli-upstream",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/hook-value": {
+      "name": "@singularity/plugin-framework-hook-value",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/plugin-id": {
@@ -4544,10 +4552,6 @@
         "@xyflow/react": "^12.3.5",
         "dagre": "^0.8.5",
       },
-    },
-    "plugins/framework/plugins/hook-value": {
-      "name": "@singularity/plugin-framework-hook-value",
-      "version": "0.0.1",
     },
     "plugins/primitives/plugins/hover-reveal": {
       "name": "@singularity/plugin-primitives-hover-reveal",
@@ -6820,6 +6824,8 @@
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-tool-output-notice": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-tool-output-notice@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/tool-output-notice"],
 
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-background-shells": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-background-shells@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells"],
+
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card"],
@@ -7359,6 +7365,8 @@
     "@singularity/plugin-framework-cli-test": ["@singularity/plugin-framework-cli-test@workspace:plugins/framework/plugins/cli/plugins/test"],
 
     "@singularity/plugin-framework-cli-upstream": ["@singularity/plugin-framework-cli-upstream@workspace:plugins/framework/plugins/cli/plugins/upstream"],
+
+    "@singularity/plugin-framework-hook-value": ["@singularity/plugin-framework-hook-value@workspace:plugins/framework/plugins/hook-value"],
 
     "@singularity/plugin-framework-plugin-id": ["@singularity/plugin-framework-plugin-id@workspace:plugins/framework/plugins/plugin-id"],
 
@@ -8213,8 +8221,6 @@
     "@singularity/plugin-primitives-folder-picker": ["@singularity/plugin-primitives-folder-picker@workspace:plugins/primitives/plugins/folder-picker"],
 
     "@singularity/plugin-primitives-graph-canvas": ["@singularity/plugin-primitives-graph-canvas@workspace:plugins/primitives/plugins/graph-canvas"],
-
-    "@singularity/plugin-framework-hook-value": ["@singularity/plugin-framework-hook-value@workspace:plugins/framework/plugins/hook-value"],
 
     "@singularity/plugin-primitives-hover-reveal": ["@singularity/plugin-primitives-hover-reveal@workspace:plugins/primitives/plugins/hover-reveal"],
 

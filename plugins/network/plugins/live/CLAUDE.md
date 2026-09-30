@@ -576,6 +576,7 @@ grouped under the wave or item that removes it
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/drop-and-exit`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/event-counter`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`

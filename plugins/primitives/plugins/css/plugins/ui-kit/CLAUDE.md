@@ -589,6 +589,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment/environment`
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/fields-card`
     - `conversations/conversation-view/jsonl-viewer/file-path`

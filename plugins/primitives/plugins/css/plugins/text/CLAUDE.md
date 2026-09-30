@@ -416,6 +416,7 @@ to reconcile them; they never needed reconciling.
     - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
     - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/code-listing`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/event-counter`

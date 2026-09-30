@@ -952,11 +952,13 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-and-exit`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/event-counter`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/notes`

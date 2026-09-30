@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import type { SubagentEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import type { WorkflowRunEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
+import type { BackgroundShell } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/core";
 import {
   DONE_LINGER_MS,
   agentRow,
@@ -21,7 +22,8 @@ const visible = (
   entries: SubagentEntry[],
   now: number,
   workflowRuns: WorkflowRunEntry[] = [],
-) => visibleAgentRows({ entries, workflowRuns }, now);
+  shells: BackgroundShell[] = [],
+) => visibleAgentRows({ entries, workflowRuns, shells }, now);
 
 function call(input: Record<string, unknown>): ToolCallEvent {
   return {
@@ -305,6 +307,7 @@ describe("summarizeAgents", () => {
     );
     expect(summarizeAgents(rows)).toEqual({
       running: 2,
+      shellsRunning: 0,
       runsGoing: 0,
       longestSince: at(60),
     });
@@ -318,6 +321,7 @@ describe("summarizeAgents", () => {
     );
     expect(summarizeAgents(rows)).toEqual({
       running: 0,
+      shellsRunning: 0,
       runsGoing: 0,
       longestSince: null,
     });
@@ -447,14 +451,106 @@ describe("workflow runs", () => {
     ]);
     expect(summarizeAgents(rows)).toEqual({
       running: 2,
+      shellsRunning: 0,
       runsGoing: 1,
       longestSince: at(2),
     });
     // A run alone, between phases, is not "1 agent working" — but it is going.
     expect(summarizeAgents(visible([], now, [run()]))).toEqual({
       running: 0,
+      shellsRunning: 0,
       runsGoing: 1,
       longestSince: null,
+    });
+  });
+});
+
+describe("background shells", () => {
+  const now = at(60).getTime();
+
+  const shell = (
+    id: string,
+    over: Partial<BackgroundShell> = {},
+  ): BackgroundShell => ({
+    shellId: id,
+    toolUseId: `toolu_${id}`,
+    command: `npm run ${id}`,
+    description: undefined,
+    outputFile: `/private/tmp/claude-501/x/y/tasks/${id}.output`,
+    startedAt: at(0),
+    endedAt: null,
+    state: { kind: "running" },
+    ...over,
+  });
+
+  test("a shell is a top-level row named by its description, else its command", () => {
+    const rows = visible(
+      [],
+      now,
+      [],
+      [shell("b1", { description: "Build the app" }), shell("b2")],
+    );
+    expect(
+      rows.map((r) => [r.kind, r.key, r.parentKey, r.type, r.description]),
+    ).toEqual([
+      ["shell", "shell:b1", null, "shell", "Build the app"],
+      ["shell", "shell:b2", null, "shell", "npm run b2"],
+    ]);
+  });
+
+  test("shells interleave with sub-agents by start", () => {
+    const rows = visible(
+      [
+        entry({ id: "early", startedAt: at(0) }),
+        entry({ id: "late", startedAt: at(10) }),
+      ],
+      now,
+      [],
+      [shell("mid", { startedAt: at(5) })],
+    );
+    expect(rows.map((r) => r.key)).toEqual(["early", "shell:mid", "late"]);
+  });
+
+  test("a finished shell lingers from its notification, then leaves", () => {
+    const done = shell("d", {
+      state: { kind: "completed", exitCode: 0 },
+      endedAt: at(59),
+    });
+    expect(visible([], now, [], [done]).map((r) => r.key)).toEqual(["shell:d"]);
+    expect(nextLingerExpiry(visible([], now, [], [done]), now)).toBe(
+      at(59).getTime() + DONE_LINGER_MS,
+    );
+    const later = at(59).getTime() + DONE_LINGER_MS;
+    expect(visible([], later, [], [done])).toEqual([]);
+  });
+
+  test("a shell that ended without reporting has no end to linger from, so it is not shown", () => {
+    const rows = visible(
+      [],
+      now,
+      [],
+      [shell("gone", { state: { kind: "ended-without-reporting" } })],
+    );
+    expect(rows).toEqual([]);
+    expect(nextLingerExpiry(rows, now)).toBeNull();
+  });
+
+  test("the summary counts shells apart, and clocks the longest of agents and shells", () => {
+    const rows = visible(
+      [entry({ id: "a", startedAt: at(20) })],
+      now,
+      [],
+      [
+        shell("s1", { startedAt: at(5) }),
+        shell("s2", { startedAt: at(30) }),
+        shell("s3", { state: { kind: "killed" }, endedAt: at(59) }),
+      ],
+    );
+    expect(summarizeAgents(rows)).toEqual({
+      running: 1,
+      shellsRunning: 2,
+      runsGoing: 0,
+      longestSince: at(5),
     });
   });
 });

@@ -10,6 +10,7 @@
   - Contributes:
     - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
     - `Pane.Register` "agent-report"
+    - `TaskNotification.Open` "sub-agent"
   - Uses:
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
@@ -17,7 +18,9 @@
     - `conversations/conversation-view/jsonl-viewer/subagents.SubagentLastStep`
     - `conversations/conversation-view/jsonl-viewer/subagents.SubagentPaneBody`
     - `conversations/conversation-view/jsonl-viewer/subagents.subagentStateDisplay`
+    - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
     - `conversations/conversation-view/jsonl-viewer/subagents.useSubagentStatus`
+    - `conversations/conversation-view/jsonl-viewer/task-notification.TaskNotification`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
     - `conversations/model-provider.familyClass`
@@ -40,9 +43,7 @@
     - `ui/icons.Icon`
   - Exports (values): `agentReportPane`
 - Cross-plugin:
-  - Imported by:
-    - `conversations/conversation-view/jsonl-viewer/task-notification`
-    - `conversations/conversation-view/running-agents`
+  - Imported by: `conversations/conversation-view/running-agents`
 - Core:
   - Exports (types): `AgentInput`
   - Exports (values):

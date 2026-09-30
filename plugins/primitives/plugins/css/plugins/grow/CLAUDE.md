@@ -54,6 +54,7 @@ needs an axis, because `min-width: 0` and `min-height: 0` are two properties.
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `debug/profiling`
     - `debug/timeline`
     - `primitives/css/fill`

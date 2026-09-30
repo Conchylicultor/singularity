@@ -33,9 +33,16 @@ import { agentReportPane } from "@plugins/conversations/plugins/conversation-vie
 import { SubagentDuration } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import { formatLastStep } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
 import {
+  shellOutputPane,
+  shellStateDisplay,
+  useShellOutput,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/web";
+import { lastOutputLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/core";
+import {
   summarizeAgents,
   type RunningAgentRow,
   type RunningAgentsSummary,
+  type ShellBandRow,
 } from "../internal/agent-rows";
 import { useRunningAgents } from "./use-running-agents";
 import "./running-agents-band.css";
@@ -59,6 +66,8 @@ const NO_ROWS: RunningAgentRow[] = [];
 interface BandChrome {
   summary: RunningAgentsSummary;
   collapsible: UseCollapsibleReturn;
+  /** The conversation whose shells' output the shell rows read. */
+  conversationId: string;
 }
 
 const BandChromeContext = createContext<BandChrome | null>(null);
@@ -86,13 +95,22 @@ function ActivityRing() {
   );
 }
 
+/**
+ * How a stopped row says it stopped: "done" for an agent or a run, and for a
+ * shell the background-shells plugin's own label ("exit 0", "Failed · exit 1",
+ * "Killed") — how a shell ended is the thing worth reading.
+ */
+function doneLabel(row: RunningAgentRow): string {
+  return row.kind === "shell" ? shellStateDisplay(row.state).label : "done";
+}
+
 /** How long a row has been going, or — once it has stopped — how long it took. */
 function ElapsedCell({ row }: { row: RunningAgentRow }) {
   const done = row.endedAt !== null;
   return (
     <Line as="span" className="gap-2xs text-muted-foreground">
       {done && <Icon icon={checkIcon} className={cn("size-3", rigidClass())} />}
-      {done && <span>done</span>}
+      {done && <span>{doneLabel(row)}</span>}
       <SubagentDuration
         startedAt={row.startedAt}
         endedAt={row.endedAt}
@@ -105,13 +123,54 @@ function ElapsedCell({ row }: { row: RunningAgentRow }) {
 /**
  * What a row says it last did — `formatLastStep`, so a card phrases it the
  * same. `null` for a workflow run's row: a run writes no transcript of its
- * own, and what it is doing is what the agents under it say.
+ * own, and what it is doing is what the agents under it say. `null` for a
+ * shell's too: its last step is its latest output line, which is a live read
+ * ({@link ShellLastLine}), not a field of the row.
  */
 function lastStepText(row: RunningAgentRow): string | null {
-  if (row.kind === "workflow") return null;
+  if (row.kind !== "agent") return null;
   return row.lastStep === null
     ? "Nothing written yet"
     : formatLastStep(row.lastStep);
+}
+
+/**
+ * A shell's "last step": the latest line it printed (`lastOutputLine`, which
+ * reads the latest `\r` frame of a progress bar), from the same live tail the
+ * output pane streams — one subscription between them. Nothing while the tail
+ * is landing: the task alone is true, a guessed step is not.
+ */
+function ShellLastLine({ row }: { row: ShellBandRow }) {
+  const { conversationId } = useBandChrome();
+  const output = useShellOutput(conversationId, row.shellId);
+  const text = shellLastLineText(output);
+  if (text === null) return null;
+  return (
+    <span className="text-muted-foreground">
+      {" · "}
+      {text}
+    </span>
+  );
+}
+
+function shellLastLineText(
+  output: ReturnType<typeof useShellOutput>,
+): string | null {
+  switch (output.status) {
+    case "loading":
+      return null;
+    case "error":
+      return "output unavailable";
+    case "ready":
+      switch (output.data.kind) {
+        case "present":
+          return lastOutputLine(output.data.tail) ?? "no output yet";
+        case "gone":
+          return "output file gone";
+        case "unknown-shell":
+          return null;
+      }
+  }
 }
 
 /**
@@ -124,6 +183,14 @@ function lastStepText(row: RunningAgentRow): string | null {
  * Plain inline spans only: a box of its own would take the truncation with it.
  */
 function TaskLabel({ row }: { row: RunningAgentRow }) {
+  if (row.kind === "shell") {
+    return (
+      <>
+        {row.description}
+        <ShellLastLine row={row} />
+      </>
+    );
+  }
   const step = lastStepText(row);
   if (step === null) return <>{row.description}</>;
   return (
@@ -196,7 +263,8 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
 function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
   const { summary, collapsible } = useBandChrome();
   const { open, triggerProps, contentId } = collapsible;
-  const working = summary.running > 0 || summary.runsGoing > 0;
+  const working =
+    summary.running > 0 || summary.shellsRunning > 0 || summary.runsGoing > 0;
   return (
     <Text as="div" variant="caption">
       <Clip className="rounded-md border border-border bg-muted/30">
@@ -219,7 +287,9 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
               />
             )}
             <Fill as="span">
-              {working && summary.running === 0 ? (
+              {working &&
+              summary.running === 0 &&
+              summary.shellsRunning === 0 ? (
                 // A run between phases: nothing to count, but not finished.
                 <>
                   {summary.runsGoing === 1
@@ -231,8 +301,7 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
                 </>
               ) : working ? (
                 <>
-                  <span className="font-medium">{summary.running}</span>
-                  {summary.running === 1 ? " agent working" : " agents working"}
+                  <WorkingCount summary={summary} />
                   {summary.longestSince !== null && (
                     <span className="text-muted-foreground">
                       {" · longest "}
@@ -244,9 +313,7 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
                   )}
                 </>
               ) : (
-                <span className="text-muted-foreground">
-                  All agents finished
-                </span>
+                <span className="text-muted-foreground">All finished</span>
               )}
             </Fill>
             <CollapsibleChevron
@@ -267,6 +334,38 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
         )}
       </Clip>
     </Text>
+  );
+}
+
+/**
+ * "2 agents working", "2 shells running", or both: "1 agent · 2 shells
+ * running". Each kind is counted apart — a shell is not an agent working.
+ */
+function WorkingCount({ summary }: { summary: RunningAgentsSummary }) {
+  const { running, shellsRunning } = summary;
+  const agents = running === 1 ? " agent" : " agents";
+  const shells = (
+    <>
+      <span className="font-medium">{shellsRunning}</span>
+      {shellsRunning === 1 ? " shell running" : " shells running"}
+    </>
+  );
+  if (shellsRunning === 0) {
+    return (
+      <>
+        <span className="font-medium">{running}</span>
+        {agents} working
+      </>
+    );
+  }
+  if (running === 0) return shells;
+  return (
+    <>
+      <span className="font-medium">{running}</span>
+      {agents}
+      {" · "}
+      {shells}
+    </>
   );
 }
 
@@ -301,8 +400,12 @@ export function RunningAgentsBand({
 
   const rows = state.kind === "known" ? state.rows : NO_ROWS;
   const chrome = useMemo<BandChrome>(
-    () => ({ summary: summarizeAgents(rows), collapsible }),
-    [rows, collapsible],
+    () => ({
+      summary: summarizeAgents(rows),
+      collapsible,
+      conversationId: conversation.id,
+    }),
+    [rows, collapsible, conversation.id],
   );
   // Each sub-agent sits under the one that spawned it. Siblings keep launch
   // order: the rows arrive in start order, and their ranks are minted from that
@@ -354,16 +457,27 @@ export function RunningAgentsBand({
         // is nowhere in this conversation's transcript. A workflow run's row
         // opens nothing: there is no pane for a whole run (its transcript card
         // already draws the DAG), so folding is its only interaction.
-        rowActivation={(row) =>
-          row.kind === "agent"
-            ? () =>
+        // A shell row opens its live output pane.
+        rowActivation={(row) => {
+          switch (row.kind) {
+            case "agent":
+              return () =>
                 openPane(
                   agentReportPane,
                   { by: "agent", key: row.key },
                   { mode: "push" },
-                )
-            : undefined
-        }
+                );
+            case "shell":
+              return () =>
+                openPane(
+                  shellOutputPane,
+                  { shellId: row.shellId },
+                  { mode: "push" },
+                );
+            case "workflow":
+              return undefined;
+          }
+        }}
         emptyState={
           <Text tone="muted">No agent matches what you searched for.</Text>
         }

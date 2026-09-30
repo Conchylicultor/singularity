@@ -11,6 +11,11 @@ import type {
   useConversationSubagents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import type { WorkflowRunEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
+import type {
+  useConversationShells,
+  useShellOutput,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/web";
+import type { BackgroundShell } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/core";
 import type { HostedToolbarParts } from "@plugins/primitives/plugins/data-view/core";
 import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { RunningAgentsBand } from "../components/running-agents-band";
@@ -37,6 +42,26 @@ vi.mock(
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
     useConversationSubagents: () => subagents,
+  }),
+);
+
+type ConversationShells = ReturnType<typeof useConversationShells>;
+
+/** What the stubbed shell read answers on the next render. */
+let shells: ConversationShells = { kind: "known", shells: [] };
+/** The stubbed output tail, per shell id. */
+let outputs: Record<string, ReturnType<typeof useShellOutput>> = {};
+
+vi.mock(
+  "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useConversationShells: () => shells,
+    useShellOutput: (_conversationId: string | null, shellId: string) =>
+      outputs[shellId] ?? {
+        status: "loading",
+        refetch: () => Promise.resolve(),
+      },
   }),
 );
 
@@ -220,6 +245,8 @@ const summaryLine = () =>
   screen.getByRole("button", { name: "Running agents" });
 
 beforeEach(() => {
+  shells = { kind: "known", shells: [] };
+  outputs = {};
   // Date only: the band's linger timer and the clocks' own ticks stay real, so
   // nothing here depends on advancing them.
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -373,5 +400,108 @@ describe("the running-agents band", () => {
     );
     // One agent is working; the run it belongs to is not a second one.
     expect(summaryLine().textContent).toContain("1 agent working");
+  });
+
+  describe("background shells", () => {
+    const shell = (
+      id: string,
+      over: Partial<BackgroundShell> = {},
+    ): BackgroundShell => ({
+      shellId: id,
+      toolUseId: `toolu_${id}`,
+      command: `npm run ${id}`,
+      description: undefined,
+      outputFile: `/private/tmp/claude-501/x/y/tasks/${id}.output`,
+      startedAt: ago(100),
+      endedAt: null,
+      state: { kind: "running" },
+      ...over,
+    });
+    const present = (tail: string): ReturnType<typeof useShellOutput> => ({
+      status: "ready",
+      data: { kind: "present", size: tail.length, tail, truncated: false },
+      refetch: () => Promise.resolve(),
+    });
+
+    it("waits for the shells too before saying anything", () => {
+      subagents = known([]);
+      shells = { kind: "pending" };
+      expect(renderBand().container.innerHTML).toBe("");
+    });
+
+    it("counts shells on their own when no agent is working", () => {
+      subagents = known([]);
+      shells = {
+        kind: "known",
+        shells: [shell("s1", { startedAt: ago(130) }), shell("s2")],
+      };
+      renderBand();
+      expect(summaryLine().textContent).toContain("2 shells running");
+      expect(summaryLine().textContent).not.toContain("agent");
+      expect(summaryLine().textContent).toContain("longest 2:10");
+    });
+
+    it("counts agents and shells apart", () => {
+      subagents = known(FIXTURES);
+      shells = {
+        kind: "known",
+        shells: [shell("s1", { startedAt: ago(300) })],
+      };
+      renderBand();
+      expect(summaryLine().textContent).toContain("2 agents · 1 shell running");
+      expect(summaryLine().textContent).toContain("longest 5:00");
+    });
+
+    it("shows a shell's latest output line, and opens its output pane", () => {
+      subagents = known([]);
+      shells = {
+        kind: "known",
+        shells: [
+          shell("s1", { description: "Build the app" }),
+          shell("s2"),
+          shell("s3"),
+        ],
+      };
+      outputs = {
+        s1: present("compiling\r 40%\r 80%\n"),
+        s2: present(""),
+      };
+      renderBand();
+
+      expect(screen.getByTestId("cell:shell:s1:description").textContent).toBe(
+        "Build the app ·  80%",
+      );
+      expect(screen.getByTestId("cell:shell:s2:description").textContent).toBe(
+        "npm run s2 · no output yet",
+      );
+      // Still landing: the task alone, never a guessed step.
+      expect(screen.getByTestId("cell:shell:s3:description").textContent).toBe(
+        "npm run s3",
+      );
+      expect(screen.getByTestId("cell:shell:s1:type").textContent).toBe(
+        "shell",
+      );
+      expect(
+        screen.getByTestId("row:shell:s1").getAttribute("data-activates"),
+      ).toBe("true");
+    });
+
+    it("says how a just-ended shell ended", () => {
+      subagents = known([]);
+      shells = {
+        kind: "known",
+        shells: [
+          shell("s1", {
+            startedAt: ago(10),
+            state: { kind: "failed", exitCode: 1 },
+            endedAt: ago(1),
+          }),
+        ],
+      };
+      renderBand();
+      expect(screen.getByTestId("cell:shell:s1:started").textContent).toBe(
+        "Failed · exit 10:09",
+      );
+    });
   });
 });

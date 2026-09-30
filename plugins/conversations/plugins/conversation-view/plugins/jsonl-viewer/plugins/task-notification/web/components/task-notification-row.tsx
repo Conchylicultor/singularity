@@ -1,16 +1,18 @@
+import type { ReactNode } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { FieldsCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card/web";
-import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { agentReportPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  EventLine,
+  useJsonlConversationId,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-
-const articleIcon = symbol("article");
-
-type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
+import {
+  TaskNotification,
+  type TaskNotificationEvent,
+  type TaskNotificationOpenContribution,
+} from "../slots";
 
 // Status colour rides a calm dot, never a filled badge, so the timeline stays
 // quiet. Unknown statuses fall back to muted.
@@ -25,29 +27,91 @@ function statusLabel(status: string): string {
 }
 
 /**
- * Opens the sub-agent this notification is about.
+ * The button onto the task this notification ended: the first
+ * `TaskNotification.Open` contribution that claims it, or nothing when none
+ * does. The row names no kind of task — which pane a sub-agent or a shell
+ * opens is its owning plugin's to say.
  *
- * The row already carries the `tool-use-id` of the parent's `Agent` block,
- * which IS the sub-agent's identity — so the completion message and the card
- * that launched it lead to the same pane, and a notification scrolled past long
- * after the card is still a way back into the work.
+ * Asked one contribution per component, in order, so each renders exactly one
+ * claim hook (the contribution list is fixed for a session, and each link is
+ * keyed by its contribution's id). A contributor still answering holds the
+ * chain: a later one must not claim what may be its task.
  */
-function OpenSubagentAction({ toolUseId }: { toolUseId: string }) {
-  const openPane = useOpenPane();
+function OpenAction({ event }: { event: TaskNotificationEvent }) {
+  const contributions = TaskNotification.Open.useContributions();
+  const conversationId = useJsonlConversationId();
   return (
-    <IconButton
-      icon={articleIcon}
-      label="View sub-agent"
-      onClick={(e) => {
-        e.stopPropagation();
-        openPane(
-          agentReportPane,
-          { by: "call", key: toolUseId },
-          { mode: "push" },
-        );
-      }}
+    <ClaimLink
+      contributions={contributions}
+      at={0}
+      event={event}
+      conversationId={conversationId}
     />
   );
+}
+
+function ClaimLink({
+  contributions,
+  at,
+  event,
+  conversationId,
+}: {
+  contributions: readonly TaskNotificationOpenContribution[];
+  at: number;
+  event: TaskNotificationEvent;
+  conversationId: string | null;
+}) {
+  const contribution = contributions[at];
+  if (contribution === undefined) return null;
+  return (
+    <ClaimStep
+      key={contribution.id}
+      useClaim={contribution.useClaim}
+      event={event}
+      conversationId={conversationId}
+      next={
+        <ClaimLink
+          contributions={contributions}
+          at={at + 1}
+          event={event}
+          conversationId={conversationId}
+        />
+      }
+    />
+  );
+}
+
+function ClaimStep({
+  useClaim,
+  event,
+  conversationId,
+  next,
+}: {
+  useClaim: TaskNotificationOpenContribution["useClaim"];
+  event: TaskNotificationEvent;
+  conversationId: string | null;
+  next: ReactNode;
+}) {
+  const claim = useClaim(event, conversationId);
+  switch (claim.kind) {
+    case "pending":
+      return null;
+    case "declined":
+      return next;
+    case "claimed": {
+      const { target } = claim;
+      return (
+        <IconButton
+          icon={target.icon}
+          label={target.label}
+          onClick={(e) => {
+            e.stopPropagation();
+            target.open();
+          }}
+        />
+      );
+    }
+  }
 }
 
 export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
@@ -57,9 +121,7 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
   );
   const label = statusLabel(e.status);
   const hasExtra = !!e.extra && Object.keys(e.extra).length > 0;
-  const open = e.toolUseId ? (
-    <OpenSubagentAction toolUseId={e.toolUseId} />
-  ) : undefined;
+  const open = <OpenAction event={e} />;
 
   // Arbitrary, potentially long `extra` fields fold behind the card's chevron so
   // the default stays a single quiet line; the summary rides the header's

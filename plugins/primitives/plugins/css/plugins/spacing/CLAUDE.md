@@ -221,6 +221,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
     - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/fields-card`
     - `conversations/conversation-view/jsonl-viewer/subagents`

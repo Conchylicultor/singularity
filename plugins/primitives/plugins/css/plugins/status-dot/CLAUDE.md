@@ -62,6 +62,7 @@ same paint through `statusDotPaintClass(paint)`.
     - `conversations/agents`
     - `conversations/conversation-category`
     - `conversations/conversation-ui/item`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/task-notification`
     - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/tasks-panel`

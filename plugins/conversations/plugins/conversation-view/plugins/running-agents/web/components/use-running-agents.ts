@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { useConversationSubagents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
+import { useConversationShells } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/web";
+import type { BackgroundShell } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/core";
 import {
   nextLingerExpiry,
   visibleAgentRows,
@@ -9,11 +11,12 @@ import {
 } from "../internal/agent-rows";
 
 /**
- * What the band knows about this conversation's sub-agents right now.
+ * What the band knows about this conversation's sub-agents and background
+ * shells right now.
  *
  * `pending` is a real arm: "how many agents are working" is answered from the
- * sub-agent files AND the parent transcript, so until both have arrived there
- * is no honest answer — and an empty band is a claim ("none are working") that
+ * sub-agent files AND the parent transcript (and the shells from that
+ * transcript), so until every read has arrived there is no honest answer — and an empty band is a claim ("none are working") that
  * would then reverse itself the moment the reads land.
  */
 export type RunningAgentsState =
@@ -22,7 +25,8 @@ export type RunningAgentsState =
   | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | { kind: "known"; rows: RunningAgentRow[] };
 
-const NOTHING: BandSource = { entries: [], workflowRuns: [] };
+const NOTHING: Omit<BandSource, "shells"> = { entries: [], workflowRuns: [] };
+const NO_SHELLS: readonly BackgroundShell[] = [];
 
 /**
  * The sub-agents to show above the prompt box: every one still running, plus
@@ -31,7 +35,8 @@ const NOTHING: BandSource = { entries: [], workflowRuns: [] };
  *
  * Run state is NOT derived here. It comes from the subagents plugin, which owns
  * the three-armed answer (running / finished / ended without reporting) and
- * reads it from what each sub-agent and its parent actually wrote.
+ * reads it from what each sub-agent and its parent actually wrote — and, for a
+ * background shell, from the background-shells plugin's fold.
  *
  * The linger needs one thing the pushed data cannot provide: a re-render at the
  * moment a row's three seconds are up. That is one `setTimeout` to the next
@@ -40,14 +45,16 @@ const NOTHING: BandSource = { entries: [], workflowRuns: [] };
  */
 export function useRunningAgents(conversationId: string): RunningAgentsState {
   const subagents = useConversationSubagents(conversationId);
+  const shellRead = useConversationShells(conversationId);
   const { entries, workflowRuns } =
     subagents.kind === "known" ? subagents : NOTHING;
+  const shells = shellRead.kind === "known" ? shellRead.shells : NO_SHELLS;
 
   // The instant the linger is measured against.
   const [now, setNow] = useState(() => Date.now());
   const rows = useMemo(
-    () => visibleAgentRows({ entries, workflowRuns }, now),
-    [entries, workflowRuns, now],
+    () => visibleAgentRows({ entries, workflowRuns, shells }, now),
+    [entries, workflowRuns, shells, now],
   );
 
   useEffect(() => {
@@ -60,11 +67,11 @@ export function useRunningAgents(conversationId: string): RunningAgentsState {
     return () => clearTimeout(id);
   }, [rows, now]);
 
-  switch (subagents.kind) {
-    case "pending":
-    case "failed":
-      return subagents;
-    case "known":
-      return { kind: "known", rows };
+  // Failed wins over pending: a read that failed will not arrive by waiting.
+  if (subagents.kind === "failed") return subagents;
+  if (shellRead.kind === "failed") return shellRead;
+  if (subagents.kind === "pending" || shellRead.kind === "pending") {
+    return { kind: "pending" };
   }
+  return { kind: "known", rows };
 }

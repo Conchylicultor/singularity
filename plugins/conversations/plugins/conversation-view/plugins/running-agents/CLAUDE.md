@@ -48,6 +48,25 @@ and clock come from `workflowRuns` (the subagents plugin), never derived here.
   agent live (between phases) is counted apart (`runsGoing`), so the header
   reads "Workflow running · between phases", never "All agents finished".
 
+### Background shells are rows too
+
+A `Bash` call with `run_in_background` is a **shell row** (`kind: "shell"`),
+keyed `shell:<shellId>`, always top-level, type "shell", named by the call's
+`description`, else its command. Its state, start and end come from
+[`../jsonl-viewer/plugins/background-shells`](../jsonl-viewer/plugins/background-shells/CLAUDE.md)
+(`useConversationShells`) and merge into the rows by start.
+
+- **Its "last step" is its latest output line** — `lastOutputLine` over the
+  live tail (`useShellOutput`, the same subscription the output pane holds),
+  "no output yet" before any; nothing while the tail is still landing.
+- **A stopped shell says how it stopped** (`shellStateDisplay`: "exit 0",
+  "Failed · exit 1", "Killed") where an agent says "done".
+- **It opens its output pane** (`shellOutputPane({ shellId })`).
+- **The summary counts shells apart**: "2 agents working", "2 shells running",
+  or "1 agent · 2 shells running"; "longest" is the oldest of either.
+- The band is `pending` while either read (sub-agents, shells) is, and
+  `failed` when either failed.
+
 ## It derives nothing
 
 Run state, last step and duration all come from
@@ -68,6 +87,14 @@ instant is the one thing pushed data cannot provide, so `useRunningAgents` arms
 ONE `setTimeout` to the next expiry (presentational, not a poll; an expiry
 already behind the clock fires at once). **Ended-without-reporting lingers the
 same way** — it stopped, whichever way it stopped.
+
+A row is shown while its state is `running`, or until `DONE_LINGER_MS` past its
+recorded `endedAt`. **A stopped row with no recorded end is not shown**: a shell
+that ended without reporting (the conversation exited, killing it, and no
+notification dates it) has `endedAt: null`. Lingering needs an instant to count
+from; "when the band first noticed" would be the band deriving a fact the
+transcript does not hold, and showing it forever would claim it is still worth
+watching. (A sub-agent always has one — its last activity.)
 
 ## No stop button, monochrome
 
@@ -119,6 +146,10 @@ Config-backed like every DataView:
   - Contributes: `Conversation.AbovePromptInput` → `RunningAgentsBand`
   - Uses:
     - `conversations/conversation-view.Conversation`
+    - `conversations/conversation-view/jsonl-viewer/background-shells.shellOutputPane`
+    - `conversations/conversation-view/jsonl-viewer/background-shells.shellStateDisplay`
+    - `conversations/conversation-view/jsonl-viewer/background-shells.useConversationShells`
+    - `conversations/conversation-view/jsonl-viewer/background-shells.useShellOutput`
     - `conversations/conversation-view/jsonl-viewer/subagents.SubagentDuration`
     - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`

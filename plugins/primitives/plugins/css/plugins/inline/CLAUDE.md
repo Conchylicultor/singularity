@@ -76,6 +76,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
     - `conversations/conversation-ui/item`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
     - `conversations/conversation-view/op-status`

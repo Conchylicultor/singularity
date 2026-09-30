@@ -120,6 +120,7 @@ memo degrades to a full chain re-read on every push.
     - `backup/sources/transcripts`
     - `conversations`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/transcript-api`
     - `conversations/transcript-retention`
