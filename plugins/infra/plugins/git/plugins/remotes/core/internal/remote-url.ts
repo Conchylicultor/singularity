@@ -87,3 +87,26 @@ export function sameRepoUrl(a: string, b: string): boolean {
   }
   return false;
 }
+
+/**
+ * How git would reach this remote: a directory on this machine, or anything
+ * else (ssh, http(s), git://, a remote helper's `<transport>::<address>`).
+ *
+ * git's own rule (`url_is_local_not_ssh` in connect.c), not a guess: a URL
+ * with `://` is local only as `file://`; without one, it is local unless a `:`
+ * comes before the first `/` — which is scp syntax (`host:path`, dot or not)
+ * or a helper's `::` — and a Windows drive letter (`C:\x`, `C:/x`) is local
+ * again. Needed because a local remote cannot be probed for write access (see
+ * `LocalReason`'s `filesystem-remote`).
+ */
+export function remoteTransport(raw: string): "filesystem" | "network" {
+  const url = raw.trim();
+  const scheme = /^([a-z][a-z0-9+.-]*):\/\//i.exec(url);
+  if (scheme)
+    return scheme[1]!.toLowerCase() === "file" ? "filesystem" : "network";
+  if (/^[a-z]:[\\/]/i.test(url)) return "filesystem";
+  const colon = url.indexOf(":");
+  if (colon === -1) return "filesystem";
+  const slash = url.indexOf("/");
+  return slash !== -1 && slash < colon ? "filesystem" : "network";
+}

@@ -67,8 +67,37 @@ import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 /**
  * Re-exec budget carried across process generations. Present ⇒ this process IS
  * a re-exec, and its value is how many happened before it.
+ *
+ * It belongs to ONE user invocation's chain of re-execs, so it is carried only
+ * from a process to the re-exec of itself. The bootstrap TAKES it
+ * ({@link takeReexecBudget}) — reads it and removes it from `process.env` —
+ * before it spawns anything, so no descendant (`run` → an e2e script → a nested
+ * `./singularity …`, `build` → its `check` subprocess) inherits a spent or
+ * partly spent budget for what is really a new invocation.
  */
 export const REEXEC_ENV = "SINGULARITY_DEPS_REEXEC";
+
+/**
+ * This invocation's re-exec budget: how many re-execs led to this process.
+ * Obtainable only from {@link takeReexecBudget}, so the counter cannot be read
+ * without also being removed from the environment descendants inherit.
+ */
+export interface ReexecBudget {
+  readonly prior: number;
+  readonly __brand: "ReexecBudget";
+}
+
+/**
+ * Read this process's re-exec budget and remove it from `env` (default
+ * `process.env`). Call once, first thing in the bootstrap, before any spawn.
+ */
+export function takeReexecBudget(
+  env: Record<string, string | undefined> = process.env,
+): ReexecBudget {
+  const prior = priorReexecs(env);
+  delete env[REEXEC_ENV];
+  return { prior, __brand: "ReexecBudget" } as ReexecBudget;
+}
 
 /**
  * At most two hand-offs per user invocation. One covers the bug above. The
@@ -92,7 +121,7 @@ export type ReexecOutcome =
 export interface ReexecOptions {
   /** Defaults to `process.argv.slice(2)` — the user's subcommand and flags. */
   args?: string[];
-  /** Defaults to `process.env`. */
+  /** The child's base environment. Defaults to `process.env`. */
   env?: Record<string, string | undefined>;
   /**
    * @internal TEST SEAM. Overrides how the child is run so the suite can assert
@@ -146,13 +175,14 @@ function runChild(
  */
 export async function reexecAfterInstall(
   entry: string,
+  budget: ReexecBudget,
   opts: ReexecOptions = {},
 ): Promise<ReexecOutcome> {
   const env = opts.env ?? process.env;
   const args = opts.args ?? process.argv.slice(2);
   const spawn = opts.spawn ?? runChild;
 
-  const prior = priorReexecs(env);
+  const { prior } = budget;
   if (prior >= MAX_REEXECS) {
     return {
       reexeced: false,

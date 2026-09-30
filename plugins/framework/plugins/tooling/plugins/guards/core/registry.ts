@@ -1,5 +1,6 @@
 import { agentModelGuard } from "./guards/agent-model";
 import { backgroundOpsGuard } from "./guards/background-ops";
+import { backgroundTimeoutGuard } from "./guards/background-timeout";
 import { bunScriptGuard } from "./guards/bun-script";
 import { findGuard } from "./guards/find";
 import { gitDiffMainGuard } from "./guards/git-diff-main";
@@ -30,6 +31,7 @@ export const GUARDS: Guard<any>[] = [
   pollLoopGuard,
   // Rewrites run after every judging guard, so those see what the agent typed.
   pipefailGuard,
+  backgroundTimeoutGuard,
   // File writes
   mainEditsGuard,
   // Bash + file writes

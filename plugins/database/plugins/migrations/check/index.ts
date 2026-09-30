@@ -1,10 +1,15 @@
 import { drizzle } from "drizzle-orm/node-postgres";
+import type { Pool } from "pg";
 import {
   MIGRATIONS_DATA_DIR,
   publishedMigrationRefs,
 } from "@plugins/database/plugins/migrations/core";
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
+import { mintTestDbName } from "@plugins/database/plugins/db-test-fixture/core/testing";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
+import { checkoutNamespace } from "@plugins/infra/plugins/paths/core";
 import {
+  getMainRepoRoot,
   getWorktreeRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
@@ -35,10 +40,15 @@ type Check = {
   cacheSignature?(): string | null | Promise<string | null>;
 };
 
-// The main DB. Worktree backends reach it directly via openShortLivedClient,
-// e.g. the query MCP tool and the push-profiling title resolver — there is no
-// exported constant, the name is the literal "singularity".
-const MAIN_DB_NAME = "singularity";
+// WHICH main database. Not a constant: it is the database of the namespace this
+// repository's main checkout runs as — `singularity` for the repository this
+// machine's main app is served from, and the clone's own namespace for any other
+// (a second clone, an e2e's temp repo; `checkoutRef`). Dry-running a clone's
+// pending delta against the machine's main database measured a history the
+// clone does not share.
+async function mainDatabaseOf(root: string): Promise<string> {
+  return checkoutNamespace(await getMainRepoRoot(root));
+}
 
 async function git(
   root: string,
@@ -53,10 +63,10 @@ async function git(
 
 // Could not reach main's DB, so the pending migrations were never tried:
 // fail loudly rather than pass unverified.
-function cannotVerify(cause: string): CheckResult {
+function cannotVerify(database: string, cause: string): CheckResult {
   return {
     ok: false,
-    message: `cannot verify migration: main DB ("${MAIN_DB_NAME}") not reachable: ${cause}`,
+    message: `cannot verify migration: main DB ("${database}") not reachable: ${cause}`,
     hint: "The main Postgres cluster must be up to dry-run pending migrations. Start it and re-run the check.",
   };
 }
@@ -104,32 +114,103 @@ const check: Check = {
     // stays on one backend. withDirectDb separates a connectivity failure
     // (cannot verify → fail loudly) from a real apply failure (the migration is
     // broken), which is reported from inside the callback.
-    const result = await withDirectDb(
-      MAIN_DB_NAME,
-      async (pool): Promise<CheckResult> => {
-        try {
-          await dryRunPendingMigrations(drizzle(pool), declared.inputs);
-          return { ok: true };
-        } catch (e) {
-          return {
-            ok: false,
-            message: (e as Error).message,
-            hint: "This migration (or the derived layer after it: updatedAt triggers, rollup tables, views) would fail and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/, or the derived object in its owning plugin.",
-          };
-        }
-      },
-    );
+    const database = await mainDatabaseOf(root);
+    const dryRun = async (pool: Pool): Promise<CheckResult> => {
+      try {
+        await dryRunPendingMigrations(drizzle(pool), declared.inputs);
+        return { ok: true };
+      } catch (e) {
+        return {
+          ok: false,
+          message: (e as Error).message,
+          hint: "This migration (or the derived layer after it: updatedAt triggers, rollup tables, views) would fail and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/, or the derived object in its owning plugin.",
+        };
+      }
+    };
+    const result = await withDirectDb(database, dryRun);
     switch (result.kind) {
       case "ok":
         return result.value;
       case "unreachable":
-        return cannotVerify(result.cause);
+        return cannotVerify(database, result.cause);
       case "no-database":
-        // A missing main DB is no more verifiable than an unreachable cluster.
-        return cannotVerify(`database "${MAIN_DB_NAME}" does not exist`);
+        // This machine's main app always has its database: a missing one is
+        // no more verifiable than an unreachable cluster.
+        if (database === MAIN_WORKTREE_NAME)
+          return cannotVerify(
+            database,
+            `database "${database}" does not exist`,
+          );
+        // Another repository whose main was never deployed here: there is no
+        // live data for a migration to trip on, so the whole truth is the
+        // schema — every migration, main's and this branch's, applied in order
+        // to an empty database.
+        return schemaOnlyDryRun(database, dryRun);
     }
   },
 };
+
+/**
+ * The dry-run on a throwaway empty database, for a repository with no deployed
+ * main on this machine. The name is minted in the disposable test-database
+ * grammar, so the test-db sweep reclaims it if this process dies before the
+ * `finally`. A failure says which mode ran, so a pass is never mistaken for a
+ * check against live data.
+ */
+async function schemaOnlyDryRun(
+  mainDatabase: string,
+  dryRun: (pool: Pool) => Promise<CheckResult>,
+): Promise<CheckResult> {
+  const scratch = mintTestDbName("mig_check", process.pid, Date.now());
+  // Over the maintenance database, directly: `database/admin`'s pool throws at
+  // import in a check subprocess (see ./internal/direct-db.ts). The name comes
+  // from `mintTestDbName`'s own grammar, so it is safe to quote as an identifier.
+  const created = await withDirectDb("postgres", (pool) =>
+    pool.query(`CREATE DATABASE "${scratch}"`),
+  );
+  if (created.kind !== "ok")
+    return cannotVerify(
+      scratch,
+      created.kind === "unreachable"
+        ? created.cause
+        : "maintenance database missing",
+    );
+  try {
+    return await verdictOnScratch(scratch, mainDatabase, dryRun);
+  } finally {
+    const dropped = await withDirectDb("postgres", (pool) =>
+      pool.query(`DROP DATABASE IF EXISTS "${scratch}" WITH (FORCE)`),
+    );
+    // Loud: a scratch database left behind is the sweep's backstop, not silence.
+    if (dropped.kind !== "ok")
+      console.warn(
+        `migration-applies-clean: could not drop scratch database "${scratch}" (${dropped.kind}); the test-db sweep reclaims it.`,
+      );
+  }
+}
+
+async function verdictOnScratch(
+  scratch: string,
+  mainDatabase: string,
+  dryRun: (pool: Pool) => Promise<CheckResult>,
+): Promise<CheckResult> {
+  const result = await withDirectDb(scratch, dryRun);
+  switch (result.kind) {
+    case "ok":
+      return result.value.ok
+        ? result.value
+        : {
+            ...result.value,
+            message: `schema-only (no deployed main "${mainDatabase}" on this machine): ${result.value.message}`,
+          };
+    case "unreachable":
+      return cannotVerify(scratch, result.cause);
+    case "no-database":
+      throw new Error(
+        `migration-applies-clean: scratch database "${scratch}" vanished right after it was created`,
+      );
+  }
+}
 
 export default [
   check,

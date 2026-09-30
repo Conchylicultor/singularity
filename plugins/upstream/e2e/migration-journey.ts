@@ -8,37 +8,32 @@
  * grammar, so only the real tree exercises what a clone user's push and update
  * actually do. Plan: `research/2026-09-30-global-clone-migrations-published-set.md` §5.
  *
- * The repositories, all under the caller's temp dir:
+ * The repositories, all under the caller's temp dir (`<id>` is per run):
  *
- *   upstream/      `git clone --shared` of THIS checkout, its `main` = this
- *                  checkout's HEAD plus (unless `--pristine`) its uncommitted
- *                  working-tree state, committed there as one overlay commit —
- *                  nothing in a worktree is committed until push, so HEAD alone
- *                  would test yesterday's code. No remote: it is the author.
- *   clone/         `git clone` of upstream that KEEPS the remote name `origin`
- *                  — what `install.sh` / `git clone` leave, and the shape in
- *                  which `origin/main` is the AUTHOR's main (Problem 1).
- *   <name>-up/     linked worktree of upstream on `main`: where upstream works.
- *   <name>-clone/  linked worktree of clone: where the clone's branches live.
+ *   e2e-cj-<id>-up/        `git clone --shared` of THIS checkout, on `main` =
+ *                          this checkout's HEAD plus (unless `--pristine`) its
+ *                          uncommitted working-tree state, committed there as
+ *                          one overlay commit — nothing in a worktree is
+ *                          committed until push, so HEAD alone would test
+ *                          yesterday's code. No remote: it is the author.
+ *   e2e-cj-<id>-clone/     `git clone` of upstream that KEEPS the remote name
+ *                          `origin` — what `install.sh` / `git clone` leave, and
+ *                          the shape in which `origin/main` is the AUTHOR's main
+ *                          (Problem 1). On `main`: push fast-forwards it here.
+ *   e2e-cj-<id>-clone-wt/  linked worktree of the clone, where its branches
+ *                          live and every clone-side `./singularity` runs.
  *
- * Every `./singularity` call runs in one of the two LINKED worktrees, never in
- * a repo's main checkout: a main checkout mints the namespace `singularity`,
- * which is the real main app's, and an op there would show on main's banner.
- * The linked worktrees get unique names so their namespaces are their own.
- *
- * PUSH IS EMULATED, not run, and on purpose. The real `./singularity push`
- * holds the host-wide push mutex (every agent on the machine queues behind
- * it), writes op markers, and runs the full `--scope tree` check pass — which
- * includes `migration-applies-clean` against the real main database and
- * `fork-schema-drift` against the real main worktree. None of that is hermetic.
- * `landingPrep` / `fastForwardMain` below replay exactly the steps of push's
- * worktree path that decide what lands in `migrations/data` (run.ts steps 3,
- * 3c and 6): the three-armed landing (amend-only when the branch contains main,
- * refuse merges main moved past, else `rebase main --exec` the trailer), the
- * FORCED normalize (`./singularity regen-migrations`, then amend the head), and
- * the fast-forward of `main`. It skips `regen-generated` (docs and registries —
- * nothing a migration assertion reads), the install (the worktree already has
- * this lockfile), the checks, and every network step (the clone is `local`).
+ * Nothing here is special-cased for being a test. A repository other than the
+ * one this machine's main app is served from names its main checkout by its
+ * directory (`checkoutRef`), so the upstream's CLI calls run in its own main
+ * checkout without touching main's namespace. The clone's origin is a local
+ * path, which `resolvePublishTarget` answers `local` from the URL. Pushes are
+ * the real `./singularity push`: its lock is the clone's own (`pushLockFor`),
+ * its `migration-applies-clean` dry-runs against the clone's own main database
+ * (a throwaway one, as that main was never deployed), and it refuses to land on
+ * any repository but the clone's. On top of that, every push first asserts that
+ * it lands under the temp dir, and the run ends by asserting that no commit of
+ * this fixture reached THIS repository's `main` or `origin/main`.
  *
  * Assertions are on git state and generated files only. No database is touched:
  * the database consequence of a renamed migration (the runner re-applies DDL
@@ -46,20 +41,15 @@
  */
 import {
   cpSync,
-  existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
-  rmSync,
+  realpathSync,
   writeFileSync,
 } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 import { dirname, join } from "node:path";
 import { resolvePublishTarget } from "@plugins/infra/plugins/git/plugins/remotes/core";
-import {
-  checkoutNamespace,
-  worktreeDataDir,
-} from "@plugins/infra/plugins/paths/core";
 import {
   spawnCaptured,
   type SpawnResult,
@@ -84,6 +74,8 @@ const GIT_TIMEOUT_MS = 120_000;
  * regen loads every schema file through drizzle-kit — minutes, not seconds.
  */
 const CLI_TIMEOUT_MS = 20 * 60_000;
+/** A push runs the whole tree-scoped check pass (type-check included). */
+const PUSH_TIMEOUT_MS = 45 * 60_000;
 
 /** A named failure of the FIXTURE (not a test result): stops the phase. */
 class HarnessError extends Error {}
@@ -125,36 +117,18 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
   return r.stdout.trim();
 }
 
-async function isAncestor(cwd: string, a: string, b: string): Promise<boolean> {
-  const r = await gitRaw(cwd, ["merge-base", "--is-ancestor", a, b]);
-  if (r.exitCode === 0) return true;
-  if (r.exitCode === 1) return false;
-  throw new HarnessError(`merge-base --is-ancestor ${a} ${b}: ${r.stderr}`);
-}
-
-/**
- * `./singularity <args>` in `cwd`, captured, full output kept in the log dir.
- *
- * `SINGULARITY_DEPS_REEXEC` is dropped from the child's env: this process was
- * itself started through `./singularity run`, and inheriting the bootstrap's
- * re-exec marker would make a child that just installed skip the re-exec its
- * stale module resolver needs.
- */
+/** `./singularity <args>` in `cwd`, captured, full output kept in the log dir. */
 async function cli(
   ctx: Ctx,
   cwd: string,
   args: string[],
+  timeoutMs = CLI_TIMEOUT_MS,
 ): Promise<SpawnResult> {
-  const env: Record<string, string | undefined> = {
-    ...process.env,
-    ...GIT_ENV,
-  };
-  delete env.SINGULARITY_DEPS_REEXEC;
   const started = Date.now();
   const r = await spawnCaptured(["./singularity", ...args], {
     cwd,
-    env,
-    timeoutMs: CLI_TIMEOUT_MS,
+    env: { ...process.env, ...GIT_ENV },
+    timeoutMs,
   });
   ctx.cliSeq += 1;
   const log = join(
@@ -283,56 +257,81 @@ function probeSource(
   );
 }
 
-// --- the emulated push (see the module docblock for why) -----------------------
+// --- landing: the real push -------------------------------------------------
 
 /**
- * Push's landing steps up to (not including) the fast-forward: make the branch
- * land as a fast-forward of `main` and run the forced normalize. Returns the
- * normalize's result so a caller can inspect what it did before anything lands.
+ * `./singularity push` of `branch` from the clone's worktree — after asserting
+ * that the repository it will land on is this fixture's, under the temp dir.
+ * `push` makes the same check against its own checkout; this one also pins it
+ * to the temp dir, so a fixture wired to the wrong repository fails here.
  */
-async function landingPrep(
-  ctx: Ctx,
-  wt: string,
-  branch: string,
-): Promise<SpawnResult> {
-  const pushId = randomBytes(8).toString("hex");
-  const trailer = `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`;
-  const commits = Number(await git(wt, "rev-list", "--count", "main..HEAD"));
-  if (await isAncestor(wt, "main", "HEAD")) {
-    // Arm 1: already contains main — amend the trailer onto the tip only.
-    if (commits > 0) await git(wt, ...trailer.split(" ").slice(1));
-  } else {
-    const merges = (await git(wt, "rev-list", "--merges", "main..HEAD"))
-      .split("\n")
-      .filter(Boolean).length;
-    // Arm 2: push refuses to flatten merges main has moved past.
-    if (merges > 0) {
-      throw new HarnessError(
-        `${branch}: merge commits on a branch main moved past — push would refuse`,
-      );
-    }
-    // Arm 3: rebase onto main, stamping every replayed commit.
-    await git(wt, "rebase", "main", "--exec", trailer);
-  }
-  // 3c. The FORCED normalize: `force: true` runs `regen-migrations` whether or
-  // not a merge marker arrived, then amends whatever it changed into the head.
-  const normalize = await cli(ctx, wt, ["regen-migrations"]);
-  if (normalize.exitCode === 0 && (await git(wt, "status", "--porcelain"))) {
-    await git(wt, "add", "-A");
-    await git(wt, "commit", "--amend", "--no-edit");
-  }
-  return normalize;
-}
-
-/** Push step 6: `main` fast-forwards to the branch (never anything else). */
-async function fastForwardMain(wt: string, branch: string): Promise<void> {
-  if (!(await isAncestor(wt, "main", branch))) {
+async function push(ctx: Ctx, branch: string): Promise<SpawnResult> {
+  const current = await git(ctx.cloneWt, "rev-parse", "--abbrev-ref", "HEAD");
+  if (current !== branch) {
     throw new HarnessError(
-      `main is not an ancestor of ${branch}: no fast-forward`,
+      `expected ${ctx.cloneWt} on ${branch}, found ${current}`,
     );
   }
-  const old = await git(wt, "rev-parse", "main");
-  await git(wt, "update-ref", "refs/heads/main", branch, old);
+  const tmp = `${realpathSync(ctx.tmp)}/`;
+  const commonDir = realpathSync(
+    await git(
+      ctx.cloneWt,
+      "rev-parse",
+      "--path-format=absolute",
+      "--git-common-dir",
+    ),
+  );
+  const mainWorktree = (
+    await git(ctx.cloneWt, "worktree", "list", "--porcelain")
+  )
+    .split("\n")[0]!
+    .replace(/^worktree /, "");
+  if (
+    !commonDir.startsWith(tmp) ||
+    !realpathSync(mainWorktree).startsWith(tmp)
+  ) {
+    throw new HarnessError(
+      `refusing to push: ${branch} would land on ${mainWorktree} (${commonDir}), outside ${tmp}`,
+    );
+  }
+  return await cli(ctx, ctx.cloneWt, ["push"], PUSH_TIMEOUT_MS);
+}
+
+/** This repository's trunk refs at the start of the run, to prove none of the fixture reached them. */
+async function realTrunk(source: string): Promise<Map<string, string>> {
+  const refs = new Map<string, string>();
+  for (const ref of ["refs/heads/main", "refs/remotes/origin/main"]) {
+    const r = await gitRaw(source, ["rev-parse", "--verify", "-q", ref]);
+    if (r.exitCode === 0) refs.set(ref, r.stdout.trim());
+  }
+  return refs;
+}
+
+/**
+ * Commits on this repository's trunk since `start` that touch the fixture's
+ * probe files — which exist only in the temp repositories, so any such commit
+ * came from this run. A provenance check, not "the ref did not move": other
+ * agents advance the real `main` while a run is going.
+ */
+async function fixtureCommitsOnTrunk(
+  source: string,
+  start: Map<string, string>,
+): Promise<string[]> {
+  const found: string[] = [];
+  for (const [ref, sha] of start) {
+    const out = await git(
+      source,
+      "log",
+      "--format=%h %s",
+      `${sha}..${ref}`,
+      "--",
+      UPSTREAM_PROBE,
+      CLONE_PROBE,
+    );
+    for (const line of out.split("\n").filter(Boolean))
+      found.push(`${ref}: ${line}`);
+  }
+  return found;
 }
 
 async function commitAll(wt: string, message: string): Promise<void> {
@@ -426,10 +425,7 @@ async function setUp(ctx: Ctx, pristine: boolean): Promise<void> {
     ctx.upstream,
   );
   const head = await git(ctx.source, "rev-parse", "HEAD");
-  await git(ctx.upstream, "branch", "-f", "main", head);
-  // The main checkout parks on an unborn branch so `main` is free to be checked
-  // out in the linked worktree (a repo's main checkout is never a CLI cwd).
-  await git(ctx.upstream, "symbolic-ref", "HEAD", "refs/heads/e2e-parked");
+  await git(ctx.upstream, "checkout", "-q", "-f", "-B", "main", head);
   await git(ctx.upstream, "remote", "remove", "origin");
   for (const b of (
     await git(
@@ -443,7 +439,6 @@ async function setUp(ctx: Ctx, pristine: boolean): Promise<void> {
     .filter((b) => b && b !== "main")) {
     await git(ctx.upstream, "branch", "-q", "-D", b);
   }
-  await git(ctx.upstream, "worktree", "add", "-q", ctx.upWt, "main");
   await git(ctx.upstream, "config", "--local", "user.name", "upstream");
   await git(
     ctx.upstream,
@@ -464,25 +459,12 @@ async function setUp(ctx: Ctx, pristine: boolean): Promise<void> {
     );
   }
 
-  // clone: keeps `origin` — the real-clone shape.
-  await git(ctx.tmp, "clone", "-q", "--no-checkout", ctx.upstream, ctx.clone);
-  await git(ctx.clone, "branch", "-f", "main", "origin/main");
-  await git(ctx.clone, "symbolic-ref", "HEAD", "refs/heads/e2e-parked");
+  // clone: keeps `origin` — the real-clone shape — and its main checkout on
+  // `main`, where push fast-forwards it.
+  await git(ctx.tmp, "clone", "-q", ctx.upstream, ctx.clone);
   await git(ctx.clone, "config", "--local", "user.name", "clone");
   await git(ctx.clone, "config", "--local", "user.email", "clone@e2e.invalid");
   await registerMergeDrivers(ctx.clone);
-  // Record the write probe's "no" for this URL, exactly as a denied probe
-  // would (remotes/core/internal/cache.ts). A local-path remote would ACCEPT a
-  // dry-run push, so without this the clone would think it may publish.
-  const url = await git(ctx.clone, "remote", "get-url", "origin");
-  await git(
-    ctx.clone,
-    "config",
-    "--local",
-    "singularity.publish.remote",
-    "none",
-  );
-  await git(ctx.clone, "config", "--local", "singularity.publish.url", url);
   await git(
     ctx.clone,
     "worktree",
@@ -513,20 +495,24 @@ export async function runMigrationJourney(
   opts: MigrationJourneyOptions,
 ): Promise<void> {
   const id = randomBytes(3).toString("hex");
+  // Basenames are the checkouts' namespaces (`checkoutRef`), so each is unique
+  // to the run. Their data dirs are left to the worktree reaper, which reclaims
+  // a namespace a day after its stamped checkout is gone.
+  const upstream = join(opts.tmp, `e2e-cj-${id}-up`);
   const ctx: Ctx = {
     tmp: opts.tmp,
     source: opts.source,
-    upstream: join(opts.tmp, "upstream"),
-    clone: join(opts.tmp, "clone"),
-    // Basenames are the worktrees' namespaces: unique, and never `singularity`.
-    upWt: join(opts.tmp, `e2e-cj-${id}-up`),
-    cloneWt: join(opts.tmp, `e2e-cj-${id}-clone`),
+    upstream,
+    clone: join(opts.tmp, `e2e-cj-${id}-clone`),
+    upWt: upstream,
+    cloneWt: join(opts.tmp, `e2e-cj-${id}-clone-wt`),
     logDir: join(opts.tmp, "logs"),
     check: opts.check,
     cliSeq: 0,
   };
   mkdirSync(ctx.logDir, { recursive: true });
   const { check } = ctx;
+  const trunk = await realTrunk(ctx.source);
   try {
     await journey(ctx, opts.pristine);
   } catch (err) {
@@ -534,24 +520,12 @@ export async function runMigrationJourney(
     check("the migration journey's fixture held", false, err.message);
   } finally {
     console.log(`  (CLI logs: ${ctx.logDir})`);
-    await removeDataDirs(ctx, id);
-  }
-}
-
-/**
- * A `./singularity check` in a temp worktree leaves its log under that
- * worktree's data dir (`~/.singularity/worktrees/<name>/`). The names are this
- * run's own (`e2e-cj-<id>-…`), so removing them touches nothing else — and the
- * prefix is re-asserted here so a changed naming rule can never widen it.
- */
-async function removeDataDirs(ctx: Ctx, id: string): Promise<void> {
-  for (const wt of [ctx.upWt, ctx.cloneWt]) {
-    if (!existsSync(wt)) continue;
-    const ns = await checkoutNamespace(wt);
-    if (!ns.startsWith(`e2e-cj-${id}-`)) {
-      throw new Error(`refusing to remove the data dir of namespace ${ns}`);
-    }
-    rmSync(worktreeDataDir(ns), { recursive: true, force: true });
+    const leaked = await fixtureCommitsOnTrunk(ctx.source, trunk);
+    check(
+      "no commit of the fixture reached this repository's main or origin/main",
+      leaked.length === 0,
+      `\n      ${leaked.join("\n      ")}`,
+    );
   }
 }
 
@@ -565,8 +539,10 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
 
   const target = await resolvePublishTarget(cloneWt);
   check(
-    "the clone publishes nowhere, its remote still named origin",
-    target.kind === "local" && (await git(cloneWt, "remote")) === "origin",
+    "the clone publishes nowhere (origin is a directory), its remote still named origin",
+    target.kind === "local" &&
+      target.reason.kind === "filesystem-remote" &&
+      (await git(cloneWt, "remote")) === "origin",
     JSON.stringify(target),
   );
 
@@ -601,10 +577,9 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
   if (ownGen.exitCode !== 0)
     throw new HarnessError(`clone's generate failed:${tail(ownGen)}`);
   await commitAll(cloneWt, "clone: e2e_clone_probe");
-  const own = await landingPrep(ctx, cloneWt, "clone-own");
+  const own = await push(ctx, "clone-own");
   if (own.exitCode !== 0)
-    throw new HarnessError(`clone-own's normalize failed:${tail(own)}`);
-  await fastForwardMain(cloneWt, "clone-own");
+    throw new HarnessError(`clone-own's push failed:${tail(own)}`);
   const cloneLanded = added(baseFiles, await filesAt(cloneWt, "main"));
   check(
     "exactly one clone schema migration landed on local main",
@@ -620,10 +595,14 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
   await git(cloneWt, "checkout", "-q", "-b", "clone-second", "main");
   write(cloneWt, "e2e-clone-journey.txt", "unrelated work\n");
   await commitAll(cloneWt, "clone: unrelated work");
-  const second = await landingPrep(ctx, cloneWt, "clone-second");
-  check("its forced normalize succeeds", second.exitCode === 0, tail(second));
+  const mainBefore = await git(cloneWt, "rev-parse", "main");
+  const second = await push(ctx, "clone-second");
+  check("its push succeeds", second.exitCode === 0, tail(second));
+  // Measured on what push LANDED. A regression lands the rename (as it would
+  // for a user), so step 5 then starts from the renamed main and fails too —
+  // read the first failure, not the cascade.
   const touched = (
-    await git(cloneWt, "diff", "--name-status", "main", "HEAD", "--", DATA)
+    await git(cloneWt, "diff", "--name-status", mainBefore, "main", "--", DATA)
   )
     .split("\n")
     .filter((l) => /^[DR]/.test(l));
@@ -638,15 +617,6 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
     lost4.length === 0,
     lost4.join(", "),
   );
-  if (touched.length === 0 && lost4.length === 0 && second.exitCode === 0) {
-    await fastForwardMain(cloneWt, "clone-second");
-  } else {
-    // A real push WOULD land this, renaming the clone's migration on its main
-    // (every DB that applied it re-applies its DDL under the new sha8). The
-    // journey goes on from the healthy main instead, so step 5 measures
-    // Problem 2 on its own rather than Problem 1 twice.
-    console.log("    (not landed — step 5 continues from the unrenamed main)");
-  }
 
   // --- 5. Problem 2: take the upstream update.
   console.log(
@@ -737,10 +707,9 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
   );
   await git(cloneWt, "add", "-A");
   await git(cloneWt, "commit", "-q", "--amend", "--no-edit");
-  const upd = await landingPrep(ctx, cloneWt, "update-1");
+  const upd = await push(ctx, "update-1");
   if (upd.exitCode !== 0)
-    throw new HarnessError(`update-1's normalize failed:${tail(upd)}`);
-  await fastForwardMain(cloneWt, "update-1");
+    throw new HarnessError(`update-1's push failed:${tail(upd)}`);
 
   write(
     upWt,
@@ -770,10 +739,9 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
   if (cloneNote.exitCode !== 0)
     throw new HarnessError(`clone's note generate failed:${tail(cloneNote)}`);
   await commitAll(cloneWt, "clone: note integer");
-  const noteLand = await landingPrep(ctx, cloneWt, "clone-note");
+  const noteLand = await push(ctx, "clone-note");
   if (noteLand.exitCode !== 0)
-    throw new HarnessError(`clone-note's normalize failed:${tail(noteLand)}`);
-  await fastForwardMain(cloneWt, "clone-note");
+    throw new HarnessError(`clone-note's push failed:${tail(noteLand)}`);
 
   await git(cloneWt, "checkout", "-q", "-b", "update-2", "main");
   const merge2 = await cli(ctx, cloneWt, ["upstream", "merge"]);

@@ -174,7 +174,7 @@ export const RUNTIME_WITHHELD_ENV = {
   SINGULARITY_CHECK_SHADOW:
     "shadow-mode switch for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
   SINGULARITY_DEPS_REEXEC:
-    "re-exec budget the CLI carries across its own dependency-install re-exec (cli/bootstrap reexec.ts)",
+    "re-exec budget the CLI carries across its own dependency-install re-exec; taken out of the env by the bootstrap, so it never reaches a descendant (cli/bootstrap reexec.ts)",
   SINGULARITY_SKIP_POST_REWRITE:
     "recursion guard the post-rewrite git hook sets for the command it runs (.githooks/post-rewrite)",
   SINGULARITY_LISTEN:

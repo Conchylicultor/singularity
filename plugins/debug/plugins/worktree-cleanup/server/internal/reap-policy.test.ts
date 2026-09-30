@@ -1,11 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_WORKTREE_NAME,
+  asNamespace,
+} from "@plugins/infra/plugins/namespace/core";
 import type { OwnedNamespace } from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
 import {
   AUTO_REAP_AGE_MS,
   classifyAttempt,
   classifyOwnedNamespace,
+  classifyStampedNamespace,
   NEEDS_HYGIENE,
+  STAMPED_NAMESPACE_GRACE_MS,
   type AttemptFacts,
   type ClassifyContext,
   type ClassifyOwnedContext,
@@ -286,6 +291,58 @@ describe("classifyOwnedNamespace — reclaimed when its OWNER disappears", () =>
   test("checkout: undefined — a legacy marker — is NEVER a target", () => {
     expect(
       classifyOwnedNamespace(owned({ checkout: undefined }), ownedCtx()),
+    ).toBeNull();
+  });
+});
+
+describe("classifyStampedNamespace", () => {
+  const NOW = 10 * STAMPED_NAMESPACE_GRACE_MS;
+  const stale = {
+    kind: "stamped" as const,
+    root: "/tmp/gone",
+    lastUsedMs: NOW - STAMPED_NAMESPACE_GRACE_MS,
+  };
+  const ns = asNamespace("e2e-clone");
+
+  test("owner gone and unused past the grace → reclaimed as a checkout's own namespace", () => {
+    expect(
+      classifyStampedNamespace(ns, stale, { checkoutExists: false, now: NOW }),
+    ).toEqual({ id: "e2e-clone" });
+  });
+
+  test("owner still on disk → kept", () => {
+    expect(
+      classifyStampedNamespace(ns, stale, { checkoutExists: true, now: NOW }),
+    ).toBeNull();
+  });
+
+  test("used within the grace → kept, whatever the stat says", () => {
+    const fresh = { ...stale, lastUsedMs: NOW - 1000 };
+    expect(
+      classifyStampedNamespace(ns, fresh, { checkoutExists: false, now: NOW }),
+    ).toBeNull();
+  });
+
+  test("no stamp, or an unreadable one → kept: unknown owner is not a gone owner", () => {
+    for (const owner of [
+      { kind: "absent" as const },
+      { kind: "malformed" as const, reason: "not JSON" },
+    ]) {
+      expect(
+        classifyStampedNamespace(ns, owner, {
+          checkoutExists: false,
+          now: NOW,
+        }),
+      ).toBeNull();
+    }
+  });
+
+  test("the main namespace is never a target, even if its checkout moved", () => {
+    expect(
+      classifyStampedNamespace(MAIN_WORKTREE_NAME, stale, {
+        checkoutExists: false,
+        now: NOW,
+      }),
     ).toBeNull();
   });
 });

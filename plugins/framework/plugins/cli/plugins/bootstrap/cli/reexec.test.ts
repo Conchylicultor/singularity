@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { dirname, join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { REEXEC_ENV, reexecAfterInstall } from "./reexec";
+import { REEXEC_ENV, reexecAfterInstall, takeReexecBudget } from "./reexec";
 
 const fixtures: string[] = [];
 afterEach(() => {
@@ -32,11 +32,15 @@ function recordingSpawn(exitCode = 0) {
 test("re-execs the same entry and args, and marks the child as generation 1", async () => {
   const { calls, spawn } = recordingSpawn();
 
-  const outcome = await reexecAfterInstall("/repo/bin/index.ts", {
-    args: ["push", "-m", "msg with spaces"],
-    env: { PATH: "/usr/bin" },
-    spawn,
-  });
+  const outcome = await reexecAfterInstall(
+    "/repo/bin/index.ts",
+    takeReexecBudget({}),
+    {
+      args: ["push", "-m", "msg with spaces"],
+      env: { PATH: "/usr/bin" },
+      spawn,
+    },
+  );
 
   expect(outcome).toEqual({ reexeced: true, exitCode: 0 });
   expect(calls).toHaveLength(1);
@@ -54,32 +58,36 @@ test("re-execs the same entry and args, and marks the child as generation 1", as
 
 test("propagates the child's exit code so the wrapper's status is the command's", async () => {
   const { spawn } = recordingSpawn(17);
-  const outcome = await reexecAfterInstall("/repo/bin/index.ts", {
-    args: ["check"],
-    env: {},
-    spawn,
-  });
+  const outcome = await reexecAfterInstall(
+    "/repo/bin/index.ts",
+    takeReexecBudget({}),
+    {
+      args: ["check"],
+      env: {},
+      spawn,
+    },
+  );
   expect(outcome).toEqual({ reexeced: true, exitCode: 17 });
 });
 
 test("a second install in a re-exec'd process re-execs once more", async () => {
   const { calls, spawn } = recordingSpawn();
-  const outcome = await reexecAfterInstall("/repo/bin/index.ts", {
-    args: ["build"],
-    env: { [REEXEC_ENV]: "1" },
-    spawn,
-  });
+  const outcome = await reexecAfterInstall(
+    "/repo/bin/index.ts",
+    takeReexecBudget({ [REEXEC_ENV]: "1" }),
+    { args: ["build"], env: {}, spawn },
+  );
   expect(outcome.reexeced).toBe(true);
   expect(calls[0]!.env[REEXEC_ENV]).toBe("2");
 });
 
 test("the budget is bounded — a checkout whose inputs keep churning cannot fork-bomb", async () => {
   const { calls, spawn } = recordingSpawn();
-  const outcome = await reexecAfterInstall("/repo/bin/index.ts", {
-    args: ["build"],
-    env: { [REEXEC_ENV]: "2" },
-    spawn,
-  });
+  const outcome = await reexecAfterInstall(
+    "/repo/bin/index.ts",
+    takeReexecBudget({ [REEXEC_ENV]: "2" }),
+    { args: ["build"], env: {}, spawn },
+  );
   expect(calls).toHaveLength(0);
   expect(outcome.reexeced).toBe(false);
   if (outcome.reexeced) throw new Error("unreachable");
@@ -89,14 +97,39 @@ test("the budget is bounded — a checkout whose inputs keep churning cannot for
 test("a garbled counter spends the budget rather than granting an unbounded one", async () => {
   const { calls, spawn } = recordingSpawn();
   for (const raw of ["nonsense", "-1", ""]) {
-    const outcome = await reexecAfterInstall("/repo/bin/index.ts", {
-      args: ["build"],
-      env: { [REEXEC_ENV]: raw },
-      spawn,
-    });
+    const outcome = await reexecAfterInstall(
+      "/repo/bin/index.ts",
+      takeReexecBudget({ [REEXEC_ENV]: raw }),
+      { args: ["build"], env: {}, spawn },
+    );
     expect(outcome.reexeced).toBe(false);
   }
   expect(calls).toHaveLength(0);
+});
+
+test("taking the budget removes it from the environment descendants inherit", () => {
+  const env: Record<string, string | undefined> = {
+    PATH: "/usr/bin",
+    [REEXEC_ENV]: "1",
+  };
+  expect(takeReexecBudget(env).prior).toBe(1);
+  expect(REEXEC_ENV in env).toBe(false);
+  expect(env.PATH).toBe("/usr/bin");
+  // A second read — what a nested `./singularity` would see — starts fresh.
+  expect(takeReexecBudget(env).prior).toBe(0);
+});
+
+test("a re-exec carries the counter only to its own child", async () => {
+  const { calls, spawn } = recordingSpawn();
+  const env: Record<string, string | undefined> = { [REEXEC_ENV]: "1" };
+  const budget = takeReexecBudget(env);
+  await reexecAfterInstall("/repo/bin/index.ts", budget, {
+    args: ["build"],
+    env,
+    spawn,
+  });
+  expect(calls[0]!.env[REEXEC_ENV]).toBe("2");
+  expect(env[REEXEC_ENV]).toBeUndefined();
 });
 
 /**
@@ -177,10 +210,9 @@ test.each(["installed", "installed-by-other"] as const)(
      await import("./cli");\n`,
     );
 
-    // Explicitly cleared: when this suite is itself run through `./singularity
-    // test` on a checkout that installed, the CLI's own re-exec marker is in our
-    // environment, and inheriting it would make the fixture skip the very step
-    // under test.
+    // Cleared for a runner that is not the CLI (the bootstrap already takes the
+    // counter out of `./singularity test`'s own environment): an inherited
+    // marker would make the fixture skip the very step under test.
     const env = { ...process.env };
     delete env[REEXEC_ENV];
     const result = await spawnCaptured(

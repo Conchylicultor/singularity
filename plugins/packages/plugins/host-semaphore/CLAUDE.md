@@ -287,6 +287,7 @@ export.
     - `AcquireHooks`
     - `HostSemaphore`
     - `HostShare`
+    - `RepoLockDir`
   - Exports (values): `createHostSemaphore`
 - Cross-plugin:
   - Imported by: `infra/host/host-admission`

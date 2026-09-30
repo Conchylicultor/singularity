@@ -245,12 +245,14 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `HostPool`
     - `HostPoolSpec`
     - `PoolOccupancy`
+    - `RepoPushLock`
   - Exports (values):
     - `cpuPool`
     - `defineHostPool`
     - `hostOccupancy`
     - `inheritedGrant`
     - `pushPool`
+    - `repoPushLock`
     - `withHostGrant`
 - Cross-plugin:
   - Imported by:

@@ -46,8 +46,9 @@ function shellDetachIn(parsed: ShellParseResult): boolean {
  * output file, which is exactly the polling `poll-loop` exists to stop. 510 such
  * timeouts appear in 30 days of transcripts.
  *
- * `run_in_background: true` has no timeout (measured task lifetimes of 125, 386
- * and 823 minutes) and answers with "You will be notified when it completes".
+ * `run_in_background: true` answers with "You will be notified when it
+ * completes" and lives up to its `timeout` — 30 min by default, 2 h at most,
+ * which `background-timeout` sets on every backgrounded `./singularity` call.
  * Forcing every long op through it deletes the handle-less state entirely.
  *
  * ## The notification only arrives for the main conversation
@@ -109,8 +110,8 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
 
     if (input.run_in_background === true) {
       if (!shellDetachIn(parsed)) {
-        // The backgrounding itself is right for everyone — the op runs detached,
-        // untimed and tracked. What differs is who gets told when it ends.
+        // The backgrounding itself is right for everyone — the op runs detached
+        // and tracked. What differs is who gets told when it ends.
         if (!ctx.agent) return null;
         recordOwnership(ctx, op);
         return { inform: awaitInstead(op) };
@@ -135,7 +136,7 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
       why: `A ${op} takes about 10 minutes at the median and regularly exceeds the 600 s foreground limit. On timeout you get "Command timed out after 10m 0s" — no task id, no notification — while the op keeps running, leaving you with no handle on it.`,
       hint: ctx.agent
         ? `Re-run the same command with \`run_in_background: true\`, then — WITHOUT ending your turn — call \`./singularity await ${op}\`. ${awaitInstead(op)}`
-        : `Re-run the same command with \`run_in_background: true\`, then END YOUR TURN. Background tasks have no timeout, and you will be re-invoked with the output when it finishes. Do not sit and watch it.`,
+        : `Re-run the same command with \`run_in_background: true\`, then END YOUR TURN. The timeout is raised to the 2 h ceiling for you, and you will be re-invoked with the output when it finishes. Do not sit and watch it.`,
     };
   },
 });

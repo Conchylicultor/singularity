@@ -30,7 +30,14 @@ export { toolchainPin } from "./internal/toolchain-pin";
 // drive. The `server` barrel re-exports `listWorktreeDirs` and `checkoutRef`, so
 // their existing server-side callers are unchanged.
 export { listWorktreeDirs } from "./internal/worktree-dirs";
-export { checkoutRef, checkoutNamespace } from "./internal/checkout-ref";
+export {
+  actAsCheckoutNamespace,
+  checkoutRef,
+  checkoutNamespace,
+} from "./internal/checkout-ref";
+// Who acts as a namespace: stamped by the CLI, read by the reaper.
+export { readCheckoutOwner } from "./internal/checkout-owner";
+export type { CheckoutOwnerRead } from "./internal/checkout-owner";
 export {
   deploysForCheckout,
   resolveCheckoutDeploy,

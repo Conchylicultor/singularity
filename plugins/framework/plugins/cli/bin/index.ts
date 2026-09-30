@@ -4,6 +4,7 @@ import {
   ensureDeps,
   installOrphanGuard,
   reexecAfterInstall,
+  takeReexecBudget,
 } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 
 /**
@@ -76,6 +77,11 @@ import {
 // `./orphan-guard.ts`.
 installOrphanGuard(() => process.exit(ORPHAN_EXIT_CODE));
 
+// Take this invocation's re-exec budget out of the environment before anything
+// is spawned (the install below included): it counts THIS chain of re-execs, and
+// a descendant `./singularity` is a new invocation with a budget of its own.
+const reexecBudget = takeReexecBudget();
+
 // The one dependency chokepoint: freshness-gated (the common case is ~140 ms and
 // silent — see its docblock for the measured breakdown), serialized against
 // every other CLI-mediated install, and loud. On
@@ -97,7 +103,7 @@ try {
 // process and exit with its status. Skipped entirely on the common fresh-stamp
 // path, which is why it costs nothing.
 if (deps.kind !== "fresh") {
-  const outcome = await reexecAfterInstall(import.meta.path);
+  const outcome = await reexecAfterInstall(import.meta.path, reexecBudget);
   if (outcome.reexeced) process.exit(outcome.exitCode);
   // Budget spent — say so and fall through rather than loop. The reason is the
   // whole story; see `reexecAfterInstall`.

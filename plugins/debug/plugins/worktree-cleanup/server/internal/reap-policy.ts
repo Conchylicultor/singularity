@@ -6,9 +6,20 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { heavyReadSlotCount } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
-import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_WORKTREE_NAME,
+  asNamespace,
+  isNamespace,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
+import {
+  listWorktreeDirs,
+  readCheckoutOwner,
+  type CheckoutOwnerRead,
+} from "@plugins/infra/plugins/paths/core";
 import {
   ensureMainWorktreeRoot,
+  hasCompositionMarker,
   isCanonicalWorktreePath,
   worktreePathFor,
 } from "@plugins/infra/plugins/worktree/server";
@@ -222,6 +233,36 @@ export function classifyOwnedNamespace(
   if (ctx.retained) return null;
   if (ctx.checkoutDirExists) return null;
   return { ns: owned.ns, checkout };
+}
+
+// How long a stamped namespace must go unused before its missing checkout
+// authorizes a reclaim. The owner's absence is the evidence; the grace only
+// keeps the sweep off a namespace a checkout is acting as right now (an op
+// rewrites the stamp, so its mtime is the last use) and off a checkout that is
+// briefly unreachable.
+export const STAMPED_NAMESPACE_GRACE_MS = 24 * 60 * 60 * 1000;
+
+// The per-namespace decision for a namespace no attempt row and no composition
+// marker owns — a second clone's main checkout, an e2e's temp repo, a hand-made
+// worktree — whose only provenance is the stamp its CLI wrote
+// (`actAsCheckoutNamespace`). PURE: the caller confirms the checkout's absence
+// with a real stat, as every other absence here is confirmed.
+//
+// Never a target:
+//   - MAIN: the machine's main app. A moved main checkout would read as gone;
+//     its namespace holds the main database.
+//   - no stamp, or an unreadable one: unknown owner is not an absent owner.
+//   - used within the grace period, or its checkout still on disk.
+export function classifyStampedNamespace(
+  ns: Namespace,
+  owner: CheckoutOwnerRead,
+  ctx: { checkoutExists: boolean; now: number },
+): ReapTarget | null {
+  if (ns === MAIN_WORKTREE_NAME) return null;
+  if (owner.kind !== "stamped") return null;
+  if (ctx.now - owner.lastUsedMs < STAMPED_NAMESPACE_GRACE_MS) return null;
+  if (ctx.checkoutExists) return null;
+  return { id: ns };
 }
 
 // Run `fn` over `items` with at most `limit` concurrent executions.
@@ -460,6 +501,33 @@ export async function collectReapable(now: number): Promise<ReapScan> {
           typeof checkout === "string" && retainedCheckouts.has(checkout),
       });
       if (decision !== null) namespaceTargets.push(decision);
+    }
+  }
+
+  // STAMP-OWNED NAMESPACE ORPHANS — the namespaces neither universe above can
+  // name: not an attempt id (WORKTREE_NAME_RE), not a composition (marker), so
+  // no row and no marker will ever authorize their reclaim. Their owner is the
+  // checkout stamped by its CLI. Reclaimed through `reapAttempt` with no
+  // worktree path — its database, config dir and registry dir — because such a
+  // namespace is a checkout's OWN namespace, exactly what that function reaps;
+  // there is no git worktree of ours to remove.
+  if (canClassifyOrphans()) {
+    for (const name of listWorktreeDirs()) {
+      if (!isNamespace(name) || WORKTREE_NAME_RE.test(name)) continue;
+      if (targets.has(name) || seenAttemptIds.has(name)) continue;
+      const ns = asNamespace(name);
+      if (hasCompositionMarker(ns)) continue;
+      const owner = readCheckoutOwner(ns);
+      if (owner.kind !== "stamped") continue;
+      const decision = classifyStampedNamespace(ns, owner, {
+        // Evaluated only when the verdict can depend on it; a real stat, per the
+        // invariant above.
+        checkoutExists:
+          now - owner.lastUsedMs < STAMPED_NAMESPACE_GRACE_MS ||
+          (await dirExists(owner.root)),
+        now,
+      });
+      if (decision !== null) targets.set(decision.id, decision);
     }
   }
 

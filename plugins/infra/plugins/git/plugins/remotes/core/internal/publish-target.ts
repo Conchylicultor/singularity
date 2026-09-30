@@ -8,6 +8,7 @@ import {
 } from "./cache";
 import { classifyRemoteFailure, type RemoteFailure } from "./classify";
 import { gitConfigGet, gitConfigSet } from "./git-config";
+import { remoteTransport } from "./remote-url";
 import type { LocalReason, PublishTarget } from "./types";
 
 /**
@@ -96,6 +97,19 @@ async function compute(
     // Nothing to key a cached answer on, and nothing to probe. A checkout with
     // no remote is the clearest local-only case there is.
     return { kind: "local", reason: { kind: "no-remote" } };
+  }
+
+  // Decided from the URL, before the cache and without a probe: a dry-run push
+  // into a directory is answered by a local receive-pack that writes nothing,
+  // so it would say yes to a push the real one may refuse (a checked-out
+  // branch, a read-only mount) — or, worse, one it would accept, writing this
+  // clone's work into someone else's checkout. Not recorded: the URL is the
+  // whole answer, and re-reading it is free.
+  if (remoteTransport(url) === "filesystem") {
+    return {
+      kind: "local",
+      reason: { kind: "filesystem-remote", remote: PUBLISH_REMOTE, url },
+    };
   }
 
   if (opts.useCache) {
@@ -229,6 +243,11 @@ export function describePublishTarget(target: PublishTarget): string {
     case "no-remote":
       return (
         `Local only (this checkout has no "${PUBLISH_REMOTE}" remote) — ` +
+        `main will advance here, and nothing will be pushed.`
+      );
+    case "filesystem-remote":
+      return (
+        `Local only (${reason.remote} is a directory on this machine: ${reason.url}) — ` +
         `main will advance here, and nothing will be pushed.`
       );
     case "read-only":

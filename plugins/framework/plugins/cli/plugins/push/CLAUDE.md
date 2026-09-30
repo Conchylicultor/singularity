@@ -36,12 +36,20 @@ instead of receiving it from the rebase's `--exec`.
 
 ## The critical section
 
-Everything from the fetch onward runs inside `withPushLock`, which holds the
-single slot of the `push` host pool — `~/.singularity/locks/push/slot-0.lock`.
-Who holds it and who queues on it is read from the op log (the push's
-`push-mutex` wait and its `granted`), not from the lock file. At most one push runs
-host-wide, so two agents can never race on `main`. Inside that mutex the order is
-load-bearing:
+Everything from the fetch onward runs inside `withPushLock`. The mutex is scoped
+to the repository whose `main` it guards (`pushLockFor`): for the repository this
+machine's main app is served from, it is the single slot of the `push` host pool
+— `~/.singularity/locks/push/slot-0.lock` — and who holds it and who queues on it
+is read from the op log (the push's `push-mutex` wait and its `granted`), not
+from the lock file. Any other repository (a second clone, an e2e's temp repo)
+locks in its own git dir (`<common-dir>/singularity-locks/push/`), so its push
+never queues the machine's real pushes. Either way at most one push per
+repository runs at a time, so two agents can never race on one `main`.
+
+Before the lock, push asserts that the main worktree it will fast-forward
+belongs to the same repository as the checkout it was run from (git common dir,
+and no inherited `GIT_DIR` / `GIT_WORK_TREE` / `GIT_COMMON_DIR`). Inside the
+mutex the order is load-bearing:
 
 1. commit (only with `-m`) — a dirty tree without a message is refused
 2. consume any merge marker this push did **not** produce

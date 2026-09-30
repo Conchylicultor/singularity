@@ -21,11 +21,17 @@
  * - `probe-failed` is the honest arm for a failure this module does not
  *   classify: git refused for some fourth reason, and we print its own words
  *   rather than pick the nearest label.
+ * - `filesystem-remote` is decided from the URL, with no probe: the remote is a
+ *   directory on this machine (a path or `file://`), where `git push
+ *   --dry-run` is answered by a local `receive-pack` that writes nothing and
+ *   so says yes to a push the real one may refuse. A clone of a local
+ *   directory lands on its own `main` and never writes into that directory.
  *
  * Only `read-only` (and its opposite, a successful probe) reaches the cache.
  */
 export type LocalReason =
   | { kind: "no-remote" }
+  | { kind: "filesystem-remote"; remote: string; url: string }
   | { kind: "read-only"; remote: string; url: string; detail: string }
   | { kind: "no-credentials"; remote: string; url: string; detail: string }
   | { kind: "unreachable"; remote: string; url: string; detail: string }

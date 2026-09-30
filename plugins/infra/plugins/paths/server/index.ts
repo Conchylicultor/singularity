@@ -72,7 +72,11 @@ export { listWorktreeDirs } from "../core/internal/worktree-dirs";
 // may import a `server` barrel from every runtime they run in), and is
 // re-exported here so the server-side callers that take every other path from
 // this barrel keep one import.
-export { checkoutRef, checkoutNamespace } from "../core/internal/checkout-ref";
+export {
+  actAsCheckoutNamespace,
+  checkoutRef,
+  checkoutNamespace,
+} from "../core/internal/checkout-ref";
 
 export {
   pruneWorktreeBuildArtifacts,

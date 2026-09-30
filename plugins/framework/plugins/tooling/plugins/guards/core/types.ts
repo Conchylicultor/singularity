@@ -105,6 +105,12 @@ export interface BashInput {
    * is tracked by the harness and notifies on exit — a shell-level `&` is not.
    */
   run_in_background?: boolean;
+  /**
+   * Milliseconds. In the foreground, the kill deadline (capped at 600 000). With
+   * `run_in_background`, how long the background task may live before the
+   * harness stops it — 1 800 000 when omitted, 7 200 000 at most.
+   */
+  timeout?: number;
 }
 export interface FileInput {
   file_path?: string;

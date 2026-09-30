@@ -17,7 +17,7 @@ Agents work in isolated git worktrees automatically created before starting. The
 1. Solve the request
 2. Run `./singularity build` to deploy (build both the frontend and server and register the gateway).
 
-   **Use `run_in_background: true` and end your turn** — build/push/check median ~10 min, over the 600 s foreground cap. Background tasks have no timeout and re-invoke you on exit, so there is nothing to wait for and nothing to watch. (Guards enforce both halves.)
+   **Use `run_in_background: true` and end your turn** — build/push/check median ~10 min, over the 600 s foreground cap. Background tasks re-invoke you on exit, so there is nothing to wait for and nothing to watch. They are not untimed — the harness stops one after its `timeout` (30 min default) — so every backgrounded `./singularity` call is rewritten to the 2 h ceiling. (Guards enforce all three.)
 
    **A SUBAGENT must not end its turn there** — it will never be re-invoked, because the harness files a subagent's completion notification under the parent session's queue and nothing delivers it. Background the op as usual, then call `./singularity await <op>` in the FOREGROUND: it blocks until the verdict is written and prints it, so the wake-up is that call's own result (exit 0 ok, 1 failed, 70 still running — just call it again). A stop hook refuses a subagent's turn that walks away from its own running op.
 

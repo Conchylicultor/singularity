@@ -1,5 +1,6 @@
 import {
   closeSync,
+  mkdirSync,
   openSync,
   readFileSync,
   renameSync,
@@ -271,6 +272,55 @@ export interface HostSemaphore {
 }
 
 /**
+ * A slot directory inside ONE git repository — for a gate whose scope is that
+ * repository rather than the machine: `<gitCommonDir>/singularity-locks/<name>/`.
+ *
+ * The exception to "the caller supplies a declared `DataDir`", and not a way
+ * back to minting data-root paths: the directory lives in the repository's own
+ * git dir, which git owns and which disappears with the repository. Every
+ * worktree of one repository shares the common dir, so they share the gate;
+ * two repositories never do.
+ */
+export interface RepoLockDir {
+  readonly kind: "repo-lock";
+  /** Absolute `git rev-parse --git-common-dir`. */
+  readonly gitCommonDir: string;
+  /** One lowercase-kebab segment, e.g. `push`. */
+  readonly name: string;
+}
+
+/** The three things the gate reads off its slot directory, whichever kind. */
+function slotAccess(slots: DataDir | RepoLockDir): {
+  spec: { name: string };
+  file(rel: string): string;
+  ensure(): void;
+} {
+  if ("kind" in slots && slots.kind === "repo-lock") {
+    if (!/^[a-z][a-z0-9-]*$/.test(slots.name)) {
+      throw new Error(
+        `createHostSemaphore: repo-lock name must be one lowercase-kebab segment, got ${JSON.stringify(slots.name)}`,
+      );
+    }
+    const dir = join(slots.gitCommonDir, "singularity-locks", slots.name);
+    return {
+      spec: { name: `${slots.name} (${slots.gitCommonDir})` },
+      file: (rel) => join(dir, rel),
+      ensure: () => {
+        mkdirSync(dir, { recursive: true });
+      },
+    };
+  }
+  const dataDir = slots as DataDir;
+  return {
+    spec: dataDir.spec,
+    file: (rel) => dataDir.file(rel),
+    ensure: () => {
+      dataDir.ensure();
+    },
+  };
+}
+
+/**
  * Cross-process bounded-concurrency gate: at most `size` `run` bodies execute at
  * once across every process sharing the same slot directory.
  *
@@ -293,11 +343,11 @@ export interface HostSemaphore {
  * un-laned pool.
  */
 export function createHostSemaphore(opts: {
-  slots: DataDir;
+  slots: DataDir | RepoLockDir;
   size: number;
   backgroundLimit?: number;
 }): HostSemaphore {
-  const { slots } = opts;
+  const slots = slotAccess(opts.slots);
   // The pool's identity, for the error messages below. Not a separate input:
   // `defineDataDir` already validated it as one lowercase-kebab path segment, so
   // the name-vs-directory drift the old `name` parameter allowed is gone.

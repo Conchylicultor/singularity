@@ -7,7 +7,7 @@ import type {
   GrantHooks,
   Lane,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
+import { actAsCheckoutNamespace } from "@plugins/infra/plugins/paths/server";
 import {
   MAIN_WORKTREE_NAME,
   type Namespace,
@@ -130,8 +130,8 @@ async function getWorktreeIdentity(): Promise<{
   }
   // A direct op runs against the main composition only — same reading as
   // `build`, where the checkout is the variable half of the pair, which is what
-  // `checkoutNamespace` names.
-  return { slug: await checkoutNamespace(root), branch };
+  // `checkoutNamespace` names (acted as, so the namespace records this checkout).
+  return { slug: await actAsCheckoutNamespace(root), branch };
 }
 
 const realDeps: DirectOpDeps = {

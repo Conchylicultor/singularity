@@ -1,7 +1,8 @@
-import { readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
   MAIN_COMPOSITION_ID,
+  MAIN_WORKTREE_NAME,
   asNamespace,
   isNamespace,
   type Namespace,
@@ -335,4 +336,48 @@ export function resolveCheckoutDeploy(
     );
   }
   return { kind: "resolved", deploy };
+}
+
+/**
+ * Which checkout this data root's main app (`singularity`) is served from —
+ * read from the `spec.json` that checkout's build wrote, like every other
+ * "who published this?" answer in this file.
+ *
+ * `unclaimed` when no checkout on disk holds it: no spec yet (a fresh machine),
+ * or a spec naming a checkout that no longer exists (the repo was moved). Both
+ * mean the next main checkout to ask may take the name.
+ *
+ * Throws on a spec that exists and cannot be read: this answer decides which
+ * checkout is allowed to act as main, and "unreadable" must not become
+ * "unclaimed" — that would let any clone on the machine take main's namespace.
+ */
+export type MainNamespaceOwner =
+  { kind: "unclaimed" } | { kind: "claimed"; checkoutRoot: string };
+
+export function mainNamespaceOwner(): MainNamespaceOwner {
+  const path = worktreeArtifacts.spec(MAIN_WORKTREE_NAME);
+  const read = readDeploySpec(path);
+  if (read.kind === "absent") return { kind: "unclaimed" };
+  if (read.kind === "malformed") {
+    throw new Error(
+      `Cannot tell which checkout serves "${MAIN_WORKTREE_NAME}": ${path} is ${read.reason}. ` +
+        `A build from the main checkout rewrites it.`,
+    );
+  }
+  const suffix = `/${SERVER_CORE_RELATIVE}`;
+  const server = resolve(read.server);
+  if (!server.endsWith(suffix)) {
+    throw new Error(
+      `Cannot tell which checkout serves "${MAIN_WORKTREE_NAME}": ${path} names ` +
+        `server ${read.server}, which is not a checkout's ${SERVER_CORE_RELATIVE}.`,
+    );
+  }
+  const checkoutRoot = server.slice(0, -suffix.length);
+  if (!existsSync(checkoutRoot)) return { kind: "unclaimed" };
+  return { kind: "claimed", checkoutRoot: comparablePath(checkoutRoot) };
+}
+
+/** `root`'s comparable identity, for matching against {@link mainNamespaceOwner}. */
+export function comparableCheckoutPath(root: string): string {
+  return comparablePath(root);
 }

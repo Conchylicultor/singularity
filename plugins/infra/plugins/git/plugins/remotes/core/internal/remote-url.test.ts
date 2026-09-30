@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeRepoUrl, sameRepoUrl } from "./remote-url";
+import { normalizeRepoUrl, remoteTransport, sameRepoUrl } from "./remote-url";
 
 const CANONICAL = "https://github.com/Conchylicultor/singularity";
 
@@ -69,4 +69,29 @@ describe("sameRepoUrl", () => {
     expect(sameRepoUrl("/tmp/up.git", "/tmp/other.git")).toBe(false);
     expect(sameRepoUrl("/tmp/up.git", CANONICAL)).toBe(false);
   });
+});
+
+describe("remoteTransport", () => {
+  const cases: [string, "filesystem" | "network"][] = [
+    ["/tmp/upstream", "filesystem"],
+    ["/tmp/upstream.git/", "filesystem"],
+    ["../other", "filesystem"],
+    ["upstream", "filesystem"],
+    ["./dir:with-colon", "filesystem"],
+    ["file:///tmp/upstream", "filesystem"],
+    ["FILE:///tmp/upstream", "filesystem"],
+    ["C:\\repos\\x", "filesystem"],
+    ["C:/repos/x", "filesystem"],
+    ["https://github.com/owner/repo.git", "network"],
+    ["ssh://git@host:2222/owner/repo", "network"],
+    ["git://host/repo", "network"],
+    ["git@github.com:Owner/repo.git", "network"],
+    ["myhost:repo", "network"],
+    ["ext::ssh host git-upload-pack repo", "network"],
+  ];
+  for (const [url, expected] of cases) {
+    test(`${url} → ${expected}`, () => {
+      expect(remoteTransport(url)).toBe(expected);
+    });
+  }
 });

@@ -116,6 +116,7 @@ the panel until it is given something to say.
     - `infra/paths.worktreesDir`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.gitWorktreesDir`
+    - `infra/worktree.hasCompositionMarker`
     - `infra/worktree.isCanonicalWorktreePath`
     - `infra/worktree.removeWorktree`
     - `infra/worktree.removeWorktreeSpec`

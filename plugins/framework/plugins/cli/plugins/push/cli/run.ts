@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   checkBroadcasts,
@@ -17,6 +18,7 @@ import {
 } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import {
   pushPool,
+  repoPushLock,
   withHostGrant,
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
@@ -32,7 +34,10 @@ import {
   recordPushRejection,
   resolvePublishTarget,
 } from "@plugins/infra/plugins/git/plugins/remotes/core";
-import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
+import {
+  actAsCheckoutNamespace,
+  checkoutRef,
+} from "@plugins/infra/plugins/paths/server";
 
 // One bound for both capture helpers below, because every command they run is
 // LOCAL git: `rev-parse`, `worktree list`, `status`, and the rebase. Nothing
@@ -280,6 +285,51 @@ async function getMainWorktree(): Promise<string> {
   return match[1]!;
 }
 
+/**
+ * Refuse to land on a `main` that is not this checkout's own repository's.
+ *
+ * Every step after this writes to `mainWorktree`, and nothing about it is
+ * reversible once `main` has advanced (or been pushed). By construction it is
+ * the first entry of `git worktree list` for the checkout push was run from, but
+ * an inherited `GIT_DIR` / `GIT_WORK_TREE` / `GIT_COMMON_DIR` — or any future
+ * resolver that stops deriving it from `root` — would silently point it at a
+ * different repository: a test's temp clone landing on the real `main`, or the
+ * reverse. So the two are compared by git's own identity for a repository, the
+ * common dir, and a push that would cross repositories stops before the lock.
+ */
+async function assertLandsOnOwnRepository(
+  root: string,
+  mainWorktree: string,
+): Promise<string> {
+  const inherited = ["GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"].filter(
+    (name) => process.env[name] !== undefined,
+  );
+  if (inherited.length > 0) {
+    console.error(
+      `Refusing to push: ${inherited.join(", ")} set in the environment would ` +
+        `redirect git away from the checkout this push was run from (${root}). Unset it and re-run.`,
+    );
+    process.exit(1);
+  }
+  const commonDir = (cwd: string) =>
+    run(
+      ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+      cwd,
+    ).then((dir) => realpathSync(dir));
+  const [ours, target] = await Promise.all([
+    commonDir(root),
+    commonDir(mainWorktree),
+  ]);
+  if (ours !== target) {
+    console.error(
+      `Refusing to push: the main worktree resolved to ${mainWorktree} (repository ${target}), ` +
+        `which is not the repository of this checkout (${ours}).`,
+    );
+    process.exit(1);
+  }
+  return ours;
+}
+
 async function getCurrentBranch(): Promise<string> {
   const { stdout, exitCode } = await runAllowFail([
     "git",
@@ -294,6 +344,27 @@ async function getCurrentBranch(): Promise<string> {
   return stdout;
 }
 
+type PushLock = Pick<typeof pushPool, "run">;
+
+/**
+ * The mutex a push of this repository takes. What it serializes is writes to ONE
+ * repository's `main`, so its scope is that repository:
+ *
+ * - the repository this machine's main app is served from (its main checkout is
+ *   `checkoutRef` "main") takes the host-wide `push` pool below — the one every
+ *   agent's push, the op log and the Debug views know;
+ * - any other repository (a second clone, an e2e's temp repo) locks inside its
+ *   own git dir, so its push — check pass and all — never queues the machine's
+ *   real pushes behind it, nor waits behind them.
+ */
+async function pushLockFor(
+  mainWorktree: string,
+  gitCommonDir: string,
+): Promise<PushLock> {
+  if ((await checkoutRef(mainWorktree)).kind === "main") return pushPool;
+  return repoPushLock(gitCommonDir);
+}
+
 // The push mutex is the `push` host-pool (host-admission): `pushPool.run(fn)`
 // holds its single slot file — `~/.singularity/locks/push/slot-0.lock` — for the
 // whole critical section, so at most one push runs host-wide. Who holds it and
@@ -304,12 +375,13 @@ async function getCurrentBranch(): Promise<string> {
 // (so a blocked push shows as waiting); `onLockAcquired` fires once the slot is
 // held, as the first thing inside the run body.
 async function withPushLock<T>(
+  lock: PushLock,
   fn: () => Promise<T>,
   onLockRequested: () => void,
   onLockAcquired: () => void,
 ): Promise<T> {
   onLockRequested();
-  return pushPool.run(
+  return lock.run(
     async () => {
       onLockAcquired();
       return await fn();
@@ -384,7 +456,7 @@ const pushAction: CliAction<
   // The op-marker slug (see markWorktreeOpStart below) is this checkout's own
   // namespace — `push` names the main composition, as `build` does. The
   // profiler carries it so the orphan reconciler can check push liveness.
-  const opSlug = await checkoutNamespace(root0);
+  const opSlug = await actAsCheckoutNamespace(root0);
 
   // An interrupted build prints no verdict and sets no exit code its caller
   // can see, so the next op is where it surfaces — and pushing work that was
@@ -499,8 +571,14 @@ const pushAction: CliAction<
   // Split fetch + rebase because `git pull --rebase --exec` isn't a valid
   // flag combination on Apple Git (the --exec doesn't propagate to rebase).
   if (opts.fromMain) {
+    const mainRoot = await getWorktreeRoot();
+    const pushLock = await pushLockFor(
+      mainRoot,
+      await assertLandsOnOwnRepository(mainRoot, mainRoot),
+    );
     try {
       await withPushLock(
+        pushLock,
         async () => {
           // Both steps are about the REMOTE's main. In local mode there is no
           // such thing: nothing else writes to this trunk, so there is nothing
@@ -596,8 +674,11 @@ const pushAction: CliAction<
   // across all concurrent agents. The flock is held for the entire
   // critical section so no two pushes can race on main.
   const mainWorktree = await getMainWorktree();
+  const gitCommonDir = await assertLandsOnOwnRepository(root0, mainWorktree);
+  const pushLock = await pushLockFor(mainWorktree, gitCommonDir);
   try {
     await withPushLock(
+      pushLock,
       async () => {
         // 2. Pull main to ensure it's up to date before merging.
         // Use explicit fetch + merge instead of `git pull --ff-only` because FETCH_HEAD

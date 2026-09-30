@@ -1,7 +1,12 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { createHostSemaphore } from "./internal/host-semaphore";
-export type { AcquireHooks, HostSemaphore, HostShare } from "./internal/host-semaphore";
+export type {
+  AcquireHooks,
+  HostSemaphore,
+  HostShare,
+  RepoLockDir,
+} from "./internal/host-semaphore";
 
 export default {
   description:

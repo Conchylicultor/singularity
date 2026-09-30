@@ -3,7 +3,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export { defineHostPool, hostOccupancy } from "./internal/pool";
 export type { HostPool, HostPoolSpec, PoolOccupancy } from "./internal/pool";
 export { cpuPool, withHostGrant, inheritedGrant } from "./internal/grant";
-export { pushPool } from "./internal/push";
+export { pushPool, repoPushLock } from "./internal/push";
+export type { RepoPushLock } from "./internal/push";
 // The pure `Grant` TYPE lives in `../core` (both runtimes share it); consumers
 // import it from there. Only the runtime impl (`withHostGrant`/`inheritedGrant`)
 // lives here.

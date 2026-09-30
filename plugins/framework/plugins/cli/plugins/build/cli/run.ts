@@ -22,7 +22,7 @@ import {
 import { reapLegacyCheckoutDist } from "./internal/legacy-dist-reap";
 import {
   WEB_CORE_RELATIVE,
-  checkoutNamespace,
+  actAsCheckoutNamespace,
   checkoutRef,
   worktreeArtifacts,
   worktreeDataDir,
@@ -558,7 +558,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // the transcript and the `build_runs` row. Those must live where the
   // backend that serves this checkout can read them — see the artifact
   // locality note in the phase plan.
-  const name = await checkoutNamespace(root);
+  const name = await actAsCheckoutNamespace(root);
 
   // WHAT this invocation deploys, decided before anything is spent: an
   // unknown composition, an illegal id or an occupied namespace costs

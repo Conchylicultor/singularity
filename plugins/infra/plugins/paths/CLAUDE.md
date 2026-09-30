@@ -252,6 +252,7 @@ run everywhere.
     - `infra/namespace.CheckoutRef`
     - `infra/namespace.isNamespace`
     - `infra/namespace.MAIN_COMPOSITION_ID`
+    - `infra/namespace.MAIN_WORKTREE_NAME`
     - `infra/namespace.Namespace`
     - `infra/namespace.namespaceFor`
     - `infra/runtime-identity.isMain`
@@ -261,6 +262,7 @@ run everywhere.
     - `AppIdentity`
     - `CheckoutDeploy`
     - `CheckoutDeployResolution`
+    - `CheckoutOwnerRead`
     - `DataDir`
     - `DataDirArea`
     - `DataDirInput`
@@ -273,6 +275,7 @@ run everywhere.
     - `ReclaimPolicy`
     - `ReleaseIdentity`
   - Exports (values):
+    - `actAsCheckoutNamespace`
     - `BACKUPS_DIR`
     - `CHECK_ARTIFACTS_RETENTION`
     - `checkoutNamespace`
@@ -296,6 +299,7 @@ run everywhere.
     - `planMigration`
     - `PLUGINS_DIR`
     - `pruneWorktreeCheckArtifacts`
+    - `readCheckoutOwner`
     - `relativeToDataRoot`
     - `releaseIdentity`
     - `REPO_ROOT`
@@ -376,6 +380,7 @@ run everywhere.
     - `ReclaimPolicy`
     - `ReleaseIdentity`
   - Exports (values):
+    - `actAsCheckoutNamespace`
     - `BACKUPS_DIR`
     - `BUILD_ARTIFACTS_RETENTION`
     - `CHECK_ARTIFACTS_RETENTION`

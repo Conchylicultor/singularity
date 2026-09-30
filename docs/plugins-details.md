@@ -16198,6 +16198,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.worktreesDir`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.gitWorktreesDir`
+          - `infra/worktree.hasCompositionMarker`
           - `infra/worktree.isCanonicalWorktreePath`
           - `infra/worktree.removeWorktree`
           - `infra/worktree.removeWorktreeSpec`
@@ -17622,6 +17623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EnsureDepsResult`
               - `HolderObservation`
               - `InstallOutcome`
+              - `ReexecBudget`
               - `ReexecOptions`
               - `ReexecOutcome`
             - Exports (values):
@@ -17633,6 +17635,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ORPHAN_EXIT_CODE`
               - `REEXEC_ENV`
               - `reexecAfterInstall`
+              - `takeReexecBudget`
         - **`build`** — `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
             - Uses:
@@ -20541,12 +20544,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `HostPool`
               - `HostPoolSpec`
               - `PoolOccupancy`
+              - `RepoPushLock`
             - Exports (values):
               - `cpuPool`
               - `defineHostPool`
               - `hostOccupancy`
               - `inheritedGrant`
               - `pushPool`
+              - `repoPushLock`
               - `withHostGrant`
           - Cross-plugin:
             - Imported by:
@@ -21112,6 +21117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/namespace.CheckoutRef`
           - `infra/namespace.isNamespace`
           - `infra/namespace.MAIN_COMPOSITION_ID`
+          - `infra/namespace.MAIN_WORKTREE_NAME`
           - `infra/namespace.Namespace`
           - `infra/namespace.namespaceFor`
           - `infra/runtime-identity.isMain`
@@ -21121,6 +21127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AppIdentity`
           - `CheckoutDeploy`
           - `CheckoutDeployResolution`
+          - `CheckoutOwnerRead`
           - `DataDir`
           - `DataDirArea`
           - `DataDirInput`
@@ -21133,6 +21140,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReclaimPolicy`
           - `ReleaseIdentity`
         - Exports (values):
+          - `actAsCheckoutNamespace`
           - `BACKUPS_DIR`
           - `CHECK_ARTIFACTS_RETENTION`
           - `checkoutNamespace`
@@ -21156,6 +21164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `planMigration`
           - `PLUGINS_DIR`
           - `pruneWorktreeCheckArtifacts`
+          - `readCheckoutOwner`
           - `relativeToDataRoot`
           - `releaseIdentity`
           - `REPO_ROOT`
@@ -21236,6 +21245,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReclaimPolicy`
           - `ReleaseIdentity`
         - Exports (values):
+          - `actAsCheckoutNamespace`
           - `BACKUPS_DIR`
           - `BUILD_ARTIFACTS_RETENTION`
           - `CHECK_ARTIFACTS_RETENTION`
@@ -22587,6 +22597,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AcquireHooks`
           - `HostSemaphore`
           - `HostShare`
+          - `RepoLockDir`
         - Exports (values): `createHostSemaphore`
       - Cross-plugin:
         - Imported by: `infra/host/host-admission`

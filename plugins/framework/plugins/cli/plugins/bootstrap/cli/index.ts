@@ -31,8 +31,8 @@ export type {
   InstallOutcome,
 } from "./ensure-deps";
 
-export { REEXEC_ENV, reexecAfterInstall } from "./reexec";
-export type { ReexecOptions, ReexecOutcome } from "./reexec";
+export { REEXEC_ENV, reexecAfterInstall, takeReexecBudget } from "./reexec";
+export type { ReexecBudget, ReexecOptions, ReexecOutcome } from "./reexec";
 
 export {
   ORPHAN_EXIT_CODE,
