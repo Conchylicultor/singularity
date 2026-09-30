@@ -136,7 +136,7 @@ function isFullViewport(p: TabProbe): boolean {
 
 /**
  * Click a surface-mode chip by its tooltip title. The chips live in the shared
- * action bar, which is a hover-revealed floating overlay while unpinned — so
+ * action bar, which is a hover-revealed floating overlay in fullscreen — so
  * reveal it first by moving the pointer into the top-right corner.
  */
 async function selectMode(page: Page, title: string): Promise<boolean> {
@@ -161,28 +161,11 @@ async function settle(page: Page, ms = 800): Promise<void> {
   await page.waitForTimeout(ms);
 }
 
-/**
- * Unpin the global action bar if it is pinned (the default for a fresh profile).
- *
- * "Pinned ⇒ never solo" is a real product rule (`global-action-bar` bounces the
- * surface straight back to docked while the bar is docked in the tab strip), so
- * a pinned profile cannot enter fullscreen at all — the run would measure a
- * docked tab and report a fullscreen failure that is really a precondition.
- */
-async function unpinActionBar(page: Page): Promise<void> {
-  const unpin = page.getByRole("button", { name: "Unpin action bar" }).first();
-  if (await unpin.isVisible()) {
-    await unpin.click();
-    await page.waitForTimeout(400);
-  }
-}
-
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
   await page.goto(pathUrl("/agents"));
   await settle(page);
-  await unpinActionBar(page);
 
   const marked = await markTab(page, MARKER);
   r.ok("marked the live tab node", marked, marked ? MARKER : "no visible tab");

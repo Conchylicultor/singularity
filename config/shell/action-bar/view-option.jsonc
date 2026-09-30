@@ -18,7 +18,6 @@
 {
   // Vertical list of rows in the action bar's gear popover, read top → bottom:
   // how the tab is laid out first, then the whole-window and editing toggles.
-  // The bar's own "Pin action bar" row always follows these.
   "items": [
     "apps-core.surface:placement-control",
     "fullscreen:fullscreen-toggle",

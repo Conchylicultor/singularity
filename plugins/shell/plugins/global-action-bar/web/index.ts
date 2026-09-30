@@ -14,7 +14,7 @@ import { ViewOptionsButton } from "./components/view-options-button";
 
 export default {
   description:
-    "Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the persisted pin: a floating top-right overlay (Core.Root) when unpinned — visible in every placement mode including solo — and a docked right-aligned strip in the tab bar (Apps.TabBarActions) when pinned.",
+    "Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the surface mode: a docked right-aligned strip in the tab bar (Apps.TabBarActions) in desktop and tab modes, and a floating top-right overlay (Core.Root) in fullscreen (solo), where the tab bar is hidden.",
   contributions: [
     Core.Root({ component: FloatingActionBarHost }),
     Apps.TabBarActions({

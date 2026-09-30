@@ -1,13 +1,7 @@
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import type {
-  PlacementChromeProps,
-  PlacementDef,
-} from "@plugins/apps-core/plugins/surface/web";
+import type { PlacementDef } from "@plugins/apps-core/plugins/surface/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const fullscreenIcon = symbol("fullscreen");
-const fullscreenExitIcon = symbol("fullscreen-exit");
 
 /**
  * The solo (fullscreen) surface mode: only the focused tab, full-viewport. It
@@ -37,31 +31,6 @@ export const soloDef: PlacementDef = {
   themeScope: "app",
   // No frame chrome: a fullscreen tab is edge to edge, and its canvas comes from
   // the host's `<Theme surface="canvas">` container like every other mode's.
-  Chrome: SoloExitOverlay,
+  // The way out is the global action bar, which floats over the top-right
+  // corner in this mode (its gear holds the mode control), plus Esc.
 };
-
-/**
- * Solo exit affordance: a hover-reveal "Exit fullscreen" button (Esc also exits,
- * via the shortcut contributed alongside this placement). Static class only — no
- * style push needed. Gated on `focused` so only the visible solo tab shows it.
- */
-function SoloExitOverlay({ focused, onExit }: PlacementChromeProps) {
-  if (!focused) return null;
-  return (
-    <Pin
-      to="top-right"
-      // Asymmetric corner offsets (top-2 / right-3) overriding Pin's single-offset anchor.
-      style={{ top: "0.5rem", right: "0.75rem" }}
-      className="group/solo z-max"
-    >
-      <div className="opacity-0 transition-opacity pointer-events-none group-hover/solo:opacity-100 group-hover/solo:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto">
-        <IconButton
-          icon={fullscreenExitIcon}
-          label="Exit fullscreen (Esc)"
-          variant="secondary"
-          onClick={onExit}
-        />
-      </div>
-    </Pin>
-  );
-}

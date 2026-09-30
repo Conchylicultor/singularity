@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import {
   FloatingAction,
   FloatingActionFadeIn,
@@ -8,15 +7,11 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
-import {
-  setSurfaceMode,
-  useSurfaceMode,
-} from "@plugins/apps-core/plugins/tabs/web";
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { HealthReportButton } from "@plugins/shell/plugins/health-report/web";
 import { actionBarConfig } from "../../shared/config";
-import { useActionBarPin } from "../internal/use-action-bar-pin";
+import { useActionBarPinned } from "../internal/use-action-bar-pinned";
 
 /**
  * The always-visible leading item: the health report's dot, at the bar's `sm`
@@ -32,7 +27,7 @@ function HealthItem() {
 
 /**
  * Floating overlay host (mounted at `Core.Root`, outside any transformed
- * ancestor). Renders only when **unpinned**: a top-right `z-popover` overlay
+ * ancestor). Renders only when **unpinned** — i.e. in fullscreen (solo) mode: a top-right `z-popover` overlay
  * collapsed to the health dot that hover-expands the action row leftward;
  * clicking the dot opens the health report.
  * Mounting in the root stacking context, one band above the solo placement's
@@ -41,7 +36,7 @@ function HealthItem() {
  */
 export function FloatingActionBarHost() {
   const { enabled } = useConfig(actionBarConfig);
-  const { pinned } = useActionBarPin();
+  const pinned = useActionBarPinned();
 
   // A chromeless embed (`?embed=1`, see `primitives/embed`) has no chrome at
   // all, so the floating overlay stays out too. (The docked host needs no
@@ -75,19 +70,12 @@ export function FloatingActionBarHost() {
 
 /**
  * Docked strip host (mounted at `Apps.TabBarActions`, the tab bar's trailing
- * zone). Renders only when **pinned**: a right-aligned, non-compressing strip
- * the tab strip scrolls under. A guard effect enforces "pinned ⇒ never solo" —
- * if the focused tab is moved to solo from the placement control while pinned,
- * it snaps back to docked so the strip stays visible.
+ * zone). Renders only when **pinned** — i.e. in desktop and tab modes: a
+ * right-aligned, non-compressing strip the tab strip scrolls under.
  */
 export function DockedActionBarHost() {
   const { enabled } = useConfig(actionBarConfig);
-  const { pinned } = useActionBarPin();
-  const mode = useSurfaceMode();
-
-  useEffect(() => {
-    if (pinned && mode === "solo") setSurfaceMode("docked");
-  }, [pinned, mode]);
+  const pinned = useActionBarPinned();
 
   if (!enabled || !pinned) return null;
 

@@ -7257,7 +7257,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.Button`
                       - `ui/icons.Icon`
-        - **`solo`** — Solo (fullscreen) surface mode — only the focused tab, full-viewport, with a hover exit button and an Esc shortcut back to the previous mode.
+        - **`solo`** — Solo (fullscreen) surface mode — only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.
           - Web:
             - Contributes:
               - `Surface.Placement`
@@ -7266,8 +7266,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface.Surface`
               - `apps-core/tabs.exitToPreviousMode`
               - `apps-core/tabs.getSurfaceMode`
-              - `primitives/css/pin.Pin`
-              - `primitives/icon-button.IconButton`
               - `primitives/shortcuts.defineShortcut`
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
       - Web:
@@ -27205,7 +27203,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/app-rail`
               - `apps-core/surface/floating/wallpaper`
-              - `apps-core/surface/solo`
               - `apps/browser/webview`
               - `apps/pages/page-tree`
               - `apps/prototypes/canvas`
@@ -30691,7 +30688,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface/floating`
-          - `apps-core/surface/solo`
           - `apps-core/tab-bar`
           - `apps/agent-manager/pages-nav`
           - `apps/browser/bookmarks`
@@ -32610,7 +32606,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/detail-sections`
           - `primitives/dom/auto-scroll`
           - `primitives/usage-rank`
-          - `shell/global-action-bar`
           - `tasks/task-draft-form`
       - Web:
         - Exports (types): `DraftOptions`
@@ -35173,7 +35168,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/global-action-bar`
           - `shell/notifications`
           - `ui/theme-engine/quick-theme`
-    - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the persisted pin: a floating top-right overlay (Core.Root) when unpinned — visible in every placement mode including solo — and a docked right-aligned strip in the tab bar (Apps.TabBarActions) when pinned. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
+    - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the surface mode: a docked right-aligned strip in the tab bar (Apps.TabBarActions) in desktop and tab modes, and a floating top-right overlay (Core.Root) in fullscreen (solo), where the tab bar is hidden. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
       - Web:
         - Contributes:
           - `Core.Root` → `FloatingActionBarHost`
@@ -35183,12 +35178,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `apps-core.Apps`
           - `apps-core/chrome-theme.chromeThemeScope`
-          - `apps-core/tabs.getSurfaceMode`
-          - `apps-core/tabs.setSurfaceMode`
           - `apps-core/tabs.useSurfaceMode`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
-          - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
@@ -35197,10 +35189,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/floating-action.FloatingAction`
           - `primitives/overlay/floating-action.FloatingActionFadeIn`
-          - `primitives/persistent-draft.useDraft`
           - `shell/action-bar.ActionBar`
           - `shell/health-report.HealthReportButton`
-          - `ui/icons.Icon`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`
@@ -37390,7 +37380,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/plugin-changes`
           - `review/plugin-changes/api-changes`
           - `screenshot`
-          - `shell/global-action-bar`
           - `shell/health-report`
           - `shell/toast`
           - `tasks/attempt-view`

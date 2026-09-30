@@ -63,7 +63,6 @@ icon+count button it stands in for — carries a per-site
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
-    - `apps-core/surface/solo`
     - `apps-core/tab-bar`
     - `apps/agent-manager/pages-nav`
     - `apps/browser/bookmarks`

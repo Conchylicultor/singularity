@@ -103,7 +103,6 @@ offsets expressible on the semantic ramp.
   - Imported by:
     - `apps-core/app-rail`
     - `apps-core/surface/floating/wallpaper`
-    - `apps-core/surface/solo`
     - `apps/browser/webview`
     - `apps/pages/page-tree`
     - `apps/prototypes/canvas`

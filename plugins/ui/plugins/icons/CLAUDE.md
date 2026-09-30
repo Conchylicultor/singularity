@@ -430,7 +430,6 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
     - `review/plugin-changes`
     - `review/plugin-changes/api-changes`
     - `screenshot`
-    - `shell/global-action-bar`
     - `shell/health-report`
     - `shell/toast`
     - `tasks/attempt-view`

@@ -150,7 +150,7 @@ const FLOATING_BAR = ".group\\/fa";
 
 /**
  * The action bar's status dot, whichever host renders it: docked in the tab bar
- * (pinned — the default) or floating (unpinned). Both put the status glyph beside
+ * (desktop and tab modes) or floating (fullscreen). Both put the status glyph beside
  * the action row, so it is the dot in the chip's nearest ancestor that has one.
  */
 function statusDot(page: Page) {
@@ -163,7 +163,7 @@ function statusDot(page: Page) {
 }
 
 /**
- * Make the chip hoverable: a floating (unpinned) bar is collapsed until hovered;
+ * Make the chip hoverable: a floating (fullscreen) bar is collapsed until hovered;
  * a docked one is already open.
  */
 async function revealActionBar(page: Page): Promise<void> {

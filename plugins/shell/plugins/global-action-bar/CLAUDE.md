@@ -4,14 +4,14 @@ Renders the shared `ActionBar.Item` set as a single global bar in the tab bar
 (`Apps.TabBarActions`), so the main actions are available identically in every
 app. Its leading item, in both hosts, is the health report's dot
 (`HealthReportButton` from `shell/health-report`): collapsed, the bar is just that
-dot, which expands the bar on hover and opens the report on click; a pin
-switch sticks it expanded inline, persisted in localStorage. Pinned is the
-default, so a fresh origin (every new worktree's `<wt>.localhost:9000`) shows the
-docked strip until the user unpins it there. Owns the `enabled` config.
+dot, which expands the bar on hover and opens the report on click. Whether the
+bar is pinned is not a preference — it follows the surface mode: desktop and
+tab modes dock it expanded in the tab bar; fullscreen (solo), which hides the
+tab bar and app rail, floats it over the app. Owns the `enabled` config.
 
 One gear button (`ViewOptionsButton`) opens a control-panel popover: the
 `ActionBar.ViewOption` rows (surface mode, browser fullscreen, edit layout —
-whatever is contributed) followed by the bar's own "Pin action bar" switch.
+whatever is contributed).
 Options about how the app is shown are set once and left alone, so they share
 that one button rather than each taking a slot in the bar. The gear is itself
 an `ActionBar.Item` this plugin contributes, so the slot's order places it
@@ -21,7 +21,7 @@ Both hosts wear the app chrome's fixed theme (`apps-core/chrome-theme`): the
 docked strip by living in the tab bar, the floating one through its own
 boundary.
 
-The two hosts are mutually exclusive (the pin), which is what keeps exactly one
+The two hosts are mutually exclusive (the surface mode), which is what keeps exactly one
 `HealthReportButton` — and so one set of health probes — mounted at a time.
 
 In an embedded document (`?embed=1`, see `primitives/embed`) neither host
@@ -32,7 +32,7 @@ tab bar, which an embed does not paint.
 
 ## Plugin reference
 
-- Description: Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the persisted pin: a floating top-right overlay (Core.Root) when unpinned — visible in every placement mode including solo — and a docked right-aligned strip in the tab bar (Apps.TabBarActions) when pinned. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
+- Description: Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the surface mode: a docked right-aligned strip in the tab bar (Apps.TabBarActions) in desktop and tab modes, and a floating top-right overlay (Core.Root) in fullscreen (solo), where the tab bar is hidden. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
 - Web:
   - Contributes:
     - `Core.Root` → `FloatingActionBarHost`
@@ -42,12 +42,9 @@ tab bar, which an embed does not paint.
   - Uses:
     - `apps-core.Apps`
     - `apps-core/chrome-theme.chromeThemeScope`
-    - `apps-core/tabs.getSurfaceMode`
-    - `apps-core/tabs.setSurfaceMode`
     - `apps-core/tabs.useSurfaceMode`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
@@ -56,10 +53,8 @@ tab bar, which an embed does not paint.
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/floating-action.FloatingAction`
     - `primitives/overlay/floating-action.FloatingActionFadeIn`
-    - `primitives/persistent-draft.useDraft`
     - `shell/action-bar.ActionBar`
     - `shell/health-report.HealthReportButton`
-    - `ui/icons.Icon`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

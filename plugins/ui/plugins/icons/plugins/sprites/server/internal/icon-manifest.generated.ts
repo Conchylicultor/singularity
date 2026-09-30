@@ -124,7 +124,6 @@ export const ICON_MANIFEST: {
     "format-underlined",
     "forum",
     "fullscreen",
-    "fullscreen-exit",
     "functions",
     "gesture",
     "grain",
