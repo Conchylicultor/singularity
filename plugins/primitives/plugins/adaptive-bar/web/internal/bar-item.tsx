@@ -95,6 +95,21 @@ export function AdaptiveBarItem({
  * — deletes the subtree and builds a new one. So the container must be minted
  * once and never replaced.
  */
+/**
+ * The occupant container's own layout: rigid (see below), and a flex column so
+ * the occupant is laid out as a flex item, never on a line box. A block
+ * container puts an inline-level occupant on a line with the inherited font's
+ * strut, and an occupant with no text baseline (an icon-only `<button>`, an
+ * SVG) sits ON that baseline — the strut's descent then pads the container
+ * below it, and the row centres the padded box, drawing the control a few
+ * pixels high. A column, not a row, so the occupant still spans the container's
+ * width the way a block child does (the panel's full-width rows rely on it).
+ */
+function occupantClass(): string {
+  // eslint-disable-next-line layout/no-adhoc-layout -- the portal container is a raw DOM node (no React element to host a layout primitive); its flex column is what keeps an occupant off a line box
+  return cn(rigidClass(), "flex flex-col");
+}
+
 function PortaledBarItem({
   registry,
   id,
@@ -125,13 +140,13 @@ function PortaledBarItem({
     // panel is content-height, so there is no deficit for a shrink to take, and
     // a parked row that could be squashed vertically is not something anyone
     // wants either.
-    el.className = rigidClass();
+    el.className = occupantClass();
     return el;
   });
   useLayoutEffect(() => {
     // Stamped like the forwarded attributes below: the container is not a
     // React element, so nothing else can carry the occupant's own classes.
-    container.setAttribute("class", cn(rigidClass(), className));
+    container.setAttribute("class", cn(occupantClass(), className));
   }, [container, className]);
   // The REGION bag, not the popup one: this container is still part of the
   // region it was rendered in, whether docked in the row or parked in the
