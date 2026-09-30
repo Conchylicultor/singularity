@@ -56,6 +56,7 @@
     - `database.isTransientDbError`
     - `database/fork.databaseForkJob`
     - `infra/attachments.getAttachment`
+    - `infra/background/timer.defineTimer`
     - `infra/claude-cli/availability.assertClaudeCodeReady`
     - `infra/claude-cli/availability.checkClaudeCode`
     - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
@@ -146,6 +147,8 @@
     - `defineTriggerEvent('conversation.created')`
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineTriggerEvent('conversation.userTurnSent')`
+    - `defineTimer('conversations.poller')`
+    - `defineTimer('conversations.turn-emitter')`
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/gone`

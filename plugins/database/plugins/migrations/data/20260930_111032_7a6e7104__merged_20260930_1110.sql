@@ -1,3 +1,4 @@
+-- singularity:phase expand
 CREATE TABLE IF NOT EXISTS "job_recent_runs" (
 	"job_name" text NOT NULL,
 	"slot" integer NOT NULL,
@@ -10,7 +11,6 @@ CREATE TABLE IF NOT EXISTS "job_recent_runs" (
 	"attempt" integer NOT NULL,
 	CONSTRAINT "job_recent_runs_job_name_slot_pk" PRIMARY KEY("job_name","slot")
 );
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "job_run_stats" (
 	"job_name" text PRIMARY KEY NOT NULL,
 	"last_started_at" timestamp with time zone NOT NULL,
@@ -22,3 +22,5 @@ CREATE TABLE IF NOT EXISTS "job_run_stats" (
 	"runs" integer NOT NULL,
 	"failures" integer NOT NULL
 );
+-- singularity:phase contract
+-- singularity:claims

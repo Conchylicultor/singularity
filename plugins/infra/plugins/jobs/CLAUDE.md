@@ -514,6 +514,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `database/connection.withQueryDeadline`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
+    - `infra/background/timer.defineTimer`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `network/live.serveCollection`
@@ -524,6 +525,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `plugins/infra/plugins/jobs/server/internal/tables.ts`
   - Exports (types):
     - `BacklogJobStat`
+    - `CronRanges`
     - `DeadJobGroupStat`
     - `DeadJobStat`
     - `DefineJobSpec`
@@ -536,6 +538,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JobCtx`
     - `JobDeadlineEvent`
     - `JobFactory`
+    - `JobRunOutcome`
+    - `JobRunRecord`
+    - `JobRunStats`
     - `JobSlotFloorReport`
     - `OccupiedSlot`
     - `PickupStats`
@@ -552,6 +557,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `abortDurableRun`
     - `ALL_JOB_TASKS`
     - `ceilingMsFor`
+    - `cronRanges`
     - `DEAD_ERROR_PREVIEW_CHARS`
     - `deadlineMsFor`
     - `DEFAULT_MAX_ATTEMPTS`
@@ -573,7 +579,10 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JobDeadlineExceededError`
     - `jobDeadlineSink`
     - `LEGACY_JOB_TASK`
+    - `listRegisteredJobs`
+    - `nextScheduledRun`
     - `NonRetryableError`
+    - `onJobRunsChanged`
     - `onQueueActivity`
     - `PICKUP_WINDOW_MS`
     - `pickupTargetMsFor`
@@ -587,7 +596,12 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `queryRunningJobs`
     - `QueueSchemaMissingError`
     - `reachableSlots`
+    - `readJobRunStats`
+    - `readRecentJobRuns`
+    - `RECENT_RUNS_RING`
+    - `resolveJobCron`
     - `RUNNERS`
+    - `runningJobStarts`
     - `singletonJobKey`
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
@@ -598,6 +612,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
   - Register:
     - `defineJob('jobs.resume')`
     - `defineJob('jobs.dead-gc')`
+    - `defineTimer('jobs.stuck-lock-sweep')`
   - Resources:
     - `dead-jobs` (keyed, window)
     - `dead-jobs:groups` (push)
@@ -694,6 +709,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `infra/deps/updates`
     - `infra/events`
     - `infra/events-test`
+    - `infra/jobs/background-arm`
     - `infra/jobs/deadline-audit`
     - `infra/jobs/supervised-job`
     - `infra/retention`
@@ -709,6 +725,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
   - Server: `@plugins/infra/plugins/jobs/server/testing`
     - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
 - Sub-plugins:
+  - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from graphile's own parse and installed matcher), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.
   - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, and job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job.
   - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
 

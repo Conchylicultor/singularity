@@ -13,6 +13,8 @@ import { generatePageIcon } from "./generate-icon";
  */
 export const autoIconJob = defineJob({
   name: "pages.auto-icon.generate",
+  description:
+    "Asks Claude Haiku to pick an emoji icon for a page from its title and content, once per page.",
   // seconds: one Haiku call bounded by its own 30 s timeout.
   hold: "seconds",
   input: z.object({ pageId: z.string() }),

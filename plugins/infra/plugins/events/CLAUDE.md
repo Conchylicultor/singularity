@@ -67,7 +67,7 @@ insert and the ring's inline prune reach it through the change feed. The
 
 ## Plugin reference
 
-- Description: Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
+- Description: Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
 - Load-bearing: yes
 - Server:
   - Contributes:
@@ -75,9 +75,11 @@ insert and the ring's inline prune reach it through the change feed. The
     - `resource.declare` "event-emissions:rows"
     - `resource.declare` "event-emissions:groups"
     - `resource.declare` "event-triggers"
+    - `background.trigger-source` "job"
   - Uses:
     - `database.db`
     - `database/sql-column.parsedJson`
+    - `infra/background/catalog.BackgroundTriggerSource`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`

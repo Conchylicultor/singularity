@@ -492,6 +492,7 @@ to reconcile them; they never needed reconciling.
     - `fields/variant/config`
     - `framework/web-core`
     - `history/dialog`
+    - `infra/background/catalog`
     - `infra/claude-cli`
     - `infra/events-test`
     - `integrations/google-maps`

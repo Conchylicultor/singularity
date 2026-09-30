@@ -657,6 +657,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `framework/web-core`
     - `history/dialog`
     - `improve`
+    - `infra/background/catalog`
     - `infra/events-test`
     - `integrations/gmail`
     - `integrations/google-maps`

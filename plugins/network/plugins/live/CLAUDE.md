@@ -594,6 +594,7 @@ grouped under the wave or item that removes it
     - `debug/queue-health`
     - `debug/sentinel`
     - `fields/secret/config`
+    - `infra/background/catalog`
     - `infra/claude-cli`
     - `infra/claude-cli/availability`
     - `infra/deps`

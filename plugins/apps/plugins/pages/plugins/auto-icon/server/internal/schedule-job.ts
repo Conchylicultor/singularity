@@ -15,6 +15,8 @@ const SETTLE_MS = 10_000;
  */
 export const autoIconScheduleJob = defineJob({
   name: "pages.auto-icon.schedule",
+  description:
+    "Schedules a page's icon pick once its edits have settled for 10 seconds.",
   // instant: one queue insert. The debounce is the future `runAt` on that row.
   hold: "instant",
   input: z.object({}).default({}),

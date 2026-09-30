@@ -158,6 +158,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `debug/worktree-cleanup`
     - `fields/secret/config`
     - `history/dialog`
+    - `infra/background/catalog`
     - `integrations/google-maps`
     - `layouts/route-fallback`
     - `map`

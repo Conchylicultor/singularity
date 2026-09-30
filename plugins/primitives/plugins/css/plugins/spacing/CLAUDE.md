@@ -293,6 +293,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `fields/tags/inline`
     - `fields/tags/table`
     - `history/dialog`
+    - `infra/background/catalog`
     - `infra/events-test`
     - `integrations/google-maps`
     - `layouts/miller`

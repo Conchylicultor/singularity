@@ -56,6 +56,7 @@ dense-list spelling for a trailing time column, where "ago" is implied.
     - `debug/trace/pane`
     - `fields/date/table`
     - `history/dialog`
+    - `infra/background/catalog`
     - `infra/deps`
     - `page/annotations/agent-notes/authorship`
     - `plugin-meta/plugin-health`

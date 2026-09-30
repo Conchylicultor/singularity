@@ -985,6 +985,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `debug/slow-ops`
     - `fields/secret/config`
     - `framework/web-core`
+    - `infra/background/catalog`
     - `infra/boot-snapshot`
     - `infra/claude-cli/availability`
     - `infra/deps`

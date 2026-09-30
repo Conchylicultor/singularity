@@ -17,6 +17,8 @@ import { autoIconJob } from "./auto-icon-job";
 // so it is enqueued again on the next boot (a cheap no-model read).
 export const backfillAutoIconsJob = defineJob({
   name: "pages.auto-icon.backfill",
+  description:
+    "Queues an icon pick for every page that does not have an automatic icon yet.",
   // instant: one indexed read and N queue inserts — no model call here.
   hold: "instant",
   input: z.object({}).default({}),
@@ -46,6 +48,8 @@ export const backfillAutoIconsJob = defineJob({
 // has not.
 export const autoIconsBackfillWarmup = defineWarmup({
   name: "pages.auto-icon.backfill",
+  description:
+    "Queues icon picks for pages created before automatic page icons existed.",
   scope: "worktree",
   run: async () => {
     await backfillAutoIconsJob.enqueue({});
