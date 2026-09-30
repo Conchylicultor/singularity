@@ -25,6 +25,8 @@ export interface TaskDraftCardProps {
   onLaunchOptionsChange: (next: LaunchOptionValues) => void;
   onSubmitChord: () => void;
   isHead?: boolean;
+  /** The head card's placeholder, from the host; omitted, the composer's own. */
+  placeholder?: string | undefined;
   /**
    * Optional host-owned home for this card's insert-at-caret handle. Supplied for
    * the head card so the host can drive the same insertion path the card's own
@@ -58,6 +60,7 @@ export function TaskDraftCard({
   onLaunchOptionsChange,
   onSubmitChord,
   isHead = false,
+  placeholder,
   insertRef: hostInsertRef,
   includeUrl,
   onToggleUrl,
@@ -96,6 +99,7 @@ export function TaskDraftCard({
             onLaunchOptionsChange={onLaunchOptionsChange}
             onSubmitChord={onSubmitChord}
             isHead={isHead}
+            placeholder={placeholder}
             insertRef={hostInsertRef}
             includeUrl={includeUrl}
             onToggleUrl={onToggleUrl}

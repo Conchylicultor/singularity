@@ -19,6 +19,12 @@ graphite at the font's own weight. The font, the rest of the type scale, radii
 and spacing are the defaults, so the chrome is set in the same face as the
 apps. `scheme: "dark"` — the frame does not flip with the light/dark switch.
 
+Its one accent is the signal blue (the build spinner, Reload): it is also the
+chrome's `primary`, so a primary action or a switched-on attach chip in a
+chrome popover (Improve's Create task, Attach page URL) lights in it. A text
+field in a chrome popover is a well (`composer`: 22% black over the panel), a
+shade darker than the panel around it.
+
 Its framed pills (Improve, Build) are `Button variant="frame"`, not
 `outline`: `outline` paints a fill of its own, and in dark mode that fill
 (`input/30`) shows as a lighter patch on the graphite.

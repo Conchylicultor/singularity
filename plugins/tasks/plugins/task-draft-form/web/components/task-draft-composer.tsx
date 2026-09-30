@@ -28,6 +28,8 @@ export interface TaskDraftComposerProps {
   onLaunchOptionsChange: (next: LaunchOptionValues) => void;
   onSubmitChord: () => void;
   isHead: boolean;
+  /** Overrides the head card's placeholder ("Describe the task…"). */
+  placeholder?: string | undefined;
   /**
    * Optional host-owned home for this composer's insert-at-caret handle. Omitted,
    * the composer keeps the handle to itself.
@@ -63,6 +65,7 @@ export function TaskDraftComposer({
   onLaunchOptionsChange,
   onSubmitChord,
   isHead,
+  placeholder,
   insertRef: hostInsertRef,
   includeUrl,
   onToggleUrl,
@@ -87,10 +90,12 @@ export function TaskDraftComposer({
       onChange={onTextChange}
       onSubmit={onSubmitChord}
       submitMode="cmd-enter"
-      placeholder={isHead ? "Describe the task…" : "Next task…"}
+      placeholder={
+        isHead ? (placeholder ?? "Describe the task…") : "Next task…"
+      }
       disabled={disabled}
       autoFocus={autoFocus}
-      minRows={isHead ? 5 : 2}
+      minRows={isHead ? 3 : 2}
       maxHeight={isHead ? "20rem" : "8rem"}
       namespace={`task-draft-card-${cardId}`}
       insertRef={insertRef}

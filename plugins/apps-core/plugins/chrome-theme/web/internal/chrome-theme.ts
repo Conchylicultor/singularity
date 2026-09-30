@@ -21,6 +21,10 @@ const SIGNAL = "oklch(0.7005 0.1387 252.57)"; // the build spinner, Reload
 const ALERT = "oklch(0.6256 0.1933 23.03)"; // badges, a failed build
 const OK = "oklch(0.7278 0.1698 151.06)"; // the health dot
 const INK = "oklch(0.2303 0.0083 264.40)"; // text on a signal/ok fill
+// A text field sunk into a panel: a shade darker than the panel it sits in
+// (22% black over it), so the box you type in reads as a well rather than as
+// another raised card.
+const WELL = "oklch(0 0 0 / 0.22)";
 
 /**
  * The app chrome's theme — the rail, the tab strip, the action bar and the
@@ -63,6 +67,13 @@ export const chromeTheme = defineFixedTheme({
         border: HAIRLINE,
         input: HAIRLINE,
         ring: SIGNAL,
+        // The chrome's one accent is its signal blue, so a primary action or
+        // a switched-on attach chip in a chrome popover (Improve's Create task,
+        // Attach page URL) lights in it rather than in the default palette's
+        // darker primary, which read as a dim blue on the graphite.
+        primary: SIGNAL,
+        primaryForeground: INK,
+        composer: WELL,
       }),
     ),
     sidebarPaletteGroup.fragment(

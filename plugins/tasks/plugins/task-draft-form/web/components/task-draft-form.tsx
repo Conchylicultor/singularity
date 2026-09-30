@@ -69,6 +69,8 @@ export interface TaskDraftFormProps {
   onStandaloneChange?: (next: boolean) => void;
   showStandalone?: boolean;
   heading?: string;
+  /** The head card's placeholder; defaults to "Describe the task…". */
+  placeholder?: string;
   /**
    * Receives the head card editor's insert-at-caret handle while it is mounted,
    * so the host can route programmatic inserts (see `TaskDraftPopover`'s insert
@@ -117,6 +119,7 @@ export function TaskDraftForm({
   onStandaloneChange,
   showStandalone,
   heading,
+  placeholder,
   headInsertRef,
 }: TaskDraftFormProps) {
   const isAgentWorktree = useIsAgentWorktree();
@@ -204,7 +207,7 @@ export function TaskDraftForm({
   return (
     <Stack
       gap="sm"
-      className={`w-[480px] ${isAgentWorktree ? "rounded-lg border-2 border-destructive/60 p-md" : ""}`}
+      className={`w-[536px] ${isAgentWorktree ? "rounded-lg border-2 border-destructive/60 p-md" : ""}`}
     >
       {isAgentWorktree && (
         <Stack
@@ -221,7 +224,7 @@ export function TaskDraftForm({
       )}
       <Line className="gap-sm">
         <Fill>
-          <Text as="h2" variant="subheading">
+          <Text as="h2" variant="label" className="font-semibold">
             {heading ?? "Draft tasks"}
           </Text>
         </Fill>
@@ -264,6 +267,7 @@ export function TaskDraftForm({
                 )}
                 <TaskDraftCard
                   isHead={isHead}
+                  placeholder={isHead ? placeholder : undefined}
                   insertRef={isHead ? headInsertRef : undefined}
                   cardId={card.localId}
                   index={idx}

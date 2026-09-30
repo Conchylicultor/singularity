@@ -99,6 +99,8 @@ export interface TaskDraftPopoverProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   heading?: string;
+  /** The head card's placeholder — what this surface asks the user for. */
+  placeholder?: string;
   onSuccess?: (taskIds: string[]) => void;
 }
 
@@ -121,6 +123,7 @@ function TaskDraftFormContent({
   activeRelate,
   target,
   heading,
+  placeholder,
   onSuccess,
   headInsertRef,
 }: {
@@ -140,6 +143,7 @@ function TaskDraftFormContent({
   activeRelate: { taskId: string } | null;
   target: TaskChainTarget;
   heading: string | undefined;
+  placeholder: string | undefined;
   onSuccess: ((taskIds: string[]) => void) | undefined;
   headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
 }) {
@@ -282,6 +286,7 @@ function TaskDraftFormContent({
       onStandaloneChange={(v) => patchDraft({ standalone: v })}
       showStandalone={relateTaskHasDeps}
       heading={heading}
+      placeholder={placeholder}
       headInsertRef={headInsertRef}
     />
   );
@@ -296,6 +301,7 @@ export function TaskDraftPopover({
   open: controlledOpen,
   onOpenChange,
   heading,
+  placeholder,
   onSuccess,
 }: TaskDraftPopoverProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -439,6 +445,7 @@ export function TaskDraftPopover({
             activeRelate={activeRelate}
             target={target}
             heading={heading}
+            placeholder={placeholder}
             onSuccess={onSuccess}
             headInsertRef={headInsertRef}
           />

@@ -47,6 +47,7 @@ export function ImproveButton() {
         target={{ kind: "category", categoryId: IMPROVEMENTS_CATEGORY_ID }}
         insert={insert}
         heading="Improve this app"
+        placeholder="What should be better here?"
       />
       {segments.map((segment) => (
         <Fragment key={segment.id}>
