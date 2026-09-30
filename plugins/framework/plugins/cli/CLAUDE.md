@@ -108,6 +108,13 @@ regenerating everything and clearing the markers itself. `core/` holds the marke
 names + conflict scan so the `generated-artifacts-normalized` check reads the
 same facts.
 
+Plugin `CLAUDE.md` is the one mixed file, and its driver (`regen-claudemd.sh`)
+is the one that can FAIL: it empties the autogen block on all three sides before
+a real 3-way merge of the prose, so the block cannot conflict, and a prose
+conflict exits non-zero — git marks the path `UU` and stops the rebase on it,
+with ours/base/theirs labels (`%S %X %Y`). It must never exit 0 over markers:
+git would stage them as a clean merge and `rebase --continue` would commit them.
+
 **Push's post-rebase call passes `force`, and skips the marker gate.** No marker
 is supposed to mean the drivers never fired, but it is equally what a marker
 delivered somewhere unread looks like — and for an ordinary branch the two are

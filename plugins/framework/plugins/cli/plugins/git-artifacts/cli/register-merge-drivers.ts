@@ -32,14 +32,17 @@ const STALE_DRIVERS = ["regen-docs"];
  * registries, docs, config origins, drizzle migrations) during
  * `git rebase` in `./singularity push`.
  *
- * Drivers themselves are trivial — they accept the upstream side. The
- * canonicalization happens in the post-rebase normalize step in `push.ts`,
- * which regenerates the artifacts from the rebased source tree.
+ * The fully-generated drivers are trivial — they accept the upstream side;
+ * `regen-claudemd` merges the hand-written prose and reports a real prose
+ * conflict to git. The canonicalization happens in the post-rebase normalize
+ * step, which regenerates the artifacts from the rebased source tree.
  */
 export async function registerMergeDrivers(root: string): Promise<void> {
   for (const d of DRIVERS) {
     const key = `merge.${d.name}.driver`;
-    const want = `${d.script} %O %A %B %P`;
+    // %S/%X/%Y (ancestor/ours/theirs labels) let a driver that leaves real
+    // conflict markers name the sides the way git's own markers do.
+    const want = `${d.script} %O %A %B %P %S %X %Y`;
     const current = await gitConfigGet(key, root);
     if (current === want) continue;
     await gitConfigSet(key, want, root);
