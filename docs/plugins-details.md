@@ -9195,6 +9195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `useConversation`
       - `useConversationById`
       - `useConversations`
+      - `useConversationTitleBySlug`
       - `useHasActiveSiblingInWorktree`
       - `useHasActiveSiblings`
       - `useLiveConversation`
@@ -9429,6 +9430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/runtime-api`
       - `conversations/runtime-tmux`
       - `conversations/summary`
+      - `debug/profiling/ops`
       - `improve`
       - `page/annotations/agent-notes/agent-page`
       - `review`
@@ -11958,13 +11960,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ConversationNoteSchema`
               - `deleteNote`
               - `upsertNote`
-        - **`op-status`** — Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to the worktree-ops live value. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
+        - **`op-status`** — Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own clock) or the work it is doing, total elapsed and the waited / worked split, expandable into the global push queue and every other in-flight op. Also a sidebar row chip flagging the same op (hourglass while parked in a wait).
           - Web:
             - Contributes:
               - `Conversation.AbovePromptInput` → `OpStatusBanner`
               - `Item.Chips` → `OpStatusChip`
             - Uses:
               - `conversations.useConversation`
+              - `conversations.useConversationTitleBySlug`
               - `conversations/conversation-ui/item.Item`
               - `conversations/conversation-view.Conversation`
               - `network/live.useLive`
@@ -11981,29 +11984,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.mapResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useResource`
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/relative-time.formatElapsed`
               - `primitives/relative-time.useNow`
               - `ui/icons.Icon`
-          - Server:
-            - Contributes: `resource.declare` "worktree-ops"
-            - Uses:
-              - `infra/file-watcher.createFileWatcher`
-              - `infra/file-watcher.FileWatcher`
-              - `infra/paths.worktreesDir`
-              - `infra/worktree.resolveActiveWorktreeOps`
-              - `infra/worktree.WorktreeOp`
-              - `network/live.serveValue`
-            - Resources: `worktree-ops` (push)
-          - Shared:
-            - Exports (types):
-              - `WorktreeOp`
-              - `WorktreeOpsPayload`
-            - Exports (values):
-              - `worktreeOps`
-              - `WorktreeOpSchema`
-              - `WorktreeOpsPayloadSchema`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000`, on the page its task was filed from when one was attached (else `/`).
           - Web:
             - Contributes: `Conversation.ActionBar` → `OpenAppButton`
@@ -12165,17 +12149,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
-              - `debug/profiling/ops.getOpProfiling`
-              - `debug/profiling/ops.useOpClick`
-              - `debug/profiling/ops/op-gantt.OpGantt`
-              - `infra/endpoints.useEndpoint`
+              - `debug/profiling/ops.WorktreeOpGantt`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
-              - `primitives/pane.useOpenPane`
-              - `tasks/attempt-view.attemptPane`
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
           - Web:
             - Uses:
@@ -13084,6 +13063,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/boot-profile`
       - `debug/latency-ledger`
       - `debug/profiling/boot-bench`
+      - `debug/profiling/op-log/op-store`
       - `debug/slow-ops`
       - `debug/trace/engine`
       - `history/engine`
@@ -13125,6 +13105,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `search/engine`
       - `shell/notifications`
       - `stats/cost`
+      - `stats/pushes`
       - `tasks`
       - `tasks/auto-start`
       - `tasks/task-category`
@@ -13200,7 +13181,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/query`
           - `debug/boot-profile`
           - `debug/latency-ledger`
-          - `debug/profiling/ops`
           - `debug/slow-ops`
           - `debug/slow-ops/cluster`
           - `debug/timeline`
@@ -13366,6 +13346,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/grouped`
           - `database`
           - `database/migrations`
+          - `debug/profiling/op-log/op-store`
           - `infra/entities`
           - `page/editor`
           - `page/editor-collab`
@@ -13646,6 +13627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/agents`
           - `conversations/conversation-category`
           - `debug/latency-ledger`
+          - `debug/profiling/op-log/op-store`
           - `fields/json/storage`
           - `fields/tags/storage`
           - `fields/text/storage`
@@ -14644,49 +14626,130 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `debug/profiling/ops`
           - Shared:
             - Exports (values): `getBuildProfiling`
-        - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader, and the single orphan reconciler.
+        - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, and the merged file reader. Its op-store child ingests it into the DB and owns the orphan reconciler.
           - Core:
             - Uses:
               - `infra/worktree.OP_KIND_IDS`
               - `infra/worktree.OpKind`
             - Exports (types):
+              - `LegacyOpenWait`
+              - `OpClosedBy`
               - `OpenWait`
-              - `OpGroup`
+              - `OpEvent`
+              - `OpEventKind`
+              - `OpFoldState`
+              - `OpIdentity`
+              - `OpLine`
+              - `OpLiveTimes`
               - `OpOutcome`
               - `OpRecord`
               - `OpStep`
+              - `OpSummary`
               - `OpWait`
+              - `OpWaitSpan`
               - `OutcomeByKind`
               - `RawOpRecord`
               - `TerminalOutcome`
               - `WaitKind`
+              - `WaitKindMeta`
+              - `WaitResult`
             - Exports (values):
-              - `foldOpRecords`
-              - `groupByOpId`
-              - `openWaitOf`
+              - `applyOpEvent`
+              - `emptyOpState`
+              - `foldOpLines`
+              - `isOpEvent`
+              - `isTerminalState`
+              - `liveTimes`
               - `orphanedOps`
+              - `reconcilerCompletedEvent`
               - `sumWaits`
+              - `toOpRecord`
+              - `toOpRecords`
+              - `WAIT_KINDS`
           - Cross-plugin:
-            - Imported by:
-              - `debug/profiling/ops`
-              - `stats/pushes`
+            - Imported by: `debug/profiling/op-log/op-store`
           - Server:
             - Exports (types):
               - `OpProfiler`
               - `OpProfilerOptions`
             - Exports (values):
+              - `appendOpLog`
               - `createOpProfiler`
-              - `finalizeOrphanedOps`
               - `OP_LOG_FILE`
               - `readOpenWait`
               - `readOpRecords`
-        - **`ops`** — Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).
+              - `readOpStates`
+          - Plugins:
+            - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
+              - Server:
+                - Contributes:
+                  - `resource.declare` "op-store.in-flight"
+                  - `resource.declare` "op-store.in-flight:rows"
+                  - `resource.declare` "op-store.in-flight:groups"
+                  - `resource.declare` "op-store.history"
+                  - `resource.declare` "op-store.history:rows"
+                  - `resource.declare` "op-store.history:groups"
+                - Uses:
+                  - `database.db`
+                  - `database/derived-updated-at.deriveUpdatedAt`
+                  - `database/sql-column.parsedJson`
+                  - `database/sql-column.parsedText`
+                  - `debug/profiling/op-log.appendOpLog`
+                  - `debug/profiling/op-log.OP_LOG_FILE`
+                  - `infra/file-watcher.createFileWatcher`
+                  - `infra/file-watcher.FileWatcher`
+                  - `infra/retention.defineRetention`
+                  - `infra/worktree.listWorktreeOps`
+                  - `infra/worktree.probeWorktreeOp`
+                  - `network/live.serveCollection`
+                - DB schema: `plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/server/internal/tables.ts`
+                - Exports (values): `_opLogOps`
+                - Register: `defineJob('retention.op_log_ops')`
+                - Resources:
+                  - `op-store.history` (keyed, window)
+                  - `op-store.history:groups` (push)
+                  - `op-store.history:rows` (keyed, point)
+                  - `op-store.in-flight` (keyed, window)
+                  - `op-store.in-flight:groups` (push)
+                  - `op-store.in-flight:rows` (keyed, point)
+              - Core:
+                - Uses:
+                  - `debug/profiling/op-log.OpenWait`
+                  - `debug/profiling/op-log.OpFoldState`
+                  - `debug/profiling/op-log.OpStep`
+                  - `debug/profiling/op-log.OpWait`
+                  - `debug/profiling/op-log.TerminalOutcome`
+                  - `debug/profiling/op-log.WAIT_KINDS`
+                  - `debug/profiling/op-log.WaitKind`
+                  - `debug/profiling/op-log.WaitResult`
+                  - `infra/worktree.OP_KIND_IDS`
+                  - `network/live.liveCollection`
+                  - `network/live/filter.liveInstant`
+                  - `network/live/filter.liveText`
+                - Exports (types):
+                  - `OpRow`
+                  - `StoreClosedBy`
+                - Exports (values):
+                  - `LANES`
+                  - `OpRowSchema`
+                  - `opRowToFoldState`
+                  - `opsHistory`
+                  - `opsInFlight`
+                  - `PUSH_MODES`
+                  - `STORE_CLOSED_BY`
+                  - `TERMINAL_OUTCOMES`
+                  - `WAIT_KIND_IDS`
+                  - `WAIT_RESULTS`
+              - Cross-plugin:
+                - Imported by: `stats/pushes`
+        - **`ops`** — Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane — all computed client-side from opsHistory rows.
           - Web:
             - Slots: `opDetailPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Profiling.Section` → `OpSection`
               - `Pane.Register` "debug-profiling-op-detail"
             - Uses:
+              - `conversations.useConversationTitleBySlug`
               - `conversations/conversation-view.conversationPane`
               - `debug/profiling.formatDuration`
               - `debug/profiling.GanttContainer`
@@ -14696,12 +14759,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling.Span`
               - `debug/profiling.SpanDetail`
               - `debug/profiling.SpanRow`
-              - `debug/profiling.useProfilingContext`
               - `debug/profiling/build.buildProfileDetailPane`
               - `debug/profiling/ops/op-gantt.opFillClass`
               - `debug/profiling/ops/op-gantt.OpGantt`
               - `debug/profiling/ops/op-gantt.waitFillClass`
-              - `infra/endpoints.useEndpoint`
+              - `debug/profiling/ops/op-gantt.waitLabel`
+              - `network/live.useLive`
+              - `network/live.useLiveRow`
               - `primitives/css/badge.Badge`
               - `primitives/css/badge.formatStatusLabel`
               - `primitives/css/clip.Clip`
@@ -14712,31 +14776,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
+              - `primitives/relative-time.useNow`
               - `shell/toast.showToast`
               - `tasks/attempt-view.attemptPane`
             - Exports (values):
-              - `getOpProfiling`
               - `opDetailPane`
-              - `useOpClick`
-          - Server:
-            - Uses:
-              - `database/admin.openShortLivedClient`
-              - `debug/profiling/op-log.finalizeOrphanedOps`
-              - `debug/profiling/op-log.readOpRecords`
-              - `infra/endpoints.HttpError`
-              - `infra/endpoints.implement`
-              - `infra/worktree.isWorktreeOpActive`
-            - Routes:
-              - `GET /api/debug/profiling/ops`
-              - `GET /api/debug/profiling/ops/:opId`
+              - `WorktreeOpGantt`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/push-profiling`
-          - Shared:
-            - Exports (values): `getOpProfiling`
           - Plugins:
             - **`op-gantt`** — Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset.
               - Web:
@@ -14764,10 +14817,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `opFillClass`
                   - `OpGantt`
                   - `waitFillClass`
+                  - `waitLabel`
               - Cross-plugin:
-                - Imported by:
-                  - `conversations/conversation-view/push-profiling`
-                  - `debug/profiling/ops`
+                - Imported by: `debug/profiling/ops`
         - **`runtime`** — Runtime HTTP/DB/loader profiling tables in the Gantt debug pane. Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
           - Web:
             - Contributes: `Profiling.Section` → `RuntimeSection`
@@ -18294,6 +18346,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/outline`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
+              - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/rewind`
               - `conversations/conversations-view/data-view/queue`
@@ -19347,7 +19400,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/pending-turn`
           - `conversations/conversation-view/push-and-exit`
-          - `conversations/conversation-view/push-profiling`
           - `conversations/conversation-view/resume`
           - `conversations/conversation-view/rewind`
           - `conversations/conversations-view`
@@ -19373,7 +19425,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling/boot`
           - `debug/profiling/boot-bench`
           - `debug/profiling/build`
-          - `debug/profiling/ops`
           - `debug/profiling/runtime`
           - `debug/profiling/stats`
           - `debug/queue`
@@ -19834,8 +19885,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2`
           - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/code`
-          - `conversations/conversation-view/op-status`
           - `conversations/transcript-watcher`
+          - `debug/profiling/op-log/op-store`
           - `debug/sentinel`
           - `infra/corpus-index`
           - `infra/deps`
@@ -20063,7 +20114,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `hostOccupancy`
               - `inheritedGrant`
               - `pushPool`
-              - `pushSlotPath`
               - `withHostGrant`
           - Cross-plugin:
             - Imported by:
@@ -20659,7 +20709,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `code-explorer/file-resolve`
           - `config_v2`
           - `conversations/conversation-progress`
-          - `conversations/conversation-view/op-status`
           - `conversations/runtime-tmux`
           - `conversations/transcript-watcher`
           - `debug/boot-watchdog`
@@ -20872,6 +20921,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/agent-origin`
           - `debug/boot-profile`
           - `debug/latency-ledger`
+          - `debug/profiling/op-log/op-store`
           - `debug/slow-ops`
           - `debug/trace/engine`
           - `history/engine`
@@ -21218,8 +21268,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `infra/host/host-admission.defineHostPool`
-          - `infra/host/host-admission.pushPool`
-          - `infra/host/host-admission.pushSlotPath`
           - `infra/paths.GIT`
           - `infra/paths.worktreeArtifacts`
           - `infra/paths.worktreeDataDir`
@@ -21227,18 +21275,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `packages/flock.flockTry`
         - Exports (types):
           - `CompositionMarker`
-          - `DerivePushDeps`
           - `NamespaceClaimant`
           - `NamespaceProbe`
-          - `PushHolder`
           - `WorktreeOp`
           - `WorktreeOpInfo`
-          - `WorktreeOpPhase`
+          - `WorktreeOpMarker`
           - `WorktreeSpec`
         - Exports (values):
-          - `clearPushHolder`
-          - `clearWorktreeOp`
-          - `derivePushPhases`
           - `ensureMainWorktreeRoot`
           - `gitWorktreesDir`
           - `hasCompositionMarker`
@@ -21250,19 +21293,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `markWorktreeOpStart`
           - `namespaceCollision`
           - `probeNamespace`
-          - `pushLockHeld`
+          - `probeWorktreeOp`
           - `readCompositionMarker`
-          - `readPushHolder`
           - `removeWorktree`
           - `removeWorktreeSpec`
-          - `resolveActiveWorktreeOps`
           - `setupWorktree`
-          - `setWorktreeOpPhase`
           - `stampCompositionMarker`
           - `withWorktreeMutateSlot`
           - `WorktreeGitTimeoutError`
           - `worktreePathFor`
-          - `writePushHolder`
           - `writeWorktreeSpec`
       - Cross-plugin:
         - Imported by:
@@ -21271,12 +21310,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/serve-composition`
           - `code-explorer`
           - `conversations`
-          - `conversations/conversation-view/op-status`
           - `conversations/runtime-tmux`
           - `debug/broadcasts`
           - `debug/memory`
           - `debug/profiling/op-log`
-          - `debug/profiling/ops`
+          - `debug/profiling/op-log/op-store`
           - `debug/worktree-cleanup`
           - `infra/deps`
           - `infra/git/git-watcher`
@@ -21899,6 +21937,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/summary`
           - `database/query-deadline`
           - `debug/claude-cli-calls`
+          - `debug/profiling/op-log/op-store`
+          - `debug/profiling/ops`
           - `debug/queue`
           - `debug/queue-health`
           - `debug/sentinel`
@@ -21952,6 +21992,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/threads`
               - `conversations/all-conversations`
               - `conversations/summary`
+              - `debug/profiling/op-log/op-store`
               - `infra/claude-cli`
               - `infra/trash`
               - `network/live`
@@ -31152,6 +31193,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/config-orphans`
           - `debug/latency-ledger`
           - `debug/live-state-health`
+          - `debug/profiling/ops`
           - `debug/queue`
           - `debug/queue-health`
           - `debug/reports`
@@ -31364,6 +31406,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/claude-cli-calls`
           - `debug/live-state-health`
           - `debug/memory`
+          - `debug/profiling/ops`
           - `debug/queue`
           - `debug/queue-health`
           - `debug/read-set`
@@ -32661,6 +32704,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/config-orphans`
           - `debug/health-monitor`
           - `debug/live-state-health`
+          - `debug/profiling/ops`
           - `debug/reports`
           - `debug/sentinel`
           - `debug/slow-ops/cluster`
@@ -35520,7 +35564,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits.yAxisFormatter`
       - Server:
         - Uses:
-          - `debug/profiling/op-log.readOpRecords`
+          - `database.db`
+          - `debug/profiling/op-log/op-store._opLogOps`
           - `infra/endpoints.implement`
         - Routes:
           - `GET /api/stats/pushes/wait-time`
@@ -35775,7 +35820,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `active-data/attempt`
-          - `conversations/conversation-view/push-profiling`
           - `debug/profiling/ops`
     - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as one live resource plus a direct read for the server-side exit-drop guard.
       - Server:

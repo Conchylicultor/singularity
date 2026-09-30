@@ -90,7 +90,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
 
-- **`debug`** [55 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [56 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [test helpers] [86 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
