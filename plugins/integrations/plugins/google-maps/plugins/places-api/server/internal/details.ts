@@ -9,6 +9,8 @@ interface PlaceDetailsResponse {
   formattedAddress?: string;
   googleMapsUri?: string;
   primaryTypeDisplayName?: { text?: string };
+  primaryType?: string;
+  types?: string[];
   location?: { latitude?: number; longitude?: number };
 }
 
@@ -42,6 +44,8 @@ export async function placeDetails(
     name: body.displayName?.text ?? body.formattedAddress,
     address: body.formattedAddress,
     category: body.primaryTypeDisplayName?.text,
+    primaryType: body.primaryType,
+    types: body.types,
     mapsUrl: body.googleMapsUri,
     lat: body.location?.latitude,
     lng: body.location?.longitude,

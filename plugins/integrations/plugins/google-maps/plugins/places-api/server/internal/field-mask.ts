@@ -7,9 +7,9 @@
  * to:
  *
  * - `id`                                        — IDs Only (free)
- * - `formattedAddress`, `location`              — Essentials
+ * - `formattedAddress`, `location`, `types`     — Essentials
  * - `displayName`, `googleMapsUri`,
- *   `primaryTypeDisplayName`                    — Pro
+ *   `primaryType`, `primaryTypeDisplayName`     — Pro
  * - `rating`, `userRatingCount`,
  *   `regularOpeningHours`,
  *   `internationalPhoneNumber`,
@@ -26,5 +26,7 @@ export const PLACE_DETAILS_FIELD_MASK = [
   "formattedAddress",
   "googleMapsUri",
   "primaryTypeDisplayName",
+  "primaryType",
+  "types",
   "location",
 ].join(",");

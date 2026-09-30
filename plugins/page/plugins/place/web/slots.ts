@@ -17,7 +17,7 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 export interface PlaceProviderContribution {
   /** Must match the server-side `definePlaceProvider({ id })`. */
   id: string;
-  /** Human name, used in the picker and in the card's "Open in …" link. */
+  /** Human name, used in the provider picker and the search placeholder. */
   label: string;
   icon?: IconRef;
   /**

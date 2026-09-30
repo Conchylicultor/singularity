@@ -1,6 +1,6 @@
 import { defineBlock } from "@plugins/page/plugins/editor/core";
 import { PlaceDataSchema } from "./schemas";
-import { typeVar } from "@plugins/primitives/plugins/css/plugins/text/core";
+import { PlaceKindSchema, type PlaceKind } from "./kinds";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const locationOnIcon = symbol("location-on");
@@ -35,6 +35,17 @@ function timestampAttr(raw: string | undefined): number | undefined {
   return value;
 }
 
+/**
+ * Read the `kind` attribute. Unlike `lat`/`fetched`, an unknown value is read as
+ * ABSENT rather than thrown: the kind set is closed and grows, so markdown
+ * written by a newer build (or by hand) can name a kind this one does not know,
+ * and the only consequence is a generic pin until the next refresh re-maps it.
+ */
+function kindAttr(raw: string | undefined): PlaceKind | undefined {
+  const parsed = PlaceKindSchema.safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
+}
+
 export const placeBlock = defineBlock({
   type: PLACE_TYPE,
   schema: PlaceDataSchema,
@@ -42,10 +53,11 @@ export const placeBlock = defineBlock({
   icon: locationOnIcon,
   aliases: ["address", "location", "map", "maps"],
   empty: () => ({}), // no placeId → the search UI
-  // The card's first line is the name row inside `Card`'s own padding, wrapped
-  // in the block's `Inset y="xs"`. Seat the gutter rail on THAT line rather than
-  // on the phantom text line the default assumes.
-  gutterFirstLineCenter: `calc(var(--space-xs) + var(--pad-card) + ${typeVar("line-height-body")} / 2)`,
+  // The card is a `Row` (its `p-row` padding) inside the block's `Inset y="xs"`,
+  // led by a 2.5rem kind circle that sets the row's height. Seat the gutter rail
+  // on the circle's centre rather than on the phantom text line the default
+  // assumes. Keep 1.25rem in step with the card's `size-10` circle.
+  gutterFirstLineCenter: "calc(var(--space-xs) + var(--pad-row-y) + 1.25rem)",
   // `<place …/>` — a self-closing tag rather than the derived JSON-attribute
   // fallback, so an agent reading the page through `read_page` sees the place
   // itself. `body: "none"`: a place has no content of its own, so a body on
@@ -62,6 +74,7 @@ export const placeBlock = defineBlock({
         name: data.name,
         address: data.address,
         category: data.category,
+        kind: data.kind,
         maps: data.mapsUrl,
         lat: data.lat,
         lng: data.lng,
@@ -78,6 +91,7 @@ export const placeBlock = defineBlock({
         name: attrs.name,
         address: attrs.address,
         category: attrs.category,
+        kind: kindAttr(attrs.kind),
         mapsUrl: attrs.maps,
         lat: numberAttr(attrs.lat, "lat"),
         lng: numberAttr(attrs.lng, "lng"),

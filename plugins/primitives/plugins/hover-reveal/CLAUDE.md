@@ -52,7 +52,6 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `page/embed`
     - `page/file`
     - `page/image`
-    - `page/place`
     - `page/table`
     - `page/video`
     - `primitives/css/row`

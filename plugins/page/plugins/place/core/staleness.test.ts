@@ -75,6 +75,7 @@ describe("placeDataFromSnapshot", () => {
           name: "Café Kitsuné",
           address: "51 Galerie de Montpensier, Paris",
           category: "Coffee shop",
+          kind: "cafe",
           mapsUrl: "https://example.test/p1",
           lat: 48.86,
           lng: 2.33,
@@ -87,6 +88,7 @@ describe("placeDataFromSnapshot", () => {
       name: "Café Kitsuné",
       address: "51 Galerie de Montpensier, Paris",
       category: "Coffee shop",
+      kind: "cafe",
       mapsUrl: "https://example.test/p1",
       lat: 48.86,
       lng: 2.33,
@@ -101,6 +103,7 @@ describe("placeDataFromSnapshot", () => {
       NOW,
     );
     expect(refreshed.category).toBeUndefined();
+    expect(refreshed.kind).toBeUndefined();
     expect(refreshed.mapsUrl).toBeUndefined();
   });
 

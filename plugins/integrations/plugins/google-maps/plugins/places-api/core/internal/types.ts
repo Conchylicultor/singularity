@@ -41,6 +41,13 @@ export const PlaceSnapshotSchema = z.object({
   address: z.string(),
   /** Human-readable primary type ("French restaurant", "Park"). */
   category: z.string().optional(),
+  /**
+   * Google's machine type for the place (`clothing_store`, `cafe`, `park`, …),
+   * and the full list it belongs to (most specific first). Google's own
+   * taxonomy — a consumer maps it onto its own vocabulary.
+   */
+  primaryType: z.string().optional(),
+  types: z.array(z.string()).optional(),
   /** Canonical Google Maps link for the place — the card's "Open in Maps". */
   mapsUrl: z.string().optional(),
   lat: z.number().optional(),

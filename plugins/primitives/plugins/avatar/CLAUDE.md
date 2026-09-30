@@ -140,6 +140,7 @@ color palette.
     - `conversations/conversation-view/jsonl-viewer/teammate-message`
     - `fields/avatar/config`
     - `fields/avatar/table`
+    - `page/place`
     - `primitives/data-view/icons`
 - Core:
   - Exports (types):

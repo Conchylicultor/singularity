@@ -9,6 +9,7 @@ import type {
   PlaceSuggestion,
 } from "@plugins/page/plugins/place/core";
 import { GOOGLE_PLACE_PROVIDER_ID } from "../../shared";
+import { googleTypeToKind } from "./type-to-kind";
 
 /**
  * The API key, or a loud stop.
@@ -57,6 +58,8 @@ export const googlePlaceProvider = definePlaceProvider({
       name: place.name,
       address: place.address,
       category: place.category,
+      // Google's taxonomy stops here: the block stores only the neutral kind.
+      kind: googleTypeToKind(place.primaryType, place.types),
       mapsUrl: place.mapsUrl,
       lat: place.lat,
       lng: place.lng,

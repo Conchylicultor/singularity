@@ -22,6 +22,7 @@
     - `build`
     - `conversations/conversation-view/op-status`
     - `debug/worktree-cleanup`
+    - `page/place`
     - `primitives/folder-picker`
     - `primitives/loading`
     - `primitives/sync-status`

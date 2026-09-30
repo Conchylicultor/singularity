@@ -176,7 +176,6 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `infra/events-test`
     - `page/annotations/instructions/instructions-page`
     - `page/editor`
-    - `page/place`
     - `plugin-meta/facets/exports/render-contributions`
     - `plugin-meta/facets/exports/render-detail`
     - `plugin-meta/facets/structure/render-detail`

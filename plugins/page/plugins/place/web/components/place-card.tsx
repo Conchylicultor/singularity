@@ -1,106 +1,120 @@
-import type { ReactNode } from "react";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
-  hoverRevealGroup,
-  hoverRevealTarget,
-} from "@plugins/primitives/plugins/hover-reveal/web";
-import type { PlaceData } from "../../core";
-import type { PlaceProviderContribution } from "../slots";
+  Avatar,
+  AvatarPresentationProvider,
+} from "@plugins/primitives/plugins/avatar/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { placeKindColor, type PlaceData } from "../../core";
+import { placeKindGlyph } from "../internal/kind-glyphs";
 
-const openInNewIcon = symbol("open-in-new");
-const locationOnIcon = symbol("location-on");
+const copyIcon = symbol("content-copy");
+const checkIcon = symbol("check");
 const refreshIcon = symbol("refresh");
+const replaceIcon = symbol("edit-location-alt");
+
+/** The refresh of an already-rendered snapshot, as the card shows it. */
+export interface PlaceCardRefresh {
+  refreshing: boolean;
+  /** The provider's reason the last refresh failed, or null. */
+  error: string | null;
+  /** Ask the provider again now. */
+  refresh: () => void;
+}
 
 export interface PlaceCardProps {
   data: PlaceData;
-  /**
-   * The provider's web contribution, when one is registered for
-   * `data.providerId`. Absent is a real state — a page can outlive the plugin
-   * that filled it — and the card degrades to a generic link label rather than
-   * refusing to render a place it already holds.
-   */
-  provider?: PlaceProviderContribution;
-  /** Rendered under the body: the refresh error, when a refresh failed. */
-  notice?: ReactNode;
+  refresh: PlaceCardRefresh;
   /** Clear the block back to its search box. */
   onReplace: () => void;
 }
 
-/** The resolved place: what the block looks like once it names somewhere. */
-export function PlaceCard({
-  data,
-  provider,
-  notice,
-  onReplace,
-}: PlaceCardProps) {
-  const icon = provider?.icon ?? locationOnIcon;
-  const linkLabel = provider ? `Open in ${provider.label}` : "Open map";
+/**
+ * The resolved place: one row — a circle whose glyph and colour say what KIND
+ * of place it is, the name, and `category · address`. The whole row opens the
+ * provider's page; refresh, copy-address and replace are hover actions. No provider
+ * name, no badge: the link is the row.
+ */
+export function PlaceCard({ data, refresh, onReplace }: PlaceCardProps) {
+  const address = data.address ?? "";
+  const { copy, copied } = useCopyToClipboard(address);
+  const details = [data.category, data.address].filter(Boolean).join(" · ");
 
   return (
-    <div className={cn(hoverRevealGroup, "relative")}>
-      <Card>
-        <Stack gap="2xs">
-          <Line>
-            <Icon
-              icon={icon}
-              className={cn(rigidClass(), "size-4 text-muted-foreground")}
+    <Row
+      hover="muted"
+      {...(data.mapsUrl
+        ? { href: data.mapsUrl, target: "_blank", rel: "noreferrer" }
+        : {})}
+      icon={
+        <Center className={cn(rigidClass(), "size-10")}>
+          <AvatarPresentationProvider value="tile">
+            <Avatar
+              symbol={placeKindGlyph(data.kind)}
+              color={placeKindColor(data.kind)}
             />
-            <Fill>
-              <Text variant="label">{data.name}</Text>
-            </Fill>
-          </Line>
-          {data.address ? (
-            <Text variant="caption" tone="muted">
-              {data.address}
+          </AvatarPresentationProvider>
+        </Center>
+      }
+      // A failed refresh keeps the actions on screen, so Refresh — the fix —
+      // is there without having to hover for it.
+      actionsAlwaysVisible={refresh.error !== null}
+      actions={
+        <>
+          <IconButton
+            icon={refreshIcon}
+            label="Refresh"
+            tooltip={
+              refresh.error === null
+                ? undefined
+                : `Couldn't refresh: ${refresh.error}. Try again.`
+            }
+            disabled={refresh.refreshing}
+            onClick={refresh.refresh}
+          />
+          {address ? (
+            <IconButton
+              icon={copied ? checkIcon : copyIcon}
+              label={copied ? "Copied" : "Copy address"}
+              onClick={copy}
+            />
+          ) : null}
+          <IconButton
+            icon={replaceIcon}
+            label="Replace place"
+            onClick={onReplace}
+          />
+        </>
+      }
+    >
+      <Stack gap="none">
+        <Line>
+          <Text variant="label">{data.name}</Text>
+        </Line>
+        <Line className="gap-2xs">
+          {refresh.refreshing ? (
+            <Spinner
+              className={cn(rigidClass(), "size-3 text-muted-foreground")}
+            />
+          ) : null}
+          {refresh.error !== null ? (
+            <Text variant="caption" tone="destructive" className={rigidClass()}>
+              Couldn't refresh ·&nbsp;
             </Text>
           ) : null}
-          {data.category || data.mapsUrl ? (
-            <Cluster align="center">
-              {data.category ? <Badge>{data.category}</Badge> : null}
-              {data.mapsUrl ? (
-                <Badge
-                  as="a"
-                  href={data.mapsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  icon={<Icon icon={openInNewIcon} className="icon-auto" />}
-                  colorClass="bg-muted text-primary hover:bg-muted/80 hover:underline"
-                >
-                  {linkLabel}
-                </Badge>
-              ) : null}
-            </Cluster>
-          ) : null}
-          {notice}
-        </Stack>
-      </Card>
-      <Pin to="top-right" offset="xs">
-        <button
-          type="button"
-          aria-label="Replace place"
-          onClick={onReplace}
-          className={cn(
-            hoverRevealTarget,
-            "size-6 rounded-full bg-black/50 text-white hover:bg-black/70",
-          )}
-        >
-          <Center className="size-full">
-            <Icon icon={refreshIcon} className="size-4" />
-          </Center>
-        </button>
-      </Pin>
-    </div>
+          <Text variant="caption" tone="muted">
+            {details}
+          </Text>
+        </Line>
+      </Stack>
+    </Row>
   );
 }

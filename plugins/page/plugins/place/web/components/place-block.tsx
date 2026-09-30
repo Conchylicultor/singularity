@@ -9,7 +9,6 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -55,7 +54,6 @@ export function PlaceBlock({ block, editor }: BlockRendererProps) {
   const [session, setSession] = useState(() => crypto.randomUUID());
 
   const { providerId, placeId } = data;
-  const provider = providers.find((p) => p.id === providerId);
   // Whether there is anything to RENDER is a pure question about the stored
   // data. Whether it is old enough to refresh is a question about the clock,
   // and only the resolve effect may ask that one — reading `Date.now()` here
@@ -74,7 +72,7 @@ export function PlaceBlock({ block, editor }: BlockRendererProps) {
     [editor, setSession],
   );
 
-  const { error: resolveError } = usePlaceResolve({
+  const resolve = usePlaceResolve({
     providerId,
     placeId,
     snapshot: data,
@@ -129,8 +127,8 @@ export function PlaceBlock({ block, editor }: BlockRendererProps) {
               className={cn(rigidClass(), "size-4 text-muted-foreground")}
             />
             <Fill>
-              {resolveError ? (
-                <Placeholder tone="error">{resolveError}</Placeholder>
+              {resolve.error ? (
+                <Placeholder tone="error">{resolve.error}</Placeholder>
               ) : (
                 <Loading variant="text" label="Looking up this place…" />
               )}
@@ -143,18 +141,11 @@ export function PlaceBlock({ block, editor }: BlockRendererProps) {
 
   return (
     <Inset x={BLOCK_INSET} y="xs">
+      {/* A failed refresh keeps the stored snapshot on screen — the refresh
+          failed, the place did not disappear. */}
       <PlaceCard
         data={data}
-        provider={provider}
-        notice={
-          resolveError ? (
-            // The stored snapshot is still on screen above this line — the
-            // refresh failed, the place did not disappear.
-            <Text variant="caption" tone="destructive">
-              Could not refresh: {resolveError}
-            </Text>
-          ) : null
-        }
+        refresh={resolve}
         onReplace={() => editor.update({})}
       />
     </Inset>

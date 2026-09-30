@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchEndpoint,
   getEndpointErrorMessage,
@@ -30,8 +30,20 @@ export interface UsePlaceResolveArgs {
   onResolved: (providerId: string, snapshot: PlaceSnapshot) => void;
 }
 
+export interface PlaceResolveState {
+  /** The provider's reason the last resolve failed, or null. */
+  error: string | null;
+  /** A resolve is in flight right now. */
+  refreshing: boolean;
+  /**
+   * Ask the provider again now, whether or not the snapshot is due — the card's
+   * Refresh action, and the retry after a failure.
+   */
+  refresh: () => void;
+}
+
 /**
- * Resolve one place, at most once per place. Called UNCONDITIONALLY from every
+ * Resolve one place, at most once per place (or once per `refresh`). Called UNCONDITIONALLY from every
  * render state — the hook itself decides whether there is anything to ask — so
  * the block's three states share one hook order.
  *
@@ -45,8 +57,14 @@ export function usePlaceResolve({
   snapshot,
   session,
   onResolved,
-}: UsePlaceResolveArgs): { error: string | null } {
+}: UsePlaceResolveArgs): PlaceResolveState {
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  // Bumped by `refresh`: a dep of the effect, so a refresh re-runs it.
+  const [attempt, setAttempt] = useState(0);
+  // Set by `refresh`, consumed by the effect run it triggers: the one request
+  // that goes out although the snapshot is still fresh.
+  const forceRef = useRef(false);
   // Guard against a double-resolve — React StrictMode double-mounts, and a
   // re-render while the request is in flight would otherwise fire a second one.
   // Keyed on the place, so replacing the place resolves again.
@@ -61,7 +79,8 @@ export function usePlaceResolve({
     // React happens to re-render it. The honest trade is that a snapshot which
     // expires while the page sits open refreshes on the next mount or edit
     // rather than mid-view — a month-old address is not worth a render-loop.
-    const needsResolve = placeNeedsResolve({ name, fetchedAt }, Date.now());
+    const needsResolve =
+      forceRef.current || placeNeedsResolve({ name, fetchedAt }, Date.now());
     if (!needsResolve || providerId === undefined || placeId === undefined) {
       // Nothing to ask right now. Clearing the key is what lets a snapshot that
       // goes stale under a long-lived mount refresh itself; it cannot loop,
@@ -72,7 +91,9 @@ export function usePlaceResolve({
     }
     if (startedRef.current === placeId) return;
     startedRef.current = placeId;
+    forceRef.current = false;
     setError(null);
+    setRefreshing(true);
 
     async function run(provider: string, place: string) {
       try {
@@ -84,12 +105,20 @@ export function usePlaceResolve({
         onResolved(provider, resolved);
       } catch (e) {
         // Fail loud: surface the provider's own reason. The key stays set, so
-        // this does not retry in a loop — a remount or a replaced place does.
+        // this does not retry in a loop — `refresh`, a remount or a replaced place does.
         setError(getEndpointErrorMessage(e));
+      } finally {
+        setRefreshing(false);
       }
     }
     void run(providerId, placeId);
-  }, [name, fetchedAt, providerId, placeId, session, onResolved]);
+  }, [name, fetchedAt, providerId, placeId, session, onResolved, attempt]);
 
-  return { error };
+  const refresh = useCallback(() => {
+    forceRef.current = true;
+    startedRef.current = null;
+    setAttempt((n) => n + 1);
+  }, []);
+
+  return { error, refreshing, refresh };
 }

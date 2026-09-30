@@ -26,6 +26,7 @@
     - `page/code-block`
     - `page/editor`
     - `page/formatting/link`
+    - `page/place`
     - `primitives/filepath-breadcrumb`
     - `primitives/log-channels`
     - `primitives/setup-steps`

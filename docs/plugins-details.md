@@ -24123,26 +24123,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
           - `page/editor.useBlockActivate`
-          - `primitives/css/badge.Badge`
+          - `primitives/avatar.Avatar`
+          - `primitives/avatar.AvatarPresentationProvider`
+          - `primitives/copy-to-clipboard.useCopyToClipboard`
           - `primitives/css/card.Card`
           - `primitives/css/center.Center`
-          - `primitives/css/cluster.Cluster`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
-          - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/spinner.Spinner`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Input`
-          - `primitives/hover-reveal.hoverRevealGroup`
-          - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/undo-redo.localUndoProps`
           - `ui/icons.Icon`
@@ -24169,10 +24169,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `page/editor.defineBlock`
-          - `primitives/css/text.typeVar`
           - `ui/icons.symbol`
         - Exports (types):
           - `PlaceData`
+          - `PlaceKind`
           - `PlaceSnapshot`
           - `PlaceSnapshotState`
           - `PlaceSuggestion`
@@ -24182,6 +24182,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `placeBlock`
           - `placeDataFromSnapshot`
           - `PlaceDataSchema`
+          - `placeKindColor`
           - `placeNeedsResolve`
           - `placeResolveEndpoint`
           - `placeSearchEndpoint`
@@ -25769,6 +25770,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
           - `fields/avatar/config`
           - `fields/avatar/table`
+          - `page/place`
           - `primitives/data-view/icons`
       - Core:
         - Exports (types):
@@ -26017,6 +26019,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/code-block`
           - `page/editor`
           - `page/formatting/link`
+          - `page/place`
           - `primitives/filepath-breadcrumb`
           - `primitives/log-channels`
           - `primitives/setup-steps`
@@ -26147,7 +26150,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events-test`
               - `page/annotations/instructions/instructions-page`
               - `page/editor`
-              - `page/place`
               - `plugin-meta/facets/exports/render-contributions`
               - `plugin-meta/facets/exports/render-detail`
               - `plugin-meta/facets/structure/render-detail`
@@ -26455,7 +26457,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/gates`
               - `fields/tags/inline`
               - `page/annotations/todo/task-link`
-              - `page/place`
               - `page/prompt/block`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/routes/render-detail`
@@ -27228,7 +27229,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `page/file`
               - `page/image`
-              - `page/place`
               - `page/read-only-view`
               - `page/table`
               - `page/video`
@@ -28067,6 +28067,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `conversations/conversation-view/op-status`
               - `debug/worktree-cleanup`
+              - `page/place`
               - `primitives/folder-picker`
               - `primitives/loading`
               - `primitives/sync-status`
@@ -30658,7 +30659,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/embed`
           - `page/file`
           - `page/image`
-          - `page/place`
           - `page/table`
           - `page/video`
           - `primitives/css/row`
@@ -30760,6 +30760,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/formatting/color`
           - `page/formatting/link`
           - `page/page-reference/open-aside`
+          - `page/place`
           - `page/table`
           - `primitives/adaptive-bar`
           - `primitives/collapsible-wrap`
