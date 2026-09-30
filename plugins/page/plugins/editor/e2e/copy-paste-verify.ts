@@ -302,7 +302,8 @@ await withBrowser(async (h) => {
     const host = [
       ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
     ].at(-1);
-    const walker = host && document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+    const walker =
+      host && document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
     const text = walker?.nextNode();
     if (!text) throw new Error("I: no text node in the last block");
     const sel = window.getSelection()!;
@@ -319,7 +320,7 @@ await withBrowser(async (h) => {
   // stated bound in CLAUDE.md's splice section) — not what this phase tests.
   await page.waitForTimeout(300);
   r.eq(
-    "I: setup — the DOM caret is after \"The \"",
+    'I: setup — the DOM caret is after "The "',
     await page.evaluate(() => {
       const sel = window.getSelection();
       const host = document.activeElement;
