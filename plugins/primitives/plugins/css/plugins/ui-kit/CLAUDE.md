@@ -817,6 +817,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `tasks/task-status`
     - `ui/breadcrumb-separator/chevron`
     - `ui/breadcrumb-separator/slash`
+    - `ui/icons/emoji`
     - `ui/segmented-progress-bar`
     - `ui/segmented-progress-bar/arc`
     - `ui/segmented-progress-bar/pie`

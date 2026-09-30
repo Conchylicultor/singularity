@@ -15,4 +15,5 @@ export interface CollectedEntry {
 export const prewarmEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/sonata/plugins/audio/plugins/piano", id: "apps.sonata.audio.piano", loader: () => import("@plugins/apps/plugins/sonata/plugins/audio/plugins/piano/prewarm"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata/plugins/audio/plugins/soundfont", id: "apps.sonata.audio.soundfont", loader: () => import("@plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont/prewarm"), dependsOn: [] },
+  { pluginPath: "ui/plugins/icons/plugins/emoji", id: "ui.icons.emoji", loader: () => import("@plugins/ui/plugins/icons/plugins/emoji/prewarm"), dependsOn: [] },
 ];

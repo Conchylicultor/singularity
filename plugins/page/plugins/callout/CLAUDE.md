@@ -147,13 +147,12 @@ keeps the origin's id and caret; the wrap is ONE undo entry).
     - `page/container.ContainerAnchor`
     - `page/container.ContainerBackdrop`
     - `page/container.ContainerNoRow`
-    - `page/editor.BlockAnchorProps`
     - `page/editor.Editor`
-    - `page/editor.PageIcon`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-picker.IconPicker`
+    - `ui/icons.Icon`
   - Exports (values): `calloutBlock`
 - Server:
   - Contributes: `page.block-data` "callout"

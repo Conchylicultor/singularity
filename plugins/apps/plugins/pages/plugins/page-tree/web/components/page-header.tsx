@@ -23,9 +23,11 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
+import { RegenerateIconAction } from "@plugins/apps/plugins/pages/plugins/auto-icon/web";
 import {
   PageIconButton,
   PageIconPicker,
+  type PageIconFooterActions,
   type PageIconValue,
 } from "./page-icon-button";
 import { ChangeCoverPopover } from "./change-cover-popover";
@@ -96,6 +98,11 @@ function PageHeaderInner({
 
   const iconValue: PageIconValue = { icon: data?.icon ?? null };
 
+  // Both pickers (the big icon's and "Add icon") offer Regenerate beside Remove.
+  const iconFooterActions: PageIconFooterActions = () => (
+    <RegenerateIconAction pageId={pageId} />
+  );
+
   const saveIcon = async (next: PageIconValue) => {
     if (!page) return;
     await mutateAsync({
@@ -127,6 +134,7 @@ function PageHeaderInner({
         <PageIconButton
           value={iconValue}
           onChange={saveIcon}
+          footerActions={iconFooterActions}
           className="relative z-raised"
           style={hasCover ? { marginTop: "-3.5rem" } : undefined}
         />
@@ -139,6 +147,7 @@ function PageHeaderInner({
             <PageIconPicker
               value={iconValue}
               onChange={saveIcon}
+              footerActions={iconFooterActions}
               trigger={
                 <Button variant="ghost" className="text-muted-foreground">
                   <Icon icon={moodIcon} />

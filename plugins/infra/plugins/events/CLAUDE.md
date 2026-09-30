@@ -158,6 +158,7 @@ insert and the ring's inline prune reach it through the change feed. The
     - `TriggersPayloadSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/pages/auto-icon`
     - `apps/pages/content-search`
     - `apps/pages/history`
     - `apps/prototypes/checkpoints`

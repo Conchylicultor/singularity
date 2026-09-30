@@ -103,8 +103,8 @@ default sprites are resident from first paint.
 
 ## Runtime symbols (saved icons)
 
-An icon a USER picked and something stored (an agent avatar, a page icon, a
-configured category avatar) is a Material Symbols name and nothing else —
+An icon a USER picked and something stored (an agent avatar, a callout
+icon, a configured category avatar) is a Material Symbols name and nothing else —
 `SavedSymbolName`, minted only by `SavedSymbolNameSchema` (`plugins/saved-names`,
 a membership parse against the installed sets, used by every store: request
 bodies, DB columns, config, block data). Its name is not in the build's
@@ -125,8 +125,8 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
   carries the default style's drawing of every name a saved-icon source
   reports. A source is `defineSavedIconSource({ id, names, watch? })` (sprites
   server barrel; the sprites plugin knows no source): DB-backed ones read
-  through `db` so their tables' changes recompute the value (agents, page and
-  callout blocks, preprompt launch snapshots), config ones pass `watch`
+  through `db` so their tables' changes recompute the value (agents, callout
+  blocks, preprompt launch snapshots), config ones pass `watch`
   (conversation-category, preprompts).
 - **On demand:** a name/style no chunk holds is a want; the sprites plugin's
   loader batches every want of a frame into one
@@ -139,6 +139,9 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
   empty box at its final size (a loading state).
 - **Theme changes are live:** only the name is stored and the style key is
   resolved from the scope at render, so saved icons restyle with their scope.
+
+A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
+`EmojiSchema`), drawn as a glyph by `<EmojiGlyph>` in an icon-sized box.
 
 ## Deviations from the plan
 
@@ -191,6 +194,7 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
     - `apps/mail/shell`
     - `apps/mail/sync-status`
     - `apps/mail/threads`
+    - `apps/pages/auto-icon`
     - `apps/pages/content-search`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`
@@ -439,6 +443,7 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
     - `tasks/task-graph`
     - `tasks/task-status`
     - `ui/breadcrumb-separator/chevron`
+    - `ui/icons/emoji`
     - `ui/icons/sprites`
     - `ui/tab-bar`
     - `ui/theme-engine/quick-theme`
@@ -521,6 +526,7 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
     - `symbolBaseNames`
     - `symbolNamesInputsHash`
 - Sub-plugins:
+  - **`emoji`** — The <EmojiPicker>: a searchable, categorized emoji grid over frimousse whose emojibase data is served same-origin by the asset mirror; onSelect hands back a parsed Emoji. Plus <EmojiGlyph>, which draws an emoji in an icon's box (sized by the same size-* class). The page icon picker and <PageIcon> compose them. Registers the emojibase data mirror so the emoji picker's data is served same-origin (offline-capable after one warm-up) rather than fetched from the CDN by the browser.
   - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
   - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks. Builds the icon sprites from the Iconify JSON for the manifest's names — one <svg> of <symbol id="ms-<styleKey>-<name>"> per style key (material-symbols at 400, material-symbols-light at 300) plus a brands sprite — and serves the default style's as the resident icons.sprites value and every one at GET /api/icons/sprite/:hash/:key, immutable. Saved (user-picked) icons are runtime symbols: the resident icons.saved-sprites value draws every name a defineSavedIconSource source reports in the default style, and GET /api/icons/symbols/:hash/:key?names= serves any saved names in any style, immutable.
 

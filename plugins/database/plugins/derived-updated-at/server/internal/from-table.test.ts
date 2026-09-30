@@ -1,6 +1,7 @@
 import { test, expect } from "bun:test";
 import {
   integer,
+  jsonb,
   pgSchema,
   pgTable,
   text,
@@ -121,6 +122,31 @@ function _typeTests(): void {
       status: { into: ["wroking"] },
       lastViewedAt: false,
     },
+  });
+
+  // exceptKeys on a scalar column (no keys to except).
+  deriveUpdatedAt(t, {
+    touchedBy: {
+      id: false,
+      // @ts-expect-error — title is text, not a jsonb object
+      title: { exceptKeys: ["icon"] },
+      status: true,
+      lastViewedAt: false,
+    },
+  });
+
+  // exceptKeys naming a key the jsonb object cannot carry.
+  const withJson = pgTable("t_json", {
+    id: text("id"),
+    data: jsonb("data").$type<{ title: string; icon: string | null }>(),
+    updatedAt: timestamp("updated_at"),
+  });
+  deriveUpdatedAt(withJson, {
+    // @ts-expect-error — "cover" is not a key of the data object
+    touchedBy: { id: false, data: { exceptKeys: ["cover"] } },
+  });
+  deriveUpdatedAt(withJson, {
+    touchedBy: { id: false, data: { exceptKeys: ["icon"] } },
   });
 
   // updatedAt classifying itself.

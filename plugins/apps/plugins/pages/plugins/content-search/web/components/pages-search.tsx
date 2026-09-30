@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { isEmoji } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { QuickFindDialog } from "@plugins/search/plugins/quick-find/web";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -37,15 +37,11 @@ export function PagesSearch() {
         }}
         renderIcon={(r) => {
           // Search metadata is untyped JSON; the reindexer writes the page's
-          // saved icon name under `icon`.
+          // emoji icon under `icon`.
           const icon: unknown = r.metadata?.icon;
           return (
             <PageIcon
-              icon={
-                typeof icon === "string" && isSavedSymbolName(icon)
-                  ? icon
-                  : null
-              }
+              icon={typeof icon === "string" && isEmoji(icon) ? icon : null}
               className="size-4"
             />
           );

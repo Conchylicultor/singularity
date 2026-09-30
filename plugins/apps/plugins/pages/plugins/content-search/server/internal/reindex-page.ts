@@ -38,7 +38,7 @@ export interface BuiltPageSearchDoc {
 //    still surfaces the page.
 //
 // The `contentHash` is a sha256 over exactly what the indexed doc encodes —
-// title, body, and the icon SVG nodes carried in metadata — so ANY change that
+// title, body, and the emoji icon carried in metadata — so ANY change that
 // would alter the stored doc (content edit, title rename, icon swap) changes the
 // hash, and nothing else does. This is the skip-if-unchanged signal.
 export async function buildPageSearchDoc(

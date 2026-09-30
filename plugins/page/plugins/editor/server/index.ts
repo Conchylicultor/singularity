@@ -20,8 +20,6 @@ import {
 import { blocksChanged } from "./internal/tables-events";
 import { Editor } from "./internal/block-registry";
 import { resolvePageTitleAnnotations } from "./internal/page-title-annotations";
-// Registers the page icons' saved-icon source (module eval).
-import "./internal/saved-icons";
 import {
   pageBlockHandle,
   PAGES_TRASH_SOURCE,
@@ -84,6 +82,9 @@ export { applyPageBlockPatch } from "./internal/handle-patch-blocks";
 // rename through `edit_page`'s `# Title` line. `requireAuthor` is judged under
 // that lock, so a page flipped to the human's mid-rename refuses (409).
 export { renamePage } from "./internal/rename-page";
+// A page row's emoji icon, written server-side under the page's lock (the
+// auto-icon job's write-back). `onlyIfUnset` never overwrites a user's pick.
+export { setPageIcon } from "./internal/set-page-icon";
 export type {
   BlockTextWriter,
   PageContentSnapshot,

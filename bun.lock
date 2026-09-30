@@ -537,6 +537,10 @@
       "name": "@singularity/plugin-apps-pages-agent-origin",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/auto-icon": {
+      "name": "@singularity/plugin-apps-pages-auto-icon",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/content-search": {
       "name": "@singularity/plugin-apps-pages-content-search",
       "version": "0.0.1",
@@ -5245,6 +5249,13 @@
       "name": "@singularity/plugin-ui-icons",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/icons/plugins/emoji": {
+      "name": "@singularity/plugin-ui-icons-emoji",
+      "version": "0.0.1",
+      "dependencies": {
+        "frimousse": "^0.4.0",
+      },
+    },
     "plugins/ui/plugins/icons/plugins/saved-names": {
       "name": "@singularity/plugin-ui-icons-saved-names",
       "version": "0.0.1",
@@ -6261,6 +6272,8 @@
     "@singularity/plugin-apps-pages": ["@singularity/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
 
     "@singularity/plugin-apps-pages-agent-origin": ["@singularity/plugin-apps-pages-agent-origin@workspace:plugins/apps/plugins/pages/plugins/agent-origin"],
+
+    "@singularity/plugin-apps-pages-auto-icon": ["@singularity/plugin-apps-pages-auto-icon@workspace:plugins/apps/plugins/pages/plugins/auto-icon"],
 
     "@singularity/plugin-apps-pages-content-search": ["@singularity/plugin-apps-pages-content-search@workspace:plugins/apps/plugins/pages/plugins/content-search"],
 
@@ -8484,6 +8497,8 @@
 
     "@singularity/plugin-ui-icons": ["@singularity/plugin-ui-icons@workspace:plugins/ui/plugins/icons"],
 
+    "@singularity/plugin-ui-icons-emoji": ["@singularity/plugin-ui-icons-emoji@workspace:plugins/ui/plugins/icons/plugins/emoji"],
+
     "@singularity/plugin-ui-icons-saved-names": ["@singularity/plugin-ui-icons-saved-names@workspace:plugins/ui/plugins/icons/plugins/saved-names"],
 
     "@singularity/plugin-ui-icons-sprites": ["@singularity/plugin-ui-icons-sprites@workspace:plugins/ui/plugins/icons/plugins/sprites"],
@@ -9159,6 +9174,8 @@
     "fractional-indexing": ["fractional-indexing@3.2.0", "", {}, "sha512-PcOxmqwYCW7O2ovKRU8OoQQj2yqTfEB/yeTYk4gPid6dN5ODRfU1hXd9tTVZzax/0NkO7AxpHykvZnT1aYp/BQ=="],
 
     "fresh": ["fresh@2.0.0", "", {}, "sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A=="],
+
+    "frimousse": ["frimousse@0.4.0", "", { "peerDependencies": { "react": "^18 || ^19", "typescript": ">=5.1.0" }, "optionalPeers": ["typescript"] }, "sha512-wA/1Xt9UTk51wYNpy+EvHKPUA4jdm4NuEFzSNNZxqT0Nxrj4RFwYByjRMuaq4qSLOco/ikDCpLKesB8W1w2q+Q=="],
 
     "fs-extra": ["fs-extra@11.3.4", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^6.0.1", "universalify": "^2.0.0" } }, "sha512-CTXd6rk/M3/ULNQj8FBqBWHYBVYybQ3VPBw0xGKFe3tuH7ytT6ACnvzpIQ3UZtB8yvUKC2cXn1a+x+5EVQLovA=="],
 

@@ -23,7 +23,8 @@ export interface LockedPageRow {
  * Rewrite one PAGE row's `data`, with the read that decides the write taken
  * under the lock of the forest the row lives in — the shared body of the two
  * page-level writes that are not the header's own `PATCH`: the kind control
- * (`setPageKind`) and an agent's rename (`renamePage`).
+ * (`setPageKind`), an agent's rename (`renamePage`) and the icon
+ * (`setPageIcon`).
  *
  * The shape is `handle-update-block.ts`'s, for its reasons:
  *

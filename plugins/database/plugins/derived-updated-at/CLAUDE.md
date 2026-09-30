@@ -53,6 +53,11 @@ the declaration site in the totality error.
   - `true` → `NEW.c IS DISTINCT FROM OLD.c`;
   - `{ into, outOf }` → `(NEW.c IS DISTINCT FROM OLD.c AND (NEW.c IN (into) OR OLD.c IN (outOf)))`
     (`null` as `IS NULL`; scalar values only, a jsonb column is refused);
+  - `{ exceptKeys }` (jsonb object columns only) → `(NEW.c - ARRAY[keys])
+    IS DISTINCT FROM (OLD.c - ARRAY[keys])`: any change but one confined to
+    the listed top-level keys — a presentation key riding inside a content
+    payload (`page_blocks.data`'s `icon`). Keys are typed against the column's
+    object type; a non-jsonb column or an empty list is refused;
   - `false` → nothing.
 
   The function sets `updated_at := now()` iff the OR of those holds (no counted

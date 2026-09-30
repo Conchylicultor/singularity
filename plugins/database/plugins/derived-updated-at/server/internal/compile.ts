@@ -108,6 +108,8 @@ function columnCondition(
   const c = quoteIdent(col.name);
   const changed = `NEW.${c} IS DISTINCT FROM OLD.${c}`;
   if (rule === true) return changed;
+  if ("exceptKeys" in rule)
+    return exceptKeysCondition(table, col, rule.exceptKeys);
   const into = rule.into ?? [];
   const outOf = rule.outOf ?? [];
   if (into.length === 0 && outOf.length === 0) {
@@ -122,6 +124,32 @@ function columnCondition(
     ...(outOf.length > 0 ? [memberOf(table, col, "OLD", outOf)] : []),
   ];
   return `(${changed} AND (${transitions.join(" OR ")}))`;
+}
+
+// A jsonb object column that counts every change but one to the listed
+// top-level keys: both sides with those keys removed (`jsonb - text[]`, which
+// drops keys from an object; a non-object value raises in Postgres — loud, not
+// silently counted), compared as a whole.
+function exceptKeysCondition(
+  table: string,
+  col: DerivedUpdatedAtColumn,
+  keys: readonly string[],
+): string {
+  if (!/^jsonb$/i.test(col.sqlType)) {
+    throw new Error(
+      `derived updatedAt on "${table}": column "${col.key}" is ${col.sqlType}; ` +
+        `an exceptKeys rule is only supported on jsonb columns.`,
+    );
+  }
+  if (keys.length === 0) {
+    throw new Error(
+      `derived updatedAt on "${table}": column "${col.key}" has an exceptKeys ` +
+        `rule with no keys — declare it true instead.`,
+    );
+  }
+  const c = quoteIdent(col.name);
+  const arr = `ARRAY[${[...new Set(keys)].map((k) => escapeLiteral(k)).join(", ")}]::text[]`;
+  return `(NEW.${c} - ${arr}) IS DISTINCT FROM (OLD.${c} - ${arr})`;
 }
 
 /**

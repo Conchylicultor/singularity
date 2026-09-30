@@ -10,10 +10,13 @@ import { ASSET_MIRROR_PREFIX } from "../../core/url";
  */
 export const mirrorRegistry = new Map<string, string>();
 
-/** httpRoutes key for the single generic mirror route (computed from the shared
- *  prefix so it can't drift from {@link assetMirrorUrl}). `:file` is one
- *  trailing segment — mirrored file names are flat (no `/`). */
+/** httpRoutes keys for the generic mirror route (computed from the shared
+ *  prefix so they can't drift from {@link assetMirrorUrl}). A mirrored path is
+ *  a flat file name, or one directory deep (`en/data.json`) for a consumer that
+ *  lays its remote tree out that way — the router has no splat, so each depth
+ *  is its own key onto the same handler. */
 export const MIRROR_ROUTE_KEY = `GET ${ASSET_MIRROR_PREFIX}/:id/:file`;
+export const MIRROR_NESTED_ROUTE_KEY = `GET ${ASSET_MIRROR_PREFIX}/:id/:dir/:file`;
 
 export interface AssetMirrorSpec {
   /** Stable id; becomes the URL segment `/api/asset-mirror/<id>/…`. Must match

@@ -136,6 +136,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `shell/notifications`
     - `tasks/task-graph`
     - `tasks/task-status`
+    - `ui/icons/emoji`
     - `ui/segmented-progress-bar/pie`
     - `ui/tab-bar`
     - `ui/tree-disclosure/column`

@@ -269,6 +269,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/events/sources/source-detail/runs`
     - `apps/home`
     - `apps/mail/threads`
+    - `apps/pages/auto-icon`
     - `apps/pages/history`
     - `apps/pages/page-outline`
     - `apps/pages/page-tree`

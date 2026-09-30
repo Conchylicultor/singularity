@@ -646,6 +646,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `apps/events/sources/salsanueva`
     - `apps/events/sources/url-extract`
     - `apps/mail/sync`
+    - `apps/pages/auto-icon`
     - `apps/pages/content-search`
     - `apps/pages/history`
     - `apps/prototypes/checkpoints`

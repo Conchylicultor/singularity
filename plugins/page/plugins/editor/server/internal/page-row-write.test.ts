@@ -10,6 +10,8 @@
  *  - a rename keeps every other key, the author included;
  *  - `requireAuthor` refuses (409) a page that is not that party's, and writes
  *    nothing;
+ *  - `setPageIcon` keeps every other key, and `onlyIfUnset` never overwrites
+ *    an icon the page already has;
  *  - neither op reaches a non-page row, or a trashed one.
  *
  * Run: `./singularity test plugins/page/plugins/editor`
@@ -40,6 +42,8 @@ import { parseBlockData } from "./parse-block-data";
 import { deleteBlocksSubtree } from "./trash-blocks";
 import { setPageKindOf } from "./handle-set-page-kind";
 import { renamePage } from "./rename-page";
+import { setPageIcon } from "./set-page-icon";
+import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 
 // Stand-in for `page/text` (the concrete block plugin imports this one, so
 // importing it back would be a cycle).
@@ -107,7 +111,7 @@ async function seed(): Promise<void> {
       rank: "a0",
       data: parseBlockData("page", {
         title: "Notes",
-        icon: "rocket",
+        icon: "🚀",
         cover: COVER,
       }),
     },
@@ -183,7 +187,7 @@ describe("setPageKindOf — the kind control", () => {
 
     const expected = {
       title: "Notes",
-      icon: "rocket",
+      icon: "🚀",
       cover: COVER,
       author: "agent",
     };
@@ -234,7 +238,7 @@ describe("setPageKindOf — the kind control", () => {
     await setPageKindOf("SUB", PAGE, t.db);
     expect(await storedData("SUB")).toEqual({
       title: "Notes",
-      icon: "rocket",
+      icon: "🚀",
       cover: COVER,
     });
   });
@@ -261,7 +265,7 @@ describe("setPageKindOf — the kind control", () => {
     await refusedWith(setPageKindOf("SUB", AGENT_PAGE, t.db), 404);
     expect(await storedData("SUB")).toEqual({
       title: "Notes",
-      icon: "rocket",
+      icon: "🚀",
       cover: COVER,
     });
     expect(await announced()).toEqual([]);
@@ -278,7 +282,7 @@ describe("setPageKindOf — instructions pages", () => {
     );
     const expected = {
       title: "Notes",
-      icon: "rocket",
+      icon: "🚀",
       cover: COVER,
       instructions: true,
       global: true,
@@ -315,7 +319,7 @@ describe("setPageKindOf — instructions pages", () => {
     await setPageKindOf("SUB", PAGE, t.db);
     expect(await storedData("SUB")).toEqual({
       title: "Notes",
-      icon: "rocket",
+      icon: "🚀",
       cover: COVER,
     });
   });
@@ -340,7 +344,7 @@ describe("renamePage — an agent's rename", () => {
     await renamePage("SUB", "Renamed", {}, t.db);
     expect(await storedData("SUB")).toEqual({
       title: "Renamed",
-      icon: "rocket",
+      icon: "🚀",
       cover: COVER,
     });
   });
@@ -402,5 +406,58 @@ describe("renamePage — an agent's rename", () => {
     await seed();
     await refusedWith(renamePage("c1", "x", {}, t.db), 400);
     await refusedWith(renamePage("nope", "x", {}, t.db), 404);
+  });
+});
+
+// ── setPageIcon ────────────────────────────────────────────────────────────
+
+describe("setPageIcon — the server-side icon write", () => {
+  const TEST_TUBE = EmojiSchema.parse("🧪");
+
+  test("sets the icon, keeping every other key, and announces once", async () => {
+    await seed();
+    const block = await setPageIcon("SUB", TEST_TUBE, {}, t.db);
+    const expected = { title: "Notes", icon: "🧪", cover: COVER };
+    expect(await storedData("SUB")).toEqual(expected);
+    expect(block.data).toEqual(expected);
+    expect(await announced()).toEqual(["P", "SUB"]);
+  });
+
+  test("null clears it", async () => {
+    await seed();
+    await setPageIcon("SUB", null, {}, t.db);
+    expect(await storedData("SUB")).toEqual({
+      title: "Notes",
+      icon: null,
+      cover: COVER,
+    });
+  });
+
+  test("onlyIfUnset writes an unset icon, and never overwrites a set one", async () => {
+    await seed();
+    await setPageIcon("AGENT", TEST_TUBE, { onlyIfUnset: true }, t.db);
+    expect(await storedData("AGENT")).toMatchObject({ icon: "🧪" });
+
+    await t.db.execute(sql`DELETE FROM event_emissions`);
+    const before = await row("SUB");
+    await setPageIcon("SUB", TEST_TUBE, { onlyIfUnset: true }, t.db);
+    expect(await row("SUB")).toEqual(before);
+    expect(await announced()).toEqual([]);
+  });
+
+  test("the icon a page already has writes nothing and announces nothing", async () => {
+    await seed();
+    await setPageIcon("SUB", TEST_TUBE, {}, t.db);
+    await t.db.execute(sql`DELETE FROM event_emissions`);
+    const before = await row("SUB");
+    await setPageIcon("SUB", TEST_TUBE, {}, t.db);
+    expect(await row("SUB")).toEqual(before);
+    expect(await announced()).toEqual([]);
+  });
+
+  test("a non-page row is a 400; an unknown one a 404", async () => {
+    await seed();
+    await refusedWith(setPageIcon("c1", TEST_TUBE, {}, t.db), 400);
+    await refusedWith(setPageIcon("nope", TEST_TUBE, {}, t.db), 404);
   });
 });

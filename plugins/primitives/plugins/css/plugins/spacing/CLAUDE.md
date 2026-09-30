@@ -404,6 +404,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `tasks/task-draft-form`
     - `tasks/task-events`
     - `tasks/task-header`
+    - `ui/icons/emoji`
     - `ui/segmented-progress-bar`
     - `ui/sidebar-framing/floating`
     - `ui/sidebar-framing/flush`

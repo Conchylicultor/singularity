@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 
 // One referencing (source) page in a target page's backlinks list. Carries
 // just enough to render a clickable row: the source page's id, title, and the
-// page's icon (a Material Symbols name; null when the page has no icon).
+// page's icon (an emoji; null when the page has no icon).
 export const BacklinkRowSchema = z.object({
   id: z.string(),
   title: z.string(),
-  icon: SavedSymbolNameSchema.nullable(),
+  icon: EmojiSchema.nullable(),
 });
 export type BacklinkRow = z.infer<typeof BacklinkRowSchema>;
 

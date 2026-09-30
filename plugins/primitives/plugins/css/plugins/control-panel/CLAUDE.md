@@ -622,6 +622,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `apps-core/surface`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/settings`
+    - `apps/pages/auto-icon`
     - `apps/pages/page-author`
     - `apps/pages/page-tree`
     - `apps/prototypes/canvas`

@@ -1,15 +1,13 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  PageIcon,
-  type BlockAnchorProps,
-} from "@plugins/page/plugins/editor/web";
+import type { BlockAnchorProps } from "@plugins/page/plugins/editor/web";
 import { ContainerAnchor } from "@plugins/page/plugins/container/web";
 import {
   CalloutAppearanceFor,
   readCalloutAppearance,
 } from "./callout-appearance";
 import { COLOR_TEXT } from "./callout-colors";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { runtimeSymbol, symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const lightbulbIcon = symbol("lightbulb");
 
@@ -42,9 +40,10 @@ export function CalloutAnchor({ data, editor }: BlockAnchorProps) {
       // `picker` role (320px, the width this popover already had as `xl`).
       panel="picker"
       glyph={
-        <PageIcon
-          icon={icon}
-          fallback={lightbulbIcon}
+        // The callout's icon is a saved Material Symbols name (unlike a
+        // page's, which is an emoji), drawn as a runtime symbol.
+        <Icon
+          icon={icon != null ? runtimeSymbol(icon) : lightbulbIcon}
           className={cn("size-5", COLOR_TEXT[color])}
         />
       }

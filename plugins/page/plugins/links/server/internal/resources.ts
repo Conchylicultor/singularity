@@ -7,7 +7,7 @@ import {
 } from "@plugins/database/plugins/sql-projection/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { liveBlocks } from "@plugins/page/plugins/editor/server";
 import { PageLinkEdgeSchema } from "../../core/schemas";
 import {
@@ -17,8 +17,8 @@ import {
 import type { PageLinkEdge } from "../../core/schemas";
 import { _pageLinks } from "./tables";
 
-// `data->>'title'` / `data->>'icon'`: the source page's title and icon (a
-// Material Symbols name) live in the `type="page"` block's `data` JSON.
+// `data->>'title'` / `data->>'icon'`: the source page's title and icon (an
+// emoji) live in the `type="page"` block's `data` JSON.
 //
 // Both carry the decoder their declared type comes from, so the projection is
 // `BacklinkRow` by construction rather than by a cast — `->` hands back whatever
@@ -27,7 +27,7 @@ import { _pageLinks } from "./tables";
 // the decoder rides along and is simply never invoked there.
 const titleExpr = sql`${liveBlocks.data} ->> 'title'`.mapWith(String);
 const iconExpr = sql`${liveBlocks.data} ->> 'icon'`.mapWith(
-  nullable(parsed(SavedSymbolNameSchema, "backlinks.icon")),
+  nullable(parsed(EmojiSchema, "backlinks.icon")),
 );
 
 // The source pages that link TO `pageId`, ordered by title. A db-arm value: the

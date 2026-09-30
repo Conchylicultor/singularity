@@ -1,43 +1,55 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useState, type ReactElement } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 import {
   ControlPanel,
   ControlPanelPopover,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
+import { EmojiPicker } from "@plugins/ui/plugins/icons/plugins/emoji/web";
+import type { Emoji } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const closeIcon = symbol("close");
 
 export interface PageIconValue {
-  icon: SavedSymbolName | null;
+  icon: Emoji | null;
 }
 
 /**
- * The icon-picker popover, decoupled from its trigger. Picking commits
+ * Extra rows for the picker's footer, rendered above "Remove" — the extension
+ * point for an action that belongs beside Remove (a "Regenerate" from the
+ * page's auto-icon). Handed `close` so a row can dismiss the picker once it
+ * has acted. Each row is a `ControlPanel.Row`.
+ */
+export type PageIconFooterActions = (ctx: { close: () => void }) => ReactNode;
+
+/**
+ * The emoji-picker popover, decoupled from its trigger. Picking commits
  * immediately and closes; "Remove" clears the icon back to the default glyph
- * (only offered when an icon is set). The `trigger` is any element — a large
+ * (only offered when an icon is set); `footerActions` adds rows above it. The `trigger` is any element — a large
  * page icon or a small "Add icon" affordance — so both entry points share one
  * picker.
  *
- * It is a `ControlPanelPopover size="picker"`, so the icon block's label, search
- * field and grid inherit the panel's one content inset, and the rule above the
- * Remove footer is drawn by the container rather than placed here.
+ * It is a `ControlPanelPopover size="picker"`, so the emoji block's label,
+ * search field and grid inherit the panel's one content inset, and the rule
+ * above the footer is drawn by the container rather than placed here.
  */
 export function PageIconPicker({
   value,
   onChange,
   trigger,
+  footerActions,
 }: {
   value: PageIconValue;
   onChange: (next: PageIconValue) => void | Promise<void>;
   trigger: ReactElement;
+  footerActions?: PageIconFooterActions;
 }) {
   const [open, setOpen] = useState(false);
   const hasIcon = value.icon != null;
+  const close = () => setOpen(false);
 
   return (
     <ControlPanelPopover
@@ -48,28 +60,31 @@ export function PageIconPicker({
       label="Page icon"
       trigger={trigger}
     >
-      {/* No section label: the icon block renders its own header (label + count). */}
+      {/* No section label: the emoji block renders its own header. */}
       <ControlPanel.Section>
-        <IconPicker
+        <EmojiPicker
           value={value.icon}
           onSelect={(icon) => {
             void onChange({ icon });
-            setOpen(false);
+            close();
           }}
         />
       </ControlPanel.Section>
-      {hasIcon && (
+      {(hasIcon || footerActions) && (
         <ControlPanel.Footer>
-          <ControlPanel.Row
-            muted
-            icon={<Icon icon={closeIcon} />}
-            onSelect={() => {
-              void onChange({ icon: null });
-              setOpen(false);
-            }}
-          >
-            Remove
-          </ControlPanel.Row>
+          {footerActions?.({ close })}
+          {hasIcon && (
+            <ControlPanel.Row
+              muted
+              icon={<Icon icon={closeIcon} />}
+              onSelect={() => {
+                void onChange({ icon: null });
+                close();
+              }}
+            >
+              Remove
+            </ControlPanel.Row>
+          )}
         </ControlPanel.Footer>
       )}
     </ControlPanelPopover>
@@ -83,11 +98,13 @@ export function PageIconPicker({
 export function PageIconButton({
   value,
   onChange,
+  footerActions,
   className,
   style,
 }: {
   value: PageIconValue;
   onChange: (next: PageIconValue) => void | Promise<void>;
+  footerActions?: PageIconFooterActions;
   className?: string;
   style?: React.CSSProperties;
 }) {
@@ -95,6 +112,7 @@ export function PageIconButton({
     <PageIconPicker
       value={value}
       onChange={onChange}
+      footerActions={footerActions}
       trigger={
         <button
           type="button"

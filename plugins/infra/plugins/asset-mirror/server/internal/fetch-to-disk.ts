@@ -8,8 +8,9 @@ import { randomUUID } from "node:crypto";
  * lazy cache-miss path (`handleMirror`) and the release prewarm runner
  * (`runAssetMirrorPrewarm`).
  *
- * The remote name is re-encoded so a flat name with spaces/`#` (e.g.
- * `"PP C#1.ogg"`) reaches the CDN as `PP%20C%231.ogg`. The parent dir is
+ * The remote name is re-encoded segment by segment so a flat name with
+ * spaces/`#` (e.g. `"PP C#1.ogg"`) reaches the CDN as `PP%20C%231.ogg`, and a
+ * nested one (`en/data.json`) keeps its `/`. The parent dir is
  * created, and the bytes land via a temp file + rename so a concurrent reader
  * never observes a half-written buffer.
  *
@@ -23,7 +24,8 @@ export async function mirrorFetchToDisk(opts: {
   diskPath: string;
 }): Promise<void> {
   const { remoteBaseUrl, file, diskPath } = opts;
-  const upstream = `${remoteBaseUrl}/${encodeURIComponent(file)}`;
+  const encoded = file.split("/").map(encodeURIComponent).join("/");
+  const upstream = `${remoteBaseUrl}/${encoded}`;
   const res = await fetch(upstream);
   if (!res.ok) {
     throw new Error(

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
-import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { defineBlock, type BlockAuthor } from "./define-block";
 import type { BlockMarkdown } from "./markdown";
 
@@ -118,10 +118,9 @@ export const PageCoverSchema = z.discriminatedUnion("type", [
 ]);
 export type PageCover = z.infer<typeof PageCoverSchema>;
 
-// The `data` payload of a `type="page"` block. `icon` is the Material Symbols
-// name the user picked (e.g. "rocket"), drawn by `<Icon>` as a runtime symbol
-// in the surrounding theme's style; null = no icon (a default glyph is shown
-// instead). `cover` is the optional page cover
+// The `data` payload of a `type="page"` block. `icon` is the page's emoji
+// (exactly one RGI emoji grapheme, `EmojiSchema`), drawn as a text glyph by
+// `<PageIcon>`; null = no icon (the default document glyph is shown instead). `cover` is the optional page cover
 // (absent on legacy rows — decodes to `undefined`, no data migration).
 // `author: "agent"` marks an AGENT-AUTHORED page — a sub-page whose whole
 // content an agent may write (`<agent-page>` in markdown). Absent means the
@@ -147,7 +146,7 @@ export type PageCover = z.infer<typeof PageCoverSchema>;
 // can be chosen by, where a nested object could not be.
 export const PageDataSchema = z.object({
   title: z.string(),
-  icon: SavedSymbolNameSchema.nullable(),
+  icon: EmojiSchema.nullable(),
   cover: PageCoverSchema.nullable().optional(),
   author: z.literal("agent").optional(),
   instructions: z.literal(true).optional(),

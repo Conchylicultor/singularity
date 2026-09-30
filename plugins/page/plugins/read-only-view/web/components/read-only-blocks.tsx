@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
-import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { isEmoji } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
@@ -268,9 +268,7 @@ function MediaBlock({
  */
 function SubPageChip({ data }: { data: Record<string, unknown> }) {
   const icon =
-    typeof data.icon === "string" && isSavedSymbolName(data.icon)
-      ? data.icon
-      : null;
+    typeof data.icon === "string" && isEmoji(data.icon) ? data.icon : null;
   const title =
     typeof data.title === "string" && data.title ? data.title : "Untitled";
   return (

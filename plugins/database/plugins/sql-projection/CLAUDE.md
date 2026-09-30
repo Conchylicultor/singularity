@@ -177,7 +177,6 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
     - `conversations/conversation-preprompt`
     - `conversations/session-chain`
     - `page/callout`
-    - `page/editor`
     - `page/links`
     - `tasks/tasks-core`
 - Server:

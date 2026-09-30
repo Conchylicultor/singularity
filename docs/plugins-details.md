@@ -3435,6 +3435,40 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `pages-origin` (keyed, window)
               - `pages-origin:groups` (push)
               - `pages-origin:rows` (keyed, point)
+        - **`auto-icon`** — Regenerate action for the page icon picker: a footer row that forces a new auto-picked emoji for the page pending while the pick runs in the request. Auto-generated page emoji icons: once a page's edits settle (10 s after the last blocksChanged), Haiku picks an emoji from its title + content, avoiding its siblings' icons, and writes it only if the page still has none. A page_blocks_ext_auto_icon row records that generation ran, so it never runs again unasked; Regenerate forces a new pick; a boot backfill covers existing pages.
+          - Server:
+            - Contributes: `trigger` "pages.auto-icon.schedule"
+            - Uses:
+              - `database.db`
+              - `infra/claude-cli.runClaudePrint`
+              - `infra/endpoints.implement`
+              - `infra/entity-extensions.defineExtension`
+              - `infra/events.Trigger`
+              - `infra/jobs.defineJob`
+              - `infra/warmup.defineWarmup`
+              - `page/editor._blocks`
+              - `page/editor.blocksChanged`
+              - `page/editor.liveBlocks`
+              - `page/editor.PAGE_BLOCK_TYPE`
+              - `page/editor.pageData`
+              - `page/editor.setPageIcon`
+            - DB schema: `plugins/apps/plugins/pages/plugins/auto-icon/server/internal/tables.ts`
+            - Entity extension of: `page/editor` (table `editor_ext_auto_icon`)
+            - Register:
+              - `defineJob('pages.auto-icon.generate')`
+              - `defineJob('pages.auto-icon.schedule')`
+              - `defineJob('pages.auto-icon.backfill')`
+              - `defineWarmup('pages.auto-icon.backfill')`
+            - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`
+          - Web:
+            - Uses:
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/loading.Loading`
+              - `ui/icons.Icon`
+            - Exports (values): `RegenerateIconAction`
+          - Cross-plugin:
+            - Imported by: `apps/pages/page-tree`
         - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.
           - Web:
             - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
@@ -3566,6 +3600,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
             - Uses:
+              - `apps/pages/auto-icon.RegenerateIconAction`
               - `apps/pages/shell.Pages`
               - `infra/attachments.uploadAttachment`
               - `infra/endpoints.fetchEndpoint`
@@ -3611,7 +3646,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/hover-reveal.hoverRevealGroup`
               - `primitives/hover-reveal.hoverRevealTarget`
               - `primitives/icon-button.IconButton`
-              - `primitives/icon-picker.IconPicker`
               - `primitives/live-state.foldResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.ResourceView`
@@ -3632,6 +3666,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/undo-redo.useUndoRedo`
               - `shell/toast.showToast`
               - `ui/icons.Icon`
+              - `ui/icons/emoji.EmojiPicker`
             - Exports (types):
               - `BlockTarget`
               - `PageSeedBlock`
@@ -13032,6 +13067,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/mail/sync`
       - `apps/mail/threads`
       - `apps/pages/agent-origin`
+      - `apps/pages/auto-icon`
       - `apps/pages/content-search`
       - `apps/sonata/library`
       - `apps/sonata/playback-history`
@@ -13664,7 +13700,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-preprompt`
           - `conversations/session-chain`
           - `page/callout`
-          - `page/editor`
           - `page/links`
           - `tasks/tasks-core`
       - Server:
@@ -18313,6 +18348,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/home`
               - `apps/mail/threads`
+              - `apps/pages/auto-icon`
               - `apps/pages/history`
               - `apps/pages/page-outline`
               - `apps/pages/page-tree`
@@ -18854,6 +18890,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/audio/piano`
           - `apps/sonata/audio/soundfont`
           - `infra/launcher`
+          - `ui/icons/emoji`
       - Server:
         - Exports (types): `AssetMirrorSpec`
         - Exports (values):
@@ -19014,6 +19051,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/url-extract`
+          - `apps/pages/auto-icon`
           - `conversations/conversation-category`
           - `conversations/conversation-view/turn-summary`
           - `debug/claude-cli-calls`
@@ -19333,6 +19371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/sync-status`
           - `apps/mail/sync/auto-resume`
           - `apps/mail/threads`
+          - `apps/pages/auto-icon`
           - `apps/pages/history`
           - `apps/pages/page-author`
           - `apps/pages/page-tree`
@@ -19615,6 +19654,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/deploy/health`
           - `apps/pages/agent-origin`
+          - `apps/pages/auto-icon`
           - `apps/pages/starred`
           - `apps/sonata/playback-history`
           - `apps/sonata/rich/chord-mode`
@@ -19729,6 +19769,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TriggersPayloadSchema`
       - Cross-plugin:
         - Imported by:
+          - `apps/pages/auto-icon`
           - `apps/pages/content-search`
           - `apps/pages/history`
           - `apps/prototypes/checkpoints`
@@ -20330,6 +20371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources/salsanueva`
           - `apps/events/sources/url-extract`
           - `apps/mail/sync`
+          - `apps/pages/auto-icon`
           - `apps/pages/content-search`
           - `apps/pages/history`
           - `apps/prototypes/checkpoints`
@@ -21254,6 +21296,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WARMUP_CONCURRENCY`
       - Cross-plugin:
         - Imported by:
+          - `apps/pages/auto-icon`
           - `apps/pages/content-search`
           - `apps/sonata/sources/midi/folders`
           - `infra/corpus-index`
@@ -22708,13 +22751,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/container.ContainerAnchor`
           - `page/container.ContainerBackdrop`
           - `page/container.ContainerNoRow`
-          - `page/editor.BlockAnchorProps`
           - `page/editor.Editor`
-          - `page/editor.PageIcon`
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-picker.IconPicker`
+          - `ui/icons.Icon`
         - Exports (values): `calloutBlock`
       - Server:
         - Contributes: `page.block-data` "callout"
@@ -22934,6 +22976,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder.useReorderedEntries`
           - `shell/toast.showToast`
           - `ui/icons.Icon`
+          - `ui/icons/emoji.EmojiGlyph`
         - Exports (types):
           - `BlockAnchorProps`
           - `BlockChrome`
@@ -23051,8 +23094,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database.db`
           - `database/derived-updated-at.deriveUpdatedAt`
           - `database/sql-column.parsedJson`
-          - `database/sql-projection.nullable`
-          - `database/sql-projection.parsed`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/events.defineTriggerEvent`
@@ -23063,7 +23104,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
-          - `ui/icons/sprites.defineSavedIconSource`
         - DB schema:
           - `plugins/page/plugins/editor/server/internal/tables-events.ts`
           - `plugins/page/plugins/editor/server/internal/tables.ts`
@@ -23103,6 +23143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveBlockAnnotations`
           - `restorePageContent`
           - `serializePageContent`
+          - `setPageIcon`
         - Register:
           - `defineTriggerEvent('page.blocksChanged')`
           - `defineTrashSource('pages')`
@@ -23140,7 +23181,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/tree.isDescendant`
           - `primitives/tree.selectionRoots`
           - `primitives/tree.subtreeIds`
-          - `ui/icons/saved-names.SavedSymbolNameSchema`
+          - `ui/icons/emoji.EmojiSchema`
         - Exports (types):
           - `Block`
           - `BlockAudience`
@@ -23316,6 +23357,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/prototype`
           - `active-data/task-link`
           - `apps/pages/agent-origin`
+          - `apps/pages/auto-icon`
           - `apps/pages/content-search`
           - `apps/pages/history`
           - `apps/pages/page-outline`
@@ -23384,6 +23426,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/collab-hydration`
           - `reports/page-undo-conflict`
         - Extended by:
+          - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
           - `apps/pages/agent-origin` (table `editor_ext_origin`)
           - `apps/pages/starred` (table `editor_ext_starred`)
           - `page/annotations/todo/task-link` (table `editor_ext_todo_task`)
@@ -23796,7 +23839,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `network/live.liveValue`
           - `primitives/live-state.resourceDescriptor`
-          - `ui/icons/saved-names.SavedSymbolNameSchema`
+          - `ui/icons/emoji.EmojiSchema`
         - Exports (types):
           - `BacklinkRow`
           - `PageLinkEdge`
@@ -26350,6 +26393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shell/notifications`
               - `tasks/task-graph`
               - `tasks/task-status`
+              - `ui/icons/emoji`
               - `ui/segmented-progress-bar/pie`
               - `ui/tab-bar`
               - `ui/tree-disclosure/column`
@@ -26590,6 +26634,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/settings`
+              - `apps/pages/auto-icon`
               - `apps/pages/page-author`
               - `apps/pages/page-tree`
               - `apps/prototypes/canvas`
@@ -27256,6 +27301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shell/notifications`
               - `tasks/task-description`
               - `tasks/task-draft-form`
+              - `ui/icons/emoji`
               - `ui/tab-bar`
         - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
           - Web:
@@ -28028,6 +28074,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-draft-form`
               - `tasks/task-events`
               - `tasks/task-header`
+              - `ui/icons/emoji`
               - `ui/segmented-progress-bar`
               - `ui/sidebar-framing/floating`
               - `ui/sidebar-framing/flush`
@@ -28549,6 +28596,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-graph`
               - `tasks/task-header`
               - `tasks/task-status`
+              - `ui/icons/emoji`
               - `ui/segmented-progress-bar`
               - `ui/segmented-progress-bar/dots`
               - `ui/tab-bar/chip`
@@ -29133,6 +29181,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-status`
               - `ui/breadcrumb-separator/chevron`
               - `ui/breadcrumb-separator/slash`
+              - `ui/icons/emoji`
               - `ui/segmented-progress-bar`
               - `ui/segmented-progress-bar/arc`
               - `ui/segmented-progress-bar/pie`
@@ -30817,7 +30866,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `symbolNameForClassic`
       - Cross-plugin:
         - Imported by:
-          - `apps/pages/page-tree`
           - `fields/avatar/config`
           - `page/callout`
           - `primitives/avatar`
@@ -31394,6 +31442,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/reading-pane`
           - `apps/mail/search`
           - `apps/mail/shell`
+          - `apps/pages/auto-icon`
           - `apps/pages/history`
           - `apps/pages/page-author`
           - `apps/pages/page-tree`
@@ -31506,6 +31555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-graph`
           - `tasks/task-list`
           - `tasks/task-track`
+          - `ui/icons/emoji`
           - `ui/theme-engine/quick-theme`
           - `ui/theme-engine/theme-customizer`
           - `ui/tokens/categorical`
@@ -37145,6 +37195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/shell`
           - `apps/mail/sync-status`
           - `apps/mail/threads`
+          - `apps/pages/auto-icon`
           - `apps/pages/content-search`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`
@@ -37393,6 +37444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-graph`
           - `tasks/task-status`
           - `ui/breadcrumb-separator/chevron`
+          - `ui/icons/emoji`
           - `ui/icons/sprites`
           - `ui/tab-bar`
           - `ui/theme-engine/quick-theme`
@@ -37475,14 +37527,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `symbolBaseNames`
           - `symbolNamesInputsHash`
       - Plugins:
+        - **`emoji`** — The <EmojiPicker>: a searchable, categorized emoji grid over frimousse whose emojibase data is served same-origin by the asset mirror; onSelect hands back a parsed Emoji. Plus <EmojiGlyph>, which draws an emoji in an icon's box (sized by the same size-* class). The page icon picker and <PageIcon> compose them. Registers the emojibase data mirror so the emoji picker's data is served same-origin (offline-capable after one warm-up) rather than fetched from the CDN by the browser.
+          - Web:
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.SectionLabel`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/loading.Loading`
+              - `ui/icons.Icon`
+            - Exports (types): `EmojiPickerProps`
+            - Exports (values):
+              - `EmojiGlyph`
+              - `EmojiPicker`
+          - Server:
+            - Uses: `infra/asset-mirror.defineAssetMirror`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/pages/page-tree`
+              - `page/editor`
+              - `page/links`
+          - Core:
+            - Exports (types): `Emoji`
+            - Exports (values):
+              - `EmojiSchema`
+              - `isEmoji`
         - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
           - Cross-plugin:
             - Imported by:
               - `conversations/agents`
               - `fields/avatar/config`
               - `page/callout`
-              - `page/editor`
-              - `page/links`
               - `primitives/icon-picker`
           - Core:
             - Exports (values):
@@ -37544,7 +37620,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-preprompt`
               - `conversations/preprompts`
               - `page/callout`
-              - `page/editor`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.arc`, `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.pie`, `ui.segmented-progress-bar.segmented`

@@ -3926,6 +3926,18 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
   under the page row's lock. Its `requireAuthor` precondition is judged under
   that same lock, because the human can flip the page between the tool's
   decision and the write.
+- **A page's icon is an emoji** (`PageDataSchema.icon: EmojiSchema.nullable()`,
+  `ui/icons/emoji` — exactly one RGI emoji grapheme; a Material Symbols name is
+  no longer storable). `<PageIcon>` draws it as an `EmojiGlyph` in the same
+  `size-*` box as the fallback `description` symbol. Pages contribute nothing to
+  the saved-icon sprites any more (the callout's own icon stays a symbol).
+  **`setPageIcon(pageId, icon, { onlyIfUnset? }, executor?)`** is the
+  server-side icon write, built on `rewritePageRow` like `renamePage`:
+  `{...stored, icon}` under the page forest's lock, announced after commit;
+  `onlyIfUnset` writes only when the page has no icon under that lock, so an
+  automatic writer never overwrites a user's pick. Like every forest write it
+  takes a handle that can OPEN a transaction, never a caller's transaction. The
+  header still writes its icon through its own `PATCH`.
 - **A patch's creates stay in its world.** `applyPageBlockPatch` accepts a create
   whose `pageId` is the locked page or a page the same patch creates, and refuses
   any other with a 400. Every page a write inserts is announced with its own
@@ -4066,6 +4078,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `reorder.useReorderedEntries`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
+    - `ui/icons/emoji.EmojiGlyph`
   - Exports (types):
     - `BlockAnchorProps`
     - `BlockChrome`
@@ -4183,8 +4196,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
-    - `database/sql-projection.nullable`
-    - `database/sql-projection.parsed`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/events.defineTriggerEvent`
@@ -4195,7 +4206,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
-    - `ui/icons/sprites.defineSavedIconSource`
   - DB schema:
     - `plugins/page/plugins/editor/server/internal/tables-events.ts`
     - `plugins/page/plugins/editor/server/internal/tables.ts`
@@ -4235,6 +4245,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `resolveBlockAnnotations`
     - `restorePageContent`
     - `serializePageContent`
+    - `setPageIcon`
   - Register:
     - `defineTriggerEvent('page.blocksChanged')`
     - `defineTrashSource('pages')`
@@ -4272,7 +4283,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/tree.isDescendant`
     - `primitives/tree.selectionRoots`
     - `primitives/tree.subtreeIds`
-    - `ui/icons/saved-names.SavedSymbolNameSchema`
+    - `ui/icons/emoji.EmojiSchema`
   - Exports (types):
     - `Block`
     - `BlockAudience`
@@ -4448,6 +4459,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `active-data/prototype`
     - `active-data/task-link`
     - `apps/pages/agent-origin`
+    - `apps/pages/auto-icon`
     - `apps/pages/content-search`
     - `apps/pages/history`
     - `apps/pages/page-outline`
@@ -4516,6 +4528,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `reports/collab-hydration`
     - `reports/page-undo-conflict`
   - Extended by:
+    - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
     - `apps/pages/agent-origin` (table `editor_ext_origin`)
     - `apps/pages/starred` (table `editor_ext_starred`)
     - `page/annotations/todo/task-link` (table `editor_ext_todo_task`)

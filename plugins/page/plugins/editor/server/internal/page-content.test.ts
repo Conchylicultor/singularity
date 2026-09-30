@@ -1177,7 +1177,7 @@ describe("a version never changes whose page it is", () => {
     await setRow("P", {
       data: parseBlockData("page", {
         title: "Renamed",
-        icon: "rocket",
+        icon: "🚀",
         author: "agent",
       }),
     });

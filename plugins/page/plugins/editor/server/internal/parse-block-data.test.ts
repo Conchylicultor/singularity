@@ -278,7 +278,7 @@ const decoratedPage = {
   type: "page",
   data: {
     title: "Findings",
-    icon: "rocket",
+    icon: "🚀",
     cover: null,
   },
 };

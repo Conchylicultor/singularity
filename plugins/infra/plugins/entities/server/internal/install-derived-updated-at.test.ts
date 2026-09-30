@@ -103,17 +103,17 @@ if (!spec) throw new Error("dua_items: expected a derived updatedAt spec");
 const rawNotes = deriveUpdatedAt(
   pgTable("dua_raw_notes", {
     id: text("id").primaryKey(),
-    body: jsonb("body").$type<{ text: string }>().notNull(),
+    body: jsonb("body").$type<{ text: string; icon?: string }>().notNull(),
     expanded: text("expanded_state").notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   }),
-  { touchedBy: { id: false, body: true, expanded: false } },
+  { touchedBy: { id: false, body: { exceptKeys: ["icon"] }, expanded: false } },
 );
 const rawSpec = compileFromTable(rawNotes, {
   id: false,
-  body: true,
+  body: { exceptKeys: ["icon"] },
   expanded: false,
 });
 
@@ -304,6 +304,25 @@ describe("a raw pgTable declared through deriveUpdatedAt", () => {
       .set({ body: { text: "a" }, expanded: "closed" })
       .where(eq(rawNotes.id, id));
     expect(await noteBumped(id)).toBe(false);
+  });
+
+  test("an exceptKeys key alone does not bump; with another key it does", async () => {
+    const id = await insertNote();
+    await t.db
+      .update(rawNotes)
+      .set({ body: { text: "a", icon: "🧪" } })
+      .where(eq(rawNotes.id, id));
+    expect(await noteBumped(id)).toBe(false);
+    await t.db
+      .update(rawNotes)
+      .set({ body: { text: "a" } })
+      .where(eq(rawNotes.id, id));
+    expect(await noteBumped(id)).toBe(false);
+    await t.db
+      .update(rawNotes)
+      .set({ body: { text: "b", icon: "🎶" } })
+      .where(eq(rawNotes.id, id));
+    expect(await noteBumped(id)).toBe(true);
   });
 
   test("writing updated_at raises", async () => {

@@ -1,0 +1,33 @@
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import { regeneratePageIcon } from "../../shared/endpoints";
+
+const autoAwesomeIcon = symbol("auto-awesome");
+
+/**
+ * The page icon picker's "Regenerate" footer row: asks the server to re-pick the
+ * page's emoji. The pick runs inside the request, so the row is pending exactly
+ * while it is in flight; the new icon arrives through the page's live row, and a
+ * failure surfaces through the endpoint's global error toast.
+ */
+export function RegenerateIconAction({ pageId }: { pageId: string }) {
+  const mutation = useEndpointMutation(regeneratePageIcon);
+  const pending = mutation.isPending;
+
+  return (
+    <ControlPanel.Row
+      muted
+      disabled={pending}
+      icon={<Icon icon={autoAwesomeIcon} />}
+      trailing={pending ? <Loading variant="spinner" /> : undefined}
+      onSelect={() => {
+        mutation.mutate({ params: { pageId } });
+      }}
+    >
+      {pending ? "Regenerating…" : "Regenerate"}
+    </ControlPanel.Row>
+  );
+}

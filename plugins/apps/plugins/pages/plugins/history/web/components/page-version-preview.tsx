@@ -19,7 +19,7 @@ import {
   buildDiff,
   type PageSnapshot,
 } from "../internal/build-diff";
-import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { isEmoji } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const descriptionIcon = symbol("description");
@@ -77,9 +77,7 @@ export function PageVersionPreview({
 
   const savedIcon = snap.page.icon;
   const icon =
-    typeof savedIcon === "string" && isSavedSymbolName(savedIcon)
-      ? savedIcon
-      : null;
+    typeof savedIcon === "string" && isEmoji(savedIcon) ? savedIcon : null;
 
   return (
     <Stack gap="md">

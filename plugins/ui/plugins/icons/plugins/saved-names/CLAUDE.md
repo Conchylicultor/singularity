@@ -10,8 +10,6 @@
     - `conversations/agents`
     - `fields/avatar/config`
     - `page/callout`
-    - `page/editor`
-    - `page/links`
     - `primitives/icon-picker`
 - Core:
   - Exports (values):

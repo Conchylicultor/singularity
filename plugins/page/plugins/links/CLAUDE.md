@@ -64,7 +64,7 @@ source-page edit.
   - Uses:
     - `network/live.liveValue`
     - `primitives/live-state.resourceDescriptor`
-    - `ui/icons/saved-names.SavedSymbolNameSchema`
+    - `ui/icons/emoji.EmojiSchema`
   - Exports (types):
     - `BacklinkRow`
     - `PageLinkEdge`

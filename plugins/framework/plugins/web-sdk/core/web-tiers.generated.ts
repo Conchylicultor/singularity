@@ -16,6 +16,7 @@
 // App-content plugins pinned EAGER (would otherwise defer), and why:
 //   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
 //   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
+//   - apps/plugins/pages/plugins/auto-icon: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/canvas: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)

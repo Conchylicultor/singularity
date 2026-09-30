@@ -199,6 +199,7 @@ Never hand-edit the generated SQL to interleave the DML: the push-time hand-edit
   - Imported by:
     - `apps/deploy/health`
     - `apps/pages/agent-origin`
+    - `apps/pages/auto-icon`
     - `apps/pages/starred`
     - `apps/sonata/playback-history`
     - `apps/sonata/rich/chord-mode`

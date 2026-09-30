@@ -85,6 +85,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/mail/shell`
+    - `apps/pages/auto-icon`
     - `apps/pages/history`
     - `apps/pages/page-author`
     - `apps/pages/page-tree`
@@ -197,6 +198,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `tasks/task-graph`
     - `tasks/task-list`
     - `tasks/task-track`
+    - `ui/icons/emoji`
     - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/theme-customizer`
     - `ui/tokens/categorical`

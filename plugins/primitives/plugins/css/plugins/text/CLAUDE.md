@@ -587,6 +587,7 @@ to reconcile them; they never needed reconciling.
     - `tasks/task-graph`
     - `tasks/task-header`
     - `tasks/task-status`
+    - `ui/icons/emoji`
     - `ui/segmented-progress-bar`
     - `ui/segmented-progress-bar/dots`
     - `ui/tab-bar/chip`

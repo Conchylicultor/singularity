@@ -29,9 +29,12 @@ import { asBlockData, StoredBlockDataSchema } from "../../core/schemas";
 //
 // `updatedAt` is DERIVED (derived-updated-at): it moves when the block's
 // content or placement changes — parent, type, payload, rank, trash flag —
-// never on a fold toggle (`expanded`), a `pageId` recompute (a function of the
-// placement that already counted), or the trash ledger correlation. No write
-// site stamps it; the trigger RAISEs on one that tries.
+// never on a fold toggle (`expanded`), an `icon` change inside the payload
+// (presentation, like the fold: an auto-generated or picked emoji is not an
+// edit, and must not reorder Recent pages — the callout's own `icon` key is
+// presentation too), a `pageId` recompute (a function of the placement that
+// already counted), or the trash ledger correlation. No write site stamps it;
+// the trigger RAISEs on one that tries.
 export const _blocks = deriveUpdatedAt(
   pgTable(
     "page_blocks",
@@ -127,7 +130,7 @@ export const _blocks = deriveUpdatedAt(
     touchedBy: {
       parentId: true,
       type: true,
-      data: true,
+      data: { exceptKeys: ["icon"] },
       rank: true,
       deletedAt: true,
       id: false,

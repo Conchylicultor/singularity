@@ -155,6 +155,7 @@ serves it with `serveCollection(claudeCliCalls, { from: _claudeCliCalls })`.
   - Imported by:
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/url-extract`
+    - `apps/pages/auto-icon`
     - `conversations/conversation-category`
     - `conversations/conversation-view/turn-summary`
     - `debug/claude-cli-calls`

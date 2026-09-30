@@ -277,6 +277,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `apps/mail/sync`
     - `apps/mail/threads`
     - `apps/pages/agent-origin`
+    - `apps/pages/auto-icon`
     - `apps/pages/content-search`
     - `apps/sonata/library`
     - `apps/sonata/playback-history`

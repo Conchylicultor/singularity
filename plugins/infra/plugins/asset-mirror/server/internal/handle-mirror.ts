@@ -8,6 +8,7 @@ const MIME_BY_EXT: Record<string, string> = {
   ".mp3": "audio/mpeg",
   ".wav": "audio/wav",
   ".flac": "audio/flac",
+  ".json": "application/json",
 };
 
 function contentType(name: string): string {
@@ -17,7 +18,8 @@ function contentType(name: string): string {
 }
 
 /**
- * Generic mirror route: `GET /api/asset-mirror/:id/:file`.
+ * Generic mirror route: `GET /api/asset-mirror/:id/:file` (and
+ * `/:id/:dir/:file` for a path one directory deep).
  *
  * `params.file` arrives already `decodeURIComponent`'d (the server-core router
  * decodes path params), so it is the canonical flat file name (e.g.
@@ -30,16 +32,27 @@ export async function handleMirror(
   params: Record<string, string>,
 ): Promise<Response> {
   const id = params.id;
-  const name = params.file;
-  if (!id || !name) return new Response("missing id or file", { status: 400 });
+  const file = params.file;
+  if (!id || !file) return new Response("missing id or file", { status: 400 });
+  // One directory deep at most (the nested route key); each segment is flat.
+  const segments = params.dir === undefined ? [file] : [params.dir, file];
+  const name = segments.join("/");
 
   const remoteBase = mirrorRegistry.get(id);
   if (remoteBase === undefined) {
     return new Response(`unknown mirror: ${id}`, { status: 404 });
   }
 
-  // Path-traversal guard: a mirrored file is a single flat name.
-  if (name.includes("/") || name.includes("\\") || name.includes("..")) {
+  // Path-traversal guard: every segment is a single flat name.
+  if (
+    segments.some(
+      (s) =>
+        s.length === 0 ||
+        s.includes("/") ||
+        s.includes("\\") ||
+        s.includes(".."),
+    )
+  ) {
     return new Response("invalid file", { status: 400 });
   }
 

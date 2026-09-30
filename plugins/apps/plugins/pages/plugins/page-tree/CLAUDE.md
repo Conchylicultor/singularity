@@ -29,6 +29,17 @@ and the same rule binds it: a nav gesture may not embed a page in a body. Hence
 `handle-move-block` folds a page arriving under a new parent and never opens a
 page destination — stated there, since in-document cross-page drags share it.
 
+## The page icon picker is an emoji picker
+
+A page icon is an emoji (`PageDataSchema.icon`, see `page/editor`). The header's
+`PageIconPicker` / `PageIconButton` (`web/components/page-icon-button.tsx`) wrap
+`ui/icons/emoji`'s `<EmojiPicker>` in a `ControlPanelPopover`; picking commits
+through the header's `PATCH` and closes. The footer holds **Remove** (when an
+icon is set) and, above it, whatever `footerActions` renders — typed
+`PageIconFooterActions = (ctx: { close }) => ReactNode`, each row a
+`ControlPanel.Row`. That prop is the extension point for an action beside Remove
+(the auto-icon plugin's Regenerate); the header passes it through.
+
 ## One row-action registry, no `rowMenu`
 
 Every trailing affordance on a sidebar row is a `PageTree.RowActions`
@@ -108,6 +119,7 @@ it, so an id means the same thing wherever it is clicked.
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
   - Uses:
+    - `apps/pages/auto-icon.RegenerateIconAction`
     - `apps/pages/shell.Pages`
     - `infra/attachments.uploadAttachment`
     - `infra/endpoints.fetchEndpoint`
@@ -153,7 +165,6 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
-    - `primitives/icon-picker.IconPicker`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceView`
@@ -174,6 +185,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/undo-redo.useUndoRedo`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
+    - `ui/icons/emoji.EmojiPicker`
   - Exports (types):
     - `BlockTarget`
     - `PageSeedBlock`

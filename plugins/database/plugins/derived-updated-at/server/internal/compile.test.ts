@@ -60,6 +60,36 @@ test("only-into / only-outOf, null values and literal escaping", () => {
   );
 });
 
+test("exceptKeys: a jsonb column compared without the listed keys", () => {
+  const { functionDdl } = compileDerivedUpdatedAt({
+    table: "t",
+    updatedAtColumn: "updated_at",
+    columns: [
+      {
+        key: "data",
+        name: "data",
+        sqlType: "jsonb",
+        rule: { exceptKeys: ["icon", "it's", "icon"] },
+      },
+    ],
+  });
+  expect(functionDdl).toContain(
+    `(NEW."data" - ARRAY['icon', 'it''s']::text[]) IS DISTINCT FROM (OLD."data" - ARRAY['icon', 'it''s']::text[])`,
+  );
+});
+
+test("exceptKeys is refused off jsonb, and with no keys", () => {
+  const compile = (sqlType: string, keys: readonly string[]) =>
+    compileDerivedUpdatedAt({
+      table: "t",
+      updatedAtColumn: "updated_at",
+      columns: [{ key: "d", name: "d", sqlType, rule: { exceptKeys: keys } }],
+    });
+  expect(() => compile("text", ["a"])).toThrow(/only supported on jsonb/);
+  expect(() => compile("json", ["a"])).toThrow(/only supported on jsonb/);
+  expect(() => compile("jsonb", [])).toThrow(/no keys/);
+});
+
 test("no counted column: never bumps, still guards the write", () => {
   const { functionDdl } = compileDerivedUpdatedAt({
     table: "t",
