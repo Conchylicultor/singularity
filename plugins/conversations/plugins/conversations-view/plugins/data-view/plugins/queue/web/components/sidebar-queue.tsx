@@ -40,7 +40,11 @@ export function QueueSource({
         onRowActivate: (r) => onNavigate(r.id),
         viewOptions: {
           list: {
-            renderRow: (c: QueueRow) => <SidebarConversationItem conv={c} />,
+            // A blocked task's row is muted: it is waiting on another task,
+            // not on the user.
+            renderRow: (c: QueueRow) => (
+              <SidebarConversationItem conv={c} muted={c.isBlocked} />
+            ),
             size: "sm",
           },
         },

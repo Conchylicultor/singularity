@@ -76,6 +76,11 @@ export type ConversationItemProps = {
   layout?: "block" | "inline" | "line";
   /** Overrides what the row is named by; see {@link ConvTitleOverride}. */
   title?: ConvTitleOverride;
+  /**
+   * Mutes the title for a reason only the caller knows (e.g. the queue's row
+   * whose task is blocked). A `gone` / `done` conversation is muted regardless.
+   */
+  muted?: boolean;
 };
 
 /**
@@ -111,10 +116,13 @@ export function ConvTitle({
   conv,
   title,
   variant = "caption",
+  muted: mutedByCaller = false,
   className,
 }: {
   conv: ConversationItemConv;
   title?: ConvTitleOverride;
+  /** See {@link ConversationItemProps.muted}. */
+  muted?: boolean;
   /**
    * The title's type role: `caption` (default) where it annotates something
    * larger (a block row, an inline chip), `label` where it IS the row's label
@@ -123,7 +131,8 @@ export function ConvTitle({
   variant?: "caption" | "label";
   className?: string;
 }) {
-  const muted = conv.status === "gone" || conv.status === "done";
+  const muted =
+    mutedByCaller || conv.status === "gone" || conv.status === "done";
   // The title is an intrinsically single-line atom — it's used both in the
   // block layout's title row (already a line container) and inside a flow
   // `<Inline>` (the inline conv chip), so it forces single-line itself to
@@ -170,6 +179,7 @@ export function ConversationItem({
   conv,
   layout = "block",
   title,
+  muted,
 }: ConversationItemProps) {
   const active = conv.status === "working";
   if (layout === "line") {
@@ -199,7 +209,12 @@ export function ConversationItem({
                 list, which would otherwise drop it to the compact rung — so
                 it matches the sidebar nav rows' labels. */}
             <ControlSizeProvider size="sm">
-              <ConvTitle conv={conv} title={title} variant="label" />
+              <ConvTitle
+                conv={conv}
+                title={title}
+                muted={muted}
+                variant="label"
+              />
             </ControlSizeProvider>
           </Fill>
         </Line>
@@ -224,7 +239,7 @@ export function ConversationItem({
         <ControlSizeProvider size="xs">
           <AvatarSlot conv={conv} />
         </ControlSizeProvider>
-        <ConvTitle conv={conv} title={title} />
+        <ConvTitle conv={conv} title={title} muted={muted} />
         <ConvSysBadge conv={conv} />
         <ChipsSlot conv={conv} />
       </Inline>
@@ -246,7 +261,7 @@ export function ConversationItem({
       </span>
       <Stack as={Fill} gap="2xs">
         <Line as={Clip} className="gap-xs">
-          <ConvTitle conv={conv} title={title} />
+          <ConvTitle conv={conv} title={title} muted={muted} />
           <ConvSysBadge conv={conv} />
         </Line>
         <Stack direction="row" gap="xs" align="center">

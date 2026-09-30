@@ -14,30 +14,43 @@ import { resolveListTitle } from "../internal/list-title";
  * `useConfig` (not `useConfigResult`): every mode's label is a true name for the
  * row, so the defaults answer of the unreachable-after-boot pending window
  * asserts nothing about the user's data.
+ *
+ * `muted` dims the title for a source-specific reason (the Queue's blocked rows).
  */
 export function SidebarConversationItem({
   conv,
+  muted,
 }: {
   conv: Conversation;
+  muted?: boolean;
 }): ReactElement {
   const { titleMode } = useConfig(conversationListConfig);
   // Split so only the short mode subscribes to the short-title rows.
-  if (titleMode === "short") return <ShortTitleItem conv={conv} />;
+  if (titleMode === "short")
+    return <ShortTitleItem conv={conv} muted={muted} />;
   return (
     <ConversationItem
       conv={conv}
       layout="line"
+      muted={muted}
       title={resolveListTitle(titleMode, conv, null)}
     />
   );
 }
 
-function ShortTitleItem({ conv }: { conv: Conversation }): ReactElement {
+function ShortTitleItem({
+  conv,
+  muted,
+}: {
+  conv: Conversation;
+  muted?: boolean;
+}): ReactElement {
   const short = useTaskShortTitle(conv.taskId);
   return (
     <ConversationItem
       conv={conv}
       layout="line"
+      muted={muted}
       title={resolveListTitle(
         "short",
         conv,
