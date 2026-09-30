@@ -44,7 +44,7 @@ interface SourcedPageNode {
 
 function sourcedPageNodes(op: BlockOp): SourcedPageNode[] {
   const forests =
-    op.kind === "paste"
+    op.kind === "paste" || op.kind === "splice"
       ? [op.forest]
       : op.kind === "duplicate"
         ? op.placements.map((p) => p.forest)

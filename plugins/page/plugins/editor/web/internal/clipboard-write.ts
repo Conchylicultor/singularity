@@ -5,7 +5,7 @@ import {
   type IdentifiedBlock,
 } from "../../core";
 import { blockTextProtectedSpans } from "./block-text-extensions";
-import { BLOCKS_MIME } from "./transfer";
+import { BLOCKS_MIME, encodeBlocksPayload } from "./transfer";
 
 /**
  * THE encoding of a copied block forest onto the clipboard — the exact inverse
@@ -40,7 +40,9 @@ export function writeForestToClipboard(
   gesture: "copy" | "cut",
 ): void {
   const payload = gesture === "cut" ? withCutId(forest, newBlockId()) : forest;
-  clipboardData.setData(BLOCKS_MIME, JSON.stringify(payload));
+  // Both callers copy WHOLE blocks, so the payload says so: a paste of it lands
+  // whole lines, never merged into the text at a caret (`decodeBlocksPayload`).
+  clipboardData.setData(BLOCKS_MIME, encodeBlocksPayload(payload));
   clipboardData.setData(
     "text/plain",
     serializeForestToMarkdown(forest, {

@@ -23,6 +23,7 @@ import {
   childrenOf,
   pasteAnchorId,
   planBulkMove,
+  planSplice,
   blockSelectionRoots,
   withContainersSelected,
   prevVisibleLine,
@@ -2314,15 +2315,20 @@ describe("blockOpContextOf", () => {
   // two filters, one per runtime, kept in step by hand — and this is what
   // replaced it: the registries differ, the derivation cannot.
   const handles = [
-    { type: "para", acceptsText: true, anchor: undefined },
+    { type: "para", acceptsText: true, anchor: undefined, defaultText: true },
     { type: "rule", acceptsText: false, anchor: undefined },
     { type: "box", acceptsText: false, anchor: true },
   ] as unknown as Parameters<typeof blockOpContextOf>[0];
 
-  test("derives both sets from the handles' own declared facts", () => {
+  test("derives every fact from the handles' own declarations", () => {
     const ctx = blockOpContextOf(handles);
     expect([...(ctx.anchorTypes ?? [])].sort()).toEqual(["box"]);
     expect([...(ctx.textBearingTypes ?? [])].sort()).toEqual(["para"]);
+    expect(ctx.defaultTextType).toBe("para");
+  });
+
+  test("no default-text handle → no plain paragraph, rather than a guessed one", () => {
+    expect(blockOpContextOf([]).defaultTextType).toBeUndefined();
   });
 
   test("both fields are always PRESENT, so a real registry never reads as `no opinion`", () => {
@@ -3641,5 +3647,297 @@ describe("BlockOpContext", () => {
         applyBlockOp(rows, op),
       );
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// splice — a forest pasted AT an insertion point inside a block's text
+// ---------------------------------------------------------------------------
+
+describe("splice", () => {
+  // Made-up type names, for the reason the text-less merge suite gives: a case
+  // passing because the reducer recognised "text" would mean it names a type.
+  const PLAIN = "para";
+  const HEADING = "title";
+  const ctx: BlockOpContext = {
+    anchorTypes: new Set([ANCHOR]),
+    textBearingTypes: new Set([PLAIN, HEADING]),
+    defaultTextType: PLAIN,
+  };
+  const para = (id: string, text: string): BlockNode =>
+    mk(id, "PAGE", a, { type: PLAIN, text, pageId: "PAGE", expanded: true });
+  const plain = (
+    id: string,
+    text: string,
+    children: IdentifiedBlock[] = [],
+  ): IdentifiedBlock => ({
+    id,
+    type: PLAIN,
+    data: { text: [{ text }] },
+    expanded: true,
+    children,
+  });
+  const heading = (id: string, text: string): IdentifiedBlock => ({
+    ...plain(id, text),
+    type: HEADING,
+  });
+  const splice = (
+    blockId: string,
+    text: string,
+    position: number,
+    forest: IdentifiedBlock[],
+  ): Extract<BlockOp, { kind: "splice" }> => ({
+    kind: "splice",
+    blockId,
+    position,
+    runs: text === "" ? [] : [{ text }],
+    forest,
+    granularity: "text",
+    tailId: "TAIL",
+  });
+  const textById = (blocks: BlockNode[], id: string): string =>
+    textOf(blocks.find((b) => b.id === id)!);
+
+  test("empty line + one paragraph: the text fills THAT line, and no row is made", () => {
+    // The reported case: `The plugin system⏎` into an empty block used to leave
+    // the block empty above a new block holding the text.
+    const blocks = [para("A", "")];
+    const op = splice("A", "", 0, [plain("P1", "The plugin system")]);
+    const out = run(blocks, op, ctx);
+    expect(out.map((b) => b.id)).toEqual(["A"]);
+    expect(textById(out, "A")).toBe("The plugin system");
+    expect(planSplice(blocks, op, ctx)!.caret).toEqual({
+      blockId: "A",
+      offset: "The plugin system".length,
+    });
+  });
+
+  test("empty line + a heading first: the empty origin is CONSUMED, the forest takes its slot", () => {
+    const blocks = [para("A", ""), { ...para("B", "next"), rank: after(a) }];
+    const op = splice("A", "", 0, [heading("H", "Title"), plain("P", "body")]);
+    const out = run(blocks, op, ctx);
+    expect(ids(out, "PAGE")).toEqual(["H", "P", "B"]);
+    expect(out.find((b) => b.id === "H")!.type).toBe(HEADING);
+    expect(planSplice(blocks, op, ctx)!.caret).toEqual({
+      blockId: "P",
+      offset: 4,
+    });
+  });
+
+  test("an empty origin that is NOT a plain paragraph keeps its line", () => {
+    const blocks = [{ ...para("A", ""), type: HEADING }];
+    const out = run(
+      blocks,
+      splice("A", "", 0, [heading("H", "X"), plain("P", "y")]),
+      ctx,
+    );
+    expect(ids(out, "PAGE")).toEqual(["A", "H", "P"]);
+  });
+
+  test("foo|bar + a⏎b → fooa, bbar, the caret after b", () => {
+    const blocks = [
+      para("A", "foobar"),
+      { ...para("B", "next"), rank: after(a) },
+    ];
+    const op = splice("A", "foobar", 3, [plain("P1", "a"), plain("P2", "b")]);
+    const out = run(blocks, op, ctx);
+    expect(ids(out, "PAGE")).toEqual(["A", "P2", "B"]);
+    expect(textById(out, "A")).toBe("fooa");
+    expect(textById(out, "P2")).toBe("bbar");
+    expect(out.some((b) => b.id === "P1" || b.id === "TAIL")).toBe(false);
+    expect(planSplice(blocks, op, ctx)!.caret).toEqual({
+      blockId: "P2",
+      offset: 1,
+    });
+  });
+
+  test("a single paragraph mid-line is a text edit of the origin alone", () => {
+    const blocks = [para("A", "foobar")];
+    const op = splice("A", "foobar", 3, [plain("P1", "XY")]);
+    const out = run(blocks, op, ctx);
+    expect(out.map((b) => b.id)).toEqual(["A"]);
+    expect(textById(out, "A")).toBe("fooXYbar");
+    expect(planSplice(blocks, op, ctx)!.caret.offset).toBe(5);
+  });
+
+  test("mid-line, a non-paragraph last block: the text after lands on a minted tail", () => {
+    // The tail is split's: `siblingType` when the intent layer resolved one,
+    // `tailData` for its data — here a heading origin whose split yields a
+    // plain paragraph.
+    const blocks = [{ ...para("A", "foobar"), type: HEADING }];
+    const op = {
+      ...splice("A", "foobar", 3, [plain("P1", "a"), heading("H", "h")]),
+      siblingType: PLAIN,
+    };
+    const out = run(blocks, op, ctx);
+    expect(ids(out, "PAGE")).toEqual(["A", "H", "TAIL"]);
+    expect(textById(out, "A")).toBe("fooa");
+    const tail = out.find((b) => b.id === "TAIL")!;
+    expect(tail.type).toBe(PLAIN);
+    expect(textOf(tail)).toBe("bar");
+    expect(planSplice(blocks, op, ctx)!.caret).toEqual({
+      blockId: "TAIL",
+      offset: 0,
+    });
+  });
+
+  test("the tail line adopts the origin's visible children, as split's tail does", () => {
+    const blocks = [
+      para("A", "foobar"),
+      mk("K", "A", a, { type: PLAIN, text: "kid", pageId: "PAGE" }),
+    ];
+    const out = run(
+      blocks,
+      splice("A", "foobar", 3, [plain("P1", "a"), plain("P2", "b")]),
+      ctx,
+    );
+    expect(ids(out, "PAGE")).toEqual(["A", "P2"]);
+    expect(ids(out, "A")).toEqual([]);
+    expect(ids(out, "P2")).toEqual(["K"]);
+  });
+
+  test("the point at the END of a line with visible children: the forest lands as its first children", () => {
+    // Where Enter at that point nests — as the immediately-next visible lines,
+    // above the children rather than after the whole subtree.
+    const blocks = [
+      para("A", "foo"),
+      mk("K", "A", a, { type: PLAIN, text: "kid", pageId: "PAGE" }),
+    ];
+    const op = splice("A", "foo", 3, [plain("P1", "a"), heading("H", "h")]);
+    const out = run(blocks, op, ctx);
+    expect(textById(out, "A")).toBe("fooa");
+    expect(ids(out, "A")).toEqual(["H", "K"]);
+    expect(planSplice(blocks, op, ctx)!.caret).toEqual({
+      blockId: "H",
+      offset: 1,
+    });
+  });
+
+  test("a range replace: the runs arrive with the span cut, and the splice lands at its start", () => {
+    // `foo[XX]bar` — the door hands `foobar`, position 3.
+    const blocks = [para("A", "fooXXbar")];
+    const out = run(
+      blocks,
+      splice("A", "foobar", 3, [plain("P1", "a"), plain("P2", "b")]),
+      ctx,
+    );
+    expect(textById(out, "A")).toBe("fooa");
+    expect(textById(out, "P2")).toBe("bbar");
+  });
+
+  test("the caret lands at the end of the LAST line of a nested last root", () => {
+    const blocks = [para("A", "")];
+    const op = splice("A", "", 0, [
+      heading("H", "t"),
+      plain("P", "p", [plain("C", "child")]),
+    ]);
+    expect(planSplice(blocks, op, ctx)!.caret).toEqual({
+      blockId: "C",
+      offset: 5,
+    });
+  });
+
+  test("the forest's ids are EXACTLY the ones handed in — never re-minted", () => {
+    const blocks = [para("A", "x")];
+    const out = run(
+      blocks,
+      splice("A", "x", 1, [
+        heading("H1", "h"),
+        plain("P", "p", [plain("C", "c")]),
+      ]),
+      ctx,
+    );
+    expect(out.map((b) => b.id).sort()).toEqual(["A", "C", "H1", "P"]);
+    expect(out.find((b) => b.id === "C")!.parentId).toBe("P");
+  });
+
+  describe("refusals are the identity", () => {
+    const forest = [plain("P1", "a"), plain("P2", "b")];
+    test("a missing block", () => {
+      const blocks = [para("A", "x")];
+      expect(run(blocks, splice("GONE", "x", 0, forest), ctx)).toEqual(blocks);
+    });
+    test("a page row", () => {
+      const blocks = [{ ...para("A", ""), type: PAGE_BLOCK_TYPE }];
+      expect(run(blocks, splice("A", "", 0, forest), ctx)).toEqual(blocks);
+    });
+    test("a container anchor", () => {
+      const blocks = [
+        { ...para("A", ""), type: ANCHOR, data: {} },
+        mk("K", "A", a, { type: PLAIN, pageId: "PAGE" }),
+      ];
+      expect(run(blocks, splice("A", "", 0, forest), ctx)).toEqual(blocks);
+    });
+    test("a text-less row", () => {
+      const blocks = [{ ...para("A", ""), type: "rule", data: {} }];
+      expect(run(blocks, splice("A", "", 0, forest), ctx)).toEqual(blocks);
+    });
+  });
+
+  test("with no default-text type, nothing is absorbed: it degrades to split + insert", () => {
+    const blocks = [para("A", "foobar")];
+    const noPlain: BlockOpContext = { ...ctx, defaultTextType: undefined };
+    const out = run(
+      blocks,
+      splice("A", "foobar", 3, [plain("P1", "a")]),
+      noPlain,
+    );
+    expect(ids(out, "PAGE")).toEqual(["A", "P1", "TAIL"]);
+    expect(textById(out, "A")).toBe("foo");
+    expect(textById(out, "TAIL")).toBe("bar");
+  });
+
+  // A block copied WHOLE pastes as whole blocks: `granularity: "blocks"` merges
+  // no head and no tail, and lands where `paste` lands a forest.
+  describe('whole blocks (`granularity: "blocks"`)', () => {
+    const whole = (
+      blockId: string,
+      text: string,
+      position: number,
+      forest: IdentifiedBlock[],
+    ) => ({
+      ...splice(blockId, text, position, forest),
+      granularity: "blocks" as const,
+    });
+
+    test("mid-line: the origin keeps its whole text, the copies land after it", () => {
+      const blocks = [
+        para("A", "foobar"),
+        { ...para("B", "next"), rank: after(a) },
+      ];
+      const op = whole("A", "foobar", 3, [plain("P1", "a"), plain("P2", "b")]);
+      const out = run(blocks, op, ctx);
+      expect(ids(out, "PAGE")).toEqual(["A", "P1", "P2", "B"]);
+      expect(textById(out, "A")).toBe("foobar");
+      expect(textById(out, "P1")).toBe("a");
+      expect(textById(out, "P2")).toBe("b");
+      expect(planSplice(blocks, op, ctx)!.caret).toEqual({
+        blockId: "P2",
+        offset: 1,
+      });
+    });
+
+    test("a copied paragraph into an EMPTY line replaces the line", () => {
+      const blocks = [para("A", "")];
+      const out = run(blocks, whole("A", "", 0, [plain("P1", "x")]), ctx);
+      expect(out.map((b) => b.id)).toEqual(["P1"]);
+    });
+
+    test("with visible children, the copies land after the whole subtree — paste's rule", () => {
+      const blocks = [
+        para("A", "foo"),
+        mk("K", "A", a, { type: PLAIN, text: "kid", pageId: "PAGE" }),
+      ];
+      const out = run(blocks, whole("A", "foo", 3, [plain("P1", "x")]), ctx);
+      expect(ids(out, "PAGE")).toEqual(["A", "P1"]);
+      expect(ids(out, "A")).toEqual(["K"]);
+    });
+
+    test("a selected range is replaced: the origin takes the runs with the span cut", () => {
+      const blocks = [para("A", "fooXXbar")];
+      const out = run(blocks, whole("A", "foobar", 3, [plain("P1", "x")]), ctx);
+      expect(textById(out, "A")).toBe("foobar");
+      expect(ids(out, "PAGE")).toEqual(["A", "P1"]);
+    });
   });
 });

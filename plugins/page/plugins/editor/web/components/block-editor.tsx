@@ -61,6 +61,8 @@ import {
   runsOfNode,
   type Block,
   type BlockNode,
+  type ForestGranularity,
+  type RichText,
   type SerializedBlock,
 } from "../../core";
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
@@ -107,6 +109,7 @@ import {
 } from "../internal/block-paste-handlers";
 import {
   BLOCKS_MIME,
+  decodeBlocksPayload,
   decideTransfer,
   readTransferText,
 } from "../internal/transfer";
@@ -568,6 +571,8 @@ function SelectionLayer({
     bulkDelete,
     bulkDuplicate,
     paste,
+    splice,
+    insertionPointAt,
     insert,
     focusBlock,
     focusBlockBoundary,
@@ -936,12 +941,11 @@ function SelectionLayer({
 
       let forest: SerializedBlock[];
       if (decision.kind === "forest") {
-        try {
-          forest = JSON.parse(decision.json) as SerializedBlock[];
-        } catch (err) {
-          if (!(err instanceof SyntaxError)) throw err;
-          return;
-        }
+        // No insertion point here, so the granularity decides nothing: every
+        // forest lands as whole blocks after the anchor.
+        const payload = decodeBlocksPayload(decision.json);
+        if (!payload.ok) return;
+        forest = payload.forest;
       } else {
         forest = parseMarkdownToForest(decision.text, {
           handles,
@@ -1528,6 +1532,27 @@ function SelectionLayer({
     [containerRef],
   );
 
+  // The insertion point a drop lands at when it lands inside a block's text:
+  // the block whose editing host holds the target, and the offset under the
+  // pointer in that block's live runs. Null outside any editing host, and for a
+  // host whose text surface cannot place the point (the drop then lands as
+  // blocks at the pointer row, as any drop outside text does).
+  const insertionPointOf = useCallback(
+    (
+      e: React.DragEvent,
+    ): { blockId: string; position: number; runs: RichText } | null => {
+      if (!isInsideEditingHost(e.target)) return null;
+      const blockId =
+        (e.target as Element)
+          .closest("[data-block-id]")
+          ?.getAttribute("data-block-id") ?? null;
+      if (blockId === null) return null;
+      const at = insertionPointAt(blockId, e.clientX, e.clientY);
+      return at ? { blockId, ...at } : null;
+    },
+    [insertionPointAt],
+  );
+
   /**
    * The container owns the pointer DROP, as the blocks own the caret PASTE.
    *
@@ -1608,15 +1633,14 @@ function SelectionLayer({
       }
 
       let forest: SerializedBlock[];
+      let granularity: ForestGranularity = "text";
       if (decision.kind === "forest") {
-        try {
-          forest = JSON.parse(decision.json) as SerializedBlock[];
-        } catch (err) {
-          // Mirror the paste handlers' tolerance: a malformed payload is not our
-          // drop — leave the browser's default alone.
-          if (!(err instanceof SyntaxError)) throw err;
-          return;
-        }
+        // Mirror the paste handlers' tolerance: a malformed payload is not our
+        // drop — leave the browser's default alone.
+        const payload = decodeBlocksPayload(decision.json);
+        if (!payload.ok) return;
+        forest = payload.forest;
+        granularity = payload.granularity;
       } else {
         forest = parseMarkdownToForest(decision.text, {
           handles,
@@ -1635,9 +1659,24 @@ function SelectionLayer({
       // event for nothing.
       if (!Array.isArray(forest) || forest.length === 0) return;
       e.preventDefault();
-      paste({ blocks: forest, ...pos });
+      // Dropped INTO a block's text: the drop has an insertion point, so it is
+      // spliced there exactly as a caret paste is — the pointer supplies the
+      // point a caret supplies for a paste. Anywhere else (the gutter, the
+      // whitespace beside the measure, below the last block) there is no point
+      // in any text, so the forest lands as blocks at the pointer row.
+      const at = insertionPointOf(e);
+      if (at) splice({ ...at, blocks: forest, granularity });
+      else paste({ blocks: forest, ...pos });
     },
-    [externalDropPosition, paste, handles, allowAttachments, rowAt],
+    [
+      externalDropPosition,
+      paste,
+      splice,
+      insertionPointOf,
+      handles,
+      allowAttachments,
+      rowAt,
+    ],
   );
 
   // The reorder drag and the file drag are mutually exclusive, so one indicator

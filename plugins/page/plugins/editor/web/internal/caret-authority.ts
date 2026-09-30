@@ -62,6 +62,13 @@ export interface BlockTextSurgery {
   deleteRange?: (from: number, to: number) => void;
   /** Serialize this block's LIVE runs (the read dual of `appendRunsAtEnd`). */
   readRuns?: () => RichText;
+  /**
+   * The linear offset (in `readRuns`' basis) of the insertion point under the
+   * viewport point `(x, y)`, or null when the point is not in this block's
+   * text. Moves no caret: a drop into a block's text reads where it lands with
+   * it, and splices there.
+   */
+  offsetAtPoint?: (x: number, y: number) => number | null;
 }
 
 /**
@@ -94,7 +101,10 @@ export type FlightInput =
  * authority's own bookkeeping (`onLanded`); spread it into whatever
  * `CaretLandOptions` the policy passes on, or the flight never completes.
  */
-export type LandPolicy = (handle: BlockFocusHandle, land: CaretLandOptions) => void;
+export type LandPolicy = (
+  handle: BlockFocusHandle,
+  land: CaretLandOptions,
+) => void;
 
 /** Why a claimed landing was given up on. Never silent — see the sink below. */
 export type CaretFlightAbortReason =
@@ -412,7 +422,10 @@ export function createCaretAuthority({
    * browser dispatches the next input event, so nothing typed after the landing
    * can be delivered ahead of what was typed before it.
    */
-  function replayInto(handle: BlockFocusHandle, entries: readonly FlightInput[]): void {
+  function replayInto(
+    handle: BlockFocusHandle,
+    entries: readonly FlightInput[],
+  ): void {
     const replay = handle.replayInput;
     if (!replay) return;
     void (async () => {
@@ -443,7 +456,6 @@ export function createCaretAuthority({
       }
     })();
   }
-
 
   function abort(reason: CaretFlightAbortReason): void {
     const failed = flight;

@@ -246,6 +246,9 @@ export function resolveOpOwnerPage(
 ): string {
   switch (op.kind) {
     case "split":
+    // A splice writes the origin's page: its forest lands beside the origin (or
+    // under it), never across a page boundary.
+    case "splice":
     case "merge":
     // `unwrap` writes only within one page: it deletes the container and
     // re-ranks its children under the container's OWN parent, all rows of the

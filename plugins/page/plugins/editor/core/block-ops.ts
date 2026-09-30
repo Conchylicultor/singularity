@@ -16,6 +16,7 @@ import {
 import {
   mergeRuns,
   plainOf,
+  runsLength,
   runsOf as coerceRuns,
   splitRuns,
   TextRunSchema,
@@ -232,7 +233,70 @@ export type BlockOp =
   | {
       kind: "duplicate";
       placements: { afterId: string; forest: IdentifiedBlock[] }[];
+    }
+  /**
+   * Splice a forest INTO a block's text at an insertion point — a caret paste,
+   * or a drop inside a block's text (see `planSplice` for the whole rule):
+   *
+   * > the text before the point keeps its line and absorbs the forest's leading
+   * > plain paragraph; the text after the point goes to the end of the forest's
+   * > last plain paragraph (or to a tail line minted like split's); everything
+   * > else lands in between.
+   *
+   * One op, so one undo entry and one server transaction, where the gesture
+   * used to be a `paste` AFTER the caret's block that left the caret's own text
+   * where it was. It is split and paste fused, and it borrows from each: `runs`
+   * / `position` / `siblingType` / `tailData` / `tailId` mean exactly what
+   * split's `runs` / `position` / `siblingType` / `tailData` / `newId` mean,
+   * and `forest` is paste's (ids minted client-side, travelling on the node).
+   */
+  | {
+      kind: "splice";
+      /** The block holding the insertion point. */
+      blockId: string;
+      /** Linear offset in `runs` (the stored-runs basis, split's). */
+      position: number;
+      /**
+       * The block's LIVE runs, with a selected range already removed
+       * (`runsWithoutSpan`) — split's `runs`, but REQUIRED: a splice is only
+       * ever issued by a live editor, so there is no projection fallback to
+       * keep.
+       */
+      runs: RichText;
+      forest: IdentifiedBlock[];
+      /**
+       * What the forest was copied AS — see {@link ForestGranularity}. `"text"`
+       * splices it into the line; `"blocks"` lands it as whole lines.
+       */
+      granularity: ForestGranularity;
+      /**
+       * Pre-minted id for a TAIL line, used only when the text after the point
+       * has no plain paragraph to land on. Minted whether or not it is used,
+       * for split's `newId` reason: both sides must agree on the row's identity
+       * before either knows whether it exists.
+       */
+      tailId: string;
+      /** The tail's type — split's `siblingType` (`BlockHandle.splitInto`). */
+      siblingType?: string;
+      /** The tail's `data` — split's `tailData` (`BlockHandle.dataOnSplit`). */
+      tailData?: unknown;
     };
+
+/**
+ * What a forest arriving at an insertion point was copied AS, which decides how
+ * it meets the line it lands in:
+ *
+ *  - `"text"` — text (external text, markdown, a text range): SPLICED into the
+ *    line, its leading paragraph joining the text before the point and the text
+ *    after the point joining its last paragraph;
+ *  - `"blocks"` — whole blocks (a block-selection copy, a bare-caret copy of the
+ *    caret's block): whole LINES, never merged into anyone's text.
+ *
+ * A fact about the COPY, carried by the payload (`BLOCKS_MIME`'s envelope) —
+ * never inferred from the forest's shape, where one copied paragraph and one
+ * pasted line of text are the same node.
+ */
+export type ForestGranularity = "text" | "blocks";
 
 /**
  * Type facts the pure reducer cannot derive from the forest alone. Parameterized
@@ -272,6 +336,19 @@ export interface BlockOpContext {
    * funnel takes for a type with no registered handle.
    */
   textBearingTypes?: ReadonlySet<string>;
+  /**
+   * The block type declaring `BlockHandle.defaultText` — the plain paragraph.
+   * The reducer needs it for one op, `splice`: only a plain paragraph has an
+   * inline form, so only one can be absorbed into the line at the insertion
+   * point (or take the text after it), and only an empty one is consumed by
+   * what lands in its place. Derived from the registry, never named: the
+   * editor core does not know which plugin ships the paragraph.
+   *
+   * Absent (a composition shipping no default text type, or a context-free
+   * call) means no node is a plain paragraph, and a splice degenerates to a
+   * split with the forest inserted between the two halves.
+   */
+  defaultTextType?: string;
 }
 
 /**
@@ -292,6 +369,7 @@ export function blockOpContextOf(
     textBearingTypes: new Set(
       handles.filter((h) => h.acceptsText).map((h) => h.type),
     ),
+    defaultTextType: handles.find((h) => h.defaultText)?.type,
   };
 }
 
@@ -370,6 +448,17 @@ export const BlockOpSchema: ZodParser<BlockOp> = z.discriminatedUnion("kind", [
     placements: z.array(
       z.object({ afterId: z.string(), forest: z.array(IdentifiedBlockSchema) }),
     ),
+  }),
+  z.object({
+    kind: z.literal("splice"),
+    blockId: z.string(),
+    position: z.number().int().nonnegative(),
+    runs: z.array(TextRunSchema),
+    forest: z.array(IdentifiedBlockSchema).min(1),
+    granularity: z.enum(["text", "blocks"]),
+    tailId: z.string(),
+    siblingType: z.string().optional(),
+    tailData: z.unknown().optional(),
   }),
 ]);
 
@@ -888,6 +977,11 @@ export function opNamedIds(op: BlockOp): string[] {
       // Every placement's ROOT ids, for paste's reason: each clone's forest
       // lands in the same one transaction as its root.
       return op.placements.flatMap((p) => p.forest.map((n) => n.id));
+    case "splice":
+      // The origin, the forest's ROOTS (paste's reason) and the pre-minted tail
+      // — named whether or not the reducer uses them, which is sound: a named
+      // id the reducer did not write only widens the op's target set.
+      return [op.blockId, ...op.forest.map((n) => n.id), op.tailId];
   }
 }
 
@@ -911,7 +1005,7 @@ export function applyBlockOp(
   ctx: BlockOpContext = {},
 ): BlockNode[] {
   const anchorTypes = ctx.anchorTypes ?? NO_ANCHORS;
-  const next = applyOp(blocks, op, anchorTypes, ctx.textBearingTypes);
+  const next = applyOp(blocks, op, anchorTypes, ctx);
   return pruneEmptyAnchors(next, anchorTypes);
 }
 
@@ -919,8 +1013,9 @@ function applyOp(
   blocks: BlockNode[],
   op: BlockOp,
   anchorTypes: ReadonlySet<string>,
-  textBearingTypes: ReadonlySet<string> | undefined,
+  ctx: BlockOpContext,
 ): BlockNode[] {
+  const textBearingTypes = ctx.textBearingTypes;
   switch (op.kind) {
     case "split":
       return applySplit(blocks, op, anchorTypes);
@@ -944,6 +1039,8 @@ function applyOp(
       return applyPaste(blocks, op);
     case "duplicate":
       return applyDuplicate(blocks, op);
+    case "splice":
+      return planSplice(blocks, op, ctx)?.blocks ?? blocks;
   }
 }
 
@@ -1071,82 +1168,22 @@ function applySplit(
     return add(revealed, aboveNode); // origin's object reference returned untouched
   }
 
-  let next = revealed;
-  let updatedBlock = withRuns(block, beforeRuns);
+  const updatedBlock = op.asChild
+    ? // Nesting the tail as the first child forces the original open, so the
+      // new child is visible.
+      { ...withRuns(block, beforeRuns), expanded: true }
+    : withRuns(block, beforeRuns);
+  const newType = (op.asChild ? op.childType : op.siblingType) ?? block.type;
+  const slot = splitSlot(revealed, block, op.asChild ?? false, isAnchor);
 
-  let newParentId: string | null;
-  let newType: string;
-  let newRank: Rank;
-  // Visible children the tail adopts (non-asChild arm only; empty otherwise).
-  let adopted: BlockNode[] = [];
-  if (op.asChild) {
-    // Nest the split-off content as the original's FIRST child, before any
-    // existing child, and force the original open so the new child is visible.
-    const firstChild = childrenOf(revealed, block.id)[0] ?? null;
-    const firstChildRank = firstChild ? Rank.from(firstChild.rank) : null;
-    newParentId = block.id;
-    newType = op.childType ?? block.type;
-    newRank = Rank.between(null, firstChildRank);
-    updatedBlock = { ...updatedBlock, expanded: true };
-  } else {
-    const next0 = nextSibling(revealed, block);
-    newParentId = block.parentId;
-    newType = op.siblingType ?? block.type;
-    newRank = Rank.between(
-      Rank.from(block.rank),
-      next0 ? Rank.from(next0.rank) : null,
-    );
-
-    // Visible-line invariant: a split turns one visible line into two ADJACENT
-    // visible lines — the tail is the immediately-next visible line, and no
-    // other line changes position or depth. A plain sibling insert satisfies
-    // that only when the origin has no visible children; otherwise the tail
-    // would render AFTER the whole subtree. So when the origin has VISIBLE
-    // children (`expanded` with a non-empty child set) the tail ADOPTS them
-    // all: each child is reparented to `op.newId` keeping its rank string
-    // byte-for-byte (the whole sibling set moves together, so uniqueness/order
-    // carry), and the tail inherits the subtree by opening (`expanded: true`).
-    // Collapsed children are not visible lines, so they stay with the head.
-    // "Visible" is `visibleChildrenOf`, not the raw `expanded` flag, so the rule
-    // reads the same forest the user sees — including inside a container, where
-    // `revealed` has already opened the box the caret was standing in.
-    //
-    // This is DERIVED from the current forest inside the reducer, not carried on
-    // the op, because ops apply against the CURRENT forest — overlay replays
-    // onto a refreshed base, and the server applies against its own load — so a
-    // flag frozen at intent time could contradict the forest at application
-    // time (e.g. a racing collapse). Deriving keeps the invariant true at the
-    // moment the op is applied. It is the exact mirror of `applyMerge`'s
-    // adoption below: after this split the head is childless, so
-    // `prevVisibleLine(tail)` resolves to the head and a following merge
-    // re-adopts — which is what makes split∘merge round-trip.
-    adopted = visibleChildrenOf(revealed, block, isAnchor);
-  }
-
-  next = replace(next, updatedBlock);
-
-  // Tail data: `op.tailData` is the authoritative per-type-transformed payload
-  // (e.g. a checked to-do → unchecked tail), resolved at the intent layer.
-  // Absent, the origin's data is inherited — but ONLY when the tail is the SAME
-  // type. `data` belongs to a type: carrying a callout's `{icon, color}`
-  // onto a `text` tail hands the write boundary a payload its
-  // strict schema rejects outright (400 `Unrecognized key(s)`), which is exactly
-  // what a container's `splitChildWhenExpanded: {childType: "text"}` produces on
-  // every Enter. A cross-type tail therefore starts from `{}` and lets the
-  // target schema's own defaults fill it in. This stayed latent until a block
-  // type carried more than `{text}`: every earlier cross-type split (heading →
-  // text, list → text) happened to be between structurally identical schemas.
-  const inheritsData = newType === block.type;
-  const tailBase =
-    op.tailData !== undefined ? op.tailData : inheritsData ? block.data : {};
-  const newData = { ...asObject(tailBase), text: afterRuns };
+  let next = replace(revealed, updatedBlock);
   const newNode: BlockNode = {
     id: op.newId,
     pageId: block.pageId,
-    parentId: newParentId,
+    parentId: slot.parentId,
     type: newType,
-    data: newData,
-    rank: newRank.toJSON(),
+    data: mintedTailData(block, newType, op.tailData, afterRuns),
+    rank: Rank.between(slot.prev, slot.next).toJSON(),
     // A block is BORN EXPANDED. The tail is either childless (where the flag is
     // unobservable) or has just adopted the origin's visible children (which it
     // must show). Minting `true` everywhere is what makes "a collapsed row is
@@ -1155,12 +1192,318 @@ function applySplit(
     expanded: true,
   };
   next = add(next, newNode);
+  return adoptInto(next, slot.adopted, op.newId);
+}
 
-  // Reparent the adopted children to the tail, rank strings preserved.
+/**
+ * WHERE a split puts the line it mints, and which of the origin's children go
+ * with it. The one placement rule, shared by `split` and `splice` — a splice is
+ * a split with a forest between the two halves, so a divergence here would make
+ * pasting "a⏎b" mid-line land its lines somewhere Enter never would.
+ *
+ *  - `asChild` — nest as the origin's FIRST child, ahead of any existing child.
+ *    Nothing is adopted: the new line already sits right under the origin.
+ *  - otherwise — the origin's next sibling, and the new line ADOPTS the origin's
+ *    VISIBLE children. That is the visible-line invariant: a split turns one
+ *    visible line into two ADJACENT visible lines — the tail is the
+ *    immediately-next visible line, and no other line changes position or
+ *    depth. A plain sibling insert satisfies that only when the origin has no
+ *    visible children; otherwise the tail would render AFTER the whole subtree.
+ *    So the tail adopts them all: each child is reparented keeping its rank
+ *    string byte-for-byte (the whole sibling set moves together, so
+ *    uniqueness/order carry). Collapsed children are not visible lines, so they
+ *    stay with the head. "Visible" is `visibleChildrenOf`, not the raw
+ *    `expanded` flag, so the rule reads the same forest the user sees —
+ *    including inside a container, where `revealAround` has already opened the
+ *    box the caret was standing in.
+ *
+ * Adoption is DERIVED from the current forest inside the reducer, not carried
+ * on the op, because ops apply against the CURRENT forest — overlay replays onto
+ * a refreshed base, and the server applies against its own load — so a flag
+ * frozen at intent time could contradict the forest at application time (e.g. a
+ * racing collapse). It is the exact mirror of `applyMerge`'s adoption: after a
+ * split the head is childless, so `prevVisibleLine(tail)` resolves to the head
+ * and a following merge re-adopts — which is what makes split∘merge round-trip.
+ *
+ * Returns the rank WINDOW rather than a rank, so a caller landing N lines there
+ * (`Rank.nBetween`) and one landing one (`Rank.between`) share it.
+ */
+function splitSlot(
+  blocks: BlockNode[],
+  block: BlockNode,
+  asChild: boolean,
+  isAnchor: IsAnchor,
+): {
+  parentId: string | null;
+  prev: Rank | null;
+  next: Rank | null;
+  adopted: BlockNode[];
+} {
+  if (asChild) {
+    const firstChild = childrenOf(blocks, block.id)[0] ?? null;
+    return {
+      parentId: block.id,
+      prev: null,
+      next: firstChild ? Rank.from(firstChild.rank) : null,
+      adopted: [],
+    };
+  }
+  const following = nextSibling(blocks, block);
+  return {
+    parentId: block.parentId,
+    prev: Rank.from(block.rank),
+    next: following ? Rank.from(following.rank) : null,
+    adopted: visibleChildrenOf(blocks, block, isAnchor),
+  };
+}
+
+/** Reparent `adopted` under `newParentId`, rank strings preserved. */
+function adoptInto(
+  blocks: BlockNode[],
+  adopted: readonly BlockNode[],
+  newParentId: string,
+): BlockNode[] {
+  let next = blocks;
   for (const child of adopted) {
-    next = replace(next, { ...child, parentId: op.newId });
+    next = replace(next, { ...child, parentId: newParentId });
   }
   return next;
+}
+
+/**
+ * The `data` of a tail line a split (or a splice) mints: `tailData` when the
+ * intent layer resolved one (e.g. a checked to-do → unchecked tail), else the
+ * origin's data — but ONLY when the tail is the SAME type. `data` belongs to a
+ * type: carrying a callout's `{icon, color}` onto a `text` tail
+ * hands the write boundary a payload its strict schema rejects outright (400
+ * `Unrecognized key(s)`), which is exactly what a container's
+ * `splitChildWhenExpanded: {childType: "text"}` produces on every Enter. A
+ * cross-type tail therefore starts from `{}` and lets the target schema's own
+ * defaults fill it in. This stayed latent until a block type carried more than
+ * `{text}`: every earlier cross-type split (heading → text, list → text)
+ * happened to be between structurally identical schemas. `text` is `runs`
+ * regardless.
+ */
+function mintedTailData(
+  origin: BlockNode,
+  tailType: string,
+  tailData: unknown,
+  runs: RichText,
+): Record<string, unknown> {
+  const base =
+    tailData !== undefined
+      ? tailData
+      : tailType === origin.type
+        ? origin.data
+        : {};
+  return { ...asObject(base), text: runs };
+}
+
+/** Where the caret lands after a splice: the end of the pasted content. */
+export interface SpliceCaret {
+  blockId: string;
+  /** Linear offset in that block's text. */
+  offset: number;
+}
+
+/**
+ * The `splice` op, planned: the forest it produces and where the caret lands.
+ * `null` is a REFUSAL — the op is then the identity, so `dispatchOp` drops it
+ * before the network like any refused op.
+ *
+ * > A forest pasted or dropped at an insertion point inside a block's text is
+ * > SPLICED there: the text before the point keeps its line and absorbs the
+ * > forest's leading paragraph; the text after the point goes to the end of the
+ * > forest's last paragraph; everything else lands in between.
+ *
+ * Step by step, `[before, after] = splitRuns(op.runs, op.position)`:
+ *
+ *  1. **Head.** A leading plain paragraph (the `defaultTextType`, no children —
+ *     nothing else has an inline form) merges into the origin: its text becomes
+ *     `before + head`, and it leaves the forest.
+ *  2. **Text only.** Nothing left: the origin reads `before + head + after` and
+ *     that is the whole op — a single-paragraph paste is a text edit.
+ *  3. **Consume an empty origin.** Textless (empty `before`, no head merged), of
+ *     the default-text type and childless: the forest takes its slot instead of
+ *     landing below an empty line — `# Title⏎body` pasted into an empty line
+ *     leaves no blank line above the title.
+ *  4. **Body.** The rest lands where a split would put its tail
+ *     (`splitSlot`): as the origin's next siblings, or — at the END of a line
+ *     with visible children, where Enter nests — as its first children.
+ *  5. **Tail.** A non-empty `after` goes to the end of the last root when that
+ *     root is a childless plain paragraph, else onto a tail line `op.tailId` of
+ *     split's type and data (`siblingType` / `tailData`). The line holding it
+ *     adopts the origin's visible children, exactly as split's tail does, so
+ *     the text after the point keeps the lines that followed it.
+ *
+ * Refusals are split's (no origin, a page row, an anchor, a text-less row) —
+ * and paste's missing anchor is the first of them, since the origin IS the
+ * anchor.
+ */
+export function planSplice(
+  blocks: BlockNode[],
+  op: Extract<BlockOp, { kind: "splice" }>,
+  ctx: BlockOpContext = {},
+): { blocks: BlockNode[]; caret: SpliceCaret } | null {
+  const anchorTypes = ctx.anchorTypes ?? NO_ANCHORS;
+  const isAnchor = anchorOf(anchorTypes);
+  const origin = byId(blocks, op.blockId);
+  if (!origin) return null;
+  // Split's refusals, for split's reasons: a page row and a container anchor own
+  // no text, so there is no insertion point in them. A text-less row (divider,
+  // image) has none either — and writing `data.text` onto it is a 400 at the
+  // write boundary. `textBearingTypes` absent is "no opinion", as for merge.
+  if (origin.type === PAGE_BLOCK_TYPE || anchorTypes.has(origin.type))
+    return null;
+  if (ctx.textBearingTypes && !ctx.textBearingTypes.has(origin.type))
+    return null;
+  if (op.forest.length === 0) return null;
+
+  // Content lands where it can be seen — split's `revealAround`, for split's
+  // reason: a paste on a collapsed container's borrowed line would otherwise
+  // land its lines among the children the fold hides.
+  const revealed = revealAround(blocks, origin, isAnchor);
+  const block = byId(revealed, op.blockId) ?? origin;
+  if (op.granularity === "blocks")
+    return planWholeLines(revealed, block, op, ctx);
+  const [before, after] = splitRuns(op.runs, op.position);
+
+  const isPlainParagraph = (node: IdentifiedBlock | undefined): boolean =>
+    node !== undefined &&
+    ctx.defaultTextType !== undefined &&
+    node.type === ctx.defaultTextType &&
+    node.children.length === 0;
+
+  // 1. Head.
+  const [first, ...others] = op.forest;
+  const headMerged = isPlainParagraph(first);
+  const rest = headMerged ? others : op.forest;
+  const headLine = headMerged ? mergeRuns(before, runsOfNode(first!)) : before;
+
+  // 2. Text only.
+  if (rest.length === 0) {
+    return {
+      blocks: replace(revealed, withRuns(block, mergeRuns(headLine, after))),
+      caret: { blockId: block.id, offset: runsLength(headLine) },
+    };
+  }
+
+  // 3. Consume an empty origin.
+  const consumed =
+    !headMerged &&
+    runsLength(before) === 0 &&
+    ctx.defaultTextType !== undefined &&
+    block.type === ctx.defaultTextType &&
+    childrenOf(revealed, block.id).length === 0;
+
+  // 4. Body — split's slot. At the end of a line whose children are visible,
+  // Enter nests (the intent layer's `asChild`), and so does the forest: landing
+  // it as next siblings would put it after the whole subtree, below lines the
+  // user sees directly under the caret. With text after the point the forest is
+  // a sibling run and the line holding that text adopts the children instead.
+  const atEnd = runsLength(after) === 0;
+  const asChild =
+    atEnd && visibleChildrenOf(revealed, block, isAnchor).length > 0;
+  const slot = splitSlot(revealed, block, asChild, isAnchor);
+
+  // 5. Tail.
+  let roots: IdentifiedBlock[];
+  let caret: SpliceCaret;
+  let tailLineId: string | null = null;
+  const last = rest[rest.length - 1]!;
+  if (atEnd) {
+    roots = rest;
+    const end = lastLineOf(last);
+    caret = { blockId: end.id, offset: runsLength(runsOfNode(end)) };
+  } else if (isPlainParagraph(last)) {
+    const lastRuns = runsOfNode(last);
+    roots = [
+      ...rest.slice(0, -1),
+      {
+        ...last,
+        data: { ...asObject(last.data), text: mergeRuns(lastRuns, after) },
+        // It may adopt the origin's children below — which it must show.
+        expanded: true,
+      },
+    ];
+    tailLineId = last.id;
+    caret = { blockId: last.id, offset: runsLength(lastRuns) };
+  } else {
+    const tailType = op.siblingType ?? block.type;
+    roots = [
+      ...rest,
+      {
+        id: op.tailId,
+        type: tailType,
+        data: mintedTailData(block, tailType, op.tailData, after),
+        expanded: true,
+        children: [],
+      },
+    ];
+    tailLineId = op.tailId;
+    caret = { blockId: op.tailId, offset: 0 };
+  }
+
+  let next = consumed
+    ? remove(revealed, [block.id])
+    : replace(revealed, {
+        ...withRuns(block, headLine),
+        expanded: asChild ? true : block.expanded,
+      });
+  const { nodes } = planForestInsert({
+    pageId: block.pageId,
+    parentId: slot.parentId,
+    rootRanks: Rank.nBetween(slot.prev, slot.next, roots.length),
+    forest: roots,
+  });
+  next = [...next, ...nodes];
+  // `adopted` is non-empty only off the `asChild` arm with visible children,
+  // i.e. with text after the point — which is exactly when a tail line exists.
+  if (tailLineId !== null) next = adoptInto(next, slot.adopted, tailLineId);
+  return { blocks: next, caret };
+}
+
+/**
+ * `splice` for a `"blocks"` forest: whole lines, landed where `paste` lands a
+ * forest — `insertForestAt` after the origin, so after its whole subtree —
+ * with no head and no tail merge. The origin keeps its text (`op.runs`, i.e.
+ * minus a selected range, which the paste replaces), and an origin left EMPTY,
+ * plain and childless is consumed exactly as a text splice consumes it: pasting
+ * copied blocks into an empty line replaces the line.
+ *
+ * So there are two placement rules and each belongs to one granularity: text
+ * lands where a SPLIT puts its tail (`splitSlot` — the text after the point
+ * travels with it), whole blocks land where a PASTE puts a forest
+ * (`insertForestAt` — nothing is split, so nothing needs the adjacency).
+ */
+function planWholeLines(
+  revealed: BlockNode[],
+  block: BlockNode,
+  op: Extract<BlockOp, { kind: "splice" }>,
+  ctx: BlockOpContext,
+): { blocks: BlockNode[]; caret: SpliceCaret } {
+  const consumed =
+    runsLength(op.runs) === 0 &&
+    ctx.defaultTextType !== undefined &&
+    block.type === ctx.defaultTextType &&
+    childrenOf(revealed, block.id).length === 0;
+  const kept = replace(revealed, withRuns(block, op.runs));
+  const landed = insertForestAt(kept, {
+    forest: op.forest,
+    afterId: block.id,
+  });
+  const end = lastLineOf(op.forest[op.forest.length - 1]!);
+  return {
+    blocks: consumed ? remove(landed, [block.id]) : landed,
+    caret: { blockId: end.id, offset: runsLength(runsOfNode(end)) },
+  };
+}
+
+/** The last line of a forest node in document order: its deepest last descendant. */
+function lastLineOf(node: IdentifiedBlock): IdentifiedBlock {
+  let cur = node;
+  while (cur.children.length > 0) cur = cur.children[cur.children.length - 1]!;
+  return cur;
 }
 
 function applyMerge(

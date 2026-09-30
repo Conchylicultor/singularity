@@ -57,6 +57,7 @@ import {
 import { isValidLinkUrl } from "../internal/link-url";
 import { BLOCK_INSET } from "../internal/page-column";
 import {
+  linearOffsetAtPoint,
   placeCaretAtBoundary,
   placeCaretAtColumn,
   placeCaretAtOffset,
@@ -295,9 +296,9 @@ export function BlockTextEditor({
         // that has to be abandoned because focus moved away meanwhile.
         focusHydratingAware(ed, opts?.scroll ?? false, opts);
       },
-      // The three precise placements are synchronous by construction (they land
-      // the caret against content that is already there), so they report the
-      // landing as soon as they return.
+      // The two column/boundary placements are synchronous by construction
+      // (they land the caret against content that is already there), so they
+      // report the landing as soon as they return.
       focusAtColumn: (x, edge, opts) => {
         const ed = lexicalEditorRef.current;
         if (!ed) return;
@@ -319,11 +320,17 @@ export function BlockTextEditor({
         if (opts?.crossing) announceCaretCrossing(ed, opts.crossing);
         opts?.onLanded?.();
       },
+      // Hydration-aware like `focus`: an offset landing can target a block the
+      // same gesture just created (a splice's last line), whose root is still
+      // childless — placing the caret into nothing would land it nowhere and
+      // report the landing anyway.
       focusOffset: (n, opts) => {
         const ed = lexicalEditorRef.current;
         if (!ed) return;
-        placeCaretAtOffset(ed, n, opts?.scroll ?? false);
-        opts?.onLanded?.();
+        const scroll = opts?.scroll ?? false;
+        focusHydratingAware(ed, scroll, opts, () =>
+          placeCaretAtOffset(ed, n, scroll),
+        );
       },
       // Everything the user typed while this editor was mounting. Registering it
       // is what makes this block a legal flight target at all — a handle without
@@ -355,6 +362,12 @@ export function BlockTextEditor({
       readRuns: () => {
         const ed = lexicalEditorRef.current;
         return ed ? serializeBlockRuns(ed) : [];
+      },
+      // Where a drop at a pointer position lands in this block's text — the
+      // read half of `placeCaretAtColumn`'s hit-test, placing nothing.
+      offsetAtPoint: (x: number, y: number) => {
+        const ed = lexicalEditorRef.current;
+        return ed ? linearOffsetAtPoint(ed, x, y) : null;
       },
     });
   }, [block.id, registerFocusHandle]);

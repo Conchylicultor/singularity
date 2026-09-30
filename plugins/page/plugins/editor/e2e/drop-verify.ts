@@ -12,8 +12,11 @@
 //
 // The fix: the block-editor CONTAINER classifies every drop through the same
 // `decideTransfer` the pastes run, and claims it (`preventDefault`) unless it is
-// a single line landing at an insertion point. Verifies:
-//   A. multi-line text dropped ON a block becomes separate blocks, and the
+// a single line landing at an insertion point. A multi-line drop INTO a block's
+// text is then SPLICED at the drop point (the `splice` op — the pointer is the
+// insertion point, as the caret is for a paste). Verifies:
+//   A. multi-line text dropped at the END of a block's text splices there: the
+//      first line joins that line, the rest become blocks below it, and the
 //      target block's root still holds exactly one paragraph
 //   B. a single-line text drop inside a block's text is DECLINED, so the native
 //      caret drop still owns it (no blocks minted)
@@ -23,6 +26,9 @@
 //      block's own text (single- vs multi-line is unknowable while the
 //      DataTransfer is in protected mode, so that drag is left to the browser
 //      and only reclaimed at drop time)
+//   E. multi-line text dropped MID-text splices AT the pointer: `al|pha` +
+//      `X⏎Y` → `alX`, `Ypha` — not a block after the row, which is where the
+//      drop used to land whatever the pointer said
 //
 // KNOWN BOUND — read before adding an assertion here. These drops are SYNTHETIC
 // (`new DragEvent(...)` with a hand-built `DataTransfer`), because an external
@@ -50,6 +56,11 @@ interface DragSpec {
   /** Which native event to synthesise. */
   type: "dragover" | "drop";
   /**
+   * Aim at a CHARACTER instead of the target's box: the viewport point of the
+   * caret position `offset` characters into the target's first text node.
+   */
+  charOffset?: number;
+  /**
    * The event TARGET, which is what `isInsideEditingHost` reads: a block's
    * `[contenteditable]` is inside an editing host; a row element (its gutter
    * rail, the whitespace beside the measure) is not.
@@ -71,14 +82,28 @@ function dragEvent(page: Page, spec: DragSpec): Promise<boolean> {
     const el = document.querySelector(s.selector);
     if (!el) throw new Error(`no element for ${s.selector}`);
     const box = el.getBoundingClientRect();
+    let point = {
+      x: box.left + box.width / 2,
+      y: s.at === "bottom" ? box.bottom - 4 : box.top + box.height / 2,
+    };
+    if (s.charOffset !== undefined) {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const text = walker.nextNode();
+      if (!text) throw new Error(`no text node in ${s.selector}`);
+      const range = document.createRange();
+      range.setStart(text, s.charOffset);
+      range.setEnd(text, s.charOffset);
+      const rect = range.getBoundingClientRect();
+      point = { x: rect.left, y: rect.top + rect.height / 2 };
+    }
     const dt = new DataTransfer();
     dt.setData("text/plain", s.text);
     const event = new DragEvent(s.type, {
       dataTransfer: dt,
       bubbles: true,
       cancelable: true,
-      clientX: box.left + box.width / 2,
-      clientY: s.at === "bottom" ? box.bottom - 4 : box.top + box.height / 2,
+      clientX: point.x,
+      clientY: point.y,
     });
     return !el.dispatchEvent(event);
   }, spec);
@@ -138,9 +163,10 @@ await withBrowser(async (h) => {
     true,
   );
 
-  // ---- A: multi-line text dropped ON a block ----------------------------------
-  // `at: "bottom"` so the pointer is unambiguously in the row's lower half —
-  // `rowAtPointer` resolves that to `after`, i.e. the lines land BELOW "bravo".
+  // ---- A: multi-line text dropped at the END of a block's text -----------------
+  // The pointer is in the middle of the (wide) line box, past its last
+  // character, so the insertion point is the end of "bravo": the first line
+  // joins it and the rest land as the lines right below it.
   const claimedA = await dragEvent(page, {
     type: "drop",
     selector: bravoText,
@@ -149,10 +175,9 @@ await withBrowser(async (h) => {
   });
   await page.waitForTimeout(2000); // server insert + push round-trip
   r.eq("A: the container claimed the drop", claimedA, true);
-  r.eq("A: the lines became separate blocks", await blockTexts(page), [
+  r.eq("A: the drop spliced at the end of the line", await blockTexts(page), [
     "alpha",
-    "bravo",
-    "one",
+    "bravoone",
     "two",
     "three",
     "charlie",
@@ -195,6 +220,28 @@ await withBrowser(async (h) => {
     ...before,
     "dropped in the margin",
   ]);
+
+  // ---- E: multi-line text dropped MID-text splices at the pointer --------------
+  const alphaId = await blockIdOf(editableBlocks(page).first());
+  const beforeE = await blockTexts(page);
+  const claimedE = await dragEvent(page, {
+    type: "drop",
+    selector: `[data-block-id="${alphaId}"] [contenteditable="true"]`,
+    text: "X\nY",
+    charOffset: 2,
+  });
+  await page.waitForTimeout(2000);
+  r.eq("E: the container claimed the drop", claimedE, true);
+  r.eq("E: it spliced AT the pointer", await blockTexts(page), [
+    "alX",
+    "Ypha",
+    ...beforeE.slice(1),
+  ]);
+  r.eq(
+    "E: the origin's root still holds ONE paragraph",
+    await rootParagraphs(page, alphaId),
+    1,
+  );
 
   console.log("PAGE_URL " + page.url());
   await r.finish();

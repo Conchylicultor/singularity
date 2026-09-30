@@ -38,6 +38,7 @@ import {
   withMintedIds,
   withPasteIds,
   pageSourcesOf,
+  planSplice,
   newBlockId,
   namesField,
   hasTextKey,
@@ -45,7 +46,10 @@ import {
   type Block,
   type BlockNode,
   type BlockOp,
+  type BlockOpContext,
   type BlockPatch,
+  type ForestGranularity,
+  type IdentifiedBlock,
   type RichText,
   type RowData,
   type SerializedBlock,
@@ -58,7 +62,9 @@ import type { BlockRunsEdit } from "./internal/block-run-tracker";
 import {
   blockDocOwnerOf,
   closeAllOpenTextRuns,
+  type BlockDocOwner,
 } from "./internal/collab-session";
+import { spliceOpenBlockDoc } from "./internal/block-text-write";
 import type { ProjectTextFn } from "./internal/doc-sourced-runs";
 import type { RowTruth } from "./internal/row-truth";
 import {
@@ -100,13 +106,18 @@ const OP_LABELS: Record<BlockOp["kind"], string> = {
   bulkMove: "Move blocks",
   paste: "Paste blocks",
   duplicate: "Duplicate blocks",
+  splice: "Paste",
 };
 
 /**
  * The block id the user is "on" for an op, used to restore focus on undo/redo.
  * Takes the PRE-op rows because some ops focus a block they do not name.
  */
-function opFocusId(op: BlockOp, before: Block[]): string | null {
+function opFocusId(
+  op: BlockOp,
+  before: Block[],
+  ctx: BlockOpContext,
+): string | null {
   switch (op.kind) {
     case "insert":
     case "split":
@@ -141,6 +152,12 @@ function opFocusId(op: BlockOp, before: Block[]): string | null {
       // leaves focus where it was (in the anchor block, or on the selection
       // container). There is no "block the user is on" to restore.
       return null;
+    case "splice":
+      // A splice DOES move the caret: to the end of what it pasted, which is
+      // the line the reducer planned it onto (the origin, the forest's last
+      // line, or the minted tail). A refused splice plans nothing and is never
+      // recorded, so its null is never read.
+      return planSplice(toNodes(before), op, ctx)?.caret.blockId ?? null;
   }
 }
 
@@ -241,6 +258,25 @@ function derivePatchEntry(
   const undoFocus =
     undoPatch.updates[0]?.id ?? undoPatch.creates[0]?.id ?? focusId ?? null;
   return { undoPatch, redoPatch, undoFocus, redoFocus };
+}
+
+/**
+ * The live content owner of the block a splice cuts. A splice is only ever
+ * issued from a MOUNTED text surface (the caret paste's editor, or the editor
+ * under a drop's pointer), and a mounted surface holds its block's owner — so a
+ * missing one is a broken assumption, never a case to route around: splicing
+ * the row alone would leave the doc (the text's owner) holding the whole line
+ * while the row says half of it.
+ */
+function spliceOwnerOf(blockId: string): BlockDocOwner {
+  const owner = blockDocOwnerOf(blockId);
+  if (!owner) {
+    throw new Error(
+      `splice: block "${blockId}" has no live content owner, so its text ` +
+        "cannot be cut at the insertion point",
+    );
+  }
+  return owner;
 }
 
 // The handle type is declared BY the caret authority, which owns the registry it
@@ -528,6 +564,38 @@ interface BlockEditorContextValue {
     afterId: string | null;
     parentId?: string | null;
   }) => void;
+  /**
+   * Splice a serialized forest INTO `blockId`'s text at an insertion point — a
+   * caret paste, or a drop inside the block's text. One `splice` `BlockOp`
+   * (see `planSplice` for the rule), so it is optimistic and ONE undo entry
+   * carrying both the structural patch and the origin's text edit; the caret
+   * lands at the end of what was pasted.
+   *
+   * `runs` are the block's LIVE runs with any selected range already removed,
+   * and `position` the insertion point in them — split's two inputs. Returns
+   * nothing, for `paste`'s reason: a refused splice is dropped before it
+   * reaches the network, so a returned id would be an absorbable failure.
+   */
+  splice: (args: {
+    blockId: string;
+    position: number;
+    runs: RichText;
+    blocks: SerializedBlock[];
+    /** What the forest was copied as — see `ForestGranularity`. */
+    granularity: ForestGranularity;
+  }) => void;
+  /**
+   * Where a drop at viewport point `(x, y)` inside `blockId`'s text would land:
+   * the block's live runs and the linear offset under the pointer — `splice`'s
+   * two inputs. Null when the block has no text surface mounted, or the point
+   * is not in its text (the caller then lands the drop as blocks, after the
+   * row). Moves no caret.
+   */
+  insertionPointAt: (
+    blockId: string,
+    x: number,
+    y: number,
+  ) => { position: number; runs: RichText } | null;
   /**
    * Create a block of the given type at the end of the page and focus it
    * once the live resource re-renders the list.
@@ -1552,7 +1620,7 @@ export function BlockEditorProviderInner({
         before,
         after,
         OP_LABELS[op.kind],
-        opFocusId(op, before),
+        opFocusId(op, before, opCtx),
       );
       store.dispatch(vars);
     },
@@ -1622,16 +1690,31 @@ export function BlockEditorProviderInner({
     [dispatchOp],
   );
 
+  // The identity half every forest insert shares — `paste` and `splice` alike,
+  // so the cut-sub-page rule cannot differ between them. Ids are minted HERE,
+  // client-side, and travel on the node: the overlay renders the pasted blocks
+  // on the keystroke and the server push is a confirmation rather than the
+  // first time the user sees their content (see the "Paste is an op" section
+  // of this plugin's CLAUDE.md). A cut sub-page's first paste keeps its id —
+  // the server then MOVES that page rather than copying it (`PageSource`);
+  // everything else is minted.
+  const prepareForest = useCallback(
+    (blocks: SerializedBlock[]): IdentifiedBlock[] => {
+      const forest = withPasteIds(
+        blocks,
+        claimCutPages(new Set(rowsRef.current.map((b) => b.id))),
+      );
+      if (forest.length > 0) markCutsPasted(pageSourcesOf(blocks));
+      return forest;
+    },
+    [],
+  );
+
   // Paste a serialized forest — a plain `dispatchOp`, which is the whole point:
   // a paste is a `BlockOp` like any other structural edit, so routing it here
   // (rather than at the store seam, where it used to sit) is what puts it on the
   // undo stack, drops a refused paste before the network, and keeps ONE place
   // that records structural mutations.
-  //
-  // Identity is minted HERE, client-side, and travels on the node: the overlay
-  // renders the pasted blocks on the keystroke and the server push is a
-  // confirmation rather than the first time the user sees their content (see the
-  // "Paste is an op" section of this plugin's CLAUDE.md).
   //
   // MUST stay below `dispatchOp` — it closes over it.
   const paste = useCallback(
@@ -1640,14 +1723,8 @@ export function BlockEditorProviderInner({
       afterId: string | null;
       parentId?: string | null;
     }) => {
-      // A cut sub-page's first paste keeps its id — the server then MOVES that
-      // page rather than copying it (`PageSource`); everything else is minted.
-      const forest = withPasteIds(
-        args.blocks,
-        claimCutPages(new Set(rowsRef.current.map((b) => b.id))),
-      );
+      const forest = prepareForest(args.blocks);
       if (forest.length === 0) return;
-      markCutsPasted(pageSourcesOf(args.blocks));
       // Anchored ON the zoom root, a paste would land after it — outside the
       // view — so it lands at the START of the root's children instead, which
       // is where "right below this line" is inside a zoom (anchorless paste
@@ -1672,7 +1749,155 @@ export function BlockEditorProviderInner({
         parentId: args.parentId ?? scope.contentParentId,
       });
     },
-    [dispatchOp, scope],
+    [dispatchOp, scope, prepareForest],
+  );
+
+  // Splice a forest into a block's text at an insertion point (see the context
+  // field, and `planSplice` for the rule). Split and paste fused, so it takes
+  // split's executor shape: the structural op is dispatched synchronously (so
+  // the caret can claim the line it lands on in this same turn, ahead of the
+  // commit that mounts it), and the ORIGIN's live doc — which ignores rows — is
+  // brought to the text the reducer left on its row one microtask later,
+  // inside the owner's `untracked` scope, and recorded as data on the SAME
+  // entry. One Cmd+Z therefore removes the pasted blocks and restores the
+  // origin's full text together.
+  //
+  // MUST stay below `dispatchOp`'s helpers — it closes over them.
+  const splice = useCallback(
+    (args: {
+      blockId: string;
+      position: number;
+      runs: RichText;
+      blocks: SerializedBlock[];
+      granularity: ForestGranularity;
+    }) => {
+      // The zoom root's next siblings are outside the view, so a splice there
+      // would be refused whole by the backstop. It keeps the root's own rule
+      // instead — the forest lands as the root's first children, the text
+      // stays where it is — rather than dropping the user's paste on the floor.
+      if (args.blockId === scope.rootId) {
+        paste({ blocks: args.blocks, afterId: args.blockId });
+        return;
+      }
+      const before = rowsRef.current;
+      const origin = before.find((b) => b.id === args.blockId);
+      if (!origin) return;
+      const forest = prepareForest(args.blocks);
+      if (forest.length === 0) return;
+      // The tail's type and data, resolved HERE where block handles are
+      // visible — split's `siblingType` / `tailData` rule, read off the same
+      // handle fields the keystroke resolver reads (`splitInto`,
+      // `dataOnSplit`), and guarded to the same-type case for the same reason:
+      // running the origin's transform on a tail validated against a different
+      // schema would corrupt it.
+      const handle = blockHandles.get(origin.type);
+      const siblingType = handle?.splitInto;
+      const tailData =
+        handle?.dataOnSplit && (siblingType ?? origin.type) === origin.type
+          ? handle.dataOnSplit(origin.data)
+          : undefined;
+      const op: Extract<BlockOp, { kind: "splice" }> = {
+        kind: "splice",
+        blockId: args.blockId,
+        position: args.position,
+        runs: args.runs,
+        forest,
+        granularity: args.granularity,
+        tailId: newBlockId(),
+        siblingType,
+        tailData,
+      };
+      const plan = planSplice(toNodes(before), op, opCtx);
+      if (!plan) return;
+      const { caret } = plan;
+      const beforeIds = new Set(before.map((b) => b.id));
+      const originRow = plan.blocks.find((b) => b.id === args.blockId);
+
+      // A single-paragraph paste creates no row: it is a TEXT edit of the
+      // origin, and a text edit is a doc edit. Rows never carry an existing
+      // block's text (it is doc-owned; `data.text` is a projection), so it is
+      // recorded as the one data entry `recordDocEdit` makes, and the caret is
+      // placed after it lands (queued behind its microtask).
+      if (originRow && plan.blocks.every((b) => beforeIds.has(b.id))) {
+        const target = runsOfNode(originRow);
+        recordDocEdit(args.blockId, OP_LABELS.splice, () =>
+          spliceOpenBlockDoc(spliceOwnerOf(args.blockId), target),
+        );
+        queueMicrotask(() => focusBlock(caret.blockId, caret.offset));
+        return;
+      }
+
+      const { after, written, vars } = predictOp(op, before, opCtx);
+      if (written.length === 0) return;
+      if (!admitsRows(before, after)) return;
+      advanceRows(after);
+      store.dispatch(vars);
+      // The line the caret lands on is always one this op CREATED (the last
+      // pasted line, or the minted tail), so this claims the keyboard until it
+      // mounts — split's `focusNew`, at an offset.
+      focusBlock(caret.blockId, caret.offset, { scroll: true });
+
+      // Deferred for split's reason: this runs from a Lexical command handler,
+      // i.e. INSIDE the origin editor's own update, where a nested update would
+      // commit only after the `untracked` scope closed. A CONSUMED origin (an
+      // empty paragraph the forest replaced) has no text to edit: its row is
+      // gone, and its doc — untouched — is what undo binds the restored row to.
+      queueMicrotask(() => {
+        if (!originRow) {
+          recordEntry({
+            label: OP_LABELS.splice,
+            focusId: caret.blockId,
+            before,
+            after,
+          });
+          return;
+        }
+        const target = runsOfNode(originRow);
+        const owner = spliceOwnerOf(args.blockId);
+        const originBefore = owner.runsNow();
+        owner.untracked(() => spliceOpenBlockDoc(owner, target));
+        recordEntry({
+          label: OP_LABELS.splice,
+          focusId: caret.blockId,
+          before,
+          after,
+          runsEdits: runsEqual(originBefore, target)
+            ? []
+            : [{ blockId: args.blockId, before: originBefore, after: target }],
+        });
+      });
+    },
+    [
+      scope,
+      paste,
+      prepareForest,
+      blockHandles,
+      opCtx,
+      recordDocEdit,
+      focusBlock,
+      admitsRows,
+      advanceRows,
+      store,
+      recordEntry,
+    ],
+  );
+
+  // See the context field: `splice`'s two inputs, read from a pointer position
+  // off the block's own text surface. Reached through `surgeryOf` like every
+  // other content read, so nothing here can place a caret.
+  const insertionPointAt = useCallback(
+    (
+      blockId: string,
+      x: number,
+      y: number,
+    ): { position: number; runs: RichText } | null => {
+      const surgery = authority.surgeryOf(blockId);
+      if (!surgery?.offsetAtPoint || !surgery.readRuns) return null;
+      const position = surgery.offsetAtPoint(x, y);
+      if (position === null) return null;
+      return { position, runs: surgery.readRuns() };
+    },
+    [authority],
   );
 
   // Duplicate a selection — one `dispatchOp` for the whole gesture, for paste's
@@ -2435,6 +2660,8 @@ export function BlockEditorProviderInner({
       bulkMove,
       bulkDuplicate,
       paste,
+      splice,
+      insertionPointAt,
       insert,
       insertFirst,
       projectText,
@@ -2479,6 +2706,8 @@ export function BlockEditorProviderInner({
       bulkMove,
       bulkDuplicate,
       paste,
+      splice,
+      insertionPointAt,
       insert,
       insertFirst,
       projectText,

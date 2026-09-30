@@ -23164,6 +23164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockUpdate`
           - `ColorToken`
           - `CreateBlockBody`
+          - `ForestGranularity`
           - `IdentifiedBlock`
           - `InlineFormatContext`
           - `InlineFormatMatch`
@@ -23186,6 +23187,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SerializedBlock`
           - `SetPageKindBody`
           - `SoftBreaks`
+          - `SpliceCaret`
           - `TextBearingSchema`
           - `TextData`
           - `TextRun`
@@ -23264,6 +23266,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `patchesFromDiff`
           - `plainOf`
           - `planForestInsert`
+          - `planSplice`
           - `prevVisibleLine`
           - `rankWindow`
           - `RichTextSchema`

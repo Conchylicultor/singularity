@@ -12,6 +12,7 @@ import {
   type Klass,
   type LexicalEditor,
   type LexicalNode,
+  type PointType,
 } from "lexical";
 import type { ComponentType, ReactNode } from "react";
 import {
@@ -531,7 +532,32 @@ function offsetOfParagraphBoundary(index: number): number {
 export function $linearCaretOffset(): number | null {
   const selection = $getSelection();
   if (!$isRangeSelection(selection)) return null;
-  const anchor = selection.anchor;
+  return $linearOffsetOfPoint(selection.anchor);
+}
+
+/**
+ * Inside a Lexical read/update: the linear span `[from, to)` a range selection
+ * covers, in the stored-runs basis — `from === to` for a collapsed caret. Null
+ * when there is no range selection, or when either end cannot be resolved
+ * (see {@link $linearOffsetOfPoint}). Anchor and focus are ordered here, so a
+ * selection drawn backwards reads the same span as one drawn forwards.
+ */
+export function $linearSelectionSpan(): { from: number; to: number } | null {
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection)) return null;
+  const a = $linearOffsetOfPoint(selection.anchor);
+  const f = $linearOffsetOfPoint(selection.focus);
+  if (a === null || f === null) return null;
+  return { from: Math.min(a, f), to: Math.max(a, f) };
+}
+
+/**
+ * Inside a Lexical read/update: one selection point's linear offset in the
+ * stored-runs basis — the body of {@link $linearCaretOffset}, for any point (a
+ * selection's focus, or a point built from a pointer hit-test). Null when the
+ * point is in no paragraph of this root.
+ */
+export function $linearOffsetOfPoint(anchor: PointType): number | null {
   const anchorNode = anchor.getNode();
   const anchorKey = anchorNode.getKey();
 

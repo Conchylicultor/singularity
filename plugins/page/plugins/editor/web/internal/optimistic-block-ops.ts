@@ -631,6 +631,23 @@ function opEffect(
     case "paste":
     case "duplicate":
       return { kind: "create", ids: opNamedIds(op) };
+    case "splice": {
+      // The rows it CREATED — the forest roots that landed as rows (a leading
+      // paragraph absorbed into the origin is not one) and the tail, when one
+      // was minted. Measured, not named: which of them exist is the reducer's
+      // answer. Never empty: a splice creating nothing is a text edit, which
+      // the executor records as a doc edit and never dispatches.
+      const beforeIds = new Set(before.map((b) => b.id));
+      const landed = new Set(
+        after.filter((b) => !beforeIds.has(b.id)).map((b) => b.id),
+      );
+      return {
+        kind: "create",
+        ids: [...op.forest.map((n) => n.id), op.tailId].filter((id) =>
+          landed.has(id),
+        ),
+      };
+    }
     case "merge":
       return { kind: "remove", ids: [op.blockId] };
     case "delete":

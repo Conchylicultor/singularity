@@ -41,6 +41,7 @@ import {
 import { marksOfTextNode, type Mark } from "../../core";
 import {
   $linearCaretOffset,
+  $linearOffsetOfPoint,
   $paragraphsPlainLength,
   $placeCaretAtLinearOffset,
   $resolveLinearOffset,
@@ -597,6 +598,60 @@ function $childIndexAtDomOffset(node: ElementNode, hit: DomCaret): number {
   // list are the same list (one DOM node per inline child), so the hit offset IS
   // the index.
   return Math.min(Math.max(hit.offset, 0), size);
+}
+
+/**
+ * The linear offset (stored-runs basis) of the insertion point under the
+ * viewport point `(x, y)` inside `editor`'s content, WITHOUT moving any caret —
+ * where a drop at that point would land its text. Null when the point resolves
+ * outside this editor's root, or onto a node no linear offset describes (the
+ * root itself, which is a padded box rather than a position in the text).
+ *
+ * The same hit-test and the same Lexical-node translation `placeCaretAtColumn`
+ * lands a caret with, read instead of applied: a text hit is that text node's
+ * offset, a decorator hit is the side of the chip the point fell on, an element
+ * hit (an empty soft line) is the child index its DOM offset names.
+ */
+export function linearOffsetAtPoint(
+  editor: LexicalEditor,
+  x: number,
+  y: number,
+): number | null {
+  const root = editor.getRootElement();
+  const hit = caretFromPoint(x, y);
+  if (!root || !hit || !root.contains(hit.node)) return null;
+  // `editor.read`, not `getEditorState().read`: the DOM → node lookup needs
+  // this editor ACTIVE, and only the former makes it so.
+  return editor.read(() => {
+    const node = $getNearestNodeFromDOMNode(hit.node);
+    if (!node || $isRootNode(node)) return null;
+    const point = $createRangeSelection().anchor;
+    if ($isTextNode(node)) {
+      point.set(
+        node.getKey(),
+        Math.min(hit.offset, node.getTextContentSize()),
+        "text",
+      );
+      return $linearOffsetOfPoint(point);
+    }
+    const parent = node.getParent();
+    if ($isElementNode(node)) {
+      point.set(node.getKey(), $childIndexAtDomOffset(node, hit), "element");
+      return $linearOffsetOfPoint(point);
+    }
+    // A leaf that is not text (a decorator chip, a line break): an element
+    // point in its parent, before or after it by the side the point fell on.
+    if (!parent) return null;
+    const box = (
+      hit.node.nodeType === Node.ELEMENT_NODE
+        ? (hit.node as Element)
+        : hit.node.parentElement
+    )?.getBoundingClientRect();
+    const after = !box || x > (box.left + box.right) / 2;
+    const index = node.getIndexWithinParent() + (after ? 1 : 0);
+    point.set(parent.getKey(), index, "element");
+    return $linearOffsetOfPoint(point);
+  });
 }
 
 /**

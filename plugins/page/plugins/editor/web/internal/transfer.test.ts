@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   decideTransfer,
+  decodeBlocksPayload,
+  encodeBlocksPayload,
   readTransferText,
   type TransferDecision,
 } from "./transfer";
@@ -60,6 +62,20 @@ describe("decideTransfer", () => {
       expected: { kind: "markdown", text: "# H\n- a" },
     },
     {
+      // The user's case: a single paragraph copied with its line terminator is
+      // NOT inline — it goes to the forest door, which splices it into the
+      // caret's own line (a head-only splice), rather than being classified by
+      // how many paragraphs it parses to.
+      name: "a lone line WITH its terminator goes to the forest door",
+      opts: {
+        isFile: false,
+        blocksJson: "",
+        text: "The plugin system\n",
+        inline: true,
+      },
+      expected: { kind: "markdown", text: "The plugin system\n" },
+    },
+    {
       name: "a CRLF newline counts as a newline",
       opts: { isFile: false, blocksJson: "", text: "one\r\ntwo", inline: true },
       expected: { kind: "markdown", text: "one\r\ntwo" },
@@ -113,5 +129,44 @@ describe("readTransferText", () => {
 
   test("no text at all reads as the empty string", () => {
     expect(readTransferText(fakeTransfer({}))).toBe("");
+  });
+});
+
+describe("the BLOCKS_MIME payload envelope", () => {
+  const forest = [
+    { type: "page.text", data: { text: [] }, expanded: true, children: [] },
+  ];
+
+  test("what we write round-trips as whole blocks", () => {
+    expect(decodeBlocksPayload(encodeBlocksPayload(forest))).toEqual({
+      ok: true,
+      granularity: "blocks",
+      forest,
+    });
+  });
+
+  test("a pre-envelope bare array reads as whole blocks — every such payload was one", () => {
+    expect(decodeBlocksPayload(JSON.stringify(forest))).toEqual({
+      ok: true,
+      granularity: "blocks",
+      forest,
+    });
+  });
+
+  test("an envelope stating text granularity is kept as text", () => {
+    expect(
+      decodeBlocksPayload(JSON.stringify({ granularity: "text", forest })),
+    ).toEqual({ ok: true, granularity: "text", forest });
+  });
+
+  test("malformed JSON and unknown shapes are not our payload", () => {
+    expect(decodeBlocksPayload("{not json")).toEqual({ ok: false });
+    expect(decodeBlocksPayload('"a string"')).toEqual({ ok: false });
+    expect(
+      decodeBlocksPayload(JSON.stringify({ granularity: "lines", forest })),
+    ).toEqual({ ok: false });
+    expect(
+      decodeBlocksPayload(JSON.stringify({ granularity: "blocks" })),
+    ).toEqual({ ok: false });
   });
 });

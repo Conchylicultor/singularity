@@ -1,6 +1,66 @@
+import type { ForestGranularity, SerializedBlock } from "../../core";
+
 /** Custom clipboard MIME carrying a serialized block forest (round-trips full
  *  structure); `text/plain` carries a markdown fallback for external apps. */
 export const BLOCKS_MIME = "application/x-singularity-blocks+json";
+
+/**
+ * The `BLOCKS_MIME` payload: a forest AND what it was copied as.
+ *
+ * > A block copied WHOLE pastes as whole blocks — never merged into the text at
+ * > the caret.
+ *
+ * That is a fact about the COPY, so the copy states it and the payload carries
+ * it; a paste door cannot recover it from the forest's shape (one copied
+ * paragraph and one pasted line of text parse to the same node). `"blocks"` is
+ * every writer today — the block-selection copy and the bare-caret whole-block
+ * copy, both through `writeForestToClipboard`; a text-range copy is the
+ * BROWSER's and writes no `BLOCKS_MIME` at all. `"text"` is the arm a future
+ * writer copying a text range structurally would state.
+ */
+export interface BlocksPayload {
+  granularity: ForestGranularity;
+  forest: SerializedBlock[];
+}
+
+/** Encode a whole-block copy — the one granularity anything writes today. */
+export function encodeBlocksPayload(forest: SerializedBlock[]): string {
+  const payload: BlocksPayload = { granularity: "blocks", forest };
+  return JSON.stringify(payload);
+}
+
+/**
+ * Decode a `BLOCKS_MIME` payload. A bare ARRAY is the pre-envelope spelling and
+ * reads as `"blocks"`: every payload ever written that way came from a
+ * whole-block copy (`writeForestToClipboard` was its only writer). Malformed
+ * JSON, or a shape that is neither, is `{ ok: false }` — not our payload, so
+ * the door declines and the browser's default runs, as it always has.
+ */
+export function decodeBlocksPayload(
+  json: string,
+): ({ ok: true } & BlocksPayload) | { ok: false } {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
+    return { ok: false };
+  }
+  if (Array.isArray(raw))
+    return {
+      ok: true,
+      granularity: "blocks",
+      forest: raw as SerializedBlock[],
+    };
+  if (typeof raw !== "object" || raw === null) return { ok: false };
+  const { granularity, forest } = raw as Record<string, unknown>;
+  if (
+    (granularity !== "blocks" && granularity !== "text") ||
+    !Array.isArray(forest)
+  )
+    return { ok: false };
+  return { ok: true, granularity, forest: forest as SerializedBlock[] };
+}
 
 /**
  * The text a `DataTransfer` carries, read with the SAME fallback Lexical's own
@@ -27,8 +87,15 @@ export function readTransferText(data: DataTransfer): string {
  *  - `file`     — a FILE; the attachment path owns it.
  *  - `forest`   — a `BLOCKS_MIME` payload (a copied block forest) to JSON.parse.
  *  - `markdown` — text to parse into a block forest.
- *  - `inline`   — a single line landing at an insertion point; leave the native
- *                 inline paste/drop alone.
+ *  - `inline`   — newline-free text landing at an insertion point; leave the
+ *                 native inline paste/drop alone.
+ *
+ * What a door does with a forest depends on whether it HAS an insertion point,
+ * not on the arm: at one (a caret, a drop inside a block's text) the forest is
+ * SPLICED there (`planSplice`), and without one (block-selection mode, a drop
+ * outside any text) it lands as blocks after the anchor row. So a `markdown`
+ * decision does not mean "becomes new blocks" — `para⏎` at a caret splices into
+ * the caret's own line.
  */
 export type TransferDecision =
   | { kind: "file" }
@@ -39,11 +106,18 @@ export type TransferDecision =
 /**
  * Classify a transfer from its primitive fields.
  *
- * > A `DataTransfer` entering the page lands as BLOCKS unless it is a single
- * > line AND there is an inline insertion point that can absorb it.
+ * > A `DataTransfer` entering the page is parsed into a FOREST unless it is
+ * > newline-free text AND there is an inline insertion point to take it.
  *
  * A file wins outright; a block-forest payload beats text; text claims the
- * gesture as markdown unless both halves of the inline rule hold.
+ * gesture as markdown unless both halves of the inline rule hold. The inline
+ * arm is "no newline", not "one parsed paragraph": text without a line in it
+ * cannot carry structure, so the native insert is exactly right for it (and
+ * keeps url-paste, token-paste, `text/html` marks and the clipboard-insert
+ * guard working), while ANY text with a newline — a lone `para⏎` included —
+ * goes to the forest, whose door splices it at the point. Whatever the parse
+ * yields, the splice puts it at the point, so no parse can be mistaken for
+ * structure it does not have.
  *
  * `inline` is the caller's answer to *"is there an insertion point a single line
  * can land in?"* — true for a caret-in-block paste and for a drop whose target

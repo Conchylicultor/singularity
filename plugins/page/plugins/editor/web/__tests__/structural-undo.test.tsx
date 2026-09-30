@@ -93,6 +93,9 @@ const textHandle = defineBlock({
   schema: textBlockSchema({}),
   label: "Fixture text",
   empty: () => ({ text: [] }),
+  // The plain paragraph, so `splice` can absorb a leading one into its origin
+  // (`BlockOpContext.defaultTextType`) — the case every real paste takes.
+  defaultText: true,
 });
 const plugins = [
   {
@@ -117,7 +120,16 @@ beforeEach(() => {
   uuidCounter = 0;
   installFakeDocServer();
 });
-afterEach(cleanup);
+
+// Content owners a case started (`Harness.own`). Ended after every case: the
+// owner registry is module-level and keyed by block id, and ids restart at
+// `id-1` per case, so a leaked owner would be another case's block.
+const sessions: CollabSession[] = [];
+afterEach(async () => {
+  for (const session of sessions.splice(0)) session.end();
+  await new Promise<void>((resolve) => setTimeout(resolve, 1));
+  cleanup();
+});
 
 /**
  * The offscreen merge's two endpoints, stubbed: doc-init answers with a stored
@@ -243,6 +255,14 @@ interface Harness {
   ctx: () => Ctx;
   /** The seeded block id whose text is `text`. */
   id: (text: string) => string;
+  /**
+   * Give the seeded block `text` a live content owner holding that text — what
+   * a mounted editor gives the block the caret is in. For the mutations that
+   * edit the LIVE doc (a splice cuts its origin's), which refuse loudly without
+   * one. Memory transport, so the seed IS the doc and the owner is
+   * authoritative at once.
+   */
+  own: (text: string) => Promise<CollabSession>;
 }
 
 function mount(): Harness {
@@ -275,12 +295,24 @@ function mount(): Harness {
       return [runs[0]!.text, b.id] as const;
     }),
   );
+  const id = (text: string): string => {
+    const found = byText.get(text);
+    if (!found) throw new Error(`no seeded block with text "${text}"`);
+    return found;
+  };
   return {
     ctx,
-    id: (text) => {
-      const id = byText.get(text);
-      if (!id) throw new Error(`no seeded block with text "${text}"`);
-      return id;
+    id,
+    own: async (text) => {
+      const session = CollabSession.start(
+        id(text),
+        seedBytesFor([{ text }]),
+        "present",
+        false,
+      );
+      sessions.push(session);
+      await session.owner.provider.connect();
+      return session;
     },
   };
 }
@@ -302,7 +334,9 @@ const settle = () =>
  * run their thunks as floating promises and `split` defers its record a
  * microtask.
  */
-async function expectRecorded(run: (h: Harness) => void): Promise<void> {
+async function expectRecorded(
+  run: (h: Harness) => void | Promise<void>,
+): Promise<void> {
   const h = mount();
   const before = snapshot(h.ctx().blocks);
   expect(h.ctx().canUndo).toBe(false);
@@ -332,8 +366,38 @@ async function expectRecorded(run: (h: Harness) => void): Promise<void> {
 // Recorded mutations
 // ---------------------------------------------------------------------------
 
-const RECORDED: [name: string, run: (h: Harness) => void][] = [
+const RECORDED: [name: string, run: (h: Harness) => void | Promise<void>][] = [
   ["paste", (h) => h.ctx().paste({ blocks: [node("P")], afterId: h.id("B") })],
+  [
+    // A leading paragraph absorbed into the origin AND a block below it: the
+    // structural patch and the origin's doc edit are ONE entry, so undo takes
+    // the heading away and the `x` off `B` together.
+    "splice",
+    async (h) => {
+      await h.own("B");
+      h.ctx().splice({
+        blockId: h.id("B"),
+        position: 1,
+        runs: [{ text: "B" }],
+        blocks: [node("x"), { ...node("H"), type: "page/heading-1" }],
+        granularity: "text",
+      });
+    },
+  ],
+  [
+    // Whole blocks (a copied block): no merge, the copy lands after the line.
+    "splice (whole blocks)",
+    async (h) => {
+      await h.own("B");
+      h.ctx().splice({
+        blockId: h.id("B"),
+        position: 1,
+        runs: [{ text: "B" }],
+        blocks: [node("copy")],
+        granularity: "blocks",
+      });
+    },
+  ],
   [
     // TWO roots on purpose: one gesture is ONE `duplicate` op however many roots
     // it clones, so a per-root dispatch (N entries, N undos) fails the quadruple
@@ -404,6 +468,70 @@ describe("every editor mutation lands exactly one undo entry", () => {
       await expectRecorded(run);
     });
   }
+});
+
+describe("splice edits its origin's DOC inside the same entry", () => {
+  const docText = (session: CollabSession): string =>
+    session.owner
+      .runsNow()
+      .map((r) => r.text)
+      .join("");
+
+  it("one undo restores the origin's text and removes the pasted rows; redo re-applies both", async () => {
+    const h = mount();
+    const session = await h.own("B");
+    const before = snapshot(h.ctx().blocks);
+    await act(async () =>
+      h.ctx().splice({
+        blockId: h.id("B"),
+        position: 1,
+        runs: [{ text: "B" }],
+        blocks: [node("x"), node("y")],
+        granularity: "text",
+      }),
+    );
+    await settle();
+    // `B|` + `x⏎y`: the head joins the origin's line, the rest is a new row.
+    expect(docText(session)).toBe("Bx");
+    const after = snapshot(h.ctx().blocks);
+    expect(after.length).toBe(before.length + 1);
+
+    await act(async () => h.ctx().undo());
+    await settle();
+    expect(docText(session)).toBe("B");
+    expect(snapshot(h.ctx().blocks)).toEqual(before);
+    expect(h.ctx().canUndo).toBe(false);
+
+    await act(async () => h.ctx().redo());
+    await settle();
+    expect(docText(session)).toBe("Bx");
+    expect(snapshot(h.ctx().blocks)).toEqual(after);
+  });
+
+  it("a single-paragraph splice creates no row: it is one text entry", async () => {
+    const h = mount();
+    const session = await h.own("B");
+    const before = snapshot(h.ctx().blocks);
+    await act(async () =>
+      h.ctx().splice({
+        blockId: h.id("B"),
+        position: 0,
+        runs: [{ text: "B" }],
+        blocks: [node("pasted ")],
+        granularity: "text",
+      }),
+    );
+    await settle();
+    expect(docText(session)).toBe("pasted B");
+    // Rows are untouched (the row's text follows through the projection).
+    expect(snapshot(h.ctx().blocks)).toEqual(before);
+    expect(h.ctx().canUndo).toBe(true);
+
+    await act(async () => h.ctx().undo());
+    await settle();
+    expect(docText(session)).toBe("B");
+    expect(h.ctx().canUndo).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -484,6 +484,10 @@ seam in between passes the CONTEXT rather than a bare `anchorTypes` set, which i
 what makes a new reducer fact one field instead of one parameter on each of six
 signatures — and the reason `textBearingTypes` reached both sides at once.
 
+`defaultTextType` (the plain paragraph, for `splice`) is the third fact, derived
+the same way — `handles.find(h => h.defaultText)?.type` — so the reducer still
+names no block type.
+
 One asymmetry worth knowing: an ABSENT `textBearingTypes` means *no opinion*, not
 *nothing accepts text*. The empty-set default that is right for `anchorTypes`
 would refuse every merge on the page, so the refusal gates on presence and a
@@ -1924,7 +1928,9 @@ structure — no per-block Lexical history.
   one id both as a write and in `deleteIds` is a 400.
 
 **What is recorded:** all `dispatchOp` ops — which is now every structural
-mutation, `paste` / `duplicate` / `move` / `delete` / `bulkMove` included —
+mutation, `paste` / `duplicate` / `move` / `delete` / `bulkMove` included, and
+`splice` through its own executor (structural patch + origin `runsEdits`, or
+one text entry when it creates no row) —
 plus `convertTo` and non-text `data` edits (to-do `checked`, callout color, image
 src… — via `commitRow` with `coalesceKey: blockId`), each with an exact
 purely-computed after-state; text edits as the run tracker's data entries. The
@@ -1980,10 +1986,11 @@ and the caret one used to be paste-only. A `copy` with a collapsed caret reached
 
 > With NOTHING selected, the caret's own block IS the selection.
 
-So Cmd+C copies that block and its subtree, Cmd+X copies and removes it, and
-`BlockForestPastePlugin` already lands the payload after the block the caret is
-in — which makes "copy, paste, duplicated" two keystrokes without leaving the
-text. **A non-collapsed selection declines** (`return false`), so a real text
+So Cmd+C copies that block and its subtree, Cmd+X copies and removes it, and a
+caret Cmd+V of that payload lands it as WHOLE blocks right after the caret's line
+— its payload says it was copied whole (`granularity: "blocks"`, see *A paste
+lands AT the insertion point*), so it is never merged into the caret's text.
+"Copy, paste, duplicated" is two keystrokes without leaving the text. **A non-collapsed selection declines** (`return false`), so a real text
 range is still the browser's own inline copy, marks and all; the only case
 claimed is the one where the native gesture was a silent no-op. Both plugins sit
 at `COMMAND_PRIORITY_NORMAL`, above rich-text's `COMMAND_PRIORITY_EDITOR`
@@ -2115,16 +2122,18 @@ rather than merely moved:
 - the MARKUP arms (`application/x-lexical-editor`, `text/html`) are guarded
   here, at `SELECTION_INSERT_CLIPBOARD_NODES_COMMAND`, whatever the gesture;
 - the PLAIN-TEXT arm is classified away before the gesture reaches it —
-  `decideTransfer` sends multi-line text to `paste` as a block forest on a caret
-  paste (`BlockForestPastePlugin`), on a block-selection paste and on a DROP
-  (the container, below).
+  `decideTransfer` sends text with a newline to a block forest on a caret
+  paste (`BlockForestPastePlugin`, which SPLICES it at the caret), on a
+  block-selection paste and on a DROP (the container, below).
 
 ## The transfer door (one classifier, two gestures)
 
-> A `DataTransfer` entering the page is classified ONCE, by shape, and lands as
-> BLOCKS unless it is a single line AND there is an inline insertion point that
-> can absorb it. Paste and drop run the same classifier; the only difference
-> between them is where the insertion point comes from.
+> A `DataTransfer` entering the page is classified ONCE, by shape, and becomes a
+> FOREST unless it is newline-free text AND there is an inline insertion point to
+> take it. A forest at an insertion point is SPLICED there (see *A paste lands AT
+> the insertion point*); without one it lands as blocks after the anchor row.
+> Paste and drop run the same classifier; the only difference between them is
+> where the insertion point comes from — the caret, or the pointer.
 
 `internal/transfer.ts` is that classifier (`decideTransfer` → `file` / `forest` /
 `markdown` / `inline`), and it stays Lexical-free so `transfer.test.ts` can
@@ -2157,7 +2166,12 @@ forest/markdown cases — it would double-handle with the container's.
   over a block's own text shows no scrim and no insertion line, because we do
   not yet know whether it will land inline or as blocks. We decline the dragover
   there and let the contenteditable make the drop fire anyway; `onExternalDrop`
-  reads the bytes and claims it only if it turns out to carry newlines.
+  reads the bytes and claims it only if it turns out to carry newlines — and
+  then SPLICES it at the pointer: `insertionPointAt` hit-tests the block's own
+  text (`BlockTextSurgery.offsetAtPoint`, the read half of
+  `placeCaretAtColumn`'s hit-test, in the stored-runs basis) and reads its live
+  runs. A drop the hit-test cannot place (no text surface under the pointer)
+  lands as blocks at the pointer row, as a drop on the chrome does.
 - **A Lexical-marked drag is never claimed.** `application/x-lexical-drag`
   (`$writeDragSourceToDataTransfer` on `DRAGSTART`) means the editor is MOVING
   its own nodes, with Lexical's own source-removal semantics — cut-and-paste, not
@@ -2171,6 +2185,13 @@ forest/markdown cases — it would double-handle with the container's.
   non-editable area. An `inline` drop is left entirely to the browser — no
   `preventDefault` — so a single line still lands at the drop caret exactly as
   it always did.
+- **`inline` is "no newline", not "one parsed paragraph".** Text without a line
+  in it cannot carry structure, so the native insert is exactly right for it —
+  and keeping it native keeps url-paste, token-paste, `text/html` marks and
+  `BlockClipboardInsertPlugin` working. Everything else at an insertion point
+  is a splice, a lone `para⏎` included (a head-only splice: a text edit of the
+  caret's line). Whatever the parse yields, the splice puts it AT the point, so
+  "one parsed paragraph mistaken for structure" is no longer a class of bug.
 - **A dropped URL gets the paste's treatment, and CONSUMES the gesture.**
   `page/url-paste` registers `DROP_COMMAND` beside its `PASTE_COMMAND`: a bare
   URL pasted at a collapsed caret in any text block — or dropped into an EMPTY
@@ -2239,11 +2260,108 @@ array breaks silently**: reorder a traversal on one side and the two sides inser
   missing `afterId`) — guessing another parent would drop content somewhere the
   user never asked for.
 - `insertScopePageId` is shared by `applyInsert`/`applyPaste` — one page-scope rule.
+- **`paste` is the op WITHOUT an insertion point** — the block-selection
+  container paste (no caret) and a drop outside any text. A caret paste and a
+  drop into text are `splice`s, below; both mint through the one
+  `prepareForest` (`withPasteIds` + `claimCutPages` + `markCutsPasted`), so the
+  cut-sub-page rules cannot differ between them.
 
 `e2e/paste-optimistic-verify.ts` is the executable spec and does NOT trust
 latency: it stalls the op endpoint 4s and asserts the blocks render long before
 the server could answer, one op POST fires, the push neither duplicates nor drops
 them, and they survive a reload.
+
+### A paste lands AT the insertion point (`{ kind: "splice", … }`)
+
+> A forest pasted or dropped at an insertion point inside a block's text is
+> SPLICED there: the text before the point keeps its line and absorbs the
+> forest's leading paragraph; the text after the point goes to the end of the
+> forest's last paragraph; everything else lands in between. One op, one undo
+> entry, and client and server compute the same rows.
+
+It used to be a `paste` AFTER the caret's block, so every multi-line paste landed
+in the wrong place: `The plugin system⏎` into an empty line left that line empty
+above a new block; `a⏎b` at `foo|bar` gave `foobar`, `a`, `b`. The op
+(`core/block-ops.ts`, planned by `planSplice`) is split and paste fused —
+`runs`/`position`/`siblingType`/`tailData`/`tailId` mean what split's
+`runs`/`position`/`siblingType`/`tailData`/`newId` mean, and `forest` is
+paste's, ids minted client-side. With `[before, after] = splitRuns(runs,
+position)`:
+
+1. **Head.** A leading PLAIN paragraph — `BlockOpContext.defaultTextType`
+   (derived from the registry's `defaultText` handle, never named), no children;
+   nothing else has an inline form — merges into the origin: `before + head`.
+2. **Text only.** Nothing left over: the origin reads `before + head + after`.
+3. **Consume an empty origin.** Textless (no `before`, no head merged), plain,
+   and childless: the forest takes its slot, so `# Title⏎body` into an empty line
+   leaves no blank line above the title.
+4. **Body.** The rest lands where split puts its tail — `splitSlot`, the one
+   placement rule the two ops share: the origin's next siblings, or, at the END of
+   a line whose children are visible (where Enter nests), its first children.
+5. **Tail.** A non-empty `after` goes onto the last root when it is a childless
+   plain paragraph, else onto a tail row `tailId` of split's type and data. The
+   line holding it adopts the origin's visible children, as split's tail does.
+
+**What the forest was copied AS decides how it meets the line** — the op's
+required `granularity` (`ForestGranularity`), never inferred from the forest's
+shape (one copied paragraph and one pasted line of text parse to the same node):
+
+> A block copied WHOLE pastes as whole blocks — never merged into the caret's
+> text. Text (external text, markdown, a text range) is spliced into it.
+
+- **The copy states it; the payload carries it.** `BLOCKS_MIME` is an envelope,
+  `{ granularity, forest }` (`encodeBlocksPayload` / `decodeBlocksPayload`,
+  `internal/transfer.ts`). Its only writer, `writeForestToClipboard` — the
+  block-selection copy and the bare-caret whole-block copy — writes `"blocks"`;
+  a text-range copy is the browser's and writes no `BLOCKS_MIME` at all. A
+  pre-envelope bare array decodes as `"blocks"`, which is true of every one ever
+  written. Markdown and plain text reach the doors as `"text"`.
+- **Two placement rules, one per granularity.** `"text"` lands where a SPLIT puts
+  its tail (`splitSlot`, steps 1–5 above) — the text after the point travels with
+  the forest, so it needs split's adjacency. `"blocks"` lands where a PASTE puts a
+  forest (`insertForestAt` after the origin, i.e. after its whole subtree) with no
+  head and no tail merge (`planWholeLines`) — nothing is split. Both consume an
+  empty, plain, childless origin, so pasting into an empty line replaces it, and
+  a selected range is replaced either way (the origin takes `runs`, span cut).
+  It is one op with a mode rather than a routing to `paste`, because the
+  consumption and the range replacement are the insertion point's, and `paste`
+  has no insertion point.
+
+The caret lands at the end of what was pasted (`planSplice`'s `caret`: the
+holding line at `runsLength(line) - runsLength(after)`), and `opFocusId` reads
+the same answer for undo/redo. Refusals are split's (page row, anchor, text-less
+row) plus paste's missing anchor — the origin IS the anchor.
+
+**Text follows split's row/doc division.** Only the ORIGIN has a live `Y.Doc`,
+so the executor (`BlockEditorContext.splice`) dispatches the op, lands the caret
+on the new last line (a claim, like `focusNew`), and one microtask later brings
+the origin's doc to the text the reducer left on its row — `spliceOpenBlockDoc`
+inside the owner's `untracked` scope — recording BOTH on one entry (structural
+patch + origin `runsEdits`). Every other row is new and seeds from its creation
+`data.text`; the server writes rows only, as for split. A CONSUMED origin gets no
+doc edit (its row is trashed; `pinRestoredText` pins it for undo). A missing live
+owner throws: a splice only ever comes from a mounted text surface.
+
+**A splice that creates no row is not dispatched.** A single-paragraph paste is a
+text edit of the origin, and an existing block's text is doc-owned (*Text is
+doc-owned*) — so it is `recordDocEdit`'s one data entry, and no row op carries
+it. That is also what keeps the op's effect honest: `OpEffect.create` lists the
+rows the splice really CREATED (measured, so an absorbed head is never in it),
+and a dispatched splice always creates at least one.
+
+- **Inside a zoom, the root keeps its own rule.** The root's next siblings are
+  outside the view, so a splice on the root line would be refused whole; it
+  pastes as the root's first children instead (the text stays where it is).
+- **A stale model selection is Lexical's, not ours.** A paste is not in
+  `$internalCreateRangeSelection`'s DOM-resync allow-list (see *"Nothing
+  selected" is a question for the DOM*), so a paste fired in the same task as a
+  one-step selection gesture reads the pre-gesture caret — exactly as Lexical's
+  own native paste would.
+
+Spec: `core/block-ops.test.ts`'s `splice` suite, `structural-undo.test.tsx` (one
+entry, doc and rows together), `e2e/copy-paste-verify.ts` phases H–J and
+`e2e/drop-verify.ts` phases A and E. Design:
+[`research/2026-09-29-page-paste-splice-op.md`](../../../../research/2026-09-29-page-paste-splice-op.md).
 
 ### Duplicate is copy + paste-in-place (`{ kind: "duplicate", placements }`)
 
@@ -2453,7 +2571,8 @@ value it did not read from the owner.
 Row text is writable at block **creation** only: a brand-new id has no doc, so
 its row is that doc's only seed (`use-collab-block-doc.ts`). `insertAfter`,
 `BlockOp.insert.data`, `split.tailData`/`split.runs`/`merge.runs` and
-`BlockHandle.empty()` therefore keep taking text. An *edit* to an existing block
+`BlockHandle.empty()` therefore keep taking text — and so does `splice`, whose
+`runs` is split's and whose forest rows are brand-new. An *edit* to an existing block
 never does — and `RowData` (`core/row-data.ts`, `Record<string, unknown> &
 { text?: never }`) makes saying it a compile error, so `BlockEditorAPI.update` /
 `convertTo` cannot express "convert this block AND set its text".
@@ -4177,6 +4296,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockUpdate`
     - `ColorToken`
     - `CreateBlockBody`
+    - `ForestGranularity`
     - `IdentifiedBlock`
     - `InlineFormatContext`
     - `InlineFormatMatch`
@@ -4199,6 +4319,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `SerializedBlock`
     - `SetPageKindBody`
     - `SoftBreaks`
+    - `SpliceCaret`
     - `TextBearingSchema`
     - `TextData`
     - `TextRun`
@@ -4277,6 +4398,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `patchesFromDiff`
     - `plainOf`
     - `planForestInsert`
+    - `planSplice`
     - `prevVisibleLine`
     - `rankWindow`
     - `RichTextSchema`

@@ -75,8 +75,16 @@ export {
   runsOfNode,
   withRuns,
   blockOpContextOf,
+  planSplice,
 } from "./block-ops";
-export type { BlockOp, BlockOpContext, BlockNode, IsAnchor } from "./block-ops";
+export type {
+  BlockOp,
+  BlockOpContext,
+  BlockNode,
+  IsAnchor,
+  SpliceCaret,
+  ForestGranularity,
+} from "./block-ops";
 
 export {
   BlockPatchSchema,

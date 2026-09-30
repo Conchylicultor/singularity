@@ -1145,4 +1145,68 @@ describe("predictOp targets", () => {
     expect([...paste.targets].sort()).toEqual(["R", "R1", "R1a"]);
     expect(paste.effect).toEqual({ kind: "create", ids: ["R"] });
   });
+
+  // A splice's effect is the rows it CREATED, measured off the reducer: the
+  // leading paragraph it absorbed into the origin is named on the op but never
+  // becomes a row, so listing it would make the op unconfirmable; the tail is
+  // listed only when one was minted. Its targets still carry the origin (whose
+  // text it rewrites) and the child the landing line adopts.
+  test("splice: effect = the created roots (never the absorbed head); targets = origin + adopted + forest", () => {
+    const ctx = { defaultTextType: "text" };
+    const para = (id: string, text: string) => ({
+      id,
+      type: "text",
+      data: { text: [{ text }] },
+      expanded: true,
+      children: [],
+    });
+    const rows = [
+      mk("A", null, a, { runs: [{ text: "foobar" }], expanded: true }),
+      mk("K", "A", a),
+    ];
+    const absorbed = expectOpVars(
+      predictOp(
+        {
+          kind: "splice",
+          blockId: "A",
+          position: 3,
+          runs: [{ text: "foobar" }],
+          forest: [para("P1", "a"), para("P2", "b")],
+          granularity: "text",
+          tailId: "TAIL",
+        },
+        rows,
+        ctx,
+      ).vars,
+    );
+    expect(absorbed.effect).toEqual({ kind: "create", ids: ["P2"] });
+    expect(absorbed.targets.has("A")).toBe(true);
+    expect(absorbed.targets.has("K")).toBe(true);
+    expect(absorbed.targets.has("P2")).toBe(true);
+
+    const tailed = expectOpVars(
+      predictOp(
+        {
+          kind: "splice",
+          blockId: "A",
+          position: 3,
+          runs: [{ text: "foobar" }],
+          forest: [para("P1", "a"), { ...para("H", "h"), type: "heading" }],
+          granularity: "text",
+          tailId: "TAIL",
+        },
+        rows,
+        ctx,
+      ).vars,
+    );
+    expect(tailed.effect).toEqual({ kind: "create", ids: ["H", "TAIL"] });
+    // Not reflected before the server lands it; reflected once both rows exist.
+    expect(isReflected(rows, tailed.effect)).toBe(false);
+    expect(
+      isReflected(
+        [...rows, mk("H", null, after(a)), mk("TAIL", null, after(after(a)))],
+        tailed.effect,
+      ),
+    ).toBe(true);
+  });
 });

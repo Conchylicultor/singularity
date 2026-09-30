@@ -247,11 +247,17 @@ function focusRestoringSelection(editor: LexicalEditor, scroll: boolean): void {
  * block the user is ACTUALLY focused in, and files one caret-flight report. A
  * landing that may or may not happen later is exactly the absorbable failure the
  * `onLanded` contract exists to rule out.
+ *
+ * `place` replaces the default placement (restore the selection, else content
+ * start) on BOTH branches, for a caller that wants the caret somewhere specific
+ * in content that may not have arrived yet — a splice landing at the end of
+ * pasted text in a block the same gesture just created.
  */
 export function focusHydratingAware(
   editor: LexicalEditor,
   scroll = false,
   land?: Pick<CaretLandOptions, "onLanded" | "onLandingLost">,
+  place?: () => void,
 ): void {
   const empty = editor
     .getEditorState()
@@ -261,7 +267,8 @@ export function focusHydratingAware(
     // NORMAL path both for a freshly-split block (the tail is already in, no
     // selection yet → content start) and for a re-focus of the block the user
     // is already editing (selection present → restored untouched).
-    focusRestoringSelection(editor, scroll);
+    if (place) place();
+    else focusRestoringSelection(editor, scroll);
     land?.onLanded?.();
     return;
   }
@@ -276,10 +283,13 @@ export function focusHydratingAware(
       land?.onLandingLost?.();
       return;
     }
-    const hasSelection = editor
-      .getEditorState()
-      .read(() => $getSelection() !== null);
-    if (!hasSelection) focusRestoringSelection(editor, scroll);
+    if (place) place();
+    else {
+      const hasSelection = editor
+        .getEditorState()
+        .read(() => $getSelection() !== null);
+      if (!hasSelection) focusRestoringSelection(editor, scroll);
+    }
     land?.onLanded?.();
   });
 }

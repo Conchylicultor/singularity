@@ -10,8 +10,11 @@
 //   B2. Cmd+Z undoes exactly that paste, leaving the trailing empty block —
 //      paste is a recorded op, not a write that slips past the undo stack
 //      (research/2026-07-30-page-record-paste-and-bulkmove-on-the-undo-stack.md)
-//   C. caret-in-block paste of copied blocks inserts REAL blocks (new plugin)
-//   D. caret-in-block paste of external multi-line markdown splits into typed blocks
+//   C. caret-in-block paste of copied blocks inserts them as WHOLE blocks after
+//      the caret's line — a block copied whole is never merged into its text
+//   D. caret-in-block paste of external multi-line markdown splits into typed
+//      blocks — and, starting with a heading, REPLACES the empty line it was
+//      pasted into rather than landing below it
 //   E. block-selection paste anchors on the selection's document-order END, so an
 //      UPWARD-extended range is not split in half by its own copies
 //      (research/2026-07-16-page-paste-anchor-selection-end.md)
@@ -21,6 +24,12 @@
 //      `BlockClipboardInsertPlugin`. `decideTransfer` reads text/plain and declines
 //      such a payload, so before the guard it reached Lexical's own insert, which
 //      splits the paragraph. Real editors emit exactly this pair.
+//   H. the reported case: `The plugin system⏎` pasted into an EMPTY block lands
+//      in THAT block — no new block, the caret at the end of the text
+//   I. `a⏎b` pasted MID-line splices at the caret: `The |plugin system` →
+//      `The a`, `bplugin system`, the caret after `b`
+//   J. one Cmd+Z takes the whole splice back — the new row AND the origin's text
+//      — and Cmd+Shift+Z puts it back (research/2026-09-29-page-paste-splice-op.md)
 //
 // Usage: bun plugins/page/plugins/editor/e2e/copy-paste-verify.ts [--url <deploy>]
 import {
@@ -112,12 +121,13 @@ await withBrowser(async (h) => {
     "",
   ]);
 
-  // ---- C: caret-in-block paste of copied blocks (new Lexical plugin) ----------
+  // ---- C: caret-in-block paste of copied blocks lands them as whole blocks ----
   await block(4).click(); // caret inside "charlie"
+  await page.keyboard.press("End");
   await page.keyboard.press("Meta+v");
   await page.waitForTimeout(2000);
   r.eq(
-    "C: caret-in-block paste inserts real blocks after it",
+    "C: caret-in-block paste inserts the copied blocks whole, after the line",
     (await blockTexts()).slice(0, 8),
     ["alpha", "bravo", "alpha", "bravo", "charlie", "alpha", "bravo", ""],
   );
@@ -132,12 +142,11 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(2000);
 
   const tail = (await blockTexts()).slice(7);
-  r.eq("D: markdown lines became separate blocks", tail, [
-    "",
-    "Head",
-    "bullet",
-    "task done",
-  ]);
+  r.eq(
+    "D: markdown lines became separate blocks, replacing the empty line",
+    tail,
+    ["Head", "bullet", "task done"],
+  );
   const hasCheckbox = await page.evaluate(() =>
     [...document.querySelectorAll("[data-block-id]")].some((row) =>
       row.querySelector('[role="checkbox"], input[type="checkbox"]'),
@@ -149,11 +158,11 @@ await withBrowser(async (h) => {
   console.log("PAGE_URL " + page.url());
 
   // ---- E: an UPWARD-extended selection pastes after its end, not its head ------
-  // D left: alpha bravo alpha bravo charlie alpha bravo "" Head bullet "task done".
-  // Extending up from "charlie" (block 4) puts the range's HEAD on "bravo" (block
-  // 3) — the TOP of the run. Anchoring there is the defect: the copies would land
-  // between the two selected blocks (bravo, bravo', charlie', charlie).
-  await enterBlockSelection("E", 4, "Shift+ArrowUp"); // "charlie", extended UP to "bravo"
+  // D left: alpha bravo alpha bravo charlie alpha bravo Head bullet "task done".
+  // Extending up from "charlie" (block 4) puts the range's HEAD on "bravo"
+  // (block 3) — the TOP of the run. Anchoring there is the defect: the copies
+  // would land between the two selected blocks.
+  await enterBlockSelection("E", 4, "Shift+ArrowUp"); // extended UP to "bravo"
   await page.keyboard.press("Meta+c");
   await page.waitForTimeout(300);
   await checkSelectionOwnsFocus("E (paste)");
@@ -240,6 +249,7 @@ await withBrowser(async (h) => {
     ),
   );
   await editableBlocks(page).last().click();
+  await page.keyboard.press("End");
   await page.keyboard.press("Meta+v");
   await page.waitForTimeout(2000);
   const afterG = await blockTexts();
@@ -253,6 +263,99 @@ await withBrowser(async (h) => {
     "Run the installer.",
     "Then restart the server.",
   ]);
+
+  // ---- H: the reported case — a lone line into an EMPTY block fills it --------
+  // `The plugin system⏎` is what copying one line out of most editors puts on
+  // the clipboard. It used to land as a NEW block below, leaving the block the
+  // caret was in empty above it.
+  await editableBlocks(page).last().click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter"); // a fresh empty paragraph
+  await page.waitForTimeout(1000);
+  const beforeH = await blockTexts();
+  r.eq("H: setup ends in an empty block", beforeH.at(-1), "");
+  await page.evaluate(() =>
+    navigator.clipboard.writeText("The plugin system\n"),
+  );
+  await page.keyboard.press("Meta+v");
+  await page.waitForTimeout(2000);
+  const afterH = await blockTexts();
+  r.eq("H: the paste minted no block", afterH.length, beforeH.length);
+  r.eq("H: the text is in THAT block", afterH.at(-1), "The plugin system");
+  // The caret is at the end of the pasted text: typing continues the line.
+  await page.keyboard.type("!");
+  await page.waitForTimeout(1000);
+  r.eq(
+    "H: the caret sits at the end of the paste",
+    (await blockTexts()).at(-1),
+    "The plugin system!",
+  );
+  // Close the typing run (500 ms idle) so J's Cmd+Z reaches the splice, not it.
+  await page.waitForTimeout(1000);
+
+  // ---- I: a multi-line paste MID-line splices at the caret --------------------
+  // The caret is PLACED rather than walked there with Home + arrows: those
+  // proved unreliable in this position (the line's DOM caret stayed at 0), and
+  // where the caret comes from is not what this phase tests.
+  await editableBlocks(page).last().click();
+  await page.evaluate(() => {
+    const host = [
+      ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
+    ].at(-1);
+    const walker = host && document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+    const text = walker?.nextNode();
+    if (!text) throw new Error("I: no text node in the last block");
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    const range = document.createRange();
+    range.setStart(text, "The ".length);
+    range.collapse(true);
+    sel.addRange(range);
+  });
+  await page.evaluate(() => navigator.clipboard.writeText("a\nb"));
+  // Let the arrows' `selectionchange` reach Lexical's model first: a paste is
+  // not in the event set Lexical re-derives its selection from the DOM on, so a
+  // paste in the same task as the arrows would read the pre-arrow caret (the
+  // stated bound in CLAUDE.md's splice section) — not what this phase tests.
+  await page.waitForTimeout(300);
+  r.eq(
+    "I: setup — the DOM caret is after \"The \"",
+    await page.evaluate(() => {
+      const sel = window.getSelection();
+      const host = document.activeElement;
+      if (!sel || sel.rangeCount === 0 || !host) return "no selection";
+      const range = document.createRange();
+      range.setStart(host, 0);
+      range.setEnd(sel.anchorNode!, sel.anchorOffset);
+      return range.toString();
+    }),
+    "The ",
+  );
+  const beforeI = await blockTexts();
+  await page.keyboard.press("Meta+v");
+  await page.waitForTimeout(2000);
+  const afterI = await blockTexts();
+  r.eq("I: one block was added", afterI.length, beforeI.length + 1);
+  r.eq(
+    "I: the text before and after the caret wrapped the paste",
+    afterI.slice(-2),
+    ["The a", "bplugin system!"],
+  );
+  r.eq(
+    "I: the caret landed in the paste's last line",
+    await page.evaluate(() =>
+      (document.activeElement?.textContent ?? "").trim(),
+    ),
+    "bplugin system!",
+  );
+
+  // ---- J: ONE Cmd+Z takes the whole splice back --------------------------------
+  await page.keyboard.press("Meta+z");
+  await page.waitForTimeout(2000);
+  r.eq("J: Cmd+Z restores the line in one step", await blockTexts(), beforeI);
+  await page.keyboard.press("Meta+Shift+z");
+  await page.waitForTimeout(2000);
+  r.eq("J: Cmd+Shift+Z re-applies it", await blockTexts(), afterI);
 
   await r.finish();
 });
