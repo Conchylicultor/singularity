@@ -4,6 +4,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { MapOverlay, MapPin } from "../../core";
 import {
   GeoMap,
@@ -117,7 +118,7 @@ function GatedRenderer({
   renderer,
   props,
   useReadiness,
-}: GateProps & { useReadiness: () => MapRendererReadiness }) {
+}: GateProps & { useReadiness: Hook<() => MapRendererReadiness> }) {
   const readiness = useReadiness();
   switch (readiness) {
     case "pending":

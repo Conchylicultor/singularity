@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { MapOverlay, MapPin } from "../core";
 import { DefaultPin } from "./components/default-pin";
@@ -49,7 +50,7 @@ export interface MapRendererContribution {
    * literal, never conditionally): the host branches on whether it exists to
    * keep both arms rules-of-hooks clean.
    */
-  useReadiness?: () => MapRendererReadiness;
+  useReadiness?: Hook<() => MapRendererReadiness>;
 }
 
 /** What a pin component receives. */
