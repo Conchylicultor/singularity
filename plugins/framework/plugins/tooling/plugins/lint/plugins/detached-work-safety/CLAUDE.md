@@ -13,10 +13,18 @@ unrelated span's `selfMs` (or vanishing at boot).
   `void obj.foo()`, `void (async()=>{})()`). Deliberately **not** `void
   someIdentifier` (a bare promise variable that may be awaited/stored elsewhere):
   the primary false-positive cut.
-- **raw `setInterval`** — flagged unless its first arg is an inline
-  function whose body syntactically wires in a wrapper (`runTracked` /
-  `runWithoutProfiling` / `runInBackgroundLane`). A bare-reference callback
-  (`setInterval(tick, …)`) can't be inspected → flagged.
+
+## `no-raw-set-interval` (sibling rule)
+
+Raw `setInterval` in `/server/`, `/central/`, `/shared/` or `/bin/` code is
+banned **outright** — an inline `runTracked` wrapper no longer earns a pass. A
+periodic in-process loop is `defineTimer`
+([`infra/background/timer`](../../../../../../../infra/plugins/background/plugins/timer/CLAUDE.md)):
+it spans every tick, records its runs, surfaces a failing tick and lists the
+loop in Debug → Background activity. The exceptions (the timer implementation
+itself, Worker / child-process entries, the bin orphan guards, the file
+watcher's per-instance reconcile timer, the hand-started churn harness) are this
+plugin's `ignores` in `lint/index.ts`, each with its reason.
 
 **Deliberately NOT `setTimeout`** — debounce / backoff / one-shot uses dominate
 it, it is rarely the invisible-long-work class, and the file-watcher substrate

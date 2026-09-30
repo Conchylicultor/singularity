@@ -173,6 +173,8 @@ export async function launchTaskNow(
 // row does the same single check the N rows would have done.
 export const maybeLaunchTaskJob = defineJob({
   name: "tasks.maybe-launch",
+  description:
+    "Launches an agent for an armed task once it is unblocked, making sure exactly one launch happens per task.",
   // instant: indexed reads, then one transaction of indexed writes that
   // ENQUEUES `database.fork` + `conversations.spawn` (no attemptId ⇒ never the
   // synchronous reuse branch), so the agent launch itself is those jobs' hold,
@@ -280,6 +282,8 @@ export const maybeLaunchTaskJob = defineJob({
 // `event` argument, so the launch job cannot bind to the event directly.
 export const maybeLaunchOnStatusJob = defineJob({
   name: "tasks.maybe-launch-on-status",
+  description:
+    "Wakes the auto-launcher when an armed task's status changes, so a task starts as soon as its blockers resolve.",
   hold: "instant",
   input: z.object({}),
   dedup: "none",

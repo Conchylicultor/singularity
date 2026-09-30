@@ -13,6 +13,8 @@ import {
 // or restored file.
 export const importMidiFileJob = defineJob({
   name: "sonata.midi.import",
+  description:
+    "Imports one MIDI file from a watched folder into the Sonata library.",
   // instant: a local file read, an in-memory MIDI parse and indexed writes —
   // no network, no spawn, no model call. "Heavy" above is relative to the
   // watcher callback it was moved off, not to a worker slot.

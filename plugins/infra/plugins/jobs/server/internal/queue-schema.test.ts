@@ -73,6 +73,7 @@ async function rejection(p: Promise<unknown>): Promise<Error> {
  */
 const job = defineJob({
   name: "jobs.queue-schema-test",
+  description: "Test job.",
   hold: "instant",
   dedup: "none",
   input: z.object({ marker: z.string() }),

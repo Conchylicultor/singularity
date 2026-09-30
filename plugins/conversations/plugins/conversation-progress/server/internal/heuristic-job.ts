@@ -63,6 +63,8 @@ async function detectPhase(
 // worktree's git state — no LLM call needed.
 export const classifyProgressJob = defineJob({
   name: "conversation-progress.classify",
+  description:
+    "Works out whether a conversation is researching, designing or implementing by checking which files its branch has changed.",
   // seconds: three git subprocesses (merge-base / diff / ls-files), each bound
   // to this run's own `ctx.signal`. They are bounded local reads over one
   // worktree — not an open-ended step machine — so this is the class below

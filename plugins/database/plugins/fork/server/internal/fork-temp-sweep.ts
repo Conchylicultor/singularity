@@ -14,6 +14,8 @@ import {
 // so a single sweep covers all worktrees.
 export const forkTempSweepJob = defineJob({
   name: "database.fork-temp-sweep",
+  description:
+    "Drops half-finished temporary database copies left behind by interrupted worktree forks.",
   // instant: catalog queries plus a `DROP DATABASE` per orphan — no subprocess,
   // no dump/restore. The sweep runs beside `database.fork`, but it does none of
   // that job's work.

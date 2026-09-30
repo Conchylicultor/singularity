@@ -33,6 +33,12 @@ import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 export interface CorpusIndexSpec<TPartial> {
   /** Stable id → warmup name / profiler span (only used by {@link CorpusIndex.warmup}). */
   name: string;
+  /**
+   * What this index holds and why, in one present-tense sentence a user reads
+   * (e.g. "Indexes agent transcripts so usage stats load without rescanning
+   * every file."). Forwarded to the warm-up it declares.
+   */
+  description: string;
   /** Roots to enumerate. A function so callers can defer path resolution. */
   roots: string[] | (() => string[]);
   /** Predicate on a full path deciding whether a file belongs to the corpus. */
@@ -452,6 +458,7 @@ export function createCorpusIndex<TPartial>(
   function warmup(): Registration {
     return defineWarmup({
       name: spec.name,
+      description: spec.description,
       scope: spec.scope,
       run: async () => {
         await startWatcher();

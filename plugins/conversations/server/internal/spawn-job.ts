@@ -23,6 +23,8 @@ import { Runtime } from "./runtime";
 // and `pg_restore` run in parallel keyed by the same natural id.
 export const spawnConversationJob = defineJob({
   name: "conversations.spawn",
+  description:
+    "Creates the git worktree and starts the agent session for a new conversation.",
   // minutes: `setupWorktree` is a `git worktree add` checkout and
   // `runtime.create` opens a tmux session running the `claude` CLI. Nothing
   // shorter than the work bounds either.

@@ -32,6 +32,8 @@ import { reconcileDeployment } from "./reconcile";
  */
 export const compositionTickJob = defineJob({
   name: "build.composition-tick",
+  description:
+    "Re-checks whether compositions are out of date and schedules a build if so.",
   // instant: this handler re-derives the decision and at most re-enqueues the
   // debounced job. The build it may cause runs in `build.run.debounced`.
   hold: "instant",

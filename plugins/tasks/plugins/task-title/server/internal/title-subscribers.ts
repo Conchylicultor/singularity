@@ -4,6 +4,8 @@ import { scheduleTaskTitleUpgrade } from "./generate-title";
 
 export const titleOnConversationCreatedJob = defineJob({
   name: "task-title.on-conversation-created",
+  description:
+    "Improves a task's title from the first prompt of a newly created conversation.",
   // instant: `scheduleTaskTitleUpgrade` is fire-and-forget — the Haiku call it
   // starts runs detached, so it never holds this slot.
   hold: "instant",
@@ -25,6 +27,7 @@ export const titleOnConversationCreatedJob = defineJob({
 
 export const titleOnUserTurnSentJob = defineJob({
   name: "task-title.on-user-turn-sent",
+  description: "Improves a task's title from the user's latest message.",
   // instant: same fire-and-forget schedule as the job above.
   hold: "instant",
   input: z.object({}).passthrough(),

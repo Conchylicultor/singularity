@@ -14,10 +14,8 @@ import {
 } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { recordReport } from "@plugins/reports/server";
-import {
-  getRuntimeProfile,
-  runTracked,
-} from "@plugins/infra/plugins/runtime-profiler/core";
+import { getRuntimeProfile } from "@plugins/infra/plugins/runtime-profiler/core";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { queueHealthConfig } from "../../core";
 import { formatDurationMs } from "../../shared/format-duration";
 import { blockedTrip, sampleOf, type JobSpanSample } from "./profile-delta";
@@ -39,8 +37,8 @@ import { blockedTrip, sampleOf, type JobSpanSample } from "./profile-delta";
 //    not depend on the job system."
 //
 // This file is that doctrine applied to the alarm rather than the recovery, and
-// it is modeled on the sweeper byte for byte: module-level timer, start/stop
-// pair, `runTracked` wrapper, `.catch → console.warn`, plus an exported
+// it is modeled on the sweeper byte for byte: a `defineTimer`, start/stop
+// pair, `.catch → console.warn`, plus an exported
 // `queueHealthTickOnce()` for forcing a tick instead of waiting for the next
 // one (the sweeper's `sweepOnce`).
 //
@@ -97,7 +95,6 @@ const SLOT_BLOCKED_EVERY_N_TICKS = 10;
 // drains, its readyCount falls, which resets the candidate regardless.
 const HEAD_DRIFT_TOLERANCE_MS = 1_000;
 
-let timer: ReturnType<typeof setInterval> | null = null;
 let tickCount = 0;
 
 // The ONLY state the wedge detector carries: which slots were held at the last
@@ -130,22 +127,25 @@ const starvedCandidates = new Map<
 const lastJobSample = new Map<string, JobSpanSample>();
 let lastJobSampleAtMs = 0;
 
+export const queueHealthTimer = defineTimer({
+  name: "queue-health.watchdog",
+  description:
+    "Samples the job queue every 30 seconds and files a report when it wedges, starves, backs up, or a job hogs a slot.",
+  everyMs: TICK_MS,
+  run: () =>
+    // eslint-disable-next-line promise-safety/no-bare-catch
+    queueHealthTickOnce().catch((err) => {
+      console.warn("[queue-health] watchdog tick failed", err);
+    }),
+});
+
 export function startQueueHealthWatchdog(): void {
-  if (timer) return;
-  timer = setInterval(() => {
-    void runTracked("queue-health:tick", () =>
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      queueHealthTickOnce().catch((err) => {
-        console.warn("[queue-health] watchdog tick failed", err);
-      }),
-    );
-  }, TICK_MS);
+  queueHealthTimer.start();
 }
 
 export function stopQueueHealthWatchdog(): void {
-  if (timer) {
-    clearInterval(timer);
-    timer = null;
+  if (queueHealthTimer.running) {
+    queueHealthTimer.stop();
     // Drop the evidence with the timer. A restarted watchdog has not observed
     // anything yet, and a set of ids (or a head timestamp, or a counter
     // baseline) captured before a shutdown says nothing about the queue after

@@ -140,6 +140,7 @@ measured overhead on a real worktree workload is still an open task.
   - Uses:
     - `debug/slow-ops.readSlowOpMarkers`
     - `debug/stall-monitor.recordEventLoopStall`
+    - `infra/background/timer.defineTimer`
     - `infra/endpoints.implement`
     - `infra/host/host-read-pool.heavyReadQueueDepth`
     - `infra/paths.listWorktreeDirs`
@@ -158,6 +159,9 @@ measured overhead on a real worktree workload is still an open task.
     - `onHealthSample`
     - `onHostSample`
     - `onStackSamples`
+  - Register:
+    - `defineTimer('health.process-sampler')`
+    - `defineTimer('health.host-sampler')`
   - Routes: `GET /api/debug/health-monitor`
 - Core:
   - Uses: `debug/slow-ops.SlowOpMarkerSchema`

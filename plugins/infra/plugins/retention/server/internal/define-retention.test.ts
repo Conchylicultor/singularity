@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { defineRetention } from "./define-retention";
+import { defineRetention, retentionDescription } from "./define-retention";
 import { getGrowthBounds } from "./growth-bounds";
 
 // Throwaway physical schemas (no live DB). Each test uses a UNIQUE table name:
@@ -39,6 +39,23 @@ describe("defineRetention — coverage ⇔ mounted (G1 regression)", () => {
     const noColumn = pgTable("dr_no_column", { id: text("id").primaryKey() });
     expect(() => defineRetention({ table: noColumn, ttlDays: 7 })).toThrow(
       /no column "createdAt"/,
+    );
+  });
+});
+
+describe("retentionDescription", () => {
+  test("names the table readably and the TTL, and says nothing more", () => {
+    expect(retentionDescription("_reports", 30, false)).toBe(
+      "Deletes reports rows older than 30 days.",
+    );
+    expect(retentionDescription("entity_versions", 1, false)).toBe(
+      "Deletes entity versions rows older than 1 day.",
+    );
+  });
+
+  test("a scoped sweep says it deletes only matching rows", () => {
+    expect(retentionDescription("job_runs", 7, true)).toBe(
+      "Deletes matching job runs rows older than 7 days.",
     );
   });
 });

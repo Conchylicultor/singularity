@@ -73,6 +73,8 @@ const supersededRunLog: SupersededRunEntry[] = [];
  * and two runs never do. Its handler only records that it ran. */
 export const supersededProbe = defineJob({
   name: JOB_NAME,
+  description:
+    "Test probe that checks a job row replaced by a newer run is dropped rather than reported as a dead job.",
   hold: "instant",
   input: z.object({ run: z.string(), label: z.string() }),
   event: z.never(),

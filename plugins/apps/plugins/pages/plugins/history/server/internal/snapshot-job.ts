@@ -11,6 +11,7 @@ import { recordVersion } from "@plugins/history/plugins/engine/server";
  */
 export const pageSnapshotJob = defineJob({
   name: "pages.history.snapshot",
+  description: "Records a version of a page in its history after edits settle.",
   hold: "instant",
   input: z.object({ pageId: z.string() }),
   event: z.never(),

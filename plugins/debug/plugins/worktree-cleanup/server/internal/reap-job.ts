@@ -59,6 +59,8 @@ async function pMap<T>(
 // corrupt fork must not block the rest.
 export const worktreeReapJob = defineSupervisedJob({
   name: "worktree-cleanup.reap-stale",
+  description:
+    "Reclaims stale worktrees and orphaned forked databases, and reports any that could not be cleaned up.",
   input: z.object({}),
   channel: reapLog,
   schedule: { cron: "0 * * * *" }, // hourly

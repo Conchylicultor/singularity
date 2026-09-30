@@ -48,6 +48,7 @@ const THUMBNAIL_TTL_MS = 30 * 24 * 60 * 60 * 1000;
  */
 export const renderThumbnailJob = defineJob({
   name: "prototypes.render-thumbnail",
+  description: "Renders a prototype's preview picture for the gallery.",
   // minutes: a chromium launch plus a page render, bounded by nothing shorter
   // than the work. Orthogonal to `serial` below — that bounds how many run at
   // once, this bounds how long one may hold a slot.
@@ -134,6 +135,8 @@ export const renderThumbnailJob = defineJob({
  */
 export const sweepThumbnailsJob = defineJob({
   name: "prototypes.sweep-thumbnails",
+  description:
+    "Deletes prototype preview pictures that have gone unused so the cache stays small.",
   hold: "instant",
   // Cron payloads are built from `input.parse({})`, so this must parse `{}`.
   input: z.object({}),

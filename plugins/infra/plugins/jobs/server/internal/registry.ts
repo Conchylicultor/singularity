@@ -3,7 +3,10 @@ import type { TaskSpec } from "graphile-worker";
 import type { PoolClient } from "pg";
 import { z } from "zod";
 import { queryOne } from "@plugins/database/plugins/sql-rows/core";
-import type { Registration } from "@plugins/framework/plugins/server-core/core";
+import {
+  registeringPlugin,
+  type Registration,
+} from "@plugins/framework/plugins/server-core/core";
 import {
   ceilingMsFor,
   priorityFor,
@@ -138,6 +141,18 @@ export interface JobCtx {
 
 export interface RegisteredJob {
   name: string;
+  /** What the job does and why, for a person — see the field's doc on
+   * {@link DefineJobSpec}. */
+  description: string;
+  /** The factory that declared the job: `defineJob`, or the wrapper named in
+   * the spec's `factory` (`defineRetention`, `defineSupervisedJob`). */
+  factory: string;
+  /** Queue plumbing rather than work a person would recognise — see the
+   * field's doc on {@link DefineJobSpec}. */
+  internal: boolean;
+  /** The plugin whose `register` array mounted the job, or `null` when it was
+   * registered outside the framework's register phase (a test). */
+  declaredIn: string | null;
   /** Duration class declared via `defineJob({ hold })` — see the field's doc on
    * {@link DefineJobSpec}. Read by the worker to pick the graphile task and
    * priority a row is inserted on, and by the slow-op pipeline for the class's
@@ -289,6 +304,29 @@ interface BaseJobSpec<
   E extends z.ZodType,
 > {
   name: N;
+  /**
+   * What this job does and why, in one present-tense sentence a user reads —
+   * the app runs it on its own, so this is how a person learns it exists.
+   * Say the effect and its purpose, not the code name or the mechanism:
+   * "Downloads the IP-to-country database used to place visitors on the
+   * analytics map." — not "Runs geoip.refresh" nor "Calls fetch and writes
+   * the mmdb". Trigger, schedule and scope are derived from the rest of the
+   * spec; do not repeat them here.
+   */
+  description: string;
+  /**
+   * Set only by a factory that wraps `defineJob` (`defineRetention`,
+   * `defineSupervisedJob`) to its own name, so a reader of the registry can
+   * tell a cleanup sweep or a detached child from a plain job without a list
+   * of names. A direct `defineJob` caller leaves it out.
+   */
+  factory?: string;
+  /**
+   * Queue plumbing — the events dispatcher, the durable-workflow resumer —
+   * rather than work a person would recognise as the app doing something. The
+   * Background activity page hides it by default. Everything else is shown.
+   */
+  internal?: boolean;
   /**
    * The timescale one RUN of this handler occupies a worker slot. Not workflow
    * duration: `ctx.waitFor` / `ctx.sleep` RETURN from `run` and release the slot,
@@ -586,6 +624,9 @@ export function defineJob<
 >(spec: DefineJobSpec<N, S, E>): JobFactory<N, S, E> {
   // The type requires a reason for `minutes`; an empty string satisfies
   // the type and states nothing, so it is refused here, at define time.
+  if (spec.description.trim() === "") {
+    throw new Error(`[jobs] ${spec.name}: \`description\` must not be empty`);
+  }
   if (spec.hold === "minutes" && spec.inProcess.trim() === "") {
     throw new Error(
       `[jobs] ${spec.name}: hold "minutes" needs a non-empty \`inProcess\` ` +
@@ -712,7 +753,7 @@ export function defineJob<
     eventSchema: spec.event,
     _kind: "job",
     _factory: "defineJob",
-    _doc: { label: spec.name },
+    _doc: { label: spec.name, detail: spec.description },
     enqueue: enqueue as JobFactory<N, S, E>["enqueue"],
     register() {
       if (jobRegistry.has(spec.name)) {
@@ -735,6 +776,10 @@ export function defineJob<
       }
       jobRegistry.set(spec.name, {
         name: spec.name,
+        description: spec.description,
+        factory: spec.factory ?? "defineJob",
+        internal: spec.internal === true,
+        declaredIn: registeringPlugin(),
         hold: spec.hold,
         inputSchema: spec.input,
         eventSchema: spec.event,
@@ -782,6 +827,27 @@ export function getJobSlowThresholdMs(name: string): number | undefined {
  * plugin this composition does not load). */
 export function getJobHold(name: string): HoldClass | undefined {
   return jobRegistry.get(name)?.hold;
+}
+
+/** Every job registered in this backend, in registration order. */
+export function listRegisteredJobs(): RegisteredJob[] {
+  return [...jobRegistry.values()];
+}
+
+/**
+ * The crontab a scheduled job resolves to RIGHT NOW: the literal, or the
+ * resolver's answer (`null` ⇒ the schedule is disabled). `null` for an
+ * unscheduled job too — the caller asks this only of a job with a `schedule`.
+ * The one reading of a schedule, shared by the cron install and every display
+ * of it, so they cannot disagree about whether a job is scheduled.
+ */
+export function resolveJobCron(job: RegisteredJob): string | null {
+  const { schedule } = job;
+  if (!schedule) return null;
+  const cron =
+    typeof schedule.cron === "function" ? schedule.cron() : schedule.cron;
+  if (!cron || !cron.trim()) return null;
+  return cron.trim();
 }
 
 // Every registered job that declared a recurring `schedule`. The worker reads

@@ -18,6 +18,8 @@ const detachedSleepLog = defineLogSink({
 
 export const detachedSleep = defineSupervisedJob({
   name: "events-test.detached-sleep",
+  description:
+    "Test probe that sleeps in a detached child process to verify supervised jobs survive a backend restart and fail as configured.",
   input: z.object({
     seconds: z.number().int().min(0).max(3600).default(90),
     fail: z.enum(["none", "retryable", "non-retryable"]).default("none"),

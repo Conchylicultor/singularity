@@ -18,6 +18,9 @@ import { _jobWaits } from "./tables";
 // racer.
 export const jobsResumeJob = defineJob({
   name: "jobs.resume",
+  description:
+    "Wakes a job that was waiting on an event or a timer by re-queueing it with its original input.",
+  internal: true,
   // Resolve a wait row and re-enqueue the target — two indexed DB writes and an
   // insert. No network, no spawn; the target's own execution lands in whatever
   // class the target declares, so routing must never queue behind heavy work.

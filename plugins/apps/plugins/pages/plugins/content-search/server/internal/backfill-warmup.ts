@@ -9,6 +9,8 @@ import { backfillPagesSearchJob } from "./backfill-job";
 // body only enqueues; the (now incremental) scan runs in the job.
 export const pagesSearchBackfillWarmup = defineWarmup({
   name: "pages.search.backfill",
+  description:
+    "Starts a catch-up pass at boot so every existing page is searchable.",
   scope: "worktree",
   run: async () => {
     await backfillPagesSearchJob.enqueue({});

@@ -7,6 +7,8 @@ import { _improvePendingGroups } from "./tables";
 
 export const applyGroupJob = defineJob({
   name: "improve.apply-group",
+  description:
+    "Adds a newly started conversation to the group chosen when its improvement task was filed.",
   hold: "instant",
   input: z.object({}),
   dedup: "none",

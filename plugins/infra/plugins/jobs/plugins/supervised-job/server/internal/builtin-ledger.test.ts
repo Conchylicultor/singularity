@@ -57,6 +57,7 @@ describe("builtinKindIdFor", () => {
   test("defineSupervisedJob derives the kind id for a job with no ledger", () => {
     const job = defineSupervisedJob({
       name: "supervised-job.test.derived-kind",
+      description: "Test job.",
       input: z.object({}),
       channel: { publishAll: () => {} } as unknown as LogChannel,
       argv: () => ({ argv: ["true"] }),

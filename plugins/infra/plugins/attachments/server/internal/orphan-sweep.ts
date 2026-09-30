@@ -17,6 +17,8 @@ const log = Log.channel("attachments");
 // running this per-worktree would race N sweeps over the same global dir.
 export const orphanSweepJob = defineJob({
   name: "attachments.orphan-sweep",
+  description:
+    "Deletes uploaded files that nothing references any more once they are past a grace period.",
   // instant: one bounded DELETE plus an unlink per reclaimed file. The 2.2s hold
   // this shows in the profile is almost entirely admission-gate wait — 62ms of it
   // is work — and the class is declared from the work.

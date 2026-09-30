@@ -5,6 +5,7 @@ import { listConversationsForInfra } from "@plugins/tasks/plugins/tasks-core/ser
 import { db, isTransientDbError } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
@@ -19,22 +20,23 @@ const POLL_MS = 5_000;
 // conversationId → unsubscribe
 const subscriptions = new Map<string, () => void>();
 
-let timer: ReturnType<typeof setInterval> | null = null;
+// Real polling for which conversations are active: a timer so it is visible
+// in Background activity while it waits for a push replacement.
+export const turnEmitterTimer = defineTimer({
+  name: "conversations.turn-emitter",
+  description:
+    "Follows the transcript of every active conversation so a finished agent turn is announced to whatever waits on it.",
+  everyMs: POLL_MS,
+  immediate: true,
+  run: tick,
+});
 
 export function startTurnEmitter(): void {
-  if (timer) return;
-  void runTracked("conversations:turn-emitter", () => tick());
-  timer = setInterval(
-    () => void runTracked("conversations:turn-emitter", () => tick()),
-    POLL_MS,
-  );
+  turnEmitterTimer.start();
 }
 
 export function stopTurnEmitter(): void {
-  if (timer) {
-    clearInterval(timer);
-    timer = null;
-  }
+  turnEmitterTimer.stop();
   for (const unsub of subscriptions.values()) unsub();
   subscriptions.clear();
 }

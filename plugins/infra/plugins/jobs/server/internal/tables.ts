@@ -106,3 +106,50 @@ export const _deadJobs = pgTable(
     index("dead_jobs_died_at_idx").on(t.diedAt),
   ],
 );
+
+// How a recorded run ended. `suspended` is a durable workflow that returned to
+// wait (`ctx.waitFor` / `ctx.sleep`, or a supervised job handing its work to a
+// detached child): graphile saw a success, but the work is not over — its
+// resumed run records the real verdict as a run of its own.
+export const JobRunOutcomeSchema = z.enum(["succeeded", "failed", "suspended"]);
+
+// Run history, part 1: ONE row per job name, the latest run and two counters.
+// Bounded by construction — the key is the job name, so the table holds at
+// most one row per job this database has ever run. No retention sweep (and no
+// jobs → retention cycle). Written from graphile's `job:complete` event (see
+// run-stats.ts), never read by the queue itself.
+export const _jobRunStats = pgTable("job_run_stats", {
+  jobName: text("job_name").primaryKey(),
+  lastStartedAt: timestamp("last_started_at", { withTimezone: true }).notNull(),
+  lastFinishedAt: timestamp("last_finished_at", {
+    withTimezone: true,
+  }).notNull(),
+  lastOutcome: parsedText("last_outcome", JobRunOutcomeSchema).notNull(),
+  lastError: text("last_error"),
+  lastDurationMs: integer("last_duration_ms").notNull(),
+  // Null until the job has succeeded at least once.
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  runs: integer("runs").notNull(),
+  failures: integer("failures").notNull(),
+});
+
+// Run history, part 2: the last `RECENT_RUNS_RING` runs of each job, as a ring —
+// run number `seq` lands in `slot = (seq - 1) % RECENT_RUNS_RING` and overwrites
+// whatever run held that slot. Bounded by construction at ring × job names.
+export const _jobRecentRuns = pgTable(
+  "job_recent_runs",
+  {
+    jobName: text("job_name").notNull(),
+    slot: integer("slot").notNull(),
+    // The run's number (the stats row's `runs` after it was counted) — the
+    // ring's order, since a slot says nothing about recency once it wraps.
+    seq: integer("seq").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }).notNull(),
+    outcome: parsedText("outcome", JobRunOutcomeSchema).notNull(),
+    error: text("error"),
+    durationMs: integer("duration_ms").notNull(),
+    attempt: integer("attempt").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.jobName, t.slot] })],
+);

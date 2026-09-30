@@ -50,6 +50,8 @@ export async function scanAttachmentFlags(
 
 export const attachmentScanJob = defineJob({
   name: "mail.attachment-scan",
+  description:
+    "Flags recent messages that have attachments so mail lists can show attachment icons.",
   // seconds: bounded Gmail `messages.list` paging (capped at
   // MAX_ATTACHMENT_SCAN_PAGES), each request under `gmailRequest`'s deadline.
   hold: "seconds",

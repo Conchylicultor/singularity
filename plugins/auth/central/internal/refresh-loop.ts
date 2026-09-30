@@ -1,4 +1,4 @@
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/central";
 import { listProviders } from "./registry";
 import { getAccount } from "./token-store";
 import { getAccessTokenInternal } from "./token-access";
@@ -6,22 +6,23 @@ import { getAccessTokenInternal } from "./token-access";
 const TICK_INTERVAL_MS = 60_000;
 const REFRESH_LEAD_MS = 5 * 60 * 1000;
 
-// biome-ignore lint/suspicious/noExplicitAny: Bun timer interop.
-let timer: any = null;
+// Central has no job queue, so this periodic refresh is a timer — listed in
+// Background activity (central half).
+export const authRefreshTimer = defineTimer({
+  name: "auth.refresh",
+  description:
+    "Refreshes connected OAuth accounts' access tokens shortly before they expire, so apps never hit an expired token.",
+  everyMs: TICK_INTERVAL_MS,
+  unref: true,
+  run: tick,
+});
 
 export function startRefreshLoop(): void {
-  if (timer) return;
-  timer = setInterval(() => {
-    void runTracked("auth:refresh", () => tick());
-  }, TICK_INTERVAL_MS);
-  if (timer && typeof timer.unref === "function") timer.unref();
+  authRefreshTimer.start();
 }
 
 export function stopRefreshLoop(): void {
-  if (timer) {
-    clearInterval(timer);
-    timer = null;
-  }
+  authRefreshTimer.stop();
 }
 
 async function tick(): Promise<void> {
@@ -36,7 +37,7 @@ async function tick(): Promise<void> {
     // await but swallow errors (logged inside on failure).
     try {
       await getAccessTokenInternal({ providerId: provider.id });
-    // eslint-disable-next-line promise-safety/no-bare-catch
+      // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       /* errors are persisted to the account.lastRefreshError field */
     }

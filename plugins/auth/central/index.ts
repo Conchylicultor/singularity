@@ -8,6 +8,7 @@ import { handleGetState } from "./internal/handlers/state";
 import { handleGetToken } from "./internal/handlers/token";
 import { authStateServed } from "./internal/auth-resource";
 import { onReady } from "./internal/boot";
+import { authRefreshTimer } from "./internal/refresh-loop";
 import {
   oauthStart,
   oauthCallback,
@@ -65,5 +66,6 @@ export default {
     [getToken.route]: handleGetToken,
   },
   resources: [authStateServed],
+  register: [authRefreshTimer],
   onReady,
 } satisfies CentralPluginDefinition;

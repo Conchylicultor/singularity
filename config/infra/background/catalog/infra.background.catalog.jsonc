@@ -1,0 +1,54 @@
+// @hash 6ec84829688d
+// Grouped by kind (Scheduled / On event / On demand / Cleanup), the way the
+// page answers "what runs, and when?". Internal queue plumbing (the events
+// dispatcher, the workflow resumer) is filtered out of the default view and
+// kept under Everything; Failing is the one a person acts on.
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "group", "groupingId": "value" },
+        "sort": [{ "fieldId": "description", "direction": "asc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-shown",
+          "conjunction": "and",
+          "children": [
+            { "kind": "rule", "id": "r-shown", "fieldId": "visibility", "operatorId": "is", "value": "shown" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "failing",
+      "name": "Failing",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "lastRun", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-failed",
+          "conjunction": "and",
+          "children": [
+            { "kind": "rule", "id": "r-failed", "fieldId": "status", "operatorId": "is", "value": "failed" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "everything",
+      "name": "Everything",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "group", "groupingId": "value" },
+        "sort": [{ "fieldId": "description", "direction": "asc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

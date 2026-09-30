@@ -20,6 +20,8 @@ const FINALIZE_TIMEOUT_MS = 60_000;
 // missed event) shouldn't strand the conversation.
 export const exitCleanFinalizeJob = defineJob({
   name: "push_and_exit.exit_clean_finalize",
+  description:
+    "Closes a conversation after the agent signals a clean exit, once its current turn ends, and notifies the user.",
   // seconds — and NOT `minutes`, despite FINALIZE_TIMEOUT_MS being 60s: that
   // number bounds a `ctx.waitFor`, which RETURNS from `run` and releases the
   // slot. The wait costs no hold at all. What this classifies is the resumed

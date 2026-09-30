@@ -28,6 +28,8 @@ const GONE_RANK_TTL_DAYS = 30;
 // `hibernateIdleJob`: only main owns the canonical conversation rows.
 export const sweepGoneRanksJob = defineJob({
   name: "queue.sweep-gone-ranks",
+  description:
+    "Removes queue positions of conversations that have been gone for over 30 days.",
   hold: "instant",
   input: z.object({}),
   event: z.never(),

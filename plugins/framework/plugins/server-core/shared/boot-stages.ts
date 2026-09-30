@@ -3,8 +3,8 @@ import {
   computeLoadWaves,
   topoSortPlugins,
 } from "@plugins/framework/plugins/plugin-loader/core";
-// eslint-disable-next-line runtime-isolation/no-deep-own-folder-import -- the boot-mode SETTER stays off the core barrel on purpose (only the boot sequence may call it), and server-core ships no browser bundle
-import { setBootMode } from "../core/boot-mode";
+// eslint-disable-next-line runtime-isolation/no-deep-own-folder-import -- the boot-mode and registering-plugin SETTERS stay off the core barrel on purpose (only the boot sequence may call it), and server-core ships no browser bundle
+import { setBootMode, setRegisteringPlugin } from "../core/boot-mode";
 import {
   assertPreloadedResourcesDeclared,
   collectContributions,
@@ -238,12 +238,14 @@ async function runRegisterPhase(ordered: LoadedServerPlugin[]): Promise<void> {
   for (const p of ordered) {
     for (const r of p.register ?? []) {
       const end = profilerStart(`register:${p.id}`, "register", p.id, p.id);
+      setRegisteringPlugin(p.id);
       try {
         await r.register();
       } catch (err) {
         console.error(`[plugin.${p.id}] register failed`, err);
         throw err;
       } finally {
+        setRegisteringPlugin(null);
         end();
       }
     }

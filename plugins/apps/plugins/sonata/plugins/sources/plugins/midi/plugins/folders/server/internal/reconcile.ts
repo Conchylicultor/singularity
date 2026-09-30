@@ -64,6 +64,8 @@ export function watchedDirsSync(): string[] {
 // and computing its own delta in memory.
 const midiIndex = defineCorpusIndex({
   name: "sonata.midi-folders",
+  description:
+    "Remembers which MIDI files exist in the watched folders so changes can be detected quickly without rescanning.",
   roots: watchedDirsSync,
   match: (p) => MIDI_EXTENSIONS.has(extname(p).toLowerCase()),
   indexPath: sonataDir.file("midi-folders-index.json"),
@@ -178,6 +180,8 @@ export async function reconcile(): Promise<void> {
 // `reconcile()` re-runs `ensureFresh()`.
 export const midiFoldersWarmup = defineWarmup({
   name: "sonata.midi-folders.reconcile",
+  description:
+    "Catches up the Sonata library with MIDI files added, changed or removed in watched folders while the app was off.",
   scope: "worktree",
   run: reconcile,
 });

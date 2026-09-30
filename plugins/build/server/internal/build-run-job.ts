@@ -4,6 +4,8 @@ import { reconcileDeployment } from "./reconcile";
 
 export const buildRunJob = defineJob({
   name: "build.run",
+  description:
+    "Decides whether any composition needs rebuilding when the deployment target moves, and schedules the build.",
   // instant: this handler re-derives the build decision (a memoized deployment
   // read plus one indexed ledger read per SERVED composition, in `decideBuilds`)
   // and at most re-enqueues the debounced job. The build it eventually causes

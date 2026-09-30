@@ -33,3 +33,33 @@ export function getBootMode(): BootMode {
   }
   return mode;
 }
+
+// ── The plugin being registered ─────────────────────────────────────────────
+//
+// Kept beside the boot mode for the same reason: its SETTER belongs to the boot
+// sequence alone, so it stays off the core barrel (only the getter is exported).
+//
+// The register phase is sequential (`runRegisterPhase` in
+// `../shared/boot-stages.ts` awaits each token before the next), so "the plugin
+// being registered" is a single well-defined value for the whole of a
+// `Registration.register()` call — including an async one that awaits inner
+// tokens (a wrapper registering the job it wraps). A registry records it so it
+// can later say WHERE an entry was declared (the Background activity page's
+// "Declared in"), without every factory taking the plugin id as an argument it
+// could get wrong.
+//
+// `null` outside the register phase: a token registered by hand (a test calling
+// `job.register()` directly) was declared by no plugin the framework knows of.
+let registering: string | null = null;
+
+/** Set by the framework around each plugin's registrations. Never call it from
+ * plugin code. */
+export function setRegisteringPlugin(pluginId: string | null): void {
+  registering = pluginId;
+}
+
+/** The id of the plugin whose `register` tokens are being run, or `null`
+ * outside the register phase. Read it inside `Registration.register()`. */
+export function registeringPlugin(): string | null {
+  return registering;
+}

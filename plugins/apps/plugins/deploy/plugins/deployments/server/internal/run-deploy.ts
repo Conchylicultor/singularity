@@ -113,6 +113,8 @@ const deployRunJobInput = z.object({ runId: z.string() });
  */
 export const deployRunJob = defineSupervisedJob({
   name: "deploy.run",
+  description:
+    "Deploys a composition to its server, preparing the machine then shipping the release, and records the outcome.",
   input: deployRunJobInput,
   channel: deployLog,
   hold: "seconds",

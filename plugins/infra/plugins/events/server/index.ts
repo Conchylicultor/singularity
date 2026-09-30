@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { eventsDispatchJob } from "./internal/dispatch-job";
+import { jobEventTriggerSource } from "./internal/background-trigger-source";
 import { jobsHooksRegistration } from "./internal/install-jobs-hooks";
 import {
   handleListEmissions,
@@ -43,7 +44,7 @@ export { Trigger } from "./internal/trigger-contributions";
 
 export default {
   description:
-    "Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().",
+    "Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.",
   loadBearing: true,
   httpRoutes: {
     [listEmissions.route]: handleListEmissions,
@@ -55,6 +56,7 @@ export default {
   contributions: [
     ...eventEmissionsServed.declare,
     ...eventTriggersServed.declare,
+    jobEventTriggerSource,
   ],
   onReady: async () => {
     await syncTriggerContributions();

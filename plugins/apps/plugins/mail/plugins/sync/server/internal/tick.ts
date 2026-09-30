@@ -26,6 +26,8 @@ import { mailSyncLog } from "./sink";
 // errored accounts are left alone.
 export const syncTickJob = defineJob({
   name: "mail.sync-tick",
+  description:
+    "Finds the mail accounts ready to sync and queues an incremental sync for each.",
   // instant, and it looks slow twice over. The body only selects accounts and
   // enqueues a delta per account — every Gmail call happens in `mail.delta`,
   // not here. Its measured ~1.5s mean is ~85% `background-acquire` wait, which

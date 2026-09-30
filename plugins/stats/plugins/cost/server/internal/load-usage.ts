@@ -111,6 +111,8 @@ const PRICE_TABLE_PATH = costUsageDir.file("price-table.json");
 // and why every read merges the two.
 const costIndex = defineCorpusIndex<FilePartial>({
   name: "stats.cost.usage",
+  description:
+    "Indexes the token usage recorded in agent transcripts so cost stats can be computed quickly.",
   roots: [CLAUDE_PROJECTS_DIR],
   match: (p) => p.endsWith(".jsonl"),
   parse: parseTranscript,
@@ -269,6 +271,8 @@ export async function captureCostHistory(): Promise<void> {
 // serves correctly via the on-demand `ensureFresh()` fallback in `loadBundle`.
 export const costUsageWarmup = defineWarmup({
   name: "stats.cost.usage",
+  description:
+    "Loads the transcript usage index after startup and keeps it fresh so cost stats open instantly.",
   scope: "host",
   run: warmAndWatch,
 });

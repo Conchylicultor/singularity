@@ -26,6 +26,7 @@ import { refreshLog } from "./sink";
  */
 export const refreshSourceJob = defineJob({
   name: "events.refresh-source",
+  description: "Re-reads one event source and extracts its current events.",
   // minutes: a URL source may read the page through a real headless browser
   // (`browserFetch`) before the model call. A browser launch is bounded by
   // nothing shorter than the work — and `slowThresholdMs` below is 180s,
@@ -86,6 +87,8 @@ async function selectDueSources(now: Date): Promise<{ id: string }[]> {
  */
 export const refreshTickJob = defineJob({
   name: "events.refresh-tick",
+  description:
+    "Finds event sources due for a refresh and queues a refresh for each.",
   // instant: the body only selects due sources and enqueues one
   // `refreshSourceJob` each. The fetching and extracting happen there.
   hold: "instant",

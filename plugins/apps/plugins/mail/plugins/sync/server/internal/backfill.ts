@@ -46,6 +46,8 @@ import { recordSyncError } from "./record-error";
 
 export const backfillJob = defineJob({
   name: "mail.backfill",
+  description:
+    "Downloads an account's older mail from Gmail in pages until its history is synced.",
   // seconds: ONE Gmail list page plus its envelope fetches per run — the chain
   // continues by re-enqueue, so the backfill spans many runs, none long.
   hold: "seconds",

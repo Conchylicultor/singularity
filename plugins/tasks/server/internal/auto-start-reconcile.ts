@@ -34,6 +34,8 @@ export async function reconcileArmedTasks(): Promise<void> {
 
 export const autoStartReconcileWarmup = defineWarmup({
   name: "tasks.auto-start-reconcile",
+  description:
+    "Wakes the launcher for every armed task at startup so none stays stranded without being launched.",
   scope: "host",
   run: () => reconcileArmedTasks(),
 });

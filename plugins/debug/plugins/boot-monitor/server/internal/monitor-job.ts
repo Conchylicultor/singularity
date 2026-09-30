@@ -28,6 +28,8 @@ let minted = false;
 // record-slow-op.ts — so the row and report can deep-link the trace id.
 export const bootMonitorJob = defineJob({
   name: "debug.boot-monitor",
+  description:
+    "Files a report with a boot trace when a backend's whole startup took longer than its budget.",
   hold: "instant",
   input: z.object({}),
   event: z.never(),

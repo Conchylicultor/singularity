@@ -1,5 +1,18 @@
 # jobs
 
+## Every job says what it does: `description`
+
+`defineJob` (and `defineSupervisedJob`, which forwards it) requires
+`description`: one present-tense sentence a user reads, saying what the job does
+and why — "Downloads the IP-to-country database used to place visitors on the
+analytics map.", not the code name and not the mechanism. The app runs these on
+its own, so this sentence is how a person learns one exists. It is stored on the
+`RegisteredJob` and written to the registration's `_doc.detail`, so the generated
+plugin docs list it. Trigger, schedule and scope are derived from the rest of the
+spec — never restate them. `defineRetention` derives its own sentence from the
+table and TTL; `defineWarmup` and `defineCorpusIndex` require one too. An empty
+string is refused at define time.
+
 ## Liveness: shared fate, not a lease
 
 **"Is this job's worker alive" is answered by Postgres, never by a clock.** For a

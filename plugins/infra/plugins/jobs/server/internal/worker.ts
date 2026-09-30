@@ -37,6 +37,7 @@ import {
   getScheduledJobs,
   jobRegistry,
   queueNameFor,
+  resolveJobCron,
   UNSAFE_getRegisteredJob,
   UNSAFE_insertJobRow,
   type JobTaskPayload,
@@ -48,7 +49,9 @@ import { LOCK_HELD, withJobLock } from "./job-lock";
 import { markJobPermanentlyFailed } from "./introspection";
 import { classifyFailure, discardWorkflowLog } from "./workflow-log";
 import { attachSlotLedger, clearSlotLedger } from "./slot-ledger";
+import { attachRunStats, clearRunStats, markRunSuspended } from "./run-stats";
 import { jobsLog } from "./jobs-log";
+import { nextFiring } from "./cron-schedule";
 
 // One runner per entry in the ladder (`RUNNERS`), all sharing one pg pool.
 let runners: Runner[] | null = null;
@@ -148,6 +151,27 @@ export function installScheduledCronItems(): void {
   scheduledCronItems.splice(0, scheduledCronItems.length, ...buildCronItems());
 }
 
+// The one spelling of a job's cron identifier (graphile's known_crontabs key).
+function cronIdentifier(jobName: string): string {
+  return `cron:${jobName}`;
+}
+
+/**
+ * When a scheduled job next fires in THIS backend, by the installed cron item's
+ * own matcher: `{ installed: false }` when this backend did not install it (a
+ * main-only schedule in a worktree, a resolver that returned null, or before
+ * the `onAllReady` install), else the next firing (`null` past the lookahead).
+ */
+export function nextScheduledRun(
+  jobName: string,
+  from: Date,
+): { installed: false } | { installed: true; next: Date | null } {
+  const identifier = cronIdentifier(jobName);
+  const item = scheduledCronItems.find((i) => i.identifier === identifier);
+  if (item === undefined) return { installed: false };
+  return { installed: true, next: nextFiring(item, from) };
+}
+
 // Build graphile-worker cron items from every job that declared a `schedule`.
 // Resolver-form schedules are evaluated here so a job can derive its crontab
 // from config or disable itself by returning null. A tick lands on the job's own
@@ -166,17 +190,16 @@ export function buildCronItems(): ParsedCronItem[] {
     // run everywhere fires once per live worktree. Default to main-only;
     // perWorktree jobs opt back in to running in every worktree.
     if (!main && !schedule.perWorktree) continue;
-    const cron =
-      typeof schedule.cron === "function" ? schedule.cron() : schedule.cron;
-    if (!cron || !cron.trim()) continue;
+    const cron = resolveJobCron(job);
+    if (cron === null) continue;
     // Scheduled jobs take no caller input; the tick payload is the schema's
     // default shape. Fail loud at startup if the input isn't defaultable.
     const input = job.inputSchema.parse({});
     items.push(
       parseCronItem({
         task: taskFor(job.hold),
-        match: cron.trim(),
-        identifier: `cron:${job.name}`,
+        match: cron,
+        identifier: cronIdentifier(job.name),
         payload: { jobName: job.name, input } satisfies JobTaskPayload,
         options: {
           // backfillPeriod 0 ⇒ no catch-up flood on boot.
@@ -349,6 +372,9 @@ export async function startWorkers(): Promise<Runner[]> {
       attachSlotLedger(spec.id, events, {
         listenInserts: spec.legacy === true,
       }),
+      // The run history rides the same emitter for the same reason: an event on
+      // it is a run in one of this backend's slots. See run-stats.ts.
+      attachRunStats(events),
     );
 
     started.push(
@@ -412,6 +438,7 @@ export async function stopWorkers(): Promise<void> {
   for (const detach of ledgerDetaches) detach();
   ledgerDetaches = [];
   clearSlotLedger();
+  clearRunStats();
   if (workerUtilsPromise) {
     const utils = await workerUtilsPromise;
     await utils.release();
@@ -768,7 +795,11 @@ async function dispatch(
     reportServerError({ message: err.message, stack: err.stack ?? null });
     throw err;
   }
-  if (outcome === "suspended") return;
+  if (outcome === "suspended") {
+    // graphile will report this run as a success; the run history must not.
+    markRunSuspended(meta.jobId);
+    return;
+  }
 
   // Normal completion: drop the step + wait logs for this run. The same
   // teardown the permanently-failed path above takes, on the same never-throw

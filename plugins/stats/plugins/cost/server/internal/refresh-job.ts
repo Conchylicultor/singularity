@@ -42,6 +42,8 @@ const log = Log.channel("stats-cost");
 // every main-only cron in the repo, and is deliberately out of scope here.
 export const costRefreshJob = defineJob({
   name: "stats.cost.refresh",
+  description:
+    "Updates model prices and saves a snapshot of token usage so cost history outlives deleted transcripts.",
   // seconds: fetches the LiteLLM price table over the network, bounded by
   // safeFetch's own 20s timeout.
   hold: "seconds",

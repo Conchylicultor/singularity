@@ -15,6 +15,8 @@ import {
 // CPU burn exactly when the host is busiest. They keep the lazy cold path.
 export const pluginTreeWarmup = defineWarmup({
   name: "plugin-tree.trees",
+  description:
+    "Pre-builds the plugin trees after startup so Studio opens without a slow first load.",
   scope: "host",
   budgetMs: 15_000,
   run: async () => {

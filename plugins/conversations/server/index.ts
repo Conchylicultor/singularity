@@ -19,9 +19,9 @@ import {
   listConversationTurns,
   closeConversation,
 } from "../core/endpoints";
-import { startPoller } from "./internal/poller";
+import { conversationsPollerTimer, startPoller } from "./internal/poller";
 import { registerOrphanedAttemptReport } from "./internal/orphaned-attempt-report";
-import { startTurnEmitter } from "./internal/turn-emitter";
+import { startTurnEmitter, turnEmitterTimer } from "./internal/turn-emitter";
 import {
   maybeLaunchTaskJob,
   maybeLaunchOnStatusJob,
@@ -121,6 +121,8 @@ export default {
     conversationCreated,
     conversationTurnCompleted,
     userTurnSent,
+    conversationsPollerTimer,
+    turnEmitterTimer,
   ],
   onReady: () => {
     registerOrphanedAttemptReport();

@@ -40,6 +40,8 @@ import {
  */
 export const backupRunJob = defineSupervisedJob({
   name: "backup.run.supervised",
+  description:
+    "Assembles a backup archive of the app's data and uploads it to the configured storage targets.",
   input: z.object({
     // Defaulted so a caller that carries no input runs as "periodic".
     trigger: z.enum(["manual", "periodic"]).default("periodic"),

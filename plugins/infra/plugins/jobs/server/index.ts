@@ -17,6 +17,7 @@ import { installQueueSchema } from "./internal/queue-schema";
 import {
   startStuckLockSweeper,
   stopStuckLockSweeper,
+  stuckLockSweeperTimer,
 } from "./internal/stuck-lock-sweeper";
 import {
   installScheduledCronItems,
@@ -33,6 +34,22 @@ export {
   getJobSlowThresholdMs,
   getJobHold,
 } from "./internal/registry";
+export { listRegisteredJobs, resolveJobCron } from "./internal/registry";
+export { nextScheduledRun } from "./internal/worker";
+export { cronRanges } from "./internal/cron-schedule";
+export type { CronRanges } from "./internal/cron-schedule";
+export {
+  onJobRunsChanged,
+  readJobRunStats,
+  readRecentJobRuns,
+  runningJobStarts,
+  RECENT_RUNS_RING,
+} from "./internal/run-stats";
+export type {
+  JobRunOutcome,
+  JobRunRecord,
+  JobRunStats,
+} from "./internal/run-stats";
 export { QueueSchemaMissingError } from "./internal/queue-schema";
 export { sweepOnce as UNSAFE_sweepStuckLocks } from "./internal/stuck-lock-sweeper";
 export { singletonJobKey } from "./internal/run-identity";
@@ -129,7 +146,7 @@ export default {
     [retryJob.route]: handleRetryJob,
     [cancelJob.route]: handleCancelJob,
   },
-  register: [jobsResumeJob, deadJobGcJob],
+  register: [jobsResumeJob, deadJobGcJob, stuckLockSweeperTimer],
   contributions: [
     ...jobsListServed.declare,
     ...deadJobsServed.declare,

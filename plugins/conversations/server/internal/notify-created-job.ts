@@ -23,6 +23,8 @@ const CAUSALITY_VALUES = new Set([
 // are open. Replaces the per-tab AutoLaunchWatcher useEffect.
 export const notifyConversationCreatedJob = defineJob({
   name: "conversations.notify-created",
+  description:
+    "Records a notification when a conversation is launched on the user's behalf, once regardless of how many tabs are open.",
   hold: "instant",
   input: z.object({}),
   dedup: "none",

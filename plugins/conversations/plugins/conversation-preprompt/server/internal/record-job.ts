@@ -15,6 +15,8 @@ import { recordConversationPreprompt } from "./record";
 // trusting the event payload) for robustness against payload drift.
 export const recordPrepromptJob = defineJob({
   name: "conversation-preprompt.record",
+  description:
+    "Saves the preprompt a task was launched with onto each new conversation so its header can show what the agent was given.",
   hold: "instant",
   input: z.object({
     conversationId: z.string().optional(),

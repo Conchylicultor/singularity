@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import { defineSupervisedJob } from "./define-supervised-job";
 
+const description = "Test job.";
 const channel = { publishAll: () => {} } as unknown as LogChannel;
 const input = z.object({ target: z.string().default("t") });
 const argv = () => ({ argv: ["true"] });
@@ -27,9 +28,10 @@ describe("DefineSupervisedJobSpec", () => {
   test("forbids the combinations the design rules out", () => {
     const typeOnly = () => {
       // Allowed shapes, for contrast.
-      defineSupervisedJob({ name: "a.ok1", input, channel, argv });
+      defineSupervisedJob({ name: "a.ok1", description, input, channel, argv });
       defineSupervisedJob({
         name: "a.ok2",
+        description,
         input,
         channel,
         run,
@@ -37,6 +39,7 @@ describe("DefineSupervisedJobSpec", () => {
       });
       defineSupervisedJob({
         name: "a.ok3",
+        description,
         input,
         channel,
         run,
@@ -45,6 +48,7 @@ describe("DefineSupervisedJobSpec", () => {
       });
       defineSupervisedJob({
         name: "a.ok4",
+        description,
         input,
         channel,
         steps,
@@ -53,6 +57,7 @@ describe("DefineSupervisedJobSpec", () => {
       });
       defineSupervisedJob({
         name: "a.ok5",
+        description,
         input,
         channel,
         run,
@@ -60,14 +65,30 @@ describe("DefineSupervisedJobSpec", () => {
       });
 
       // @ts-expect-error — two bodies
-      defineSupervisedJob({ name: "a.e1", input, channel, argv, run });
+      defineSupervisedJob({
+        name: "a.e1",
+        description,
+        input,
+        channel,
+        argv,
+        run,
+      });
       // @ts-expect-error — `run` and `steps`
-      defineSupervisedJob({ name: "a.e2", input, channel, run, steps, ledger });
+      defineSupervisedJob({
+        name: "a.e2",
+        description,
+        input,
+        channel,
+        run,
+        steps,
+        ledger,
+      });
       // @ts-expect-error — no body at all
-      defineSupervisedJob({ name: "a.e3", input, channel });
+      defineSupervisedJob({ name: "a.e3", description, input, channel });
       // @ts-expect-error — `lock` with an own ledger
       defineSupervisedJob({
         name: "a.e4",
+        description,
         input,
         channel,
         argv,
@@ -75,10 +96,11 @@ describe("DefineSupervisedJobSpec", () => {
         lock: () => "k",
       });
       // @ts-expect-error — `steps` without a ledger
-      defineSupervisedJob({ name: "a.e5", input, channel, steps });
+      defineSupervisedJob({ name: "a.e5", description, input, channel, steps });
       // @ts-expect-error — `runAttempts` with `steps`
       defineSupervisedJob({
         name: "a.e6",
+        description,
         input,
         channel,
         steps,
@@ -88,6 +110,7 @@ describe("DefineSupervisedJobSpec", () => {
       // `minutes` on `steps` (the error lands on the property)
       defineSupervisedJob({
         name: "a.e7",
+        description,
         input,
         channel,
         steps,
@@ -98,6 +121,7 @@ describe("DefineSupervisedJobSpec", () => {
       // any `hold` on a single-child body (the error lands on the property)
       defineSupervisedJob({
         name: "a.e8",
+        description,
         input,
         channel,
         run,
@@ -107,6 +131,7 @@ describe("DefineSupervisedJobSpec", () => {
       // `minutes` on a single-child body (the error lands on the property)
       defineSupervisedJob({
         name: "a.e9",
+        description,
         input,
         channel,
         argv,
@@ -114,7 +139,7 @@ describe("DefineSupervisedJobSpec", () => {
         hold: "minutes",
       });
       // @ts-expect-error — `channel` is required
-      defineSupervisedJob({ name: "a.e10", input, argv });
+      defineSupervisedJob({ name: "a.e10", description, input, argv });
     };
     expect(typeof typeOnly).toBe("function");
   });

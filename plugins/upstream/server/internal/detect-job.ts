@@ -29,6 +29,8 @@ const log = Log.channel("upstream");
  */
 export const detectUpstreamUpdatesJob = defineJob({
   name: "upstream.detect-updates",
+  description:
+    "Checks whether the repository this checkout was cloned from has new commits and records a report when it does.",
   // One `git fetch` of a branch that may be far ahead, over the network.
   hold: "minutes",
   inProcess:

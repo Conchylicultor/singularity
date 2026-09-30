@@ -3192,6 +3192,18 @@
       "name": "@singularity/plugin-infra-attachments",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/background": {
+      "name": "@singularity/plugin-infra-background",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/background/plugins/catalog": {
+      "name": "@singularity/plugin-infra-background-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/background/plugins/timer": {
+      "name": "@singularity/plugin-infra-background-timer",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/boot-snapshot": {
       "name": "@singularity/plugin-infra-boot-snapshot",
       "version": "0.0.1",
@@ -3329,6 +3341,10 @@
         "graphile-worker": "^0.16.6",
       },
     },
+    "plugins/infra/plugins/jobs/plugins/background-arm": {
+      "name": "@singularity/plugin-infra-jobs-background-arm",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/jobs/plugins/deadline-audit": {
       "name": "@singularity/plugin-infra-jobs-deadline-audit",
       "version": "0.0.1",
@@ -3422,6 +3438,10 @@
     },
     "plugins/infra/plugins/warmup": {
       "name": "@singularity/plugin-infra-warmup",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/warmup/plugins/background-arm": {
+      "name": "@singularity/plugin-infra-warmup-background-arm",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/worktree": {
@@ -7568,6 +7588,12 @@
 
     "@singularity/plugin-infra-attachments": ["@singularity/plugin-infra-attachments@workspace:plugins/infra/plugins/attachments"],
 
+    "@singularity/plugin-infra-background": ["@singularity/plugin-infra-background@workspace:plugins/infra/plugins/background"],
+
+    "@singularity/plugin-infra-background-catalog": ["@singularity/plugin-infra-background-catalog@workspace:plugins/infra/plugins/background/plugins/catalog"],
+
+    "@singularity/plugin-infra-background-timer": ["@singularity/plugin-infra-background-timer@workspace:plugins/infra/plugins/background/plugins/timer"],
+
     "@singularity/plugin-infra-boot-snapshot": ["@singularity/plugin-infra-boot-snapshot@workspace:plugins/infra/plugins/boot-snapshot"],
 
     "@singularity/plugin-infra-claude-cli": ["@singularity/plugin-infra-claude-cli@workspace:plugins/infra/plugins/claude-cli"],
@@ -7632,6 +7658,8 @@
 
     "@singularity/plugin-infra-jobs": ["@singularity/plugin-infra-jobs@workspace:plugins/infra/plugins/jobs"],
 
+    "@singularity/plugin-infra-jobs-background-arm": ["@singularity/plugin-infra-jobs-background-arm@workspace:plugins/infra/plugins/jobs/plugins/background-arm"],
+
     "@singularity/plugin-infra-jobs-deadline-audit": ["@singularity/plugin-infra-jobs-deadline-audit@workspace:plugins/infra/plugins/jobs/plugins/deadline-audit"],
 
     "@singularity/plugin-infra-jobs-supervised-job": ["@singularity/plugin-infra-jobs-supervised-job@workspace:plugins/infra/plugins/jobs/plugins/supervised-job"],
@@ -7675,6 +7703,8 @@
     "@singularity/plugin-infra-trash": ["@singularity/plugin-infra-trash@workspace:plugins/infra/plugins/trash"],
 
     "@singularity/plugin-infra-warmup": ["@singularity/plugin-infra-warmup@workspace:plugins/infra/plugins/warmup"],
+
+    "@singularity/plugin-infra-warmup-background-arm": ["@singularity/plugin-infra-warmup-background-arm@workspace:plugins/infra/plugins/warmup/plugins/background-arm"],
 
     "@singularity/plugin-infra-worktree": ["@singularity/plugin-infra-worktree@workspace:plugins/infra/plugins/worktree"],
 

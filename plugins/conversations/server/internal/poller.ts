@@ -14,6 +14,7 @@ import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { recordReport } from "@plugins/reports/server";
 import { isTransientDbError } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { Runtime, flushInteractivePrompt, type RuntimeInfo } from "./runtime";
 import { autoAnswerConfig } from "../../shared/config";
@@ -428,13 +429,18 @@ function logTickError(label: string, err: unknown): void {
   console.error(`[conversations.poller] ${label} failed`, err);
 }
 
+// Real polling (tmux has no change signal this backend subscribes to yet):
+// a timer so it is visible in Background activity while it waits for a push
+// replacement.
+export const conversationsPollerTimer = defineTimer({
+  name: "conversations.poller",
+  description:
+    "Checks every second which agent sessions are alive and moves each conversation's status to match — adopting orphaned sessions on main and sweeping ones that never started.",
+  everyMs: TICK_MS,
+  immediate: true,
+  run: () => tick().catch((err) => logTickError("tick", err)),
+});
+
 export function startPoller(): void {
-  void runTracked("conversations:poller", () =>
-    tick().catch((err) => logTickError("initial tick", err)),
-  );
-  setInterval(() => {
-    void runTracked("conversations:poller", () =>
-      tick().catch((err) => logTickError("tick", err)),
-    );
-  }, TICK_MS);
+  conversationsPollerTimer.start();
 }

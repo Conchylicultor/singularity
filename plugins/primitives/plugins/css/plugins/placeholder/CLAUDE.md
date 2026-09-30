@@ -69,6 +69,7 @@
     - `debug/trace/stall`
     - `debug/worktree-cleanup`
     - `history/dialog`
+    - `infra/background/catalog`
     - `map`
     - `page/attachment-block`
     - `page/bookmark`

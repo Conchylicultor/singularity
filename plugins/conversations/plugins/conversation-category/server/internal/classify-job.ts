@@ -52,6 +52,8 @@ function selectTargets(
 // direct-enqueued from the re-classify HTTP route.
 export const classifyConversationJob = defineJob({
   name: "conversation-category.classify",
+  description:
+    "Asks a small model to sort a conversation into the configured categories after each turn.",
   // seconds: bounded by the 30s HAIKU_TIMEOUT_MS the runClaudePrint call below
   // passes itself.
   hold: "seconds",

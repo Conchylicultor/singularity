@@ -17,6 +17,8 @@ const log = Log.channel("deps");
  */
 export const depsSweepJob = defineJob({
   name: "deps.sweep",
+  description:
+    "Removes installed optional dependencies that no checkout uses any more and that sat unused for two weeks.",
   hold: "minutes",
   inProcess:
     "A reclaim pass over the deps cache: small state-file reads, one identity derivation per (dep, checkout) and async directory removals; a restart aborts it and the next daily tick repeats it.",

@@ -131,6 +131,11 @@ export interface SupervisedStepsContext {
 interface SupervisedJobBase<N extends string, S extends z.ZodType> {
   /** Job name, as it appears in the queue (`build.run.supervised`). */
   name: N;
+  /**
+   * What this job does and why, in one present-tense sentence a user reads —
+   * forwarded to `defineJob`'s `description` (see its doc for the rules).
+   */
+  description: string;
   /** Schema for the value `.enqueue()` takes. Parsed once, at enqueue. */
   input: S;
   /** Where the supervisor publishes the children's live output. */
@@ -431,6 +436,8 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
 
   const common = {
     name: spec.name,
+    description: spec.description,
+    factory: "defineSupervisedJob",
     hold,
     input: spec.input,
     event: z.never(),
@@ -450,7 +457,7 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
     kind,
     _kind: "supervised-job",
     _factory: "defineSupervisedJob",
-    _doc: { label: spec.name },
+    _doc: { label: spec.name, detail: spec.description },
     async register() {
       // The kind first: the supervisor asserts its kind is registered, and all
       // three writes happen in the register phase, before any `onReady` — which

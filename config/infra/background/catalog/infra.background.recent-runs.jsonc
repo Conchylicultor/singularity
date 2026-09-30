@@ -1,0 +1,15 @@
+// @hash 6ec84829688d
+// Newest first: the ring the server keeps is already bounded, so one plain
+// list is the whole history.
+{
+  "views": [
+    {
+      "id": "recent",
+      "name": "Recent",
+      "view": { "type": "list", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

@@ -8,6 +8,8 @@ import { buildJob } from "./run-build";
 // one run that fires once the window goes quiet.
 export const buildRunDebouncedJob = defineJob({
   name: "build.run.debounced",
+  description:
+    "Starts the automatic build once a burst of changes goes quiet, so a burst yields one build.",
   // instant, and honestly so: this run decides and enqueues, and the build
   // itself is a separate workflow (`build.run.supervised`) that spawns a
   // detached child and suspends. Nothing here holds a slot for the length of a

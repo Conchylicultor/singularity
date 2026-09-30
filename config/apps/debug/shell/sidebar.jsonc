@@ -1,4 +1,4 @@
-// @hash 99559010f8f7
+// @hash 8d1442de96c1
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -19,6 +19,7 @@
     "debug.health-monitor:health-monitor",
     "debug.heap-snapshot:heap-snapshot",
     "debug.queue:queue",
+    "infra.background.catalog:background",
     "debug.live-state-health:live-state-health",
     "debug.live-state-churn.emit:live-state-emit",
     "debug.read-set:read-set",

@@ -109,6 +109,8 @@ export async function detectOne(
  */
 export const detectOutdatedDepsJob = defineJob({
   name: "deps.detect-outdated",
+  description:
+    "Checks each tracked toolchain for a newer release and files an upgrade task when one is available and none is open.",
   // Each updater asks its release source over the network.
   hold: "minutes",
   inProcess:

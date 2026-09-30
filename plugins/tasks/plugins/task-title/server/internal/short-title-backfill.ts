@@ -24,6 +24,8 @@ const RECENT_DAYS = 30;
 // the model calls, one at a time.
 export const backfillShortTitlesJob = defineJob({
   name: "task-title.short-backfill",
+  description:
+    "Finds recently active tasks whose short title is missing or stale and queues them for regeneration.",
   // instant: one indexed read and N queue inserts — no model call here.
   hold: "instant",
   input: z.object({}).default({}),
@@ -56,6 +58,8 @@ export const backfillShortTitlesJob = defineJob({
 // seed unless it renamed tasks itself.
 export const shortTitlesBackfillWarmup = defineWarmup({
   name: "task-title.short-backfill",
+  description:
+    "Queues short-title generation at startup for recently active tasks that lack a current short title.",
   scope: "worktree",
   run: async () => {
     await backfillShortTitlesJob.enqueue({});

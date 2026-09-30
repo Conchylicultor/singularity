@@ -61,6 +61,8 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 
 export const saturateSleeper = defineJob({
   name: "events_test.saturate-sleeper",
+  description:
+    "Test probe that occupies a worker slot for a chosen duration to verify the queue reports saturation.",
   // minutes: the handler holds its slot for a caller-chosen duration (up to the
   // endpoint's 20-min cap), and nothing shorter bounds it. It is also the point:
   // `minutes` rows reach only the wide runner's slots, so a handful of these
@@ -89,6 +91,8 @@ export const saturateSleeper = defineJob({
 
 export const deadLetterProbe = defineJob({
   name: "events_test.dead-letter",
+  description:
+    "Test probe that always fails to verify a failing job is dead-lettered and reported.",
   // instant: it throws before doing anything.
   hold: "instant",
   input: z.object({}),

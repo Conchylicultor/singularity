@@ -9,6 +9,8 @@ import { reindexPage } from "./reindex";
 // may retry, but `reindexPage` is idempotent (diff-based).
 export const reindexLinksJob = defineJob({
   name: "page.links.reindex",
+  description:
+    "Refreshes a page's outgoing links after each edit so backlinks stay accurate.",
   hold: "instant",
   input: z.object({}).default({}),
   event: z.object({ pageId: z.string() }),

@@ -193,6 +193,18 @@
       "parent": null
     },
     {
+      "paneId": "debug-background",
+      "segment": "background",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-background-entry",
+      "segment": "activity/:kind/:name",
+      "appIndex": false,
+      "parent": "debug-background"
+    },
+    {
       "paneId": "debug-boot-profile",
       "segment": "boot-profile",
       "appIndex": false,

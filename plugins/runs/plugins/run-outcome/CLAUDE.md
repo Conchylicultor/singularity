@@ -33,7 +33,9 @@ Own plugin, not `runs/core`, so `runs/web` can import the chip without
     - `RunOutcomeChip`
     - `RunOutcomeDot`
 - Cross-plugin:
-  - Imported by: `runs`
+  - Imported by:
+    - `infra/background/catalog`
+    - `runs`
 - Core:
   - Exports (types): `RunOutcome`
   - Exports (values):

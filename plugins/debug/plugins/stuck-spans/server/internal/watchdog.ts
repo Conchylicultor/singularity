@@ -1,7 +1,5 @@
-import {
-  captureFlightWindow,
-  runTracked,
-} from "@plugins/infra/plugins/runtime-profiler/core";
+import { captureFlightWindow } from "@plugins/infra/plugins/runtime-profiler/core";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { recordReport } from "@plugins/reports/server";
 import type { ReportSource } from "@plugins/reports/core";
@@ -18,7 +16,7 @@ import { createStuckSpanWatcher, type StuckSpanFinding } from "./detect";
 // worker and would be queued behind the very wedge it exists to report. That is
 // what happened to the queue monitor on 2026-08-17 (eleven copies of it sat in
 // the frozen backlog it existed to report); the doctrine, and the structure
-// this file copies — module-level timer, start/stop pair, `runTracked` tick —
+// this file copies — a `defineTimer`, start/stop pair, spanned tick —
 // are written down in `plugins/debug/plugins/queue-health/server/internal/watchdog.ts`,
 // itself modeled on the jobs plugin's stuck-lock sweeper.
 //
@@ -61,23 +59,25 @@ const watcher = createStuckSpanWatcher({
   onStuck: fileStuckSpans,
 });
 
-let timer: ReturnType<typeof setInterval> | null = null;
+// A throw in a tick is recorded by the timer and rethrown as an unhandled
+// rejection, which the reports plugin files — loud, never eaten.
+export const stuckSpanTimer = defineTimer({
+  name: "stuck-spans.watchdog",
+  description:
+    "Looks every 15 seconds for a request or background step that has been running far too long, and files a report with a trace while it is still stuck.",
+  everyMs: TICK_MS,
+  run: () => {
+    watcher.tick();
+  },
+});
 
 export function startStuckSpanWatchdog(): void {
-  if (timer) return;
-  timer = setInterval(() => {
-    // A throw here rejects the tracked promise; `void` lets it surface as an
-    // unhandled rejection, which the reports plugin files — loud, never eaten.
-    void runTracked("stuck-spans:tick", () => {
-      watcher.tick();
-    });
-  }, TICK_MS);
+  stuckSpanTimer.start();
 }
 
 export function stopStuckSpanWatchdog(): void {
-  if (!timer) return;
-  clearInterval(timer);
-  timer = null;
+  if (!stuckSpanTimer.running) return;
+  stuckSpanTimer.stop();
   // A restarted watchdog has not reported anything yet.
   watcher.reset();
 }

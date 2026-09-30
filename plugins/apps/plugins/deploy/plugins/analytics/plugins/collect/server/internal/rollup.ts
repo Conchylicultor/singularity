@@ -56,6 +56,8 @@ export async function runRollup(
  */
 export const analyticsRollupJob = defineJob({
   name: "analytics.rollup",
+  description:
+    "Summarizes each finished day's visits into totals and purges expired visitor-linking data.",
   // SQL only: a grouped INSERT … SELECT per day over indexed rows.
   hold: "instant",
   input: z.object({}),

@@ -20,14 +20,6 @@ const ALLOWED_ESCAPES = new Set([
   "enqueue",
 ]);
 
-// The subset an inline `setInterval` callback must wire in to be trusted: it must
-// route its per-tick work through a span (or an explicit lane/suppression opt-out).
-const INTERVAL_WRAPPERS = new Set([
-  "runTracked",
-  "runWithoutProfiling",
-  "runInBackgroundLane",
-]);
-
 /**
  * Off-main-thread entry points: code that runs on a Bun `Worker` thread or in a
  * spawned child process, NOT on the backend's main event loop. The
@@ -63,65 +55,17 @@ function calleeName(call: TSESTree.CallExpression): string | undefined {
   return undefined;
 }
 
-/** Is `node` a `setInterval` / `globalThis.setInterval` / member `.setInterval` call? */
-function isSetInterval(call: TSESTree.CallExpression): boolean {
-  const callee = call.callee;
-  if (callee.type === "Identifier") return callee.name === "setInterval";
-  if (
-    callee.type === "MemberExpression" &&
-    callee.property.type === "Identifier"
-  ) {
-    return callee.property.name === "setInterval";
-  }
-  return false;
-}
-
-/**
- * Does the subtree rooted at `node` syntactically contain a CallExpression to one
- * of `names`? A shallow structural walk — an inline callback that wires a wrapper
- * in anywhere in its body is trusted; a bare-reference callback (nothing to walk)
- * is not.
- */
-function containsWrapperCall(
-  node: TSESTree.Node,
-  names: Set<string>,
-): boolean {
-  let found = false;
-  const visit = (n: TSESTree.Node | null | undefined): void => {
-    if (found || !n || typeof n.type !== "string") return;
-    if (n.type === "CallExpression") {
-      const name = calleeName(n);
-      if (name !== undefined && names.has(name)) {
-        found = true;
-        return;
-      }
-    }
-    for (const key of Object.keys(n)) {
-      if (key === "parent") continue;
-      const value = (n as unknown as Record<string, unknown>)[key];
-      if (Array.isArray(value)) {
-        for (const child of value) {
-          if (child && typeof child === "object") visit(child as TSESTree.Node);
-        }
-      } else if (value && typeof value === "object") {
-        visit(value as TSESTree.Node);
-      }
-    }
-  };
-  visit(node);
-  return found;
-}
-
 export default createRule({
   name: "no-untracked-detached-work",
   meta: {
     type: "problem",
     docs: {
       description:
-        "Route detached main-thread work (a `void <call>` fire-and-forget, or a " +
-        "`setInterval` tick) through `runTracked(label, fn)` so its cost is " +
+        "Route detached main-thread work (a `void <call>` fire-and-forget) " +
+        "through `runTracked(label, fn)` so its cost is " +
         "attributed to a span instead of silently inflating an unrelated span's " +
-        "selfMs (or vanishing at boot). Server/central only. `setTimeout` is " +
+        "selfMs (or vanishing at boot). Server/central only. A `setInterval` is " +
+        "the sibling rule `no-raw-set-interval`'s (banned outright). `setTimeout` is " +
         "deliberately NOT flagged: debounce / backoff / one-shot uses dominate it, " +
         "it is rarely the invisible-long-work class, and the file-watcher substrate " +
         "already spans its timers. Off-main-thread entry files (a `/worker/` " +
@@ -144,17 +88,14 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    const filename = (
-      context.filename ??
-      context.getFilename?.() ??
-      ""
-    )
+    const filename = (context.filename ?? context.getFilename?.() ?? "")
       .split("\\")
       .join("/");
 
     // Scope: this concerns main-thread server/central work only. Skip tests, and
     // client / isomorphic / separate-process trees (a different concern).
-    if (filename.endsWith(".test.ts") || filename.endsWith(".spec.ts")) return {};
+    if (filename.endsWith(".test.ts") || filename.endsWith(".spec.ts"))
+      return {};
     if (
       filename.includes("/web/") ||
       filename.includes("/core/") ||
@@ -179,23 +120,6 @@ export default createRule({
         if (node.argument.type !== "CallExpression") return;
         const name = calleeName(node.argument);
         if (name !== undefined && ALLOWED_ESCAPES.has(name)) return;
-        context.report({ node, messageId: "untrackedDetachedWork" });
-      },
-
-      // Trigger 2 — raw `setInterval`. A bare-reference callback can't be
-      // inspected → flagged (forces an inline wrap or an auditable disable); an
-      // inline callback that wired a wrapper in is trusted.
-      CallExpression(node: TSESTree.CallExpression) {
-        if (!isSetInterval(node)) return;
-        const first = node.arguments[0];
-        if (
-          first &&
-          (first.type === "ArrowFunctionExpression" ||
-            first.type === "FunctionExpression") &&
-          containsWrapperCall(first, INTERVAL_WRAPPERS)
-        ) {
-          return;
-        }
         context.report({ node, messageId: "untrackedDetachedWork" });
       },
     };

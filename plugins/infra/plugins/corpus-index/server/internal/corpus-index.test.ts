@@ -185,6 +185,7 @@ function spec(
 ): CorpusIndexSpec<string> {
   return {
     name: "test.corpus",
+    description: "Test corpus.",
     roots: [corpusRoot],
     match: (p) => p.endsWith(".txt"),
     parse: async (p) => {
@@ -276,6 +277,7 @@ test("defineCorpusIndex with no parse yields CorpusIndex<null> and still indexes
   // Enumerate-only: no `parse`. TPartial is pinned to `null` by the overload.
   const idx = defineCorpusIndex({
     name: "test.noparse",
+    description: "Test corpus.",
     roots: [corpusRoot],
     match: (p) => p.endsWith(".txt"),
     indexPath,

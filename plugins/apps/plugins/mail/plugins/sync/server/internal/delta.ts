@@ -32,6 +32,8 @@ import { recordSyncError } from "./record-error";
 
 export const deltaJob = defineJob({
   name: "mail.delta",
+  description:
+    "Pulls new messages and label changes for one mail account from Gmail.",
   // seconds: paginated Gmail calls, no spawn and no render. The bound is
   // `gmailRequest`'s 120s retry deadline, which caps the RETRY LOOP — it is
   // checked between attempts, and the `fetch` under it carries no signal, so a

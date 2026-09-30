@@ -46,6 +46,8 @@ import { recordReport } from "@plugins/reports/server";
  */
 export const testDbSweepJob = defineJob({
   name: "database.test-db-sweep",
+  description:
+    "Drops throwaway test databases left behind by killed test runs, filing a report for each one dropped.",
   // instant: a catalog query plus a `DROP DATABASE` per orphan — no subprocess,
   // no dump/restore.
   hold: "instant",

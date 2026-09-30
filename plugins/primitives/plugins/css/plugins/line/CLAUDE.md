@@ -75,6 +75,7 @@ attribute type carries.
     - `debug/queue-health`
     - `debug/sentinel`
     - `debug/timeline`
+    - `infra/background/catalog`
     - `page/annotations/todo/task-link`
     - `page/formatting/link`
     - `page/inline-date`

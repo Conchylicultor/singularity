@@ -102,6 +102,23 @@ export async function sweepExpired<T extends PgTable>(
 }
 
 /**
+ * The sweep's user-facing description, DERIVED from the spec so no retention
+ * policy has a sentence for its author to forget or let drift: the table name
+ * made readable (`_reports` → "reports", `entity_versions` → "entity versions"),
+ * the TTL, and whether a `where` narrows the sweep to a subset of rows.
+ */
+export function retentionDescription(
+  tableName: string,
+  ttlDays: number,
+  scoped: boolean,
+): string {
+  const human = tableName.replace(/^_+/, "").replace(/_+/g, " ").trim();
+  const days = ttlDays === 1 ? "1 day" : `${ttlDays} days`;
+  const subset = scoped ? "matching " : "";
+  return `Deletes ${subset}${human} rows older than ${days}.`;
+}
+
+/**
  * Thin wrapper over `defineJob`: a scheduled sweep that deletes rows older than
  * `ttlDays`. Returns the same `JobFactory` `defineJob` returns — the consumer
  * mounts it via `register: [retentionJob]` on its `ServerPluginDefinition`.
@@ -126,6 +143,12 @@ export function defineRetention<T extends PgTable>(
 
   const job = defineJob({
     name: `retention.${tableName}`,
+    description: retentionDescription(
+      tableName,
+      spec.ttlDays,
+      spec.where !== undefined,
+    ),
+    factory: "defineRetention",
     // Every sweep is one bounded `DELETE ... WHERE <column> < cutoff` against an
     // indexed column — no network, no spawn — so the wrapper decides the class
     // and `RetentionSpec` deliberately has no `hold` for a consumer to get wrong.

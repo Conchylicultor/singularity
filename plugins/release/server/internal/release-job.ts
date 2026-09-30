@@ -77,6 +77,8 @@ function intentArgs(intent: ReleaseIntent): string[] {
  */
 export const releaseJob = defineSupervisedJob({
   name: "release.run.supervised",
+  description:
+    "Builds a standalone release of a composition and records whether it succeeded.",
   input: releaseJobInput,
 
   channel: releaseLog,

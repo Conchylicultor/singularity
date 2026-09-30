@@ -398,6 +398,7 @@ them to include 1, which would put the warning on the same instant as the abort.
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `infra/background/timer.defineTimer`
     - `infra/endpoints.implement`
     - `infra/jobs.ceilingMsFor`
     - `infra/jobs.deadlineMsFor`
@@ -429,7 +430,9 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `reports.ReportKind`
     - `tasks/tasks-core.getConversation`
   - Exports (values): `queueHealthTickOnce`
-  - Register: `mcpTool('get_queue_health')`
+  - Register:
+    - `mcpTool('get_queue_health')`
+    - `defineTimer('queue-health.watchdog')`
   - Resources: `queue-health.pulse` (push)
   - Routes: `GET /api/debug/queue-health/summary`
 - Core:

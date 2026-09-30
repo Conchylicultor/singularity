@@ -2,10 +2,15 @@ import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleHealthData } from "./internal/handle-health-data";
 import {
+  processSamplerTimer,
   startProcessSampler,
   stopProcessSampler,
 } from "./internal/process-sampler";
-import { startHostSampler, stopHostSampler } from "./internal/host-sampler";
+import {
+  hostSamplerTimer,
+  startHostSampler,
+  stopHostSampler,
+} from "./internal/host-sampler";
 
 // Every sample as it is taken, for plugins that build on the health series
 // without tailing its JSONL (debug/latency-ledger).
@@ -28,6 +33,7 @@ export default {
   httpRoutes: {
     [getHealthData.route]: handleHealthData,
   },
+  register: [processSamplerTimer, hostSamplerTimer],
   onReady: () => {
     startProcessSampler();
     if (isMain()) startHostSampler();

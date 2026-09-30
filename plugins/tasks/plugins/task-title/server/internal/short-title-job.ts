@@ -23,6 +23,8 @@ const SETTLE_MS = 10_000;
 // at once.
 export const shortTitleJob = defineJob({
   name: "task-title.short",
+  description:
+    "Generates a short title of at most three words for a task so narrow list rows stay readable.",
   // seconds: one Haiku call bounded by its own 30 s timeout.
   hold: "seconds",
   input: z.object({ taskId: z.string() }),
@@ -88,6 +90,8 @@ async function shortTitleFor(
 // hands the task to the keyed job above, delayed by the settle window.
 export const shortTitleOnTitleChangedJob = defineJob({
   name: "task-title.short-on-title-changed",
+  description:
+    "Queues a short-title refresh when a task's title changes, waiting until the title settles.",
   // instant: one queue insert.
   hold: "instant",
   input: z.object({}).passthrough(),

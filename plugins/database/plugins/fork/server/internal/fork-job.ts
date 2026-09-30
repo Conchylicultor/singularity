@@ -41,6 +41,8 @@ const forkLog = defineLogSink({
 // putting a job consumer back in `admin` would form an import cycle.
 export const databaseForkJob = defineSupervisedJob({
   name: "database.fork",
+  description:
+    "Copies the main database into a new worktree's own database so the worktree starts with current data.",
   input: z.object({ source: z.string(), target: z.string() }),
   channel: forkLog,
   lock: (input) => input.target,

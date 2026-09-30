@@ -24,6 +24,8 @@ import { _tasksAutoStartExt } from "./tables";
 // auto-start marker would invert that dependency.
 export const cancelAutoStartOnDropJob = defineJob({
   name: "tasks.auto-start-cancel-on-drop",
+  description:
+    "Cancels a task's queued auto-launch when the task is dropped, so un-dropping it never launches an abandoned agent.",
   hold: "instant",
   input: z.object({}),
   dedup: "none",
@@ -69,6 +71,8 @@ export async function sweepArmedDroppedTasks(): Promise<number> {
 
 export const autoStartDroppedSweepWarmup = defineWarmup({
   name: "tasks.auto-start-dropped-sweep",
+  description:
+    "Clears leftover auto-launch markers from already-dropped tasks at startup.",
   scope: "host",
   run: async () => {
     await sweepArmedDroppedTasks();

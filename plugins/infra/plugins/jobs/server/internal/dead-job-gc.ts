@@ -107,6 +107,8 @@ export async function reconcileDeadJobs(
 // and satisfies the no-polling rule.
 export const deadJobGcJob = defineJob({
   name: "jobs.dead-gc",
+  description:
+    "Moves permanently failed jobs out of the live queue into a bounded archive so they stay inspectable without clogging it.",
   // One transaction of bounded indexed statements against the queue and the
   // archive.
   //

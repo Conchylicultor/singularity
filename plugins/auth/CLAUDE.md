@@ -147,6 +147,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `useAuthState`
 - Central:
   - Uses:
+    - `infra/background/timer.defineTimer`
     - `infra/secrets.getSecret`
     - `infra/secrets.ready`
     - `infra/secrets.SecretsKeychainLockedError`
@@ -181,6 +182,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `getAccountIdentity`
     - `listProviders`
     - `registerAuthProvider`
+  - Register: `defineTimer('auth.refresh')`
   - Resources: `auth-state` (push)
   - Routes:
     - `GET /api/auth/start/:provider`

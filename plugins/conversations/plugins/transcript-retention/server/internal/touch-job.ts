@@ -27,6 +27,8 @@ const log = Log.channel("transcript-retention");
 // erase the history it contributes.
 export const transcriptTouchJob = defineJob({
   name: "conversations.transcript-touch",
+  description:
+    "Refreshes the transcript files of retained conversations so Claude Code never deletes their history for age.",
   // seconds: filesystem metadata only, but N is the whole retained set and
   // resolving each session chain glob-scans the Claude projects dir on a cache
   // miss — nothing bounds it to the `instant` ceiling.

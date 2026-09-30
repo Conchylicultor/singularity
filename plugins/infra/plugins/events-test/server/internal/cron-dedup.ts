@@ -87,6 +87,8 @@ const MAX_ATTEMPTS = 5;
  * makes `enqueue()` derive the same job key the cron path uses. */
 export const cronDedupProbe = defineJob({
   name: JOB_NAME,
+  description:
+    "Test probe that verifies repeated scheduled ticks of one job collapse into a single pending run without delaying it.",
   hold: "instant",
   input: z.object({}),
   event: z.never(),

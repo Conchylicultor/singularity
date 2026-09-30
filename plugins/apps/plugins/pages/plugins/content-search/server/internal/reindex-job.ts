@@ -10,6 +10,8 @@ import { reindexPageSearch } from "./reindex-page";
 // upsert).
 export const reindexPageSearchJob = defineJob({
   name: "pages.search.reindex",
+  description:
+    "Refreshes a page's search entry after it changes so search results stay current.",
   hold: "instant",
   input: z.object({}).default({}),
   event: z.object({ pageId: z.string() }),

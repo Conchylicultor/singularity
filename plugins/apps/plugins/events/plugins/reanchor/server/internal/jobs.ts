@@ -33,6 +33,8 @@ import { reanchorRecurringEvents } from "@plugins/apps/plugins/events/plugins/ev
  */
 export const reanchorEventsJob = defineJob({
   name: "events.reanchor",
+  description:
+    "Moves each recurring event forward to its next occurrence so upcoming-event lists stay correct.",
   // instant: one indexed select plus, in the rare non-empty case, a handful of
   // single-row updates. No fetching, no model call, no source contacted.
   hold: "instant",

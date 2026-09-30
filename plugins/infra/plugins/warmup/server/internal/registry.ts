@@ -1,4 +1,7 @@
-import type { Registration } from "@plugins/framework/plugins/server-core/core";
+import {
+  registeringPlugin,
+  type Registration,
+} from "@plugins/framework/plugins/server-core/core";
 
 /**
  * A declared heavy boot warm-up. Deferred past serving-ready and drained by
@@ -13,6 +16,12 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 export interface WarmupSpec {
   /** Stable id → profiler span + budget-report dedup key. Must be unique. */
   name: string;
+  /**
+   * What this warm-up prepares and why, in one present-tense sentence a user
+   * reads — not the code name or the mechanism (e.g. "Builds the plugin tree
+   * so the first Studio visit opens instantly.").
+   */
+  description: string;
   /**
    * `host` ⇒ runs ONLY on the main backend (the `isMain()` gate) — the
    * N×-worktree-redundancy killer for host-global corpora/indexes. `worktree`
@@ -38,6 +47,10 @@ export interface WarmupSpec {
  */
 export const warmupRegistry = new Map<string, WarmupSpec>();
 
+/** The plugin that registered each warm-up (Background activity's "Declared
+ * in"), or `null` when registered outside the framework's register phase. */
+export const warmupDeclaredIn = new Map<string, string | null>();
+
 /**
  * Declare a heavy boot warm-up. Returns a {@link Registration} that side-effects
  * into {@link warmupRegistry} at `register()` time — mirroring `defineJob`.
@@ -48,12 +61,27 @@ export function defineWarmup(spec: WarmupSpec): Registration {
   return {
     _kind: "warmup",
     _factory: "defineWarmup",
-    _doc: { label: spec.name },
+    _doc: { label: spec.name, detail: spec.description },
     register() {
       if (warmupRegistry.has(spec.name)) {
         throw new Error(`[warmup] duplicate warmup name: ${spec.name}`);
       }
       warmupRegistry.set(spec.name, spec);
+      warmupDeclaredIn.set(spec.name, registeringPlugin());
     },
   };
+}
+
+/** A declared warm-up and the plugin that registered it. */
+export interface RegisteredWarmup {
+  spec: WarmupSpec;
+  declaredIn: string | null;
+}
+
+/** Every registered warm-up, in registration order. */
+export function listRegisteredWarmups(): RegisteredWarmup[] {
+  return [...warmupRegistry.values()].map((spec) => ({
+    spec,
+    declaredIn: warmupDeclaredIn.get(spec.name) ?? null,
+  }));
 }

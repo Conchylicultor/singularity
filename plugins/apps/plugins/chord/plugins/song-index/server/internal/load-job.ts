@@ -36,6 +36,8 @@ const songIndexLog = defineLogSink({
  */
 export const songIndexLoadJob = defineSupervisedJob({
   name: "chord.song-index.load",
+  description:
+    "Downloads and loads the song index of real-song chord sections used by the chord trainer.",
   input: z.object({}),
   channel: songIndexLog,
   lock: () => "chord.song-index.load",

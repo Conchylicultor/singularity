@@ -158,6 +158,7 @@ primitive exists to name.
     - `debug/trace/spans`
     - `debug/trace/stall`
     - `debug/worktree-cleanup`
+    - `infra/background/catalog`
     - `infra/events-test`
     - `page/annotations/todo/task-link`
     - `page/bookmark`

@@ -33,6 +33,8 @@ import {
 // than let the tick report a partial picture as if it were the whole one.
 export const sessionDivergenceMonitorJob = defineJob({
   name: "debug.session-divergence-monitor",
+  description:
+    "Checks that every agent session is recorded in its conversation and files a report when a session is missing or belongs to another conversation.",
   // seconds: the detector captures the process table and the tmux pane list
   // through subprocesses it does not time out, then stats a transcript per
   // reachable session. Its measured 25.6s mean is 21.4s of background-acquire

@@ -24,6 +24,8 @@ const depsInstallLog = defineLogSink({
  */
 export const depsInstallJob = defineSupervisedJob({
   name: "deps.install",
+  description:
+    "Downloads and installs one optional dependency in the background so it is ready when a feature needs it.",
   input: z.object({ id: z.string() }),
   channel: depsInstallLog,
   lock: ({ id }) => id,

@@ -60,6 +60,7 @@ const JOB_NAME = "jobs.superseded-trigger-test";
  */
 const job = defineJob({
   name: JOB_NAME,
+  description: "Test job.",
   hold: "instant",
   input: z.object({ key: z.string() }),
   event: z.never(),

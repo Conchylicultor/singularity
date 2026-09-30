@@ -32,6 +32,8 @@ const reportedSuperseded = new Set<string>();
 // Silent when every recent boot came up within budget.
 export const bootWatchdogMonitorJob = defineJob({
   name: "debug.boot-watchdog-monitor",
+  description:
+    "Files a report when a worktree's backend started but never became ready within its boot budget.",
   // seconds: one gateway fetch bounded by its own 2s AbortSignal.timeout, plus
   // a sweep of every worktree's boot channel off the shared filesystem.
   hold: "seconds",

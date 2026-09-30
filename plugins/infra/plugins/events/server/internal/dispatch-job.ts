@@ -31,6 +31,9 @@ import { triggerTableRegistry } from "./registry";
 // maxAttempts retries on every emission.
 export const eventsDispatchJob = defineJob({
   name: "events.dispatch",
+  description:
+    "Delivers an emitted event to the job subscribed to it by validating the payload and queueing that job.",
+  internal: true,
   // instant: routing only — resolve the target, validate the payload, enqueue.
   // Measured at 26ms of work over 1405 runs. The target's EXECUTION lands in
   // whatever class the target itself declares, so a heavy target never makes the

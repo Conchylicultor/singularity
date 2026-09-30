@@ -23,6 +23,8 @@ const PageShape = z.object({ title: z.string() });
  */
 export const reminderFireJob = defineJob({
   name: "page.reminders.fire",
+  description:
+    "Sends the notification for a page reminder when it comes due, unless it was canceled or deleted.",
   hold: "instant",
   input: z.object({ reminderId: z.string() }),
   event: z.never(),

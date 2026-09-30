@@ -30,6 +30,8 @@ export function resetLog(): void {
 // defaults the event-derived fields so direct invocations still log.
 export const logPing = defineJob({
   name: "events_test.log",
+  description:
+    "Test probe that writes a labelled line to the log so event-to-job delivery can be verified end to end.",
   hold: "instant",
   input: z.object({ label: z.string() }),
   event: z.object({ userId: z.string(), message: z.string() }),

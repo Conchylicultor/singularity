@@ -81,6 +81,8 @@ type PerOpTrip =
 // per-kind threshold/budget trips (silent when healthy).
 export const opRateMonitorJob = defineJob({
   name: "debug.op-rate-monitor",
+  description:
+    "Files a report when an operation runs far more often, or spends far more total time, than its budget allows.",
   // seconds, and NOT instant despite touching only memory and the DB: the tick
   // fans out over every profiler label across every span kind and then files up
   // to TOP_N reports, each a DB round-trip and (for op-time) a coherent-instant

@@ -11,6 +11,8 @@ import { conversationProgress } from "./tables";
 // transcript content.
 export const markProgressPushedJob = defineJob({
   name: "conversation-progress.mark-pushed",
+  description:
+    "Marks every conversation of an attempt as pushed when its work lands on main.",
   hold: "instant",
   input: z.object({}).passthrough(),
   event: z

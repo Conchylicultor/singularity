@@ -120,6 +120,8 @@ export async function refreshSnapshot(opts: {
  */
 export const ipCountryRefreshJob = defineJob({
   name: "ip-country.refresh",
+  description:
+    "Downloads the IP-to-country database used to place visitors on the analytics map.",
   // seconds: one download bounded by DOWNLOAD_TIMEOUT_MS, then in-memory
   // parsing of ~90 MB of CSV that yields to the event loop between chunks.
   hold: "seconds",

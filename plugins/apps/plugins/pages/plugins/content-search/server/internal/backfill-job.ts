@@ -30,6 +30,8 @@ import { buildPageSearchDoc, SOURCE } from "./reindex-page";
 // entire corpus every boot.
 export const backfillPagesSearchJob = defineJob({
   name: "pages.search.backfill",
+  description:
+    "Indexes any pages missing from or stale in search, so the whole page corpus is searchable.",
   // instant despite sweeping the whole corpus: every step is an indexed read
   // or an upsert — no network, no spawn, no model call. If the loop ever does
   // exceed the class ceiling, `queue-slot-hog` names the real defect (a

@@ -18,6 +18,8 @@ const DEBOUNCE_MS = 4000;
  */
 export const pageHistoryScheduleJob = defineJob({
   name: "pages.history.schedule",
+  description:
+    "Debounces page edits so a burst of typing produces a single history snapshot.",
   // instant: the body only re-enqueues the snapshot job. The debounce is a
   // future `runAt` on that row, not a wait held here.
   hold: "instant",

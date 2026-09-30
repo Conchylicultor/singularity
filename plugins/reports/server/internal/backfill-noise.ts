@@ -84,6 +84,8 @@ export async function backfillNoiseClassification(): Promise<void> {
 // state is a single SELECT + zero writes.
 export const backfillNoiseWarmup = defineWarmup({
   name: "reports.backfill-noise",
+  description:
+    "Reclassifies stored reports against the current noise rules so stale rows stop cluttering the report list.",
   scope: "worktree",
   run: () => backfillNoiseClassification(),
 });

@@ -71,6 +71,8 @@ function targetsOf(input: BuildJobInput): string[] {
  */
 export const buildJob = defineSupervisedJob({
   name: "build.run.supervised",
+  description:
+    "Builds a composition and deploys it to its local namespace, recording the outcome.",
   input: buildJobInput,
 
   channel: buildLog,

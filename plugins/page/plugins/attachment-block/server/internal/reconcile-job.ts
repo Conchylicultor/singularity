@@ -7,6 +7,8 @@ import { reconcilePageAttachments } from "./reconcile";
 // graphile may retry, but `reconcilePageAttachments` is idempotent (set()-based).
 export const reconcileBlockAttachmentsJob = defineJob({
   name: "page.attachment-block.reconcile",
+  description:
+    "Keeps a page's attachment links in step with the attachment blocks it contains after each edit.",
   // instant, and the measurements disagree ON PURPOSE. `slow_ops` showed a
   // max_ms near 1050s for this job, but that number is wall-clock INCLUDING
   // gate wait: the handler is one indexed SELECT over a page's blocks plus one

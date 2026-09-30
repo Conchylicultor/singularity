@@ -14,6 +14,8 @@ const log = Log.channel("conversation-rewind");
 // backends sweeping it would only race each other.
 export const rewindBackupSweepJob = defineJob({
   name: "conversations.rewind-backup-sweep",
+  description:
+    "Deletes rewind transcript backups that are past their retention age to free disk space.",
   // seconds: one readdir + a stat per file, no bound on the file count.
   hold: "seconds",
   input: z.object({}),

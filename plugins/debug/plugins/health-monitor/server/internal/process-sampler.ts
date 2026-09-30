@@ -14,6 +14,7 @@ import { procMemory } from "@plugins/framework/plugins/server-core/core";
 import { heavyReadQueueDepth } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { getSelfMeter } from "@plugins/infra/plugins/runtime-profiler/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import type { HealthSample } from "../../core";
 import {
   startStallProfiler,
@@ -32,7 +33,7 @@ import {
 // ~/.singularity/worktrees/<wt>/logs/health.jsonl (durable, read from disk by
 // the main backend's pane endpoint).
 //
-// Why a setInterval and NOT a defineJob / graphile cron task: the sampler is
+// Why a timer (an in-process interval) and NOT a defineJob / graphile cron task: the sampler is
 // the diagnostic instrument FOR a wedged backend. Routing it through the job
 // queue (which itself runs on the event loop) would mean a blocked event loop
 // silently starves its own health sampler. graphile cron is also 5-field
@@ -71,7 +72,16 @@ export function onHealthSample(cb: HealthSampleObserver): () => void {
 }
 
 let histogram: IntervalHistogram | null = null;
-let interval: ReturnType<typeof setInterval> | null = null;
+// Profiler-invisible: the tick drains the JSC stall profiler and reads the
+// profiler's own self-meter, so spanning it would re-feed what it measures.
+export const processSamplerTimer = defineTimer({
+  name: "health.process-sampler",
+  description:
+    "Samples this backend's event-loop lag, memory and garbage-collection pressure every 10 seconds into its health log, which Debug → Health reads.",
+  everyMs: SAMPLE_INTERVAL_MS,
+  profile: "invisible",
+  run: tick,
+});
 // Declared exactly once at module eval (not in start): the sampler can be stopped
 // and restarted, and `defineLogSink` throws on a duplicate id. PERF sink.
 const channel = defineLogSink({
@@ -206,7 +216,7 @@ function tick(): void {
 }
 
 export function startProcessSampler(): void {
-  if (interval) return;
+  if (processSamplerTimer.running) return;
   histogram = monitorEventLoopDelay({ resolution: 10 });
   histogram.enable();
   // Precise GC timing only when the runtime exposes 'gc' performance entries.
@@ -234,15 +244,11 @@ export function startProcessSampler(): void {
     startStallProfiler();
     stallArmed = true;
   }
-  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability sampler: drains the JSC stall profiler each tick; must stay profiler-invisible or it re-feeds the profiler it measures
-  interval = setInterval(tick, SAMPLE_INTERVAL_MS);
+  processSamplerTimer.start();
 }
 
 export function stopProcessSampler(): void {
-  if (interval) {
-    clearInterval(interval);
-    interval = null;
-  }
+  processSamplerTimer.stop();
   if (stallArmed) {
     stopStallProfiler();
     stallArmed = false;

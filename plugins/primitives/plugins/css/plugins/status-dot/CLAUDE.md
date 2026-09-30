@@ -72,6 +72,7 @@ same paint through `statusDotPaintClass(paint)`.
     - `debug/queue-health`
     - `debug/timeline`
     - `debug/trace/pane`
+    - `infra/background/catalog`
     - `runs/run-outcome`
     - `shell/health-report`
     - `tasks/attempt-view`

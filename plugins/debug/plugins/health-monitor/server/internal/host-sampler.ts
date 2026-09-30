@@ -4,16 +4,27 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { HostSample } from "../../core";
 import { parseVmStat, type VmStat } from "./vm-stat";
 import { detectWallJumpMs } from "./wall-jump";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 
 const VM_STAT_TIMEOUT_MS = 5_000;
 
 // Host-level sampler. Runs only on the main backend (the host is a shared
 // resource — one sampler suffices). Appends to the singularity worktree's
-// health-host.jsonl. Same setInterval rationale as process-sampler.ts.
+// health-host.jsonl. Same timer rationale as process-sampler.ts.
 
 const SAMPLE_INTERVAL_MS = 10_000;
 
-let interval: ReturnType<typeof setInterval> | null = null;
+// Main-only (host metrics are the machine's, not this backend's), and
+// profiler-invisible like the process sampler.
+export const hostSamplerTimer = defineTimer({
+  name: "health.host-sampler",
+  description:
+    "Samples the machine's memory, swap, compression and load every 10 seconds into the host health log, which the sentinel and Debug → Health read.",
+  everyMs: SAMPLE_INTERVAL_MS,
+  mainOnly: true,
+  profile: "invisible",
+  run: tick,
+});
 // Declared once at module eval (not in start): the sampler can be stopped and
 // restarted, and `defineLogSink` throws on a duplicate id. PERF sink.
 const channel = defineLogSink({
@@ -117,18 +128,11 @@ async function tick(): Promise<void> {
 }
 
 export function startHostSampler(): void {
-  if (interval) return;
+  if (hostSamplerTimer.running) return;
   lastTickAt = Date.now();
-  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability sampler: host metrics tick; must stay profiler-invisible or it re-feeds the profiler it measures
-  interval = setInterval(() => {
-    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability sampler: host metrics tick; must stay profiler-invisible or it re-feeds the profiler it measures
-    void tick();
-  }, SAMPLE_INTERVAL_MS);
+  hostSamplerTimer.start();
 }
 
 export function stopHostSampler(): void {
-  if (interval) {
-    clearInterval(interval);
-    interval = null;
-  }
+  hostSamplerTimer.stop();
 }

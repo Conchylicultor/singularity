@@ -20,6 +20,8 @@ import { planTurnCheckpoint } from "./turn";
 // version already carrying this turn's message answers `unchanged`.
 export const checkpointTurnJob = defineJob({
   name: "prototypes.checkpoint-turn",
+  description:
+    "Saves a version of a prototype after each agent turn so its history can be restored.",
   // minutes: each checkpoint spawns git against the prototype's history repo,
   // and `checkpointPrototype` takes no signal or timeout of its own — so nothing
   // shorter than the work bounds it ("does it spawn?"). The transcript read is

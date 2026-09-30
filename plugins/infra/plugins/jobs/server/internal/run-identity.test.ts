@@ -75,6 +75,7 @@ describe("ownedWorkflowRunIds", () => {
 
 describe("hold: minutes requires inProcess", () => {
   const base = {
+    description: "Test job.",
     input: z.object({}),
     event: z.never(),
     dedup: "none" as const,
@@ -111,6 +112,7 @@ describe("the cron item", () => {
     const name = "jobs.run-identity-test.cron";
     await defineJob({
       name,
+      description: "Test job.",
       hold: "instant",
       input: z.object({}),
       event: z.never(),
@@ -145,6 +147,7 @@ describe("against a real queue", () => {
 
   const singletonJob = defineJob({
     name: SINGLETON,
+    description: "Test job.",
     hold: "instant",
     input: z.object({}),
     event: z.never(),
@@ -153,6 +156,7 @@ describe("against a real queue", () => {
   });
   const noneJob = defineJob({
     name: NONE,
+    description: "Test job.",
     hold: "instant",
     input: z.object({}),
     event: z.never(),
@@ -161,6 +165,7 @@ describe("against a real queue", () => {
   });
   const keyedJob = defineJob({
     name: KEYED,
+    description: "Test job.",
     hold: "instant",
     input: z.object({ key: z.string() }),
     event: z.never(),

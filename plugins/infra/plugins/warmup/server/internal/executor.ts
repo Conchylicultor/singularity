@@ -5,6 +5,7 @@ import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { warmupRegistry, type WarmupSpec } from "./registry";
+import { recordWarmupRun } from "./runs";
 
 /**
  * How many warm-ups may run at once. Kept deliberately small: warm-ups drain
@@ -27,7 +28,25 @@ export interface WarmupExecDeps {
   withSlot: <T>(fn: () => Promise<T>) => Promise<T>;
   yieldMacrotask: () => Promise<void>;
   concurrency: number;
+  /** Told when each warm-up starts and settles (in-memory run record). */
+  onRun?: (name: string, run: WarmupRun) => void;
 }
+
+/**
+ * One warm-up's run in this process — kept in memory, since a warm-up runs
+ * once per boot. `skipped`: a host-scoped warm-up on a backend that is not
+ * main (the executor never started it).
+ */
+export type WarmupRun =
+  | { outcome: "running"; startedAt: Date }
+  | {
+      outcome: "succeeded" | "failed";
+      startedAt: Date;
+      finishedAt: Date;
+      durationMs: number;
+      error: string | null;
+    }
+  | { outcome: "skipped" };
 
 /**
  * Drain the given warm-ups. Executor semantics (baked in, not per-consumer):
@@ -46,11 +65,18 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
   await Promise.all(
     deps.warmups.map((w) =>
       gate.run(async () => {
-        if (w.scope === "host" && !deps.isMain()) return;
+        if (w.scope === "host" && !deps.isMain()) {
+          deps.onRun?.(w.name, { outcome: "skipped" });
+          return;
+        }
         // A real macrotask breath before each heavy unit — unlike a microtask
         // `await Promise.resolve()`, this admits queued request IO/timers.
         await deps.yieldMacrotask();
         const end = profilerStart(`warmup:${w.name}`, "warmup", w.name, w.name);
+        const startedAt = new Date();
+        const t0 = performance.now();
+        deps.onRun?.(w.name, { outcome: "running", startedAt });
+        let error: string | null = null;
         try {
           // Boot-Gantt bar (profilerStart, above) and runtime `bg` aggregate
           // (runTracked) are complementary: the former is the coarse boot phase,
@@ -59,11 +85,19 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
           await runTracked(`warmup:${w.name}`, () =>
             deps.withSlot(() => w.run()),
           );
-          // eslint-disable-next-line promise-safety/no-bare-catch -- a warm-up is an optimization, never a correctness dependency: every failure maps to the same handling (log loudly + keep draining the other warm-ups), so one bad warm-up can neither abort its siblings nor reject drainWarmups() into the post-serving boot path. Mirrors the framework's own onShutdown isolation loop in bin/index.ts.
+          // A warm-up is an optimization, never a correctness dependency: every failure maps to the same handling (log loudly + keep draining the other warm-ups), so one bad warm-up can neither abort its siblings nor reject drainWarmups() into the post-serving boot path. Mirrors the framework's own onShutdown isolation loop in bin/index.ts.
         } catch (err) {
           console.error(`[warmup] ${w.name} failed`, err);
+          error = err instanceof Error ? err.message : String(err);
         } finally {
           end();
+          deps.onRun?.(w.name, {
+            outcome: error === null ? "succeeded" : "failed",
+            startedAt,
+            finishedAt: new Date(),
+            durationMs: Math.round((performance.now() - t0) * 10) / 10,
+            error,
+          });
         }
       }),
     ),
@@ -82,5 +116,6 @@ export async function drainWarmups(): Promise<void> {
     withSlot: withHeavyReadSlot,
     yieldMacrotask,
     concurrency: WARMUP_CONCURRENCY,
+    onRun: recordWarmupRun,
   });
 }

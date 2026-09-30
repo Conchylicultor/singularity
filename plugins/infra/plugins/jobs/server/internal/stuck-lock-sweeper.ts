@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { jobLockHeldExpr, jobNameExpr, supersededExpr } from "./introspection";
 import { jobsLog } from "./jobs-log";
 import type { EnqueueTx } from "./registry";
@@ -41,7 +41,7 @@ import { discardWorkflowLogs } from "./workflow-log";
 // DELETED instead of released. Released, it would read as a dead job. See
 // jobs/CLAUDE.md, "Superseded rows", and `superseded-trigger.ts`.
 //
-// Why this stays a raw setInterval and NOT a scheduled `defineJob`: it is the
+// Why this is a timer and NOT a scheduled `defineJob`: it is the
 // recovery mechanism FOR the job system. Routing it through graphile's own
 // queue would mean a wedged worker (the exact failure this clears) couldn't
 // run its own recovery — a deadlock. Infra that recovers the job system must
@@ -61,25 +61,24 @@ import { discardWorkflowLogs } from "./workflow-log";
 const LOCK_ACQUIRE_GRACE = "30 seconds";
 const SWEEP_INTERVAL_MS = 60_000;
 
-let timer: ReturnType<typeof setInterval> | null = null;
+export const stuckLockSweeperTimer = defineTimer({
+  name: "jobs.stuck-lock-sweep",
+  description:
+    "Frees jobs whose worker died mid-run, so they run again within a minute instead of sitting locked for hours.",
+  everyMs: SWEEP_INTERVAL_MS,
+  run: () =>
+    // eslint-disable-next-line promise-safety/no-bare-catch
+    sweepOnce().catch((err) => {
+      console.warn("[jobs] stuck-lock sweep failed", err);
+    }),
+});
 
 export function startStuckLockSweeper(): void {
-  if (timer) return;
-  timer = setInterval(() => {
-    void runTracked("jobs:stuck-lock-sweep", () =>
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      sweepOnce().catch((err) => {
-        console.warn("[jobs] stuck-lock sweep failed", err);
-      }),
-    );
-  }, SWEEP_INTERVAL_MS);
+  stuckLockSweeperTimer.start();
 }
 
 export function stopStuckLockSweeper(): void {
-  if (timer) {
-    clearInterval(timer);
-    timer = null;
-  }
+  stuckLockSweeperTimer.stop();
 }
 
 const ReclaimedRowSchema = z.object({

@@ -25,6 +25,7 @@ describe("drainWarmupsWith", () => {
     const warmups: WarmupSpec[] = [
       {
         name: "host-one",
+        description: "Test warm-up.",
         scope: "host",
         run: async () => {
           ran = true;
@@ -40,6 +41,7 @@ describe("drainWarmupsWith", () => {
     const warmups: WarmupSpec[] = [
       {
         name: "host-one",
+        description: "Test warm-up.",
         scope: "host",
         run: async () => {
           ran = true;
@@ -55,6 +57,7 @@ describe("drainWarmupsWith", () => {
     const warmups: WarmupSpec[] = [
       {
         name: "wt-one",
+        description: "Test warm-up.",
         scope: "worktree",
         run: async () => {
           ran = true;
@@ -76,6 +79,7 @@ describe("drainWarmupsWith", () => {
     };
     const warmups: WarmupSpec[] = Array.from({ length: 6 }, (_, i) => ({
       name: `w${i}`,
+      description: "Test warm-up.",
       scope: "worktree" as const,
       run: makeRun(),
     }));
@@ -89,6 +93,7 @@ describe("drainWarmupsWith", () => {
     const warmups: WarmupSpec[] = [
       {
         name: "before",
+        description: "Test warm-up.",
         scope: "worktree",
         run: async () => {
           ran.push("before");
@@ -96,6 +101,7 @@ describe("drainWarmupsWith", () => {
       },
       {
         name: "boom",
+        description: "Test warm-up.",
         scope: "worktree",
         run: async () => {
           throw new Error("kaboom");
@@ -103,6 +109,7 @@ describe("drainWarmupsWith", () => {
       },
       {
         name: "after",
+        description: "Test warm-up.",
         scope: "worktree",
         run: async () => {
           ran.push("after");
@@ -118,8 +125,18 @@ describe("drainWarmupsWith", () => {
   test("yields (a macrotask) before each warm-up that runs", async () => {
     let yields = 0;
     const warmups: WarmupSpec[] = [
-      { name: "a", scope: "worktree", run: async () => {} },
-      { name: "b", scope: "worktree", run: async () => {} },
+      {
+        name: "a",
+        description: "Test warm-up.",
+        scope: "worktree",
+        run: async () => {},
+      },
+      {
+        name: "b",
+        description: "Test warm-up.",
+        scope: "worktree",
+        run: async () => {},
+      },
     ];
     await drainWarmupsWith(
       baseDeps(warmups, {

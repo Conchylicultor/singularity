@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { queueHealthConfig, queueHealthSummaryEndpoint } from "../core";
 import {
+  queueHealthTimer,
   startQueueHealthWatchdog,
   stopQueueHealthWatchdog,
 } from "./internal/watchdog";
@@ -23,7 +24,7 @@ export default {
   httpRoutes: {
     [queueHealthSummaryEndpoint.route]: handleQueueHealthSummary,
   },
-  register: [queueHealthTool],
+  register: [queueHealthTool, queueHealthTimer],
   contributions: [
     ConfigV2.Register({ descriptor: queueHealthConfig }),
     ...queuePulseServed.declare,
@@ -34,7 +35,7 @@ export default {
     classStarvedKind,
     wedgedKind,
   ],
-  // The watchdog is a raw interval on this backend's event loop, started and
+  // The watchdog is a timer on this backend's event loop, started and
   // stopped exactly like the jobs plugin's stuck-lock sweeper — see the long
   // comment in `internal/watchdog.ts` for why it must not be a `defineJob`.
   onReady: () => {

@@ -149,8 +149,10 @@ run no `onReady`, so no watchdog.
   - Contributes: `report-kind` "span-stuck"
   - Uses:
     - `debug/trace/engine.captureTrace`
+    - `infra/background/timer.defineTimer`
     - `reports.recordReport`
     - `reports.ReportKind`
+  - Register: `defineTimer('stuck-spans.watchdog')`
 - Core:
   - Exports (types):
     - `StuckAncestor`

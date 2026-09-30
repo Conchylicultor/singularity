@@ -9,6 +9,8 @@ const AUTO_DISMISS_TTL_MS = 24 * 3_600_000;
 
 export const ttlCleanupJob = defineJob({
   name: "notifications.ttl-cleanup",
+  description:
+    "Removes old dismissed notifications and auto-dismisses quiet ones so the bell stays short.",
   hold: "instant",
   input: z.object({}),
   event: z.never(),
