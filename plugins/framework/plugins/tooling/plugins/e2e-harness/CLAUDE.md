@@ -323,6 +323,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `debug/queue-health`
     - `debug/render-profiler`
     - `improve/element-picker`
+    - `infra/background/catalog`
     - `infra/events-test`
     - `network/live`
     - `page/annotations`

@@ -65,7 +65,7 @@ export const backgroundEntryPane = Pane.define({
     parent: backgroundRoute,
   }),
   app: debugApp,
-  resolve: useResolveEntry,
+  useResolve: useResolveEntry,
   component: BackgroundEntryBody,
   width: 460,
 });
