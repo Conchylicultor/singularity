@@ -7,10 +7,12 @@ type SerializeCtx = Parameters<NonNullable<typeof tag.attrs>>[1];
 type ParseCtx = Parameters<NonNullable<typeof tag.parseAttrs>>[1];
 const serializeCtx: SerializeCtx = {
   md: (t) => String(t),
+  mdLine: (t) => String(t),
+  protectedSpans: [],
   plain: (t) => String(t),
   ordinal: 0,
 };
-const parseCtx: ParseCtx = { runs: () => [] };
+const parseCtx: ParseCtx = { runs: () => [], protectedSpans: [] };
 
 /** Serialize → parse, keeping only the attributes that were set (as the markdown writer does). */
 function roundTrip(data: PlaceData): PlaceData {
