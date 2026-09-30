@@ -220,6 +220,63 @@ describe("readJsonlEvents — side leaves off the live conversation", () => {
   });
 });
 
+describe("readJsonlEvents — tool_reference results", () => {
+  test("a tool search's tool_reference blocks survive as toolReferences", async () => {
+    // A ToolSearch result carries no text: its content is tool_reference
+    // blocks, which extractText drops. The names must still reach the row.
+    const path = await writeFixture([
+      userLine("root", null, "load the tools"),
+      toolUseLine("t1", "root", "ToolSearch"),
+      {
+        type: "user",
+        uuid: "r1",
+        parentUuid: "t1",
+        timestamp: TS,
+        message: {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "tu-t1",
+              content: [
+                {
+                  type: "tool_reference",
+                  tool_name: "mcp__singularity__add_task",
+                },
+                { type: "tool_reference", tool_name: "WebFetch" },
+              ],
+            },
+          ],
+        },
+      },
+    ]);
+
+    const call = (await readJsonlEvents(path)).find(
+      (e) => e.kind === "tool-call",
+    );
+    expect(call?.kind === "tool-call" ? call.result : undefined).toEqual({
+      at: TS,
+      content: "",
+      toolReferences: ["mcp__singularity__add_task", "WebFetch"],
+    });
+  });
+
+  test("a plain text result carries no toolReferences", async () => {
+    const path = await writeFixture([
+      userLine("root", null, "run it"),
+      toolUseLine("t1", "root", "Bash"),
+      toolResultLine("r1", "t1", "t1"),
+    ]);
+
+    const call = (await readJsonlEvents(path)).find(
+      (e) => e.kind === "tool-call",
+    );
+    expect(
+      call?.kind === "tool-call" ? call.result?.toolReferences : "not a call",
+    ).toBeUndefined();
+  });
+});
+
 describe("readJsonlEvents — unparseable timestamp", () => {
   test("a line whose timestamp is not a parseable date emits no event", async () => {
     const path = await writeFixture([

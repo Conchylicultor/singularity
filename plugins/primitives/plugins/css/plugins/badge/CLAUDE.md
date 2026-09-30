@@ -128,6 +128,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/read`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `conversations/conversation-view/launch-prompts`

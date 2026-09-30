@@ -175,6 +175,7 @@ interface RawBlock {
   tool_use_id?: string;
   content?: unknown;
   is_error?: boolean;
+  tool_name?: string;
   source?: {
     type?: string;
     media_type?: string;
@@ -215,6 +216,24 @@ function extractText(content: unknown): string {
     }
   }
   return parts.join("");
+}
+
+/** The tool names a result's `tool_reference` blocks point at, or undefined
+ *  when it has none (the common case: every result but a tool search's). */
+function extractToolReferences(content: unknown): string[] | undefined {
+  if (!Array.isArray(content)) return undefined;
+  const names: string[] = [];
+  for (const block of content as RawBlock[]) {
+    /* eslint-disable @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements */
+    if (
+      block?.type === "tool_reference" &&
+      typeof block.tool_name === "string"
+    ) {
+      names.push(block.tool_name);
+    }
+    /* eslint-enable @typescript-eslint/no-unnecessary-condition */
+  }
+  return names.length > 0 ? names : undefined;
 }
 
 /**
@@ -438,6 +457,7 @@ async function buildEvents(
               at: ts,
               content: extractText(block.content),
               isError: block.is_error === true ? true : undefined,
+              toolReferences: extractToolReferences(block.content),
             };
             const existing = toolCallByUseId.get(toolUseId);
             if (existing) {

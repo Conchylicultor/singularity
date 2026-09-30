@@ -335,7 +335,7 @@
           - **`system`** — Renders system events in the JSONL viewer.
           - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
           - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
-          - **`tool-call`** [15 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+          - **`tool-call`** [16 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
           - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it.
             - Plugins:
               - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering.

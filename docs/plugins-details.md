@@ -11437,7 +11437,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/markdown.Markdown`
             - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
               - Web:
-                - Slots: `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.tool-call.bash`, `conversations.conversation-view.jsonl-viewer.tool-call.edit`, `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`, `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.edit-page`, `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.read-page`, `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.write-note`, `conversations.conversation-view.jsonl-viewer.tool-call.read`, `conversations.conversation-view.jsonl-viewer.tool-call.skill`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.jsonl-viewer.tool-call.write`
+                - Slots: `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.tool-call.bash`, `conversations.conversation-view.jsonl-viewer.tool-call.edit`, `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`, `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.edit-page`, `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.read-page`, `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.write-note`, `conversations.conversation-view.jsonl-viewer.tool-call.read`, `conversations.conversation-view.jsonl-viewer.tool-call.skill`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.tool-call.tool-search`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.jsonl-viewer.tool-call.write`
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                   - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
@@ -11473,6 +11473,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/write`
               - Core:
@@ -11756,6 +11757,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
                       - `ui/icons.Icon`
+                - **`tool-search`** — Renders ToolSearch calls as the deferred tools they loaded: the tool names in the row, a select's not-found names flagged, a keyword search's query and match count.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "ToolSearch" → `ToolSearchToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/badge.Badge`
+                      - `primitives/css/cluster.Cluster`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
                     - Slots: `workflow-node.actions` ← `primitives.pane`
@@ -26148,6 +26159,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/launch-prompts`
@@ -26488,6 +26500,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/artifacts/skill`
               - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/prompt-templates`
               - `debug/claude-cli-calls`
@@ -27906,6 +27919,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
               - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/jsonl-viewer/user-image`
@@ -28446,6 +28460,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
               - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/jsonl-viewer/tool-call/write`
               - `conversations/conversation-view/jsonl-viewer/user-image`

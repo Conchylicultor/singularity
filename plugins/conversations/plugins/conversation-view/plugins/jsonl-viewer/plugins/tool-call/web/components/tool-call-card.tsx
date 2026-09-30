@@ -12,6 +12,9 @@ import {
 interface ToolCallCardProps {
   event: ToolCallEvent;
   summary?: ReactNode;
+  /** Muted middot-led count after the identity (`· 3 matches`) — the card's
+   *  `note`. Names what it counted; never a bare parenthesised number. */
+  note?: ReactNode;
   /** Interactive chip rendered right after the tool-name badge and before the
    *  summary — e.g. a skill-name chip. Wrapped in `<CardHeaderAction>` so it
    *  stays clickable while the rest of the row still toggles the card. */
@@ -45,6 +48,7 @@ interface ToolCallCardProps {
 export function ToolCallCard({
   event,
   summary,
+  note,
   leading,
   aside,
   children,
@@ -59,6 +63,7 @@ export function ToolCallCard({
       error={hasError}
       defaultOpen={defaultOpen}
       summary={summary}
+      note={note}
       aside={aside}
       trailing={isRunning ? <BouncingDots /> : undefined}
       label={

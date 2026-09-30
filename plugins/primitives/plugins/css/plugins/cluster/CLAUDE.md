@@ -61,6 +61,7 @@ defined in exactly one place. The distinct export buys two things:
     - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/prompt-templates`
     - `debug/claude-cli-calls`

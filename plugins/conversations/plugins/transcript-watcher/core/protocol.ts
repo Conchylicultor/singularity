@@ -48,6 +48,13 @@ const ToolCallResultSchema = z.object({
   at: z.string(),
   content: z.string(),
   isError: z.boolean().optional(),
+  /**
+   * Names carried by the result's `tool_reference` blocks — the content type a
+   * tool-search result uses to hand deferred tool definitions to the model.
+   * They hold no text, so `content` alone would read as an empty result.
+   * Absent when the result has none.
+   */
+  toolReferences: z.array(z.string()).optional(),
 });
 export type ToolCallResult = z.infer<typeof ToolCallResultSchema>;
 

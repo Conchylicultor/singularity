@@ -437,6 +437,7 @@ to reconcile them; they never needed reconciling.
     - `conversations/conversation-view/jsonl-viewer/tool-call/read`
     - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/tool-call/write`
     - `conversations/conversation-view/jsonl-viewer/user-image`
