@@ -3,9 +3,6 @@ import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
-import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import {
   prototypeHistory,
   type PrototypeVersion,
@@ -19,6 +16,7 @@ import {
   decodePicks,
   decodeSize,
 } from "../internal/present-link";
+import { PresentBox } from "./present-box";
 import { PresentStage } from "./present-stage";
 
 /**
@@ -92,11 +90,9 @@ function PresentPageBody({
       {...(picks === undefined ? {} : { initialPicks: picks })}
       {...(size === undefined ? {} : { initialSize: size })}
     >
-      <div className={cn("relative size-full bg-background", hoverRevealGroup)}>
-        <PortalHost>
-          <PresentStage name={name} />
-        </PortalHost>
-      </div>
+      <PresentBox>
+        <PresentStage name={name} />
+      </PresentBox>
     </PrototypeDetailProvider>
   );
 }

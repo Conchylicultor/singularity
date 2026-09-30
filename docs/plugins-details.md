@@ -4314,9 +4314,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/hover-reveal.hoverRevealTarget`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
+              - `primitives/overlay/popup-open.PopupOpenScope`
               - `primitives/overlay/portal-host.PortalHost`
               - `primitives/overlay/surface-overlay.SurfaceOverlay`
               - `primitives/overlay/tooltip.Kbd`
@@ -32486,6 +32488,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
           - Cross-plugin:
             - Imported by:
+              - `apps/prototypes/present`
               - `primitives/adaptive-bar`
               - `primitives/css/ui-kit`
               - `primitives/data-view/view-core`

@@ -41,6 +41,8 @@ import {
   sameExtent,
   type PageExtent,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
+import { PRESENT_CHROME_ATTR } from "../internal/use-pointer-idle";
+import { useChromeIdle } from "./present-box";
 
 /** The Exit button, and which top corner it takes. */
 export interface PresentExit {
@@ -112,6 +114,7 @@ function PresentedFrame({
   exit: PresentExit | undefined;
 }): ReactElement {
   const { canvas } = usePrototypeDetail();
+  const idle = useChromeIdle();
   const [roomRef, room] = useElementSize<HTMLDivElement>();
   const browserWindow = useWindowSize();
   // The shown frame's extent, for Whole page. Keyed by frame so flipping to
@@ -129,6 +132,12 @@ function PresentedFrame({
     );
   }
   const index = canvas.frames.indexOf(frame);
+  // Every piece of chrome: revealed by hovering the box, and hidden again while
+  // the pointer rests over the frame (see `PresentBox`).
+  const chrome = {
+    [PRESENT_CHROME_ATTR]: "",
+    className: idle ? CHROME_RESTING : hoverRevealTarget,
+  };
   const extent = page?.id === frame.id ? page.extent : null;
   const pageHeight = pageHeightOf(extent);
   const noWholePage = canvas.wholePage && extent?.kind === "window-sized";
@@ -174,7 +183,7 @@ function PresentedFrame({
               </Stack>
             ) : null}
           </Scroll>
-          <Pin to="top-left" offset="md" className={hoverRevealTarget}>
+          <Pin to="top-left" offset="md" {...chrome}>
             <Stack direction="row" gap="sm" align="center">
               <FrameTag
                 frame={frame}
@@ -189,16 +198,16 @@ function PresentedFrame({
             </Stack>
           </Pin>
           {exit?.side === "right" ? (
-            <Pin to="top-right" offset="md" className={hoverRevealTarget}>
+            <Pin to="top-right" offset="md" {...chrome}>
               <ExitButton onExit={exit.onExit} />
             </Pin>
           ) : null}
           {frame.kind === "prototype" ? (
-            <Pin to="bottom" offset="lg" className={hoverRevealTarget}>
+            <Pin to="bottom" offset="lg" {...chrome}>
               <OptionsPill frame={frame} meta={meta} />
             </Pin>
           ) : null}
-          <Pin to="bottom-right" offset="md" className={hoverRevealTarget}>
+          <Pin to="bottom-right" offset="md" {...chrome}>
             <SizeChip layout={layout} noWholePage={noWholePage} />
           </Pin>
         </>
@@ -206,6 +215,13 @@ function PresentedFrame({
     </CanvasFrameView>
   );
 }
+
+/**
+ * Chrome resting out of sight: faded out, and never a live click-target while
+ * hidden — the same coupling `hoverRevealTarget` keeps.
+ */
+const CHROME_RESTING =
+  "opacity-0 pointer-events-none select-none transition-opacity duration-400";
 
 /** The frame tag's card look (the Exit button beside it is `variant="floating"`). */
 const CHROME = "rounded-md border border-border bg-background shadow-md";

@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
-import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { useSurfaceFocused } from "@plugins/apps-core/plugins/tabs/web";
 import {
   usePrototypeDetail,
   type FrameId,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
+import { PresentBox } from "./present-box";
 import { PresentStage } from "./present-stage";
 
 /**
@@ -124,29 +122,20 @@ export function PresentOverlay({
     /* The stage box: the element handed to the Fullscreen API, and the
        positioning context the chrome pins to (so it is inside the fullscreened
        subtree and stays visible there). */
-    <div
-      ref={rootRef}
-      className={cn("relative size-full bg-background", hoverRevealGroup)}
-    >
-      {/* Every popup opened in the presentation (the version list, the size
-          menu, a tooltip) is drawn inside this box: under the Fullscreen API
-          only this subtree is painted, and a viewport presentation sits above
-          the popup layer. */}
-      <PortalHost>
-        {/* Exit goes top-LEFT, beside the tag, when we only cover the surface:
-            the app's own floating chrome (the global action bar) sits at the
-            top-right and is portaled above us. Covering the viewport puts it
-            underneath, so the top-right corner is free again. */}
-        <PresentStage
-          name={name}
-          frameId={shown}
-          exit={{
-            onExit: exit,
-            side: placement === "surface" ? "left" : "right",
-          }}
-        />
-      </PortalHost>
-    </div>
+    <PresentBox boxRef={rootRef}>
+      {/* Exit goes top-LEFT, beside the tag, when we only cover the surface:
+          the app's own floating chrome (the global action bar) sits at the
+          top-right and is portaled above us. Covering the viewport puts it
+          underneath, so the top-right corner is free again. */}
+      <PresentStage
+        name={name}
+        frameId={shown}
+        exit={{
+          onExit: exit,
+          side: placement === "surface" ? "left" : "right",
+        }}
+      />
+    </PresentBox>
   );
 
   // `aria-modal` only where it is true: covering the viewport really does make

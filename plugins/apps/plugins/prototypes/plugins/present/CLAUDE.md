@@ -55,6 +55,15 @@ Hovering shows the chrome (`PresentStage`):
 - the canvas's **size & zoom chip**, bottom right. Changing it changes the
   canvas too: there is one size for the whole canvas.
 
+**Resting the pointer hides the chrome again** (`PresentBox`,
+`internal/use-pointer-idle.ts`): after 0.8 s with no pointer move, press, wheel
+or key over the presentation it fades out, so what it covers can be seen —
+the video-player rule. The frame is an iframe, whose events never reach our
+document, so every same-origin document loaded under the box is watched too
+(attached on its `load`, captured at the box). It stays up while the pointer
+rests on the chrome itself, while a chrome control holds keyboard focus, and
+while a popup opened from it (the version list, the size menu) is showing.
+
 **← / → flip through the canvas's frames in place** (surface-scoped
 shortcuts). Leaving selects the frame last on show, so the canvas comes back on
 it.
@@ -176,9 +185,11 @@ embedded document): a reload reopens the canvas the link carries.
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
+    - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/overlay/surface-overlay.SurfaceOverlay`
     - `primitives/overlay/tooltip.Kbd`
