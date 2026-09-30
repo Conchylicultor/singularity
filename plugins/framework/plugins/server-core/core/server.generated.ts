@@ -339,6 +339,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "page/plugins/prompt/plugins/block", id: "page.prompt.block", loader: () => import("@plugins/page/plugins/prompt/plugins/block/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/prompt/plugins/link", id: "page.prompt.link", loader: () => import("@plugins/page/plugins/prompt/plugins/link/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/entity-extensions", "network/plugins/live", "tasks/plugins/task-category", "tasks/plugins/task-title", "tasks/plugins/tasks-core"] },
   { pluginPath: "page/plugins/quote", id: "page.quote", loader: () => import("@plugins/page/plugins/quote/server"), dependsOn: ["page/plugins/editor"] },
+  { pluginPath: "page/plugins/table", id: "page.table", loader: () => import("@plugins/page/plugins/table/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/text", id: "page.text", loader: () => import("@plugins/page/plugins/text/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/to-do", id: "page.to-do", loader: () => import("@plugins/page/plugins/to-do/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/toggle", id: "page.toggle", loader: () => import("@plugins/page/plugins/toggle/server"), dependsOn: ["page/plugins/editor"] },

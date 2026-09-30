@@ -18376,6 +18376,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/place`
               - `page/prompt/block`
               - `page/quote`
+              - `page/table`
               - `page/url-paste`
               - `primitives/adaptive-bar`
               - `primitives/css/control-panel`
@@ -22848,7 +22849,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
-          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.map`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.map`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.table`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
           - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.BlockMenuItem` ← `page.open-as-page`
@@ -22961,6 +22962,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockTextPluginProps`
           - `BlockTextSelection`
           - `BlockTextTokenExtension`
+          - `BlockView`
           - `CaretFlightAbortReason`
           - `CaretFlightAbortReport`
           - `CaretSurface`
@@ -23035,6 +23037,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useFrameHovered`
           - `useGroupedInsertableBlocks`
           - `useInsertableBlocks`
+          - `usePageMarkdownContext`
           - `usePageOptions`
           - `useSelectionControl`
           - `useSetFrameHover`
@@ -23367,6 +23370,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/quote`
           - `page/read-only-view`
           - `page/sub-page`
+          - `page/table`
           - `page/text`
           - `page/to-do`
           - `page/toggle`
@@ -24374,7 +24378,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReadOnlyBlocks`
           - `RunsRenderer`
       - Cross-plugin:
-        - Imported by: `apps/pages/history`
+        - Imported by:
+          - `apps/pages/history`
+          - `page/table`
     - **`sub-page`** — Sub-page block type: renders a child page inline in its parent's content flow as a clickable Notion-style page row. A void, text-less block — selectable and arrow-navigable, but Enter/Backspace can never originate in it.
       - Web:
         - Contributes: `Editor.Block` "page" → `SubPageBlock`
@@ -24404,6 +24410,42 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.PageDataSchema`
           - `primitives/css/text.typeVar`
         - Exports (values): `subPageBlock`
+    - **`table`** — Table block type: a GFM pipe table rendered as a real table, with an in-place markdown source mode for editing it. Table block type: registers its `data` schema (column alignment, header cells, body rows) at the server write boundary.
+      - Web:
+        - Contributes: `Editor.Block` "table" → `TableBlock`
+        - Uses:
+          - `page/editor.BLOCK_INSET`
+          - `page/editor.BlockRendererProps`
+          - `page/editor.Editor`
+          - `page/editor.useBlockActivate`
+          - `page/editor.usePageMarkdownContext`
+          - `page/read-only-view.RunsRenderer`
+          - `primitives/css/pin.Pin`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/text.textVariantClass`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/hover-reveal.hoverRevealGroup`
+          - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/icon-button.IconButton`
+          - `primitives/undo-redo.localUndoProps`
+      - Server:
+        - Contributes: `page.block-data` "table"
+        - Uses: `page/editor.Editor`
+      - Core:
+        - Uses:
+          - `page/editor.defineBlock`
+          - `page/editor.MdParseCtx`
+          - `page/editor.RichText`
+          - `page/editor.RichTextSchema`
+          - `primitives/css/text.typeVar`
+          - `ui/icons.symbol`
+        - Exports (types):
+          - `TableAlign`
+          - `TableData`
+        - Exports (values): `tableBlock`
     - **`text`** — Plain-text block type for the page editor. Plain-text block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "text" → `BlockTextRenderer`
@@ -27191,6 +27233,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/image`
               - `page/place`
               - `page/read-only-view`
+              - `page/table`
               - `page/video`
               - `primitives/app-shell`
               - `primitives/data-view/gallery`
@@ -27589,6 +27632,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events-test`
               - `page/page-link`
               - `page/place`
+              - `page/table`
               - `plugin-meta/plugin-health`
               - `plugin-meta/plugin-view`
               - `plugin-meta/plugin-view/file-tree`
@@ -27898,6 +27942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`
+              - `page/table`
               - `plugin-meta/facets/contributions/render-detail`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/db-schema/render-detail`
@@ -28431,6 +28476,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`
+              - `page/table`
               - `plugin-meta/facets/contributions/render-detail`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/db-schema/render-detail`
@@ -28953,6 +28999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/place/map-layer`
               - `page/prompt/block`
               - `page/read-only-view`
+              - `page/table`
               - `page/video`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/db-schema/render-detail`
@@ -30615,6 +30662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/file`
           - `page/image`
           - `page/place`
+          - `page/table`
           - `page/video`
           - `primitives/css/row`
           - `primitives/data-view`
@@ -30716,6 +30764,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/formatting/color`
           - `page/formatting/link`
           - `page/page-reference/open-aside`
+          - `page/table`
           - `primitives/adaptive-bar`
           - `primitives/collapsible-wrap`
           - `primitives/css/control-panel`
@@ -33735,6 +33784,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/math/inline`
           - `page/page-link`
           - `page/place`
+          - `page/table`
           - `primitives/text-editor`
     - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, and useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and swept by a nightly 1-year retention job.
       - Server:
@@ -37282,6 +37332,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/prompt/block`
           - `page/quote`
           - `page/read-only-view`
+          - `page/table`
           - `page/text`
           - `page/to-do`
           - `page/toggle`
