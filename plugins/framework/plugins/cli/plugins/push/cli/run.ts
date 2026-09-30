@@ -430,7 +430,9 @@ const pushAction: CliAction<
   // death — a push owns no deploy receipt. It is also the op where an
   // unattributed death costs the most: a push holds the host-wide push
   // mutex, so every agent on the box queues behind whoever killed it.
-  installFatalSignalExit(signalOriginTap({ opId: pushId, worktree: opSlug }));
+  installFatalSignalExit(
+    await signalOriginTap({ opId: pushId, worktree: opSlug }),
+  );
   // Fires immediately BEFORE `pushPool.run` (see withPushLock), so a push
   // blocked on the mutex lands on disk as a live "waiting" row before it
   // ever holds the lock. A failure BEFORE this point writes no record at

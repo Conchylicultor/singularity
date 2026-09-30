@@ -12,7 +12,9 @@ import { liveValue } from "@plugins/network/plugins/live/core";
  *   throws on boot). Same reasoning.
  * - `render-timeout` — the page never settled inside the budget. A partial
  *   screenshot is indistinguishable from a finished one, so we take none.
- * - `browser-unavailable` — chromium could not be launched at all.
+ * - `browser-unavailable` — chromium could not be launched at all, or its
+ *   install failed. (Not installed YET is not a failure: that is the
+ *   `waiting-for-browser` state.)
  */
 export const ThumbnailFailureKindSchema = z.enum([
   "subresource-failed",
@@ -33,6 +35,10 @@ export type ThumbnailFailureKind = z.infer<typeof ThumbnailFailureKindSchema>;
 export const ThumbnailStateSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("ready"), key: z.string() }),
   z.object({ status: z.literal("rendering") }),
+  // Chromium (an on-demand dependency) is not installed yet: its install has
+  // been requested, and the render is re-enqueued when it settles. Not a
+  // failure of the prototype, and not cached as one.
+  z.object({ status: z.literal("waiting-for-browser"), message: z.string() }),
   z.object({
     status: z.literal("failed"),
     key: z.string(),

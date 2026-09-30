@@ -55,6 +55,12 @@ import { listenFlag } from "./listen";
 // Own-plugin, so relative — the `@plugins/infra/plugins/launcher/core` alias
 // would name this plugin from inside itself.
 import { pickRuntimeEnv, runtimeEnvNames } from "../../core";
+import { gatewayBinary } from "../../deps";
+import { readyNow, type Ready } from "@plugins/infra/plugins/deps/deps";
+import {
+  builtFile,
+  type BuildSource,
+} from "@plugins/infra/plugins/deps/plugins/build/deps";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
 // belongs on the terminal, but this plugin must not assume stdout (a packaged
@@ -379,45 +385,28 @@ export function writeReleaseDatabaseConfig(
 }
 
 /**
- * Build (or locate) the gateway binary. If `<repoRoot>/gateway/gateway` already
- * exists, skip the build and return it as-is — this is the release path (a
- * vendored prebuilt binary, no Go toolchain on the host) and also a fast path in
- * dev (a prior build left the binary in place). Only run `go build -o gateway`
- * when the binary is absent. Pass `forceBuild` to rebuild unconditionally (dev
- * correctness when the gateway Go source changed). Fails loud if the build does
- * not exit cleanly. Returns the gateway working dir and binary path so the
- * caller can spawn it.
+ * The gateway sealed into the release bundle at `bundleRoot` — read from its
+ * `deps.sealed.json`, never built: a release host has no Go toolchain and no
+ * source. Throws when the bundle does not carry a gateway for this platform.
  */
-export async function buildOrLocateGateway(
-  repoRoot: string,
-  log: LogFn = noop,
-  forceBuild = false,
-): Promise<{ gatewayDir: string; gatewayBin: string }> {
-  const gatewayDir = join(repoRoot, "gateway");
-  const gatewayBin = join(gatewayDir, "gateway");
-
-  if (!forceBuild && existsSync(gatewayBin)) {
-    log("Using prebuilt gateway");
-    return { gatewayDir, gatewayBin };
-  }
-
-  log("Building gateway...");
-  const build = Bun.spawn(["go", "build", "-o", "gateway", "."], {
-    cwd: gatewayDir,
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  if ((await build.exited) !== 0) {
-    throw new Error("Gateway build failed");
-  }
-
-  return { gatewayDir, gatewayBin };
+export async function bundledGateway(
+  bundleRoot: string,
+): Promise<Ready<BuildSource>> {
+  const now = await readyNow(gatewayBinary, { root: bundleRoot });
+  if (now.kind === "ready") return now.ready;
+  throw new Error(
+    `The bundle at ${bundleRoot} has no usable gateway (${gatewayBinary.id}: ${now.kind}${now.kind === "failed" ? ` — ${now.message}` : ""}).`,
+  );
 }
 
 /** What a gateway launch needs, whoever performs it (see {@link gatewayLaunchSpec}). */
 export interface GatewayLaunchOptions {
-  gatewayDir: string;
-  gatewayBin: string;
+  /**
+   * The installed gateway binary (`gateway-binary`): ensured from the checkout
+   * by `./singularity start` / `serve-app`, read from the bundle by a release.
+   * A `Ready`, so a launch that never ensured one does not compile.
+   */
+  gateway: Ready<BuildSource>;
   port: number;
   /**
    * Bind host, e.g. `127.0.0.1`. Omitted (the default) is a wildcard bind on
@@ -475,7 +464,7 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
   gatewayLocks.ensure();
   return {
     argv: [
-      opts.gatewayBin,
+      builtFile(opts.gateway),
       "-listen",
       listenFlag({ host: opts.bindHost ?? null, port: opts.port }),
       "-log-level",
@@ -515,7 +504,9 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
       "-child-env",
       runtimeEnvNames().join(","),
     ],
-    cwd: opts.gatewayDir,
+    // Nothing the gateway reads is relative (every path is a flag above); its
+    // own install dir is simply a directory that exists as long as it does.
+    cwd: opts.gateway.dir,
     // The declared subset of the LIVE `process.env` — never an implicit
     // inherit (which would miss the release launcher's mutations) and never
     // the whole thing (which hands the starter's shell to every backend).
@@ -774,7 +765,7 @@ async function awaitAppReady(name: Namespace, port: number): Promise<void> {
  * path constants are import-time frozen, so it cannot be set mid-process).
  *
  * Ordering (each step gates the next):
- *   1. Build/locate the gateway binary.
+ *   1. (The caller hands in the gateway binary — ensured or sealed.)
  *   2. ensureDatabaseConfig — write the release database.json under the root.
  *   3. Spawn the gateway daemon (receives SINGULARITY_DIR and the rest of the
  *      declared runtime environment, listens on `port`);
@@ -791,6 +782,8 @@ async function awaitAppReady(name: Namespace, port: number): Promise<void> {
  */
 export async function bootSelfContainedApp(opts: {
   name: Namespace;
+  /** The gateway binary: `bundledGateway(bundleRoot)` in a release, `ensureDep` from a CLI. */
+  gateway: Ready<BuildSource>;
   server: string;
   web: string;
   port: number;
@@ -830,7 +823,6 @@ export async function bootSelfContainedApp(opts: {
   const logLevel = opts.logLevel ?? "info";
   const log = opts.log ?? noop;
 
-  const { gatewayDir, gatewayBin } = await buildOrLocateGateway(repoRoot, log);
   ensureDatabaseConfig(repoRoot, log);
   // Stamp the release identity BEFORE the gateway spawn: a child's env is
   // snapshotted at spawn, and the backend gets its env from the gateway (both
@@ -840,8 +832,7 @@ export async function bootSelfContainedApp(opts: {
   // A self-contained app is single-namespace: route subdomain-less requests
   // (the desktop webview, single-origin web) to it via the gateway default.
   const gateway = spawnGatewayDaemon({
-    gatewayDir,
-    gatewayBin,
+    gateway: opts.gateway,
     port,
     bindHost,
     logLevel,

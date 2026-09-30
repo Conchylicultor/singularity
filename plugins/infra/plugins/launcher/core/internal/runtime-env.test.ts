@@ -18,13 +18,12 @@ const withheld = Object.keys(RUNTIME_WITHHELD_ENV);
 const prefixes = Object.keys(RUNTIME_FORWARDED_PREFIXES);
 
 describe("pickRuntimeEnv", () => {
-  test("keeps host, forwarded, tool and prefix-matched names", () => {
+  test("keeps host, forwarded and prefix-matched names", () => {
     const picked = pickRuntimeEnv({
       HOME: "home-value",
       PATH: "/usr/bin",
       SINGULARITY_DIR: "/data",
       SINGULARITY_RELEASE_RUN_ID: "run-1",
-      PLAYWRIGHT_BROWSERS_PATH: "",
       SINGULARITY_AUTH_GOOGLE_CLIENT_ID: "id",
     });
     expect(picked).toEqual({
@@ -32,7 +31,6 @@ describe("pickRuntimeEnv", () => {
       PATH: "home-value/.local/share/mise/shims:/usr/bin",
       SINGULARITY_DIR: "/data",
       SINGULARITY_RELEASE_RUN_ID: "run-1",
-      PLAYWRIGHT_BROWSERS_PATH: "",
       SINGULARITY_AUTH_GOOGLE_CLIENT_ID: "id",
     });
   });
@@ -126,7 +124,6 @@ describe("runtimeEnvNames", () => {
     const names = runtimeEnvNames();
     expect(names).toContain("HOME");
     expect(names).toContain("SINGULARITY_DIR");
-    expect(names).toContain("PLAYWRIGHT_BROWSERS_PATH");
     expect(names).toContain("SINGULARITY_AUTH_*");
     expect(names).not.toContain("SINGULARITY_CONVERSATION_ID");
     expect(new Set(names).size).toBe(names.length);

@@ -2,9 +2,11 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { listWorktreePaths } from "@plugins/infra/plugins/worktree/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
-import { declaredDeps } from "./registry";
-import { defaultStore } from "./store";
-import { SWEEP_IDLE_MS, sweepDeps } from "./sweep";
+import { declaredDeps } from "../../deps";
+// The engine's own files, by relative path (inside one plugin): the sweep is
+// this job's alone, so it is not part of the `deps` barrel's API.
+import { defaultStore } from "../../deps/internal/store";
+import { SWEEP_IDLE_MS, sweepDeps } from "../../deps/internal/sweep";
 
 const log = Log.channel("deps");
 
@@ -25,7 +27,7 @@ export const depsSweepJob = defineJob({
   async run() {
     const report = await sweepDeps({
       store: defaultStore(),
-      deps: declaredDeps(),
+      deps: await declaredDeps(),
       checkouts: await listWorktreePaths(),
       now: new Date(),
       idleMs: SWEEP_IDLE_MS,

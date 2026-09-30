@@ -25,8 +25,8 @@ export default defineBoundaries({
     // like `@plugins/other/data-dirs` is. The known exceptions are the
     // host-only `core/` files listed under `runtimeExceptions` below.
     web: ["web", "core", "shared"],
-    server: ["server", "core", "shared", "data-dirs"],
-    central: ["central", "core", "shared", "data-dirs"],
+    server: ["server", "core", "shared", "data-dirs", "deps"],
+    central: ["central", "core", "shared", "data-dirs", "deps"],
     core: ["core"],
     shared: ["shared", "core", "data-dirs"],
     // Declarations of the directories a plugin owns under the data root. A leaf
@@ -41,7 +41,9 @@ export default defineBoundaries({
     // work no request path may ever start. That is not hypothetical: the
     // chromium installer used to sit in `browser-fetch/core`, and a thumbnail
     // render called it, so a missing binary blocked a backend's event loop for
-    // a ~150 MB download (see that plugin's `provision/index.ts`).
+    // a ~150 MB download. (Chromium is now an on-demand `infra/deps`
+    // dependency, and no provisioning step remains; the registry still works
+    // with zero entries.)
     //
     // The row polices it in both directions: a provisioning step may not import
     // `@plugins/x/web` or its own `../web`, and no other folder's row lists
@@ -66,13 +68,13 @@ export default defineBoundaries({
     // root by hand — an undeclared path, spelled a second time, which is the
     // whole failure mode the registry exists to end. Importing a declaration
     // reads a path; it does not import the code under test.
-    e2e: ["e2e", "core", "data-dirs"],
+    e2e: ["e2e", "core", "data-dirs", "deps"],
     // cli/ — a plugin's `./singularity <verb>` contribution. A CLI command is a
     // host process like a server, so it may reach `core`, its own `shared`,
     // declared `data-dirs`, other plugins' `server` barrels, and other plugins'
     // `cli` barrels. That last edge is the point: shared CLI machinery lives in
-    // a `cli/` barrel rather than being copied, exactly as `provision` shares one
-    // chromium installer and `tooling/e2e-harness` shares one Playwright harness.
+    // a `cli/` barrel rather than being copied, exactly as `tooling/e2e-harness`
+    // shares one Playwright harness through its `e2e/` barrel.
     // `runtimeNames` derives from `RUNTIME_FOLDERS`, so `@plugins/<p>/cli` is a
     // legal cross-plugin barrel with no other edit.
     //
@@ -88,16 +90,26 @@ export default defineBoundaries({
     // `cli:command-declarations-light` — which measures each `cli/index.ts`'s
     // STATIC closure only. An implementation sitting next to the declaration is
     // free to reach `server`; the declaration reaching it is the error.
-    cli: ["cli", "core", "shared", "data-dirs", "server"],
+    cli: ["cli", "core", "shared", "data-dirs", "server", "deps"],
+    // deps/ — on-demand dependency declarations (`defineDep`) and, in
+    // `infra/deps`, the install engine. Host-only: the engine reads
+    // `paths/core` (`homedir()` at module eval) and declares its cache through
+    // `data-dirs`, so `web` and `core` do not list it — which is also why the
+    // engine is a barrel of its own rather than `core/`. Every host-process row
+    // (server, central, cli, check, e2e, scripts, bin) lists it, so a CLI op, a
+    // check or `./singularity start` reaches a declaration and `ensureDep`
+    // without booting a backend. Host admission, a server barrel, is injected
+    // through the `ExecContext` rather than imported.
+    deps: ["deps", "core", "data-dirs"],
 
     // Leaf folders (`LEAF_FOLDERS`): found by discovery or run by path, never
     // imported. `shared` in a row is the plugin's own; plugin-boundaries R10
     // forbids reaching another plugin's. `web` is in no host-process row.
     lint: ["core"],
-    check: ["core", "shared", "data-dirs", "server"],
+    check: ["core", "shared", "data-dirs", "server", "deps"],
     facet: ["core"],
-    bin: ["core", "shared", "data-dirs", "server", "central", "cli"],
-    scripts: ["core", "shared", "data-dirs", "server"],
+    bin: ["core", "shared", "data-dirs", "server", "central", "cli", "deps"],
+    scripts: ["core", "shared", "data-dirs", "server", "deps"],
     // Layout-harness fixtures render real components in the browser.
     fixtures: ["web", "core"],
     vite: ["core"],

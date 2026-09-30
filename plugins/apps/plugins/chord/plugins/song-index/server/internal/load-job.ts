@@ -39,7 +39,7 @@ export const songIndexLoadJob = defineSupervisedJob({
   input: z.object({}),
   channel: songIndexLog,
   lock: () => "chord.song-index.load",
-  async run(_input, { log }) {
+  async run(_input, { log, exec }) {
     const target = currentIndexTarget();
     if (isIndexCurrent(await readIndexState(), target)) {
       log(
@@ -56,7 +56,11 @@ export const songIndexLoadJob = defineSupervisedJob({
       existsSync(snapshotPath()) ? "loading" : "downloading",
     );
     try {
-      const path = await ensureSnapshot({ log, onPhase: setIndexPhase });
+      const path = await ensureSnapshot({
+        log,
+        exec,
+        onPhase: setIndexPhase,
+      });
       const result = await loadSections({
         snapshotPath: path,
         scope: target.scope,

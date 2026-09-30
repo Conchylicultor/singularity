@@ -1,5 +1,11 @@
 import { join, normalize } from "node:path";
 import { chromium, type Browser, type Page } from "playwright";
+import { z } from "zod";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
+import { readBrowserExecutables } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
 import type {
   FixtureMutation,
   MeasuredFixture,
@@ -106,13 +112,47 @@ function serveDir(outDir: string): { origin: string; stop: () => void } {
   };
 }
 
+/**
+ * The installed headless Chromium, installing it first if needed.
+ *
+ * Chromium is an on-demand dependency (`chromium`, declared by
+ * safe-fetch/browser-fetch). This file sits under `web/`, whose row cannot
+ * reach the `deps/` engine barrel, so it asks the engine's process boundary
+ * instead — `./singularity deps install chromium --json`, a no-op printing
+ * where the install lives once it is there (the `layout-geometry` check has
+ * already installed it before this suite runs) — and reads the executables
+ * the install recorded, as Playwright reported them, through the kind's
+ * `core` reader. So the suite runs the same way under the check and under a
+ * plain `./singularity test`.
+ */
+async function installedHeadlessChromium(): Promise<string> {
+  const root = await getWorktreeRoot();
+  const argv = [`${root}/singularity`, "deps", "install", "chromium", "--json"];
+  const res = await spawnCaptured(argv, { cwd: root, timeoutMs: 30 * 60_000 });
+  if (res.exitCode !== 0 || res.timedOut) {
+    throw new Error(
+      `${argv.slice(1).join(" ")} ${res.timedOut ? "timed out" : `exited ${res.exitCode}`}:\n${res.stderr.trim().split("\n").slice(-20).join("\n")}`,
+    );
+  }
+  const { dir } = z
+    .object({ dir: z.string() })
+    .parse(JSON.parse(res.stdout.trim().split("\n").at(-1) ?? ""));
+  const read = readBrowserExecutables(dir);
+  if (!read.ok) throw new Error(`chromium at ${dir}: ${read.reason}`);
+  return read.executables.headlessShell;
+}
+
 export async function openMeasurer(outDir: string): Promise<Measurer> {
+  const executablePath = await installedHeadlessChromium();
   const srv = serveDir(outDir);
   // Playwright's default launch timeout is 30s. Under host load (a CI box or a
   // box running several worktree servers) cold Chromium startup can briefly
   // exceed that even when serialized — a slow launch is not a real failure, so
   // give it generous headroom rather than flaking the geometry gate.
-  const browser: Browser = await chromium.launch({ timeout: 120_000 });
+  const browser: Browser = await chromium.launch({
+    executablePath,
+    timeout: 120_000,
+  });
   const page: Page = await browser.newPage();
 
   // A fixture that CRASHES must fail the gate, and until this listener existed

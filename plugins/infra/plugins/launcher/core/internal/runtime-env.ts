@@ -140,12 +140,12 @@ export const RUNTIME_FORWARDED_PREFIXES = {
 
 /**
  * Third-party tool locations an operator may set, where the install-time
- * reader and the run-time reader must agree.
+ * reader and the run-time reader must agree. None today:
+ * `PLAYWRIGHT_BROWSERS_PATH` left when Chromium became an `infra/deps`
+ * dependency, which installs into its own cache dir and launches the
+ * executable it recorded there, whatever the environment says.
  */
-export const RUNTIME_FORWARDED_TOOL_ENV = {
-  PLAYWRIGHT_BROWSERS_PATH:
-    "browser-fetch's provision step installs chromium there, and chromium.launch() inside the backend must look in the same place (safe-fetch/browser-fetch provision/index.ts, server/internal/browser-fetch.ts)",
-} as const;
+export const RUNTIME_FORWARDED_TOOL_ENV: Readonly<Record<string, string>> = {};
 
 /**
  * Names that exist in the code but must NEVER be inherited by the runtime tree,

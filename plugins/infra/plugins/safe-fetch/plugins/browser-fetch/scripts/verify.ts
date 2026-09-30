@@ -18,6 +18,8 @@
 //       bundle has run.
 //   http://169.254.169.254/latest/meta-data/
 //       expect SsrfError, thrown before anything is launched.
+import { ensureDepViaCli } from "@plugins/infra/plugins/deps/deps";
+import { chromium } from "../deps";
 import { browserFetch, BrowserFetchError } from "../server";
 
 const args = process.argv.slice(2);
@@ -28,6 +30,11 @@ if (url === undefined) {
 }
 const selectorIdx = args.indexOf("--selector");
 const waitForSelector = selectorIdx >= 0 ? args[selectorIdx + 1] : undefined;
+
+// A script is not a backend: install Chromium here (a `deps install` child,
+// progress on this terminal) rather than meet `browserFetch`'s request-path
+// answer, which is to enqueue a job no backend of this script's runs.
+await ensureDepViaCli(chromium, { stdio: "inherit" });
 
 try {
   const res = await browserFetch(url, { waitForSelector });

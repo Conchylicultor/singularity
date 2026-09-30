@@ -1019,6 +1019,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `TokenizedChordSchema`
               - `WindowsByModeSchema`
               - `windowsInModes`
+          - Deps:
+            - Uses:
+              - `infra/deps.defineDep`
+              - `infra/deps/download.download`
+            - Exports (values):
+              - `SHEETSAGE_DUMP_FILES`
+              - `sheetSageDumps`
           - Cross-plugin:
             - Imported by:
               - `apps/chord/curriculum`
@@ -4337,6 +4344,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/prototypes/files.listPrototypeMetas`
               - `apps/prototypes/files.onPrototypesChanged`
+              - `infra/deps.onDepInstallSettled`
+              - `infra/deps.requestDep`
               - `infra/jobs.defineJob`
               - `network/live.serveValue`
             - Register:
@@ -17616,15 +17625,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reportInterruptedPredecessor`
               - `resolveBuildReceipt`
               - `writeBuildReceipt`
-          - Cross-plugin:
-            - Imported by:
-              - `framework/cli/build`
-              - `framework/cli/check`
-              - `framework/cli/push`
-              - `framework/cli/release`
-              - `framework/cli/run`
-              - `framework/cli/test`
           - Cli:
+            - Uses: `infra/jobs/supervised-job.cliExecContext`
             - Exports (types):
               - `BuildLogs`
               - `BuildProfile`
@@ -17682,6 +17684,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `writeBuildLogs`
               - `writeBuildProfile`
               - `writeBuildReceipt`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/check`
+              - `framework/cli/push`
+              - `framework/cli/release`
+              - `framework/cli/run`
+              - `framework/cli/test`
         - **`push`** — `./singularity push` — the one path work reaches main: commit, rebase onto main, re-normalize generated artifacts, run the tree-scoped checks, fast-forward and push, all under the host-wide push mutex.
           - Cli:
             - Uses:
@@ -17699,14 +17709,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `framework/cli/migrations.generateMigration`
         - **`release`** — `./singularity release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or a Tauri desktop bundle.
           - Cli:
-            - Uses: `framework/cli/op-runtime.FATAL_SIGNAL_EXITS`
+            - Uses:
+              - `framework/cli/op-runtime.FATAL_SIGNAL_EXITS`
+              - `infra/jobs/supervised-job.cliExecContext`
         - **`run`** — `./singularity run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
         - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
+          - Cli:
+            - Uses: `infra/jobs/supervised-job.cliExecContext`
         - **`start`** — `./singularity start` — build the gateway and register it as a launchd service (macOS) so it comes back after a reboot, then wait for it to actually serve before reporting success.
           - Cli:
-            - Uses: `framework/cli/doctor.assertPrerequisites`
+            - Uses:
+              - `framework/cli/doctor.assertPrerequisites`
+              - `infra/jobs/supervised-job.cliExecContext`
         - **`stop`** — `./singularity stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login.
         - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
           - Core:
@@ -18346,6 +18362,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/web-sdk`
               - `improve/element-picker`
               - `infra/asset-mirror`
+              - `infra/deps`
               - `infra/paths`
               - `plugin-meta/facets`
               - `primitives/css/layout-harness`
@@ -18358,7 +18375,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineCollectedDir`
               - `isCollectedDirDef`
               - `loadCollectedDir`
-        - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
+        - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./singularity deps install chromium`). Also owns the two generic tools (screenshot, perf).
           - Core:
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
@@ -19165,7 +19182,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/sonata/sources/midi/folders`
           - `stats/cost`
-    - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. Optional dependencies installed on demand: defineDep declares one (an installer kind's source, and how it stays current), ensureDep installs it off the event loop (it demands an ExecContext) under a host flock into a content-addressed cache (`ready.json` written last), requestDep enqueues the deps.install supervised job from a request, depState and the pushed deps.states live value say absent / installing / ready / failed, and a daily deps.sweep removes identities no checkout declares that sat unused for 14 days.
+    - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request, the pushed deps.states live value says absent / installing / ready / failed for every declared dependency, the install/remove endpoints back Settings → Dependencies, and a daily deps.sweep removes identities no checkout declares that sat unused for 14 days.
       - Web:
         - Slots:
           - `item-actions` ← `infra.deps`
@@ -19198,31 +19215,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/file-watcher.createFileWatcher`
-          - `infra/host/host-admission.withHostGrant`
           - `infra/jobs.defineJob`
           - `infra/jobs/supervised-job.defineSupervisedJob`
           - `infra/worktree.listWorktreePaths`
           - `network/live.serveValue`
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels.Log`
-        - Exports (types):
-          - `DefineDepSpec`
-          - `Dep`
-          - `DepSource`
-          - `EnsureOptions`
-          - `InstallContext`
-          - `Ready`
-          - `RemoveOutcome`
         - Exports (values):
-          - `declaredDep`
-          - `declaredDeps`
-          - `defineDep`
-          - `DepDeclare`
-          - `depState`
-          - `ensureDep`
-          - `removeDep`
+          - `onDepInstallSettled`
           - `requestDep`
-          - `UnknownDepError`
         - Register:
           - `defineSupervisedJob('deps.install')`
           - `defineJob('deps.sweep')`
@@ -19232,6 +19233,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/deps/remove`
       - Core:
         - Uses:
+          - `framework/tooling/collected-dir.defineCollectedDir`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
         - Exports (types):
@@ -19251,21 +19253,90 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/deps/updates.upgradeThisWorktree`
           - `infra/jobs/supervised-job.cliExecContext`
       - Cross-plugin:
-        - Imported by: `infra/deps/hello-python`
+        - Imported by:
+          - `apps/chord/song-index`
+          - `apps/prototypes/thumbnails`
+          - `infra/deps/build`
+          - `infra/deps/hello-python`
+          - `infra/launcher`
+          - `infra/safe-fetch/browser-fetch`
+          - `packages/signal-origin`
+      - Deps:
+        - Exports (types):
+          - `BundleSpec`
+          - `DefineDepSpec`
+          - `Dep`
+          - `DepSource`
+          - `DepTarget`
+          - `EnsureOptions`
+          - `InstallContext`
+          - `Ready`
+          - `ReadyNow`
+          - `RemoveOutcome`
+          - `SealOutcome`
+          - `TargetedSource`
+        - Exports (values):
+          - `declaredDep`
+          - `declaredDeps`
+          - `defineDep`
+          - `depState`
+          - `ensureDep`
+          - `ensureDepViaCli`
+          - `holdDep`
+          - `hostTarget`
+          - `readyNow`
+          - `removeDep`
+          - `sealDep`
+          - `SEALED_MANIFEST`
+          - `UnknownDepError`
       - Test helpers:
-        - Server: `@plugins/infra/plugins/deps/server/testing`
+        - Deps: `@plugins/infra/plugins/deps/deps/testing`
           - `readyForTests`
       - Plugins:
-        - **`hello-python`** — hello-python: a tiny real `python/` uv project (numpy only) declared as an on-demand dependency — the python kind's end-to-end proof, until the audio pipeline replaces it.
-          - Server:
-            - Contributes: `dep` "hello-python"
+        - **`build`** — The build installer kind of infra/deps: build({ inputs, tool, output, run }) (its deps barrel) declares something built from this checkout's own source — identity = sha256 of every file the git ls-files input globs match, the tool's version output and the target platform/arch — built by run(ctx) straight into env/<output>, which is what isIntact checks; builtFile(ready) is its path. admission: { none } skips host admission for a build too small to be worth a grant.
+          - Deps:
+            - Uses:
+              - `infra/deps.DepSource`
+              - `infra/deps.DepTarget`
+              - `infra/deps.hostTarget`
+              - `infra/deps.InstallContext`
+              - `infra/deps.Ready`
+              - `infra/deps.TargetedSource`
+            - Exports (types):
+              - `BuildContext`
+              - `BuildSource`
+              - `BuildTargets`
+              - `BuildTool`
+            - Exports (values):
+              - `build`
+              - `builtFile`
+          - Cross-plugin:
+            - Imported by:
+              - `infra/launcher`
+              - `packages/signal-origin`
+        - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus derive.version — fetched with curl into env/<name>.part (progress in the install log), sha256-checked and renamed, then optionally post-processed in place by derive.run; downloadedFile(ready, name) is the path of one of them.
+          - Cross-plugin:
+            - Imported by: `apps/chord/song-index`
+          - Deps:
+            - Exports (types):
+              - `DownloadDerive`
+              - `DownloadFile`
+              - `DownloadSource`
+            - Exports (values):
+              - `download`
+              - `downloadedFile`
+        - **`hello-python`** — A tiny real python/ uv project (numpy only) declared as the on-demand dependency `hello-python`: the deps python kind's end-to-end proof, deleted once the audio pipeline lands as the first real consumer.
+          - Deps:
             - Uses:
               - `infra/deps.defineDep`
-              - `infra/deps.DepDeclare`
               - `infra/deps.Ready`
               - `infra/deps/python.pythonEnv`
               - `infra/deps/python.PythonEnvSource`
               - `infra/deps/python.runPython`
+            - Exports (types): `HelloStats`
+            - Exports (values):
+              - `helloPython`
+              - `helloStats`
         - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the daily deps.detect-outdated job files its upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
           - Server:
             - Contributes: `updater` "mise"
@@ -19284,10 +19355,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `toolchain.TOOLS`
               - `toolchain.upgradeTarget`
             - Exports (values): `miseUpdater`
-        - **`python`** — The python installer kind of infra/deps: pythonEnv({ project }) declares a dependency on one uv project (a plugin's `python/` folder) — identity = hash of pyproject.toml + uv.lock + .python-version + the uv version, installed with `uv sync --frozen` into its own env with a uv-downloaded CPython (never the system Python) — and runPython(ready, { module, input, output }) runs one of its modules with JSON in and one JSON document out. Contributes the `uv` updater, which moves every python/ project's uv.lock under a 3-day release cooldown.
+        - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
+          - Cross-plugin:
+            - Imported by: `infra/safe-fetch/browser-fetch`
+          - Core:
+            - Exports (types):
+              - `BrowserExecutables`
+              - `ReadBrowserExecutables`
+            - Exports (values):
+              - `BROWSER_EXECUTABLES_FILE`
+              - `BrowserExecutablesSchema`
+              - `readBrowserExecutables`
+          - Deps:
+            - Exports (types):
+              - `ChromiumLaunchOptions`
+              - `PlaywrightBrowserName`
+              - `PlaywrightBrowserSource`
+            - Exports (values):
+              - `launchChromium`
+              - `playwrightBrowser`
+        - **`python`** — The python installer kind of infra/deps: pythonEnv({ project }) (its deps barrel) declares a dependency on one uv project (a plugin's `python/` folder) — identity = hash of pyproject.toml + uv.lock + .python-version + the uv version, installed with `uv sync --frozen` into its own env with a uv-downloaded CPython (never the system Python) — and runPython(ready, { module, input, output }) runs one of its modules with JSON in and one JSON document out. Contributes the `uv` updater, which moves every python/ project's uv.lock under a 3-day release cooldown.
           - Server:
             - Contributes: `updater` "uv"
             - Uses: `infra/deps/updates.UpdaterDeclare`
+          - Cross-plugin:
+            - Imported by: `infra/deps/hello-python`
+          - Deps:
             - Exports (types):
               - `PythonEnvSource`
               - `RunPythonOptions`
@@ -19295,8 +19388,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PythonEntryError`
               - `pythonEnv`
               - `runPython`
-          - Cross-plugin:
-            - Imported by: `infra/deps/hello-python`
         - **`updates`** — The updater registry (UpdaterDeclare) and the daily deps.detect-outdated job: for each updater with something newer than its lock records and no open task, files one auto-started task (Dependencies category) whose agent runs `./singularity deps upgrade <updater>` and pushes on an `upgraded` verdict.
           - Server:
             - Contributes: `taskCategory` "dependencies"
@@ -20196,8 +20287,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database/admin`
               - `debug/profiling/boot-bench`
               - `framework/tooling/checks/type-check`
-              - `infra/deps`
               - `infra/host/host-read-pool`
+              - `infra/jobs/supervised-job`
               - `infra/safe-fetch/browser-fetch`
               - `infra/worktree`
           - Core:
@@ -20491,6 +20582,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events.defineTriggerEvent`
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
+              - `infra/host/host-admission.withHostGrant`
               - `infra/jobs.abortDurableRun`
               - `infra/jobs.defineJob`
               - `infra/jobs.isNonRetryableError`
@@ -20561,12 +20653,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `database/fork`
               - `debug/worktree-cleanup`
+              - `framework/cli/op-runtime`
+              - `framework/cli/release`
+              - `framework/cli/serve-app`
+              - `framework/cli/start`
               - `infra/deps`
               - `infra/events-test`
               - `release`
           - Test helpers:
             - Core: `@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing`
-              - `execContextForTests`
+              - `execContextForTests` — An `ExecContext` for tests: origin `cli`, admission that admits at once.
     - **`launcher`**
       - Server:
         - Uses:
@@ -20596,7 +20692,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `bootoutGatewayService`
           - `bootSelfContainedApp`
           - `bootstrapGatewayService`
-          - `buildOrLocateGateway`
+          - `bundledGateway`
           - `ensureDatabaseConfig`
           - `GATEWAY_SERVICE_LABEL`
           - `gatewayLaunchSpec`
@@ -20621,6 +20717,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `terminateProcess`
           - `writeGatewayServicePlist`
           - `writeReleaseDatabaseConfig`
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps.DepTarget`
+          - `infra/deps/build.build`
+        - Exports (values): `gatewayBinary`
       - Cross-plugin:
         - Imported by: `release`
       - Core:
@@ -21118,6 +21220,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`browser-fetch`** — Browser-backed page read for URLs a plain HTTP client cannot read: launch-per-call headless Chromium pinned to one validated IP via --host-resolver-rules (MAP <host> <ip>,MAP * ~NOTFOUND), every intercepted request re-guarded with parsePublicUrl, cross-origin subresources proxied through safeFetch, bounded by a size-2 host pool. Throws on timeout rather than returning a partially-rendered page.
           - Server:
             - Uses:
+              - `infra/deps.requestDep`
               - `infra/host/host-admission.defineHostPool`
               - `infra/safe-fetch.assertResolvesPublic`
               - `infra/safe-fetch.parsePublicUrl`
@@ -21128,14 +21231,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `BrowserFetchInit`
               - `BrowserFetchResult`
               - `BrowserFetchTimings`
+              - `BrowserUnavailableReason`
             - Exports (values):
               - `browserFetch`
               - `BrowserFetchError`
               - `browserFetchQueueDepth`
+              - `BrowserUnavailableError`
+          - Deps:
+            - Uses:
+              - `infra/deps.defineDep`
+              - `infra/deps/playwright-browser.playwrightBrowser`
+            - Exports (values): `chromium`
           - Cross-plugin:
-            - Imported by:
-              - `apps/events/sources/url-extract`
-              - `framework/tooling/e2e-harness`
+            - Imported by: `apps/events/sources/url-extract`
           - Core:
             - Exports (types):
               - `BotMitigation`
@@ -22229,7 +22337,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Semaphore`
           - `SlotOptions`
         - Exports (values): `createSemaphore`
-    - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
+    - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin(ready, signos) arms from the compiled shim (the signal-origin-shim dependency, a build kind declared in its deps barrel) and fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps/build.build`
+        - Exports (values): `signalOriginShim`
       - Cross-plugin:
         - Imported by: `build/build-termination`
       - Server:
@@ -22237,7 +22350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `armSignalOrigin`
           - `readSignalOrigin`
-          - `signalOriginSourcePath`
+          - `signalOriginDisabled`
       - Core:
         - Exports (types):
           - `SignalOrigin`
@@ -34038,10 +34151,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (values):
       - `bunCompileTarget`
       - `BundleResolutionSchema`
-      - `goEnvFor`
       - `hostPlatformTag`
       - `isLinuxTag`
       - `isPlatformTag`
+      - `nodeTargetFor`
       - `PLATFORM_TAGS`
       - `platformTagFor`
       - `platformTagFromUname`

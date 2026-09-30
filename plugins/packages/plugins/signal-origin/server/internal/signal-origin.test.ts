@@ -3,20 +3,31 @@
  * every case here drives `signal-origin.fixture.ts` as a real child and reads
  * back what it recorded. See that file for the on-disk protocol.
  */
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { ensureDep } from "@plugins/infra/plugins/deps/deps";
+import { execContextForTests } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing";
 import type { SignalOrigin } from "../../core";
+import { signalOriginShim } from "../../deps";
 import type { SignalOriginArmResult } from "./signal-origin";
 
 const FIXTURE = join(import.meta.dir, "signal-origin.fixture.ts");
 const READY_TIMEOUT_MS = 20_000;
 const EXIT_TIMEOUT_MS = 20_000;
 
+// The fixture arms from the real `signal-origin-shim` install (it takes it
+// with `readyNow`), so the suite ensures it first — a real compile the first
+// time on this machine, the fast path after.
+beforeAll(async () => {
+  await ensureDep(signalOriginShim, execContextForTests());
+}, 120_000);
+
 const scratchDirs: string[] = [];
 afterEach(() => {
-  for (const dir of scratchDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  for (const dir of scratchDirs.splice(0))
+    rmSync(dir, { recursive: true, force: true });
 });
 
 function scratch(): string {
@@ -32,7 +43,9 @@ async function awaitReady(dir: string, proc: Bun.Subprocess): Promise<number> {
   while (Date.now() < deadline) {
     if (existsSync(readyPath)) return Number(readFileSync(readyPath, "utf8"));
     if (proc.exitCode !== null || proc.signalCode !== null) {
-      throw new Error(`fixture exited before arming (code=${proc.exitCode} signal=${proc.signalCode})`);
+      throw new Error(
+        `fixture exited before arming (code=${proc.exitCode} signal=${proc.signalCode})`,
+      );
     }
     await Bun.sleep(20);
   }
@@ -50,7 +63,11 @@ async function awaitExit(proc: Bun.Subprocess): Promise<void> {
  * holding a pipe across that is exactly the bun exit-during-stream-pull wedge.
  * stderr is inherited so a fixture crash is visible in the test output.
  */
-function spawnFixture(mode: string, dir: string, env?: Record<string, string>): Bun.Subprocess {
+function spawnFixture(
+  mode: string,
+  dir: string,
+  env?: Record<string, string>,
+): Bun.Subprocess {
   return Bun.spawn(["bun", FIXTURE, "--mode", mode, "--out", dir], {
     stdout: "ignore",
     stderr: "inherit",
@@ -121,7 +138,9 @@ describe("armSignalOrigin / readSignalOrigin", () => {
     expect(origin?.selfPpid).toBe(process.pid);
     // The production call site is an exit hook, not the signal listener — a
     // synchronous FFI read must still work there, and give the same answer.
-    expect(readJson<SignalOrigin | null>(dir, "origin-at-exit.json")).toEqual(origin);
+    expect(readJson<SignalOrigin | null>(dir, "origin-at-exit.json")).toEqual(
+      origin,
+    );
   }, 60_000);
 
   test("a sender reaped before delivery still yields its pid, and says why the chain is empty", async () => {
@@ -178,7 +197,9 @@ describe("armSignalOrigin / readSignalOrigin", () => {
     await awaitExit(proc);
     killer.kill("SIGKILL");
 
-    expect(readFileSync(join(dir, "events"), "utf8")).toContain("listener-fired");
+    expect(readFileSync(join(dir, "events"), "utf8")).toContain(
+      "listener-fired",
+    );
     expect(proc.exitCode).toBe(143);
   }, 60_000);
 
@@ -203,31 +224,20 @@ describe("armSignalOrigin / readSignalOrigin", () => {
     expect(existsSync(join(dir, "events"))).toBe(false);
   }, 60_000);
 
-  test("SINGULARITY_NO_SIGNAL_ORIGIN=1 fails open with a reason and no compile", async () => {
+  test("SINGULARITY_NO_SIGNAL_ORIGIN=1 fails open with a reason", async () => {
     const dir = scratch();
-    const proc = spawnFixture("arm-only", dir, { SINGULARITY_NO_SIGNAL_ORIGIN: "1" });
+    const proc = spawnFixture("arm-only", dir, {
+      SINGULARITY_NO_SIGNAL_ORIGIN: "1",
+    });
     await awaitExit(proc);
 
     const arm = readJson<SignalOriginArmResult>(dir, "arm.json");
     expect(arm.armed).toBe(false);
     // The reason is the product, not a nicety: the caller records it so that
     // "no attribution" is itself on the record.
-    expect(arm.armed === false && arm.reason).toContain("SINGULARITY_NO_SIGNAL_ORIGIN");
-    expect(proc.exitCode).toBe(0);
-  }, 60_000);
-
-  test("a broken CC fails open with a reason instead of throwing", async () => {
-    const dir = scratch();
-    const proc = spawnFixture("arm-only", dir, {
-      CC: join(dir, "definitely-not-a-compiler"),
-      // Point the content-addressed cache at an empty dir so the arm misses and
-      // actually has to reach the (bogus) compiler.
-      SINGULARITY_DIR: dir,
-    });
-    await awaitExit(proc);
-
-    const arm = readJson<SignalOriginArmResult>(dir, "arm.json");
-    expect(arm.armed).toBe(false);
+    expect(arm.armed === false && arm.reason).toContain(
+      "SINGULARITY_NO_SIGNAL_ORIGIN",
+    );
     expect(proc.exitCode).toBe(0);
   }, 60_000);
 });

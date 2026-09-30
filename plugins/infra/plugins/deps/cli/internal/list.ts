@@ -1,6 +1,6 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import type { DepState } from "../../core";
-import { inThisCheckout } from "./exec";
+import { declaredDeps, depState } from "../../deps";
 
 function describe(state: DepState): string {
   switch (state.kind) {
@@ -15,23 +15,19 @@ function describe(state: DepState): string {
   }
 }
 
-const run: CliAction<[], object> = () =>
-  inThisCheckout(async () => {
-    // After the boot: a server barrel evaluates config that needs the
-    // runtime namespace `runExec` declares.
-    const { declaredDeps, depState } =
-      await import("@plugins/infra/plugins/deps/server");
-    const deps = declaredDeps();
-    if (deps.length === 0) {
-      console.log("No dependency is declared in this checkout.");
-      return;
-    }
-    for (const dep of deps) {
-      const state = await depState(dep);
-      console.log(
-        `${dep.id}  [${dep.source.kind}: ${dep.source.label}]  ${dep.sizeHint}\n  ${describe(state)}`,
-      );
-    }
-  });
+// No backend boot: the declarations are a generated registry, read directly.
+const run: CliAction<[], object> = async () => {
+  const deps = await declaredDeps();
+  if (deps.length === 0) {
+    console.log("No dependency is declared in this checkout.");
+    return;
+  }
+  for (const dep of deps) {
+    const state = await depState(dep);
+    console.log(
+      `${dep.id}  [${dep.source.kind}: ${dep.source.label}]  ${dep.sizeHint}\n  ${describe(state)}`,
+    );
+  }
+};
 
 export default run;

@@ -1,6 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { onPrototypesChanged } from "@plugins/apps/plugins/prototypes/plugins/files/server";
+import { onDepInstallSettled } from "@plugins/infra/plugins/deps/server";
+import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import { PROTOTYPE_THUMB_ROUTE } from "../core";
 import { handleThumbnail } from "./internal/handlers";
 import { renderThumbnailJob, sweepThumbnailsJob } from "./internal/jobs";
@@ -19,6 +21,13 @@ export default {
     // `files` owns `prototypes/` and already watches it; subscribing to the
     // signal it computes is what keeps a second watcher off the same tree.
     onPrototypesChanged(() => {
+      void runTracked("prototype-thumbnails:sync", () => syncThumbnails());
+    });
+
+    // A render that found no browser parked its card in `waiting-for-browser`
+    // and asked for the install; when that install settles, re-sync, which
+    // re-renders those (or leaves them to fail honestly if it failed).
+    onDepInstallSettled(chromium, () => {
       void runTracked("prototype-thumbnails:sync", () => syncThumbnails());
     });
 

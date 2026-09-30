@@ -30,7 +30,7 @@
   - **`checks`** — Check runner and built-in checks for ./singularity check
   - **`codegen`** — Plugin doc generation and registry codegen
   - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
-  - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
+  - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./singularity deps install chromium`). Also owns the two generic tools (screenshot, perf).
   - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
   - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
   - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads.

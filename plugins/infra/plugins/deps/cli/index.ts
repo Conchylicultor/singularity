@@ -2,10 +2,11 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 /**
  * `./singularity deps …` — prewarm, inspect, clean up and upgrade optional
- * dependencies from a terminal. Every verb boots this checkout's backend in
- * `exec` mode (the declared deps and updaters are server contributions), so the
- * checkout must have been built once. Install uses the same `ensureDep` a
- * supervised job does.
+ * dependencies from a terminal. `list`, `install` and `remove` read the
+ * generated declaration registry and run the host-only engine directly — no
+ * backend is booted; install uses the same `ensureDep` a supervised job does.
+ * `upgrade` boots this checkout's backend in `exec` mode, because updaters are
+ * still server contributions.
  */
 export default defineCliCommand({
   name: "deps",
@@ -18,11 +19,18 @@ export default defineCliCommand({
         "Every declared dependency with its state on this machine (absent / installing / ready / failed), size and identity",
       run: () => import("./internal/list"),
     }),
-    defineCliCommand<[string]>({
+    defineCliCommand<[string], { json?: boolean }>({
       name: "install",
       description:
         "Install a dependency now (a no-op when it is already installed at its current identity); waits for another process installing it",
       arguments: [{ name: "<id>", description: "The dependency's id" }],
+      options: [
+        {
+          flags: "--json",
+          description:
+            "Print one JSON line { id, identity, dir } on stdout once it is ready (progress goes to stderr) — for host code that cannot import the deps engine",
+        },
+      ],
       run: () => import("./internal/install"),
     }),
     defineCliCommand<[string]>({

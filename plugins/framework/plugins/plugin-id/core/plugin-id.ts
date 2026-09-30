@@ -47,7 +47,15 @@ export const packageNameFor = (fsPath: string): string =>
  *  copying it), and it carries its own isolation policy — a provisioning step
  *  may reach `core` and other `provision` barrels, and NOTHING may reach back
  *  into it, because provisioning downloads and installs: work no request path
- *  may ever start. */
+ *  may ever start.
+ *
+ *  `deps` holds a plugin's on-demand dependency declarations (`defineDep`
+ *  values; `infra/deps` collects every `deps/index.ts` into a generated
+ *  registry) and, in `infra/deps` itself, the install engine. It is a runtime
+ *  of its own so every HOST process — a backend, a CLI op, a check, an e2e
+ *  script, the gateway's `start` — can reach a declaration and the engine
+ *  without booting a backend, while `web` and `core` cannot: the engine reads
+ *  `paths/core` (`homedir()` at module eval). */
 export const RUNTIME_FOLDERS = [
   "web",
   "server",
@@ -58,6 +66,7 @@ export const RUNTIME_FOLDERS = [
   "provision",
   "data-dirs",
   "cli",
+  "deps",
 ] as const;
 export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
 
@@ -132,6 +141,11 @@ const RUNTIME_FOLDER_DOCUMENTED: Record<RuntimeFolder, boolean> = {
   // the generated reference before adding a second verb for the same job, and it
   // is not answerable from anywhere else — a command name is not a filename.
   cli: true,
+  // `deps` is documented: its barrels are what a feature imports to declare,
+  // install and run a dependency (`infra/deps`' engine, a kind's runner, one
+  // plugin's declaration another ensures), so its exports are real API that
+  // server, CLI and check code depends on.
+  deps: true,
 };
 
 /** Runtime folders the generated plugin docs omit — the doc renderer's generic
@@ -172,6 +186,9 @@ const RUNTIME_FOLDER_SHIPPED: Record<RuntimeFolder, boolean> = {
   e2e: false,
   provision: false,
   cli: false,
+  // A backend imports its declarations and the engine (`requestDep`,
+  // `readyNow`, the install job), so a `deps` import is a reason to bundle.
+  deps: true,
 };
 
 /** The runtimes whose imports define the shipped closure — the ALLOWLIST the

@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { installDepEndpoint } from "../../core";
-import { defineDep, type DepSource } from "./dep";
-import { ensureDep } from "./ensure";
+import { defineDep, ensureDep, type DepSource } from "../../deps";
 
 const frozenSource: DepSource<"fake"> = {
   kind: "fake",

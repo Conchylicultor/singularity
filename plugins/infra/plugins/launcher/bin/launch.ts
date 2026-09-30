@@ -2,9 +2,10 @@
  * Release launcher — the compiled `launch` binary, the artifact's entrypoint.
  *
  * Compiled by `release.ts` via `bun build --compile` and placed at the bundle
- * root, next to `gateway/`, `server`, `web/`, `pg/`, `pgbouncer/`, and
- * `RELEASE.json`. Running it brings up the whole self-contained app on a fresh
- * host with no bun, no Go toolchain, and no node_modules.
+ * root, next to `deps/` + `deps.sealed.json` (the sealed gateway), `server`,
+ * `web/`, `pg/`, `pgbouncer/`, and `RELEASE.json`. Running it brings up the
+ * whole self-contained app on a fresh host with no bun, no Go toolchain, and no
+ * node_modules.
  *
  * CRITICAL ordering: some path constants are FROZEN at import time from the env
  * vars set below, so this file must set them BEFORE importing anything
@@ -143,6 +144,7 @@ async function main(): Promise<void> {
   const {
     assertSupportedHost,
     bootSelfContainedApp,
+    bundledGateway,
     teardownSelfContainedApp,
     writeReleaseDatabaseConfig,
     seedReleaseAssetMirror,
@@ -214,6 +216,9 @@ async function main(): Promise<void> {
 
   const { gateway } = await bootSelfContainedApp({
     name,
+    // Sealed into the bundle by `release` (deps.sealed.json): read, never
+    // built — this host has no Go toolchain and no source.
+    gateway: await bundledGateway(bundleRoot),
     // Which build is serving, for /api/health to report — see setReleaseIdentity.
     // `runId` is absent on a bundle built outside a tracked release run.
     releaseIdentity: { runId: manifest.runId ?? null, composition: name },
@@ -230,8 +235,6 @@ async function main(): Promise<void> {
     web: join(bundleRoot, "web"),
     port,
     bindHost: bindHost ?? undefined,
-    // buildOrLocateGateway skips `go build` because <repoRoot>/gateway/gateway
-    // (the vendored prebuilt) already exists.
     repoRoot: bundleRoot,
     log: console.log,
   });

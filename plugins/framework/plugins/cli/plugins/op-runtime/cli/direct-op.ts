@@ -101,7 +101,7 @@ export interface DirectOpDeps {
   markWorktreeOpStart: typeof markWorktreeOpStart;
   /** Register an exit-time cleanup (`process.on("exit", …)`). */
   onExit: (fn: () => void) => void;
-  installFatalSignalExit: (opId: string, slug: Namespace) => void;
+  installFatalSignalExit: (opId: string, slug: Namespace) => Promise<void>;
 }
 
 // This worktree's identity: the op-marker slug (this checkout's namespace,
@@ -148,8 +148,8 @@ const realDeps: DirectOpDeps = {
   // direct op owns no deploy receipt, so without the line an externally-killed
   // check/test leaves nothing behind but a cleared marker. The signal→exit-code
   // map is shared with `build` and `push`; see ./fatal-signals.ts.
-  installFatalSignalExit: (opId, slug) =>
-    installFatalSignalExit(signalOriginTap({ opId, worktree: slug })),
+  installFatalSignalExit: async (opId, slug) =>
+    installFatalSignalExit(await signalOriginTap({ opId, worktree: slug })),
 };
 
 /**
@@ -239,7 +239,7 @@ export async function withDirectOp<K extends OpKind>(
     // Catchable fatal signals → graceful exit so the exit handler above runs
     // (the wrapper's orphan SIGTERM tears this worker down cleanly). SIGKILL is
     // uncatchable; the kernel drops the marker's flock with the process.
-    deps.installFatalSignalExit(opId, slug);
+    await deps.installFatalSignalExit(opId, slug);
   }
 
   const ctx: DirectOpContext<K> = {

@@ -65,6 +65,7 @@ paths itself and uses throw-on-failure semantics.
     - `framework/web-sdk`
     - `improve/element-picker`
     - `infra/asset-mirror`
+    - `infra/deps`
     - `infra/paths`
     - `plugin-meta/facets`
     - `primitives/css/layout-harness`

@@ -28,6 +28,10 @@ export function decideThumbnail(
     return { state: previous, render: false };
   }
 
+  // `waiting-for-browser` falls through on purpose: it is not a verdict about
+  // these bytes, so every sync — including the one the browser's install
+  // triggers when it settles — renders again.
+
   return { state: { status: "rendering" }, render: true };
 }
 

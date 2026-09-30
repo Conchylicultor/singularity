@@ -1,11 +1,12 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-// The bot-mitigation predicate and the chromium provisioning step live in
-// `../core` — import them from there. Re-exporting them here would hide that
+// The bot-mitigation predicate lives in `../core` and the Chromium declaration
+// in `../deps` — import them from there. Re-exporting them here would hide that
 // `core` is cheap to import (no Playwright at module eval) while this barrel is
 // the one that can start a browser.
 export { browserFetch } from "./internal/browser-fetch";
-export { BrowserFetchError } from "./internal/errors";
+export { BrowserFetchError, BrowserUnavailableError } from "./internal/errors";
+export type { BrowserUnavailableReason } from "./internal/errors";
 export { browserFetchQueueDepth } from "./internal/pool";
 export type {
   BrowserFetchInit,

@@ -8,14 +8,16 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const warningIcon = symbol("warning");
+const downloadingIcon = symbol("downloading");
 
 /**
  * A prototype's rendered preview, for use as a gallery card's cover.
  *
- * Three arms, because a render genuinely has three outcomes:
+ * Four arms:
  *
  * - rendered → the cached PNG;
  * - not rendered yet (or still rendering) → the caller's `fallback`;
+ * - waiting for the browser to install → the `fallback` plus a muted marker;
  * - failed → the `fallback` plus a visible marker saying so, with the reason on
  *   hover. Nothing was cached, so the next edit retries on its own.
  *
@@ -67,6 +69,22 @@ export function PrototypeThumbnail({
           <WithTooltip content={state.message} className="max-w-md">
             <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
               Preview failed
+            </Badge>
+          </WithTooltip>
+        </Pin>
+      </Overlay>
+    );
+  }
+
+  if (state?.status === "waiting-for-browser") {
+    // Same layering as `failed` below, but muted: nothing is wrong with the
+    // prototype — the browser that renders previews is still installing.
+    return (
+      <Overlay behind={fallback} fill className="h-full w-full">
+        <Pin to="bottom-right" offset="xs">
+          <WithTooltip content={state.message} className="max-w-md">
+            <Badge variant="muted" icon={<Icon icon={downloadingIcon} />}>
+              Installing browser
             </Badge>
           </WithTooltip>
         </Pin>

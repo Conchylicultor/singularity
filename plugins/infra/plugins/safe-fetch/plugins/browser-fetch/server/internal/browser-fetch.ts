@@ -19,8 +19,21 @@ import {
   assertResolvesPublic,
   parsePublicUrl,
 } from "@plugins/infra/plugins/safe-fetch/server";
+import { readyNow, type Ready } from "@plugins/infra/plugins/deps/deps";
+import { requestDep } from "@plugins/infra/plugins/deps/server";
+import {
+  launchChromium,
+  type PlaywrightBrowserSource,
+} from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
+import { chromium as chromiumDep } from "../../deps";
 import { withDeadline } from "./deadline";
-import { BrowserFetchError, browserUnavailable } from "./errors";
+import {
+  BrowserFetchError,
+  BrowserUnavailableError,
+  browserInstallFailed,
+  browserInstalling,
+  browserUnavailable,
+} from "./errors";
 import { buildLaunchArgs } from "./launch-args";
 import { withBrowserSlot } from "./pool";
 import { decideRequest } from "./request-policy";
@@ -64,12 +77,11 @@ async function loadPlaywright(
       pending,
       budgetMs,
       () =>
-        new BrowserFetchError(
-          "browser-unavailable",
+        new BrowserUnavailableError(
+          "launch-failed",
           url,
           `Loading the Playwright module took longer than ${Math.round(budgetMs)}ms, ` +
-            `so no browser could be started for ${url}. ` +
-            `Run \`bun run playwright install chromium\` to provision it.`,
+            `so no browser could be started for ${url}.`,
         ),
     );
   } catch (err) {
@@ -120,7 +132,38 @@ export async function browserFetch(
   );
   const ip = await assertResolvesPublic(logicalUrl);
 
-  return withBrowserSlot(() => renderChain(logicalUrl, ip, opts));
+  // Also before admission: with no browser installed there is nothing to queue
+  // for.
+  const browser = await installedChromium(logicalUrl.href);
+
+  return withBrowserSlot(() => renderChain(logicalUrl, ip, opts, browser));
+}
+
+/**
+ * The installed Chromium, or the typed reason there is none — never a stand-in
+ * page. Chromium is an on-demand dependency: this is a request path, so it
+ * never installs (`readyNow` only reads), it asks for the install
+ * (`requestDep` enqueues the `deps.install` job and returns at once) and says
+ * `installing`. A FAILED install is not re-requested from here — every
+ * browser read would otherwise start another doomed ~280 MB download.
+ */
+async function installedChromium(
+  url: string,
+): Promise<Ready<PlaywrightBrowserSource>> {
+  const now = await readyNow(chromiumDep);
+  switch (now.kind) {
+    case "ready":
+      return now.ready;
+    case "failed":
+      throw browserInstallFailed(url, now.message);
+    case "absent":
+    case "installing":
+      // Requested even while `installing`: the install may be a terminal's
+      // `deps install`, and the job (which waits on its host lock) is what
+      // the Dependencies view follows. A second request claims nothing.
+      await requestDep(chromiumDep);
+      throw browserInstalling(url);
+  }
 }
 
 interface HopTotals {
@@ -154,6 +197,7 @@ async function renderChain(
   startUrl: URL,
   startIp: string,
   opts: ResolvedInit,
+  browser: Ready<PlaywrightBrowserSource>,
 ): Promise<BrowserFetchResult> {
   // The whole-op clock starts HERE, after admission — a call is not charged for
   // time it spent queueing behind other renders.
@@ -166,7 +210,7 @@ async function renderChain(
   let redirects = 0;
 
   for (;;) {
-    const hop = await renderOnce(url, ip, opts, deadline, totals);
+    const hop = await renderOnce(url, ip, opts, deadline, totals, browser);
 
     if (hop.kind === "page") {
       return {
@@ -202,11 +246,14 @@ async function renderOnce(
   opts: ResolvedInit,
   deadline: number,
   totals: HopTotals,
+  installed: Ready<PlaywrightBrowserSource>,
 ): Promise<HopResult> {
   const href = logicalUrl.href;
   const pinnedHost = logicalUrl.hostname.toLowerCase();
   // Bounded like every other step, and clamped to the same whole-op deadline.
-  const { chromium, errors } = await loadPlaywright(
+  // Loaded here, under the budget, so the import inside `launchChromium`
+  // below finds the module already evaluated.
+  const { errors } = await loadPlaywright(
     href,
     stepTimeout(deadline, opts, opts.launchTimeoutMs, href),
   );
@@ -214,7 +261,7 @@ async function renderOnce(
   const launchStart = performance.now();
   let browser: Browser;
   try {
-    browser = await chromium.launch({
+    browser = await launchChromium(installed, {
       args: buildLaunchArgs(pinnedHost, ip),
       timeout: stepTimeout(deadline, opts, opts.launchTimeoutMs, href),
     });

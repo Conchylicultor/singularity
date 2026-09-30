@@ -26,24 +26,45 @@
  * file is on disk, complete, before `event()` returns. Appends are reserved for
  * the bounded-append sink primitive, which is what owns rotation repo-wide.
  *
+ * The shim comes from the real dependency cache: the suite ensures
+ * `signal-origin-shim` before spawning this child, which takes it with
+ * `readyNow` (this file is not test code, so it cannot mint a `Ready`).
+ *
  * Usage: bun signal-origin.fixture.ts --mode <mode> --out <dir>
  */
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { armSignalOrigin, readSignalOrigin } from "./signal-origin";
+import { readyNow } from "@plugins/infra/plugins/deps/deps";
+import { signalOriginShim } from "../../deps";
+import {
+  armSignalOrigin,
+  readSignalOrigin,
+  type SignalOriginArmResult,
+} from "./signal-origin";
 
 const SIGTERM = 15;
 
 function argValue(name: string): string {
   const i = process.argv.indexOf(name);
   const v = i >= 0 ? process.argv[i + 1] : undefined;
-  if (v === undefined) throw new Error(`fixture: missing required argument ${name}`);
+  if (v === undefined)
+    throw new Error(`fixture: missing required argument ${name}`);
   return v;
 }
 
 const mode = argValue("--mode");
 const outDir = argValue("--out");
 const at = (name: string) => join(outDir, name);
+
+const shim = await readyNow(signalOriginShim);
+
+/** Arm from the ensured shim; a shim that is not installed is an unarmed result. */
+function arm(): SignalOriginArmResult {
+  if (shim.kind !== "ready") {
+    return { armed: false, reason: `signal-origin-shim is ${shim.kind}` };
+  }
+  return armSignalOrigin(shim.ready, [SIGTERM]);
+}
 
 const events: string[] = [];
 
@@ -76,7 +97,10 @@ switch (mode) {
     // async work can run and Bun is tearing down — so the suite exercises that
     // context, not just the signal listener, and asserts the two agree.
     process.on("exit", () => {
-      writeFileSync(at("origin-at-exit.json"), JSON.stringify(readSignalOrigin(SIGTERM)));
+      writeFileSync(
+        at("origin-at-exit.json"),
+        JSON.stringify(readSignalOrigin(SIGTERM)),
+      );
     });
     process.on("SIGTERM", () => {
       event("listener-fired");
@@ -84,7 +108,7 @@ switch (mode) {
       writeFileSync(at("origin.json"), JSON.stringify(origin));
       process.exit(143);
     });
-    writeFileSync(at("arm.json"), JSON.stringify(armSignalOrigin([SIGTERM])));
+    writeFileSync(at("arm.json"), JSON.stringify(arm()));
     announceReady();
     stayAlive();
     break;
@@ -97,7 +121,7 @@ switch (mode) {
    * forever. It must still die.
    */
   case "default-arm": {
-    writeFileSync(at("arm.json"), JSON.stringify(armSignalOrigin([SIGTERM])));
+    writeFileSync(at("arm.json"), JSON.stringify(arm()));
     announceReady();
     stayAlive();
     break;
@@ -108,7 +132,7 @@ switch (mode) {
    * keeps the loop alive, so the process exits 0 on its own.
    */
   case "arm-only": {
-    writeFileSync(at("arm.json"), JSON.stringify(armSignalOrigin([SIGTERM])));
+    writeFileSync(at("arm.json"), JSON.stringify(arm()));
     break;
   }
 

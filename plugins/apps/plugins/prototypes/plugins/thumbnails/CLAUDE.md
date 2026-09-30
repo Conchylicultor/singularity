@@ -64,13 +64,22 @@ dependency**. Do not "fix" this by adding one.
 seconds, which a backend must never pay at boot just because something in its
 graph *can* start a browser.
 
-**A render never provisions.** The chromium binary is installed at *install*
-time, by `browser-fetch`'s `provision/` step — add no provisioning step here,
-and never call one from this path. It was called from here once
-(`ensureChromium()`, then in `browser-fetch/core`), and a missing binary meant
-this backend downloading ~150 MB with the event loop blocked, ahead of every
-bound in `render.ts`. A binary missing at render time is an operator problem:
-fail `browser-unavailable`, naming `bun run playwright install chromium`.
+**A render never installs.** Chromium is an on-demand `infra/deps` dependency
+(`chromium`, declared by `safe-fetch/browser-fetch`), and this job runs in the
+backend with no `ExecContext`, so it only READS: `readyNow(chromium)`, and
+`renderThumbnail(meta, ready)` takes the `Ready` (launching through the
+playwright-browser kind's `launchChromium`), so a render cannot be spelled
+without an installed browser. It was once spelled with one: `ensureChromium()`
+downloaded ~150 MB here with the event loop blocked, ahead of every bound in
+`render.ts`.
+
+When Chromium is not installed yet the job calls `requestDep(chromium)` and
+parks the card in `waiting-for-browser` (a muted "Installing browser" marker —
+not a failure, not cached as one). The server registers
+`onDepInstallSettled(chromium, …)`: when that install ends, the sync runs again
+and `decideThumbnail` re-renders every `waiting-for-browser` card. A FAILED
+install becomes `failed` / `browser-unavailable` with the install's error and
+the retry command, and is not re-requested.
 
 ## Never cache a lie
 
@@ -146,6 +155,8 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
   - Uses:
     - `apps/prototypes/files.listPrototypeMetas`
     - `apps/prototypes/files.onPrototypesChanged`
+    - `infra/deps.onDepInstallSettled`
+    - `infra/deps.requestDep`
     - `infra/jobs.defineJob`
     - `network/live.serveValue`
   - Register:

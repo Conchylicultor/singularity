@@ -10,6 +10,9 @@ import {
   gatewayPidFile,
 } from "@plugins/infra/plugins/launcher/server";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
+import { gatewayBinary } from "@plugins/infra/plugins/launcher/deps";
+import { ensureDep } from "@plugins/infra/plugins/deps/deps";
+import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import {
   asNamespace,
   namespaceUrl,
@@ -65,6 +68,12 @@ const run: CliAction<
 
   await bootSelfContainedApp({
     name,
+    // Built from `repoRoot`'s gateway source into the deps cache — or read
+    // from `deps.sealed.json` when `--repo-root` names a release bundle.
+    gateway: await ensureDep(gatewayBinary, cliExecContext(), {
+      root: repoRoot,
+      log: console.log,
+    }),
     server,
     web: opts.web,
     composition: opts.composition ?? opts.name,

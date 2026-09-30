@@ -90,6 +90,7 @@ export const ICON_MANIFEST: {
     "do-not-disturb-on",
     "donut-large",
     "download",
+    "downloading",
     "draft",
     "drag-indicator",
     "drive-file-rename",

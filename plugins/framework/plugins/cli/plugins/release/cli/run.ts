@@ -44,13 +44,19 @@ import {
   propagateConfigToUser,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
+import {
+  declaredDeps,
+  SEALED_MANIFEST,
+  sealDep,
+} from "@plugins/infra/plugins/deps/deps";
+import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { FATAL_SIGNAL_EXITS } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import {
   PLATFORM_TAGS,
   bunCompileTarget,
-  goEnvFor,
   hostPlatformTag,
   isLinuxTag,
+  nodeTargetFor,
   isPlatformTag,
   type PlatformTag,
 } from "@plugins/release/core";
@@ -73,7 +79,9 @@ import {
 //   <out>/                         = …/releases/<wt>/<comp>-<target>/<run-id>/
 //     launch                       compiled launcher binary (entrypoint)
 //     server                       compiled backend binary (gateway spawns this)
-//     gateway/gateway              prebuilt Go gateway binary
+//     deps/<id>/...                sealed dependencies (the Go gateway binary,
+//                                  deps/gateway-binary/gateway), for the target
+//     deps.sealed.json             their identities — what the launcher reads
 //     pg/pg-start                  compiled embedded-PG start binary
 //     pg/native/...                vendored embedded-postgres native tree
 //     pgbouncer/pgbouncer-start    compiled PgBouncer start binary
@@ -1141,30 +1149,35 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
           }),
         };
 
-  // Gateway: build it (forced) so the bundle ships a fresh prebuilt.
-  // `-o` writes STRAIGHT into <out> — never into <repo>/gateway/gateway,
-  // which is the path `buildOrLocateGateway` (launcher boot.ts)
-  // short-circuits on: a cross-build leaving a linux binary there would
-  // make a later `./singularity start` silently launch a linux gateway on
-  // the Mac.
-  console.log("  • gateway (go build)");
-  const gatewayOut = join(out, "gateway", "gateway");
-  mkdirSync(dirname(gatewayOut), { recursive: true });
-  await run(["go", "build", "-o", gatewayOut, "."], {
-    cwd: join(root, "gateway"),
-    env: {
-      ...goEnvFor(platform),
-      // cgo is a function of the TARGET OS, not a blanket 0. The darwin
-      // sigaction shim (`gateway/sigterm_darwin.go`) is a cgo file whose
-      // pure-Go twin is `//go:build !darwin`, so CGO_ENABLED=0 on a darwin
-      // target compiles NEITHER (`undefined: logSigtermSender`) — and Go
-      // defaults cgo OFF whenever GOOS/GOARCH differ from the host, so
-      // even darwin-arm64 → darwin-x64 needs it explicitly ON. Linux takes
-      // the pure-Go twin and wants 0, for a static binary that depends on
-      // no glibc version on the production host.
-      CGO_ENABLED: isLinuxTag(platform) ? "0" : "1",
-    },
-  });
+  // Sealed dependencies: every declaration that says `bundle` (the gateway
+  // binary), installed FOR the target platform — cross-compiled when the
+  // kind can — into <out>/deps/<id>/, with deps.sealed.json naming each
+  // identity. The launcher reads them from there: a release host has no
+  // source, no toolchain and no network to install anything. Generic: this
+  // names no dependency. A required one the kind cannot build for the target
+  // fails the release here; an optional one is recorded as left out.
+  const depTarget = nodeTargetFor(platform);
+  const sealExec = cliExecContext();
+  for (const dep of (await declaredDeps()).filter((d) => d.bundle !== null)) {
+    console.log(`  • ${dep.id} (sealed for ${platform})`);
+    const sealed = await sealDep(dep, {
+      target: depTarget,
+      outDir: out,
+      exec: sealExec,
+      root,
+      log: (line) => console.log(`      ${line}`),
+    });
+    console.log(
+      sealed.kind === "sealed"
+        ? `      ${sealed.identity} (${(sealed.bytes / 1e6).toFixed(1)} MB)`
+        : `      left out: ${sealed.reason}`,
+    );
+  }
+  if (!existsSync(join(out, SEALED_MANIFEST))) {
+    throw new Error(
+      `release: no ${SEALED_MANIFEST} was written — no dependency declares \`bundle\`, so the bundle has no gateway`,
+    );
+  }
 
   // Embedded PG: copy the whole native/ tree (bin + lib + symlink manifest).
   console.log("  • embedded-postgres native tree");

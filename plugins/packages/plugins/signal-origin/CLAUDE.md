@@ -4,7 +4,11 @@ A native `SA_SIGINFO` tap that records **who** sent a fatal signal, reachable
 from Bun via `bun:ffi`. `process.on("SIGTERM", …)` tells you a signal arrived
 and nothing else; the kernel knew the sender (`siginfo_t.si_pid`) all along.
 
-- `armSignalOrigin(signos)` → `{armed:true,…} | {armed:false, reason}`
+- `signalOriginShim` (`deps/` barrel) — the compiled C shim, a `build`-kind
+  dependency (`infra/deps/plugins/build`): identity = the `native/` source's
+  hash + `$CC --version` + platform/arch, built into the deps cache
+- `armSignalOrigin(ready, signos)` → `{armed:true,…} | {armed:false, reason}` —
+  takes the shim's `Ready`, so arming without building is a type error
 - `readSignalOrigin(signo)` → `SignalOrigin | null` — synchronous, safe from an exit hook
 - `formatSignalOrigin(origin)` — pure, in `core/`
 
@@ -55,12 +59,20 @@ sees a delivery.
 - **Fails open and PRINTS NOTHING.** A banner on every build in a
   toolchain-less environment would be noise in exactly the transcript this
   feature exists to keep clean. The caller records the `reason`. Escape hatch
-  `SINGULARITY_NO_SIGNAL_ORIGIN=1`.
-- **Not a `provision/` entry** — that runner fails loud, so a box without CLT
-  would stop being able to `bun install`. The `.c` is compiled lazily to
-  `~/.singularity/cache/signal-origin-native/signal-origin-<sha8>-<arch>.{dylib,so}`,
-  content-addressed (so parallel worktrees compiling at once is harmless: same
-  bytes, tmp+rename, last one wins) and `existsSync` in steady state.
+  `SINGULARITY_NO_SIGNAL_ORIGIN=1` (`signalOriginDisabled()`: no arm, and the
+  tap does not ensure the shim either).
+- **The shim is a dependency, not a compile inside the arm.** `op-runtime`'s
+  `signalOriginTap` awaits `ensureDep(signalOriginShim, cliExecContext())`
+  before installing the listeners, then arms synchronously in `afterInstall`.
+  An install failure (no compiler, a compile error) is fail-open: it becomes
+  the `arm-failed` sink line, and the dependency reads `failed` in
+  `./singularity deps list` / Settings → Dependencies instead of being silent.
+  The declaration says `admission: { none }`: one tiny compile, awaited on the
+  way INTO an op, must not queue behind the background lane for a host grant
+  (see `DepSource.admission`). Parallel worktrees on one identity share one
+  build under the engine's lock. A release bundle ships no source and no `cc`,
+  so the identity cannot be derived and the tap is unarmed there, as before
+  (sealed installs are the follow-up that fixes it).
 - **`core/` is the FFI-free half** — a surface that only renders a recorded
   origin must not pay a `bun:ffi` dependency. Same split as `spawn-priority`.
 - **`server/internal/signal-origin.fixture.ts` is in the repo, not `/tmp`.** A
@@ -75,7 +87,12 @@ name their sender.
 
 ## Plugin reference
 
-- Description: Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
+- Description: Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin(ready, signos) arms from the compiled shim (the signal-origin-shim dependency, a build kind declared in its deps barrel) and fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
+- Deps:
+  - Uses:
+    - `infra/deps.defineDep`
+    - `infra/deps/build.build`
+  - Exports (values): `signalOriginShim`
 - Cross-plugin:
   - Imported by: `build/build-termination`
 - Server:
@@ -83,7 +100,7 @@ name their sender.
   - Exports (values):
     - `armSignalOrigin`
     - `readSignalOrigin`
-    - `signalOriginSourcePath`
+    - `signalOriginDisabled`
 - Core:
   - Exports (types):
     - `SignalOrigin`

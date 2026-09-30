@@ -17,6 +17,25 @@ spawn writes it too, so a gateway that dies before getting that far still
 leaves its dead pid for a preview's reaper. Design:
 [`research/2026-09-25-global-gateway-survives-reboot.md`](../../../../research/2026-09-25-global-gateway-survives-reboot.md).
 
+## The gateway binary is a dependency
+
+`gateway-binary` (`deps/index.ts`) is an `infra/deps` `build` dependency: `go
+build` of `gateway/` (every `.go` file + `go.mod` / `go.sum`, `go version`, the
+target), cached at `~/.singularity/cache/deps/gateway-binary/<identity>/env/gateway`.
+There is no `<repo>/gateway/gateway` any more. `GatewayLaunchOptions.gateway`
+and `bootSelfContainedApp({ gateway })` take its `Ready`, so a launch that never
+ensured the binary does not compile; argv[0] is `builtFile(ready)` and the cwd
+is the install dir (every path the gateway reads is a flag).
+
+- `./singularity start` ensures it from the MAIN checkout and holds it
+  (`holdDep(…, "machine-gateway")`) so the deps sweep never deletes the binary
+  the launchd plist names; `serve-app` ensures it from its `--repo-root`.
+- A release seals it (`bundle: "required"`, `targets: "any"` — cgo on for a
+  darwin target, off for linux) into `<bundle>/deps/gateway-binary/` with
+  `deps.sealed.json`; `bin/launch.ts` reads it through
+  `bundledGateway(bundleRoot)` (a `readyNow` against the bundle root — no Go,
+  no source, nothing built).
+
 ## Boot ordering
 
 `bootSelfContainedApp` is a strict sequence and each step exists to gate the
@@ -228,7 +247,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `bootoutGatewayService`
     - `bootSelfContainedApp`
     - `bootstrapGatewayService`
-    - `buildOrLocateGateway`
+    - `bundledGateway`
     - `ensureDatabaseConfig`
     - `GATEWAY_SERVICE_LABEL`
     - `gatewayLaunchSpec`
@@ -253,6 +272,12 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `terminateProcess`
     - `writeGatewayServicePlist`
     - `writeReleaseDatabaseConfig`
+- Deps:
+  - Uses:
+    - `infra/deps.defineDep`
+    - `infra/deps.DepTarget`
+    - `infra/deps/build.build`
+  - Exports (values): `gatewayBinary`
 - Cross-plugin:
   - Imported by: `release`
 - Core:

@@ -8,7 +8,7 @@ import type {
   UpdaterHold,
   UpdaterSmoke,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
-import { uvEnv } from "./uv";
+import { uvEnv } from "../../deps/internal/uv";
 
 const MINUTE = 60_000;
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -11,7 +11,7 @@ export {
   pgbouncerConnection,
   ensureDatabaseConfig,
   writeReleaseDatabaseConfig,
-  buildOrLocateGateway,
+  bundledGateway,
   spawnGatewayDaemon,
   gatewayLaunchSpec,
   awaitProcessGone,

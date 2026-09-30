@@ -12,7 +12,7 @@ import {
   type SkipSummary,
 } from "../../core";
 import { songIndexConfig } from "../../shared/config";
-import { SNAPSHOT_NAME } from "./dump-files";
+import { SNAPSHOT_NAME } from "./snapshot";
 import { indexStatus, type IndexStateView, type IndexTarget } from "./status";
 import {
   SINGLETON_ROW_ID,

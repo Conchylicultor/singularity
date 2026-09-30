@@ -10,8 +10,7 @@
  * is its own sub-plugin, a sibling cannot reach the host's `bin/`, and `shared/`
  * is plugin-private (cross-plugin `shared/` imports are forbidden by R10). A
  * `cli/` barrel is the sanctioned way for one CLI plugin to share code with
- * another — the same shape `provision/` uses for the one chromium installer and
- * `e2e/` uses for the shared Playwright harness.
+ * another — the same shape `e2e/` uses for the shared Playwright harness.
  *
  * NOTHING HERE MAY IMPORT A COMMAND. The dependency runs commands → op-runtime,
  * never back; the `cli` runtime's R6 graph has to stay a DAG. This barrel does

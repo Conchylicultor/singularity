@@ -87,7 +87,9 @@ redirects need nothing; `MAP` binds a hostname regardless of scheme or path.
 | Bound | Default | On breach |
 | --- | --- | --- |
 | Playwright module load | shares the launch budget | `browser-unavailable` |
-| launch / chromium missing | 30 s | `browser-unavailable` (message names `bun run playwright install chromium`) |
+| chromium not installed yet | — (checked before admission) | `browser-unavailable`, `reason: "installing"` (install requested) |
+| chromium install failed | — | `browser-unavailable`, `reason: "install-failed"` (not re-requested) |
+| launch | 30 s | `browser-unavailable`, `reason: "launch-failed"` |
 | navigation | 20 s | `navigation-timeout` / `navigation-failed` |
 | settle (`networkidle`) | 3 s | **not a failure** — the ceiling is the expected path |
 | `waitForSelector` | `settleMs` | `selector-timeout` |
@@ -109,25 +111,31 @@ caller owns what a 404 means, exactly as `safeFetch` callers own
 `browser-unavailable` is deliberately an *operator* problem, so callers should
 keep it transient: parking a source over a missing binary would be a lie.
 
-## Provisioning is install-time, and only install-time
+## Chromium is an on-demand dependency, and never installed from here
 
-The chromium binary is fetched by `provision/index.ts` (`provisionChromium`),
-which runs at postinstall — never from a request path. That is enforced, not
-merely intended: `provision` is a declared runtime in `boundary-config.ts`, and
-no other runtime may import it, so a `server/` file cannot reach the installer
-at all. The e2e harness contributes its own step calling the same function.
+Chromium is `chromium` in `deps/index.ts` — an `infra/deps` dependency of the
+`playwright-browser` kind, installed into the deps cache (~280 MB download,
+~600 MB on disk) the first time anything needs it; nothing downloads it at
+`bun install`. `browserFetch` is a request path, so it only READS:
+`readyNow(chromium)` before pool admission. Not installed yet →
+`requestDep(chromium)` (enqueues the `deps.install` job and returns at once)
+and throw `BrowserUnavailableError` with `reason: "installing"`. Install
+failed → `reason: "install-failed"`, carrying the failure, and NOT requested
+again (every read would otherwise start another doomed download). Installed →
+`launchChromium(ready, …)` from the kind, which takes the `Ready`, so a launch
+without an installed browser cannot be spelled.
 
-The reason is a real defect, not tidiness. The installer used to live in `core/`
-as `ensureChromium()`, and the prototype thumbnail render called it: a missing
-binary meant a backend blocking its **entire event loop** on a synchronous
-~150 MB download — no health endpoint, no live-state, no jobs, and invisible to
-the queue-health watchdog, which is a `setInterval` on the loop it blocks.
+The reason this matters is a real defect, not tidiness. The installer once
+lived in `core/` as `ensureChromium()`, and the prototype thumbnail render
+called it: a missing binary meant a backend blocking its **entire event loop**
+on a synchronous ~150 MB download — no health endpoint, no live-state, no jobs,
+invisible to the queue-health watchdog. The engine's `ensureDep` demands an
+`ExecContext` for exactly that reason.
 
-So a runtime that finds no binary FAILS — `browser-unavailable`, naming the one
-command that fixes it. `bun install` re-runs whenever this checkout's declared
-dependencies change, so a serving backend has already been through provisioning;
-a binary missing at that point is an operator problem, and parking a source over
-it would be a lie.
+Every flavour of `browser-unavailable` stays transient for a classifying
+caller: parking a source over a browser that is still installing would be a
+lie. `scripts/verify.ts` is not a backend, so it installs first
+(`ensureDepViaCli`, progress on the terminal).
 
 ## Concurrency
 
@@ -184,6 +192,7 @@ proven by hand:
 - Description: Browser-backed page read for URLs a plain HTTP client cannot read: launch-per-call headless Chromium pinned to one validated IP via --host-resolver-rules (MAP <host> <ip>,MAP * ~NOTFOUND), every intercepted request re-guarded with parsePublicUrl, cross-origin subresources proxied through safeFetch, bounded by a size-2 host pool. Throws on timeout rather than returning a partially-rendered page.
 - Server:
   - Uses:
+    - `infra/deps.requestDep`
     - `infra/host/host-admission.defineHostPool`
     - `infra/safe-fetch.assertResolvesPublic`
     - `infra/safe-fetch.parsePublicUrl`
@@ -194,14 +203,19 @@ proven by hand:
     - `BrowserFetchInit`
     - `BrowserFetchResult`
     - `BrowserFetchTimings`
+    - `BrowserUnavailableReason`
   - Exports (values):
     - `browserFetch`
     - `BrowserFetchError`
     - `browserFetchQueueDepth`
+    - `BrowserUnavailableError`
+- Deps:
+  - Uses:
+    - `infra/deps.defineDep`
+    - `infra/deps/playwright-browser.playwrightBrowser`
+  - Exports (values): `chromium`
 - Cross-plugin:
-  - Imported by:
-    - `apps/events/sources/url-extract`
-    - `framework/tooling/e2e-harness`
+  - Imported by: `apps/events/sources/url-extract`
 - Core:
   - Exports (types):
     - `BotMitigation`

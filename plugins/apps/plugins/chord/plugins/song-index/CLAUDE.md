@@ -159,7 +159,7 @@ because it is jsonb, and Postgres orders an object's keys itself.
 
 | What | Where | Forks | Backups |
 |---|---|---|---|
-| The two dump files (116 MB, pinned commit + sha256) | `cache/chord-sheetsage/` | — | no (refetched) |
+| The two dump files (116 MB, pinned commit + sha256) | the `sheetsage-dumps` dependency (`deps/index.ts`, infra/deps' `download` kind: `cache/deps/sheetsage-dumps/<identity>/env/`) | — | no (refetched; the deps sweep may reclaim them) |
 | The snapshot `sheetsage-<processed sha>-<raw sha>-v<format>.ndjson.gz` | `apps/chord/song-index/` | — | **yes** (`chord-song-index` backup source) |
 | `chord_sections`, `chord_loop_windows`, `chord_index_state` | DB | excluded | excluded |
 | `chord_index_request` (the app was opened here) | DB | kept | kept |
@@ -172,8 +172,10 @@ because it is jsonb, and Postgres orders an object's keys itself.
    a derivation bump, a restored database or a fresh fork reloads on its own.
 3. **The load job** is a supervised job (a detached child, `lock` = one run at a
    time; a second enqueue claims nothing). It re-checks the state row first, then:
-   under a host-wide flock (`cache/chord-sheetsage/snapshot.lock`) it downloads
-   the missing files and builds the snapshot once per machine; truncates the two
+   under a host-wide flock (`apps/chord/song-index/snapshot.lock`) it builds the
+   snapshot once per machine — `ensureDep(sheetSageDumps, exec)` first, which
+   downloads and sha256-checks the files when they are not installed (phase
+   `downloading`); truncates the two
    index tables; streams the snapshot, keeps the scope's sections, derives and
    inserts them in batches of 200 (one transaction per batch); marks the state
    row `ready`. A throw marks it `failed` with the message and rethrows.
@@ -389,6 +391,13 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `TokenizedChordSchema`
     - `WindowsByModeSchema`
     - `windowsInModes`
+- Deps:
+  - Uses:
+    - `infra/deps.defineDep`
+    - `infra/deps/download.download`
+  - Exports (values):
+    - `SHEETSAGE_DUMP_FILES`
+    - `sheetSageDumps`
 - Cross-plugin:
   - Imported by:
     - `apps/chord/curriculum`

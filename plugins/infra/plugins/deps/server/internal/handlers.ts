@@ -1,12 +1,11 @@
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { installDepEndpoint, removeDepEndpoint } from "../../core";
-import { removeDep } from "./ensure";
+import { declaredDep, removeDep, UnknownDepError } from "../../deps";
 import { requestDep } from "./install-job";
-import { declaredDep, UnknownDepError } from "./registry";
 
-function lookup(id: string) {
+async function lookup(id: string) {
   try {
-    return declaredDep(id);
+    return await declaredDep(id);
   } catch (err) {
     if (err instanceof UnknownDepError) throw new HttpError(404, err.message);
     throw err;
@@ -16,7 +15,7 @@ function lookup(id: string) {
 export const handleInstallDep = implement(
   installDepEndpoint,
   async ({ body }) => {
-    const dep = lookup(body.id);
+    const dep = await lookup(body.id);
     await requestDep(dep);
     return { id: dep.id };
   },
@@ -25,7 +24,7 @@ export const handleInstallDep = implement(
 export const handleRemoveDep = implement(
   removeDepEndpoint,
   async ({ body }) => {
-    const outcome = await removeDep(lookup(body.id));
+    const outcome = await removeDep(await lookup(body.id));
     if (outcome.kind === "busy") {
       throw new HttpError(
         409,

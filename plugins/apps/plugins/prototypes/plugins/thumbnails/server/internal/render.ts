@@ -1,5 +1,10 @@
 import { pathToFileURL } from "node:url";
 import type { Browser } from "playwright";
+import type { Ready } from "@plugins/infra/plugins/deps/deps";
+import {
+  launchChromium,
+  type PlaywrightBrowserSource,
+} from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
   viewportRenderSize,
@@ -62,9 +67,11 @@ type PlaywrightModule = typeof import("playwright");
 let playwrightModule: Promise<PlaywrightModule> | undefined;
 
 /**
- * Load Playwright lazily and once. Importing it costs seconds of module
- * evaluation, which a backend must never pay at boot merely because something
- * in its graph *can* start a browser — the same care `browser-fetch` takes.
+ * Load Playwright lazily and once, BOUNDED. Importing it costs seconds of
+ * module evaluation, which a backend must never pay at boot merely because
+ * something in its graph *can* start a browser — the same care `browser-fetch`
+ * takes. Loaded here, under the bound, so the import inside `launchChromium`
+ * finds it already evaluated.
  */
 async function loadPlaywright(): Promise<PlaywrightModule> {
   const pending = (playwrightModule ??= import("playwright"));
@@ -159,22 +166,22 @@ async function closeBrowser(browser: Browser, name: string): Promise<void> {
  * handler, and an unbounded wait there holds a worker slot for as long as it
  * lasts.
  *
- * It also never PROVISIONS. This used to open with `ensureChromium()`, which
- * downloaded the binary synchronously when it was missing — blocking the whole
- * backend's event loop for ~150 MB — and, being an unbounded
- * `await import("playwright")` of its own, ran ahead of `loadPlaywright()` so
- * that function's 30 s bound never armed. A missing binary is now what it
- * always was for `browserFetch`: an operator problem, reported as
- * `browser-unavailable` with the one command that fixes it.
+ * It never INSTALLS. It takes the installed Chromium's `Ready`, which only
+ * the dependency engine mints: the job finds it with `readyNow` and, when it
+ * is not there yet, asks for the install and parks the card in
+ * `waiting-for-browser` (see `jobs.ts`). This once opened with
+ * `ensureChromium()`, which downloaded ~150 MB synchronously on the backend's
+ * event loop; taking a `Ready` makes that unspellable.
  */
 export async function renderThumbnail(
   meta: PrototypeMeta,
+  installed: Ready<PlaywrightBrowserSource>,
 ): Promise<Uint8Array> {
-  const { chromium } = await loadPlaywright();
+  await loadPlaywright();
 
   let browser: Browser | undefined;
   try {
-    browser = await chromium.launch({
+    browser = await launchChromium(installed, {
       // The non-SSRF subset of browser-fetch's argv: no telemetry, no
       // variations, no component updates — none of which a local file needs,
       // and each of which is startup latency. The sandbox stays ON: a
@@ -191,8 +198,8 @@ export async function renderThumbnail(
   } catch (err) {
     throw new ThumbnailRenderError(
       "browser-unavailable",
-      `could not launch chromium — run \`bun run playwright install chromium\` ` +
-        `to provision it: ${String(err)}`,
+      `could not launch chromium (if its install is damaged, ` +
+        `\`./singularity deps install chromium\` reinstalls it): ${String(err)}`,
       { cause: err },
     );
   }

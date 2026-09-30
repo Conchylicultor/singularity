@@ -8,11 +8,11 @@
  * instead of at each call site:
  *
  * - the release CLI resolves `--platform`, then needs the Bun compile target and
- *   the Go `GOOS`/`GOARCH` for the same tag;
+ *   the Node platform/arch its sealed dependencies are built for;
  * - the Deploy health probe parses `uname -sm` into a tag it can store;
  * - `ship` compares a bundle's tag against a server's observed tag.
  *
- * Getting the Bun target prefix or the Go arch spelling wrong is a silent
+ * Getting the Bun target prefix or the arch spelling wrong is a silent
  * mis-build (a Mach-O binary wrapping a Linux payload, or vice versa), so both
  * mappings are single-sourced here.
  */
@@ -48,8 +48,7 @@ export function isPlatformTag(value: string): value is PlatformTag {
  * "we have never looked". See the absorbable-failure rule.
  */
 export type PlatformTagResult =
-  | { ok: true; tag: PlatformTag }
-  | { ok: false; reason: string };
+  { ok: true; tag: PlatformTag } | { ok: false; reason: string };
 
 /** Node's `process.platform`/`process.arch` pair → tag. */
 export function platformTagFor(
@@ -113,12 +112,19 @@ export function bunCompileTarget(tag: PlatformTag): string {
   return `bun-${tag}`;
 }
 
-/** The Go cross-compile environment for a tag (used to build the gateway). */
-export function goEnvFor(tag: PlatformTag): { GOOS: string; GOARCH: string } {
+/**
+ * A tag as Node spells a platform (`process.platform` / `process.arch`) — the
+ * target `infra/deps` seals a bundle's dependencies for (the gateway binary),
+ * whose kinds turn it into their own toolchain's terms (Go's GOOS/GOARCH).
+ */
+export function nodeTargetFor(tag: PlatformTag): {
+  platform: "darwin" | "linux";
+  arch: "arm64" | "x64";
+} {
   const [os, cpu] = tag.split("-");
   return {
-    GOOS: os === "darwin" ? "darwin" : "linux",
-    GOARCH: cpu === "arm64" ? "arm64" : "amd64",
+    platform: os === "darwin" ? "darwin" : "linux",
+    arch: cpu === "arm64" ? "arm64" : "x64",
   };
 }
 

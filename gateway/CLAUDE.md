@@ -161,10 +161,18 @@ Rotation (`logwriter.go`, `rotatingWriter`) is size-based: at `maxLogBytes` (50 
 
 ## Build & Run
 
+The machine's gateway binary is the `gateway-binary` dependency
+(`plugins/infra/plugins/launcher/deps`, an `infra/deps` `build` kind): built from
+this directory's Go source into `~/.singularity/cache/deps/gateway-binary/<identity>/env/gateway`
+by `./singularity start` (or `./singularity deps install gateway-binary`), rebuilt
+whenever a `.go` file, `go.mod`/`go.sum` or Go itself changes, and sealed into
+every release bundle (`deps/gateway-binary/gateway`, cross-compiled for its
+platform). By hand, for a debugger:
+
 ```sh
-go build -o gateway .
-./gateway -child-env HOME,USER,PATH                      # minimal hand-run; defaults: :9000, ~/.singularity/worktrees/
-./gateway -child-env HOME,USER,PATH -listen :8080 -idle-timeout 5m -log-level debug
+go build -o /tmp/gateway .
+/tmp/gateway -child-env HOME,USER,PATH                   # minimal hand-run; defaults: :9000, ~/.singularity/worktrees/
+/tmp/gateway -child-env HOME,USER,PATH -listen :8080 -idle-timeout 5m -log-level debug
 ```
 
 `-child-env` is **required**: a comma-separated list of the environment variable names children may receive (an entry ending in `*`, like `SINGULARITY_AUTH_*`, matches a prefix). Without it the gateway exits non-zero before doing anything. It has no Go-side default on purpose — the declaration lives in one place, `runtimeEnvNames()` in `plugins/infra/plugins/launcher/core`, and `./singularity start` passes exactly that. The minimal form above is enough to poke at routing under a debugger; a backend that needs more (the `SINGULARITY_*` installation settings, OAuth credentials) needs the full list. At boot `gateway.log` records the forwarded names at info and, at warn, every name in the gateway's own environment it is NOT forwarding — the normal path drops nothing, so a warn line means a hand-run gateway. Names only, never values.

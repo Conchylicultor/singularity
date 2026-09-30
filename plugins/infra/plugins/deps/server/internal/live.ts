@@ -3,12 +3,11 @@ import { serveValue } from "@plugins/network/plugins/live/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { depsStates, type DepRow } from "../../core";
 import { depsCacheDir } from "../../data-dirs";
-import { depState } from "./ensure";
-import { declaredDeps } from "./registry";
+import { declaredDeps, depState } from "../../deps";
 
 async function loadDepRows(): Promise<DepRow[]> {
   return Promise.all(
-    declaredDeps().map(async (dep) => ({
+    (await declaredDeps()).map(async (dep) => ({
       id: dep.id,
       owner: dep.owner,
       description: dep.description,

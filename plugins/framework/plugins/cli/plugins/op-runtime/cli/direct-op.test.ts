@@ -100,7 +100,7 @@ function makeHarness(opts: { inherited?: Grant; slug?: string } = {}) {
       };
     },
     onExit: (fn) => exitHandlers.push(fn),
-    installFatalSignalExit: (opId) => {
+    installFatalSignalExit: async (opId) => {
       events.push(`signals:${opId.length > 0 ? "armed" : "?"}`);
     },
     // `_slug` above: the stubs record the op, not the slug — every call in a

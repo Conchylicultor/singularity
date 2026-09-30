@@ -19,6 +19,15 @@ describe("decideThumbnail", () => {
     });
   });
 
+  test("waiting for the browser is not a verdict: the next sync renders", () => {
+    expect(
+      decideThumbnail(KEY, false, {
+        status: "waiting-for-browser",
+        message: "Chromium is being installed",
+      }),
+    ).toEqual({ state: { status: "rendering" }, render: true });
+  });
+
   test("a failure at these exact bytes is kept, not retried", () => {
     const failed = {
       status: "failed",

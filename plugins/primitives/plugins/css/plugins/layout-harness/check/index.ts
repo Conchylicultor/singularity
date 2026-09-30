@@ -13,6 +13,8 @@ import type {
   CheckResult,
   RepoFiles,
 } from "@plugins/framework/plugins/tooling/core";
+import { ensureDepViaCli } from "@plugins/infra/plugins/deps/deps";
+import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import { layoutLabDir } from "../data-dirs";
 import { classifyFailure } from "./classify";
 
@@ -165,6 +167,22 @@ const check: Check = {
     layoutLabDir.ensure();
     if (existsSync(markerFile(sig))) return { ok: true };
 
+    // Chromium is an on-demand dependency. Install it (a no-op once it is)
+    // BEFORE taking the grant and the pool: in a `./singularity deps install`
+    // child, a CLI process admitted to the host on its own, because this
+    // process runs inside an op that already holds its grant — an in-process
+    // install waiting for a background unit could wait on itself. The suite's
+    // measurer then finds it installed (see `web/internal/measure-page.ts`).
+    try {
+      await ensureDepViaCli(chromium, { stdio: "capture" });
+    } catch (err) {
+      return {
+        ok: false,
+        message: `Chromium, which the layout geometry suite runs in, could not be installed: ${(err as Error).message}`,
+        hint: "Run `./singularity deps install chromium` to see the install fail in full (its log is also in Settings → Dependencies), then re-run.",
+      };
+    }
+
     // Marker absent ⇒ the suite must actually launch Chromium. Spend a grant unit
     // (a cpu-holder that then waits on the size-1 pool — acyclic, the pool holder
     // waits for nothing) around the host-wide-serialized launch. Re-check the
@@ -173,28 +191,6 @@ const check: Check = {
     return ctx.grant.run(() =>
       browserPool.run(async () => {
         if (existsSync(markerFile(sig))) return { ok: true };
-
-        const { chromium } = await import("playwright");
-
-        // Chromium must be provisioned (the e2e-harness provision step owns that). Fail loudly
-        // with a clear hint — never auto-install.
-        let exe: string;
-        try {
-          exe = chromium.executablePath();
-        } catch (err) {
-          return {
-            ok: false,
-            message: `Could not resolve the Playwright Chromium executable: ${(err as Error).message}`,
-            hint: "Provision the browser with `bun run playwright install chromium` (normally done by the e2e-harness postinstall provision step), then re-run.",
-          };
-        }
-        if (!exe || !existsSync(exe)) {
-          return {
-            ok: false,
-            message: `Playwright Chromium is not installed (expected at ${exe || "<unresolved>"}).`,
-            hint: "Provision the browser with `bun run playwright install chromium` (normally done by the e2e-harness postinstall provision step), then re-run.",
-          };
-        }
 
         // `--timeout 120000`: this suite's `beforeAll` runs a Vite build + a cold
         // headless Chromium launch + page load, which routinely exceeds bun:test's

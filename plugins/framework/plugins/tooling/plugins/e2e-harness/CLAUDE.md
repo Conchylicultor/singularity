@@ -174,6 +174,19 @@ predicate the harness keeps internal so no script gains an origin string).
 one it did not launch; the price is that one script's end-revert would restore
 another's in-flight writes.
 
+## Chromium arrives on demand
+
+No browser is installed at `bun install`. Chromium is the `chromium`
+dependency (`safe-fetch/browser-fetch`'s `deps/`, kind `playwright-browser`),
+and `withBrowser` gets it with `ensureDepViaCli(chromium, { stdio: "inherit" })`:
+one `readyNow` when it is installed; otherwise a `./singularity deps install
+chromium` child — its progress on this terminal, ~280 MB, once per machine per
+`playwright-core` version — then the proof. The launch is
+`launchChromium(ready, { headless: !--headed })`: the recorded
+`chrome-headless-shell`, or with `--headed` the headed binary of the same
+revision. A launch failure is re-thrown with the playwright that ran (and
+where it resolved from), the install dir and the executables it recorded.
+
 ## `diffImages` — two captures in, a number and a picture out
 
 `diffImages(page, aPng, bPng, { threshold, grid, labels })` compares two PNG
@@ -243,7 +256,7 @@ own `requestfailed` listener calls it too. Diagnosis:
 
 ## Plugin reference
 
-- Description: Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
+- Description: Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./singularity deps install chromium`). Also owns the two generic tools (screenshot, perf).
 - Core:
   - Uses: `framework/tooling/guards.MODULE_EXTENSION`
   - Exports (values): `isE2eScriptPath`

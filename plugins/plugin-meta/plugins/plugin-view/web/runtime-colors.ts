@@ -26,4 +26,5 @@ export const RUNTIME_COLORS: Record<ExportRuntime, string> = {
   provision: "bg-categorical-6/10 text-categorical-6",
   "data-dirs": "bg-categorical-4/10 text-categorical-4",
   cli: "bg-categorical-8/10 text-categorical-8",
+  deps: "bg-categorical-10/10 text-categorical-10",
 };

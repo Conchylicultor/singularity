@@ -475,10 +475,10 @@ remote is built here.
   - Exports (values):
     - `bunCompileTarget`
     - `BundleResolutionSchema`
-    - `goEnvFor`
     - `hostPlatformTag`
     - `isLinuxTag`
     - `isPlatformTag`
+    - `nodeTargetFor`
     - `PLATFORM_TAGS`
     - `platformTagFor`
     - `platformTagFromUname`

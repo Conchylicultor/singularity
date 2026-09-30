@@ -5,10 +5,12 @@
  * NOT in this list: a 404 still renders HTML, and the caller decides what a 404
  * means — exactly as `safeFetch` callers own their own status assertion.
  *
- * `browser-unavailable` is separated from the rest because it is an OPERATOR
- * problem (no chromium binary), not a statement about the URL. A caller that
- * classifies errors must keep it in its transient bucket; parking a source with
- * a red "this page cannot be read" over a missing binary would be a lie.
+ * `browser-unavailable` is separated from the rest because it is about the
+ * BROWSER, not the URL: Chromium is still installing (it is an on-demand
+ * dependency), its install failed, or it would not launch — the thrown
+ * `BrowserUnavailableError`'s `reason` says which. A caller that classifies
+ * errors must keep it in its transient bucket; parking a source with a red
+ * "this page cannot be read" over a missing binary would be a lie.
  */
 export type BrowserFetchFailureKind =
   | "browser-unavailable"

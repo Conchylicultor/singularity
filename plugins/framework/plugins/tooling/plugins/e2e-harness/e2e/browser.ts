@@ -9,12 +9,14 @@
  */
 import { readFileSync } from "node:fs";
 import { basename, dirname } from "node:path";
+import type { Browser, BrowserContext, Page } from "playwright";
+import { ensureDepViaCli, type Ready } from "@plugins/infra/plugins/deps/deps";
 import {
-  chromium,
-  type Browser,
-  type BrowserContext,
-  type Page,
-} from "playwright";
+  launchChromium,
+  type PlaywrightBrowserSource,
+} from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
+import { readBrowserExecutables } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
+import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import {
   agentOriginHeaders,
   ORIGIN_HEADER,
@@ -104,24 +106,19 @@ function packageVersion(
 /**
  * Why a launch failure is re-thrown rather than left to Playwright.
  *
- * Playwright's own message names ONE fact — the executable path it wanted:
- *
- *   Executable doesn't exist at …/chromium_headless_shell-1234/…
- *
- * which reads like "run the installer" and is a dead end, because the installer
- * you would reach for provisions whatever version *your shell* resolves, not
- * the one this script just launched. The missing fact is WHICH playwright ran:
- * a revision the repo never chose means a module resolved from somewhere the
- * repo never chose, and the resolved-from path says where in one line.
- *
- * Deliberately NOT a pre-launch `existsSync` on `chromium.executablePath()`.
- * That getter returns the HEADED binary (`Google Chrome for Testing`), while a
- * headless launch runs `chrome-headless-shell` — a different file, of the same
- * revision, installed as its pair. A pre-stat would therefore be checking a
- * path no caller here launches. Playwright is the only authority on which
- * binaries a given launch needs, so we let it decide and annotate its verdict.
+ * Playwright's own message names ONE fact — the executable path it wanted —
+ * which reads like "run the installer" and is a dead end when the real cause
+ * is WHICH playwright ran: a module resolved from somewhere the repo never
+ * chose (a worktree with no `node_modules` of its own resolves the MAIN
+ * checkout's, a different version with nothing on screen to say so). So the
+ * diagnostic names the playwright that ran, where it resolved from, and the
+ * executables the Chromium install recorded (as Playwright reported them when
+ * it installed them) — the pair this launch picked between.
  */
-function launchFailure(cause: unknown): Error {
+function launchFailure(
+  cause: unknown,
+  installed: Ready<PlaywrightBrowserSource>,
+): Error {
   const here = import.meta.dir;
   const playwright = probe(() => {
     const { path, version } = packageVersion("playwright", here);
@@ -136,23 +133,26 @@ function launchFailure(cause: unknown): Error {
     const { path, version } = packageVersion("playwright-core", dirname(pkg));
     return `${version}  (${path})`;
   });
-  const headed = probe(() => chromium.executablePath());
+  const recorded = readBrowserExecutables(installed.dir);
+  const executables = recorded.ok
+    ? `headless ${recorded.executables.headlessShell}\n` +
+      `                  headed   ${recorded.executables.headed}\n` +
+      `                  (installed for playwright-core ${recorded.executables.playwrightCore})`
+    : `<unreadable: ${recorded.reason}>`;
   const detail = cause instanceof Error ? cause.message : String(cause);
 
   return new Error(
     `Playwright could not launch chromium.\n` +
       `  playwright      ${playwright}\n` +
       `  playwright-core ${core}\n` +
-      `  headed binary   ${headed}\n` +
-      `                  (a headless launch runs chrome-headless-shell at the same\n` +
-      `                   revision, its installed pair — the launch error below names\n` +
-      `                   the exact file it wanted)\n` +
+      `  install         ${installed.dir}\n` +
+      `  executables     ${executables}\n` +
       `  launch error    ${detail}\n` +
       `\n` +
       `If the resolved path above is NOT inside this checkout, the script ran against\n` +
       `another checkout's dependencies. Run it as \`./singularity run <script.ts> [args…]\`,\n` +
       `which installs this worktree's own node_modules from its own lock first. If the\n` +
-      `path IS correct, the browser is simply missing: \`bun run playwright install chromium\`.`,
+      `install itself is damaged: \`./singularity deps remove chromium\`, then run again.`,
     { cause },
   );
 }
@@ -237,11 +237,19 @@ export async function withBrowser<T>(
   // On the normal path, not in a `finally`, so `process.exit` cannot skip it.
   await repairAgentWrites("start");
 
+  // Chromium is an on-demand dependency: the first run on a machine installs
+  // it (~280 MB, progress on this terminal) in a `./singularity deps install`
+  // child — this script holds no ExecContext of its own — and every run after
+  // finds it with one read.
+  const installed = await ensureDepViaCli(chromium, { stdio: "inherit" });
+
   let browser: Browser;
   try {
-    browser = await chromium.launch({ headless: !flag("headed") });
+    // Headless runs the recorded chrome-headless-shell, `--headed` the headed
+    // binary of the same revision.
+    browser = await launchChromium(installed, { headless: !flag("headed") });
   } catch (err) {
-    throw launchFailure(err);
+    throw launchFailure(err, installed);
   }
 
   let torndown = false;

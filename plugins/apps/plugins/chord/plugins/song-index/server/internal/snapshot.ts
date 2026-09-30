@@ -12,6 +12,9 @@ import { JSONParser } from "@streamparser/json";
 import { z } from "zod";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { chordDir } from "@plugins/apps/plugins/chord/data-dirs";
+import { ensureDep, readyNow } from "@plugins/infra/plugins/deps/deps";
+import { downloadedFile } from "@plugins/infra/plugins/deps/plugins/download/deps";
+import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { HookpadHarmonyDocSchema } from "@plugins/integrations/plugins/hooktheory/core";
 import {
   SheetSageAlignmentSchema,
@@ -19,14 +22,20 @@ import {
   type IndexLoadPhase,
   type SnapshotLine,
   type SnapshotSkipReason,
+  SNAPSHOT_FORMAT_VERSION,
 } from "../../core";
-import { sheetSageCacheDir } from "../../data-dirs";
-import { SNAPSHOT_NAME, dumpFilesPresent, ensureDumpFile } from "./dump-files";
+import { SHEETSAGE_DUMP_FILES, sheetSageDumps } from "../../deps";
 
 // ── The compact source snapshot: build once per machine, read on every load ──
 
 /** The song index's area of the app dir. The snapshot is the copy backups keep. */
 export const songIndexArea = chordDir.subdir("song-index");
+
+/**
+ * The snapshot's name: both dump pins and the line format, so a different dump
+ * or a new format is a different file rather than a misread one.
+ */
+export const SNAPSHOT_NAME = `sheetsage-${SHEETSAGE_DUMP_FILES.processed.sha256.slice(0, 12)}-${SHEETSAGE_DUMP_FILES.raw.sha256.slice(0, 12)}-v${SNAPSHOT_FORMAT_VERSION}`;
 
 export function snapshotPath(): string {
   return songIndexArea.file(`${SNAPSHOT_NAME}.ndjson.gz`);
@@ -37,6 +46,8 @@ const LOCK_RETRY_MS = 1_000;
 
 export type SnapshotHooks = {
   log: (line: string) => void;
+  /** The supervised run's exec context: what installs the dump files when they are missing. */
+  exec: ExecContext;
   /** Called as the work moves to downloading or building. */
   onPhase: (phase: IndexLoadPhase) => Promise<void>;
 };
@@ -44,7 +55,10 @@ export type SnapshotHooks = {
 /**
  * The snapshot's path, built first when it is missing.
  *
- * Under a host-wide flock on a file in the cache dir, so two backends opening
+ * The dump files come from the `sheetsage-dumps` dependency (installed here
+ * when missing, under infra/deps' own lock); they are read only to build.
+ *
+ * Under a host-wide flock on a file in the app's own dir, so two backends opening
  * the app at once build it once: the second waits, then finds the file. The
  * kernel releases the lock when its holder dies, so a killed build never wedges
  * the next one. (`flockTry` is non-blocking by design — a blocking `flock` would
@@ -54,8 +68,8 @@ export async function ensureSnapshot(hooks: SnapshotHooks): Promise<string> {
   const path = snapshotPath();
   if (existsSync(path)) return path;
 
-  sheetSageCacheDir.ensure();
-  const fd = openSync(sheetSageCacheDir.file("snapshot.lock"), "a");
+  songIndexArea.ensure();
+  const fd = openSync(songIndexArea.file("snapshot.lock"), "a");
   try {
     if (!flockTry(fd)) {
       hooks.log("another process is building the snapshot; waiting for it");
@@ -64,9 +78,17 @@ export async function ensureSnapshot(hooks: SnapshotHooks): Promise<string> {
     }
     if (existsSync(path)) return path;
 
-    if (!dumpFilesPresent()) await hooks.onPhase("downloading");
-    const processedPath = await ensureDumpFile("processed", hooks.log);
-    const rawPath = await ensureDumpFile("raw", hooks.log);
+    if ((await readyNow(sheetSageDumps)).kind !== "ready") {
+      await hooks.onPhase("downloading");
+    }
+    const dumps = await ensureDep(sheetSageDumps, hooks.exec, {
+      log: hooks.log,
+    });
+    const processedPath = downloadedFile(
+      dumps,
+      SHEETSAGE_DUMP_FILES.processed.name,
+    );
+    const rawPath = downloadedFile(dumps, SHEETSAGE_DUMP_FILES.raw.name);
 
     await hooks.onPhase("building-snapshot");
     const report = await buildSnapshot({

@@ -2,6 +2,9 @@ import { writeFileSync } from "node:fs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
+import { ensureDep, holdDep } from "@plugins/infra/plugins/deps/deps";
+import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
+import { gatewayBinary } from "@plugins/infra/plugins/launcher/deps";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
 import {
   MAIN_WORKTREE_NAME,
@@ -13,7 +16,6 @@ import {
   isRunning,
   isGatewayListening,
   ensureDatabaseConfig,
-  buildOrLocateGateway,
   spawnGatewayDaemon,
   gatewayLaunchSpec,
   awaitGatewayReady,
@@ -153,22 +155,26 @@ async function startDetached(opts: Opts): Promise<void> {
   );
 }
 
-/** Compile the gateway and write `database.json` — the inputs to any launch. */
+/** Ensure the gateway binary and write `database.json` — the inputs to any launch. */
 async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
+  // The machine's gateway is MAIN's: built from the main checkout's Go source
+  // whichever checkout runs `start`.
   const repoRoot = await getMainRepoRoot();
-  // Dev `start` always rebuilds the shared gateway (forceBuild): it is the
-  // only path that compiles the gateway, so a Go source change must take
-  // effect here. The skip-if-exists fast path is reserved for the release
-  // launcher (a vendored prebuilt binary, no Go toolchain on the host).
-  const { gatewayDir, gatewayBin } = await buildOrLocateGateway(
-    repoRoot,
-    console.log,
-    true,
-  );
+  // Built only when main's gateway source (or Go) changed since the last
+  // build — the identity is the source hash — so a Go change takes effect
+  // on the next `start` with no flag, and an unchanged one costs a hash.
+  const gateway = await ensureDep(gatewayBinary, cliExecContext(), {
+    root: repoRoot,
+    log: console.log,
+  });
+  // The launchd job (and a detached gateway) names this binary by path long
+  // after main's source moves on: keep the deps sweep off it until the next
+  // `start` moves the hold to a newer build.
+  holdDep(gateway, "machine-gateway");
+  console.log(`Gateway binary: ${gateway.dir} (${gateway.identity})`);
   ensureDatabaseConfig(repoRoot, console.log);
   return {
-    gatewayDir,
-    gatewayBin,
+    gateway,
     port: DEFAULT_PORT,
     logLevel: opts.logLevel,
   };

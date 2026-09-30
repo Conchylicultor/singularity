@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { readyNow } from "@plugins/infra/plugins/deps/deps";
+import { requestDep } from "@plugins/infra/plugins/deps/server";
+import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import { listPrototypeMetas } from "@plugins/apps/plugins/prototypes/plugins/files/server";
 import { hasThumbnail, sweepThumbnails, writeThumbnail } from "./cache";
 import { fingerprintPrototype } from "./fingerprint";
@@ -79,8 +82,35 @@ export const renderThumbnailJob = defineJob({
       return;
     }
 
+    // Chromium is an on-demand dependency, and this job runs IN the backend
+    // (no ExecContext), so it never installs: it reads, and when the browser is
+    // not there yet it asks for the install and says so on the card. The
+    // server barrel re-syncs when that install settles (`onDepInstallSettled`),
+    // and `waiting-for-browser` is re-rendered by every sync.
+    const browser = await readyNow(chromium);
+    if (browser.kind === "failed") {
+      setThumbnailState(meta.name, {
+        status: "failed",
+        key: input.key,
+        kind: "browser-unavailable",
+        message:
+          `Chromium could not be installed: ${browser.message} ` +
+          `Retry from Settings → Dependencies, or run \`./singularity deps install chromium\`.`,
+      });
+      return;
+    }
+    if (browser.kind !== "ready") {
+      await requestDep(chromium);
+      setThumbnailState(meta.name, {
+        status: "waiting-for-browser",
+        message:
+          "Installing Chromium (~280 MB, once per machine) — the preview renders when it is ready.",
+      });
+      return;
+    }
+
     try {
-      const png = await renderThumbnail(meta);
+      const png = await renderThumbnail(meta, browser.ready);
       await writeThumbnail(input.key, png);
       setThumbnailState(meta.name, { status: "ready", key: input.key });
     } catch (err) {

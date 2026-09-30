@@ -13,6 +13,4 @@ export interface CollectedEntry {
 }
 
 export const provisionEntries: CollectedEntry[] = [
-  { pluginPath: "framework/plugins/tooling/plugins/e2e-harness", id: "framework.tooling.e2e-harness", loader: () => import("@plugins/framework/plugins/tooling/plugins/e2e-harness/provision"), dependsOn: ["infra/plugins/safe-fetch/plugins/browser-fetch"] },
-  { pluginPath: "infra/plugins/safe-fetch/plugins/browser-fetch", id: "infra.safe-fetch.browser-fetch", loader: () => import("@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/provision"), dependsOn: [] },
 ];

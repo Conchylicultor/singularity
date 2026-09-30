@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { recordRunError } from "./builtin-ledger";
 import {
-  supervisedRunExecContext,
+  mintExecContext,
   type ExecContext,
 } from "../../core/internal/exec-context";
+import { admitBackground } from "./admit";
 import { defineSupervisedTask, type SupervisedTask } from "./task/registry";
 
 /** What a `run` body is handed in its child process. */
@@ -69,7 +70,7 @@ export function defineRunBodyTask<S extends z.ZodType>(opts: {
         await opts.run(parsed, {
           runId,
           log,
-          exec: supervisedRunExecContext(),
+          exec: mintExecContext("supervised-run", admitBackground),
         });
       } catch (err) {
         if (!opts.recordErrors) throw err;

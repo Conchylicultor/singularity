@@ -12,7 +12,7 @@ export {
   hostPlatformTag,
   platformTagFromUname,
   bunCompileTarget,
-  goEnvFor,
+  nodeTargetFor,
   isLinuxTag,
 } from "./platforms";
 export type { PlatformTag, PlatformTagResult } from "./platforms";

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { SsrfError } from "@plugins/infra/plugins/safe-fetch/server";
-import { BrowserFetchError, browserUnavailable } from "./errors";
+import {
+  BrowserFetchError,
+  browserInstallFailed,
+  browserInstalling,
+  browserUnavailable,
+} from "./errors";
 
 describe("BrowserFetchError", () => {
   // Classification downstream is NAME-based, not instanceof-based: the error
@@ -36,14 +41,30 @@ describe("BrowserFetchError", () => {
   });
 });
 
-describe("browserUnavailable", () => {
-  test("names the one command that fixes it", () => {
+describe("browser-unavailable reasons", () => {
+  test("installing says so, and is still a BrowserFetchError by name", () => {
+    const err = browserInstalling("https://example.com/");
+    expect(err.kind).toBe("browser-unavailable");
+    expect(err.reason).toBe("installing");
+    expect(err.name).toBe("BrowserFetchError");
+    expect(err).toBeInstanceOf(BrowserFetchError);
+    expect(err.message).toContain("being installed");
+  });
+
+  test("install-failed carries the failure and the retry command", () => {
+    const err = browserInstallFailed("https://example.com/", "curl: 404.");
+    expect(err.reason).toBe("install-failed");
+    expect(err.message).toContain("curl: 404.");
+    expect(err.message).toContain("./singularity deps install chromium");
+  });
+
+  test("launch-failed keeps the launch error", () => {
     const err = browserUnavailable(
       "https://example.com/",
       new Error("Executable doesn't exist"),
     );
     expect(err.kind).toBe("browser-unavailable");
-    expect(err.message).toContain("bun run playwright install chromium");
+    expect(err.reason).toBe("launch-failed");
     expect(err.message).toContain("Executable doesn't exist");
   });
 });

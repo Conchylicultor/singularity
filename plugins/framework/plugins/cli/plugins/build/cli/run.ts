@@ -855,7 +855,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // this change, so the tap adds no regression surface. `recordSignal` is
   // what is build-specific: the receipt stamp and the verdict's termination.
   installFatalSignalExit(
-    signalOriginTap({
+    await signalOriginTap({
       opId: buildId,
       worktree: name,
       onSignal: recordSignal,

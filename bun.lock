@@ -3212,6 +3212,14 @@
       "name": "@singularity/plugin-infra-deps",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/deps/plugins/build": {
+      "name": "@singularity/plugin-infra-deps-build",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/download": {
+      "name": "@singularity/plugin-infra-deps-download",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/deps/plugins/hello-python": {
       "name": "@singularity/plugin-infra-deps-hello-python",
       "version": "0.0.1",
@@ -3219,6 +3227,13 @@
     "plugins/infra/plugins/deps/plugins/mise": {
       "name": "@singularity/plugin-infra-deps-mise",
       "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/playwright-browser": {
+      "name": "@singularity/plugin-infra-deps-playwright-browser",
+      "version": "0.0.1",
+      "dependencies": {
+        "playwright": "^1.62.1",
+      },
     },
     "plugins/infra/plugins/deps/plugins/python": {
       "name": "@singularity/plugin-infra-deps-python",
@@ -7563,9 +7578,15 @@
 
     "@singularity/plugin-infra-deps": ["@singularity/plugin-infra-deps@workspace:plugins/infra/plugins/deps"],
 
+    "@singularity/plugin-infra-deps-build": ["@singularity/plugin-infra-deps-build@workspace:plugins/infra/plugins/deps/plugins/build"],
+
+    "@singularity/plugin-infra-deps-download": ["@singularity/plugin-infra-deps-download@workspace:plugins/infra/plugins/deps/plugins/download"],
+
     "@singularity/plugin-infra-deps-hello-python": ["@singularity/plugin-infra-deps-hello-python@workspace:plugins/infra/plugins/deps/plugins/hello-python"],
 
     "@singularity/plugin-infra-deps-mise": ["@singularity/plugin-infra-deps-mise@workspace:plugins/infra/plugins/deps/plugins/mise"],
+
+    "@singularity/plugin-infra-deps-playwright-browser": ["@singularity/plugin-infra-deps-playwright-browser@workspace:plugins/infra/plugins/deps/plugins/playwright-browser"],
 
     "@singularity/plugin-infra-deps-python": ["@singularity/plugin-infra-deps-python@workspace:plugins/infra/plugins/deps/plugins/python"],
 
