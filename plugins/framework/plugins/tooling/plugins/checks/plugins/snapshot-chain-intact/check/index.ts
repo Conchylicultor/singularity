@@ -1,155 +1,111 @@
-import { open, readdir } from "fs/promises";
-import { join, resolve } from "path";
+import { resolve } from "path";
+// The DAG's edges (prevId + merge-node parents) and the published set are the
+// migrations plugin's: the CLI's tip join reads the same definitions, so this
+// check cannot accept a history the generator would refuse, or the reverse.
+import {
+  analyzeSnapshotDag,
+  MIGRATIONS_DATA_DIR,
+  NULL_SNAPSHOT_ID,
+  publishedMigrationBasenames,
+  readSnapshotNodes,
+  type SnapshotDagProblem,
+} from "@plugins/database/plugins/migrations/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-const NULL_UUID = "00000000-0000-0000-0000-000000000000";
-
-interface Snapshot {
-  file: string;
-  id: string;
-  prevId: string;
-}
+const list = (files: readonly string[]) =>
+  files.map((f) => `  meta/${f}`).join("\n");
 
 /**
- * How much of a snapshot's start is read. drizzle-kit writes `id` then `prevId`
- * as the first two keys, so both fit well inside this.
+ * One problem as a message + hint. `published` is only consulted for a
+ * multiple-tips fork, to tell a rebase Y-fork from an unjoined upstream merge.
  */
-const HEAD_BYTES = 1024;
-
-/** The first two keys of a snapshot, anchored at the start of the file. */
-const HEAD_RE = /^\{\s*"id":\s*"([^"]+)",\s*"prevId":\s*"([^"]+)"/;
-
-/**
- * The chain only needs each snapshot's `id` and `prevId`, but a snapshot is the
- * whole schema (~250 KB, and there are hundreds). Reading and parsing every one
- * in full held the check runner's shared thread for 1–2 s, so only the start of
- * each file is read. A file whose start is not `{ "id": …, "prevId": … }` throws,
- * naming it: a changed snapshot layout must fail here, not pass unchecked.
- */
-async function readHead(path: string): Promise<{ id: string; prevId: string }> {
-  const handle = await open(path, "r");
-  try {
-    const buf = Buffer.alloc(HEAD_BYTES);
-    const { bytesRead } = await handle.read(buf, 0, HEAD_BYTES, 0);
-    const match = HEAD_RE.exec(buf.toString("utf8", 0, bytesRead));
-    if (!match) {
-      throw new Error(
-        `snapshot-chain-intact: ${path} does not start with "id" then "prevId" — the drizzle snapshot layout changed; update readHead`,
-      );
+async function explain(
+  p: SnapshotDagProblem,
+  published: () => Promise<ReadonlySet<string>>,
+): Promise<{ message: string; hint: string }> {
+  switch (p.kind) {
+    case "duplicate-id":
+      return {
+        message: `duplicate snapshot id ${p.id}:\n${list(p.files)}`,
+        hint: "Regenerate one of the snapshots via `./singularity build`.",
+      };
+    case "missing-parent":
+      return {
+        message: `snapshot ${p.file} references missing parent ${p.parent}.`,
+        hint: "A parent snapshot was deleted or the chain was hand-edited. Restore from git or regenerate.",
+      };
+    case "merge-prev-not-parent":
+      return {
+        message: `merge node ${p.file}: its prevId is not one of the parents its .sql header names.`,
+        hint: "Merge nodes are generator output — never hand-edit one. Restore it from git, or reset a branch-local one with `./singularity build --reset-migration`.",
+      };
+    case "no-root":
+      return {
+        message: `no root snapshot (none has prevId=${NULL_SNAPSHOT_ID}).`,
+        hint: "Drizzle snapshots have been corrupted. Regenerate from a known-good state.",
+      };
+    case "multiple-roots":
+      return {
+        message: `multiple root snapshots (prevId=${NULL_SNAPSHOT_ID}):\n${list(p.files)}`,
+        hint: "Only one snapshot may be the chain root. Rebase onto `main` and re-run `./singularity build`.",
+      };
+    case "cycle":
+      return {
+        message: `snapshot parents form a cycle:\n${list(p.files)}`,
+        hint: "The chain was hand-edited. Restore the snapshots and merge headers from git.",
+      };
+    case "unreachable":
+      return {
+        message: `${p.files.length} snapshot(s) are not reachable from the root:\n${list(p.files)}`,
+        hint: "The chain has a broken link. Inspect snapshot prevIds and regenerate if needed.",
+      };
+    case "multiple-tips": {
+      const pub = await published();
+      const local = p.files.filter((f) => !pub.has(f));
+      const message =
+        `snapshot chain has ${p.files.length} tips (a fork no merge node joins):\n` +
+        p.files
+          .map(
+            (f) =>
+              `  meta/${f}${pub.has(f) ? "  (published)" : "  (branch-local)"}`,
+          )
+          .join("\n");
+      return local.length > 0
+        ? {
+            message,
+            hint: "A rebase Y-fork: rebase onto `main`, then re-run `./singularity build --reset-migration --migration-name <slug>` to drop this branch's migration and regenerate it against the new tip.",
+          }
+        : {
+            message,
+            hint: "Every tip is published — two `main`s were merged (an upstream update). Run `./singularity build`: it writes the merge node that joins them, or stops and names the conflicting schema paths. Never delete or edit a published migration.",
+          };
     }
-    return { id: match[1]!, prevId: match[2]! };
-  } finally {
-    await handle.close();
   }
-}
-
-async function readSnapshots(metaDir: string): Promise<Snapshot[]> {
-  const files = (await readdir(metaDir))
-    .filter((f) => f.endsWith("_snapshot.json"))
-    .sort();
-  return Promise.all(
-    files.map(async (file) => ({
-      file,
-      ...(await readHead(join(metaDir, file))),
-    })),
-  );
 }
 
 const check: Check = {
   id: "snapshot-chain-intact",
-  description: "drizzle migration snapshots form a single linear chain",
+  description:
+    "drizzle migration snapshots form one DAG (prevId + merge-node parents) with a single root and a single tip",
   async run() {
     const root = await getWorktreeRoot();
-    const metaDir = resolve(
-      root,
-      "plugins/database/plugins/migrations/data/meta",
+    const dag = analyzeSnapshotDag(
+      await readSnapshotNodes(resolve(root, MIGRATIONS_DATA_DIR)),
     );
-
-    const snapshots = await readSnapshots(metaDir);
-    if (snapshots.length === 0) return { ok: true };
-
-    const byId = new Map<string, Snapshot>();
-    for (const s of snapshots) {
-      if (byId.has(s.id)) {
-        return {
-          ok: false,
-          message: `duplicate snapshot id ${s.id}:\n  ${byId.get(s.id)!.file}\n  ${s.file}`,
-          hint: "Regenerate one of the snapshots via `./singularity build`.",
-        };
-      }
-      byId.set(s.id, s);
-    }
-
-    const byPrevId = new Map<string, Snapshot[]>();
-    for (const s of snapshots) {
-      const list = byPrevId.get(s.prevId) ?? [];
-      list.push(s);
-      byPrevId.set(s.prevId, list);
-    }
-
-    const roots = byPrevId.get(NULL_UUID) ?? [];
-    if (roots.length === 0) {
-      return {
-        ok: false,
-        message: `no root snapshot (none has prevId=${NULL_UUID}).`,
-        hint: "Drizzle snapshots have been corrupted. Regenerate from a known-good state.",
-      };
-    }
-    if (roots.length > 1) {
-      return {
-        ok: false,
-        message:
-          `multiple root snapshots (prevId=${NULL_UUID}):\n` +
-          roots.map((r) => `  ${r.file}`).join("\n"),
-        hint: "Only one snapshot may be the chain root. Rebase onto main and re-run `./singularity build`.",
-      };
-    }
-
-    for (const [prev, group] of byPrevId) {
-      if (group.length > 1) {
-        return {
-          ok: false,
-          message:
-            `snapshot chain has a Y-fork: ${group.length} snapshots share prevId ${prev}:\n` +
-            group.map((s) => `  ${s.file}`).join("\n"),
-          hint: "Rebase onto origin/main, then re-run `./singularity build --reset-migration --migration-name <slug>` to drop this branch's old migration and regenerate it against the new tip.",
-        };
-      }
-    }
-
-    for (const s of snapshots) {
-      if (s.prevId === NULL_UUID) continue;
-      if (!byId.has(s.prevId)) {
-        return {
-          ok: false,
-          message: `snapshot ${s.file} references missing parent ${s.prevId}.`,
-          hint: "A parent snapshot was deleted or the chain was hand-edited. Restore from git or regenerate.",
-        };
-      }
-    }
-
-    const reachable = new Set<string>();
-    let cursor: Snapshot | undefined = roots[0];
-    while (cursor) {
-      reachable.add(cursor.id);
-      const next = byPrevId.get(cursor.id);
-      cursor = next && next.length === 1 ? next[0] : undefined;
-    }
-    if (reachable.size !== snapshots.length) {
-      const orphans = snapshots.filter((s) => !reachable.has(s.id));
-      return {
-        ok: false,
-        message:
-          `${orphans.length} snapshot(s) are not reachable from the root:\n` +
-          orphans.map((s) => `  ${s.file}`).join("\n"),
-        hint: "The chain has a broken link. Inspect snapshot prevIds and regenerate if needed.",
-      };
-    }
-
-    return { ok: true };
+    const first = dag.problems[0];
+    if (!first) return { ok: true };
+    const { message, hint } = await explain(first, () =>
+      publishedMigrationBasenames(root),
+    );
+    const more = dag.problems.length - 1;
+    return {
+      ok: false,
+      message: more > 0 ? `${message}\n(and ${more} more problem(s))` : message,
+      hint,
+    };
   },
 };
 

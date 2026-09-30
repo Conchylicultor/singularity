@@ -209,6 +209,7 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnPassthrough`
 - Cross-plugin:
   - Imported by:
+    - `database/migrations`
     - `framework/tooling`
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`

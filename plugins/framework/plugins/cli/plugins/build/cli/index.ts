@@ -51,7 +51,7 @@ export default defineCliCommand({
     {
       flags: "--reset-migration",
       description:
-        "Drop branch-local SCHEMA migration files (those absent from origin/main, that carry a drizzle snapshot) before generating. Recovers from snapshot-chain Y-forks after rebasing onto main. Data/backfill migrations (snapshot-less) are preserved.",
+        "Drop branch-local SCHEMA migration files (those on no published main — local main or <remote>/main — that carry a drizzle snapshot) before generating. Recovers from snapshot-chain Y-forks after rebasing onto main. Data/backfill migrations (snapshot-less) are preserved.",
     },
     {
       flags: "--custom-migration",

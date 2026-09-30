@@ -22,6 +22,25 @@
 // A claim names a data migration by `<YYYYMMDD_HHMMSS>__<slug>` — its filename
 // minus the content hash, because a branch-local data migration is re-hashed on
 // every build while its timestamp and slug never change.
+//
+// A MERGE NODE (research/2026-09-30-global-clone-migrations-published-set.md
+// §3) is a phased file with empty sections and no claims, preceded by one
+// header line naming the snapshot ids it joins:
+//
+//   -- singularity:merge-snapshot parents=<snapshotIdA>,<snapshotIdB>
+//   -- singularity:phase expand
+//   -- singularity:phase contract
+//   -- singularity:claims
+//
+// Its SQL does nothing — each side's own migrations already apply that side's
+// DDL — and its snapshot is the 3-way merge of the parents. The header is the
+// one place a snapshot DAG edge beyond `prevId` is recorded.
+
+const MERGE_HEADER = "-- singularity:merge-snapshot";
+const MERGE_HEADER_RE =
+  /^-- singularity:merge-snapshot parents=([0-9a-f-]+(?:,[0-9a-f-]+)+)$/;
+const SNAPSHOT_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const EXPAND = "-- singularity:phase expand";
 const CONTRACT = "-- singularity:phase contract";
@@ -64,10 +83,56 @@ export function renderPhasedMigration(m: PhasedMigration): string {
   );
 }
 
+// The body of a merge node joining `parents` (snapshot ids, in snapshot-file
+// order): the header, then an empty phased migration.
+export function renderMergeSnapshotMigration(
+  parents: readonly string[],
+): string {
+  if (parents.length < 2)
+    throw new Error(
+      `a merge node joins at least two snapshots, got ${parents.length}`,
+    );
+  for (const p of parents) {
+    if (!SNAPSHOT_ID_RE.test(p))
+      throw new Error(`malformed snapshot id in merge node: "${p}"`);
+  }
+  return (
+    `${MERGE_HEADER} parents=${parents.join(",")}\n` +
+    renderPhasedMigration({ expand: "", contract: "", claims: [] })
+  );
+}
+
+// The snapshot ids a merge node joins, read from its first line; null for any
+// other migration. A first line that starts like the header but does not parse
+// throws — a merge edge must never be silently dropped from the DAG.
+export function mergeSnapshotParents(sql: string): string[] | null {
+  const eol = sql.indexOf("\n");
+  const first = (eol === -1 ? sql : sql.slice(0, eol)).trimEnd();
+  if (!first.startsWith(MERGE_HEADER)) return null;
+  const m = MERGE_HEADER_RE.exec(first);
+  if (!m) throw new Error(`malformed merge-snapshot header: ${first}`);
+  const parents = m[1]!.split(",");
+  for (const p of parents) {
+    if (!SNAPSHOT_ID_RE.test(p))
+      throw new Error(`malformed snapshot id in merge-snapshot header: "${p}"`);
+  }
+  return parents;
+}
+
 // Parse a migration file body. A file whose first line is not the expand marker
 // is legacy. A file that starts phased but is malformed throws — never degrades
-// to legacy, which would silently apply contract before its data.
+// to legacy, which would silently apply contract before its data. A merge
+// node's header line is skipped; what follows it must be phased.
 export function parseMigration(sql: string): ParsedMigration {
+  if (mergeSnapshotParents(sql) !== null) {
+    const eol = sql.indexOf("\n");
+    const parsed = eol === -1 ? null : parseMigration(sql.slice(eol + 1));
+    if (parsed?.kind !== "phased")
+      throw new Error(
+        `a merge-snapshot migration must be phased after its header line`,
+      );
+    return parsed;
+  }
   const lines = sql.split("\n");
   if (lines[0]?.trimEnd() !== EXPAND) return { kind: "legacy", sql };
 

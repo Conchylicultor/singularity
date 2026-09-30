@@ -23,10 +23,34 @@ export type { DrizzleGenerateOptions } from "./internal/drizzle-cli";
 // The phased-migration file grammar, shared by the generator (cli) and the
 // runner (server). See research/2026-09-29-global-phased-migrations.md.
 export {
+  mergeSnapshotParents,
   migrationClaimId,
   parseMigration,
+  renderMergeSnapshotMigration,
   renderPhasedMigration,
 } from "./internal/phases";
+// The snapshot DAG (prevId edges + merge-node parents): one definition of its
+// edges for the CLI's tip join and the snapshot-chain-intact check, and the
+// single-tip out-dir every drizzle-kit run reads instead of data/ (drizzle-kit
+// aborts on a merged history). See
+// research/2026-09-30-global-clone-migrations-published-set.md §3.
+export {
+  analyzeSnapshotDag,
+  declaredParents,
+  NULL_SNAPSHOT_ID,
+  readSnapshotNodes,
+  snapshotAncestors,
+} from "./internal/snapshot-dag";
+export type {
+  SnapshotDag,
+  SnapshotDagProblem,
+  SnapshotNode,
+} from "./internal/snapshot-dag";
+export {
+  stageDrizzleOut,
+  UnjoinedSnapshotTipsError,
+} from "./internal/drizzle-stage";
+export type { DrizzleStage } from "./internal/drizzle-stage";
 export type { ParsedMigration, PhasedMigration } from "./internal/phases";
 // The one statement splitter for migration SQL (comment/literal/dollar-quote
 // aware), shared by the phaser and the data-migration-dml-only and
@@ -48,3 +72,25 @@ export type {
   StatementClass,
   StatementOp,
 } from "./internal/classify";
+// What "published" means for a migration — on any `main` this checkout knows
+// of (local `main` or `refs/remotes/<remote>/main`) — and the rule that a
+// published migration is immutable. One spelling for the CLI's generate
+// pipeline, regen-migrations, and every migration check. See
+// research/2026-09-30-global-clone-migrations-published-set.md.
+export {
+  LOCAL_MAIN_REF,
+  MIGRATIONS_DATA_DIR,
+  publishedMergeBases,
+  publishedMigrationBasenames,
+  publishedMigrationOrigins,
+  publishedMigrationRefs,
+  publishedMigrationRefsSignature,
+} from "./internal/published";
+export type { PublishedMergeBase, PublishedRef } from "./internal/published";
+export {
+  findPublishedMigrationViolations,
+  formatPublishedMigrationViolations,
+  migrationContentHash,
+  PUBLISHED_MIGRATION_HINT,
+} from "./internal/published-immutable";
+export type { PublishedMigrationViolation } from "./internal/published-immutable";

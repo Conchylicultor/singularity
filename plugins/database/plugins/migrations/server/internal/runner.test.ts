@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { renderPhasedMigration } from "@plugins/database/plugins/migrations/core";
+import {
+  renderMergeSnapshotMigration,
+  renderPhasedMigration,
+} from "@plugins/database/plugins/migrations/core";
 import { planMigrations, planSchemaSteps, type Migration } from "./runner";
 
 // Build a Migration inline, mirroring listMigrationFiles's shape.
@@ -399,5 +402,87 @@ describe("planSchemaSteps", () => {
         new Set(["dddddddd", "11111111", "22222222"]),
       ),
     ).toThrow(/claimed by both/);
+  });
+});
+
+// research/2026-09-30-global-clone-migrations-published-set.md: after an
+// upstream update the history interleaves two independently phased sides by
+// timestamp, joined by a merge node (an empty phased group behind its header).
+describe("planSchemaSteps over a merged history", () => {
+  // User side: data dU claimed by schema sU. Upstream side: data dP claimed by
+  // schema sP. Interleaved: dU, dP, sU, sP, then the merge node.
+  const dU = mig(
+    "20260901",
+    "000000",
+    "0d0d0d0d",
+    "user_backfill",
+    "UPDATE u SET a = 1",
+  );
+  const dP = mig(
+    "20260902",
+    "000000",
+    "1d1d1d1d",
+    "upstream_backfill",
+    "UPDATE p SET a = 1",
+  );
+  const sU = mig(
+    "20260903",
+    "000000",
+    "05050505",
+    "user_schema",
+    phased(
+      'ALTER TABLE "u" ADD COLUMN "n" text;',
+      'ALTER TABLE "u" DROP COLUMN "o";',
+      ["20260901_000000__user_backfill"],
+    ),
+  );
+  const sP = mig(
+    "20260904",
+    "000000",
+    "15151515",
+    "upstream_schema",
+    phased(
+      'ALTER TABLE "p" ADD COLUMN "n" text;',
+      'ALTER TABLE "p" DROP COLUMN "o";',
+      ["20260902_000000__upstream_backfill"],
+    ),
+  );
+  const merge = mig(
+    "20260904",
+    "000001",
+    "33333333",
+    "merge_snapshot",
+    renderMergeSnapshotMigration([
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ]),
+  );
+  const history = [dU, dP, sU, sP, merge];
+
+  test("a fresh install runs each side's group in timestamp order; the merge node only records", () => {
+    expect(trace(history)).toEqual([
+      `${sU.file} expand`,
+      `${dU.file} whole`,
+      `${dU.file} record`,
+      `${sU.file} contract`,
+      `${sU.file} record`,
+      `${sP.file} expand`,
+      `${dP.file} whole`,
+      `${dP.file} record`,
+      `${sP.file} contract`,
+      `${sP.file} record`,
+      `${merge.file} record`,
+    ]);
+  });
+
+  test("the user's DB (own side applied) runs only upstream's group and the merge node", () => {
+    expect(trace(history, [dU.hash, sU.hash])).toEqual([
+      `${sP.file} expand`,
+      `${dP.file} whole`,
+      `${dP.file} record`,
+      `${sP.file} contract`,
+      `${sP.file} record`,
+      `${merge.file} record`,
+    ]);
   });
 });

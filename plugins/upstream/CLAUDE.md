@@ -61,6 +61,17 @@ its payload, so the row always names today's count and today's newest commits.
 Read that row's own `count` column as "how many days running this has been
 true" — the commit count is in the payload, not there.
 
+## Migrations after a merge
+
+Both sides' migrations are published (upstream's on `<remote>/main`, the user's
+on local `main`), so the merge renames, deletes and re-hashes none of them. Their
+snapshot chains fork at the merge base; the first `./singularity build` (or
+push's normalize) after the merge joins them with a **merge node** — a no-op
+migration whose snapshot is the 3-way merge of the two tips — and fails, naming
+the schema paths, when both sides changed the same column differently. See
+`database/migrations/CLAUDE.md` → **Merge nodes**. `merge-prompt.ts` tells the
+agent to keep the node and to stop and report on a conflict.
+
 ## What it does not do yet
 
 The row never clears itself. Once the user merges, the next day's job records

@@ -1,5 +1,4 @@
-import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "fs";
-import { join, relative, resolve } from "path";
+import { resolve } from "path";
 // Reach the config reader through the database CORE barrel, not admin/server:
 // the admin pool module's worktree connection string needs this process's runtime
 // namespace, which a tooling/check subprocess does not have. The core barrel
@@ -17,10 +16,15 @@ import { libpqEnv } from "@plugins/database/core";
 // migrations plugin owns HOW its tool is invoked as well as from WHERE. It takes
 // typed flags, so this check cannot express a subcommand that would dial the
 // sentinel credentials in drizzle.config.ts.
+// `stageDrizzleOut` is drizzle-kit's view of data/ — the journal and the
+// snapshot DAG's single tip — because drizzle-kit aborts, exit 0 and nothing
+// written, on a merged history: a copy of the whole dir would pass here
+// silently after every upstream update.
 import {
-  DRIZZLE_CONFIG_PATH,
   drizzleGenerateArgv,
   MIGRATIONS_PLUGIN_DIR,
+  stageDrizzleOut,
+  UnjoinedSnapshotTipsError,
 } from "@plugins/database/plugins/migrations/core";
 import {
   getWorktreeRoot,
@@ -33,12 +37,6 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 const PROMPT_RE =
   /Is .+? (column in .+? table|table|schema|enum|view|sequence|role|policy) created or renamed/;
 
-function listSql(dir: string): string[] {
-  return readdirSync(dir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
-}
-
 const check: Check = {
   id: "migrations-in-sync",
   description: "plugin schema files match committed migration files",
@@ -47,27 +45,23 @@ const check: Check = {
     const migrationsPluginDir = resolve(root, MIGRATIONS_PLUGIN_DIR);
     const committed = resolve(migrationsPluginDir, "data");
 
-    const tmp = mkdtempSync(join(migrationsPluginDir, ".check-"));
+    let stage: Awaited<ReturnType<typeof stageDrizzleOut>>;
     try {
-      const tmpOut = join(tmp, "migrations");
-      cpSync(committed, tmpOut, { recursive: true });
-
-      const tmpConfig = join(tmp, "drizzle.config.ts");
-      const realConfig = resolve(migrationsPluginDir, DRIZZLE_CONFIG_PATH);
-      writeFileSync(
-        tmpConfig,
-        `import base from ${JSON.stringify(realConfig)};\nexport default { ...base, out: ${JSON.stringify(tmpOut)} };\n`,
-      );
-
-      const before = listSql(tmpOut);
+      stage = await stageDrizzleOut(migrationsPluginDir, committed);
+    } catch (err) {
+      // More than one snapshot tip: an unjoined fork, which is
+      // snapshot-chain-intact's to diagnose. Stated, not passed.
+      if (err instanceof UnjoinedSnapshotTipsError)
+        return { ok: false, message: err.message };
+      throw err;
+    }
+    try {
       // 20 buffered Enter keystrokes: enough to auto-advance any create-vs-rename
       // prompts drizzle shows (each defaults to "create"); the PROMPT_RE check
       // below still fails the run when prompts appeared. Delivered as whole-buffer
       // stdin — the prompts need no live parsing here, unlike migrations-interactive.
       const result = await spawnCaptured(
-        drizzleGenerateArgv({
-          configPath: relative(migrationsPluginDir, tmpConfig),
-        }),
+        drizzleGenerateArgv({ configPath: stage.configPath }),
         {
           cwd: migrationsPluginDir,
           stdin: new Uint8Array(20).fill(0x0d),
@@ -96,6 +90,18 @@ const check: Check = {
           message: `drizzle-kit generate failed:\n${result.stderr}`,
         };
       }
+      // drizzle-kit exits 0 on its own failures (an unreadable snapshot, a
+      // collision), having generated nothing — which reads here as "in sync".
+      // Same guard as generateMigration's.
+      if (
+        /\b(error|collision|conflict|ENOENT)\b/i.test(result.stderr) ||
+        /\b(collision|ENOENT)\b/i.test(result.stdout)
+      ) {
+        return {
+          ok: false,
+          message: `drizzle-kit generate printed a diagnostic but exited 0:\n${result.stdout}\n${result.stderr}`,
+        };
+      }
 
       if (PROMPT_RE.test(result.stdout)) {
         return {
@@ -110,8 +116,7 @@ const check: Check = {
         };
       }
 
-      const after = listSql(tmpOut);
-      const added = after.filter((f) => !before.includes(f));
+      const added = stage.emitted().sql;
       if (added.length > 0) {
         return {
           ok: false,
@@ -121,7 +126,7 @@ const check: Check = {
       }
       return { ok: true };
     } finally {
-      rmSync(tmp, { recursive: true, force: true });
+      stage.dispose();
     }
   },
 };

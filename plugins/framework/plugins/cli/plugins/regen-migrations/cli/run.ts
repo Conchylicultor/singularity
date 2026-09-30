@@ -1,12 +1,15 @@
-import { createHash } from "crypto";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
-import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
-  generateMigration,
-  listTrackedMigrationBasenames,
-  resolveMainRef,
-} from "@plugins/framework/plugins/cli/plugins/migrations/cli";
+  findPublishedMigrationViolations,
+  formatPublishedMigrationViolations,
+  migrationContentHash,
+  MIGRATIONS_DATA_DIR,
+  PUBLISHED_MIGRATION_HINT,
+  publishedMigrationBasenames,
+} from "@plugins/database/plugins/migrations/core";
+import type { CliAction } from "@plugins/framework/plugins/cli/core";
+import { generateMigration } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Each migration filename embeds the sha256 prefix of its SQL content
@@ -16,22 +19,12 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 async function assertNoHandEditedBranchLocalMigrations(
   root: string,
 ): Promise<void> {
-  const migrationsDir = resolve(
-    root,
-    "plugins/database/plugins/migrations/data",
-  );
-  const ref = await resolveMainRef(root);
-  if (!ref) {
-    console.error(
-      "regen-migrations needs `origin/main` or `main` to compare against; run `git fetch origin main` first.",
-    );
-    process.exit(1);
-  }
-  const tracked = await listTrackedMigrationBasenames(root, ref);
+  const migrationsDir = resolve(root, MIGRATIONS_DATA_DIR);
+  const published = await publishedMigrationBasenames(root);
   const offenders: { file: string; expected: string; actual: string }[] = [];
   for (const f of readdirSync(migrationsDir)) {
     if (!f.endsWith(".sql")) continue;
-    if (tracked.has(f)) continue;
+    if (published.has(f)) continue;
     // Data migrations (snapshot-less) are exempt: their SQL is hand-written by
     // design and their filename hash is self-healed on every build (see
     // rehashBranchLocalDataMigrations in migrations.ts). Only schema migrations —
@@ -45,8 +38,7 @@ async function assertNoHandEditedBranchLocalMigrations(
     const m = f.match(/^\d{8}_\d{6}_([0-9a-f]{8})__/);
     if (!m) continue;
     const expected = m[1]!;
-    const sql = readFileSync(join(migrationsDir, f));
-    const actual = createHash("sha256").update(sql).digest("hex").slice(0, 8);
+    const actual = migrationContentHash(readFileSync(join(migrationsDir, f)));
     if (expected !== actual) offenders.push({ file: f, expected, actual });
   }
   if (offenders.length === 0) return;
@@ -65,38 +57,22 @@ async function assertNoHandEditedBranchLocalMigrations(
   process.exit(1);
 }
 
-// Migrations on main are immutable by contract — their hashes are recorded in
-// every deployed DB's `__singularity_migrations`. So a tracked `.sql` missing
-// from the working tree is always an error, never a legitimate state.
+// Published migrations are immutable by contract — their hashes are recorded in
+// deployed DBs' `__singularity_migrations`, and their snapshots are links of the
+// chain. The rule is the migrations plugin's (`findPublishedMigrationViolations`,
+// also the `published-migrations-immutable` check), asserted here before the
+// destructive reset because the regeneration would bake a violation in.
 //
 // This is also the guard that keeps the unconditional journal regeneration
 // honest: the journal is derived from the `.sql` files on disk, so a deleted
-// migration would previously have surfaced as a loud `orphanJournal` entry from
-// `migration-metadata-consistent` and now just quietly loses its row. Asserting
-// presence here restores the loud failure at the point the deletion matters.
-async function assertTrackedMigrationsPresent(root: string): Promise<void> {
-  const migrationsDir = resolve(
-    root,
-    "plugins/database/plugins/migrations/data",
-  );
-  const ref = await resolveMainRef(root);
-  if (!ref) return; // already reported by the hand-edit assertion above
-  const tracked = await listTrackedMigrationBasenames(root, ref);
-  const missing = [...tracked]
-    .filter((f) => f.endsWith(".sql") && !existsSync(join(migrationsDir, f)))
-    .sort();
-  if (missing.length === 0) return;
+// migration would otherwise just quietly lose its row.
+async function assertPublishedMigrationsIntact(root: string): Promise<void> {
+  const violations = await findPublishedMigrationViolations(root);
+  if (violations.length === 0) return;
   console.error(
-    `Migration file(s) present on ${ref} are missing from the working tree:\n`,
+    `Published migration file(s) changed in the working tree:\n${formatPublishedMigrationViolations(violations)}\n`,
   );
-  for (const f of missing) console.error(`  ${f}`);
-  console.error(
-    "\nMigrations that have landed on main are immutable — deployed databases record " +
-      "their hashes, so removing one desynchronizes every DB that already applied it.\n" +
-      "Restore them (`git checkout " +
-      ref +
-      " -- plugins/database/plugins/migrations/data`) before re-running.",
-  );
+  console.error(PUBLISHED_MIGRATION_HINT);
   process.exit(1);
 }
 
@@ -113,7 +89,7 @@ function deriveMigrationName(): string {
 const run: CliAction<[], { name?: string }> = async (opts) => {
   const root = await getWorktreeRoot();
   await assertNoHandEditedBranchLocalMigrations(root);
-  await assertTrackedMigrationsPresent(root);
+  await assertPublishedMigrationsIntact(root);
   await generateMigration({
     root,
     migrationName: opts.name ?? deriveMigrationName(),

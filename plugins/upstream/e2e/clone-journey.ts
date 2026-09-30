@@ -16,7 +16,15 @@
  * a network call (a `--dry-run` push, which sends no update); everything else
  * is local filesystem repositories.
  *
+ * Then the migration journey (`./migration-journey.ts`): a clone of THIS tree
+ * lands its own schema migrations and takes an upstream update carrying
+ * upstream's, through the real CLI. It tests this checkout's working tree,
+ * uncommitted changes included; `--pristine` tests committed HEAD only.
+ *
  * Run: ./singularity run plugins/upstream/e2e/clone-journey.ts
+ *        [--pristine]            migration journey against HEAD, no overlay
+ *        [--skip-migrations]     only the (fast) text-fixture journey
+ *        [--keep]                leave the temp repos and CLI logs behind
  */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -32,6 +40,7 @@ import {
   getWorktreeRoot,
 } from "@plugins/infra/plugins/spawn/core";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
+import { runMigrationJourney } from "./migration-journey";
 
 const GIT_TIMEOUT_MS = 60_000;
 
@@ -125,6 +134,15 @@ async function withNoAmbientIdentity<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 async function main(): Promise<void> {
+  const argv = process.argv.slice(2);
+  const known = ["--pristine", "--skip-migrations", "--keep"];
+  const unknown = argv.filter((a) => !known.includes(a));
+  if (unknown.length > 0) {
+    console.error(
+      `Unknown argument(s): ${unknown.join(" ")} (known: ${known.join(" ")})`,
+    );
+    process.exit(2);
+  }
   const tmp = mkdtempSync(join(tmpdir(), "singularity-clone-journey-"));
   try {
     // --- the fixture: an upstream repo, and a clone of it whose only remote is
@@ -302,8 +320,18 @@ async function main(): Promise<void> {
       mineUp.kind === "none" && mineUp.reason === "is-publisher",
       JSON.stringify(mineUp),
     );
+
+    if (!argv.includes("--skip-migrations")) {
+      await runMigrationJourney({
+        tmp: join(tmp, "migrations"),
+        source: await getWorktreeRoot(),
+        pristine: argv.includes("--pristine"),
+        check,
+      });
+    }
   } finally {
-    rmSync(tmp, { recursive: true, force: true });
+    if (argv.includes("--keep")) console.log(`\n(kept: ${tmp})`);
+    else rmSync(tmp, { recursive: true, force: true });
   }
 
   console.log("");

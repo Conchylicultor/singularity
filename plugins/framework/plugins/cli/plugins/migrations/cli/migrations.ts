@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import {
   existsSync,
   readdirSync,
@@ -25,25 +24,34 @@ import { join, resolve } from "path";
 // (cwd), so neither can drift per call site.
 // The phased-migration grammar and the statement table come from the same
 // barrel: the migrations plugin owns what a schema migration file may say.
+// So does what "published" means (`publishedMigrationBasenames`): the migrations
+// on any `main` this checkout knows of are immutable, and everything else in
+// data/ is this branch's own.
 import {
   drizzleGenerateArgv,
   migrationClaimId,
+  MIGRATIONS_DATA_DIR,
+  migrationContentHash,
   MIGRATIONS_PLUGIN_DIR,
   parseMigration,
   phaseStatements,
+  publishedMigrationOrigins,
   renderPhasedMigration,
   renderStatements,
+  stageDrizzleOut,
 } from "@plugins/database/plugins/migrations/core";
-import {
-  spawnCaptured,
-  spawnExpectOk,
-} from "@plugins/infra/plugins/spawn/core";
 import {
   promptKey,
   runDrizzleKitWithPrompts,
   type DetectedPrompt,
   type MigrationAnswer,
 } from "./migrations-interactive";
+import {
+  formatMigrationTimestamp,
+  joinSnapshotTips,
+  latestMigrationTimestamp,
+  SnapshotJoinError,
+} from "./snapshot-join";
 
 // The interactive drizzle-kit runner (the CLI's one sanctioned streaming-stdio
 // child) and its prompt model live in ./migrations-interactive.ts; re-exported
@@ -60,13 +68,6 @@ export type {
   MigrationAnswer,
   DrizzlePromptResult,
 } from "./migrations-interactive";
-
-// Wedge-breaker for the local `git` metadata reads in this file — orders of
-// magnitude above what any of them take, so only a wedged child trips it. A CLI
-// process owns no deadline of its own, but that is a reason to bound these, not
-// to leave them open: nothing else would ever break such a wedge (the
-// fleet-level op-wedge watchdog was retired 2026-07-28).
-const GIT_TIMEOUT_MS = 60_000;
 
 /**
  * Parse a `--migration-answers <json>` argv value into the answer list
@@ -154,30 +155,26 @@ export function answersSidecarName(tag: string): string {
 
 /**
  * Read every branch-local `meta/_*_answers.json` sidecar (those whose migration
- * `.sql` is NOT tracked on origin/main) and merge their entries into one keyed
+ * `.sql` is not in `published` — see `publishedMigrationBasenames`) and merge their entries into one keyed
  * map. Main's accumulated sidecars are ignored, so a re-emitted prompt is only
  * ever resolved from this branch's own authored answers. Fails loud on malformed
  * JSON (lets JSON.parse throw).
  */
-export async function readBranchLocalAnswers(
-  root: string,
+export function readBranchLocalAnswers(
   migrationsDir: string,
-): Promise<Map<string, MigrationAnswer>> {
+  published: ReadonlySet<string>,
+): Map<string, MigrationAnswer> {
   const map = new Map<string, MigrationAnswer>();
-  const ref = await resolveMainRef(root);
   const metaDir = join(migrationsDir, "meta");
   if (!existsSync(metaDir)) return map;
-  const tracked = ref
-    ? await listTrackedMigrationBasenames(root, ref)
-    : new Set<string>();
 
   for (const f of readdirSync(metaDir)) {
     if (!f.startsWith(ANSWERS_PREFIX) || !f.endsWith(ANSWERS_SUFFIX)) continue;
     // A sidecar _<tag>_answers.json maps to migration <tag>.sql; skip sidecars
-    // whose migration is already on main (their answers are immutable history).
+    // whose migration is published (their answers are immutable history).
     const tag = f.slice(ANSWERS_PREFIX.length, -ANSWERS_SUFFIX.length);
     const sqlBasename = `${tag}.sql`;
-    if (tracked.has(sqlBasename)) continue;
+    if (published.has(sqlBasename)) continue;
     const raw = readFileSync(join(metaDir, f), "utf8");
     const parsed = JSON.parse(raw) as AnswersSidecar;
     for (const entry of parsed.answers) {
@@ -297,21 +294,27 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
-  const migrationsDir = resolve(
-    root,
-    "plugins/database/plugins/migrations/data",
-  );
+  const migrationsDir = resolve(root, MIGRATIONS_DATA_DIR);
+
+  // Every step below splits data/ into published (immutable) and this branch's
+  // own. Read once, before anything is generated: the set is a property of the
+  // refs, which nothing here moves — and a throw here (no local `main`) leaves
+  // no half-generated file behind.
+  // Which `main` each published file is on: the tip join labels a conflict's
+  // sides by it (this checkout vs upstream). Its key set is the published set.
+  const origins = await publishedMigrationOrigins(root);
+  const published: ReadonlySet<string> = new Set(origins.keys());
 
   // Regen mode (resetMigration with no positional answers) replays the persisted
   // create-vs-rename decisions. Read the branch-local sidecars NOW — before the
   // reset below deletes them — so a re-emitted prompt resolves by entity identity.
   const keyedAnswers =
     resetMigration && !migrationAnswers
-      ? await readBranchLocalAnswers(root, migrationsDir)
+      ? readBranchLocalAnswers(migrationsDir, published)
       : undefined;
 
   if (resetMigration) {
-    await resetBranchLocalMigrations(root, migrationsDir);
+    resetBranchLocalMigrations(migrationsDir, published);
   }
 
   // Self-heal the filename-hash == content-hash invariant for branch-local data
@@ -319,9 +322,27 @@ export async function generateMigration(opts: {
   // empty file when first generated; once the agent hand-edits the SQL the runner
   // (which identifies migrations by their filename hash) would otherwise silently
   // skip the new content or diverge across DBs. Re-hashing on every build keeps
-  // the identity honest. Never touches migrations already on origin/main — their
-  // hashes are locked into every deployed DB.
-  await rehashBranchLocalDataMigrations(root, migrationsDir);
+  // the identity honest. Never touches published migrations — their hashes are
+  // locked into every deployed DB.
+  rehashBranchLocalDataMigrations(migrationsDir, published);
+
+  // Join the snapshot DAG's tips — after the reset, so every tip left is
+  // published (an upstream update's fork), and before drizzle-kit, which must
+  // diff against the join. A branch-local tip (a rebase Y-fork) or a real
+  // conflict stops here with the resolution, having written nothing.
+  try {
+    const joined = await joinSnapshotTips(migrationsDir, origins);
+    if (joined.kind === "joined") {
+      console.log(
+        `  wrote merge node ${joined.file} (joins snapshots ${joined.parents.join(", ")})`,
+      );
+    }
+  } catch (err) {
+    if (!(err instanceof SnapshotJoinError)) throw err;
+    regenerateJournal(migrationsDir);
+    console.error(`\nError: ${err.message}\n`);
+    process.exit(1);
+  }
 
   // Re-establish journal↔filename consistency before anything else runs. Two
   // paths get NO other regen: every abort between here and `renameMigrations`
@@ -335,44 +356,82 @@ export async function generateMigration(opts: {
 
   const before = new Set(readdirSync(migrationsDir));
 
+  // drizzle-kit reads a staged out-dir holding only the journal and the DAG's
+  // single tip, never data/ itself: it aborts (exit 0, nothing written) on any
+  // two snapshots sharing a prevId, which every merged history has. What it
+  // emits is moved into data/ right after it exits, so everything below sees
+  // the files exactly where drizzle-kit used to write them.
+  const cwd = resolve(root, MIGRATIONS_PLUGIN_DIR);
+  const stage = await stageDrizzleOut(cwd, migrationsDir);
+
   // The argv comes from the migrations plugin, which owns it: the binary name and
   // `generate` are welded together there (with the load-bearing `--bun` flag), so
   // this call site configures FLAGS and cannot express another subcommand.
   const cmd = drizzleGenerateArgv({
     custom: customMigration,
     name: migrationName,
+    configPath: stage.configPath,
   });
 
-  const cwd = resolve(root, MIGRATIONS_PLUGIN_DIR);
-  const result = await runDrizzleKitWithPrompts({
-    cmd,
-    cwd,
-    // No `env` at all, so the child simply inherits this process's. `generate`
-    // is a pure snapshot diff against ./data and opens no connection, and
-    // drizzle.config.ts reads no database config — passing libpqEnv() here is
-    // what made this step ENOENT on a host with no
-    // ~/.singularity/state/db-config/database.json. The worktree name used to be
-    // passed too; the schema files never needed it (no schema-glob file resolves
-    // a namespace at module eval, and the database client defers its identity to
-    // the first query), and a namespace in an environment is inherited by
-    // everything drizzle-kit itself spawns.
-    answers: migrationAnswers ?? null,
-    keyedAnswers,
-    echo: true,
-  });
+  let result: Awaited<ReturnType<typeof runDrizzleKitWithPrompts>>;
+  try {
+    result = await runDrizzleKitWithPrompts({
+      cmd,
+      cwd,
+      // No `env` at all, so the child simply inherits this process's. `generate`
+      // is a pure snapshot diff against ./data and opens no connection, and
+      // drizzle.config.ts reads no database config — passing libpqEnv() here is
+      // what made this step ENOENT on a host with no
+      // ~/.singularity/state/db-config/database.json. The worktree name used to be
+      // passed too; the schema files never needed it (no schema-glob file resolves
+      // a namespace at module eval, and the database client defers its identity to
+      // the first query), and a namespace in an environment is inherited by
+      // everything drizzle-kit itself spawns.
+      answers: migrationAnswers ?? null,
+      keyedAnswers,
+      echo: true,
+    });
+    stage.moveEmittedInto(migrationsDir);
+  } finally {
+    stage.dispose();
+  }
 
-  if (result.exitCode !== 0) process.exit(1);
-  if (/\b(error|collision|conflict)\b/i.test(result.stderrBuf)) {
-    console.error(
-      "\nError: drizzle-kit printed a diagnostic but exited 0. Treating as failure.\n" +
-        "If this is a snapshot-chain collision, rebase onto origin/main, then re-run\n" +
-        "  ./singularity build --reset-migration --migration-name <slug>\n" +
-        "to drop this branch's migration and regenerate it against the new tip.",
+  if (result.exitCode !== 0) {
+    discardGenerated(
+      migrationsDir,
+      readdirSync(migrationsDir).filter(
+        (f: string) => f.endsWith(".sql") && !before.has(f),
+      ),
     );
     process.exit(1);
   }
-
   const combined = `${result.stdoutBuf}\n${result.stderrBuf}`;
+
+  // drizzle-kit reports its own failures and still exits 0 having written
+  // nothing: a snapshot collision ("… is a collision", printed to STDOUT) or a
+  // snapshot it could not read (ENOENT, e.g. a misplaced out-dir). Either one,
+  // on either stream, in whatever dir it ran in, is a failure — never "no
+  // schema change".
+  if (
+    /\b(error|collision|conflict)\b/i.test(result.stderrBuf) ||
+    /\b(collision|ENOENT)\b/i.test(combined)
+  ) {
+    discardGenerated(
+      migrationsDir,
+      readdirSync(migrationsDir).filter(
+        (f: string) => f.endsWith(".sql") && !before.has(f),
+      ),
+    );
+    console.error(
+      "\nError: drizzle-kit printed a diagnostic but exited 0. Treating as failure.\n" +
+        "If this is a snapshot-chain collision, rebase onto main, then re-run\n" +
+        "  ./singularity build --reset-migration --migration-name <slug>\n" +
+        "to drop this branch's migration and regenerate it against the new tip.\n" +
+        "(drizzle-kit only ever sees the staged single-tip view of data/, so a collision\n" +
+        "there means the staging itself is broken: report it, do not work around it.)",
+    );
+    process.exit(1);
+  }
 
   // drizzle-kit's `prepareOutFolder` runs the pg-schema validator over EVERY
   // `meta/*.json` whose name doesn't start with `_` — which sweeps in our
@@ -490,17 +549,8 @@ export async function generateMigration(opts: {
   // matches the phased body. A --custom data migration is never phased: it is
   // what gets claimed.
   if (!customMigration) {
-    const ref = await resolveRef(root);
-    if (!ref) {
-      discardGenerated(migrationsDir, added);
-      console.error(
-        "Phasing a schema migration needs `origin/main` or `main` to tell this branch's data migrations from main's; run `git fetch origin main` first.",
-      );
-      process.exit(1);
-    }
-    const tracked = await listTrackedMigrationBasenames(root, ref);
     try {
-      phaseGeneratedMigrations(migrationsDir, tracked);
+      phaseGeneratedMigrations(migrationsDir, published);
     } catch (err) {
       discardGenerated(migrationsDir, added);
       console.error(`\nError: ${(err as Error).message}\n`);
@@ -570,37 +620,34 @@ export async function generateMigration(opts: {
 
 /**
  * Re-derive the filename hash from current content for branch-local data
- * migrations — NEW_FORMAT .sql files with no sibling snapshot that are absent
- * from origin/main. Keeps filename-hash == content-hash so the runner (which
+ * migrations — NEW_FORMAT .sql files with no sibling snapshot that are not
+ * published. Keeps filename-hash == content-hash so the runner (which
  * identifies migrations by filename hash) never silently skips hand-edited
  * backfill SQL. Preserves the timestamp (and thus ordering); only the hash token
  * changes. Schema migrations keep their snapshot and are left untouched — their
- * SQL must match the snapshot's DDL and must never be silently re-hashed. Files
- * already on origin/main are immutable (their hash is recorded in deployed DBs).
+ * SQL must match the snapshot's DDL and must never be silently re-hashed.
+ * Published files are immutable (their hash is recorded in deployed DBs).
  *
  * Does NOT touch the journal: its caller regenerates unconditionally right
  * after. Regenerating here only when a rename happened is how a branch-local
  * data migration whose hash was already correct could end up with no journal
  * entry at all.
  */
-async function rehashBranchLocalDataMigrations(
-  root: string,
+function rehashBranchLocalDataMigrations(
   migrationsDir: string,
-): Promise<void> {
-  const ref = await resolveRef(root);
-  if (!ref) return; // can't determine the branch-local set; leave files untouched
-  const tracked = await listTrackedMigrationBasenames(root, ref);
+  published: ReadonlySet<string>,
+): void {
   const metaDir = join(migrationsDir, "meta");
 
   for (const f of readdirSync(migrationsDir)) {
     const m = NEW_FORMAT.exec(f);
     if (!m) continue;
-    if (tracked.has(f)) continue; // already on main — immutable
+    if (published.has(f)) continue; // published — immutable
     const [, date, time, oldHash, name] = m;
     // Snapshot present => schema migration; skip (its SQL is snapshot-bound).
     if (existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`))) continue;
     const sql = readFileSync(join(migrationsDir, f), "utf8");
-    const newHash = createHash("sha256").update(sql).digest("hex").slice(0, 8);
+    const newHash = migrationContentHash(sql);
     if (newHash === oldHash) continue;
     const newName = `${date}_${time}_${newHash}__${name}.sql`;
     renameSync(join(migrationsDir, f), join(migrationsDir, newName));
@@ -609,39 +656,31 @@ async function rehashBranchLocalDataMigrations(
 }
 
 /**
- * Delete migration files that exist in the working tree but not at
- * `origin/main` (or local `main` as fallback). Used by `--reset-migration`
+ * Delete schema migration files that exist in the working tree but are not
+ * published (`publishedMigrationBasenames`). Used by `--reset-migration`
  * to recover from a snapshot-chain Y-fork after rebasing onto main: the
  * branch-local migration is dropped so drizzle-kit can re-emit a fresh one
  * against the rebased tip.
  *
- * Only ever touches files absent from the chosen ref, so a shared migration
- * cannot be removed by accident.
+ * Only ever touches files absent from every published `main`, so a shared
+ * migration — the author's, the user's own landed one, or upstream's after an
+ * update — cannot be removed by accident.
  *
  * Does NOT touch the journal: its caller regenerates unconditionally right
  * after. Regenerating here only when something was actually removed is how a
  * branch carrying only a (deliberately preserved) data migration took the
  * early return below and left a stale journal behind.
  */
-async function resetBranchLocalMigrations(
-  root: string,
+function resetBranchLocalMigrations(
   migrationsDir: string,
-): Promise<void> {
-  const ref = await resolveRef(root);
-  if (!ref) {
-    console.error(
-      "--reset-migration needs `origin/main` or `main` to compare against; run `git fetch origin main` first.",
-    );
-    process.exit(1);
-  }
-
-  const tracked = await listTrackedMigrationBasenames(root, ref);
+  published: ReadonlySet<string>,
+): void {
   const metaDir = join(migrationsDir, "meta");
 
   const removed: string[] = [];
   for (const f of readdirSync(migrationsDir)) {
     if (!f.endsWith(".sql")) continue;
-    if (tracked.has(f)) continue;
+    if (published.has(f)) continue;
     // Preserve data migrations (snapshot-less): plain drizzle generate can't
     // recreate their hand-written SQL, so deleting them here would lose the
     // backfill. They never join the snapshot chain, so they don't need resetting.
@@ -655,7 +694,7 @@ async function resetBranchLocalMigrations(
   }
   for (const f of readdirSync(metaDir)) {
     if (!f.endsWith("_snapshot.json")) continue;
-    if (tracked.has(f)) continue;
+    if (published.has(f)) continue;
     rmSync(join(metaDir, f), { force: true });
     removed.push(`meta/${f}`);
   }
@@ -668,47 +707,6 @@ async function resetBranchLocalMigrations(
   }
 
   for (const f of removed) console.log(`  removed ${f}`);
-}
-
-async function resolveRef(root: string): Promise<string | null> {
-  for (const ref of ["origin/main", "main"]) {
-    const result = await spawnCaptured(["git", "rev-parse", "--verify", ref], {
-      cwd: root,
-      timeoutMs: GIT_TIMEOUT_MS,
-    });
-    if (result.exitCode === 0) return ref;
-  }
-  return null;
-}
-
-export async function resolveMainRef(root: string): Promise<string | null> {
-  return resolveRef(root);
-}
-
-export async function listTrackedMigrationBasenames(
-  root: string,
-  ref: string,
-): Promise<Set<string>> {
-  // `ref` was already verified by resolveRef, so a failure here is unexpected —
-  // spawnExpectOk throws rather than absorbing it into an empty set.
-  const result = await spawnExpectOk(
-    [
-      "git",
-      "ls-tree",
-      "-r",
-      "--name-only",
-      ref,
-      "--",
-      "plugins/database/plugins/migrations/data",
-    ],
-    { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
-  );
-  return new Set(
-    result.stdout
-      .split("\n")
-      .filter(Boolean)
-      .map((p) => p.split("/").pop() ?? p),
-  );
 }
 
 export interface RenameResult {
@@ -730,7 +728,13 @@ export function renameMigrations(migrationsDir: string): RenameResult {
     const [, idx, name] = m;
 
     const sqlPath = join(migrationsDir, file);
-    const ts = timestampNow();
+    // Now — but never at or before an existing migration: a merge node is
+    // stamped latest + 1s, and a fresh migration must sort after it (drizzle-kit
+    // and the runner both order by filename).
+    const latest = latestMigrationTimestamp(readdirSync(migrationsDir));
+    const ts = formatMigrationTimestamp(
+      Math.max(Date.now(), latest === null ? 0 : latest + 1000),
+    );
     let sql = readFileSync(sqlPath, "utf8");
     if (sql.trim() === DRIZZLE_CUSTOM_PLACEHOLDER) {
       // Uniquify the empty custom-migration body so its content hash is distinct
@@ -742,7 +746,7 @@ export function renameMigrations(migrationsDir: string): RenameResult {
       sql = `${DRIZZLE_CUSTOM_PLACEHOLDER}\n-- migration: ${ts}__${name} --\n`;
       writeFileSync(sqlPath, sql);
     }
-    const hash = createHash("sha256").update(sql).digest("hex").slice(0, 8);
+    const hash = migrationContentHash(sql);
     const newName = `${ts}_${hash}__${name}.sql`;
 
     renameSync(sqlPath, join(migrationsDir, newName));
@@ -767,19 +771,19 @@ export function renameMigrations(migrationsDir: string): RenameResult {
  * the runner resolves into `expand → claimed data migrations → contract`.
  *
  * It claims every BRANCH-LOCAL data migration (a snapshot-less NEW_FORMAT
- * `.sql` absent from `tracked`, i.e. from main) that no other branch-local
+ * `.sql` absent from `published`) that no other branch-local
  * phased schema migration already claims. They all sort before it: the new file
  * is only stamped by `renameMigrations`, after this, with the current time.
  * After push's `regen-migrations` the single merged file therefore claims all of
  * the branch's data migrations — one push, one explicit group.
  *
  * Throws, naming the statement, when the table rejects or does not recognise a
- * statement; the caller discards the generation. `tracked` is the set of
- * migration basenames on main (`listTrackedMigrationBasenames`).
+ * statement; the caller discards the generation. `published` is the set of
+ * published migration basenames (`publishedMigrationBasenames`).
  */
 export function phaseGeneratedMigrations(
   migrationsDir: string,
-  tracked: ReadonlySet<string>,
+  published: ReadonlySet<string>,
 ): void {
   const metaDir = join(migrationsDir, "meta");
   const files = readdirSync(migrationsDir).sort();
@@ -796,7 +800,7 @@ export function phaseGeneratedMigrations(
   const hasSnapshot = (f: string) =>
     existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`));
   const branchLocal = files.filter(
-    (f) => NEW_FORMAT.test(f) && !tracked.has(f),
+    (f) => NEW_FORMAT.test(f) && !published.has(f),
   );
 
   const claimed = new Set<string>();
@@ -859,15 +863,6 @@ export function removeGeneratedFiles(
 function discardGenerated(migrationsDir: string, files: string[]): void {
   removeGeneratedFiles(migrationsDir, files);
   regenerateJournal(migrationsDir);
-}
-
-function timestampNow(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return (
-    `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}` +
-    `_${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}`
-  );
 }
 
 /** One `meta/_journal.json` entry. Deliberately carries no `idx` — see below. */

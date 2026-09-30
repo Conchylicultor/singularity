@@ -59,6 +59,16 @@ Bring them into THIS worktree and stop there. You are not landing them — the u
 3. Run \`./singularity build\` in the background, then confirm the deploy receipt at
    \`${WORKTREES_DIR_DISPLAY}/<worktree>/build-status.json\` says \`"status": "ok"\`.
 
+   **Migrations.** When both sides added schema migrations, the build writes one new
+   migration itself: a *merge node* (\`…__merge_snapshot.sql\`, whose SQL is only a
+   \`-- singularity:merge-snapshot parents=…\` header, plus its snapshot) that joins the two
+   snapshot chains. That file is expected — keep it. If the build instead stops on a
+   **snapshot merge conflict** (it lists schema paths like
+   \`tables.public.<table>.columns.<column>.type\`) or \`migration-applies-clean\` fails, stop
+   and report that output verbatim. Never delete, rename or edit a file under
+   \`plugins/database/plugins/migrations/data\` — both sides' migrations are already applied
+   somewhere and are immutable.
+
 4. Open \`http://<worktree>.localhost:9000\` and check the app still works: it comes up, the
    screens you can reach render, and Debug → Reports holds nothing new.
 

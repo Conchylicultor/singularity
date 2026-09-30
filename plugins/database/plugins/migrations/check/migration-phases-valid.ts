@@ -2,7 +2,10 @@ import { existsSync, readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import {
   classifyStatement,
+  mergeSnapshotParents,
   parseMigration,
+  publishedMigrationBasenames,
+  publishedMigrationRefsSignature,
   splitStatements,
 } from "@plugins/database/plugins/migrations/core";
 // The runner's own planner validates the claims, so this check cannot drift
@@ -11,14 +14,7 @@ import {
   listMigrationFiles,
   planSchemaSteps,
 } from "@plugins/database/plugins/migrations/server";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
-
-// Wedge-breaker for a metadata-only git read, not latency policing — same
-// reasoning as the sibling migration-applies-clean check.
-const GIT_TIMEOUT_MS = 60_000;
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling checks in this folder) to
 // avoid a cross-plugin import of the framework Check type from a check file.
@@ -34,7 +30,6 @@ type Check = {
 
 const DATA_DIR = join(import.meta.dir, "..", "data");
 const META_DIR = join(DATA_DIR, "meta");
-const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
@@ -48,7 +43,7 @@ export interface MigrationFile {
 
 /**
  * PURE core (exported for unit testing): every reason a BRANCH-LOCAL schema
- * migration (absent from `tracked`, main's basenames) was not produced by the
+ * migration (absent from `tracked`, the published basenames) was not produced by the
  * current generator, as one line each.
  *
  * - It must be phased — a legacy one would apply its contract before the data
@@ -56,6 +51,10 @@ export interface MigrationFile {
  * - Each of its statements must re-classify into the section it sits in: an
  *   expand statement as expand, a contract statement as contract. That is what
  *   the generator wrote, so a mismatch is a hand-edit or a stale file.
+ *
+ * - A merge node (a `merge-snapshot` header) must be a no-op: empty sections
+ *   and no claims. Its snapshot is a merge, not a diff, so any SQL in it would
+ *   apply DDL no snapshot accounts for.
  *
  * Claims are validated by the runner's `planSchemaSteps` in `run()`.
  */
@@ -79,6 +78,17 @@ export function findPhaseErrors(
       );
       continue;
     }
+    if (
+      mergeSnapshotParents(m.sql) !== null &&
+      (parsed.expand !== "" ||
+        parsed.contract !== "" ||
+        parsed.claims.length > 0)
+    ) {
+      errors.push(
+        `${m.file}: a merge node must be a no-op (empty expand and contract, no claims)`,
+      );
+      continue;
+    }
     for (const phase of ["expand", "contract"] as const) {
       for (const stmt of splitStatements(parsed[phase])) {
         const cls = classifyStatement(stmt);
@@ -94,72 +104,18 @@ export function findPhaseErrors(
   return errors;
 }
 
-async function git(
-  root: string,
-  args: string[],
-): Promise<{ code: number; out: string }> {
-  const result = await spawnCaptured(["git", ...args], {
-    cwd: root,
-    timeoutMs: GIT_TIMEOUT_MS,
-  });
-  return { code: result.exitCode, out: result.stdout };
-}
-
-// Migration basenames on origin/main (or local main); null when neither ref
-// resolves, so the branch-local set is unknowable.
-async function trackedBasenames(root: string): Promise<Set<string> | null> {
-  for (const ref of ["origin/main", "main"]) {
-    if ((await git(root, ["rev-parse", "--verify", ref])).code !== 0) continue;
-    const listed = await git(root, [
-      "ls-tree",
-      "-r",
-      "--name-only",
-      ref,
-      "--",
-      MIGRATIONS_SUBDIR,
-    ]);
-    if (listed.code !== 0) {
-      throw new Error(
-        `git ls-tree ${ref} -- ${MIGRATIONS_SUBDIR} exited ${listed.code}`,
-      );
-    }
-    return new Set(
-      listed.out
-        .split("\n")
-        .filter(Boolean)
-        .map((p) => p.split("/").pop()!),
-    );
-  }
-  return null;
-}
-
 const check: Check = {
   id: "migration-phases-valid",
   description:
     "branch-local schema migrations are phased (expand / contract re-classify), and the runner's planner accepts every claim on disk",
-  // Impure: reads origin/main via git. The data/ dir CONTENT is covered by the
-  // runner's own tree hash — only origin/main's ref needs folding in.
+  // Impure: reads the published refs via git. The data/ dir CONTENT is covered
+  // by the runner's own tree hash — only the published refs need folding in.
   async cacheSignature(): Promise<string | null> {
-    try {
-      const result = await git(process.cwd(), ["rev-parse", "origin/main"]);
-      return result.code === 0 ? result.out.trim() : "no-main";
-      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (git error) safely degrades to "never cache" (return null), which only re-runs the cheap check
-    } catch {
-      return null;
-    }
+    return publishedMigrationRefsSignature(await getWorktreeRoot());
   },
   async run() {
     const root = await getWorktreeRoot();
-    const tracked = await trackedBasenames(root);
-    if (!tracked) {
-      return {
-        ok: false,
-        inconclusive: true,
-        message:
-          "neither `origin/main` nor `main` resolves, so the branch-local migration set is unknowable",
-        hint: "Run `git fetch origin main` and re-run the check.",
-      };
-    }
+    const tracked = await publishedMigrationBasenames(root);
 
     const files = readdirSync(DATA_DIR)
       .filter((f) => MIGRATION_RE.test(f))

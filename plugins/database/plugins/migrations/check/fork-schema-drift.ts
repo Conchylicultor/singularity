@@ -3,14 +3,12 @@ import { basename, join, resolve } from "path";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import {
   classifyStatement,
+  publishedMigrationRefsSignature,
   splitStatements,
   type StatementOp,
 } from "@plugins/database/plugins/migrations/core";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { z } from "zod";
 import { withDirectDb } from "./internal/direct-db";
@@ -27,21 +25,6 @@ type Check = {
 };
 
 const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
-
-// Wedge-breaker for a metadata-only git read, not latency policing — same
-// reasoning as the sibling migration-applies-clean check.
-const GIT_TIMEOUT_MS = 60_000;
-
-async function git(
-  root: string,
-  args: string[],
-): Promise<{ code: number; out: string }> {
-  const result = await spawnCaptured(["git", ...args], {
-    cwd: root,
-    timeoutMs: GIT_TIMEOUT_MS,
-  });
-  return { code: result.exitCode, out: result.stdout };
-}
 
 // Filename → sha8 regex, inlined from the runner (server/internal/runner.ts) so
 // this check never imports a server-plugin internal.
@@ -97,17 +80,12 @@ const check: Check = {
   id: "fork-schema-drift",
   description:
     "worktree DB carries no destructive migration absent from this branch",
-  // Impure: reads origin/main via git. The data/ dir CONTENT is already
-  // covered by the runner's own tree hash (scope "tree", the default) — only
-  // origin/main's ref needs folding in.
+  // Impure: reads the main worktree's data/ dir, which is outside this tree.
+  // The data/ dir CONTENT here is already covered by the runner's own tree
+  // hash (scope "tree", the default) — the published refs (local `main`, which
+  // the main worktree has checked out, among them) are folded in.
   async cacheSignature(): Promise<string | null> {
-    try {
-      const result = await git(process.cwd(), ["rev-parse", "origin/main"]);
-      return result.code === 0 ? result.out.trim() : "no-main";
-      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (git error) safely degrades to "never cache" (return null), which only re-runs the cheap check
-    } catch {
-      return null;
-    }
+    return publishedMigrationRefsSignature(await getWorktreeRoot());
   },
   async run() {
     const root = await getWorktreeRoot();
@@ -177,9 +155,7 @@ const check: Check = {
           `main has ${candidates.length} destructive migration(s) this branch lacks — ` +
           `if this DB applied them, your code may use schema they drop:\n` +
           formatDetails(candidates),
-        hint:
-          "Rebase onto main — that settles this check with or without the DB: " +
-          "git fetch origin main && git rebase origin/main",
+        hint: "Rebase onto `main` — that settles this check with or without the DB.",
       };
     }
 
@@ -197,8 +173,7 @@ const check: Check = {
         `destructive migration(s) absent from this branch:\n${formatDetails(confirmed)}`,
       hint:
         "This worktree's DB has migrations your branch lacks that DROP/RENAME " +
-        "schema your code may still use. Rebase onto main to pull them in: " +
-        "git fetch origin main && git rebase origin/main",
+        "schema your code may still use. Rebase onto `main` to pull them in.",
     };
   },
 };

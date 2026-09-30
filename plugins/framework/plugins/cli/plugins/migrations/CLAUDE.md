@@ -22,6 +22,14 @@ unclaimed data migrations. A statement the table rejects or does not know
 discards the generation and exits 1. See `database/migrations/CLAUDE.md` →
 **Phased schema migrations**.
 
+Before drizzle-kit runs, `joinSnapshotTips` (`snapshot-join.ts`, merging with
+the pure `snapshot-merge.ts`) joins a snapshot DAG with several published tips —
+an upstream update's fork — with a no-op **merge node**, or fails naming the
+conflicting schema paths. drizzle-kit itself generates into the migrations
+plugin's staged out-dir (`stageDrizzleOut`: journal + the single tip), because
+it aborts silently on any merged history; what it emits is moved back into
+`data/`. See `database/migrations/CLAUDE.md` → **Merge nodes**.
+
 Never run `drizzle-kit generate` or the migration runner by hand — always go
 through `./singularity build`.
 
@@ -48,7 +56,6 @@ through `./singularity build`.
     - `answersSidecarName`
     - `generateMigration`
     - `journalEntriesForSqlFiles`
-    - `listTrackedMigrationBasenames`
     - `parseMigrationAnswers`
     - `phaseGeneratedMigrations`
     - `promptKey`
@@ -57,7 +64,6 @@ through `./singularity build`.
     - `removeGeneratedFiles`
     - `renameMigrations`
     - `resolveAnswer`
-    - `resolveMainRef`
     - `runDrizzleKitWithPrompts`
     - `writeAnswersSidecar`
 

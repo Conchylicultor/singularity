@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { renderMergeSnapshotMigration } from "@plugins/database/plugins/migrations/core";
 import { findPhaseErrors, type MigrationFile } from "./migration-phases-valid";
 
 const DATA = "20260902_000000_dddddddd__remap_icons.sql";
@@ -58,6 +59,23 @@ describe("findPhaseErrors", () => {
     const broken = "-- singularity:phase expand\nDROP INDEX i;\n";
     expect(findPhaseErrors([schema(SCHEMA, broken)], new Set())).toEqual([
       expect.stringContaining("malformed"),
+    ]);
+  });
+
+  test("a merge node (empty phased file behind its header) is valid", () => {
+    const merge = renderMergeSnapshotMigration([
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ]);
+    expect(findPhaseErrors([schema(SCHEMA, merge)], new Set())).toEqual([]);
+  });
+
+  test("a merge node carrying SQL is refused", () => {
+    const merge =
+      "-- singularity:merge-snapshot parents=11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222\n" +
+      phased('ALTER TABLE "agents" ADD COLUMN "icon" text;', "", []);
+    expect(findPhaseErrors([schema(SCHEMA, merge)], new Set())).toEqual([
+      expect.stringContaining("a merge node must be a no-op"),
     ]);
   });
 });

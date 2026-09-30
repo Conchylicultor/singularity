@@ -13551,32 +13551,62 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listMigrationFiles`
           - `migrationsReady`
           - `planSchemaSteps`
-      - Cross-plugin:
-        - Imported by: `database`
       - Core:
+        - Uses:
+          - `infra/spawn.spawnCaptured`
+          - `infra/spawn.spawnExpectOk`
         - Exports (types):
           - `ContractOp`
           - `DrizzleGenerateOptions`
+          - `DrizzleStage`
           - `ExpandOp`
           - `ParsedMigration`
           - `PhasedMigration`
           - `PhasedStatements`
+          - `PublishedMergeBase`
+          - `PublishedMigrationViolation`
+          - `PublishedRef`
           - `RejectOp`
+          - `SnapshotDag`
+          - `SnapshotDagProblem`
+          - `SnapshotNode`
           - `Statement`
           - `StatementClass`
           - `StatementOp`
         - Exports (values):
+          - `analyzeSnapshotDag`
           - `classifyStatement`
+          - `declaredParents`
           - `DRIZZLE_CONFIG_PATH`
           - `drizzleGenerateArgv`
+          - `findPublishedMigrationViolations`
+          - `formatPublishedMigrationViolations`
+          - `LOCAL_MAIN_REF`
+          - `mergeSnapshotParents`
           - `migrationClaimId`
+          - `migrationContentHash`
+          - `MIGRATIONS_DATA_DIR`
           - `MIGRATIONS_PLUGIN_DIR`
+          - `NULL_SNAPSHOT_ID`
           - `parseMigration`
           - `phaseStatements`
+          - `PUBLISHED_MIGRATION_HINT`
+          - `publishedMergeBases`
+          - `publishedMigrationBasenames`
+          - `publishedMigrationOrigins`
+          - `publishedMigrationRefs`
+          - `publishedMigrationRefsSignature`
+          - `readSnapshotNodes`
+          - `renderMergeSnapshotMigration`
           - `renderPhasedMigration`
           - `renderStatements`
           - `schemaGlobFiles`
+          - `snapshotAncestors`
           - `splitStatements`
+          - `stageDrizzleOut`
+          - `UnjoinedSnapshotTipsError`
+      - Cross-plugin:
+        - Imported by: `database`
       - Structure:
         - Non-standard folders: `data/`
       - Test helpers:
@@ -17558,7 +17588,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `answersSidecarName`
               - `generateMigration`
               - `journalEntriesForSqlFiles`
-              - `listTrackedMigrationBasenames`
               - `parseMigrationAnswers`
               - `phaseGeneratedMigrations`
               - `promptKey`
@@ -17567,7 +17596,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `removeGeneratedFiles`
               - `renameMigrations`
               - `resolveAnswer`
-              - `resolveMainRef`
               - `runDrizzleKitWithPrompts`
               - `writeAnswersSidecar`
         - **`normalize-generated`** — `./singularity normalize-generated` — re-derive the generated artifacts a merge driver auto-resolved during a merge or rebase and amend the head commit; the `post-rewrite` git hook's entry point.
@@ -17668,10 +17696,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`regen-generated`** — `./singularity regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`.
         - **`regen-migrations`** — `./singularity regen-migrations` — discard branch-local migrations and re-generate them against the rebased schema, for the post-rebase normalize step in `push`; aborts on hand-edited SQL.
           - Cli:
-            - Uses:
-              - `framework/cli/migrations.generateMigration`
-              - `framework/cli/migrations.listTrackedMigrationBasenames`
-              - `framework/cli/migrations.resolveMainRef`
+            - Uses: `framework/cli/migrations.generateMigration`
         - **`release`** — `./singularity release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or a Tauri desktop bundle.
           - Cli:
             - Uses: `framework/cli/op-runtime.FATAL_SIGNAL_EXITS`
@@ -21196,6 +21221,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `spawnPassthrough`
       - Cross-plugin:
         - Imported by:
+          - `database/migrations`
           - `framework/tooling`
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`

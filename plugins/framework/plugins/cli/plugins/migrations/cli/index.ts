@@ -19,14 +19,12 @@ export {
   answersSidecarName,
   generateMigration,
   journalEntriesForSqlFiles,
-  listTrackedMigrationBasenames,
   parseMigrationAnswers,
   phaseGeneratedMigrations,
   readBranchLocalAnswers,
   regenerateJournal,
   removeGeneratedFiles,
   renameMigrations,
-  resolveMainRef,
   writeAnswersSidecar,
 } from "./migrations";
 export type {

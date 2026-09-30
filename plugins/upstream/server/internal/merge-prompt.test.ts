@@ -74,4 +74,19 @@ describe("upstreamMergeInstructions", () => {
     // …and a conflicted migration is a person's call.
     expect(text).toContain("conflicted migration");
   });
+
+  test("explains the migration merge node, and when to stop on migrations", () => {
+    const text = upstreamMergeInstructions(base);
+    // The build writes a merge node; the agent must not mistake it for noise.
+    expect(text).toContain("merge node");
+    expect(text).toContain("singularity:merge-snapshot");
+    // Stop and report, verbatim, on either failure mode.
+    expect(text).toContain("snapshot merge conflict");
+    expect(text).toContain("migration-applies-clean");
+    expect(text).toContain("verbatim");
+    // Published migrations are immutable.
+    expect(text).toContain(
+      "Never delete, rename or edit a file under\n   `plugins/database/plugins/migrations/data`",
+    );
+  });
 });

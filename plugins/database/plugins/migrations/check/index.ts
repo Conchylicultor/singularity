@@ -1,4 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
+import {
+  MIGRATIONS_DATA_DIR,
+  publishedMigrationRefs,
+} from "@plugins/database/plugins/migrations/core";
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
 import {
   getWorktreeRoot,
@@ -10,6 +14,7 @@ import schemaFilesLoadableCheck from "./internal/schema-files-loadable";
 import forkSchemaDriftCheck from "./fork-schema-drift";
 import drizzleConfigSchemaGlobsCheck from "./drizzle-config-schema-globs";
 import migrationPhasesValidCheck from "./migration-phases-valid";
+import publishedMigrationsImmutableCheck from "./published-immutable";
 import { withDirectDb } from "./internal/direct-db";
 import { declaredSchemaInputs } from "./internal/declared-schema-inputs";
 
@@ -34,8 +39,6 @@ type Check = {
 // e.g. the query MCP tool and the push-profiling title resolver — there is no
 // exported constant, the name is the literal "singularity".
 const MAIN_DB_NAME = "singularity";
-
-const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
 
 async function git(
   root: string,
@@ -62,31 +65,29 @@ const check: Check = {
   id: "migration-applies-clean",
   description:
     "pending migrations apply cleanly on top of main (transactional dry-run, rolled back)",
-  // Impure: reads origin/main via git. The data/ dir CONTENT is already
+  // Impure: reads local `main` via git. The data/ dir CONTENT is already
   // covered by the runner's own tree hash (this check is scope "tree", the
-  // default) — only origin/main's ref needs folding in, since a
-  // remote-tracking ref can move without changing anything in this tree.
+  // default) — only local main's sha needs folding in, since the ref can move
+  // without changing anything in this tree.
   async cacheSignature(): Promise<string | null> {
-    try {
-      const result = await git(process.cwd(), ["rev-parse", "origin/main"]);
-      return result.code === 0 ? result.out.trim() : "no-main";
-      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (git error) safely degrades to "never cache" (return null), which only re-runs the cheap fast-path check
-    } catch {
-      return null;
-    }
+    const [main] = await publishedMigrationRefs(await getWorktreeRoot());
+    return main.sha;
   },
   async run() {
     const root = await getWorktreeRoot();
 
-    // FAST PATH: if this branch changes no migration file vs origin/main there
+    // FAST PATH: if this branch changes no migration file vs local `main` there
     // is nothing to apply — pass without ever touching the DB. This is the ~99%
-    // case (most pushes touch no migration), so it must be free.
+    // case (most pushes touch no migration), so it must be free. Local `main`,
+    // not a remote's: it is the ref the main DB runs (main auto-builds from
+    // it), so it is exactly what the dry-run below would find applied.
+    const [main] = await publishedMigrationRefs(root);
     const diff = await git(root, [
       "diff",
       "--quiet",
-      "origin/main",
+      main.sha,
       "--",
-      MIGRATIONS_SUBDIR,
+      MIGRATIONS_DATA_DIR,
     ]);
     if (diff.code === 0) return { ok: true };
 
@@ -138,4 +139,5 @@ export default [
   forkSchemaDriftCheck,
   drizzleConfigSchemaGlobsCheck,
   migrationPhasesValidCheck,
+  publishedMigrationsImmutableCheck,
 ];
