@@ -17,6 +17,7 @@ import {
   assertAgentAddressable,
   assertAgentAuthored,
   assertAgentAuthoredPlan,
+  inertEmptyParagraphs,
   redactHumanAudience,
 } from "./policy";
 
@@ -370,6 +371,21 @@ describe("assertAgentAuthoredPlan — every write inside a card", () => {
     }).toThrow(/was created outside every agent-authored block/);
   });
 
+  test("names the refused block by what it looks like, not only its minted id", () => {
+    const worded = {
+      ...create("loose", PAGE, "text"),
+      data: { text: [{ text: "x".repeat(80) }] },
+    };
+    expect(() => {
+      judgePage(planOf({ creates: [create("loose", PAGE, "text")] }));
+    }).toThrow(/block loose \(an empty <text\/>\) was created/);
+    expect(() => {
+      judgePage(planOf({ creates: [worded] }));
+    }).toThrow(
+      new RegExp(`block loose \\(a <text> reading "${"x".repeat(60)}…"\\)`),
+    );
+  });
+
   test("T3: refuses MOVING prose into a card — the new chain is not enough", () => {
     // The attack the both-chains rule exists for: the whole page annexed into the
     // agent's own card, attributed to the agent, without deleting a character.
@@ -390,7 +406,9 @@ describe("assertAgentAuthoredPlan — every write inside a card", () => {
           textEdits: [{ blockId: "open", runs: [{ text: "x" }] }],
         }),
       );
-    }).toThrow(/block prose was deleted[\s\S]*2 other writes in this edit/);
+    }).toThrow(
+      /block prose \(an empty <text\/>\) was deleted[\s\S]*2 other writes in this edit/,
+    );
   });
 
   test("a card-rooted apply may write anywhere inside its own card", () => {
@@ -900,5 +918,82 @@ describe("refusal wording names BOTH kinds, off the handles", () => {
     }
     expect(message).toContain("<agent-inline>…</agent-inline>");
     expect(message).not.toContain("agent-note");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// inertEmptyParagraphs — the layout an edit leaves alone
+// ---------------------------------------------------------------------------
+
+describe("inertEmptyParagraphs", () => {
+  const inertAt = (rootId: string, rows = scope.rows) =>
+    inertEmptyParagraphs({ rows, pageRow: scope.pageRow, rootId });
+  const rowById = (id: string): StoredBlock =>
+    scope.rows.find((r) => r.id === id)!;
+  const node = (type: string, data: unknown = {}) => ({
+    type,
+    data,
+    expanded: true,
+    children: [],
+  });
+  const empty = node("text");
+
+  test("a stored empty paragraph is inert unless an agent-authored block holds it", () => {
+    const inert = inertAt(PAGE);
+    expect(inert.row(rowById("prose"))).toBe(true);
+    // Inside a human-authored card: as closed to the agent as the prose.
+    expect(inert.row(rowById("open"))).toBe(true);
+    expect(inert.row(rowById("answer-line"))).toBe(true);
+    // The agent's own card.
+    expect(inert.row(rowById("note-line"))).toBe(false);
+  });
+
+  test("a row with text, a row with children, or another type is never inert", () => {
+    const inert = inertAt(PAGE);
+    expect(
+      inert.row({ ...rowById("prose"), data: { text: [{ text: "words" }] } }),
+    ).toBe(false);
+    expect(inert.row(rowById("secret"))).toBe(false);
+    expect(inert.row(rowById("shared"))).toBe(false);
+  });
+
+  test("a document node reads its chain off its document ancestors, then the root", () => {
+    const atPage = inertAt(PAGE);
+    expect(atPage.node(empty, [])).toBe(true);
+    expect(atPage.node(empty, [node(agentNotesBlock.type)])).toBe(false);
+    // Nearest declaration wins: a human's card inside the agent's card is theirs.
+    expect(
+      atPage.node(empty, [node(humanish.type), node(agentNotesBlock.type)]),
+    ).toBe(true);
+    expect(atPage.node(node("text", { text: [{ text: "x" }] }), [])).toBe(
+      false,
+    );
+    expect(atPage.node({ ...empty, children: [node("text")] }, [])).toBe(false);
+    // Rooted at the agent's card, the top level IS the card's.
+    expect(inertAt("notes").node(empty, [])).toBe(false);
+    // Rooted at a human's card, or at prose, it is not.
+    expect(inertAt("shared").node(empty, [])).toBe(true);
+    expect(inertAt("secret").node(empty, [])).toBe(true);
+  });
+
+  test("a minted agent page's body is the agent's", () => {
+    const page = node("page", agentPageData("New"));
+    expect(inertAt(PAGE).node(empty, [page])).toBe(false);
+  });
+
+  test("on an agent-authored page nothing is inert", () => {
+    const inert = inertEmptyParagraphs({
+      rows: agentScope.rows,
+      pageRow: agentScope.pageRow,
+      rootId: APAGE,
+    });
+    expect(inert.row(agentScope.rows.find((r) => r.id === "a-line")!)).toBe(
+      false,
+    );
+    expect(inert.node(empty, [])).toBe(false);
+    // …except inside the human's card on it.
+    expect(
+      inert.row(agentScope.rows.find((r) => r.id === "a-answer-line")!),
+    ).toBe(true);
   });
 });

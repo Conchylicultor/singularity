@@ -9,11 +9,14 @@ import { parseMarkdownToForest } from "@plugins/page/plugins/editor/core";
 import { writeBlockTexts } from "@plugins/page/plugins/block-text-write/server";
 import {
   documentOrderRows,
+  dropInertNodes,
+  dropInertRows,
   pageTitleBanner,
   planMarkdownApply,
   planWriteCount,
   stripPageTitleBanner,
   subtractNoise,
+  type InertBlocks,
   type MarkdownApplyPlan,
 } from "../../core";
 // Not through the core barrel: the wording has exactly one caller, and this
@@ -168,6 +171,29 @@ export interface ApplyBlockOptions {
     plan: MarkdownApplyPlan,
     forest: { rows: readonly StoredBlock[]; pageRow: BlockScopePageRow },
   ): void;
+  /**
+   * The content-free blocks this caller's document has NO SAY over — left
+   * exactly as stored rather than written or refused (see `core/inert.ts`).
+   *
+   * The third answer beside {@link redact} and {@link assertAcceptable}: `redact`
+   * hides what a write may not SEE, `assertAcceptable` refuses what it may not
+   * DO, and this declines writes that are not worth refusing — an empty
+   * paragraph added or left out where the caller may not write. Inert rows are
+   * pruned from the walk (after `redact`, so they keep their rank as an
+   * obstacle), inert nodes are dropped from the parsed document, and neither
+   * can be created, moved or deleted.
+   *
+   * Asked ONCE per apply, with the same unredacted rows `assertAcceptable` gets
+   * plus the scope root, because whether a block is inert usually depends on
+   * what it sits inside — which may be above the root. Applied identically to
+   * the edited document and to the {@link baseline}, so the two still plan the
+   * same dialect.
+   */
+  inert?(forest: {
+    rows: readonly StoredBlock[];
+    pageRow: BlockScopePageRow;
+    rootId: string;
+  }): InertBlocks;
 }
 
 export interface ApplyReport {
@@ -203,6 +229,14 @@ export interface ApplyReport {
    * number is how anyone notices the projection has become lossier.
    */
   absorbedWrites: number;
+  /**
+   * The inert blocks this apply left alone (see {@link ApplyBlockOptions.inert}):
+   * how many stood in the scope, and how many the edited document held. Equal
+   * when the caller echoed them; a surplus of `incoming` is inert lines it added
+   * and nothing wrote, a surplus of `stored` is ones it left out and nothing
+   * deleted. `{ stored: 0, incoming: 0 }` when no `inert` was given.
+   */
+  inert: { stored: number; incoming: number };
 }
 
 /** One scoped apply: the two channels, over rows a caller has already read. */
@@ -218,6 +252,7 @@ async function applyToScope(scope: {
   baseline?: string;
   redact?: ApplyBlockOptions["redact"];
   assertAcceptable?: ApplyBlockOptions["assertAcceptable"];
+  inert?: ApplyBlockOptions["inert"];
 }): Promise<ApplyReport> {
   const {
     rootId,
@@ -229,8 +264,19 @@ async function applyToScope(scope: {
     baseline,
     redact,
     assertAcceptable,
+    inert,
   } = scope;
   const ctx = serverMarkdownContext();
+  // Asked once: both documents below are planned against the same answer.
+  const inertBlocks = inert?.({ rows, pageRow, rootId });
+  // What the walk may reach: the caller's redaction, then the inert rows. Composed
+  // in that order so an inert row the redaction already hid is simply absent,
+  // and everything pruned — by either — keeps its rank as an obstacle.
+  const walkFilter =
+    inertBlocks === undefined
+      ? redact
+      : (all: StoredBlock[]): readonly StoredBlock[] =>
+          dropInertRows(redact ? redact(all) : all, inertBlocks.row);
   // Everything a document has to go through to become a plan, in ONE place: the
   // edited document and the baseline are planned by the same call, against the
   // same rows, with the same context and the same redaction. Two spellings of
@@ -248,19 +294,29 @@ async function applyToScope(scope: {
       rootId === pageId
         ? stripPageTitleBanner(md, pageTitleBanner(title, ctx))
         : md;
-    return planMarkdownApply({
-      rootId,
-      pageId,
-      // The WHOLE partition, redacted or not: the filter prunes the planner's
-      // walk, which is the entire mechanism — see `core/plan.ts`.
-      existing: rows,
-      incoming: parseMarkdownToForest(document, ctx),
-      handles: ctx.handles,
-      redact,
-    });
+    const parsed = parseMarkdownToForest(document, ctx);
+    const { forest, dropped } =
+      inertBlocks === undefined
+        ? { forest: parsed, dropped: 0 }
+        : dropInertNodes(parsed, inertBlocks.node);
+    return {
+      dropped,
+      result: planMarkdownApply({
+        rootId,
+        pageId,
+        // The WHOLE partition, redacted or not: the filter prunes the planner's
+        // walk, which is the entire mechanism — see `core/plan.ts`.
+        existing: rows,
+        incoming: forest,
+        handles: ctx.handles,
+        redact: walkFilter,
+      }),
+    };
   };
 
-  const result = planOf(markdown);
+  const edited = planOf(markdown);
+  const result = edited.result;
+  const inertIncoming = edited.dropped;
   // A refusal returns BEFORE any write: the planner cannot verify what it was
   // asked to do, and half-applying it would be worse than refusing it.
   if (!result.ok) {
@@ -279,7 +335,7 @@ async function applyToScope(scope: {
   let plan = result.plan;
   let absorbedWrites = 0;
   if (baseline !== undefined) {
-    const identity = planOf(baseline);
+    const identity = planOf(baseline).result;
     if (!identity.ok) {
       // The document a read produced cannot be applied back onto the rows it was
       // read from. Nothing the caller did can cause this, so it is a bug in the
@@ -397,6 +453,15 @@ async function applyToScope(scope: {
     createdPageIds,
     textEditedIds: textEdits.map((e) => e.blockId),
     absorbedWrites,
+    inert: {
+      stored:
+        inertBlocks === undefined
+          ? 0
+          : documentOrderRows(redact ? redact([...rows]) : rows, rootId).filter(
+              (row) => inertBlocks.row(row),
+            ).length,
+      incoming: inertIncoming,
+    },
   };
 }
 
@@ -421,6 +486,7 @@ export async function applyMarkdownToBlock(
     baseline: opts?.baseline,
     redact: opts?.redact,
     assertAcceptable: opts?.assertAcceptable,
+    inert: opts?.inert,
   });
 }
 
@@ -451,5 +517,6 @@ export async function applyMarkdownToPage(
     baseline: opts?.baseline,
     redact: opts?.redact,
     assertAcceptable: opts?.assertAcceptable,
+    inert: opts?.inert,
   });
 }

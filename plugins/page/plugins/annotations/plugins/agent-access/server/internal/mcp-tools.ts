@@ -31,6 +31,7 @@ import {
   assertAgentAddressable,
   assertAgentAuthored,
   assertAgentAuthoredPlan,
+  inertEmptyParagraphs,
   redactHumanAudience,
 } from "./policy";
 
@@ -101,6 +102,26 @@ function applySummary(
     // a number climbing here is the projection becoming lossy, which nothing
     // else in this response would show.
     absorbed_writes: report.absorbedWrites,
+    // Empty paragraphs outside every agent-authored block are left as they are
+    // (see `inertEmptyParagraphs`): said aloud, so an agent whose spacer did
+    // not appear knows why rather than retrying it.
+    ...inertNote(report.inert),
+  };
+}
+
+/** The `applySummary` fields for the empty paragraphs an apply left alone. */
+function inertNote(inert: ApplyReport["inert"]): object {
+  const added = inert.incoming - inert.stored;
+  if (added === 0) return {};
+  return {
+    empty_paragraphs_left_alone:
+      added > 0
+        ? `${added} empty paragraph${added === 1 ? "" : "s"} you added outside ` +
+          `every agent-authored block ${added === 1 ? "was" : "were"} not written ` +
+          `— the page's own layout is not yours to change. Nothing else was affected.`
+        : `${-added} empty paragraph${added === -1 ? "" : "s"} you left out ` +
+          `${added === -1 ? "is" : "are"} outside every agent-authored block, so ` +
+          `${added === -1 ? "it was" : "they were"} kept. Nothing else was affected.`,
   };
 }
 
@@ -434,6 +455,7 @@ can open the run that produced it. Returns what the write actually did
       // The SAME filter the read used, which is what makes the apply a diff
       // against the document the agent actually saw.
       redact: redactHumanAudience,
+      inert: inertEmptyParagraphs,
       assertAcceptable: (plan, { rows, pageRow }) => {
         authored = assertAgentAuthoredPlan({
           plan,
@@ -511,10 +533,13 @@ page's title as \`# Title\` and a blank line. It is not a block of the page.
 
 A blank line between two paragraphs is an empty paragraph, the same as pressing
 Enter twice in the editor. Blocks are one per line in this document, so such a
-blank line you add is a new block — and a new block that lands outside a card is
-refused like any other. A blank line next to a tag line (\`<…>\` or \`</…>\`)
-is just spacing, so you may put blank lines around a card you insert; an empty
-paragraph that really sits beside a tag reads as \`<text/>\`.
+blank line you add is a new block. A blank line next to a tag line (\`<…>\` or
+\`</…>\`) is just spacing, so you may put blank lines around a card you insert;
+an empty paragraph that really sits beside a tag reads as \`<text/>\`.
+Outside every agent-authored block, empty paragraphs are the page's layout and
+this edit leaves them alone: one you add (a blank line or \`<text/>\`) is not
+written, one you leave out is kept, and the result's
+\`empty_paragraphs_left_alone\` says so. Neither refuses the edit.
 
 A \`\\n\` INSIDE a line is the opposite: a soft line break within that block, the
 same as pressing Shift+Enter in the editor rather than Enter. It is part of that
@@ -780,6 +805,7 @@ the author's even when it sits in yours.`,
       // caller for blocks the projection touched.
       baseline: markdown,
       redact: redactHumanAudience,
+      inert: inertEmptyParagraphs,
       assertAcceptable: (plan, { rows, pageRow }) => {
         authored = assertAgentAuthoredPlan({
           plan,

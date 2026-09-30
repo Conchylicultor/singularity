@@ -24422,6 +24422,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `BoundaryViolation`
           - `ClassifiedRow`
+          - `InertBlocks`
           - `MarkdownApplyArgs`
           - `MarkdownApplyPlan`
           - `MarkdownApplyResult`
@@ -24433,6 +24434,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `boundaryViolations`
           - `documentOrderRows`
+          - `dropInertNodes`
+          - `dropInertRows`
           - `markdownNodesOfRows`
           - `pageTitleBanner`
           - `parsePageTitleBanner`

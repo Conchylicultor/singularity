@@ -493,6 +493,7 @@ annotation in the key would make every status change look like a new block.
   - Exports (types):
     - `BoundaryViolation`
     - `ClassifiedRow`
+    - `InertBlocks`
     - `MarkdownApplyArgs`
     - `MarkdownApplyPlan`
     - `MarkdownApplyResult`
@@ -504,6 +505,8 @@ annotation in the key would make every status change look like a new block.
   - Exports (values):
     - `boundaryViolations`
     - `documentOrderRows`
+    - `dropInertNodes`
+    - `dropInertRows`
     - `markdownNodesOfRows`
     - `pageTitleBanner`
     - `parsePageTitleBanner`

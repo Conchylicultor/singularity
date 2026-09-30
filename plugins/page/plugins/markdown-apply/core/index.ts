@@ -9,6 +9,9 @@ export { documentOrderRows, markdownNodesOfRows } from "./flatten";
 
 export { planWriteCount, subtractNoise } from "./subtract-noise";
 
+export { dropInertNodes, dropInertRows } from "./inert";
+export type { InertBlocks } from "./inert";
+
 export { boundaryViolations, touchedBlocks } from "./touched";
 export type {
   BoundaryViolation,

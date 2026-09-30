@@ -2,6 +2,7 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { Editor, type StoredBlock } from "@plugins/page/plugins/editor/server";
 import {
   blockAuthorOf,
+  defaultTextHandle,
   markdownTagNameOf,
   markdownTagNamesAuthoredBy,
   namesField,
@@ -14,6 +15,7 @@ import {
   touchedBlocks,
   type BoundaryViolation,
   type ClassifiedRow,
+  type InertBlocks,
   type MarkdownApplyPlan,
   type WriteBoundary,
 } from "@plugins/page/plugins/markdown-apply/core";
@@ -592,6 +594,31 @@ interface RefusalContext {
   total: number;
 }
 
+/** How long a refusal's quote of a block's text may run before it is cut. */
+const PREVIEW_CHARS = 60;
+
+/**
+ * A block as a refusal names it: its id, and what it looks like in the document
+ * the agent wrote — its tag and the start of its text — so the agent can find
+ * the line. An id alone is not enough: a CREATED block's id was minted for the
+ * refused write, so it is in no document the agent has seen.
+ */
+function blockPhrase(id: string, forest: Forest): string {
+  const type = forest.typeOf.get(id);
+  if (type === undefined) return `block ${id}`;
+  const data = forest.dataOf.get(id);
+  const tag = tagNameOf(type, data);
+  const lens = handlesByType().get(type)?.text;
+  if (lens === undefined) return `block ${id} (a <${tag}>)`;
+  const text = lens(data)
+    .map((run) => run.text)
+    .join("");
+  if (text === "") return `block ${id} (an empty <${tag}/>)`;
+  const preview =
+    text.length > PREVIEW_CHARS ? `${text.slice(0, PREVIEW_CHARS)}…` : text;
+  return `block ${id} (a <${tag}> reading ${JSON.stringify(preview)})`;
+}
+
 /**
  * The refusal a boundary violation becomes — the agent's documentation here.
  *
@@ -637,9 +664,17 @@ function violationMessage(
   const carriedOut = violation.side === "old" && violation.how !== "deleted";
 
   if (violation.reason === "escaped") {
+    // Named by what it looks like, not only by id: a created block's id was
+    // minted for the refused write and appears nowhere the agent can look. A
+    // created block as the document wrote it; any other as the agent READ it,
+    // which is where it will look for the line.
+    const which = blockPhrase(
+      violation.blockId,
+      violation.how === "created" ? ctx.after : ctx.before,
+    );
     if (carriedOut) {
       return (
-        `block ${violation.blockId} was ${VERB[violation.how]}, but it did not COME ` +
+        `${which} was ${VERB[violation.how]}, but it did not COME ` +
         `from inside an agent-authored block (${agentTags}) — this edit pulls a block ` +
         `of the page's own prose into one. Moving or re-indenting the page's blocks ` +
         `into your card is not an annotation: leave them exactly where they are, and ` +
@@ -648,7 +683,7 @@ function violationMessage(
       );
     }
     return (
-      `block ${violation.blockId} was ${VERB[violation.how]} outside every ` +
+      `${which} was ${VERB[violation.how]} outside every ` +
       `agent-authored block. An edit may only create, rewrite, move or delete blocks ` +
       `that sit inside an ${agentTags} — the page's own prose is read-only to an ` +
       `agent. Re-read ${ctx.rootId}, change only text inside such a block, and add ` +
@@ -855,4 +890,90 @@ export function assertAgentAuthoredPlan(args: {
     if (block !== null && !deleted.has(block)) authored.add(block);
   }
   return [...authored];
+}
+
+/**
+ * The blocks an agent's edit has NO SAY over — the `inert` option of the apply
+ * (`markdown-apply/core/inert.ts`): an EMPTY paragraph, with no children, that
+ * sits outside every region an agent authors.
+ *
+ * Such a paragraph is layout, not words. An agent adds one next to its card
+ * for spacing, or drops one it replaced with its card, and refusing the whole
+ * edit over it cost a round trip and a confusing message (the refused block's id
+ * was minted for the write, so it named nothing the agent could find). Allowing
+ * it would change the author's page, however slightly. So the apply does
+ * neither: an empty paragraph there is left exactly as stored — never created,
+ * moved or deleted — and the result says how many it left alone.
+ *
+ * "Outside every region an agent authors" is the SAME walk rule 3 judges with
+ * ({@link writeBoundaryOf}): the nearest row that declares anything is not an
+ * open one. So a spacer inside the agent's own card or page is the agent's to
+ * add or drop like any other line, and one inside a `<human>` card is as inert
+ * as one in the page's prose. Anything with text, anything with children and
+ * any other block type is still judged — and refused — as before.
+ *
+ * A stored row's chain is its own, up to the page. A document node's is its
+ * ancestors in the document, then what the scope root declares — the root
+ * itself first, then everything above it, which is {@link enclosureOf}.
+ */
+export function inertEmptyParagraphs(args: {
+  rows: readonly StoredBlock[];
+  pageRow: BlockScopePageRow;
+  rootId: string;
+}): InertBlocks {
+  const { rows, pageRow, rootId } = args;
+  const paragraph = defaultTextHandle(Editor.BlockData.getContributions());
+  const lens = paragraph?.text;
+  // A composition with no paragraph type has no empty paragraph to leave alone.
+  if (paragraph === undefined || lens === undefined) {
+    return { row: () => false, node: () => false };
+  }
+  const isEmptyParagraph = (type: string, data: unknown): boolean =>
+    type === paragraph.type && lens(data).every((run) => run.text === "");
+
+  const boundaryOf = writeBoundaryOf();
+  const before = forestOf(rows, pageRow);
+  const bound = rows.length + 1;
+  const parents = new Set<string>();
+  for (const row of rows) if (row.parentId !== null) parents.add(row.parentId);
+
+  // A chain that reaches the document's top level without a declaration hears
+  // the root's own, else whatever is above it.
+  const rootRow = rootId === pageRow.id ? null : classified(before, rootId);
+  const atRoot =
+    (rootRow === null ? undefined : boundaryOf(rootRow)) ??
+    enclosureOf(before, rootId, pageRow.id, boundaryOf, bound).boundary;
+
+  /** The nearest declaration at or above a stored row, up to the page. */
+  const declaredAt = (startId: string): WriteBoundary | "none" => {
+    let current: string | undefined = startId;
+    for (let steps = 0; current !== undefined; steps++) {
+      if (steps > bound) throw nonTerminating(startId, bound);
+      const row = classified(before, current);
+      const declared = row === null ? undefined : boundaryOf(row);
+      if (declared !== undefined) return declared;
+      current = before.parentOf.get(current) ?? undefined;
+    }
+    return "none";
+  };
+
+  return {
+    row: (row) =>
+      isEmptyParagraph(row.type, row.data) &&
+      !parents.has(row.id) &&
+      declaredAt(row.id) !== "open",
+    node: (node, ancestors) => {
+      if (node.children.length > 0) return false;
+      if (!isEmptyParagraph(node.type, node.data ?? {})) return false;
+      for (const ancestor of ancestors) {
+        const declared = boundaryOf({
+          id: ancestor.ref ?? "",
+          type: ancestor.type,
+          data: ancestor.data ?? {},
+        });
+        if (declared !== undefined) return declared !== "open";
+      }
+      return atRoot !== "open";
+    },
+  };
 }

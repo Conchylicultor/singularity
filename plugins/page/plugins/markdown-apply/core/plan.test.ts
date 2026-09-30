@@ -19,7 +19,8 @@ import {
   type RichText,
 } from "@plugins/page/plugins/editor/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { markdownNodesOfRows } from "./flatten";
+import { documentOrderRows, markdownNodesOfRows } from "./flatten";
+import { dropInertNodes, dropInertRows, type InertBlocks } from "./inert";
 import { planMarkdownApply, type MarkdownApplyPlan } from "./plan";
 import type { StoredRow } from "./stored-row";
 
@@ -1942,5 +1943,139 @@ describe("fuzz: a non-page root, over the same edits", () => {
       expectConverges(rows, survivors, seed, root.id);
     }
     expect(exercised).toBeGreaterThan(100);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Inert blocks: left exactly as stored, on both sides of the diff
+// ---------------------------------------------------------------------------
+
+describe("inert blocks (core/inert.ts)", () => {
+  const isEmptyText = (type: string, data: unknown): boolean =>
+    type === "text" &&
+    plainOf(runsOf((data as { text?: unknown }).text)) === "";
+  /**
+   * The shape of `agent-access`'s policy, over this fixture: an empty paragraph
+   * is inert unless an `agent-notes` card holds it. Everything here is at the
+   * page root, so a stored row's parent IS its whole chain.
+   */
+  const inert: InertBlocks = {
+    row: (row) => isEmptyText(row.type, row.data) && row.parentId === PAGE_ID,
+    node: (node, ancestors) =>
+      isEmptyText(node.type, node.data) &&
+      node.children.length === 0 &&
+      !ancestors.some((a) => a.type === "agent-notes"),
+  };
+  /** What `applyToScope` does with an `inert` option: both sides, one answer. */
+  const planInert = (rows: StoredRow[], md: string) => {
+    const { forest, dropped } = dropInertNodes(
+      parseMarkdownToForest(md, ctx),
+      inert.node,
+    );
+    const result = planMarkdownApply({
+      rootId: PAGE_ID,
+      pageId: PAGE_ID,
+      existing: rows,
+      incoming: forest,
+      handles,
+      redact: (all) => dropInertRows(all, inert.row),
+    });
+    if (!result.ok) throw new Error(`refused: ${result.detail}`);
+    return { plan: result.plan, dropped };
+  };
+  // A, an empty paragraph, B.
+  const rows = rowsOf([
+    raw("text", { text: runs("A") }),
+    raw("text", { text: [] }),
+    raw("text", { text: runs("B") }),
+  ]);
+  const card = "<agent-notes>\n  note\n</agent-notes>";
+  const orderAfter = (plan: MarkdownApplyPlan): string[] =>
+    documentOrderRows(applyPlan(rows, plan), PAGE_ID).map((row) =>
+      row.type === "text" ? plainTextOfRow(row) || "(empty)" : row.type,
+    );
+  const textOf = (data: unknown): string =>
+    plainOf(runsOf((data as { text?: unknown }).text));
+
+  test("the read's own document plans nothing", () => {
+    const { plan, dropped } = planInert(rows, markdownOf(rows));
+    expect(isEmptyPatch(plan.patch)).toBe(true);
+    expect(plan.textEdits).toEqual([]);
+    expect(dropped).toBe(1);
+  });
+
+  test("an empty paragraph ADDED beside a new card is not created", () => {
+    // The edit that was refused in the wild: the existing spacer echoed, the
+    // card, and a SECOND `<text/>` after it.
+    const { plan, dropped } = planInert(
+      rows,
+      `A\n<text/>\n${card}\n<text/>\nB`,
+    );
+    expect(plan.patch.creates.map((b) => b.type).sort()).toEqual([
+      "agent-notes",
+      "text",
+    ]);
+    expect(
+      textOf(plan.patch.creates.find((b) => b.type === "text")!.data),
+    ).toBe("note");
+    expect(plan.patch.deleteIds).toEqual([]);
+    expect(dropped).toBe(2);
+    expect(orderAfter(plan)).toEqual([
+      "A",
+      "(empty)",
+      "agent-notes",
+      "note",
+      "B",
+    ]);
+  });
+
+  test("an empty paragraph LEFT OUT is kept, and nothing is minted onto its rank", () => {
+    const { plan } = planInert(rows, `A\n${card}\nB`);
+    expect(plan.patch.deleteIds).toEqual([]);
+    const top = applyPlan(rows, plan).filter((row) => row.parentId === PAGE_ID);
+    expect(new Set(top.map((row) => row.rank)).size).toBe(top.length);
+    // Inserted where the hidden row sits, so it lands after it (ranks.ts).
+    expect(orderAfter(plan)).toEqual([
+      "A",
+      "(empty)",
+      "agent-notes",
+      "note",
+      "B",
+    ]);
+  });
+
+  test("an empty paragraph inside the card is the card's own line", () => {
+    const { plan } = planInert(
+      rows,
+      `A\n<text/>\n<agent-notes>\n  note\n  <text/>\n  more\n</agent-notes>\nB`,
+    );
+    expect(plan.patch.creates.map((b) => b.type)).toEqual([
+      "agent-notes",
+      "text",
+      "text",
+      "text",
+    ]);
+  });
+
+  test("text in an inert position is still planned — only EMPTY is inert", () => {
+    const { plan } = planInert(rows, "A\n<text/>\nnew prose\nB");
+    expect(plan.patch.creates.map((b) => textOf(b.data))).toEqual([
+      "new prose",
+    ]);
+  });
+
+  test("an inert block with children throws on either side", () => {
+    const leaf = {
+      type: "text",
+      data: { text: [] },
+      expanded: true,
+      children: [],
+    };
+    const parent = { ...leaf, type: "toggle", children: [leaf] };
+    expect(() => dropInertNodes([parent], () => true)).toThrow(/Only a leaf/);
+    const nested = rowsOf([
+      raw("toggle", { text: [] }, [raw("text", { text: [] })]),
+    ]);
+    expect(() => dropInertRows(nested, () => true)).toThrow(/Only a leaf/);
   });
 });
