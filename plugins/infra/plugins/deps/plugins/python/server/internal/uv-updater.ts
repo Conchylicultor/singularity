@@ -45,7 +45,7 @@ export function uvCutoff(now: Date): string {
 
 /** One uv project, found by its tracked `python/pyproject.toml`. */
 interface UvProject {
-  /** Repo-relative dir, e.g. `plugins/<…>/hello-python/python`. */
+  /** Repo-relative dir, e.g. `plugins/<…>/audio-analysis/python`. */
   dir: string;
   /** The owning plugin's folder name — the prefix of a move's name. */
   label: string;
@@ -252,7 +252,7 @@ export function isNewerRelease(to: string, from: string): boolean {
 const isHeld = (pkg: string, version: string): boolean =>
   UV_HOLDS.some((h) => h.name === pkg && h.version === version);
 
-/** A move's name: `<plugin>:<package>`, e.g. `hello-python:numpy`. */
+/** A move's name: `<plugin>:<package>`, e.g. `audio-analysis:numpy`. */
 const moveName = (project: UvProject, pkg: string): string =>
   `${project.label}:${pkg}`;
 

@@ -224,9 +224,12 @@ module eval).
   `playwright` npm pin (user: `safe-fetch/browser-fetch`'s `chromium`, ~280 MB
   download, ~600 MB on disk). The shared `~/Library/Caches/ms-playwright` is
   not used; the deps sweep replaces Playwright's stale-browser GC.
-- `hello-python` — a tiny real `python/` project (numpy), declared in its
-  `deps/index.ts`; delete it once the audio pipeline lands as the first real
-  consumer.
+
+Consumers of the `python` kind (outside this plugin): `audio-python`
+(`plugins/infra/plugins/audio-analysis`, torch + Beat This! + librosa, ≈950
+MB) and `youtube-audio` (`plugins/integrations/plugins/youtube/plugins/audio-fetch`,
+yt-dlp, a few MB) — two projects, so a weekly yt-dlp bump never reinstalls
+torch.
 
 ## Not done yet (by design, follow-ups)
 

@@ -33,7 +33,6 @@ export {
 } from "./internal/section";
 export { hookpadKeyAt } from "./internal/key-at";
 export type { HookpadKeyAtResult } from "./internal/key-at";
-export { youtubeVideoId } from "./internal/youtube";
 export {
   HOOKPAD_MODE_OFFSETS,
   hookpadChordSound,

@@ -49,7 +49,7 @@ export type DepUpdates = z.infer<typeof DepUpdatesSchema>;
 /** One declared dependency, as the Dependencies view lists it. */
 export const DepRowSchema = z.object({
   id: z.string(),
-  /** The declaring plugin's path, e.g. `infra/deps/hello-python`. */
+  /** The declaring plugin's path, e.g. `infra/audio-analysis`. */
   owner: z.string(),
   description: z.string(),
   /** A human estimate of the install's size, e.g. `≈40 MB`. */

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { youtubeVideoId } from "@plugins/integrations/plugins/hooktheory/core";
+import { youtubeVideoId } from "@plugins/integrations/plugins/youtube/core";
 import {
   SkipTally,
   alignmentFromSheetSage,

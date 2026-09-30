@@ -1,0 +1,21 @@
+# The audio-analysis extractors (infra/audio-analysis): beat tracking with
+# Beat This!, CQT chroma with librosa, decoding with PyAV (resampled with soxr). Installed on first
+# use as the `audio-python` dependency (infra/deps), run with runPython.
+[project]
+name = "singularity-audio"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "av",
+  "beat-this",
+  "librosa",
+  "numpy",
+  "soxr",
+  "torch",
+  "torchaudio",
+]
+
+[tool.uv]
+# Not a package: its source runs from the checkout (PYTHONPATH), never
+# installed into the shared env.
+package = false

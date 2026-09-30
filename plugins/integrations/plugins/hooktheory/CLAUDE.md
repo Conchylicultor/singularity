@@ -36,7 +36,8 @@ trainer) never import `@plugins/auth/*`. Design:
     the song index skips the section).
   - `hookpadTonicPc(tonic)` — a tonic spelling (`F#`, `Bb`, `E#`, `Abb`) to a
     pitch class; throws on anything else. Plus `HOOKPAD_MODE_OFFSETS` (the
-    nine modes as offsets from the tonic) and `youtubeVideoId(raw)`.
+    nine modes as offsets from the tonic). (`youtubeVideoId(raw)` lives in
+    `integrations/youtube/core`.)
 - **HTTP** (this worktree's backend): `GET /api/hooktheory/trends/nodes?cp=1,4`,
   `GET /api/hooktheory/trends/songs?cp=1,5,6,4&page=1`,
   `GET /api/hooktheory/sections/:id`.
@@ -171,7 +172,9 @@ nothing calls it in a loop yet.
     - `GET /api/hooktheory/trends/songs`
     - `GET /api/hooktheory/sections/:id`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `integrations/youtube.youtubeVideoId`
   - Exports (types):
     - `HookpadChord`
     - `HookpadChordInput`
@@ -217,7 +220,6 @@ nothing calls it in a loop yet.
     - `trendNodesEndpoint`
     - `TrendSongSchema`
     - `trendSongsEndpoint`
-    - `youtubeVideoId`
 - Cross-plugin:
   - Imported by:
     - `apps/chord/curriculum`

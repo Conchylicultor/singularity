@@ -1,0 +1,12 @@
+// @hash cc12a6d740a7
+{
+  // Where the Beat This! beat tracker runs. The output is the same on either; the GPU is several times faster.
+  // Allowed values: "auto", "cpu", "mps"
+  "device": "auto",
+  // Which Beat This! checkpoint tracks beats and downbeats. Features computed with each model are cached separately.
+  // Allowed values: "small0", "final0"
+  "beatModel": "final0",
+  // How the per-beat pitch-class profiles (treble and bass) are computed. Both compensate tuning. Features computed with each are cached separately.
+  // Allowed values: "fast", "full"
+  "chroma": "fast"
+}

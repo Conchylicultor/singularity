@@ -1,0 +1,15 @@
+# The YouTube audio fetcher: yt-dlp, with yt-dlp-ejs for the JavaScript
+# challenges YouTube now serves (solved by bun, passed in as a JS runtime).
+# Installed on first use as the `youtube-audio` dependency and run with
+# runPython. Its own project, apart from the audio analysis one, so a yt-dlp
+# bump (roughly weekly) reinstalls ≈15 MB, never torch.
+[project]
+name = "youtube-audio"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["yt-dlp", "yt-dlp-ejs"]
+
+[tool.uv]
+# Not a package: its source runs from the checkout (PYTHONPATH), never
+# installed into the shared env.
+package = false

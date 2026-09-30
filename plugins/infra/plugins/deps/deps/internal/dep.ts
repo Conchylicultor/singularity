@@ -155,7 +155,7 @@ type BundleField<S extends DepSource> = S extends {
 export type DefineDepSpec<S extends DepSource> = {
   /** Stable id: the cache dir name and the CLI argument. `^[a-z][a-z0-9-]*$`. */
   id: string;
-  /** The declaring plugin's path, e.g. `infra/deps/hello-python`. */
+  /** The declaring plugin's path, e.g. `infra/audio-analysis`. */
   owner: string;
   description: string;
   /** A human estimate of the install's size, e.g. `≈40 MB`. */

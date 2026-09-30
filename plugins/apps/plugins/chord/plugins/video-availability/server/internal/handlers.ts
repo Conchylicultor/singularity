@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import { youtubeVideoId } from "@plugins/integrations/plugins/hooktheory/core";
+import { youtubeVideoId } from "@plugins/integrations/plugins/youtube/core";
 import {
   reportPlaybackEndpoint,
   videoStatusSummaryEndpoint,

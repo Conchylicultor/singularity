@@ -229,11 +229,13 @@ count accumulates across drops.
     - `debug/timeline`
     - `debug/worktree-cleanup`
     - `infra/attachments`
+    - `infra/audio-analysis`
     - `infra/deps`
     - `infra/deps/updates`
     - `infra/events-test`
     - `infra/host/duress`
     - `infra/jobs`
+    - `integrations/youtube/audio-fetch`
     - `page/annotations/agent-access`
     - `primitives/live-state`
     - `release`

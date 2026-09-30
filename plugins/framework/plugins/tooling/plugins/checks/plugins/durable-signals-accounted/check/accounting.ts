@@ -128,6 +128,10 @@ export const ACCOUNTING: Record<string, SinkAccounting> = {
     consumer: "internal",
     note: "Detached deps.install child transcript (infra/deps): one dependency install requested from the app, its progress and its installer's output. Failures surface as the dependency's `failed` state (its failed.json, pushed on deps.states and shown in Settings → Dependencies) and the job dead-letter.",
   },
+  "audio-analysis": {
+    consumer: "internal",
+    note: "Detached audio-analysis.beat-features child transcript (infra/audio-analysis): one video's audio download, dependency install and extractor output. Failures surface as the video's `failed` beat-features state (its failed.json, read by GET /api/audio-analysis/beat-features/:videoId) and the job dead-letter.",
+  },
   "chord-video-check": {
     consumer: "internal",
     note: "On-demand oEmbed checks that settled nothing (apps/chord/video-availability): no answer (timeout, network) or a code that says nothing about the video. Forensic only — nothing durable reads it. By design such a check fails open: the video stays `unknown`, the loop is still offered, and the next query or the player's own report settles it, so a stuck YouTube shows as rows that never leave `unknown` in chord_video_status_v, not as a report.",

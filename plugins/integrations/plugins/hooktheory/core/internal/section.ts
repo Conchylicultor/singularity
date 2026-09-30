@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TheorytabSectionSchema, type TheorytabSection } from "./schemas";
 import { parseOrThrow } from "./parse";
-import { youtubeVideoId } from "./youtube";
+import { youtubeVideoId } from "@plugins/integrations/plugins/youtube/core";
 
 /**
  * The harmony half of a Hookpad document: everything but the melody. zod strips

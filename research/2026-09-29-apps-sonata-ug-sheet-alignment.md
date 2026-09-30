@@ -89,6 +89,50 @@ but must keep their shape and meaning, and record any change here.
 - the audio duration, and the analysis version (so a better model triggers a
   re-analysis instead of mixing old and new results).
 
+*Contract 1 as built* (`BeatFeaturesSchema` in
+`@plugins/infra/plugins/audio-analysis/core`, `ANALYSIS_VERSION = 2`; read it
+with `ensureBeatFeatures(videoId, exec)` from a job, or `readBeatFeatures` /
+`GET /api/audio-analysis/beat-features/:videoId` for the state):
+
+```ts
+BeatFeatures = {
+  videoId: string;
+  analysisVersion: number;        // bump ⇒ re-analysis; also in the cache path
+                                  // (beat-features/v<N>/<settingsKey>/<videoId>.json)
+  durationSec: number;
+  sampleRate: number;             // 22050, of the analysed signal
+  tuningCents: number;            // offset from A440, already compensated in the chroma
+  beats: {                        // beat i spans [t, beats[i+1].t); the last ends at durationSec
+    t: number;                    // seconds (Beat This! runs at 50 fps: 20 ms steps)
+    downbeat: boolean;
+    barPos: number;               // 1-based position in its bar; 0 before the first downbeat
+    chroma: number[12];           // C..B, treble CQT (MIDI 48–95), harmonic part, log-compressed,
+                                  // beat-synchronous median, max-normalised (the top bin is 1)
+    bass: number[12];             // same, bass range (MIDI 28–52)
+    rms: number;                  // the span's RMS relative to the song's loudest beat, 0–1
+  }[];
+  source: {
+    audioFormat: string; ytDlpVersion: string;
+    model: string;                // e.g. "beat_this small0"
+    device: "cpu" | "mps";        // where the beat tracker ran ("auto" resolved)
+    settings: { beatModel: "small0" | "final0"; chroma: "fast" | "full" };
+  };
+}
+```
+
+The settings are user config (Settings → Config, `infra/audio-analysis`),
+defaulting to `final0` + `fast` chroma, device `auto` (`small0` is faster but
+misplaces downbeats on sparse songs). The settings that change the output key
+the cache (`settingsKey`: `final0-fastchroma`), so
+results computed with different settings never mix, and switching back reuses
+the earlier entry; the device does not (CPU and MPS give identical features).
+
+Additions over the list above: `barPos`, `tuningCents`, `rms` and `source`.
+Floats are rounded to 4 decimals (65–150 KB per song as measured). Beats are
+raw: tempo-octave errors are not corrected (Someone Like You came out at
+double tempo, 136 BPM), so B must tolerate half and double grids. Bars are
+not always 4 beats (Let It Be: 83 %).
+
 **2. Alignment record**: produced by B, consumed by B's `compile()` and by C.
 Per song:
 
