@@ -3200,6 +3200,10 @@
       "name": "@singularity/plugin-infra-attachments",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/audio-analysis": {
+      "name": "@singularity/plugin-infra-audio-analysis",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/background": {
       "name": "@singularity/plugin-infra-background",
       "version": "0.0.1",
@@ -3238,10 +3242,6 @@
     },
     "plugins/infra/plugins/deps/plugins/download": {
       "name": "@singularity/plugin-infra-deps-download",
-      "version": "0.0.1",
-    },
-    "plugins/infra/plugins/deps/plugins/hello-python": {
-      "name": "@singularity/plugin-infra-deps-hello-python",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/deps/plugins/mise": {
@@ -3484,6 +3484,10 @@
     },
     "plugins/integrations/plugins/youtube": {
       "name": "@singularity/plugin-integrations-youtube",
+      "version": "0.0.1",
+    },
+    "plugins/integrations/plugins/youtube/plugins/audio-fetch": {
+      "name": "@singularity/plugin-integrations-youtube-audio-fetch",
       "version": "0.0.1",
     },
     "plugins/layouts": {
@@ -7596,6 +7600,8 @@
 
     "@singularity/plugin-infra-attachments": ["@singularity/plugin-infra-attachments@workspace:plugins/infra/plugins/attachments"],
 
+    "@singularity/plugin-infra-audio-analysis": ["@singularity/plugin-infra-audio-analysis@workspace:plugins/infra/plugins/audio-analysis"],
+
     "@singularity/plugin-infra-background": ["@singularity/plugin-infra-background@workspace:plugins/infra/plugins/background"],
 
     "@singularity/plugin-infra-background-catalog": ["@singularity/plugin-infra-background-catalog@workspace:plugins/infra/plugins/background/plugins/catalog"],
@@ -7615,8 +7621,6 @@
     "@singularity/plugin-infra-deps-build": ["@singularity/plugin-infra-deps-build@workspace:plugins/infra/plugins/deps/plugins/build"],
 
     "@singularity/plugin-infra-deps-download": ["@singularity/plugin-infra-deps-download@workspace:plugins/infra/plugins/deps/plugins/download"],
-
-    "@singularity/plugin-infra-deps-hello-python": ["@singularity/plugin-infra-deps-hello-python@workspace:plugins/infra/plugins/deps/plugins/hello-python"],
 
     "@singularity/plugin-infra-deps-mise": ["@singularity/plugin-infra-deps-mise@workspace:plugins/infra/plugins/deps/plugins/mise"],
 
@@ -7729,6 +7733,8 @@
     "@singularity/plugin-integrations-hooktheory": ["@singularity/plugin-integrations-hooktheory@workspace:plugins/integrations/plugins/hooktheory"],
 
     "@singularity/plugin-integrations-youtube": ["@singularity/plugin-integrations-youtube@workspace:plugins/integrations/plugins/youtube"],
+
+    "@singularity/plugin-integrations-youtube-audio-fetch": ["@singularity/plugin-integrations-youtube-audio-fetch@workspace:plugins/integrations/plugins/youtube/plugins/audio-fetch"],
 
     "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
 

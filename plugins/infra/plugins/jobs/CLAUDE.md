@@ -705,6 +705,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `debug/slow-ops`
     - `improve`
     - `infra/attachments`
+    - `infra/audio-analysis`
     - `infra/deps`
     - `infra/deps/updates`
     - `infra/events`
@@ -713,6 +714,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `infra/jobs/deadline-audit`
     - `infra/jobs/supervised-job`
     - `infra/retention`
+    - `integrations/youtube/audio-fetch`
     - `page/attachment-block`
     - `page/inline-date`
     - `page/links`

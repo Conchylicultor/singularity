@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { ensureDep } from "@plugins/infra/plugins/deps/server";
-import { runPython } from "@plugins/infra/plugins/deps/plugins/python/server";
+import { ensureDep } from "@plugins/infra/plugins/deps/deps";
+import { runPython } from "@plugins/infra/plugins/deps/plugins/python/deps";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { fetchYouTubeAudio } from "@plugins/integrations/plugins/youtube/plugins/audio-fetch/server";
 import type { AnalysisSettings } from "../../core";
-import { audioPythonDep } from "./dep";
+import { audioPythonDep } from "../../deps";
 import { configuredAnalysis } from "./settings";
 import { cacheRoot, featurePaths } from "./store";
 

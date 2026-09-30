@@ -45,14 +45,7 @@ const audio = await fetchYouTubeAudio(videoId, exec, { log });
 
 - Description: YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable). The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
 - Server:
-  - Contributes: `dep` "youtube-audio"
   - Uses:
-    - `infra/deps.defineDep`
-    - `infra/deps.DepDeclare`
-    - `infra/deps.ensureDep`
-    - `infra/deps/python.PythonEntryError`
-    - `infra/deps/python.pythonEnv`
-    - `infra/deps/python.runPython`
     - `infra/jobs.defineJob`
     - `infra/jobs.NonRetryableError`
     - `primitives/log-channels.Log`
@@ -61,9 +54,13 @@ const audio = await fetchYouTubeAudio(videoId, exec, { log });
     - `YouTubeAudio`
   - Exports (values):
     - `fetchYouTubeAudio`
-    - `youtubeAudioDep`
     - `YouTubeAudioUnavailableError`
   - Register: `defineJob('youtube-audio.sweep')`
+- Deps:
+  - Uses:
+    - `infra/deps.defineDep`
+    - `infra/deps/python.pythonEnv`
+  - Exports (values): `youtubeAudioDep`
 - Cross-plugin:
   - Imported by: `infra/audio-analysis`
 

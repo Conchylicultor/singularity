@@ -8745,7 +8745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -8967,6 +8967,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/trace/engine`
       - `fields/secret/config`
       - `framework/tooling/codegen`
+      - `infra/audio-analysis`
       - `infra/host/duress`
       - `integrations/gmail`
       - `plugin-meta/composition`
@@ -18044,6 +18045,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `withNotifyBatch`
       - Cross-plugin:
         - Imported by:
+          - `infra/audio-analysis`
           - `infra/deps`
           - `infra/jobs/supervised-job`
       - Cli:
@@ -19139,6 +19141,64 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
           - `tasks/tasks-core`
         - Endpoint callers: `task-attachments`
+    - **`audio-analysis`** — The audio-analysis settings registration (beat tracker device and model, chroma variant), so they appear in Settings → Config. Audio analysis of YouTube videos on the on-demand `audio-python` dependency: ensureBeatFeatures(videoId, exec) fetches the audio, runs Beat This! (beats, downbeats, no DBN) and a librosa CQT chroma out of process under one background unit of host admission, and caches the validated features host-wide per video, analysis version and settings (beat model, chroma variant — user config, with the fast ones as defaults; the device is config too) under a per-entry host flock; readBeatFeatures answers absent / running / ready / failed from the files, and requestBeatFeatures (GET/POST /api/audio-analysis/beat-features/:videoId) enqueues the audio-analysis.beat-features supervised job.
+      - Web:
+        - Contributes: `ConfigV2.WebRegister` "config"
+        - Uses: `config_v2.ConfigV2`
+      - Server:
+        - Contributes: `ConfigV2.Register` "config"
+        - Uses:
+          - `config_v2.ConfigV2`
+          - `config_v2.getConfig`
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `infra/jobs.isNonRetryableError`
+          - `infra/jobs/supervised-job.defineSupervisedJob`
+          - `integrations/youtube/audio-fetch.fetchYouTubeAudio`
+          - `primitives/log-channels.defineLogSink`
+        - Exports (types): `EnsureBeatFeaturesOptions`
+        - Exports (values):
+          - `ensureBeatFeatures`
+          - `readBeatFeatures`
+          - `requestBeatFeatures`
+          - `sonifyBeatFeatures`
+        - Register: `defineSupervisedJob('audio-analysis.beat-features')`
+        - Routes:
+          - `GET /api/audio-analysis/beat-features/:videoId`
+          - `POST /api/audio-analysis/beat-features/:videoId`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (types):
+          - `AnalysisDevice`
+          - `AnalysisPhase`
+          - `AnalysisSettings`
+          - `Beat`
+          - `BeatFeatures`
+          - `BeatFeaturesState`
+          - `BeatModel`
+          - `ChromaVariant`
+        - Exports (values):
+          - `ANALYSIS_VERSION`
+          - `AnalysisDeviceSchema`
+          - `AnalysisPhaseSchema`
+          - `AnalysisSettingsSchema`
+          - `BeatFeaturesSchema`
+          - `BeatFeaturesStateSchema`
+          - `BeatModelSchema`
+          - `BeatSchema`
+          - `ChromaVariantSchema`
+          - `getBeatFeaturesEndpoint`
+          - `requestBeatFeaturesEndpoint`
+          - `settingsKey`
+      - Cli:
+        - Uses:
+          - `framework/server-core.runExec`
+          - `infra/jobs/supervised-job.cliExecContext`
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps/python.pythonEnv`
+        - Exports (values): `audioPythonDep`
     - **`background`** — Umbrella for what the app runs on its own: the catalog every background mechanism reports into, and the page that lists it.
       - Plugins:
         - **`catalog`** — Debug → Background activity: a DataView over the pushed background.catalog — everything this backend runs on its own, grouped by kind, with a status dot, the trigger in words and its next run, and the last run — and a detail pane per entry with its scope, declaring plugin, recent runs and Run now. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
@@ -19521,10 +19581,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/chord/song-index`
           - `apps/prototypes/thumbnails`
+          - `infra/audio-analysis`
           - `infra/deps/build`
-          - `infra/deps/hello-python`
           - `infra/launcher`
           - `infra/safe-fetch/browser-fetch`
+          - `integrations/youtube/audio-fetch`
           - `packages/signal-origin`
       - Deps:
         - Exports (types):
@@ -19590,18 +19651,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `download`
               - `downloadedFile`
-        - **`hello-python`** — A tiny real python/ uv project (numpy only) declared as the on-demand dependency `hello-python`: the deps python kind's end-to-end proof, deleted once the audio pipeline lands as the first real consumer.
-          - Deps:
-            - Uses:
-              - `infra/deps.defineDep`
-              - `infra/deps.Ready`
-              - `infra/deps/python.pythonEnv`
-              - `infra/deps/python.PythonEnvSource`
-              - `infra/deps/python.runPython`
-            - Exports (types): `HelloStats`
-            - Exports (values):
-              - `helloPython`
-              - `helloStats`
         - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the daily deps.detect-outdated job files its upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
           - Server:
             - Contributes: `updater` "mise"
@@ -19644,7 +19693,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `updater` "uv"
             - Uses: `infra/deps/updates.UpdaterDeclare`
           - Cross-plugin:
-            - Imported by: `infra/deps/hello-python`
+            - Imported by:
+              - `infra/audio-analysis`
+              - `integrations/youtube/audio-fetch`
           - Deps:
             - Exports (types):
               - `PythonEnvSource`
@@ -19871,6 +19922,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `history/dialog`
           - `history/engine`
           - `infra/attachments`
+          - `infra/audio-analysis`
           - `infra/background/catalog`
           - `infra/boot-snapshot`
           - `infra/claude-cli`
@@ -20815,6 +20867,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops`
           - `improve`
           - `infra/attachments`
+          - `infra/audio-analysis`
           - `infra/deps`
           - `infra/deps/updates`
           - `infra/events`
@@ -20823,6 +20876,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs/deadline-audit`
           - `infra/jobs/supervised-job`
           - `infra/retention`
+          - `integrations/youtube/audio-fetch`
           - `page/attachment-block`
           - `page/inline-date`
           - `page/links`
@@ -20960,6 +21014,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/release`
               - `framework/cli/serve-app`
               - `framework/cli/start`
+              - `infra/audio-analysis`
               - `infra/deps`
               - `infra/events-test`
               - `release`
@@ -22028,7 +22083,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GET /api/hooktheory/trends/songs`
           - `GET /api/hooktheory/sections/:id`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `integrations/youtube.youtubeVideoId`
         - Exports (types):
           - `HookpadChord`
           - `HookpadChordInput`
@@ -22074,7 +22131,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `trendNodesEndpoint`
           - `TrendSongSchema`
           - `trendSongsEndpoint`
-          - `youtubeVideoId`
       - Cross-plugin:
         - Imported by:
           - `apps/chord/curriculum`
@@ -22112,7 +22168,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `YouTubePlayer`
           - `YouTubePlayerNotReadyError`
       - Cross-plugin:
-        - Imported by: `apps/chord/trainer`
+        - Imported by:
+          - `apps/chord/trainer`
+          - `integrations/hooktheory`
+      - Core:
+        - Exports (values):
+          - `VideoIdSchema`
+          - `youtubeVideoId`
+      - Plugins:
+        - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable). The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
+          - Server:
+            - Uses:
+              - `infra/jobs.defineJob`
+              - `infra/jobs.NonRetryableError`
+              - `primitives/log-channels.Log`
+            - Exports (types):
+              - `FetchOptions`
+              - `YouTubeAudio`
+            - Exports (values):
+              - `fetchYouTubeAudio`
+              - `YouTubeAudioUnavailableError`
+            - Register: `defineJob('youtube-audio.sweep')`
+          - Deps:
+            - Uses:
+              - `infra/deps.defineDep`
+              - `infra/deps/python.pythonEnv`
+            - Exports (values): `youtubeAudioDep`
+          - Cross-plugin:
+            - Imported by: `infra/audio-analysis`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
@@ -32187,11 +32270,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/timeline`
           - `debug/worktree-cleanup`
           - `infra/attachments`
+          - `infra/audio-analysis`
           - `infra/deps`
           - `infra/deps/updates`
           - `infra/events-test`
           - `infra/host/duress`
           - `infra/jobs`
+          - `integrations/youtube/audio-fetch`
           - `page/annotations/agent-access`
           - `primitives/live-state`
           - `release`

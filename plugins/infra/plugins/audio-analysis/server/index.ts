@@ -1,9 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
-import { DepDeclare } from "@plugins/infra/plugins/deps/server";
 import { getBeatFeaturesEndpoint, requestBeatFeaturesEndpoint } from "../core";
 import { audioAnalysisConfig } from "../shared/config";
-import { audioPythonDep } from "./internal/dep";
 import {
   handleGetBeatFeatures,
   handleRequestBeatFeatures,
@@ -13,7 +11,6 @@ import { beatFeaturesJob } from "./internal/job";
 // Off the event loop (an ExecContext): `ensureBeatFeatures` (a chain job's run
 // body, the CLI) and `sonifyBeatFeatures`. Anywhere: `readBeatFeatures` (the
 // state, from files) and `requestBeatFeatures` (enqueues the job).
-export { audioPythonDep } from "./internal/dep";
 export { ensureBeatFeatures } from "./internal/ensure";
 export type { EnsureBeatFeaturesOptions } from "./internal/ensure";
 export { requestBeatFeatures } from "./internal/job";
@@ -28,8 +25,5 @@ export default {
     [requestBeatFeaturesEndpoint.route]: handleRequestBeatFeatures,
   },
   register: [beatFeaturesJob],
-  contributions: [
-    DepDeclare({ dep: audioPythonDep }),
-    ConfigV2.Register({ descriptor: audioAnalysisConfig }),
-  ],
+  contributions: [ConfigV2.Register({ descriptor: audioAnalysisConfig })],
 } satisfies ServerPluginDefinition;

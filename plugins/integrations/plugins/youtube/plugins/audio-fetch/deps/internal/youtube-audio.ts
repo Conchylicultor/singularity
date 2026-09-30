@@ -1,5 +1,5 @@
-import { defineDep } from "@plugins/infra/plugins/deps/server";
-import { pythonEnv } from "@plugins/infra/plugins/deps/plugins/python/server";
+import { defineDep } from "@plugins/infra/plugins/deps/deps";
+import { pythonEnv } from "@plugins/infra/plugins/deps/plugins/python/deps";
 
 /**
  * yt-dlp and yt-dlp-ejs, in their own Python project so the (roughly weekly)

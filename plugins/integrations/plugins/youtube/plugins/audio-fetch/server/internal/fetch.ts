@@ -1,10 +1,10 @@
 import { basename, dirname } from "node:path";
 import { z } from "zod";
-import { ensureDep } from "@plugins/infra/plugins/deps/server";
+import { ensureDep } from "@plugins/infra/plugins/deps/deps";
 import {
   PythonEntryError,
   runPython,
-} from "@plugins/infra/plugins/deps/plugins/python/server";
+} from "@plugins/infra/plugins/deps/plugins/python/deps";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import { VideoIdSchema } from "@plugins/integrations/plugins/youtube/core";
@@ -16,7 +16,7 @@ import {
   writeMeta,
   type AudioMeta,
 } from "./cache";
-import { youtubeAudioDep } from "./dep";
+import { youtubeAudioDep } from "../../deps";
 
 /** One video's audio, as downloaded: the stream YouTube served, untouched. */
 export interface YouTubeAudio {

@@ -34,6 +34,8 @@ const audioAnalysisLog = defineLogSink({
  */
 export const beatFeaturesJob = defineSupervisedJob({
   name: "audio-analysis.beat-features",
+  description:
+    "Downloads a YouTube video's audio and analyses its beats, downbeats and per-beat chroma, cached for every worktree.",
   input: z.object({
     videoId: VideoIdSchema,
     force: z.boolean().default(false),

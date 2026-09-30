@@ -113,7 +113,7 @@ export function parseUvLockVersions(text: string): Map<string, string> {
 
 /**
  * The package name a move of a project's interpreter (`.python-version`)
- * carries: `hello-python:cpython`. A hold on it holds a CPython release.
+ * carries: `audio-analysis:cpython`. A hold on it holds a CPython release.
  */
 export const CPYTHON = "cpython";
 

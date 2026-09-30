@@ -9,7 +9,9 @@
   - Contributes: `updater` "uv"
   - Uses: `infra/deps/updates.UpdaterDeclare`
 - Cross-plugin:
-  - Imported by: `infra/deps/hello-python`
+  - Imported by:
+    - `infra/audio-analysis`
+    - `integrations/youtube/audio-fetch`
 - Deps:
   - Exports (types):
     - `PythonEnvSource`

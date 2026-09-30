@@ -74,13 +74,13 @@ plugins/integrations/plugins/youtube/
   core/                    NEW barrel: VideoIdSchema (the 11-char regex) + youtubeVideoId(raw),
                            moved from integrations/hooktheory/core (importers updated; no re-export)
   plugins/audio-fetch/     NEW
-    python/                uv project, package=false: yt-dlp, yt-dlp-ejs; .python-version 3.12
+    python/                uv project, package=false: yt-dlp, yt-dlp-ejs; .python-version 3.14.7
       youtube_audio/fetch.py   stdin {videoId, outDir, bunPath} → stdout {file, ext, durationSec, title, channel, ytDlpVersion}
                                -f bestaudio, native container, no ffmpeg; --js-runtimes bun:<bunPath>;
                                downloads to a temp name, renames; yt-dlp's "unavailable" errors → exit 3 + message
     data-dirs/             cache/youtube-audio (reclaim: safe)
     server/
-      youtubeAudioDep      defineDep + DepDeclare
+      youtubeAudioDep      defineDep, in the plugin's deps/ barrel
       fetchYouTubeAudio(videoId, exec, {log}) → {path, meta}   hit ⇒ touch mtime, no Python;
                            miss ⇒ ensureDep + runPython under a per-video host flock; bunPath = process.execPath
       YouTubeAudioUnavailableError (extends NonRetryableError)
@@ -96,10 +96,10 @@ plugins/infra/plugins/audio-analysis/   NEW (single plugin; later extractors add
   data-dirs/               cache/beat-features (v<N>/<videoId>.json + .running.json / .failed.json),
                            cache/audio-models (TORCH_HOME for the Beat This! checkpoint; reclaim: safe)
   server/
-    audioPythonDep         defineDep + DepDeclare
+    audioPythonDep         defineDep, in the plugin's deps/ barrel
     ensureBeatFeatures(videoId, exec, {log, force?}) → BeatFeatures
         flock(videoId) → re-check → running.json → fetchYouTubeAudio → ensureDep(audioPythonDep)
-        → withHostGrant({lane:"background", max:1}) runPython(beat_features) → parse with the schema
+        → exec.admit(runPython(beat_features)) → parse with the schema
         → rename into place → clear running.json; on a throw write failed.json and rethrow
     readBeatFeatures(videoId) → absent | running{since, phase} | ready{features} | failed{message, at, permanent}
     requestBeatFeatures(videoId, {force?})   enqueues the job unless ready or permanently failed
@@ -212,7 +212,7 @@ Run on the four reference songs with the locked env synced into a scratch dir
   - `audio-python` env: **≈950 MB** installed (torch 549 MB, llvmlite 129 MB,
     scipy 70 MB, av 44 MB, sklearn 31 MB, sympy 29 MB, numpy 24 MB). A warm uv
     cache syncs it in 7 s.
-  - The uv-managed CPython 3.12: 71 MB (shared with every Python dep).
+  - The uv-managed CPython (3.14.7 pin): ≈70 MB (shared with every Python dep).
   - The Beat This! `final0` checkpoint: 81 MB in `cache/audio-models`.
   - `youtube-audio` env: 16 MB.
   - Features: 65–150 KB per song (4-decimal floats, compact JSON).

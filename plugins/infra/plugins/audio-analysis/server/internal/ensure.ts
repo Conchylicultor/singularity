@@ -1,9 +1,8 @@
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
-import { ensureDep } from "@plugins/infra/plugins/deps/server";
-import { runPython } from "@plugins/infra/plugins/deps/plugins/python/server";
-import { withHostGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
+import { ensureDep } from "@plugins/infra/plugins/deps/deps";
+import { runPython } from "@plugins/infra/plugins/deps/plugins/python/deps";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { isNonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import { VideoIdSchema } from "@plugins/integrations/plugins/youtube/core";
@@ -19,7 +18,7 @@ import {
   type BeatFeatures,
 } from "../../core";
 import { audioModelsCacheDir } from "../../data-dirs";
-import { audioPythonDep } from "./dep";
+import { audioPythonDep } from "../../deps";
 import { configuredAnalysis } from "./settings";
 import type { FailedFile, RunningFile } from "./state";
 import {
@@ -147,7 +146,7 @@ async function analyse(
     phase("installing");
     const ready = await ensureDep(audioPythonDep, exec, { log: say });
     phase("analysing");
-    const summary = await withHostGrant({ lane: "background", max: 1 }, () =>
+    const summary = await exec.admit(() =>
       runPython(ready, {
         module: "singularity_audio.beat_features",
         input: {

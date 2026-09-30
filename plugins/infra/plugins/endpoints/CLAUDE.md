@@ -350,6 +350,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `history/dialog`
     - `history/engine`
     - `infra/attachments`
+    - `infra/audio-analysis`
     - `infra/background/catalog`
     - `infra/boot-snapshot`
     - `infra/claude-cli`

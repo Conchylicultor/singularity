@@ -13,6 +13,8 @@ const log = Log.channel("youtube-audio");
  */
 export const youtubeAudioSweepJob = defineJob({
   name: "youtube-audio.sweep",
+  description:
+    "Deletes downloaded YouTube audio unused for 30 days, then the oldest past 2 GB, so the cache stays small.",
   hold: "seconds",
   input: z.object({}),
   event: z.never(),
