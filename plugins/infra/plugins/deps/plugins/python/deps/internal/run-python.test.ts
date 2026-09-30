@@ -1,17 +1,28 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { z } from "zod";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { defineDep } from "@plugins/infra/plugins/deps/deps";
 import { readyForTests } from "@plugins/infra/plugins/deps/deps/testing";
 import { pythonEnv } from "./python-env";
 import { PythonEntryError, runPython } from "./run-python";
+import { uvEnv } from "./uv";
 
-// The runPython contract, against the machine's own python3 standing in for an
-// installed env (no uv, no network): a fake env whose bin/python links to it,
-// and a throwaway project holding the modules.
+// The runPython contract, against a uv-managed CPython standing in for an
+// installed env: a fake env whose bin/python links to it (as a real env's
+// does), and a throwaway project holding the modules. Never the machine's own
+// python3: on macOS that is an xcode-select shim, which pops the "install the
+// command line developer tools" dialog when run under a name it does not know
+// (`python`) or on a machine without the tools.
 let base: string;
 let ready: ReturnType<typeof makeReady>;
 
@@ -27,18 +38,41 @@ function makeReady() {
   return readyForTests(dep, join(base, "env"), "test-identity");
 }
 
-beforeAll(() => {
+/** `uv python <args>` under the python kind's own env (managed Pythons only). */
+async function uvPython(args: string[]) {
+  // From the repo root: its mise.lock picks the uv release (the shim refuses
+  // a directory with no mise config, like the temp dir).
+  return spawnCaptured(["uv", "python", ...args], {
+    cwd: REPO_ROOT,
+    env: uvEnv(),
+    timeoutMs: 10 * 60_000,
+  });
+}
+
+/**
+ * A uv-managed interpreter: any one already downloaded into the declared
+ * `cache/uv-python`, else the newest (one download, then cached).
+ */
+async function managedPython(): Promise<string> {
+  let found = await uvPython(["find", "--no-project"]);
+  if (found.exitCode !== 0) {
+    // `--no-bin`: no `python3.x` link dropped into ~/.local/bin.
+    const install = await uvPython(["install", "--no-bin"]);
+    if (install.exitCode !== 0) {
+      throw new Error(`uv python install failed: ${install.stderr.trim()}`);
+    }
+    found = await uvPython(["find", "--no-project"]);
+  }
+  if (found.exitCode !== 0) {
+    throw new Error(`uv python find failed: ${found.stderr.trim()}`);
+  }
+  return found.stdout.trim();
+}
+
+beforeAll(async () => {
   base = mkdtempSync(join(tmpdir(), "run-python-"));
   mkdirSync(join(base, "env", "bin"), { recursive: true });
-  // A wrapper, not a symlink: macOS's /usr/bin/python3 is an xcode-select shim
-  // that dispatches on its own argv[0], and `python` is not a name it knows.
-  writeFileSync(
-    join(base, "env", "bin", "python"),
-    '#!/bin/sh\nexec python3 "$@"\n',
-    {
-      mode: 0o755,
-    },
-  );
+  symlinkSync(await managedPython(), join(base, "env", "bin", "python"));
   const pkg = join(base, "project", "fixture");
   mkdirSync(pkg, { recursive: true });
   writeFileSync(join(pkg, "__init__.py"), "");
@@ -52,7 +86,7 @@ beforeAll(() => {
   );
   writeFileSync(join(pkg, "chatty.py"), 'print("not json")\n');
   ready = makeReady();
-});
+}, 10 * 60_000);
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 
 describe("runPython", () => {

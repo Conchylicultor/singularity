@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type {
   Move,
@@ -24,7 +25,8 @@ export const UV_COOLDOWN_DAYS = 3;
  * Releases not to move to, each with the upstream issue that makes it broken.
  * Added by the agent running a `uv` upgrade when a new release regresses
  * something that is not ours to fix; remove it once a newer release ships past
- * it. The updater never plans a move onto a held release.
+ * it. The updater never plans a move onto a held release. A CPython release is
+ * held by the name {@link CPYTHON} (`{ name: "cpython", version: "3.15.0" }`).
  */
 export const UV_HOLDS: readonly UpdaterHold[] = [];
 
@@ -109,6 +111,100 @@ export function parseUvLockVersions(text: string): Map<string, string> {
   return versions;
 }
 
+/**
+ * The package name a move of a project's interpreter (`.python-version`)
+ * carries: `hello-python:cpython`. A hold on it holds a CPython release.
+ */
+export const CPYTHON = "cpython";
+
+/** A stable CPython build uv can download, and the day it was published. */
+export interface CpythonDownload {
+  version: string;
+  /** `YYYY-MM-DD` of the python-build-standalone release carrying the build. */
+  published: string;
+}
+
+const pythonListSchema = z.array(
+  z.object({
+    version: z.string(),
+    implementation: z.string(),
+    variant: z.string(),
+    url: z.string().nullable(),
+  }),
+);
+
+/**
+ * The stable, default-variant CPython builds in a `uv python list
+ * --only-downloads --output-format json`. Pre-releases (`3.15.0rc2`) and the
+ * freethreaded/debug variants are never candidates. A build's publish day is
+ * its python-build-standalone release tag (`…/download/20260924/…`); with
+ * `--all-versions` each version is listed at the newest release that still
+ * carries it, so the day is never earlier than the version's own — a
+ * cooldown measured from it is conservative.
+ */
+export function parseCpythonDownloads(json: string): CpythonDownload[] {
+  const out: CpythonDownload[] = [];
+  for (const d of pythonListSchema.parse(JSON.parse(json))) {
+    if (d.implementation !== "cpython" || d.variant !== "default") continue;
+    if (!/^\d+\.\d+\.\d+$/.test(d.version) || d.url === null) continue;
+    const day = /\/download\/(\d{4})(\d{2})(\d{2})\//.exec(d.url);
+    if (day === null) {
+      throw new Error(
+        `CPython ${d.version}'s download URL carries no release day: ${d.url}`,
+      );
+    }
+    out.push({
+      version: d.version,
+      published: `${day[1]}-${day[2]}-${day[3]}`,
+    });
+  }
+  return out;
+}
+
+/**
+ * The newest CPython published on or before `cutoff` (an ISO instant from
+ * {@link uvCutoff}) and not held, or `null` when none is.
+ */
+export function newestCpython(
+  downloads: readonly CpythonDownload[],
+  cutoff: string,
+): string | null {
+  let best: string | null = null;
+  for (const d of downloads) {
+    if (`${d.published}T00:00:00.000Z` > cutoff) continue;
+    if (isHeld(CPYTHON, d.version)) continue;
+    if (best === null || isNewerRelease(d.version, best)) best = d.version;
+  }
+  return best;
+}
+
+/** Every CPython build this checkout's uv can download for this machine. */
+async function cpythonDownloads(root: string): Promise<CpythonDownload[]> {
+  const argv = [
+    "uv",
+    "python",
+    "list",
+    "--only-downloads",
+    "--all-versions",
+    "--output-format",
+    "json",
+  ];
+  const result = await spawnCaptured(argv, {
+    cwd: root,
+    env: uvEnv(),
+    timeoutMs: MINUTE,
+  });
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `\`${argv.join(" ")}\` failed (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}): ${result.stderr.trim()}`,
+    );
+  }
+  return parseCpythonDownloads(result.stdout);
+}
+
+const pythonVersionFile = (root: string, project: UvProject): string =>
+  join(root, project.dir, ".python-version");
+
 async function uvLock(
   root: string,
   project: UvProject,
@@ -161,23 +257,44 @@ const moveName = (project: UvProject, pkg: string): string =>
   `${project.label}:${pkg}`;
 
 /**
- * Every `python/` project's `uv.lock`, moved with `uv lock` under a
- * {@link UV_COOLDOWN_DAYS}-day `exclude-newer` cooldown. Each move is one
- * package, pinned to the exact version planned (`--upgrade-package
- * name==version`), so the apply lands exactly what the plan named and a held
- * release is never adopted.
+ * Every `python/` project's `uv.lock` and `.python-version`, under one
+ * {@link UV_COOLDOWN_DAYS}-day release cooldown.
+ *
+ * - **Packages** move with `uv lock` under `exclude-newer`. Each move is one
+ *   package, pinned to the exact version planned (`--upgrade-package
+ *   name==version`), so the apply lands exactly what the plan named and a held
+ *   release is never adopted.
+ * - **The interpreter** (`<plugin>:cpython`) moves to the newest stable CPython
+ *   the pinned uv can download that is past the cooldown, written as an exact
+ *   version so the env's identity changes with it. A new minor (3.14 → 3.15) is
+ *   an ordinary move: the gates decide whether it works.
  */
 export const uvUpdater: Updater = {
   id: "uv",
-  description: `Every python/ project's uv.lock (uv lock, ${UV_COOLDOWN_DAYS}-day release cooldown)`,
+  description: `Every python/ project's uv.lock and .python-version (${UV_COOLDOWN_DAYS}-day release cooldown)`,
 
   files: async (root) =>
-    (await uvProjects(root)).map((p) => join(p.dir, "uv.lock")),
+    (await uvProjects(root)).flatMap((p) => [
+      join(p.dir, "uv.lock"),
+      join(p.dir, ".python-version"),
+    ]),
 
   async detect(root): Promise<Outdated[]> {
     const cutoff = uvCutoff(new Date());
+    const cpython = newestCpython(await cpythonDownloads(root), cutoff);
     const out: Outdated[] = [];
     for (const project of await uvProjects(root)) {
+      const pinned = readFileSync(
+        pythonVersionFile(root, project),
+        "utf8",
+      ).trim();
+      if (cpython !== null && isNewerRelease(cpython, pinned)) {
+        out.push({
+          name: moveName(project, CPYTHON),
+          current: pinned,
+          latest: cpython,
+        });
+      }
       const output = await uvLock(root, project, [
         "--upgrade",
         "--dry-run",
@@ -222,7 +339,15 @@ export const uvUpdater: Updater = {
   async apply(root, moves, log) {
     const cutoff = uvCutoff(new Date());
     for (const project of await uvProjects(root)) {
-      const mine = moves.filter((m) => m.name.startsWith(`${project.label}:`));
+      const ours = moves.filter((m) => m.name.startsWith(`${project.label}:`));
+      const interpreter = ours.find(
+        (m) => m.name === moveName(project, CPYTHON),
+      );
+      if (interpreter !== undefined) {
+        log(`  ${project.dir}/.python-version → ${interpreter.to}`);
+        writeFileSync(pythonVersionFile(root, project), `${interpreter.to}\n`);
+      }
+      const mine = ours.filter((m) => m !== interpreter);
       if (mine.length === 0) continue;
       const pins = mine.flatMap((m) => [
         "--upgrade-package",

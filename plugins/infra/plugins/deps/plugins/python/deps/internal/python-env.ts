@@ -31,7 +31,8 @@ function sha256(path: string): string {
  *   the same lock while each runs its own code.
  * - **Install**: uv downloads its own CPython into the declared
  *   `cache/uv-python`; the system Python is never used.
- * - **Kept current** by the `uv` updater, which moves the project's `uv.lock`.
+ * - **Kept current** by the `uv` updater, which moves the project's `uv.lock`
+ *   and its exact `.python-version` pin.
  */
 export function pythonEnv(opts: { project: string }): PythonEnvSource {
   const { project } = opts;
@@ -51,6 +52,17 @@ export function pythonEnv(opts: { project: string }): PythonEnvSource {
           );
         }
         inputs[file] = sha256(path);
+      }
+      // `3.12` would let two machines on the same identity run different
+      // patch releases; the `uv` updater moves the exact pin.
+      const pinned = readFileSync(
+        join(root, project, ".python-version"),
+        "utf8",
+      ).trim();
+      if (!/^\d+\.\d+\.\d+$/.test(pinned)) {
+        throw new Error(
+          `${project}/.python-version is "${pinned}": pin an exact CPython release (e.g. 3.14.7), which the uv updater keeps current.`,
+        );
       }
       inputs.uv = await uvVersion(root);
       return inputs;

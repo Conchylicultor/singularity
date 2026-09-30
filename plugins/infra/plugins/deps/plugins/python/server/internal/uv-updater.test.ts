@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   isNewerRelease,
+  newestCpython,
+  parseCpythonDownloads,
   parseLockUpdates,
   parseUvLockVersions,
   uvCutoff,
@@ -58,5 +60,57 @@ source = { registry = "https://pypi.org/simple" }
     expect(isNewerRelease("2.5.0", "2.5.3")).toBe(false);
     expect(isNewerRelease("2026.9.2", "2026.8.1")).toBe(true);
     expect(isNewerRelease("1.0", "1.0.0")).toBe(false);
+  });
+});
+
+describe("uv updater interpreter", () => {
+  const entry = (version: string, day: string, extra: object = {}) => ({
+    key: `cpython-${version}-macos-aarch64-none`,
+    version,
+    implementation: "cpython",
+    variant: "default",
+    url: `https://releases.astral.sh/github/python-build-standalone/releases/download/${day}/cpython-${version}%2B${day}-aarch64-apple-darwin-install_only_stripped.tar.gz`,
+    ...extra,
+  });
+
+  test("keeps stable default CPython builds with their publish day", () => {
+    const json = JSON.stringify([
+      entry("3.15.0rc2", "20260924"),
+      entry("3.14.7", "20260924", { variant: "freethreaded" }),
+      entry("3.14.7", "20260924"),
+      entry("3.14.6", "20260804"),
+      entry("7.3.20", "20260804", { implementation: "pypy" }),
+      { ...entry("3.13.15", "20260924"), url: null },
+    ]);
+    expect(parseCpythonDownloads(json)).toEqual([
+      { version: "3.14.7", published: "2026-09-24" },
+      { version: "3.14.6", published: "2026-08-04" },
+    ]);
+  });
+
+  test("a download URL without a release day fails loudly", () => {
+    const json = JSON.stringify([
+      { ...entry("3.14.7", "20260924"), url: "https://example.com/py.tgz" },
+    ]);
+    expect(() => parseCpythonDownloads(json)).toThrow(/no release day/);
+  });
+
+  test("picks the newest release past the cooldown, across minors", () => {
+    const downloads = [
+      { version: "3.12.14", published: "2026-09-24" },
+      { version: "3.14.6", published: "2026-08-04" },
+      { version: "3.14.7", published: "2026-09-24" },
+      { version: "3.13.15", published: "2026-09-24" },
+    ];
+    expect(newestCpython(downloads, "2026-09-27T00:00:00.000Z")).toBe("3.14.7");
+    // 3.14.7 is inside the cooldown: fall back to the newest one outside it.
+    expect(newestCpython(downloads, "2026-09-23T00:00:00.000Z")).toBe("3.14.6");
+    expect(newestCpython(downloads, "2026-01-01T00:00:00.000Z")).toBeNull();
+  });
+
+  test("an exact pin is older than a newer patch, and a loose one is too", () => {
+    expect(isNewerRelease("3.14.7", "3.12")).toBe(true);
+    expect(isNewerRelease("3.12.14", "3.12")).toBe(true);
+    expect(isNewerRelease("3.14.7", "3.14.7")).toBe(false);
   });
 });
