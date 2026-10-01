@@ -66,7 +66,10 @@ const SELECTED_MARK = " selected";
  * `notes:`/`preview:` annotations the harness appends. Preview text is rendered
  * from the tool input, so it is only used here to bound the answer and notes.
  */
-function splitAnnotations(value: string): { answer: string; notes: string | null } {
+function splitAnnotations(value: string): {
+  answer: string;
+  notes: string | null;
+} {
   const notesIdx = value.indexOf(NOTES_MARK);
   const previewIdx = value.indexOf(PREVIEW_MARK);
   const marks = [notesIdx, previewIdx].filter((i) => i >= 0);
@@ -104,8 +107,11 @@ export function parseAnswerMap(
   const payload = extractPayload(content);
 
   const answers: Record<string, ParsedAnswer> = {};
-  const anchors: { question: string; anchorStart: number; valueStart: number }[] =
-    [];
+  const anchors: {
+    question: string;
+    anchorStart: number;
+    valueStart: number;
+  }[] = [];
 
   for (const q of questions) {
     // Anchor on `"<question>"=` only — the value may be a quoted option or the
@@ -178,6 +184,9 @@ export function parseMarkerAnswer(
   return answers;
 }
 
+// Separator the harness (and `serializeAnswers`) joins multi-select parts with.
+const SEPARATOR = ", ";
+
 export function parseSelectedLabels(
   answer: string | undefined,
   options: QuestionOption[],
@@ -188,20 +197,39 @@ export function parseSelectedLabels(
     return { selected: new Set([answer]), otherText: null };
   }
 
-  const parts = answer.split(", ");
-  const labelSet = new Set(options.map((o) => o.label));
+  // Labels may themselves contain ", " (e.g. "46px toolbar, no border"), so the
+  // answer cannot be split on the separator first. Walk it instead: at each
+  // part boundary, claim the longest option label that ends on a boundary;
+  // anything no label claims is free-form text, kept verbatim.
+  const labels = [...new Set(options.map((o) => o.label))].sort(
+    (a, b) => b.length - a.length,
+  );
   const matched = new Set<string>();
   const unmatched: string[] = [];
 
-  for (const part of parts) {
-    if (labelSet.has(part)) matched.add(part);
-    else unmatched.push(part);
+  let i = 0;
+  while (i <= answer.length) {
+    const label = labels.find(
+      (l) =>
+        answer.startsWith(l, i) &&
+        (i + l.length === answer.length ||
+          answer.startsWith(SEPARATOR, i + l.length)),
+    );
+    if (label != null) {
+      matched.add(label);
+      i += label.length + SEPARATOR.length;
+      continue;
+    }
+    const next = answer.indexOf(SEPARATOR, i);
+    const end = next === -1 ? answer.length : next;
+    unmatched.push(answer.slice(i, end));
+    i = end + SEPARATOR.length;
   }
 
   if (matched.size > 0) {
     return {
       selected: matched,
-      otherText: unmatched.length > 0 ? unmatched.join(", ") : null,
+      otherText: unmatched.length > 0 ? unmatched.join(SEPARATOR) : null,
     };
   }
 
