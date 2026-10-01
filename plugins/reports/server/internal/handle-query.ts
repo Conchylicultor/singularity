@@ -5,6 +5,7 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { SortRule } from "@plugins/primitives/plugins/data-view/core";
 import {
+  applyJoin,
   augmentServerQuery,
   bindColumns,
   compileWhere,
@@ -86,7 +87,7 @@ export const handleQueryReports = implement(queryReports, async ({ body }) => {
     .select({ ...getTableColumns(_reports), ...aug.projection })
     .from(_reports)
     .$dynamic();
-  for (const j of aug.joins) q = j.apply(q);
+  for (const j of aug.joins) q = applyJoin(q, j, _reports.id);
   const rows = await q
     .where(where)
     .orderBy(...orderByClauses(keys))

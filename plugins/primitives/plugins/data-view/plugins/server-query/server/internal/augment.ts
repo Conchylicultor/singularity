@@ -1,5 +1,6 @@
-import type { AnyColumn } from "drizzle-orm";
-import type { PgColumn, PgSelect } from "drizzle-orm/pg-core";
+import { and, eq, getTableColumns, sql, type AnyColumn } from "drizzle-orm";
+import { alias, type PgColumn, type PgSelect } from "drizzle-orm/pg-core";
+import type { KeyedSideJoin } from "@plugins/infra/plugins/query-resource/core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import { readDataViewConfigDoc } from "@plugins/primitives/plugins/data-view/server";
 import type { SortRule } from "@plugins/primitives/plugins/data-view/core";
@@ -35,26 +36,58 @@ export interface QueryAugmentorContext {
 }
 
 /**
- * A single dynamic join an augmentor contributes. `apply` takes and returns the
- * erased `$dynamic()` builder (`PgSelect`) — the drizzle dynamic-query
- * composition pattern (`q = q.leftJoin(...)`). It is deliberately NOT generic
- * over `Q extends PgSelect`: `leftJoin` widens the selection, so its result is
- * not provably the *same* `Q`, but it IS assignable back to the broad `PgSelect`.
- */
-export interface DataViewJoin {
-  apply: (q: PgSelect) => PgSelect;
-}
-
-/**
  * One column an augmentor OFFERS: its binding (the domain it is filtered in, and
  * the SQL it reads — valid only once `join` is applied) and the join that
- * materializes it. An augmentor offers every column it could serve; the fold
- * joins only the ones the request's sort or filter names, so an unused column
- * costs nothing.
+ * materializes it, as DATA: a keyed-side join (query-resource's join
+ * vocabulary — the same spec a live collection's join family renders, so the
+ * HTTP and the live reads of a custom column are one join). An augmentor
+ * offers every column it could serve; the fold joins only the ones the
+ * request's sort or filter names, so an unused column costs nothing.
  */
 export interface AugmentedColumn {
   binding: ColumnBinding;
-  join: DataViewJoin;
+  join: KeyedSideJoin;
+}
+
+/**
+ * Apply one keyed-side join to a `$dynamic()` builder (`q = applyJoin(q, …)`):
+ * `LEFT JOIN <table> AS <alias> ON <hostKey> = <the host's key> AND <each
+ * selector>`. `hostKey` is the consumer's row-key column (see
+ * `QueryAugmentorContext.rowKeyCol`), compared as the side column's type. The
+ * binding's columns render against the same alias, so they read this join.
+ * Not generic over `Q extends PgSelect`: `leftJoin` widens the selection, so
+ * its result is not provably the same `Q`, but it IS assignable back to the
+ * broad `PgSelect`.
+ */
+export function applyJoin(
+  q: PgSelect,
+  spec: KeyedSideJoin,
+  hostKey: AnyColumn,
+): PgSelect {
+  const t = alias(spec.table, spec.alias);
+  const columns = Object.entries(
+    getTableColumns(spec.table) as Record<string, PgColumn>,
+  );
+  const own = (col: PgColumn): PgColumn => {
+    const key = columns.find(([, c]) => c === col)?.[0];
+    if (key === undefined) {
+      throw new Error(
+        `applyJoin("${spec.alias}"): column "${col.name}" is not a column of its table`,
+      );
+    }
+    return (t as unknown as Record<string, PgColumn>)[key]!;
+  };
+  const host =
+    hostKey.getSQLType() === spec.hostKey.getSQLType()
+      ? hostKey
+      : sql`${hostKey}::${sql.raw(spec.hostKey.getSQLType())}`;
+  return q.leftJoin(
+    t,
+    and(
+      eq(own(spec.hostKey), host),
+      ...spec.selectors.map((s) => eq(own(s.col), s.value)),
+    ),
+  );
 }
 
 /**
@@ -66,7 +99,8 @@ export interface AugmentedColumn {
 export interface ServerQueryAugmentation {
   filter: Filter | undefined;
   columnMap: FieldColumnMap;
-  joins: DataViewJoin[];
+  /** Apply each with `applyJoin(q, join, rowKeyCol)`. */
+  joins: KeyedSideJoin[];
   // `PgColumn` (not the broad `AnyColumn`) so the consumer can spread these
   // straight into a drizzle `.select({...})` (whose `SelectedFields` values are
   // pg columns / SQL).
@@ -154,7 +188,7 @@ export async function augmentServerQuery(args: {
   for (const id of sortIds) referenced.add(id);
 
   const columnMap: FieldColumnMap = { ...args.columnMap };
-  const joins: DataViewJoin[] = [];
+  const joins: KeyedSideJoin[] = [];
   const projection: Record<string, PgColumn> = {};
   for (const [id, col] of Object.entries(offered)) {
     if (!referenced.has(id)) continue;

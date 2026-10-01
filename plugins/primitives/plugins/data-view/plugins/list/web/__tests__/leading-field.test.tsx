@@ -69,12 +69,15 @@ function renderList(
       visibleFields: opts.visibleFields,
     },
     setSort: () => {},
+    sortHeader: { active: [], sortable: new Set<string>() },
     setFilter: () => {},
     setExpanded: () => {},
     // Grouping inputs. These fixtures render UNGROUPED, so the clock is never
     // consulted — a pinned zero states that rather than borrowing the real one.
     now: 0,
     groupOrder: "asc",
+    rowsComplete: true,
+    sectionOrder: "bucket",
     options:
       opts.own === false
         ? undefined

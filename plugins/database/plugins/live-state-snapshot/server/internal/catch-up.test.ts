@@ -60,6 +60,9 @@ interface ChangelogSeed {
   t: string;
   op: "I" | "U" | "D";
   ids: string[] | null;
+  /** A routed table's row-wise layout, as `live_state_notify_routed()` writes it. */
+  keys?: unknown;
+  unchanged?: string[] | null;
 }
 
 async function insertChangelog(row: ChangelogSeed): Promise<void> {
@@ -70,9 +73,20 @@ async function insertChangelog(row: ChangelogSeed): Promise<void> {
           row.ids.map((i) => sql`${i}`),
           sql`, `,
         )}]::text[]`;
+  const unchangedExpr =
+    row.unchanged === undefined || row.unchanged === null
+      ? sql`NULL`
+      : sql`ARRAY[${sql.join(
+          row.unchanged.map((c) => sql`${c}`),
+          sql`, `,
+        )}]::text[]`;
+  const keysExpr =
+    row.keys === undefined
+      ? sql`NULL`
+      : sql`${JSON.stringify(row.keys)}::jsonb`;
   await t.db.execute(sql`
-    INSERT INTO ${sql.raw(LIVE_STATE_CHANGELOG_TABLE)} (seq, xid, t, op, ids)
-    VALUES (${row.seq}, ${row.xid}::numeric, ${row.t}, ${row.op}, ${idsExpr})
+    INSERT INTO ${sql.raw(LIVE_STATE_CHANGELOG_TABLE)} (seq, xid, t, op, ids, keys, unchanged)
+    VALUES (${row.seq}, ${row.xid}::numeric, ${row.t}, ${row.op}, ${idsExpr}, ${keysExpr}, ${unchangedExpr})
   `);
 }
 
@@ -106,9 +120,33 @@ describe("runCatchUp", () => {
     await runCatchUp(t.db, route);
 
     expect(routed).toEqual([
-      { table: "tb", op: "I", ids: ["2"], xid: null, changedAt: null },
-      { table: "tc", op: "D", ids: ["3"], xid: null, changedAt: null }, // DELETE ids preserved (replay ≡ live path; a membership entry stays scoped)
-      { table: "td", op: "U", ids: null, xid: null, changedAt: null }, // genuinely null-ids stays FULL
+      {
+        table: "tb",
+        op: "I",
+        ids: ["2"],
+        xid: null,
+        changedAt: null,
+        keys: null,
+        unchanged: null,
+      },
+      {
+        table: "tc",
+        op: "D",
+        ids: ["3"],
+        xid: null,
+        changedAt: null,
+        keys: null,
+        unchanged: null,
+      }, // DELETE ids preserved (replay ≡ live path; a membership entry stays scoped)
+      {
+        table: "td",
+        op: "U",
+        ids: null,
+        xid: null,
+        changedAt: null,
+        keys: null,
+        unchanged: null,
+      }, // genuinely null-ids stays FULL
     ]);
   });
 
@@ -127,7 +165,15 @@ describe("runCatchUp", () => {
     await runCatchUp(t.db, route);
 
     expect(routed).toEqual([
-      { table: "at", op: "U", ids: null, xid: null, changedAt: null },
+      {
+        table: "at",
+        op: "U",
+        ids: null,
+        xid: null,
+        changedAt: null,
+        keys: null,
+        unchanged: null,
+      },
     ]);
   });
 
@@ -161,5 +207,88 @@ describe("runCatchUp", () => {
     await runCatchUp(t.db, route);
 
     expect(routed).toEqual([]);
+  });
+
+  test("a routed row replays its key layout (columnar) and its unchanged columns as written", async () => {
+    await seedFloor("200");
+    await insertChangelog({
+      seq: 1,
+      xid: "200",
+      t: "side",
+      op: "U",
+      ids: ["s1"],
+      keys: {
+        c: ["host", "view"],
+        r: [
+          ["h1", "v"],
+          ["h2", null],
+        ],
+      },
+      unchanged: ["host"],
+    });
+    // A gated UPDATE whose every compared column moved. The routes may have
+    // changed since (a catch-up always follows a restart), and that is fine:
+    // `unchanged` names only columns KNOWN equal, whatever gate compared
+    // them, so a route reading a column the old gate lacked is still reached.
+    await insertChangelog({
+      seq: 2,
+      xid: "201",
+      t: "hosts",
+      op: "U",
+      ids: ["a"],
+      unchanged: [],
+    });
+
+    const { routed, route } = recorder();
+    await runCatchUp(t.db, route);
+
+    expect(routed).toEqual([
+      {
+        table: "side",
+        op: "U",
+        ids: ["s1"],
+        xid: null,
+        changedAt: null,
+        keys: { host: ["h1", "h2"], view: ["v", null] },
+        unchanged: ["host"],
+      },
+      {
+        table: "hosts",
+        op: "U",
+        ids: ["a"],
+        xid: null,
+        changedAt: null,
+        keys: null,
+        unchanged: [],
+      },
+    ]);
+  });
+
+  test("a malformed layout replays the row unscoped — never dropped", async () => {
+    await seedFloor("200");
+    await insertChangelog({
+      seq: 1,
+      xid: "200",
+      t: "side",
+      op: "U",
+      ids: ["s1"],
+      keys: { c: ["host"], r: [["h1", "extra"]] },
+      unchanged: ["host"],
+    });
+
+    const { routed, route } = recorder();
+    await runCatchUp(t.db, route);
+
+    expect(routed).toEqual([
+      {
+        table: "side",
+        op: "U",
+        ids: null,
+        xid: null,
+        changedAt: null,
+        keys: null,
+        unchanged: null,
+      },
+    ]);
   });
 });

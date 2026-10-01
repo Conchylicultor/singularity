@@ -67,11 +67,14 @@ function renderIcons(
     rowKey: (r) => r.id,
     state: { sort: [], query: "", filter: null },
     setSort: () => {},
+    sortHeader: { active: [], sortable: new Set<string>() },
     setFilter: () => {},
     setExpanded: () => {},
     // Ungrouped fixtures: the clock is never consulted.
     now: 0,
     groupOrder: "asc",
+    rowsComplete: true,
+    sectionOrder: "bucket",
     options: undefined,
     ...over,
   };

@@ -186,7 +186,7 @@ export function DataTable<TRow>({
           style={{ top: stickyHeaderOffset }}
         >
           {columns.map((col) => {
-            const sortable = !!col.value;
+            const sortable = col.sortable ?? !!col.value;
             const active = sortState?.columnId === col.id;
             return (
               <Text

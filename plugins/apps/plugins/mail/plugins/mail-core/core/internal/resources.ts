@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { MailSyncStateSchema, MailLabelSchema } from "./fields";
+import {
+  MailAccountSchema,
+  MailSyncStateSchema,
+  MailLabelSchema,
+} from "./fields";
 
 // One row per connected account's sync-engine watermark + error state. Served by
 // the `sync` plugin (`mailSyncStateServed`), which loads the whole
@@ -22,4 +26,18 @@ export const mailSyncState = liveValue("mail-sync-state", {
 // consumer and risk closing a cycle.
 export const mailLabels = liveValue("mail-labels", {
   schema: z.array(MailLabelSchema),
+});
+
+/**
+ * THE connected account — the one the mail surfaces show — or `null` before
+ * any account has connected. One row, never collection-shaped: the earliest
+ * connected (`connected_at`, then `id`), the same definition
+ * `resolveMailAccountId` uses server-side, so "the account" is one choice.
+ *
+ * The threads list reads it to scope its live window to the account
+ * (`mailThreadsSource.scoped({ where: { accountId } })`): the scope is data
+ * the client states, not a subquery the server hides.
+ */
+export const mailAccount = liveValue("mail-account", {
+  schema: MailAccountSchema.pick({ id: true, email: true }).nullable(),
 });

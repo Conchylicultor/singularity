@@ -10,6 +10,7 @@
   - Uses:
     - `database.db`
     - `database/admin.ExcludeFromFork`
+    - `database/change-feed.readLayout`
     - `database/change-feed.routeChange`
     - `infra/jobs.defineJob`
     - `primitives/log-channels.defineLogSink`
@@ -42,7 +43,17 @@ catch-up on purpose — the missed-changes replay then also goes scoped.
 Catch-up replays each changelog row EXACTLY as the live listener would (its
 invariant), so it **preserves `row.ids` for every op** — a `D`-with-ids stays a cheap
 scoped membership exit (zero loader queries), not a FULL. Only a genuinely null-ids
-bulk statement degrades to FULL.
+bulk statement degrades to FULL. A routed table's row also carries its key layout
+(`keys`, row-wise jsonb) and known-unchanged column set (`unchanged`), written by the routed
+trigger with the post-cap values it NOTIFYs; the replay reads them by the
+listener's own rule (change-feed's `readLayout`), so a routed resource's replay is
+as scoped as the live path, and a layout that does not parse routes unscoped
+(FULL for its readers), reported — never dropped — on both paths. Both replay as
+written: `unchanged` names only columns KNOWN equal in every row, a fact
+whatever gate the trigger compared under, so a replay after a deploy that
+changed the routes still reaches a route reading a column the old gate did not
+compare; a column the old layout did not carry reads `keys` as unknown, which
+recomputes rather than skips.
 
 ## Invariant harness (DB-backed)
 
@@ -63,7 +74,9 @@ in the backend entry `server/index.ts` (hooks + catch-up) and in
   `xid >= floor` + `ORDER BY seq` replay, the floor boundary (`==` in, `-1` out),
   id-preserving replay (a `D`-with-ids keeps its ids → scoped on the live path; only
   a genuinely null-ids row degrades to FULL), the missing-history **backstop** (`min(xid) >
-  floor` → one FULL per distinct table), and "already current".
+  floor` → one FULL per distinct table), "already current", and a routed row's
+  `keys` and `unchanged` replayed as written (a malformed layout unscoped, never
+  dropped).
 
 The shared `db-test-fixture` primitive (`createTestDb`) provisions an isolated
 throwaway database via admin's public barrel and drops it after. **Running:** needs a running cluster — a plain

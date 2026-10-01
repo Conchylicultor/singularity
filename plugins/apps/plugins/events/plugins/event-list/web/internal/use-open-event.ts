@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useEventSourceOrigin } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import {
   externalUrl,
+  sourceRefOf,
   type SourcedEvent,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
@@ -29,7 +30,7 @@ export function useEventUrl(): (event: SourcedEvent) => string | null {
   const originOf = useEventSourceOrigin();
   return useCallback(
     (event: SourcedEvent): string | null =>
-      externalUrl(event.url) ?? originOf(event.source),
+      externalUrl(event.url) ?? originOf(sourceRefOf(event)),
     [originOf],
   );
 }

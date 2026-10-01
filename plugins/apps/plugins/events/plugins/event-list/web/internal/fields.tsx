@@ -8,7 +8,7 @@ import type {
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   externalUrl,
-  type EventRecord,
+  type ListedEvent,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { EVENT_LIST_FIELDS } from "../../core";
 import { formatEventWhen, urlHost } from "./format";
@@ -20,7 +20,7 @@ const openInNewIcon = symbol("open-in-new");
 // Comparable projection for one field id. Drives the toolbar sort/filter pills
 // and the default table/gallery cell. (Search/filter/sort actually run
 // server-side; this powers the chrome and the read cells.)
-function fieldValue(e: EventRecord, id: string): FieldValue {
+function fieldValue(e: ListedEvent, id: string): FieldValue {
   switch (id) {
     case "title":
       return e.title;
@@ -74,23 +74,23 @@ function UrlCell({ url }: { url: string | null }): ReactNode {
   );
 }
 
-function cellFor(id: string): ((e: EventRecord) => ReactNode) | undefined {
+function cellFor(id: string): ((e: ListedEvent) => ReactNode) | undefined {
   // `startsAt` is the one date rendered ABSOLUTELY: an events list is mostly
   // forward-looking and the weekday decides whether you go, which the generic
   // relative date cell ("in 3d") cannot say. `disappearedAt` is a provenance
   // stamp — relative is exactly right there, so it keeps the type's own cell.
   if (id === "startsAt") {
-    return (e: EventRecord) => (
+    return (e: ListedEvent) => (
       <Text as="span" variant="body">
         {formatEventWhen(e.startsAt, e.allDay)}
       </Text>
     );
   }
   if (id === "disappearedAt") {
-    return (e: EventRecord) =>
+    return (e: ListedEvent) =>
       e.disappearedAt ? <RelativeTime date={e.disappearedAt} /> : null;
   }
-  if (id === "url") return (e: EventRecord) => <UrlCell url={e.url} />;
+  if (id === "url") return (e: ListedEvent) => <UrlCell url={e.url} />;
   return undefined;
 }
 
@@ -98,7 +98,7 @@ function cellFor(id: string): ((e: EventRecord) => ReactNode) | undefined {
 // it can never drift from the server's FieldColumnMap. Every typed field here is
 // automatically BOTH a filter and a sort dimension — which is why this surface
 // hangs no bespoke filter chips off its toolbar.
-export const eventFieldDefs: FieldDef<EventRecord>[] = EVENT_LIST_FIELDS.map(
+export const eventFieldDefs: FieldDef<ListedEvent>[] = EVENT_LIST_FIELDS.map(
   (spec) => ({
     id: spec.id,
     label: spec.label,
@@ -110,9 +110,9 @@ export const eventFieldDefs: FieldDef<EventRecord>[] = EVENT_LIST_FIELDS.map(
     // `tags` is the one multi-value dimension: it projects through `values`
     // (folded into search + the array-aware filter predicate), never `value`.
     ...(spec.type === "tags"
-      ? { values: (e: EventRecord) => e.tags }
+      ? { values: (e: ListedEvent) => e.tags }
       : {
-          value: (e: EventRecord) => fieldValue(e, spec.id),
+          value: (e: ListedEvent) => fieldValue(e, spec.id),
           cell: cellFor(spec.id),
         }),
   }),

@@ -1,15 +1,17 @@
 import { useMemo } from "react";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type {
-  DataViewAggregateConfig,
-  DataViewRowEntry,
-  DataViewSection,
-  FieldDef,
-  FieldGrouping,
-  FieldValue,
-  FilterOperatorSet,
-  GroupByRule,
-  ViewState,
+import {
+  atLeastCount,
+  exactCount,
+  type DataViewAggregateConfig,
+  type DataViewRowEntry,
+  type DataViewSection,
+  type FieldDef,
+  type FieldGrouping,
+  type FieldValue,
+  type FilterOperatorSet,
+  type GroupByRule,
+  type ViewState,
 } from "../../core";
 import { useGroupingRegistry } from "../grouping-slot";
 import { IDENTITY_GROUPING } from "./identity-grouping";
@@ -59,6 +61,18 @@ export interface PartitionOptions {
    * it holds no position on the ordinal, so reversing it would mean nothing.
    */
   order: "asc" | "desc";
+  /**
+   * Whether `rows` is the whole set (`DataViewRenderProps.rowsComplete`).
+   * Absent ⇒ true (in memory). When not, a section's count is a lower bound
+   * unless a later section has started (under `"appearance"` order).
+   */
+  rowsComplete?: boolean;
+  /**
+   * `"appearance"` — sections follow first appearance in `rows`, which the
+   * server sorted by the grouped column first; `"bucket"` (default) — by the
+   * bucket's ordinal. See `DataViewRenderProps.sectionOrder`.
+   */
+  sectionOrder?: "bucket" | "appearance";
 }
 
 /**
@@ -85,12 +99,13 @@ export function partitionIntoSections<TRow>(
     ? fields.find((f) => f.id === groupBy.fieldId)
     : undefined;
 
+  const complete = opts.rowsComplete ?? true;
   // Ungrouped (or an unresolvable/value-less group field): one implicit section.
   if (!groupBy || !field?.value) {
     return [
       {
         key: null,
-        count: rows.length,
+        count: complete ? exactCount(rows.length) : atLeastCount(rows.length),
         entries: rows.map((row, i) => ({ row, key: rowKey(row, i) })),
       },
     ];
@@ -153,8 +168,12 @@ export function partitionIntoSections<TRow>(
   });
 
   const dir = opts.order === "desc" ? -1 : 1;
+  const byAppearance = opts.sectionOrder === "appearance";
+  // In row order, a section's first row is where the server's sort placed it;
+  // otherwise the bucket's ordinal decides, discovery order breaking ties.
   const ordered: [string, Bucket][] = [...buckets.entries()].sort(
-    ([, a], [, b]) => (a.order - b.order) * dir || a.seq - b.seq,
+    ([, a], [, b]) =>
+      byAppearance ? a.seq - b.seq : (a.order - b.order) * dir || a.seq - b.seq,
   );
   // "None" is not a point on the ordinal — it is the absence of one — so it
   // trails the real sections whichever way they read.
@@ -163,10 +182,15 @@ export function partitionIntoSections<TRow>(
   // Index counter is global across sections so `rowKey(row, index)` stays
   // stable and unique even when the consumer's key depends on the index.
   let globalIndex = 0;
-  return ordered.map(([key, bucket]) => ({
+  return ordered.map(([key, bucket], i) => ({
     key,
     label: bucket.label,
-    count: bucket.rows.length,
+    // Exact when every row is loaded — or, sections in row order, when a later
+    // section has started: a later page can only add sections after the tail.
+    count:
+      complete || (byAppearance && i < ordered.length - 1)
+        ? exactCount(bucket.rows.length)
+        : atLeastCount(bucket.rows.length),
     entries: bucket.rows.map((row) => ({
       row,
       key: rowKey(row, globalIndex++),
@@ -293,6 +317,10 @@ export function useDataViewSections<TRow>(
     now: number;
     /** `DataViewRenderProps.groupOrder` — the section reading direction. */
     groupOrder: "asc" | "desc";
+    /** `DataViewRenderProps.rowsComplete` — whether section counts may be exact. */
+    rowsComplete: boolean;
+    /** `DataViewRenderProps.sectionOrder` — how grouped sections are ordered. */
+    sectionOrder: "bucket" | "appearance";
     /**
      * `DataViewRenderProps.foldLines?.open` — the section keys whose fold line is
      * open. The fold rule itself is read off `state.fold` (which the host already
@@ -319,7 +347,14 @@ export function useDataViewSections<TRow>(
   );
   const rowKey = opts.rowKey;
   const aggregate = opts.aggregate;
-  const { now, groupOrder, openFolds, selectedRowId } = opts;
+  const {
+    now,
+    groupOrder,
+    openFolds,
+    selectedRowId,
+    rowsComplete,
+    sectionOrder,
+  } = opts;
   const fold = state.fold;
   // The fold rule's `keep` tree, lowered once per (tree, clock) like the filter.
   const matchesKeep = useRowFilter(
@@ -349,7 +384,7 @@ export function useDataViewSections<TRow>(
       fields,
       groupBy,
       rowKey ?? ((_row: TRow, i: number) => String(i)),
-      { resolveGrouping, now, order: groupOrder },
+      { resolveGrouping, now, order: groupOrder, rowsComplete, sectionOrder },
     );
     // Order each section's entries by rank (within-section manual order) BEFORE
     // aggregating, so the representative defaults to the first rank-ordered member.
@@ -381,6 +416,8 @@ export function useDataViewSections<TRow>(
     resolveGrouping,
     now,
     groupOrder,
+    rowsComplete,
+    sectionOrder,
     fold,
     openFolds,
     selectedRowId,

@@ -1,7 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { dataViewConfigRegistrations } from "./internal/config-registrations";
 
-export { readDataViewConfigDoc } from "./internal/descriptors";
+export {
+  readDataViewConfigDoc,
+  watchDataViewConfigDoc,
+} from "./internal/descriptors";
 
 export default {
   description:

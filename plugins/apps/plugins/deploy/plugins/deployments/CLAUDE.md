@@ -241,9 +241,10 @@ environment.
   no transcript has not spawned, and for an `update` the only leg that is
   named-but-unspawned is `ship`, which means the build is what is running.
 - **`deploy_runs`** — the **record**: one row per launched run, so _what is live
-  on this box, and what happened before_ survives a restart. Queried back by
-  `POST /api/deploy/deployments/:id/runs/query` (keyset, `deploy-history`'s
-  section renders it), swept at 90 days. It is also the **lock** (above) and the
+  on this box, and what happened before_ survives a restart. Read back as the
+  `deployRunHistory` live collection (`deploy.run-history`, a `scroll: true`
+  window whose `columnScope` is the History surface; `deploy-history`'s section
+  scopes it per deployment and renders it), swept at 90 days. It is also the **lock** (above) and the
   **re-attach index** (below).
 
 Both are written by `internal/run-state.ts` and only there, and they share the
@@ -376,7 +377,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
 
 ## Plugin reference
 
-- Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+- Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
 - Web:
   - Slots:
     - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`, `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
@@ -451,7 +452,9 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `resource.declare` "deploy.deployments:rows"
     - `resource.declare` "deploy.deployments:groups"
     - `resource.declare` "deploy.runs"
-    - `resource.declare` "deploy.runs-revision"
+    - `resource.declare` "deploy.run-history"
+    - `resource.declare` "deploy.run-history:rows"
+    - `resource.declare` "deploy.run-history:groups"
   - Uses:
     - `apps/deploy/health.serverHealth`
     - `apps/deploy/servers._deployServers`
@@ -470,14 +473,6 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
     - `network/live.serveValue`
-    - `primitives/data-view/server-query.augmentServerQuery`
-    - `primitives/data-view/server-query.bindColumns`
-    - `primitives/data-view/server-query.compileWhere`
-    - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/keyset.buildSortKeys`
-    - `primitives/keyset.keyValuesOf`
-    - `primitives/keyset.orderByClauses`
-    - `primitives/keyset.seekPredicate`
     - `primitives/log-channels.defineLogSink`
     - `release.awaitRelease`
     - `release.enqueueRelease`
@@ -494,8 +489,10 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `deploy.deployments` (keyed, window)
     - `deploy.deployments:groups` (push)
     - `deploy.deployments:rows` (keyed, point)
+    - `deploy.run-history` (keyed, window)
+    - `deploy.run-history:groups` (push)
+    - `deploy.run-history:rows` (keyed, point)
     - `deploy.runs` (push)
-    - `deploy.runs-revision` (push)
   - Routes:
     - `GET /api/deploy/deployments`
     - `POST /api/deploy/deployments`
@@ -503,7 +500,6 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `PATCH /api/deploy/deployments/:id`
     - `DELETE /api/deploy/deployments/:id`
     - `POST /api/deploy/deployments/:id/run`
-    - `POST /api/deploy/deployments/:id/runs/query`
 - Core:
   - Uses:
     - `apps/deploy/servers.serverDetailRoute`
@@ -512,8 +508,6 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `network/live.liveValue`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveText`
-    - `primitives/data-view.ServerFilterWireSchema`
-    - `primitives/live-state.resourceDescriptor`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `CreateDeploymentBody`
@@ -523,7 +517,6 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DeployRunRecord`
     - `DeployVerb`
     - `InstallLayout`
-    - `QueryDeployRunsBody`
     - `RunDeploymentBody`
     - `UpdateDeploymentBody`
   - Exports (values):
@@ -534,16 +527,14 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DEFAULT_LOOPBACK_PORT`
     - `deleteDeployment`
     - `DEPLOY_LOG_CHANNEL`
-    - `DEPLOY_RUN_FILTERABLE`
-    - `DEPLOY_RUN_SEARCHABLE`
     - `deploymentDetailRoute`
     - `deployments`
     - `DeploymentSchema`
     - `DeployPhaseSchema`
+    - `deployRunHistory`
     - `DeployRunRecordSchema`
     - `deployRuns`
     - `DeployRunSchema`
-    - `deployRunsRevisionResource`
     - `DeployVerbSchema`
     - `deriveInstall`
     - `getDeployment`
@@ -553,9 +544,6 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `LOOPBACK_HOST`
     - `loopbackOnlySentence`
     - `publicUrls`
-    - `queryDeployRuns`
-    - `QueryDeployRunsBodySchema`
-    - `QueryDeployRunsResponseSchema`
     - `releaseAppPath`
     - `releaseDir`
     - `REMOTE_SCRIPT_SHEBANG`

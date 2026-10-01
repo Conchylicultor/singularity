@@ -7,17 +7,18 @@ import {
   previewEndpoint,
   stopPreviewEndpoint,
   releaseLogsEndpoint,
-  queryReleaseHistory,
 } from "../core/endpoints";
 import { handleRelease } from "./internal/handle-release";
 import { handleReleaseCandidate } from "./internal/handle-candidate";
 import { handleLatestRun } from "./internal/handle-latest-run";
 import { handlePreview, handleStopPreview } from "./internal/handle-preview";
 import { handleReleaseLogs } from "./internal/handle-logs";
-import { handleHistoryQuery } from "./internal/handle-history-query";
 import { reconcileOrphanPreviews } from "./internal/preview-manager";
 import { releaseJob } from "./internal/release-job";
-import { releaseRunsServed } from "./internal/release-runs-resource";
+import {
+  releaseHistoryServed,
+  releaseRunsServed,
+} from "./internal/release-runs-resource";
 import { releaseRunsRevisionResource } from "./internal/history-revision-resource";
 import { releasePreviewsServed } from "./internal/preview-state-resource";
 export { _releaseRuns } from "./internal/tables";
@@ -40,6 +41,7 @@ export default {
   register: [releaseJob],
   contributions: [
     ...releaseRunsServed.declare,
+    ...releaseHistoryServed.declare,
     Resource.Declare(releaseRunsRevisionResource),
     ...releasePreviewsServed.declare,
   ],
@@ -50,7 +52,6 @@ export default {
     [previewEndpoint.route]: handlePreview,
     [stopPreviewEndpoint.route]: handleStopPreview,
     [releaseLogsEndpoint.route]: handleReleaseLogs,
-    [queryReleaseHistory.route]: handleHistoryQuery,
   },
   onReady: async () => {
     // Unfinished release_runs rows are no longer reconciled here: that is the

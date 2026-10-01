@@ -3,7 +3,11 @@ export {
   CustomColumnValueRowSchema,
 } from "./internal/types";
 export type { CustomColumnDef, CustomColumnValueRow } from "./internal/types";
-export { customColumnValues } from "./internal/resource";
+export {
+  CUSTOM_COLUMNS_SET,
+  customColumnDefs,
+  customColumnValues,
+} from "./internal/resource";
 export {
   setCustomColumnValue,
   SetCustomColumnValueBodySchema,

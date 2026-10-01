@@ -11,18 +11,36 @@ describe("parseLiveStatePayload", () => {
       ids: ["a", "b"],
       xid: null,
       changedAt: null,
+      keys: null,
+      unchanged: null,
     });
   });
 
   test("parses an INSERT with ids", () => {
     expect(parseLiveStatePayload(`{"t":"tasks","op":"I","ids":["x"]}`)).toEqual(
-      { table: "tasks", op: "I", ids: ["x"], xid: null, changedAt: null },
+      {
+        table: "tasks",
+        op: "I",
+        ids: ["x"],
+        xid: null,
+        changedAt: null,
+        keys: null,
+        unchanged: null,
+      },
     );
   });
 
   test("parses a DELETE", () => {
     expect(parseLiveStatePayload(`{"t":"tasks","op":"D","ids":["x"]}`)).toEqual(
-      { table: "tasks", op: "D", ids: ["x"], xid: null, changedAt: null },
+      {
+        table: "tasks",
+        op: "D",
+        ids: ["x"],
+        xid: null,
+        changedAt: null,
+        keys: null,
+        unchanged: null,
+      },
     );
   });
 
@@ -33,6 +51,8 @@ describe("parseLiveStatePayload", () => {
       ids: null,
       xid: null,
       changedAt: null,
+      keys: null,
+      unchanged: null,
     });
   });
 
@@ -43,6 +63,8 @@ describe("parseLiveStatePayload", () => {
       ids: null,
       xid: null,
       changedAt: null,
+      keys: null,
+      unchanged: null,
     });
   });
 
@@ -53,6 +75,8 @@ describe("parseLiveStatePayload", () => {
       ids: [],
       xid: null,
       changedAt: null,
+      keys: null,
+      unchanged: null,
     });
   });
 
@@ -92,6 +116,8 @@ describe("parseLiveStatePayload", () => {
       ids: ["a"],
       xid: "12345",
       changedAt: null,
+      keys: null,
+      unchanged: null,
     });
     // Over-cap re-emit shape: ids dropped, attribution kept.
     expect(
@@ -102,6 +128,8 @@ describe("parseLiveStatePayload", () => {
       ids: null,
       xid: "12345",
       changedAt: null,
+      keys: null,
+      unchanged: null,
     });
     // Malformed `x` never rejects the change — only the attribution degrades.
     expect(
@@ -112,6 +140,8 @@ describe("parseLiveStatePayload", () => {
       ids: ["a"],
       xid: null,
       changedAt: null,
+      keys: null,
+      unchanged: null,
     });
     expect(
       parseLiveStatePayload(`{"t":"tasks","op":"U","ids":["a"],"x":""}`),
@@ -121,6 +151,8 @@ describe("parseLiveStatePayload", () => {
       ids: ["a"],
       xid: null,
       changedAt: null,
+      keys: null,
+      unchanged: null,
     });
   });
 
@@ -135,6 +167,8 @@ describe("parseLiveStatePayload", () => {
       ids: ["a"],
       xid: "1",
       changedAt: 1789915496002,
+      keys: null,
+      unchanged: null,
     });
     // A malformed `at` loses one latency sample, never the change.
     expect(
@@ -145,6 +179,8 @@ describe("parseLiveStatePayload", () => {
       ids: ["a"],
       xid: null,
       changedAt: null,
+      keys: null,
+      unchanged: null,
     });
   });
 
@@ -158,5 +194,81 @@ describe("parseLiveStatePayload", () => {
     expect(
       parseLiveStatePayload(`{"t":"tasks","op":"U","ids":["ok",3]}`),
     ).toBeNull();
+  });
+
+  test("a routed table's key layout parses row-wise into columns, row-aligned", () => {
+    expect(
+      parseLiveStatePayload(
+        JSON.stringify({
+          t: "side",
+          op: "U",
+          ids: ["p1"],
+          k: {
+            c: ["host", "view"],
+            r: [
+              ["h1", "v"],
+              ["h2", null],
+            ],
+          },
+          u: ["host"],
+          x: "9",
+        }),
+      ),
+    ).toEqual({
+      table: "side",
+      op: "U",
+      ids: ["p1"],
+      xid: "9",
+      changedAt: null,
+      keys: { host: ["h1", "h2"], view: ["v", null] },
+      unchanged: ["host"],
+    });
+  });
+
+  test("an empty unchanged set is a known 'every compared column moved', distinct from null (nothing known)", () => {
+    expect(
+      parseLiveStatePayload(`{"t":"h","op":"U","ids":["a"],"k":null,"u":[]}`)
+        ?.unchanged,
+    ).toEqual([]);
+    expect(
+      parseLiveStatePayload(`{"t":"h","op":"U","ids":["a"],"u":null}`)
+        ?.unchanged,
+    ).toBeNull();
+  });
+
+  test("a malformed layout or unchanged set routes the change UNSCOPED — never dropped, reported", () => {
+    for (const bad of [
+      `{"t":"h","op":"U","ids":["a"],"k":[]}`,
+      `{"t":"h","op":"U","ids":["a"],"k":{"c":[],"r":[]}}`,
+      `{"t":"h","op":"U","ids":["a"],"k":{"c":["a","a"],"r":[]}}`,
+      `{"t":"h","op":"U","ids":["a"],"k":{"c":["a"],"r":[["x","y"]]}}`,
+      `{"t":"h","op":"U","ids":["a"],"k":{"c":["a"],"r":[[1]]}}`,
+      `{"t":"h","op":"U","ids":["a"],"k":{"c":["a"],"r":"x"}}`,
+      `{"t":"h","op":"U","ids":["a"],"u":"a"}`,
+      `{"t":"h","op":"U","ids":["a"],"u":[1]}`,
+    ]) {
+      const reported: string[] = [];
+      expect(parseLiveStatePayload(bad, (c) => reported.push(c.table))).toEqual(
+        {
+          table: "h",
+          op: "U",
+          ids: null,
+          xid: null,
+          changedAt: null,
+          keys: null,
+          unchanged: null,
+        },
+      );
+      expect(reported).toEqual(["h"]);
+    }
+  });
+
+  test("a well-formed layout is not reported", () => {
+    const reported: string[] = [];
+    parseLiveStatePayload(
+      `{"t":"h","op":"U","ids":["a"],"k":{"c":["x"],"r":[["1"]]},"u":["x"]}`,
+      (c) => reported.push(c.table),
+    );
+    expect(reported).toEqual([]);
   });
 });

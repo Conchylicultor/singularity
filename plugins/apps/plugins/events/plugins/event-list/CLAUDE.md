@@ -1,37 +1,54 @@
 # event-list
 
-The Events app's main surface: every event, as a **server-delegated DataView**
-(`defineDataView("events.list")`). The set grows without bound and the user
-filters/sorts across all of it, so filter/sort/search/pagination compile to SQL —
-the `mail/inbox` shape, file for file.
+The Events app's main surface: every event, as a **live DataView**
+(`defineDataView("events.list")`) over the `events.list` collection
+(`core/internal/collection.ts`). The set grows without bound and the user
+filters/sorts across all of it, so filter/sort/search compile to SQL per window
+tuple, read as a segmented scroll (`scroll: true`) — the mail threads shape.
 
 ```
-core/internal/fields.ts     the shared field-id vocabulary (browser-safe data)
-  ↓                              ↓
-web/internal/fields.tsx     server/internal/column-map.ts
-  (FieldDef[] + value/cell)   (FieldColumnMap: id → drizzle column + domain)
-                                 ↓
-                            server/internal/handle-query.ts
-                              (compileWhere + null-aware keyset seek)
+core/internal/fields.ts       the shared field-id vocabulary (browser-safe data)
+  ↓                                ↓
+web/internal/fields.tsx       core/internal/collection.ts   (liveCollection)
+  (FieldDef[] + value/cell)        ↓
+                              server/internal/collection.ts (serveCollection:
+                                the source lookup + the default scopes)
 ```
 
 One vocabulary, two runtimes: the web `FieldDef[]` derives from
-`EVENT_LIST_FIELDS`, and the server `FieldColumnMap` binds
-`EVENT_LIST_FILTERABLE` (the same file), so they cannot drift on which
-dimensions exist or what domain they filter in.
+`EVENT_LIST_FIELDS`, and the collection declares `EVENT_LIST_FILTERABLE` /
+`EVENT_LIST_SORTABLE` (the same file), so they cannot drift on which dimensions
+exist or what domain they filter in.
+
+## Live, with no tick
+
+The list is kept fresh by the routed change feed
+(`research/2026-09-29-global-scoped-change-routing.md`, P4), never by a
+revision tick and a refetch:
+
+- an event write refills exactly that event in the segments that hold (or now
+  admit) it; one no tuple's where / order reads (a title edit) reaches only the
+  windows holding the event (`moves`);
+- each row carries its source's ref (`sourceType` / `sourceConfig`, a REQUIRED
+  lookup `source` on `events.source_id`), so a source write reaches the list
+  through the lookup's REVERSE route, gated on the source columns the list reads
+  (`id`, `type`, `config`, `enabled`): a run's `status` / watermark writes reach
+  nothing; a type / config edit refills that source's events a tuple holds; an
+  `enabled` flip refills its events (at most 500, then the window reloads,
+  bounded);
+- a deleted source's events arrive as event deletes (the FK cascade);
+- the sighting stamps (`firstSeenAt` / `lastSeenAt`) are not on a listed event
+  (`ListedEvent`), so a re-extraction that finds nothing new moves no row.
+
+`e2e/list-live-verify.ts` drives each arm against a deploy.
 
 ## Every typed field is a filter AND a sort dimension
 
 That is the whole reason this is a DataView. Adding a dimension means adding a
-`FieldDef` + an `EVENT_LIST_FILTERABLE` entry (whose `COLUMN_MAP` binding `tsc`
-then demands) — **never** a bespoke toggle chip on the
-toolbar, and never a hand-rolled `.map()` of `<Row>` (`no-adhoc-row-list`).
-
-The server side is the `EVENT_LIST_FILTERABLE` declaration (`core/`), bound by
-`COLUMN_MAP` (`bindColumns`) and read by the web `dataSource.filterable` too — so
-the Filter control offers exactly the fields the server can filter, and the
-server strict-decodes (400) anything else. A few ids differ between the two
-sides on purpose:
+`FieldDef` + an `EVENT_LIST_FILTERABLE` entry (and `EVENT_LIST_SORTABLE`, if it
+sorts — the live source refuses a sortable field whose column is not) — **never**
+a bespoke toggle chip on the toolbar, and never a hand-rolled `.map()` of
+`<Row>` (`no-adhoc-row-list`). A few ids differ between the two sides on purpose:
 
 - **`sourceId` is declared with no web field here.** The `source` dimension
   arrives as a *contributed* field extension through the exported
@@ -41,45 +58,32 @@ sides on purpose:
   server-side the moment it lands, with zero edits here. This plugin names no
   source type, ever.
 - **`tags` is the jsonb string array**, filtered in the `stringArray` domain
-  (has all / any / none of). It stays `sortable: false`: a jsonb array has no
-  keyset order.
-- **`description` and `tagsText` are searched only** (no field): the search box
-  lowers to `contains` over `EVENT_LIST_SEARCHABLE`, and `tagsText` is the tags
-  array rendered as text (`tags::text`) so a typed tag is still found.
+  (has all / any / none of). It is not sortable: a jsonb array has no order.
+- **`description` is searched only** (no field): the search box lowers to
+  `contains` over `EVENT_LIST_SEARCHABLE`. A tag is not searchable text any
+  more (the fetchPage query searched `tags::text`; a live collection's filterable
+  columns are row fields) — the Tags filter finds one.
 
-## Disappeared events are hidden by DEFAULT, not by fixed scope
+## Disappeared events, and a disabled source's, are hidden by DEFAULT
 
-Disappearance is soft (`disappearedAt` stamped, row never deleted), so those
-rows must not clutter an ordinary browse — but they must stay reachable, since a
-user may have annotated one. `disappearedAt` is therefore a real filterable
-field, and `server/internal/scope.ts` applies `IS NULL` only when the caller's
-filter tree mentions the field *at all*: naming it, with any operator, is the
-view saying "I know about disappearance — here is what I want". Contrast
-mail-inbox, whose INBOX predicate is a genuinely fixed scope with no field.
+Both are the collection's `defaults` (`server/internal/collection.ts`, network/live's
+default scopes): a predicate ANDed into a tuple unless its filter names the
+column, with any op.
 
-## A disabled source's events are hidden by DEFAULT too
+- **Disappearance is soft** (`disappearedAt` stamped, row never deleted), so
+  those rows must not clutter an ordinary browse — but they must stay reachable,
+  since a user may have annotated one. Naming `disappearedAt` is the view saying
+  "I know about disappearance — here is what I want".
+- **Disabling a source** is the user saying "I don't care about this any more",
+  so its events stop cluttering the list — but nothing is deleted or stamped, so
+  re-enabling the source brings every one of them straight back. Naming the
+  `source` dimension ("source is X", "source is not empty") is asking about
+  sources, a disabled one's events included.
 
-Disabling a source is the user saying "I don't care about this any more", so its
-events stop cluttering the list — but nothing is deleted or stamped, so
-re-enabling the source brings every one of them straight back. That
-reversibility is exactly why this is a query-time scope and not a write.
-
-It follows the disappearance rule above, file for file: `scope.ts` exposes
-`shouldHideInactiveSources`, and `handle-query.ts` restricts to events whose
-source row is `enabled` only when the caller's filter tree does *not* mention
-`sourceId` at all. Naming the `source` dimension — with any operator, "source is
-X" as much as "source is-not-empty" — is the view saying "I am asking about
-sources", and it then gets exactly what it asked for, a disabled source's events
-included; a fixed predicate would instead make that history unreachable.
-
-The predicate is on the joined `event_sources` row (the query joins it anyway, to
-send each event's source ref), stated positively as "the source is active". Not
-a denormalized `enabled` copy on the event row: that duplicates a *mutable* FK attribute across an unbounded
-table, and every flip of the toggle would owe a backfill.
-
-Freshness when the toggle flips is not this plugin's problem: `events-core`'s
-`events.revision` tick folds in the active-source set, so the open list refetches
-in place like any other event change.
+The predicate is on the joined `event_sources` row, stated positively as "the
+source is active" — never a denormalized `enabled` copy on the event row, which
+would duplicate a *mutable* FK attribute across an unbounded table and owe a
+backfill on every flip. The flip is routed instead (above).
 
 ## The gallery cover is an accessor, not a field
 
@@ -100,12 +104,12 @@ not a copy of mail's app-scoped route.
 `onRowActivate` (host-level, so list/table/gallery agree) resolves
 `event.url ?? source origin URL` through `externalUrl()`. The fallback is the
 common case — an extraction often yields no per-event link — and it comes from
-the `source: SourceRef` the query joins onto every row (`SourcedEvent`), read
-through `events-core`'s `useEventSourceOrigin()`, whose answer each source type
-supplies via its `originUrl`. No sources window is read, so an event of any
-source resolves, and nothing is ever "not loaded yet". This plugin still names no
-source type. No destination
-(hand-entered event) → the click is a no-op.
+the source ref joined onto every row (`SourcedEvent`'s `sourceType` /
+`sourceConfig`, read back by `sourceRefOf`), through `events-core`'s
+`useEventSourceOrigin()`, whose answer each source type supplies via its
+`originUrl`. No sources window is read, so an event of any source resolves, and
+nothing is ever "not loaded yet". This plugin still names no source type. No
+destination (hand-entered event) → the click is a no-op.
 
 ## Config is the only source of view instances
 
@@ -113,17 +117,14 @@ There is no code-synthesized default: the instances come only from
 `config/apps/events/event-list/events.list.jsonc`, and
 `config:overrides-authored` fails until its `// @review` marker is deleted. The
 intended set is `Upcoming` (filter `startsAt is-on-or-after` today, sort
-ascending), `All`, and `By category` (grouped).
-
-Freshness is push-based: events-core's `events.revision` tick (count +
-max(updated_at)) drives an **in-place** refetch of the loaded pages — it is never
-part of the query key.
+ascending), `All`, and `By category` (grouped). The surface is the collection's
+`columnScope`, so its custom columns sort and filter server-side.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: The events DataView: a server-delegated keyset query over the events table rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the keyset events query (POST /api/events/query) over the events table — filter/sort/search compiled to SQL, cursor-paginated, with soft-deleted events hidden by default.
+- Description: The events DataView: the live `events.list` collection (a segmented scroll kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the `events.list` live collection over the events table joined to its source (a required lookup, routed in reverse: a source write refills that source's events, gated on the columns the list reads), with soft-deleted events and a disabled source's events hidden by default.
 - Web:
   - Slots:
     - `EventList.Fields` ← `apps.events.sources.source-field`
@@ -133,9 +134,7 @@ part of the query key.
     - `Events.Sidebar` "Events"
   - Uses:
     - `apps/events/events-core.useEventSourceOrigin`
-    - `apps/events/events-core.useEventsRevision`
     - `apps/events/shell.Events`
-    - `infra/endpoints.fetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -145,7 +144,7 @@ part of the query key.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineFieldExtensions`
-    - `primitives/live-state.matchResource`
+    - `primitives/data-view.liveDataSource`
     - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
@@ -159,46 +158,35 @@ part of the query key.
     - `useEventUrl`
     - `useOpenEvent`
 - Server:
+  - Contributes:
+    - `resource.declare` "events.list"
+    - `resource.declare` "events.list:rows"
+    - `resource.declare` "events.list:groups"
   - Uses:
     - `apps/events/events-core._eventSources`
     - `apps/events/events-core.eventsTable`
-    - `database.db`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `primitives/data-view/server-query.bindColumns`
-    - `primitives/data-view/server-query.compileWhere`
-    - `primitives/data-view/server-query.decodeFilterBody`
-    - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/data-view/server-query.filterableOf`
-    - `primitives/keyset.buildSortKeys`
-    - `primitives/keyset.keyValuesOf`
-    - `primitives/keyset.orderByClauses`
-    - `primitives/keyset.seekPredicate`
-  - Exports (values): `handleQuery`
-  - Routes: `POST /api/events/query`
+    - `network/live.serveCollection`
+  - Resources:
+    - `events.list` (keyed, window)
+    - `events.list:groups` (push)
+    - `events.list:rows` (keyed, point)
 - Core:
   - Uses:
     - `apps/events/events-core.EVENT_CATEGORIES`
     - `apps/events/events-core.SourcedEventSchema`
-    - `infra/endpoints.defineEndpoint`
+    - `network/live.liveCollection`
     - `network/live/filter.liveBoolean`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveStringArray`
     - `network/live/filter.liveText`
-    - `primitives/data-view.ServerFilterWireSchema`
   - Exports (types):
     - `EventFieldSpec`
     - `EventFieldType`
-    - `QueryEventsBody`
   - Exports (values):
     - `EVENT_CATEGORY_OPTIONS`
     - `EVENT_LIST_FIELDS`
-    - `EVENT_LIST_FILTERABLE`
     - `EVENT_LIST_SEARCHABLE`
-    - `queryEvents`
-    - `QueryEventsBodySchema`
-    - `QueryEventsResponseSchema`
-    - `SortRuleSchema`
+    - `eventsList`
 - Cross-plugin:
   - Imported by:
     - `apps/events/sources/source-detail/runs/extracted-events`

@@ -6,7 +6,7 @@ import { _events } from "./tables";
 
 // THE ONLY sanctioned write path to `events`.
 //
-// `updated_at` (what the `events.revision` tick reads) is derived by a DB
+// `updated_at` is derived by a DB
 // trigger from the counted columns, so no writer here or elsewhere stamps it.
 // The funnel owns the rest of the row's lifecycle instead: the sighting stamps
 // (`firstSeenAt` / `lastSeenAt`), soft disappearance, and the three write

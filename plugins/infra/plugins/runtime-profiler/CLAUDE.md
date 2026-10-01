@@ -206,26 +206,23 @@ Consumer: the health sampler (`debug/health-monitor` `process-sampler.ts`) diffs
 `health.jsonl` → the Debug → Health charts. So a monitoring storm shows up as a spike even
 though every one of its spans is suppressed.
 
-## Loader→table read-set (union vs per-run)
+## Loader→table read-set capture
 
 Each `loader` entry captures the tables its DB queries read (`recordReadTables`, from the
-pool chokepoint, matching only `FROM`/`JOIN`) and flushes them in `recordEntrySpan`'s
-`finally` into **two** structures:
-
-- **`readSetIndex` (union)** — append-only per key; surfaced by `getReadSetIndex()`. A safe
-  **over-approximation** (never sheds), so inverting it (`table → resource`) for live
-  change-feed routing (`applyDbChange`) can only over-recompute, never miss — which is why it
-  stays a union: a table read only for SOME data (a data-dependent conditional query) must
-  not drop out of the live-routing set.
-- **`lastLoaderReadSet` (per-run)** — the exact tables the MOST RECENT run read (REPLACE,
-  not union); surfaced by `getLastLoaderReadSet(key)`. The resource runtime persists this
-  after a FULL recompute (`live_state_snapshot.tables_read`, replace semantics) so a
-  dependency a code change removed — or a historical mis-attribution — is **shed** from the
-  durable seed instead of carried forever. Read it synchronously right after awaiting the
-  loader (no intervening await), so it is that load's own capture. Written only when the run
-  read ≥1 table (same gate as the union), so a no-table run never replaces a real set with
-  empty. See `research/2026-07-07-global-read-set-self-heal-on-full-recompute.md` (and the
-  prior `…-notifications-attribution-noise.md`). Both are cleared by `resetRuntimeProfile()`.
+pool chokepoint, matching only `FROM`/`JOIN`) and, in `recordEntrySpan`'s `finally`, hands
+them once to the **installed loader read-set sink** (`installLoaderReadSetSink`). The index
+it feeds — the append-only union the change router inverts, and the per-run capture the L2
+persist seam stores — is ROUTING state owned by `server-core/core/read-set.ts`, not profile
+data: `server/internal/install.ts` wires the sink to server-core's `recordLoaderReadSet`,
+`resetRuntimeProfile()` does not touch it, and the capture is **not** gated on the
+`SINGULARITY_PROFILING=0` kill-switch (a kill-switched profiler used to stop live-state
+routing). It still honours `runWithoutProfiling` suppression, which is an attribution rule —
+observability writes inside a loader's context are not that loader's dependencies. No sink
+installed (the web, a bare test) = nothing captured. The per-run capture is also the input
+of the runtime's route drift guard (A8): a ROUTED resource's loader reading a table none of
+its routes names is reported (a failed load under a test runner — pinned by
+`server/internal/install.test.ts`). See
+`research/2026-09-29-global-scoped-change-routing.md` (P0, P1).
 
 ## Flight-recorder substrate
 
@@ -344,12 +341,11 @@ remaining allocations are one flat band array per completed entry span, and what
     - `currentCallerKind`
     - `currentEntryLabel`
     - `currentOriginClass`
-    - `getLastLoaderReadSet`
-    - `getReadSetIndex`
     - `getRuntimeProfile`
     - `getSelfMeter`
     - `installBackgroundLaneRuntime`
     - `installClock`
+    - `installLoaderReadSetSink`
     - `installProfilingSuppressionRuntime`
     - `installSpanContextRuntime`
     - `onSlowSpan`
@@ -359,12 +355,10 @@ remaining allocations are one flat band array per completed entry span, and what
     - `recordReadTables`
     - `recordSpan`
     - `registerGateGauge`
-    - `removeReadSetTable`
     - `resetRuntimeProfile`
     - `runInBackgroundLane`
     - `runTracked`
     - `runWithoutProfiling`
-    - `seedReadSetIndex`
     - `SPAN_KINDS`
     - `SPAN_MEASURES`
     - `waitSplit`

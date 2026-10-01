@@ -7,7 +7,6 @@ import {
   useResource,
   foldResource,
   useEndpointResource,
-  type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   useLive,
@@ -20,7 +19,6 @@ import {
   deleteEventSource,
   eventRunsRevisionResource,
   eventSources,
-  eventsRevisionResource,
   getEventSourceRun,
   listEventSourceRuns,
   listRunEvents,
@@ -48,15 +46,6 @@ export function useEventSourceRow(
   sourceId: string,
 ): LiveRowResult<EventSource> {
   return useLiveRow(eventSources, sourceId);
-}
-
-/**
- * The `events` revision tick. Read it to refetch a delegated events query in
- * place; never put it in a query key — that would refetch on remount rather than
- * on change, and would refetch the window from scratch on every pulse.
- */
-export function useEventsRevision(): ResourceResult<{ rev: string }> {
-  return useResource(eventsRevisionResource);
 }
 
 /**

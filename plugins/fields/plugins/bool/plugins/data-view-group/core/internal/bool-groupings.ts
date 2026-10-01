@@ -23,5 +23,11 @@ function bucketBool(value: FieldValue): GroupBucket {
 }
 
 export const boolGroupings: FieldGrouping[] = [
-  { id: "value", label: "Value", plan: () => bucketBool },
+  // One section per value, No before Yes — the order SQL gives `false`, `true`.
+  {
+    id: "value",
+    label: "Value",
+    oneBucketPerValue: true,
+    plan: () => bucketBool,
+  },
 ];

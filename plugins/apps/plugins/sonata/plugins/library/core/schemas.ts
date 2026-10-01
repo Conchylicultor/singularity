@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { fieldsToZodObject, nullable, type FieldsRecord } from "@plugins/fields/core";
+import {
+  fieldsToZodObject,
+  nullable,
+  type FieldsRecord,
+} from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -23,15 +27,16 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
  * display labels are resolved through the generic `Sonata.Source` registry.
  */
 export const songFields = {
-  id:          textField(),
-  title:       textField(),
-  composer:    nullable(textField()),
+  id: textField(),
+  title: textField(),
+  composer: nullable(textField()),
   durationSec: floatField(),
-  endBeat:     floatField(),
-  createdAt:   dateField(),
-  source:      textField(),
+  endBeat: floatField(),
+  createdAt: dateField(),
+  source: textField(),
 } satisfies FieldsRecord;
 
 export const SongSchema = fieldsToZodObject(songFields);
 
-export type Song = z.infer<typeof SongSchema>;
+/** A song row as stored — the library collection's own fields. */
+export type SongRow = z.infer<typeof SongSchema>;

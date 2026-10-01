@@ -11,11 +11,14 @@ export {
 export type {
   AugmentedColumn,
   QueryAugmentorContext,
-  DataViewJoin,
   ServerQueryAugmentation,
   QueryAugmentor,
 } from "./internal/augment";
-export { DataViewServer, augmentServerQuery } from "./internal/augment";
+export {
+  DataViewServer,
+  applyJoin,
+  augmentServerQuery,
+} from "./internal/augment";
 
 export default {
   description:

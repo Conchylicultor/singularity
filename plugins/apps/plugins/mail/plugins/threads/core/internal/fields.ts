@@ -1,20 +1,14 @@
-import {
-  liveBoolean,
-  liveInstant,
-  liveNumber,
-  liveStringArray,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+import type { MailThreadColumn } from "./collection";
 
-// The single shared field vocabulary driving BOTH the web `FieldDef[]` (added
-// `value`/`values`/`cell`/`options` accessors) and the server `FieldColumnMap`
-// (added drizzle columns), so the two runtimes can never drift on which
-// dimensions exist or what type they are. Plain data only (browser-safe) — no
-// React, no drizzle.
+// The shared field vocabulary: the web `FieldDef[]` (which adds the
+// `value`/`values`/`cell`/`options` accessors) and the authored-views test both
+// read it, and each field names the `mailThreads` column it sorts and filters
+// by — so a field can never lower to a column the collection does not declare.
+// Plain data only (browser-safe) — no React.
 //
 // `sender`/`snippet` are display-only (rendered inside the list's `renderRow`),
 // NOT fields here — that avoids dead sort/filter axes; the search box covers
-// subject/snippet (`MAIL_THREAD_SEARCHABLE`).
+// subject/snippet (the live source's `searchable`).
 export type MailThreadFieldType = "text" | "date" | "bool" | "int" | "tags";
 
 export interface MailThreadFieldSpec {
@@ -27,8 +21,12 @@ export interface MailThreadFieldSpec {
   sortable?: boolean;
   /** Filterable in the toolbar Filter pill. */
   filterable?: boolean;
-  /** Column may be NULL — drives null-aware keyset seek terms server-side. */
-  nullable?: boolean;
+  /**
+   * The `mailThreads` column this field sorts and filters by, when its id is
+   * not that column's name (`labels` → `labelIds`). Field ids are the persisted
+   * vocabulary (the authored mailbox rules say `labels`), so they stay.
+   */
+  column?: MailThreadColumn;
   /** Table/list trailing alignment for this field. */
   align?: "start" | "end" | "center";
 }
@@ -51,43 +49,24 @@ export const MAIL_THREAD_FIELDS: MailThreadFieldSpec[] = [
     type: "text",
     primary: true,
     sortable: true,
-    nullable: true,
   },
   {
     id: "lastMessageAt",
     label: "Date",
     type: "date",
     sortable: true,
-    nullable: true,
     align: "end",
   },
-  { id: "labels", label: "Labels", type: "tags", filterable: true },
+  {
+    id: "labels",
+    label: "Labels",
+    type: "tags",
+    filterable: true,
+    column: "labelIds",
+  },
   { id: "unread", label: "Unread", type: "bool", filterable: true },
   { id: "starred", label: "Starred", type: "bool", filterable: true },
   { id: "important", label: "Important", type: "bool", filterable: true },
   { id: "hasAttachments", label: "Attachment", type: "bool", filterable: true },
   { id: "messageCount", label: "Messages", type: "int", sortable: true },
 ];
-
-/**
- * What the server can filter on, by filter-language domain — the ONE
- * declaration both runtimes read: the web `dataSource.filterable` (so the
- * Filter control offers exactly these) and the server column map
- * (`bindColumns`) the handler strict-decodes against. `labels` is the jsonb
- * `label_ids` array — every mailbox tab's scope is a containment op over it.
- * `snippet` has no field: it is searched only.
- */
-export const MAIL_THREAD_FILTERABLE = {
-  subject: liveText(),
-  snippet: liveText(),
-  lastMessageAt: liveInstant(),
-  labels: liveStringArray(),
-  unread: liveBoolean(),
-  starred: liveBoolean(),
-  important: liveBoolean(),
-  hasAttachments: liveBoolean(),
-  messageCount: liveNumber(),
-};
-
-/** The text columns the search box matches (any of, case-insensitively). */
-export const MAIL_THREAD_SEARCHABLE = ["subject", "snippet"] as const;

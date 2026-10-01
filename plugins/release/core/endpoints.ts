@@ -1,20 +1,8 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { ServerFilterWireSchema } from "@plugins/primitives/plugins/data-view/core";
-import {
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { PlatformTagSchema } from "./platforms";
 import { ReleaseCandidateResponseSchema } from "./candidate";
 import { ReleaseRunSchema } from "./resources";
-
-// Wire mirror of the data-view `SortRule` (no zod schema is exported from
-// data-view/core, so it's declared here for body validation).
-export const SortRuleSchema = z.object({
-  fieldId: z.string(),
-  direction: z.enum(["asc", "desc"]),
-});
 
 /**
  * WHY a release is being cut — the one input that decides whether the artifact
@@ -147,10 +135,9 @@ export type ReleaseLatestRunResponse = z.infer<
  * both — the first to gate Ship, the second to say "a build is in flight" or
  * "the last build failed".
  *
- * A GET, so consumers use `useEndpoint` rather than hand-rolling a `useQuery`
- * over the POST history query with a fabricated `dataViewId` — that endpoint is
- * a server-delegated **DataView** source, and borrowing it off-label breaks the
- * moment a `DataViewServer.QueryAugmentor` matches the invented surface id.
+ * A GET, so consumers use `useEndpoint` rather than borrowing the history
+ * DataView's live source (`releaseHistory`), which is scoped to that one
+ * surface's custom columns.
  *
  * `release_runs_ns_comp_started_idx` — `(namespace, composition, started_at
  * DESC)` — covers this exactly; it needs no index of its own.
@@ -160,61 +147,4 @@ export const releaseLatestRunEndpoint = defineEndpoint({
   query: z.object({ composition: z.string().min(1) }),
   response: ReleaseLatestRunResponseSchema,
   dedupe: true,
-});
-
-/**
- * What the release-history server can filter on, by filter-language domain —
- * the ONE declaration both runtimes read: the web `dataSource.filterable` (so
- * the Filter control offers exactly these) and the server column map
- * (`bindColumns`) the handler strict-decodes against. `composition` has no
- * field (the window is already scoped to one): it is searched only.
- */
-export const RELEASE_HISTORY_FILTERABLE = {
-  composition: liveText(),
-  target: liveText(),
-  status: liveText(),
-  platform: liveText(),
-  startedAt: liveInstant(),
-  finishedAt: liveInstant(),
-};
-
-/** The text columns the search box matches (any of, case-insensitively). */
-export const RELEASE_HISTORY_SEARCHABLE = [
-  "composition",
-  "target",
-  "platform",
-] as const;
-
-export const QueryReleaseHistoryBodySchema = z.object({
-  // The composition this history window is scoped to (the one extra field over
-  // the all-conversations query body — a composition's runs, not the worktree's).
-  composition: z.string(),
-  sort: z.array(SortRuleSchema),
-  // The DataView host's lowered, canonical filter (search folded in); decoded
-  // strictly against RELEASE_HISTORY_FILTERABLE (+ custom columns).
-  filter: ServerFilterWireSchema.optional(),
-  cursor: z.string().nullable(),
-  limit: z.number().int().positive().max(200),
-  // The DataView surface id (its `storageKey`), injected by the DataView host.
-  // The handler passes it to `augmentServerQuery` so per-surface augmentations
-  // (custom columns) can bind their values into the query.
-  dataViewId: z.string(),
-});
-export type QueryReleaseHistoryBody = z.infer<
-  typeof QueryReleaseHistoryBodySchema
->;
-
-export const QueryReleaseHistoryResponseSchema = z.object({
-  items: z.array(ReleaseRunSchema),
-  nextCursor: z.string().nullable(),
-  hasMore: z.boolean(),
-});
-
-// POST so the structured filter tree rides in the body. Filter/sort/search
-// compile to SQL server-side; pagination is keyset (cursor), not OFFSET. Scoped
-// to one composition so a composition's full run history is browsable, no cap.
-export const queryReleaseHistory = defineEndpoint({
-  route: "POST /api/release/history/query",
-  body: QueryReleaseHistoryBodySchema,
-  response: QueryReleaseHistoryResponseSchema,
 });

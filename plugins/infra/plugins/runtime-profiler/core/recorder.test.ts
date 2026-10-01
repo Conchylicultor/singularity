@@ -10,12 +10,11 @@ import {
   captureFlightWindow,
   chargeWait,
   currentOriginClass,
-  getLastLoaderReadSet,
-  getReadSetIndex,
   getRuntimeProfile,
   getSelfMeter,
   installBackgroundLaneRuntime,
   installClock,
+  installLoaderReadSetSink,
   installProfilingSuppressionRuntime,
   installSpanContextRuntime,
   onSlowSpan,
@@ -24,11 +23,9 @@ import {
   recordReadTables,
   recordSpan,
   registerGateGauge,
-  removeReadSetTable,
   resetRuntimeProfile,
   runInBackgroundLane,
   runWithoutProfiling,
-  seedReadSetIndex,
   type Aggregate,
   type EntryContext,
   type FlightSpan,
@@ -85,12 +82,20 @@ installProfilingSuppressionRuntime({
   suppressed: () => suppressAls.getStore() === true,
 });
 
+// The loader read-set sink, installed the way server/internal/install.ts wires
+// server-core's runtime-owned read-set: every flush lands here, in order.
+let readSetFlushes: Array<{ label: string; tables: string[] }> = [];
+installLoaderReadSetSink((label, tables) => {
+  readSetFlushes.push({ label, tables: [...tables].sort() });
+});
+
 let fakeNow = 0;
 
 beforeEach(() => {
   fakeNow = 0;
   installClock(() => fakeNow);
   resetRuntimeProfile();
+  readSetFlushes = [];
 });
 
 function agg(kind: SpanKind, label: string): Aggregate {
@@ -259,7 +264,7 @@ describe("closed-ancestor safety", () => {
     });
 
     // The entry flushed exactly its one real read at finish.
-    expect(getReadSetIndex().l).toEqual(["real_table"]);
+    expect(readSetFlushes).toEqual([{ label: "l", tables: ["real_table"] }]);
     expect(captured.closed).toBe(true);
 
     // Let the late write land on the (now closed) context — it must be dropped.
@@ -269,7 +274,7 @@ describe("closed-ancestor safety", () => {
     // Neither the closed context's own set nor the flushed index gained the
     // late table: the append was a structural no-op, not a silently-lost write.
     expect(captured.tables && [...captured.tables]).toEqual(["real_table"]);
-    expect(getReadSetIndex().l).toEqual(["real_table"]);
+    expect(readSetFlushes).toEqual([{ label: "l", tables: ["real_table"] }]);
   });
 
   test("a closed intermediate ancestor is skipped, an open grandparent still charged", async () => {
@@ -816,60 +821,58 @@ describe("flight recorder — gate gauges", () => {
   });
 });
 
-describe("read-set index — removeReadSetTable", () => {
-  test("evicts a mis-attributed table from non-kept keys, leaving kept keys untouched", () => {
-    seedReadSetIndex({
-      attempts: ["attempts_v", "notifications"],
-      notifications: ["notifications"],
-    });
-    const changed = removeReadSetTable("notifications", ["notifications"]);
-    expect(changed).toEqual(["attempts"]);
-    const index = getReadSetIndex();
-    expect(index.attempts).toEqual(["attempts_v"]);
-    expect(index.notifications).toEqual(["notifications"]); // kept
-  });
-});
-
-describe("read-set index — per-run capture (getLastLoaderReadSet)", () => {
-  // Simulate a loader run that reads `tables`, keyed by the loader label. Mirrors
-  // the DB pool chokepoint: recordReadTables fires INSIDE the loader entry.
+describe("loader read-set capture — handed to the installed sink", () => {
+  // Mirrors the DB pool chokepoint: recordReadTables fires INSIDE the loader entry.
   async function runLoader(key: string, tables: string[]): Promise<void> {
     await recordEntrySpan("loader", key, () => {
       recordReadTables(tables);
     });
   }
 
-  test("returns only the LAST run's tables (replace), while the index is the union", async () => {
+  test("each loader run flushes its own tables once, at finish", async () => {
     await runLoader("attempts", ["attempts_v", "conversations_v"]);
-    // A later run reads a DIFFERENT set (e.g. a code change dropped conversations_v
-    // and a prior mis-attribution had added `notifications`).
     await runLoader("attempts", ["attempts_v"]);
-
-    // The append-only index still carries every table ever read (over-approximation).
-    expect(getReadSetIndex().attempts).toEqual([
-      "attempts_v",
-      "conversations_v",
+    expect(readSetFlushes).toEqual([
+      { label: "attempts", tables: ["attempts_v", "conversations_v"] },
+      { label: "attempts", tables: ["attempts_v"] },
     ]);
-    // The per-run capture is ONLY the most recent run — the self-healing set.
-    expect(getLastLoaderReadSet("attempts")).toEqual(["attempts_v"]);
   });
 
-  test("undefined for a key with no captured loader run", () => {
-    expect(getLastLoaderReadSet("never-ran")).toBeUndefined();
-  });
-
-  test("a run that reads no tables leaves the prior per-run capture intact", async () => {
-    await runLoader("p", ["p_table"]);
-    // A subsequent loader entry that reads nothing must NOT replace a real set with
-    // empty (same gate as the index): the capture keeps the last non-empty run.
+  test("a run that reads no tables flushes nothing; a non-loader entry never flushes", async () => {
     await recordEntrySpan("loader", "p", () => {});
-    expect(getLastLoaderReadSet("p")).toEqual(["p_table"]);
+    await recordEntrySpan("http", "GET /x", () => {
+      recordReadTables(["tasks"]);
+    });
+    expect(readSetFlushes).toEqual([]);
   });
 
-  test("resetRuntimeProfile clears the per-run capture", async () => {
-    await runLoader("p", ["p_table"]);
-    resetRuntimeProfile();
-    expect(getLastLoaderReadSet("p")).toBeUndefined();
+  // The read-set is routing state, not profile data: a kill-switched profiler
+  // records no span, yet the live-state router still needs every loader's tables.
+  test("captures under the SINGULARITY_PROFILING=0 kill-switch, which drops the span itself", async () => {
+    const prior = process.env.SINGULARITY_PROFILING;
+    process.env.SINGULARITY_PROFILING = "0";
+    try {
+      await runLoader("killed", ["tasks"]);
+    } finally {
+      if (prior === undefined) delete process.env.SINGULARITY_PROFILING;
+      else process.env.SINGULARITY_PROFILING = prior;
+    }
+    expect(readSetFlushes).toEqual([{ label: "killed", tables: ["tasks"] }]);
+    expect(
+      getRuntimeProfile().aggregates.loader.find((a) => a.label === "killed"),
+    ).toBeUndefined();
+  });
+
+  // Suppression is an ATTRIBUTION rule, not a profiling one: observability
+  // writes issued inside a loader's context are not that loader's dependencies.
+  test("reads issued under runWithoutProfiling are never attributed to the enclosing loader", async () => {
+    await recordEntrySpan("loader", "l", async () => {
+      recordReadTables(["real_table"]);
+      await runWithoutProfiling(async () => {
+        recordReadTables(["reports"]);
+      });
+    });
+    expect(readSetFlushes).toEqual([{ label: "l", tables: ["real_table"] }]);
   });
 });
 

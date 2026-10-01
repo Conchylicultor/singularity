@@ -13,8 +13,11 @@ import {
   QueryClient,
   QueryClientProvider,
   skipToken,
+  useQueries,
   useQuery,
+  useQueryClient,
   type NonUndefinedGuard,
+  type QueryObserverResult,
 } from "@tanstack/react-query";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
@@ -322,6 +325,107 @@ function useCanonicalParams(
   return useMemo(() => JSON.parse(json) as ResourceParams, [json]);
 }
 
+/**
+ * The query options of ONE read tuple — shared by `useResource` (its
+ * non-skipped arm) and `useResources`, so a tuple read either way is the same
+ * query: one key, one HTTP fallback, one placeholder rule, one GC rule.
+ */
+interface TupleQueryOptions<T> {
+  queryKey: unknown[];
+  queryFn: () => Promise<T>;
+  initialData: NonUndefinedGuard<T>;
+  initialDataUpdatedAt: 0;
+  enabled?: (query: { state: { data: unknown } }) => boolean;
+  structuralSharing: typeof dateAwareReplaceEqualDeep;
+  gcTime?: number;
+}
+function tupleQueryOptions<T, P extends ResourceParams>(
+  notifications: NotificationsClient,
+  resource: ResourceDescriptor<T, P>,
+  p: ResourceParams,
+): TupleQueryOptions<T> {
+  const { key, origin, schema } = resource;
+  return {
+    queryKey: queryKeyFor(key, p),
+    // THE single HTTP write path: version-guarded, shared with the cold-start
+    // prime (notifications-client.ts `fetchOverHttp`). Runs as the WS-down
+    // fallback and the invalidate-mode post-invalidate refetch; the sub-ack
+    // normally fills the cache so this rarely runs. Errors propagate to `q.error`.
+    queryFn: () =>
+      notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
+    // A typed placeholder, never a value: seeded at epoch 0 so
+    // `dataUpdatedAt === 0` means only the placeholder has been seen. A
+    // descriptor without one (a `liveValue`) seeds nothing — the query simply
+    // has no data, still `dataUpdatedAt === 0`, still `pending`.
+    initialData: resource.initialData as NonUndefinedGuard<T>,
+    initialDataUpdatedAt: 0 as const,
+    // With no placeholder, React Query would fetch on mount (a query with no
+    // data always loads). The WS sub-ack is what fills the cache — the HTTP
+    // `queryFn` is only the fallback — so such a query stays disabled until a
+    // value lands (then `invalidate` refetches behave as for any other). That is
+    // exactly a placeholder query's behavior under `staleTime: Infinity`. A
+    // manual `refetch()` ignores `enabled`.
+    //
+    // An on-demand resource is the exception: its value NEVER rides the socket
+    // (no sub-ack value, only `invalidate` frames), so HTTP is its read path,
+    // not a fallback — it fetches on mount like any enabled query.
+    ...(resource.initialData === undefined && resource.load !== "on-demand"
+      ? {
+          enabled: (query: { state: { data: unknown } }) =>
+            query.state.data !== undefined,
+        }
+      : {}),
+    // Date-aware structural sharing for EVERY resource (with or without
+    // `select`): RQ applies the query's `structuralSharing` to both the
+    // query-data merge AND the select-result memoization. The default
+    // `replaceEqualDeep` treats `Date` instances as opaque (so a deeply-equal
+    // payload that carries `z.coerce.date()` fields still mints a new reference
+    // on every push), defeating the documented slice-selector dedup. This is
+    // strictly stronger dedup, never weaker.
+    structuralSharing: dateAwareReplaceEqualDeep,
+    // A `"boot-and-keep"` resource is never garbage-collected: its value must
+    // survive the windows where nothing observes it, otherwise the next mount
+    // reads `dataUpdatedAt === 0` — pending again, long after boot said it was
+    // known. A tuple the boot hydrated got the same default before it was built
+    // (`hydrateResource`); this covers one a tab subscribes without a hydrate.
+    ...(resource.preload === "boot-and-keep" ? { gcTime: Infinity } : {}),
+  };
+}
+
+/**
+ * Report ONE tuple's mount→settle duration (`slowResourceReportSink`), the
+ * first time it holds a value — shared by `useResource` and `useResources`, so
+ * a tuple read either way is measured alike. live-state stays
+ * threshold-agnostic: the registered reporter (a domain plugin) decides what
+ * counts as slow. `startedAt` is when the tuple was observed (null: unknown).
+ */
+function reportTupleSettled(
+  notifications: NotificationsClient,
+  key: string,
+  params: ResourceParams,
+  startedAt: number | null,
+): void {
+  // Cold-start attribution (additive, never suppressing): was the transport
+  // NOT yet ready when this tuple mounted, and how much of the settle window
+  // did it spend waiting for the transport to first become ready?
+  const firstReadyAt = notifications.getFirstReadyAt();
+  const now = performance.now();
+  slowResourceReportSink.emit({
+    key,
+    params,
+    durationMs: startedAt === null ? 0 : now - startedAt,
+    transportColdStart:
+      startedAt !== null &&
+      (firstReadyAt === null || firstReadyAt >= startedAt),
+    transportWaitMs:
+      startedAt === null
+        ? 0
+        : firstReadyAt === null
+          ? now - startedAt
+          : Math.max(0, Math.min(firstReadyAt, now) - startedAt),
+  });
+}
+
 /** A skipped read (`params === null`) has nothing to refetch. */
 const SKIPPED_REFETCH = (): Promise<void> => Promise.resolve();
 /** The second query-key element of a skipped read — never a params object. */
@@ -397,61 +501,18 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   const selectActive =
     !skipped && select !== undefined && (!gate || settledKey === keyStr);
 
+  // A skipped read sits on a per-key skip key with `skipToken`, so no refetch
+  // path (a manual one, `refetchQueries`, the on-demand `enabled` default) can
+  // run it; every other read is the shared tuple query.
+  const tuple = skipped ? null : tupleQueryOptions(notifications, resource, p);
   const q = useQuery({
     queryKey,
-    // THE single HTTP write path: version-guarded, shared with the cold-start
-    // prime (notifications-client.ts `fetchOverHttp`). Runs as the WS-down
-    // fallback and the invalidate-mode post-invalidate refetch; the sub-ack
-    // normally fills the cache so this rarely runs. Errors propagate to `q.error`.
-    // A skipped read has nothing to fetch: `skipToken` keeps every refetch path
-    // (a manual one, `refetchQueries`, the on-demand `enabled` default) off it.
-    queryFn: skipped
-      ? skipToken
-      : () => notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
-    // sub-ack writes setQueryData, so normally queryFn never runs.
-    // It's the fallback when the WS is down.
-    // A typed placeholder, never a value: seeded at epoch 0 so
-    // `dataUpdatedAt === 0` means only the placeholder has been seen. A
-    // descriptor without one (a `liveValue`) seeds nothing — the query simply
-    // has no data, still `dataUpdatedAt === 0`, still `pending`.
-    initialData: (skipped
-      ? undefined
-      : resource.initialData) as NonUndefinedGuard<T>,
+    queryFn: tuple?.queryFn ?? skipToken,
+    initialData: tuple?.initialData as NonUndefinedGuard<T>,
     initialDataUpdatedAt: 0,
-    // With no placeholder, React Query would fetch on mount (a query with no
-    // data always loads). The WS sub-ack is what fills the cache — the HTTP
-    // `queryFn` is only the fallback — so such a query stays disabled until a
-    // value lands (then `invalidate` refetches behave as for any other). That is
-    // exactly a placeholder query's behavior under `staleTime: Infinity`. A
-    // manual `refetch()` ignores `enabled`.
-    //
-    // An on-demand resource is the exception: its value NEVER rides the socket
-    // (no sub-ack value, only `invalidate` frames), so HTTP is its read path,
-    // not a fallback — it fetches on mount like any enabled query.
-    ...(!skipped &&
-    resource.initialData === undefined &&
-    resource.load !== "on-demand"
-      ? {
-          enabled: (query: { state: { data: unknown } }) =>
-            query.state.data !== undefined,
-        }
-      : {}),
-    // Date-aware structural sharing for EVERY resource (with or without
-    // `select`): RQ applies the query's `structuralSharing` to both the
-    // query-data merge AND the select-result memoization. The default
-    // `replaceEqualDeep` treats `Date` instances as opaque (so a deeply-equal
-    // payload that carries `z.coerce.date()` fields still mints a new reference
-    // on every push), defeating the documented slice-selector dedup. This is
-    // strictly stronger dedup, never weaker.
+    ...(tuple?.enabled ? { enabled: tuple.enabled } : {}),
     structuralSharing: dateAwareReplaceEqualDeep,
-    // A `"boot-and-keep"` resource is never garbage-collected: its value must
-    // survive the windows where nothing observes it, otherwise the next mount
-    // reads `dataUpdatedAt === 0` — pending again, long after boot said it was
-    // known. A tuple the boot hydrated got the same default before it was built
-    // (`hydrateResource`); this covers one a tab subscribes without a hydrate.
-    ...(!skipped && resource.preload === "boot-and-keep"
-      ? { gcTime: Infinity }
-      : {}),
+    ...(tuple?.gcTime !== undefined ? { gcTime: tuple.gcTime } : {}),
     // With a selector, narrow re-renders to the selected slice: structural
     // sharing keeps a deeply-equal slice's reference, and limiting
     // notifyOnChangeProps to data/error stops the per-push `dataUpdatedAt`
@@ -509,31 +570,11 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   }, [hasValue, skipped, key, keyStr]);
 
   // Report the mount→settle duration once, the first time this resource leaves
-  // `pending`. live-state stays threshold-agnostic — the registered reporter (a
-  // domain plugin) decides what counts as slow.
+  // `pending` (`reportTupleSettled`).
   useEffect(() => {
     if (hasValue && !reportedRef.current) {
       reportedRef.current = true;
-      // Cold-start attribution (additive, never suppressing): was the transport
-      // NOT yet ready when this resource mounted, and how much of the settle
-      // window did it spend waiting for the transport to first become ready?
-      const start = startRef.current;
-      const firstReadyAt = notifications.getFirstReadyAt();
-      const transportColdStart =
-        start !== null && (firstReadyAt === null || firstReadyAt >= start);
-      const transportWaitMs =
-        start === null
-          ? 0
-          : firstReadyAt === null
-            ? performance.now() - start
-            : Math.max(0, Math.min(firstReadyAt, performance.now()) - start);
-      slowResourceReportSink.emit({
-        key,
-        params: p,
-        durationMs: start === null ? 0 : performance.now() - start,
-        transportColdStart,
-        transportWaitMs,
-      });
+      reportTupleSettled(notifications, key, p, startRef.current);
     }
   }, [hasValue, notifications, key, p]);
 
@@ -570,4 +611,185 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     }
     return { status: "ready", data, refetch };
   }, [skipped, hasValue, data, error, stale]);
+}
+
+/** One tuple's read state, as `useResources`' combine reads it off its query. */
+interface TupleState {
+  hasValue: boolean;
+  data: unknown;
+  error: Error | null;
+}
+
+/**
+ * `useQueries`' `combine`: each query's read state as plain data. Stable (module
+ * level), so React Query re-runs it only when a query's result changed, and its
+ * structural sharing keeps an unchanged tuple's state — and its `data` — the
+ * same object.
+ */
+function combineTuples(
+  results: readonly QueryObserverResult<unknown>[],
+): TupleState[] {
+  return results.map((q) => ({
+    hasValue: q.dataUpdatedAt !== 0,
+    data: q.data,
+    error: q.error,
+  }));
+}
+
+/**
+ * Read a VARYING number of tuples of one resource — `useResource` for a list of
+ * params whose length changes over time (a segmented scroll's windows), which
+ * a hook call per tuple cannot express. Each tuple is read exactly as
+ * `useResource` reads it — the same query (key, HTTP fallback, placeholder, GC
+ * rule), the same `observe` / `unobserve` refcount (a tuple another component
+ * also reads is subscribed once), the same cold-start prime, and the same
+ * pending-mount count until its first value — and yields the same
+ * `ResourceResult` states, in `paramsList` order, and each tuple's
+ * mount→settle is reported once (`reportTupleSettled`). No `select` and no
+ * `gate`.
+ *
+ * The subscription set moves by DIFF: a tuple kept across a list change (moved,
+ * or with others added or removed around it) stays observed throughout — it is
+ * never unobserved and re-observed, which would let its socket subscription
+ * lapse — and a removed tuple is unobserved only after the new ones are
+ * observed.
+ */
+export function useResources<T, P extends ResourceParams = ResourceParams>(
+  resource: ResourceDescriptor<T, P>,
+  paramsList: readonly P[],
+): readonly ResourceResult<T>[] {
+  const notifications = useContext(NotificationsContext);
+  if (!notifications) {
+    throw new Error("useResources must be used within a NotificationsProvider");
+  }
+  const queryClient = useQueryClient();
+  const { key, origin, schema } = resource;
+  const keyOf = resource.keyed?.keyOf;
+  // Canonical tuples (see `canonicalParams`), one identity per canonical list.
+  const listJson = JSON.stringify(
+    paramsList.map((p) => canonicalParams(p, resource.optionalParams)),
+  );
+  const list = useMemo(
+    () => JSON.parse(listJson) as ResourceParams[],
+    [listJson],
+  );
+  const tupleKeys = useMemo(
+    () => list.map((p) => JSON.stringify(queryKeyFor(key, p))),
+    [list, key],
+  );
+
+  // Refcount by diff (see above). The unmount cleanup releases whatever is
+  // observed at that point; StrictMode's mount → cleanup → mount observes again
+  // from an empty set.
+  const observedRef = useRef<Map<string, ResourceParams>>(new Map());
+  // When each tuple was first observed, for its mount→settle report.
+  const startedRef = useRef<Map<string, number>>(new Map());
+  useEffect(() => {
+    const next = new Map(list.map((p, i) => [tupleKeys[i]!, p]));
+    const prev = observedRef.current;
+    for (const [k, p] of next) {
+      if (!prev.has(k)) {
+        if (!startedRef.current.has(k))
+          startedRef.current.set(k, performance.now());
+        notifications.observe(key, p, origin, schema, keyOf);
+      }
+    }
+    for (const [k, p] of prev) {
+      if (!next.has(k)) notifications.unobserve(key, p, origin);
+    }
+    observedRef.current = next;
+  }, [notifications, key, origin, schema, keyOf, list, tupleKeys]);
+  useEffect(
+    () => () => {
+      for (const p of observedRef.current.values()) {
+        notifications.unobserve(key, p, origin);
+      }
+      observedRef.current = new Map();
+    },
+    [notifications, key, origin],
+  );
+
+  const states = useQueries({
+    queries: list.map((p) => tupleQueryOptions(notifications, resource, p)),
+    combine: combineTuples,
+  });
+
+  // Tuples with no value yet: counted as pending mounts, and — before the
+  // transport was ever ready — primed over HTTP once each, as `useResource`
+  // does for its one tuple.
+  const waitingJson = JSON.stringify(
+    tupleKeys.filter((_, i) => states[i]?.hasValue !== true),
+  );
+  const primedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (notifications.hasEverBeenReady(origin)) return;
+    const waiting = new Set(JSON.parse(waitingJson) as string[]);
+    list.forEach((p, i) => {
+      const k = tupleKeys[i]!;
+      if (!waiting.has(k) || primedRef.current.has(k)) return;
+      primedRef.current.add(k);
+      void notifications.primeFromHttp(key, p, origin);
+    });
+  }, [notifications, origin, key, list, tupleKeys, waitingJson]);
+  const releasesRef = useRef<Map<string, () => void>>(new Map());
+  useEffect(() => {
+    const waiting = new Set(JSON.parse(waitingJson) as string[]);
+    const releases = releasesRef.current;
+    for (const k of waiting) {
+      if (!releases.has(k)) releases.set(k, notePendingMount(key));
+    }
+    for (const [k, release] of releases) {
+      if (!waiting.has(k)) {
+        release();
+        releases.delete(k);
+      }
+    }
+  }, [waitingJson, key]);
+  useEffect(
+    () => () => {
+      for (const release of releasesRef.current.values()) release();
+      releasesRef.current = new Map();
+    },
+    [key],
+  );
+  // Each tuple's first value: its mount→settle report, once per tuple.
+  const reportedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    list.forEach((p, i) => {
+      const k = tupleKeys[i]!;
+      if (states[i]?.hasValue !== true || reportedRef.current.has(k)) return;
+      reportedRef.current.add(k);
+      reportTupleSettled(
+        notifications,
+        key,
+        p,
+        startedRef.current.get(k) ?? null,
+      );
+    });
+  }, [notifications, key, list, tupleKeys, states]);
+
+  return useMemo(
+    () =>
+      states.map((st, i): ResourceResult<T> => {
+        const queryKey = queryKeyFor(key, list[i]!);
+        // A manual refetch ignores `enabled`, as `useResource`'s does.
+        const refetch = () =>
+          (
+            queryClient
+              .getQueryCache()
+              .find({ queryKey, exact: true })
+              ?.fetch() ?? Promise.resolve()
+          ).then(() => {});
+        // The same three states, in the same precedence, as `useResource`.
+        if (st.error !== null) {
+          const error = toResourceError(st.error);
+          return st.hasValue
+            ? { status: "error", error, stale: st.data as T, refetch }
+            : { status: "error", error, refetch };
+        }
+        if (!st.hasValue) return { status: "loading", refetch };
+        return { status: "ready", data: st.data as T, refetch };
+      }),
+    [states, list, key, queryClient],
+  );
 }

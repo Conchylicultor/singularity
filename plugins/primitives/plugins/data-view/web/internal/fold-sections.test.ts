@@ -67,7 +67,7 @@ function section(key: string | null, rows: Conv[]): DataViewSection<Conv> {
   return {
     key,
     label: key ?? undefined,
-    count: rows.length,
+    count: { kind: "exact", n: rows.length },
     entries: rows.map(entry),
   };
 }
@@ -96,7 +96,7 @@ describe("foldSections", () => {
     });
     expect(s!.entries.map((e) => e.key)).toEqual(["a", "c"]);
     expect(s!.fold).toEqual({ hidden: 2, open: false });
-    expect(s!.count).toBe(4);
+    expect(s!.count).toEqual({ kind: "exact", n: 4 });
   });
 
   test("a section whose rows are all folded keeps its header", () => {
@@ -108,7 +108,7 @@ describe("foldSections", () => {
     const old = sections[1]!;
     expect(old.label).toBe("old");
     expect(old.entries).toEqual([]);
-    expect(old.count).toBe(2);
+    expect(old.count).toEqual({ kind: "exact", n: 2 });
     expect(old.fold).toEqual({ hidden: 2, open: false });
   });
 

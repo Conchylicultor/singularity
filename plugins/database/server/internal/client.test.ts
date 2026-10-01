@@ -8,8 +8,8 @@ import {
 } from "@plugins/database/plugins/connection/server";
 import { QueryDeadlineExceededError } from "@plugins/database/plugins/connection/server/testing";
 import {
-  getReadSetIndex,
   installBackgroundLaneRuntime,
+  installLoaderReadSetSink,
   installSpanContextRuntime,
   readGateGauges,
   recordEntrySpan,
@@ -17,6 +17,8 @@ import {
   runInBackgroundLane,
   type EntryContext,
 } from "@plugins/infra/plugins/runtime-profiler/core";
+import { recordLoaderReadSet } from "@plugins/framework/plugins/server-core/core";
+import { getReadSetIndex } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   BACKGROUND_QUERY_MAX,
   BACKGROUND_TX_MAX,
@@ -269,6 +271,11 @@ installBackgroundLaneRuntime({
   run: (fn) => backgroundLaneAls.run(true, fn),
   active: () => backgroundLaneAls.getStore() === true,
 });
+
+// …and the loader read-set lands in server-core's runtime-owned index, as wired
+// at boot. It is routing state, so `resetRuntimeProfile` leaves it alone: the
+// read-set assertions below use keys only these tests' loaders write.
+installLoaderReadSetSink(recordLoaderReadSet);
 
 interface Deferred {
   promise: Promise<void>;

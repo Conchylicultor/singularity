@@ -12,8 +12,8 @@ vocabulary here, encoding the 8 system mailboxes as TypeScript and compiling eac
 to an enforced SQL scope. **It is gone, deliberately.** A mailbox is now an
 authored view instance of the `threads` DataView
 (`config/apps/mail/threads/mail-threads.jsonc`), and its scope is that view's
-ordinary, user-editable `filter` — plain `FilterGroup` JSON travelling the
-standard `compileWhere` path. "Inbox" is definitionally the tab whose filter is
+ordinary, user-editable `filter` — plain `FilterGroup` JSON lowered into the
+`mail.threads` live window like any other filter. "Inbox" is definitionally the tab whose filter is
 `labels contains INBOX`; if the user edits it, that is the answer. There is no
 invariant left to enforce, so there is nothing here to enforce it with.
 
@@ -21,8 +21,17 @@ Do not re-introduce a mailbox vocabulary in code. If a mailbox needs to change,
 edit the config row. Design:
 `research/2026-08-03-global-mail-mailbox-as-dataview-views-v2.md`.
 
-Two live values are declared here (`core/internal/resources.ts`), in the leaf
+Three live values are declared here (`core/internal/resources.ts`), in the leaf
 every mail plugin imports, so no consumer has to import another to read them:
+
+- `mailAccount` (`liveValue("mail-account")`, `{ id, email } | null`) is THE
+  account the mail surfaces show: the earliest connected (`connected_at`, then
+  `id`), served here as `mailAccountServed`. The served loader and
+  `resolveMailAccountId()` both call `readMailAccount(executor)`
+  (`server/internal/account.ts`), so "the account" has one definition —
+  deterministic when a second Google account has connected (sync keys accounts
+  by email and deletes none); `account.test.ts` pins the choice against a real
+  database. `threads` scopes its live window to its id.
 
 - `mailLabels` (`liveValue("mail-labels")`, the account's `type="user"` labels
   ordered by name) is also served here, as `mailLabelsServed` — a `source: "db"`
@@ -34,7 +43,7 @@ every mail plugin imports, so no consumer has to import another to read them:
   account) is only declared here; `sync`, which owns the writes, serves it
   (`mailSyncStateServed`). `sync-status` reads it for the banner and rail dot.
 
-Both recompute and push on every write to a table their loader reads
+All three recompute and push on every write to a table their loader reads
 (`mailLabels` also reads `mail_accounts`, to resolve the account) through the
 DB change-feed — no manual notify.
 
@@ -108,10 +117,11 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
 
 ## Plugin reference
 
-- Description: Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared user-labels live resource.
+- Description: Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.
 - Server:
   - Contributes:
     - `resource.declare` "mail-labels"
+    - `resource.declare` "mail-account"
     - `fork-data-exclusion` "mail_messages"
     - `fork-data-exclusion` "mail_threads"
     - `fork-data-exclusion` "mail_message_labels"
@@ -145,7 +155,9 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `mailDraftAttachments`
     - `requireGmailToken`
     - `resolveMailAccountId`
-  - Resources: `mail-labels` (push, unbounded: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
+  - Resources:
+    - `mail-account` (push)
+    - `mail-labels` (push, unbounded: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -187,6 +199,7 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `MAIL_SYNC_ERROR_CODES`
     - `MAIL_SYNC_REMEDIATION`
     - `MAIL_SYNC_STATUSES`
+    - `mailAccount`
     - `mailAccountFields`
     - `MailAccountSchema`
     - `MailAddressSchema`

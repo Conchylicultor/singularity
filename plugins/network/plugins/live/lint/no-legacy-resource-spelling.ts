@@ -49,6 +49,14 @@ const REPLACEMENT = {
   usePointResource: "`useLiveRow`",
   usePointResources: "`useLive(c, { ids })`",
   useWindowResource: "`useLive(c, query)`",
+  // The deferred and multi-tuple substrate the segmented scroll and the
+  // contributed-column collections compile to (not a fourth way to declare,
+  // serve or read one).
+  defineDeferredResource:
+    "`serveCollection` (a `contributed` / `columnScope` collection binds deferred)",
+  deferredWindowQueryResource: "`serveCollection`",
+  useResources:
+    "`useLive` (a scrolled list: a DataView `liveDataSource`, which reads `useLiveScroll`)",
 } as const;
 
 type LegacyName = keyof typeof REPLACEMENT;
@@ -68,6 +76,7 @@ const LEGACY_BARRELS: Readonly<Record<string, readonly LegacyName[]>> = {
     "resourceDescriptor",
     "keyedResourceDescriptor",
     "useResource",
+    "useResources",
     // Deleted at the phase-3 Wave 3 barrier; kept so a stale import is flagged.
     "usePointResource",
     "usePointResources",
@@ -84,10 +93,12 @@ const LEGACY_BARRELS: Readonly<Record<string, readonly LegacyName[]>> = {
   "@plugins/infra/plugins/query-resource/server": [
     "queryResource",
     "windowQueryResource",
+    "deferredWindowQueryResource",
   ],
   "@plugins/framework/plugins/server-core/core": [
     "defineResource",
     "defineExternalResource",
+    "defineDeferredResource",
   ],
   "@plugins/framework/plugins/central-core/core": [
     "defineResource",

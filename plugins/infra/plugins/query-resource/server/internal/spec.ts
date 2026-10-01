@@ -2,9 +2,14 @@ import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable, PgView } from "drizzle-orm/pg-core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type {
+  JoinFamily,
+  JoinSpec,
+} from "@plugins/infra/plugins/query-resource/core";
+import type {
   DependsOnEntry,
   Resource,
   ResourceParams,
+  RoutedRecomputeOn,
 } from "@plugins/framework/plugins/resource-runtime/core";
 
 // A structural view of an `infra/entities` Entity — exactly the subset the
@@ -23,8 +28,19 @@ export interface EntitySource {
 /** The three relation kinds a query-resource can read from. */
 export type QuerySource = PgTable | PgView | EntitySource;
 
-/** A drizzle select projection: JS key → column (or aliased SQL expression). */
-export type SelectMap = Record<string, PgColumn | SQL.Aliased>;
+/**
+ * What a ROUTED compile reads: a base table, or an entity (read through its
+ * table) — never a view, whose changes arrive under its base tables' names
+ * that no route of the view could state (A1 of
+ * research/2026-09-29-global-scoped-change-routing.md).
+ */
+export type RoutedSource = PgTable | EntitySource;
+
+/**
+ * A drizzle select projection: JS key → column, an expression standing for
+ * one (a defaulted extension column's COALESCE), or an aliased expression.
+ */
+export type SelectMap = Record<string, PgColumn | SQL | SQL.Aliased>;
 
 // The minimal chainable query surface the compiler drives: `select → from →
 // optional where/orderBy/limit → await rows`. Kept deliberately small so
@@ -46,6 +62,10 @@ export type SelectMap = Record<string, PgColumn | SQL.Aliased>;
 // `entry.schema.parse(await entry.loader(params, ctx))`). The seam declares the
 // shape; the runtime is what verifies it, at one chokepoint, on every load.
 export interface QueryStep<Row = unknown> extends PromiseLike<Row[]> {
+  /** A declared join (`./joins`): the joined table under its alias, and its condition. */
+  leftJoin(table: PgTable, on: SQL): QueryStep<Row>;
+  /** A required (INNER) lookup — see `LookupJoin.required`. */
+  innerJoin(table: PgTable, on: SQL): QueryStep<Row>;
   where(predicate: SQL): QueryStep<Row>;
   /** Aggregate reads (a collection's `:groups`); the compilers here never group. */
   groupBy(...columns: (PgColumn | SQL)[]): QueryStep<Row>;
@@ -173,7 +193,13 @@ export interface QueryResourceSpec<P extends ResourceParams = ResourceParams> {
  * future cursor can derive its keyset seek from the same keys.
  */
 export interface WindowOrderKey {
-  col: PgColumn;
+  /**
+   * The column, as the SQL reads it: a base column, or a declared join's
+   * rendered column (`JoinPlan.render` — a defaulted extension column is its
+   * COALESCE expression) — whose NULLs a LEFT join may add, so the compiler
+   * orders it NULLS LAST whatever `nullable` says.
+   */
+  col: PgColumn | SQL;
   /** Default `"asc"`. */
   dir?: "asc" | "desc";
   /** Nullable column → symmetric NULLS LAST handling (see `primitives/keyset`). Default `false`. */
@@ -188,16 +214,54 @@ export interface WindowOrderKey {
  * (`c.rows`), which `serveCollection` (network/live) compiles through here.
  * There is deliberately NO `limit` / `recompute` / `scopedMembership` here:
  * the bound comes from the subscription params (clamped to `maxLimit`), and
- * membership is always incremental.
+ * membership is always incremental. Nor `edges`: the compiled resource is
+ * ROUTED (its routes name the table it reads), and a routed entry takes no
+ * cascade — it routes the tables it reads itself.
  */
 export interface WindowQueryResourceSpec<
   P extends ResourceParams = ResourceParams,
 > {
-  /** The relation to read: a base table, a 1:1 identity view, or an entity. */
-  from: QuerySource;
-  /** Same derivation rules as `QueryResourceSpec.identity`. For `point`, `point.by` IS the identity pk. */
-  identity?: { table?: string; pk: PgColumn };
-  /** Projection. Default: an entity's `wireColumns`, or all columns (table/view). */
+  /** The table to read: a base table, or an entity. Never a view (see `RoutedSource`). */
+  from: RoutedSource;
+  /**
+   * The relations joined onto `from` (see `JoinSpec`, `core/`). Each is read by
+   * exactly the tuples whose SQL references it — projected, a required (INNER)
+   * lookup, or named by the tuple's `where` / order — and is routed by the
+   * route its kind maps to (`./joins`). A projection over joins must be
+   * explicit (`select`), each joined column rendered against its alias.
+   */
+  joins?: readonly JoinSpec[];
+  /**
+   * Join FAMILIES (see `JoinFamily`, `core/`): side tables joined once per
+   * MEMBER a tuple's `where` / order names — a DataView surface's custom
+   * columns. The caller renders a member's value through its own plan
+   * (`JoinPlan.readMember`, over these same family objects); this compiler joins
+   * exactly the members a tuple's SQL references, emits ONE route per family,
+   * and reads it as `membership` with a `match` on the members that tuple reads.
+   * A member a tuple orders by is projected under `valuesKey` (an object keyed
+   * by the member's join alias) so the tuple's order signature sees it move.
+   * Window kind only.
+   */
+  families?: { joins: readonly JoinFamily[]; valuesKey: string };
+  /**
+   * External upstream tuples whose change moves this compile's vocabulary (the
+   * members a family may name, how their values cast): passed to the runtime as
+   * the routed entry's `recomputeOn` — every subscribed tuple recomputes FULL
+   * and its read-set memo is dropped.
+   */
+  recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
+  /**
+   * Overrides the derived pk (the table's single primary). For `point`,
+   * `point.by` IS the identity pk. A pk that is not the table's primary key
+   * routes by that column's value, which the change feed does not carry yet —
+   * its readers recompute FULL on every change.
+   */
+  identity?: { pk: PgColumn };
+  /**
+   * Projection. Default: an entity's `wireColumns`, or all columns (table/view).
+   * Required with `joins`: a joined column is projected rendered against its
+   * alias (`JoinPlan.render`).
+   */
   select?: SelectMap;
   /**
    * Server-fixed scope predicate (e.g. `dismissed = false`). Unlike the plain
@@ -205,6 +269,15 @@ export interface WindowQueryResourceSpec<
    * detected as a membership exit/entry by the runtime's window path.
    */
   where?: SQL | ((params: P) => SQL | undefined);
+  /**
+   * Every column a per-params `where` may read — rendered columns (as in
+   * `select`), or fragments standing for them (a static predicate the function
+   * ANDs in) — the universe its routes' `columns` are cut from. Each tuple's
+   * `where` is checked against it (a column outside throws). Absent with a
+   * function `where`, every column of every relation is a route column:
+   * correct, but the `unchanged` gate then never skips.
+   */
+  whereReads?: readonly (PgColumn | SQL)[];
   /**
    * Window total order — REQUIRED for `window`, forbidden for `point` (point
    * sets are unordered). Static keys, or a per-params resolver
@@ -217,15 +290,16 @@ export interface WindowQueryResourceSpec<
   orderBy?:
     WindowOrderKey | WindowOrderKey[] | ((params: P) => WindowOrderKey[]);
   /**
-   * The columns the window's order signature covers — REQUIRED with a
-   * function `orderBy` (the union of every column it may sort by), optional
-   * with a static one (default: the declared order columns). One signature per
-   * resource, not per tuple: an UPDATE to ANY listed column re-derives each
-   * member tuple's window (one bounded ids query), even a tuple not sorting by
-   * it. Every column must be projected, and a resolved order column outside
-   * this set throws — its reorder would otherwise go stale.
+   * Every column a tuple's order may read — REQUIRED with a function
+   * `orderBy` (the union of every column it may sort by), optional with a
+   * static one (default: the declared order columns). Each tuple's order
+   * signature covers the columns IT orders by, cut from this set: an UPDATE
+   * to one of them re-derives that tuple's window (one bounded ids query),
+   * while a tuple sorting by another column keeps its in-place path. Every
+   * column must be projected, and a resolved order column outside this set
+   * throws — its reorder would otherwise go stale.
    */
-  signatureColumns?: PgColumn[];
+  signatureColumns?: (PgColumn | SQL)[];
   /**
    * Ordered-window kind. `maxLimit` clamps every subscription's decoded
    * `limit` (the loader AND `windowIdsOf`, identically). It may instead come
@@ -235,7 +309,25 @@ export interface WindowQueryResourceSpec<
    * source both the client read and the boot path use; the compiler asserts
    * `defaultLimit <= maxLimit` at module eval.
    */
-  window?: { maxLimit?: number };
+  window?: {
+    maxLimit?: number;
+    /**
+     * The subscription's decoded limit, when the descriptor's codec cannot
+     * decode the params alone (a contributed collection decodes against the
+     * column sets it serves). Default: the descriptor codec's `decode`.
+     * Clamped to `maxLimit` either way.
+     */
+    limitOf?: (params: P) => number;
+    /**
+     * The params gate, for the same reason: the descriptor's codec would
+     * refuse the column names a contributed collection serves. Replaces the
+     * descriptor's `validateParams` on the server (the runtime's
+     * `ServerResourceOptions.validateParams`); throws `ResourceContractError`
+     * on a mismatch — of the RAW params (it is the gate that decides whether
+     * they are a `P`). Default: the descriptor's.
+     */
+    validateParams?: (params: ResourceParams) => void;
+  };
   /**
    * Explicit point-set kind. `by` is the column the subscribed id set matches —
    * it IS the resource's identity pk (the change-feed routes by intersecting
@@ -243,8 +335,6 @@ export interface WindowQueryResourceSpec<
    * never intersect). Redundant `identity.pk`, if given, must equal it.
    */
   point?: { by: PgColumn };
-  /** `rel()` cascade edges — compiled into `dependsOn` (see `Edge`). */
-  edges?: Edge[];
   /**
    * The wire row, derived IN JS from each selected row — every row a loader
    * returns (full, scoped refill and point) goes through it, so the order
@@ -253,6 +343,39 @@ export interface WindowQueryResourceSpec<
    * in SQL, where `encode(…, 'base64')` folds lines at 76 chars.
    */
   encodeRow?: (row: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * How a projected field is read off an ENCODED row — what the order
+   * signature reads. Default `row[field]`; an `encodeRow` that moves a field
+   * (a collection folding contributed columns into `$columns`) says where it
+   * went.
+   */
+  readField?: (row: Record<string, unknown>, field: string) => unknown;
+  /**
+   * A scroll window (window kind only): a tuple may be one SEGMENT of a deep
+   * scroll — its order cut by an exclusive `after` and an inclusive `until`
+   * row key — and every full / scoped row carries its own row key in
+   * `keyField`, so a client can cut the order at a row without re-deriving it.
+   *
+   * A row key is the canonical JSON array of the tuple's order keys (the
+   * declared ones, then the pk unless one already is) as exact Postgres text
+   * (`col::text`): a key a decoded row would have rounded (a µs `timestamptz`
+   * read as a ms `Date`) crosses exactly. A key over `maxKeyBytes` is `null` —
+   * a cut rides in every tuple's params, so it stays bounded. Cuts compile on
+   * the ORDER side (over the tuple's rendered order keys, each operand cast
+   * back to its column's type), never through `where`: they read only order
+   * columns, which the routes and the per-tuple signature already cover.
+   */
+  scroll?: {
+    /** The tuple's cuts, each exactly one value per order key (the codec checked it). */
+    cutsOf: (params: P) => {
+      after?: readonly (string | null)[];
+      until?: readonly (string | null)[];
+    };
+    /** The wire field the row key is projected under. */
+    keyField: string;
+    /** A row key's JSON over this many bytes is projected as `null`. */
+    maxKeyBytes: number;
+  };
   /** Fixed-window trailing debounce (ms) for this resource's flushes. */
   debounceMs?: number;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */

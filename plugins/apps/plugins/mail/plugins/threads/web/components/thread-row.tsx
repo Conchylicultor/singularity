@@ -20,14 +20,15 @@ const labelImportantIcon = symbol("label-important");
  *
  * It owns NO click and no leading star: the DataView list wraps it in the
  * selectable/clickable `Row`, and the leading star + row activation come from the
- * list's `viewOptions.list`.
+ * list's `viewOptions.list`. `data-thread-id` names the thread the row shows,
+ * which the e2e scripts read to tell which threads a tab rendered.
  */
 export function ThreadRow({ thread }: { thread: MailThread }): ReactElement {
   const bold = thread.unread ? "font-semibold" : undefined;
   const sortDate = thread.lastMessageAt ?? thread.createdAt;
 
   return (
-    <Fill>
+    <Fill data-thread-id={thread.id}>
       <Stack gap="2xs">
         <Line>
           <Fill>

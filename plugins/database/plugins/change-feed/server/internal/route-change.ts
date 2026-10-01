@@ -1,4 +1,7 @@
-import { applyDbChange } from "@plugins/framework/plugins/server-core/core";
+import {
+  applyDbChange,
+  routeTableChange,
+} from "@plugins/framework/plugins/server-core/core";
 import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
 import type { DbChange } from "./parse-payload";
 import { dependentViews } from "./view-deps";
@@ -21,6 +24,12 @@ import { dependentViews } from "./view-deps";
 // "catch-up ≡ replay the missed rows as if they just arrived" is true by
 // construction and can never drift from the live path. See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
+//
+// Two routers read each change, and each resource is served by exactly one of
+// them: `routeTableChange` serves the ROUTED resources (compiler-emitted routes —
+// per-tuple read-sets, host-id maps), `applyDbChange` every other one through the
+// read-set inversion, which skips routed keys.
+// See research/2026-09-29-global-scoped-change-routing.md.
 export function routeChange(change: DbChange): void {
   // `xid` (the source transaction — mutation-ack attribution) forwards on BOTH
   // applies: even a view-fanout FULL recompute reads post-commit, so the ackTx
@@ -31,6 +40,16 @@ export function routeChange(change: DbChange): void {
     // is late by the same amount as the table that fed it.
     ...(change.changedAt !== null ? { changedAt: change.changedAt } : {}),
   };
+  // A routed table's trigger carries its key layout and, for a gated UPDATE,
+  // the unchanged columns; every other table's leaves both null (unknown).
+  routeTableChange({
+    table: change.table,
+    op: change.op,
+    ids: change.ids,
+    keys: change.keys,
+    unchanged: change.unchanged,
+    ...xid,
+  });
   applyDbChange({
     table: change.table,
     op: change.op,

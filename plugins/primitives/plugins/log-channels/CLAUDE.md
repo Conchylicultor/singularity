@@ -236,6 +236,7 @@ count accumulates across drops.
     - `infra/host/duress`
     - `infra/jobs`
     - `integrations/youtube/audio-fetch`
+    - `network/live`
     - `page/annotations/agent-access`
     - `primitives/live-state`
     - `release`

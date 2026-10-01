@@ -37,6 +37,19 @@ export type {
 } from "./internal/filter-scope";
 
 export {
+  atLeastCount,
+  exactCount,
+  formatSectionCount,
+} from "./internal/section-count";
+
+export type {
+  LiveDataSource,
+  LiveDataSourceOf,
+  LiveSearchableColumn,
+  LiveSourceScope,
+} from "./internal/live-data-source";
+
+export {
   splitFieldSections,
   orderFieldsBySection,
   SHARED_FIELD_SECTION,
@@ -75,8 +88,14 @@ export type {
   DataViewAggregateConfig,
   DataViewRenderProps,
   DataViewProps,
+  DataViewBaseProps,
+  DataViewDataOrigin,
+  DataViewInMemoryOrigin,
+  DataViewFetchPageOrigin,
+  DataViewLiveOrigin,
   DataViewSurfaceChrome,
   DataViewActiveChrome,
+  SectionCount,
   DataViewDensity,
   DataViewGroupHeaders,
   TableCellProps,

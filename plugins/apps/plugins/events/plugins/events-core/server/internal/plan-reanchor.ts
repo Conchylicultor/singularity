@@ -40,7 +40,7 @@ export function planReanchor(
   if (!resolved.found) return { kind: "over" };
   const occurrence = resolved.occurrence;
   // Compare rather than assume a stale row can only move forward, so a repeat
-  // pass writes nothing and cannot tick the live `events.revision` for nothing.
+  // pass writes nothing and cannot push an unchanged row to every open list.
   return occurrence.startsAt.getTime() === storedStartsAt.getTime()
     ? { kind: "keep" }
     : { kind: "move", occurrence };

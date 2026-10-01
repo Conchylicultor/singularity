@@ -29,10 +29,12 @@ export {
   type EventSource,
   EventSchema,
   type EventRecord,
+  type ListedEvent,
   SourceRefSchema,
   type SourceRef,
   SourcedEventSchema,
   type SourcedEvent,
+  sourceRefOf,
   EventSourceRunSchema,
   type EventSourceRun,
   EventSourceRunEventSchema,
@@ -68,9 +70,5 @@ export {
   RefreshAllResultSchema,
   type RefreshAllResult,
 } from "./internal/endpoints";
-export {
-  eventSources,
-  eventsRevisionResource,
-  eventRunsRevisionResource,
-} from "./internal/resources";
+export { eventSources, eventRunsRevisionResource } from "./internal/resources";
 export { externalUrl } from "./internal/external-url";

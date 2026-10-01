@@ -15,8 +15,10 @@ lowers its operators into the language in the browser, and the server compiles
 the result with `filterSql` — no per-field-type SQL, and no registry consulted
 at query time. The one per-type fact a server-delegated DataView still needs is
 how a TEXT-stored custom-column value reads as SQL: `Fields.ValueTextCast`
-contributes the cast (`(c)::numeric`, …) AND the domain that cast is filtered in
-(`number`, …); a type with no cast reads raw TEXT, in the `text` domain.
+contributes the cast (`(c)::numeric`, …), the domain that cast is filtered in
+(`number`, …) AND the SQL type it produces (`numeric`, …) — what a live scroll's
+cut over a sorted custom column casts its exact-text operand back to; a type with
+no cast reads raw TEXT, in the `text` domain, as `text`.
 
 ## The storage contract: two arms, two different promises
 

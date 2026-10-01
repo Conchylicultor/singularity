@@ -5,7 +5,7 @@ import { UnionRunSchema } from "./wire";
 
 // Wire mirror of the data-view `SortRule`. data-view/core exports the TYPE but
 // no zod schema for it, so every server-delegated query body declares its own
-// (the `queryDeployRuns` / `queryReleaseHistory` precedent).
+// (as `queryReports` does).
 const SortRuleSchema = z.object({
   fieldId: z.string(),
   direction: z.enum(["asc", "desc"]),

@@ -1,6 +1,6 @@
 import { _songs } from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import { playbackHistoryShape } from "../../shared/resources";
+import { playbackHistoryShape } from "../../shared/shape";
 
 // Mutable per-song playback rollup attached to the library's `sonata_songs` row
 // via the entity-extensions primitive (1:1 side-table, FK CASCADE on song

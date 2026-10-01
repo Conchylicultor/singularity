@@ -67,9 +67,10 @@ const eventSources = defineEntity("event_sources", eventSourceFields, {
 const events = defineEntity("events", eventFields, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
-  // raises) — and so the `events.revision` tick. Every list-visible column
-  // counts; the sighting stamps (`firstSeenAt` / `lastSeenAt`) do not, so a
-  // content-identical re-extraction leaves the row — and open lists — still.
+  // raises). Every list-visible column counts; the sighting stamps
+  // (`firstSeenAt` / `lastSeenAt`) do not — nor are they on a listed event
+  // (`ListedEventSchema`), so a content-identical re-extraction leaves the
+  // row, and open lists, still.
   updatedAt: {
     touchedBy: {
       id: false,

@@ -22,6 +22,7 @@ import type {
   AnyExtensionShape,
   ExtensionTimestamp,
 } from "@plugins/infra/plugins/entity-extensions/core";
+import type { ExtensionJoin } from "@plugins/infra/plugins/query-resource/core";
 import { extensionIndexName } from "./index-names";
 
 type ParentTable = PgTable & { id: AnyPgColumn };
@@ -111,6 +112,17 @@ export interface EntityExtension<
     exec?: DbExecutor,
   ): Promise<ExtensionTable<F, D>["$inferSelect"]>;
   delete(id: string, exec?: DbExecutor): Promise<void>;
+  // This side table as a join of its parent's collection
+  // (`serveCollection(c, { from: parent, joins: [ext.join("playback")] })`):
+  // LEFT, 1:1 on the parent's id, routed as an `alias` — a side row I / U / D
+  // refills its host row. `alias` names it in the collection's column
+  // overrides (`(j) => j.playback.lastPlayedAt`), which offer only its
+  // `wireColumns` — never a server-only column (by default the timestamps).
+  join<A extends string>(
+    alias: A,
+  ): ExtensionJoin<A, ExtensionTable<F, D>> & {
+    wireColumns: Entity<F, D, S>["wireColumns"];
+  };
 }
 
 // The handle type a given shape + meta produce.
@@ -237,6 +249,16 @@ export function defineExtension<
     },
     async delete(id: string, exec: DbExecutor = db): Promise<void> {
       await exec.delete(table).where(eq(keyColumn, id));
+    },
+    join(alias: string): ExtensionJoin {
+      return {
+        kind: "extension",
+        alias,
+        table,
+        key: keyColumn,
+        parentKey: parentTable.id,
+        wireColumns: entity.wireColumns,
+      };
     },
   }) as unknown as ExtensionOf<Sh, M>;
 }

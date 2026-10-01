@@ -21,14 +21,15 @@
  *      DEFAULT, never a delete. Three assertions, because that one word is the
  *      whole design: the unfiltered list drops by exactly the source's own
  *      count; a filter that NAMES `sourceId` still returns every one of them
- *      (naming the dimension defeats the default — `shouldHideInactiveSources`
- *      in event-list's `scope.ts`, the same rule `disappearedAt` gets); and
+ *      (naming the dimension defeats the default — the `events.list`
+ *      collection's `unless: "sourceId"` default scope, the same rule
+ *      `disappearedAt` gets); and
  *      re-enabling restores the original count, so nothing was stamped, moved
  *      or deleted;
  *   3. that scope is PUSHED, not polled. The toggle is flipped out-of-band
  *      (a PATCH from this script, never through the open tab's own UI), so an
  *      events list that updates can only have learned it from the server —
- *      `events-core`'s `events.revision` tick folding in the active-source set;
+ *      the `source` lookup's reverse route refilling that source's events;
  *   4. "Refresh all" is a SET operation with a tally, and the tally is rendered
  *      arm by arm — a resolved promise is not "everything refreshed". Every arm
  *      `describeRefreshAll` can produce is accepted, so a deploy whose sources
@@ -40,8 +41,10 @@
  * script therefore asserts on the enqueue tally and never on a run's outcome;
  * the runs land long after it exits.
  *
- * Reads the app's own data through the app's own endpoints, in the page's own
- * session, so it keeps working on a machine whose sources are not this one's.
+ * Reads the app's own data through the app's own endpoints and live resources
+ * (`GET /api/resources/<key>`, the HTTP read every live subscription can
+ * fall back to), in the page's own session, so it keeps working on a machine
+ * whose sources are not this one's.
  *
  * Idempotent: every source it switches off is switched back on in a `finally`,
  * so a killed run cannot leave a source quietly disabled.
@@ -54,6 +57,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { eventsList } from "@plugins/apps/plugins/events/plugins/event-list/core";
 
 const OUT = arg("out") ?? "/tmp/events-source-actions";
 
@@ -67,8 +71,8 @@ const BOOT_TIMEOUT_MS = 90_000;
  */
 const ROW_HALF_HEIGHT_PX = 26;
 
-/** Paging bound for the counting reads below. 20 × 200 = 4000 events. */
-const MAX_COUNT_PAGES = 20;
+/** One page of the per-source counts — the grouping's maximum (`LIST_MAX`). */
+const MAX_SOURCE_GROUPS = 100;
 
 interface SourceRow {
   id: string;
@@ -80,24 +84,10 @@ interface EventRow {
   title: string;
   sourceId: string;
 }
-interface QueryPage {
-  items: EventRow[];
-  nextCursor: string | null;
-  hasMore: boolean;
+/** A live resource's HTTP read: its current value. */
+interface ResourceBody<T> {
+  value: T;
 }
-/** The wire shape of a `FilterGroup` naming one `sourceId` (data-view/core). */
-type SourceFilter = {
-  kind: "group";
-  id: string;
-  conjunction: "and";
-  children: {
-    kind: "rule";
-    id: string;
-    fieldId: "sourceId";
-    operatorId: "is";
-    value: string;
-  }[];
-};
 
 const r = report("Events · source actions");
 
@@ -122,59 +112,51 @@ await withBrowser(async (h) => {
     return res.ok();
   };
 
-  const sourceFilter = (id: string): SourceFilter => ({
-    kind: "group",
-    id: "g",
-    conjunction: "and",
-    children: [
-      {
-        kind: "rule",
-        id: "r",
-        fieldId: "sourceId",
-        operatorId: "is",
-        value: id,
-      },
-    ],
-  });
+  /** A live resource's current value, read over HTTP. */
+  const readResource = async <T>(
+    key: string,
+    params: Record<string, string>,
+  ): Promise<T> => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await page.request.get(
+      pathUrl(`/api/resources/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`),
+    );
+    if (!res.ok())
+      throw new Error(`GET /api/resources/${key} — ${res.status()}`);
+    return ((await res.json()) as ResourceBody<T>).value;
+  };
 
   /**
-   * How many events the list would show for a filter — the TOTAL, walked page
-   * by page rather than read off one capped response. A single `limit: 200`
-   * read would silently clamp on a worktree with more events than that, and
-   * every assertion below is an exact-count comparison: a clamped number would
-   * make two genuinely different sets look identical.
+   * How many events the list would show — the TOTAL, from the collection's
+   * `:groups` read (a count per source), never a capped page of rows: every
+   * assertion below is an exact-count comparison, and a clamped number would
+   * make two genuinely different sets look identical. Without a source the
+   * list's default scopes apply (a disabled source's events hidden); naming the
+   * source drops that default, exactly as a filter on `sourceId` does.
    */
-  const countEvents = async (filter: SourceFilter | null): Promise<number> => {
-    let cursor: string | null = null;
-    let total = 0;
-    for (let i = 0; i < MAX_COUNT_PAGES; i++) {
-      const res = await page.request.post(pathUrl("/api/events/query"), {
-        data: { sort: [], filter, query: "", cursor, limit: 200 },
-      });
-      if (!res.ok())
-        throw new Error(`POST /api/events/query — ${res.status()}`);
-      const body = (await res.json()) as QueryPage;
-      total += body.items.length;
-      if (!body.hasMore || body.nextCursor === null) return total;
-      cursor = body.nextCursor;
+  const countEvents = async (sourceId: string | null): Promise<number> => {
+    const groups = await readResource<{ value: unknown; count: number }[]>(
+      eventsList.groups.key,
+      eventsList.groups.groups.encode({
+        groupBy: "sourceId",
+        limit: MAX_SOURCE_GROUPS,
+        ...(sourceId === null ? {} : { where: { sourceId } }),
+      }),
+    );
+    if (groups.length === MAX_SOURCE_GROUPS) {
+      throw new Error(
+        `${MAX_SOURCE_GROUPS}+ sources — a count over one page of groups would be a lower bound`,
+      );
     }
-    throw new Error(`more than ${MAX_COUNT_PAGES} pages of events`);
+    return groups.reduce((sum, g) => sum + g.count, 0);
   };
 
-  /** Every event of one source, for picking a title that is on screen. */
-  const eventsOf = async (id: string): Promise<EventRow[]> => {
-    const res = await page.request.post(pathUrl("/api/events/query"), {
-      data: {
-        sort: [],
-        filter: sourceFilter(id),
-        query: "",
-        cursor: null,
-        limit: 50,
-      },
-    });
-    if (!res.ok()) throw new Error(`POST /api/events/query — ${res.status()}`);
-    return ((await res.json()) as QueryPage).items;
-  };
+  /** Events of one source, for picking a title that is on screen. */
+  const eventsOf = async (id: string): Promise<EventRow[]> =>
+    readResource<EventRow[]>(
+      eventsList.window.key,
+      eventsList.window.window.encode({ where: { sourceId: id }, limit: 50 }),
+    );
 
   // ---------------------------------------------------------------------------
   // Finding a row's OWN action button.
@@ -262,7 +244,7 @@ await withBrowser(async (h) => {
     let ownEvents = 0;
     for (const source of enabled) {
       if (!(await named(source))) continue;
-      const count = await countEvents(sourceFilter(source.id));
+      const count = await countEvents(source.id);
       if (target === undefined) target = source;
       if (count > 0) {
         target = source;
@@ -332,7 +314,7 @@ await withBrowser(async (h) => {
         // predicate instead of a default would make this number 0.
         r.eq(
           "a filter that names `sourceId` still returns every one of them",
-          await countEvents(sourceFilter(target.id)),
+          await countEvents(target.id),
           ownEvents,
         );
       } else if (disable !== null) {
@@ -427,7 +409,7 @@ await withBrowser(async (h) => {
 
           // Deliberately NOT through this tab's UI. The tab has no idea the
           // toggle moved, so anything that happens on screen came off the
-          // server's own `events.revision` tick.
+          // server's routed change feed (the lookup's reverse route).
           r.ok(
             "out-of-band disable accepted",
             await setEnabled(target.id, false),

@@ -162,9 +162,19 @@ export type ServeValueOptions<
 } & BoundArm<Src, T> &
   WhileSubscribedArm<Src, P>;
 
+/**
+ * A value's two-arg runtime options: never routed (`reach`) — a value's
+ * loader is opaque, so the read-set it captures routes it (`source: "db"`), or
+ * its own `notify` does (`"external"`).
+ */
+type ValueOptions<T, P extends Record<string, string>> = ServerResourceOptions<
+  T,
+  P
+> & { reach?: never };
+
 /** The runtime's two-arg options for a value, plus which factory registers it. */
 export interface CompiledValue<T, P extends Record<string, string>> {
-  options: ServerResourceOptions<T, P>;
+  options: ValueOptions<T, P>;
   external: boolean;
   unbounded?: { reason: string };
   /**
@@ -179,11 +189,11 @@ export interface CompiledValue<T, P extends Record<string, string>> {
 export interface ValueRuntime {
   defineResource<T, P extends Record<string, string>>(
     contract: ResourceContract<T, P> & { keyed?: never },
-    opts: ServerResourceOptions<T, P>,
+    opts: ValueOptions<T, P>,
   ): Resource<T, P>;
   defineExternalResource<T, P extends Record<string, string>>(
     contract: ResourceContract<T, P>,
-    opts: ServerResourceOptions<T, P>,
+    opts: ValueOptions<T, P>,
   ): ExternalResource<T, P>;
 }
 

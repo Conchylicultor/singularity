@@ -11,10 +11,11 @@ import {
   type MailLabel,
   type MailThread,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { MAIL_THREAD_FIELDS } from "../../core";
+import { MAIL_THREAD_FIELDS, mailThreads } from "../../core";
 
-// Comparable projection for one field id. Drives the toolbar sort/filter pills
-// (search/filter/sort actually run server-side; this powers the chrome). The
+// Comparable projection for one field id — each one IS its column's value (the
+// live lowering's premise: the server sorts and filters by the column). Drives
+// the toolbar sort/filter pills (search/filter/sort run server-side). The
 // list body itself is fully owned by `renderRow` (ThreadRow), so no cell is
 // needed for display — only the `date` cell exists so a future non-renderRow
 // consumer of these fields still shows a friendly date.
@@ -78,8 +79,9 @@ const labelOption = (l: MailLabel): LabelOption => ({
 });
 
 /**
- * The web `FieldDef[]`, derived from the shared `MAIL_THREAD_FIELDS` vocabulary
- * so it can never drift from the server's `FieldColumnMap`.
+ * The web `FieldDef[]`, derived from the shared `MAIL_THREAD_FIELDS` vocabulary;
+ * a field whose id is not its column's name binds it (`labels` → `labelIds`),
+ * so every field lowers to a column the `mailThreads` collection declares.
  *
  * A hook rather than a constant because the `labels` field's `options` are live:
  * they map each Gmail label id to a friendly name, which every mailbox tab's
@@ -123,6 +125,9 @@ export function useMailThreadFieldDefs(): FieldDef<MailThread>[] {
           sortable: spec.sortable,
           filterable: spec.filterable,
           align: spec.align,
+          ...(spec.column === undefined
+            ? {}
+            : { column: mailThreads.column(spec.column) }),
         };
         // `tags` fields project through `values` (array-aware), not `value`, and
         // carry the id→name mapping the chips render.

@@ -27,9 +27,11 @@ import type { Song } from "../core";
  *    hover cluster). There is no per-view action list, so an action added here
  *    can never reach one view and miss the other.
  *  - `Fields` — extra DataView `FieldDef<Song>[]` injected by other plugins. A
- *    field extension is a *component* (not plain data) so its `value` closure can
- *    capture hook-loaded data — e.g. `playback-history` reads its own live
- *    resource and yields play-count / last-played fields. Contributed fields show
+ *    field extension is a *component* (not plain data), though the library's
+ *    contributors need no hook: `playback-history` reads its play-count /
+ *    last-played columns off the song row (`playbackColumns.read`, the
+ *    `$columns` its `LiveColumns.Serve` folds in) and binds each field to
+ *    `playbackColumns.column(…)`. Contributed fields show
  *    up in the Sort pill, the Filter pill, and as table columns for free, so a
  *    prerecorded "Most played" ordering is just a named `SortRule[]` over the
  *    `playCount` field (a config sort preset) rather than a bespoke toggle chip.

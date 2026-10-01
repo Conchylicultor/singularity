@@ -1,5 +1,9 @@
 import { getTableName } from "drizzle-orm";
-import { getTableConfig, type ForeignKey, type PgTable } from "drizzle-orm/pg-core";
+import {
+  getTableConfig,
+  type ForeignKey,
+  type PgTable,
+} from "drizzle-orm/pg-core";
 import { declareGrowthBound } from "./growth-bounds";
 
 // Verify — at MODULE EVAL of the consumer — that a table's unbounded growth is
@@ -14,7 +18,7 @@ import { declareGrowthBound } from "./growth-bounds";
 // BOOT-FATAL. `./singularity build` probes backend health after restart and fails
 // loudly ("Check server logs") when the new backend never takes over — so a bad
 // cascade claim surfaces as a failed build, not a silently-dead app. This mirrors
-// the precedent in change-feed's `assertScopePoliciesCovered` (a throwing boot
+// the precedent in change-feed's `assertRouteTablesCovered` (a throwing boot
 // invariant that a static `./singularity check` cannot express).
 
 /**
@@ -26,7 +30,10 @@ import { declareGrowthBound } from "./growth-bounds";
  * shape per the api-design skill, not an absorbed failure. Kept out of the barrel;
  * exported only so the test can exercise it directly.
  */
-export function findCascadeFk(table: PgTable, owner: PgTable): ForeignKey | null {
+export function findCascadeFk(
+  table: PgTable,
+  owner: PgTable,
+): ForeignKey | null {
   const ownerName = getTableName(owner);
   const fks = getTableConfig(table).foreignKeys;
   return (

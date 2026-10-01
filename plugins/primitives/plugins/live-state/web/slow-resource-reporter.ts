@@ -22,8 +22,8 @@ export interface SlowResourceInfo {
 }
 
 /**
- * One resource's mount→first-data settle duration, emitted by `useResource` on
- * every settle. A domain plugin (`debug/slow-ops`) registers the handler at
+ * One resource tuple's mount→first-data settle duration, emitted by
+ * `useResource` / `useResources` on every settle. A domain plugin (`debug/slow-ops`) registers the handler at
  * mount time; live-state stays threshold-agnostic and never decides what "slow"
  * means — the consumer gates on its own threshold (pre-hydrated resources settle
  * at ~0ms and are correctly ignored downstream).

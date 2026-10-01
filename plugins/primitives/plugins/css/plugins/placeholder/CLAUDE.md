@@ -34,6 +34,7 @@
     - `apps/sonata/notation`
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/studio/compositions/release`
     - `apps/studio/contributions/tables/columns`
     - `apps/studio/contributions/tables/foreign-keys`
     - `apps/studio/contributions/tables/indexes`

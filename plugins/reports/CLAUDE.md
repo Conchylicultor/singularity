@@ -97,6 +97,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `infra/host/duress.ShedSummary`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
+    - `primitives/data-view/server-query.applyJoin`
     - `primitives/data-view/server-query.augmentServerQuery`
     - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`

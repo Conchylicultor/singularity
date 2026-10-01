@@ -11,23 +11,20 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { eq, type SQL } from "drizzle-orm";
-import {
-  PgDialect,
-  QueryBuilder,
-  integer,
-  pgTable,
-  text,
-} from "drizzle-orm/pg-core";
+import { eq } from "drizzle-orm";
+import { integer, pgTable, pgView, text, timestamp } from "drizzle-orm/pg-core";
 import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import {
+  compileJoins,
   windowQueryResource,
-  type QueryDb,
-  type SelectMap,
   type WindowQueryResourceSpec,
 } from "@plugins/infra/plugins/query-resource/server";
-import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
+import type { ExtensionJoin } from "@plugins/infra/plugins/query-resource/core";
+import {
+  compileWindowQuery,
+  recordingQueryDb,
+} from "@plugins/infra/plugins/query-resource/server/testing";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
@@ -36,6 +33,9 @@ import type {
   WindowParams,
   PointParams,
 } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection, LIVE_ROW_KEY } from "../../core";
+import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
+import { compileCollection } from "./serve-collection";
 
 const rows = pgTable("rows", {
   id: text("id").primaryKey(),
@@ -70,62 +70,26 @@ const byOrder = (p: SortParams) => [
 const ptDescriptor = () =>
   pointQueryResourceDescriptor(`test.cw.pt-${seq++}`, rowSchema, "id");
 
-// ── Fake db: records rendered SQL, returns scripted rows (compile.test.ts twin) ──
-interface Recorded {
-  sql: string;
-  params: unknown[];
-}
-function fakeDb(script: (info: Recorded) => unknown[] = () => []): {
-  db: QueryDb;
-  calls: Recorded[];
-} {
-  const dialect = new PgDialect();
-  const calls: Recorded[] = [];
-  const wrap = (q: any): any => ({
-    where: (p: SQL) => wrap(q.where(p)),
-    orderBy: (...o: SQL[]) => wrap(q.orderBy(...o)),
-    limit: (nn: number) => wrap(q.limit(nn)),
-    then: (
-      resolve: (v: unknown[]) => unknown,
-      reject?: (e: unknown) => unknown,
-    ) => {
-      const rec = dialect.sqlToQuery(q.getSQL());
-      calls.push({ sql: rec.sql, params: rec.params });
-      return Promise.resolve(script({ sql: rec.sql, params: rec.params })).then(
-        resolve,
-        reject,
-      );
-    },
-  });
-  const qb = new QueryBuilder();
-  const makeFrom = (builder: any) => ({
-    from: (t: any) => wrap(builder.from(t)),
-  });
-  const db = {
-    select: (fields?: SelectMap) =>
-      makeFrom(fields ? qb.select(fields) : qb.select()),
-    selectDistinct: (fields: SelectMap) => makeFrom(qb.selectDistinct(fields)),
-  } as unknown as QueryDb;
-  return { db, calls };
-}
+// ── Fake db: records rendered SQL, returns scripted rows ──
+const fakeDb = recordingQueryDb;
 
 describe("compileWindowQuery — window SQL", () => {
   test("FULL loader: where + declared order + pk tiebreaker (NULLS LAST) + params-decoded limit", async () => {
     const { db, calls } = fakeDb();
-    const { serverOpts, keyField, identityTableName } = compileWindowQuery(
-      winDescriptor(),
-      {
-        from: rows,
-        select: { id: rows.id, n: rows.n },
-        where: eq(rows.dismissed, 0),
-        orderBy: { col: rows.n, dir: "desc" },
-        window: { maxLimit: 500 },
-        db,
-      },
-    );
+    const { serverOpts, keyField } = compileWindowQuery(winDescriptor(), {
+      from: rows,
+      select: { id: rows.id, n: rows.n },
+      where: eq(rows.dismissed, 0),
+      orderBy: { col: rows.n, dir: "desc" },
+      window: { maxLimit: 500 },
+      db,
+    });
     expect(keyField).toBe("id");
-    expect(identityTableName).toBe("rows");
-    expect(serverOpts).toMatchObject({ identityTable: "rows" });
+    // Routed, not identity-scoped: the base table is its identity route.
+    expect(serverOpts.identityTable).toBeUndefined();
+    expect(serverOpts.routes!.routes.map((r) => [r.table, r.map])).toEqual([
+      ["rows", { kind: "identity" }],
+    ]);
     await serverOpts.loader({ limit: "100" });
     expect(calls[0]!.sql).toBe(
       `select "id", "n" from "rows" where "rows"."dismissed" = $1 ` +
@@ -217,7 +181,8 @@ describe("compileWindowQuery — window SQL", () => {
     });
     const membership = serverOpts.membership!;
     if (membership.kind !== "window") throw new Error("unreachable");
-    const sig = membership.orderSignatureOf!;
+    const params = { limit: "10" };
+    const sig = (row: unknown) => membership.orderSignatureOf!(row, params);
     // Same order value, different pk → same signature (the tiebreaker is
     // immutable and excluded); different order value → different signature.
     expect(sig({ id: "a", n: 1 })).toBe(sig({ id: "b", n: 1 }));
@@ -238,7 +203,8 @@ describe("compileWindowQuery — window SQL", () => {
     });
     const membership = serverOpts.membership!;
     if (membership.kind !== "window") throw new Error("unreachable");
-    const sig = membership.orderSignatureOf!;
+    const params = { limit: "10" };
+    const sig = (row: unknown) => membership.orderSignatureOf!(row, params);
     // Reads the ALIASED wire fields (`count`, `parent`), not the DB names.
     expect(sig({ id: "a", count: 1, parent: "p" })).toBe(
       sig({ id: "z", count: 1, parent: "p" }),
@@ -278,6 +244,75 @@ describe("compileWindowQuery — window SQL", () => {
     expect(calls[0]!.sql).toBe(
       `select "id", "n" from "rows" order by "rows"."id" DESC NULLS LAST limit $1`,
     );
+  });
+});
+
+describe("compileWindowQuery — routes", () => {
+  test("a window emits ONE identity route on its base table, read by every tuple as membership", () => {
+    const { db } = fakeDb();
+    const { serverOpts } = compileWindowQuery(winDescriptor(), {
+      from: rows,
+      where: (p: WindowParams) => (p.limit === "1" ? eq(rows.n, 1) : undefined),
+      orderBy: { col: rows.n },
+      window: { maxLimit: 500 },
+      db,
+    });
+    const plan = serverOpts.routes!;
+    expect(plan.routes).toEqual([
+      {
+        id: "base",
+        table: "rows",
+        map: { kind: "identity" },
+        // A function `where` with no `whereReads`: every column, the safe
+        // over-approximation of what the SQL may reference.
+        columns: ["id", "parent_id", "n", "dismissed", "icon"],
+      },
+    ]);
+    // Each tuple moves on what its where / order read — `n` for both.
+    for (const params of [{ limit: "1" }, { limit: "5" }]) {
+      expect([...plan.usesOf(params)]).toEqual([
+        ["base", { role: "membership", moves: ["n"] }],
+      ]);
+    }
+  });
+
+  test("a point set keyed by the table's pk routes the change feed's ids as they stand", () => {
+    const { db } = fakeDb();
+    const { serverOpts } = compileWindowQuery(ptDescriptor(), {
+      from: rows,
+      point: { by: rows.id },
+      db,
+    });
+    expect(serverOpts.routes!.routes[0]!.map).toEqual({ kind: "identity" });
+  });
+
+  test("a pk that is NOT the table's primary key routes by that column's value", () => {
+    const { db } = fakeDb();
+    const { serverOpts } = compileWindowQuery(ptDescriptor(), {
+      from: rows,
+      identity: { pk: rows.parentId },
+      select: { conversationId: rows.parentId, n: rows.n },
+      point: { by: rows.parentId },
+      db,
+    });
+    expect(serverOpts.routes!.routes[0]!.map).toEqual({
+      kind: "identity",
+      column: "parent_id",
+    });
+  });
+
+  test("A1: a view `from` throws — a routed resource reads base tables", () => {
+    const view = pgView("rows_v").as((qb) =>
+      qb.select({ id: rows.id, n: rows.n }).from(rows),
+    );
+    expect(() =>
+      compileWindowQuery(ptDescriptor(), {
+        // An untyped caller: `from` is typed `PgTable | EntitySource`.
+        from: view as unknown as typeof rows,
+        point: { by: rows.id },
+        db: fakeDb().db,
+      }),
+    ).toThrow(/a routed compile reads a base table, never a view/);
   });
 });
 
@@ -390,7 +425,7 @@ describe("compileWindowQuery — per-params orderBy", () => {
     expect(calls[3]!.params).toEqual([50]);
   });
 
-  test("orderSignatureOf covers every signature column, whichever order a tuple uses", () => {
+  test("orderSignatureOf covers the columns the TUPLE orders by, not every signature column", () => {
     const { db } = fakeDb();
     const { serverOpts } = compileWindowQuery(sortDescriptor(50), {
       from: rows,
@@ -402,19 +437,30 @@ describe("compileWindowQuery — per-params orderBy", () => {
     });
     const membership = serverOpts.membership!;
     if (membership.kind !== "window") throw new Error("unreachable");
+    // The default tuple sorts by `n`: a `parent` write does not move it — a
+    // write to a column only another tuple sorts by costs it no ids query.
+    const byN = { limit: "5" };
+    const byParent = { limit: "5", order: "parent" };
     const sig = membership.orderSignatureOf!;
-    expect(sig({ id: "a", n: 1, parent: "p" })).toBe(
-      sig({ id: "b", n: 1, parent: "p" }),
+    expect(sig({ id: "a", n: 1, parent: "p" }, byN)).toBe(
+      sig({ id: "b", n: 1, parent: "p" }, byN),
     );
-    expect(sig({ id: "a", n: 1, parent: "p" })).not.toBe(
-      sig({ id: "a", n: 2, parent: "p" }),
+    expect(sig({ id: "a", n: 1, parent: "p" }, byN)).not.toBe(
+      sig({ id: "a", n: 2, parent: "p" }, byN),
     );
-    expect(sig({ id: "a", n: 1, parent: "p" })).not.toBe(
-      sig({ id: "a", n: 1, parent: "q" }),
+    expect(sig({ id: "a", n: 1, parent: "p" }, byN)).toBe(
+      sig({ id: "a", n: 1, parent: "q" }, byN),
+    );
+    // The tuple sorting by `parent` is the mirror image.
+    expect(sig({ id: "a", n: 1, parent: "p" }, byParent)).not.toBe(
+      sig({ id: "a", n: 1, parent: "q" }, byParent),
+    );
+    expect(sig({ id: "a", n: 1, parent: "p" }, byParent)).toBe(
+      sig({ id: "a", n: 2, parent: "p" }, byParent),
     );
   });
 
-  test("a static orderBy with signatureColumns widens the signature; the SQL is unchanged", async () => {
+  test("a static orderBy with signatureColumns: the SQL and the signature follow the order alone", async () => {
     const { db, calls } = fakeDb();
     const { serverOpts } = compileWindowQuery(winDescriptor(), {
       from: rows,
@@ -430,9 +476,15 @@ describe("compileWindowQuery — per-params orderBy", () => {
     );
     const membership = serverOpts.membership!;
     if (membership.kind !== "window") throw new Error("unreachable");
-    const sig = membership.orderSignatureOf!;
-    expect(sig({ id: "a", n: 1, parentId: "p" })).not.toBe(
+    // `signatureColumns` is the universe a tuple's order is checked against;
+    // the signature is the tuple's own order columns (`n`).
+    const params = { limit: "3" };
+    const sig = (row: unknown) => membership.orderSignatureOf!(row, params);
+    expect(sig({ id: "a", n: 1, parentId: "p" })).toBe(
       sig({ id: "a", n: 1, parentId: "q" }),
+    );
+    expect(sig({ id: "a", n: 1, parentId: "p" })).not.toBe(
+      sig({ id: "a", n: 2, parentId: "p" }),
     );
   });
 
@@ -639,5 +691,293 @@ describe("windowQueryResource — descriptor/keyField assertion", () => {
         db,
       }),
     ).toThrow(/does not match the keyField "id"/);
+  });
+});
+
+describe("compileWindowQuery — joins", () => {
+  const rowsExt = pgTable("rows_ext", {
+    parentId: text("parent_id").primaryKey(),
+    id: text("id"),
+    score: integer("score"),
+  });
+  const x: ExtensionJoin<"x", typeof rowsExt> = {
+    kind: "extension",
+    alias: "x",
+    table: rowsExt,
+    key: rowsExt.parentId,
+    parentKey: rows.id,
+  };
+  const plan = compileJoins({ table: rows, name: "rows" }, [x], rows.id, "t");
+  const score = plan.render({ from: "x", col: rowsExt.score });
+
+  test("a spec with joins needs an explicit select", () => {
+    expect(() =>
+      compileWindowQuery(winDescriptor(), {
+        from: rows,
+        joins: [x],
+        orderBy: { col: rows.n },
+        window: { maxLimit: 500 },
+        db: fakeDb().db,
+      }),
+    ).toThrow(/needs an explicit `select`/);
+  });
+
+  test("the key field must project the base identity, never a joined column", () => {
+    expect(() =>
+      compileWindowQuery(winDescriptor(), {
+        from: rows,
+        joins: [x],
+        select: { id: plan.render({ from: "x", col: rowsExt.id }), n: rows.n },
+        orderBy: { col: rows.n },
+        window: { maxLimit: 500 },
+        db: fakeDb().db,
+      }),
+    ).toThrow(/projects a joined column/);
+  });
+
+  test("a per-params where reading outside its declared whereReads fails its load", async () => {
+    const { serverOpts } = compileWindowQuery(winDescriptor(), {
+      from: rows,
+      joins: [x],
+      select: { id: rows.id, n: rows.n, score },
+      where: (p: WindowParams) =>
+        p.limit === "1" ? eq(rows.dismissed, 0) : eq(rows.n, 1),
+      whereReads: [rows.n],
+      orderBy: { col: rows.n },
+      window: { maxLimit: 500 },
+      db: fakeDb().db,
+    });
+    await serverOpts.loader({ limit: "5" });
+    const failure = await Promise.resolve()
+      .then(() => serverOpts.loader({ limit: "1" }))
+      .then(
+        () => null,
+        (err: unknown) => err,
+      );
+    expect(String(failure)).toMatch(
+      /reads "base"\."dismissed", which is not in `whereReads`/,
+    );
+    // …and its read-set answer throws the same, so the runtime FULLs the tuple.
+    expect(() => serverOpts.routes!.usesOf({ limit: "1" })).toThrow(
+      /whereReads/,
+    );
+  });
+
+  test("with whereReads, the route columns are exactly what the SQL may read", () => {
+    const { serverOpts } = compileWindowQuery(winDescriptor(), {
+      from: rows,
+      joins: [x],
+      select: { id: rows.id, n: rows.n, score },
+      where: () => eq(rows.dismissed, 0),
+      whereReads: [rows.dismissed],
+      orderBy: { col: rows.n },
+      window: { maxLimit: 500 },
+      db: fakeDb().db,
+    });
+    expect(
+      serverOpts.routes!.routes.map((r) => [r.id, r.map, r.columns]),
+    ).toEqual([
+      ["base", { kind: "identity" }, ["id", "n", "dismissed"]],
+      ["x", { kind: "alias" }, ["parent_id", "score"]],
+    ]);
+  });
+
+  test("with no select, the route columns are the whole projection a select-all reads", async () => {
+    const { db, calls } = fakeDb();
+    const { serverOpts } = compileWindowQuery(winDescriptor(), {
+      from: rows,
+      where: eq(rows.dismissed, 0),
+      orderBy: { col: rows.n },
+      window: { maxLimit: 500 },
+      db,
+    });
+    // An update that changes only `icon` or `parent_id` changes a member row
+    // the loader returns, so the `unchanged` gate must let it through.
+    expect(serverOpts.routes!.routes[0]!.columns).toEqual([
+      "id",
+      "parent_id",
+      "n",
+      "dismissed",
+      "icon",
+    ]);
+    await serverOpts.loader({ limit: "5" });
+    expect(calls[0]!.sql).toStartWith(
+      `select "id", "parent_id", "n", "dismissed", "icon" from "rows"`,
+    );
+  });
+});
+
+// ── A scroll collection's window: segment cuts and the `$key` row key ──────
+
+describe("compileWindowQuery — scroll segments (serveCollection over a scroll collection)", () => {
+  const tracks = pgTable("tracks", {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    playedAt: timestamp("played_at", { withTimezone: true }),
+    durationSec: integer("duration_sec").notNull(),
+    owner: text("owner").notNull(),
+  });
+  const TrackRow = z.object({
+    id: z.string(),
+    title: z.string(),
+    playedAt: z.date().nullable(),
+    durationSec: z.number(),
+    owner: z.string(),
+  });
+  let n = 0;
+  const scrollCollection = () =>
+    liveCollection(`test.cw.scroll-${n++}`, {
+      row: TrackRow,
+      id: "id",
+      filterable: { title: liveText(), owner: liveText() },
+      // durationSec is sortable but NOT filterable.
+      sortable: ["title", "playedAt", "durationSec"],
+      default: { orderBy: [["playedAt", "desc"]], limit: 10 },
+      maxLimit: 30,
+      scroll: true,
+    });
+
+  function compileScroll(
+    script?: (q: { sql: string; params: unknown[] }) => unknown[],
+  ) {
+    const c = scrollCollection();
+    const recording = fakeDb(script);
+    const specs = compileCollection(c, {
+      from: tracks,
+      where: eq(tracks.owner, "me"),
+      db: recording.db,
+    });
+    return {
+      c,
+      window: compileWindowQuery(c.window, specs.window).serverOpts,
+      ...recording,
+    };
+  }
+
+  const AFTER = JSON.stringify(["2026-09-30 10:00:00.123456+00", "t1"]);
+  const UNTIL = JSON.stringify(["2026-09-29 08:00:00.5+00", "t9"]);
+
+  test("a cut-free tuple renders exactly as before; each row gets its $key", async () => {
+    const { c, window, calls } = compileScroll(() => [
+      {
+        id: "t1",
+        title: "a",
+        playedAt: new Date(0),
+        durationSec: 1,
+        owner: "me",
+        __row_key_0: "1970-01-01 00:00:00+00",
+        __row_key_1: "t1",
+      },
+    ]);
+    const rows = (await window.loader(c.window.window.encode())) as Record<
+      string,
+      unknown
+    >[];
+    expect(calls[0]!.sql).toBe(
+      `select "id", "title", "played_at", "duration_sec", "owner", ` +
+        `"played_at"::text as "__row_key_0", "id"::text as "__row_key_1" ` +
+        `from "tracks" where "tracks"."owner" = $1 ` +
+        `order by "tracks"."played_at" DESC NULLS LAST, "tracks"."id" ASC NULLS LAST limit $2`,
+    );
+    expect(rows[0]![LIVE_ROW_KEY]).toBe('["1970-01-01 00:00:00+00","t1"]');
+    expect(Object.keys(rows[0]!).some((k) => k.startsWith("__row_key"))).toBe(
+      false,
+    );
+  });
+
+  test("cuts compile on the order side, operands cast back to each key's column type, in full / scoped / ids", async () => {
+    const { c, window, calls } = compileScroll();
+    const params = c.window.window.encode(
+      { limit: 20 },
+      { after: AFTER, until: UNTIL },
+    );
+    await window.loader(params);
+    await window.loader(params, { affectedIds: ["t3"] });
+    await (
+      window.membership as { windowIdsOf(p: unknown): Promise<string[]> }
+    ).windowIdsOf(params);
+    const cut =
+      `(("tracks"."played_at" < $2::timestamp with time zone OR "tracks"."played_at" IS NULL) ` +
+      `or ("tracks"."played_at" = $3::timestamp with time zone and "tracks"."id" > $4::text)) ` +
+      `and ("tracks"."played_at" > $5::timestamp with time zone ` +
+      `or ("tracks"."played_at" = $6::timestamp with time zone and "tracks"."id" < $7::text) ` +
+      `or ("tracks"."played_at" = $8::timestamp with time zone and "tracks"."id" = $9::text))`;
+    for (const call of calls) expect(call.sql).toContain(cut);
+    expect(calls[0]!.params.slice(0, 9)).toEqual([
+      "me",
+      "2026-09-30 10:00:00.123456+00",
+      "2026-09-30 10:00:00.123456+00",
+      "t1",
+      "2026-09-29 08:00:00.5+00",
+      "2026-09-29 08:00:00.5+00",
+      "t9",
+      "2026-09-29 08:00:00.5+00",
+      "t9",
+    ]);
+    // Only the full and scoped loads project the row key.
+    expect(calls[0]!.sql).toContain(`::text as "__row_key_0"`);
+    expect(calls[1]!.sql).toContain(`::text as "__row_key_0"`);
+    expect(calls[2]!.sql).not.toContain("__row_key");
+  });
+
+  test("a NULL order key in a cut compiles as the trailing NULL region", async () => {
+    const { c, window, calls } = compileScroll();
+    await window.loader(
+      c.window.window.encode(undefined, {
+        after: JSON.stringify([null, "t4"]),
+      }),
+    );
+    expect(calls[0]!.sql).toContain(
+      `where ("tracks"."owner" = $1 and ("tracks"."played_at" IS NULL and "tracks"."id" > $2::text))`,
+    );
+  });
+
+  test("a sortable-but-not-filterable order key takes cuts without tripping the whereReads universe", async () => {
+    const { c, window, calls } = compileScroll();
+    const params = c.window.window.encode(
+      { orderBy: [["durationSec", "asc"]], where: { title: "x" } },
+      { after: JSON.stringify(["90", "t2"]) },
+    );
+    await window.loader(params);
+    expect(calls[0]!.sql).toContain(
+      `("tracks"."duration_sec" > $3::integer or ("tracks"."duration_sec" = $4::integer and "tracks"."id" > $5::text))`,
+    );
+    // The routes and roles are those of the same tuple without the cut.
+    expect([...window.routes!.usesOf(params)]).toEqual([
+      ...window.routes!.usesOf(
+        c.window.window.encode({
+          orderBy: [["durationSec", "asc"]],
+          where: { title: "x" },
+        }),
+      ),
+    ]);
+  });
+
+  test("a $key over 1 KiB (a long text sort key) is projected as null", async () => {
+    const long = "x".repeat(1100);
+    const { c, window } = compileScroll(() => [
+      {
+        id: "t1",
+        title: long,
+        playedAt: null,
+        durationSec: 1,
+        owner: "me",
+        __row_key_0: long,
+        __row_key_1: "t1",
+      },
+      {
+        id: "t2",
+        title: "short",
+        playedAt: null,
+        durationSec: 1,
+        owner: "me",
+        __row_key_0: "short",
+        __row_key_1: "t2",
+      },
+    ]);
+    const rows = (await window.loader(
+      c.window.window.encode({ orderBy: [["title", "asc"]] }),
+    )) as Record<string, unknown>[];
+    expect(rows.map((r) => r[LIVE_ROW_KEY])).toEqual([null, '["short","t2"]']);
   });
 });

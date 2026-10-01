@@ -12,7 +12,6 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 // Re-export the source id so consumers can identify this source without
 // depending on its internal layout.
 export { MIDI_SOURCE_ID };
-export { useSongMidiMap } from "./hooks";
 
 export default {
   description:

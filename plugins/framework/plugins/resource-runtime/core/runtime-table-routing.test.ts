@@ -1,0 +1,1909 @@
+/**
+ * Scoped change routing (`routeTableChange`, `./routing`) — the P0 runtime seam
+ * of research/2026-09-29-global-scoped-change-routing.md, driven DB-free with
+ * routes injected on the resource the way a compiler will emit them. Run with
+ * `./singularity test plugins/framework/plugins/resource-runtime`.
+ *
+ * The fixture is one simulated database: `hosts` (the window's identity table),
+ * `hosts_ext` (a 1:1 extension keyed by its host — an `alias` route), and
+ * `sources` (an N:1 lookup the hosts reference — a `reverse` route). The window
+ * orders hosts by `n`; `tag` / `enabled` params filter by the joined columns,
+ * which is what turns their routes from the `value` role into `membership`.
+ *
+ * The matrix (op × map kind × role × membership kind × several routes on one
+ * table) pins, per cell: which tuples get a pending, scoped vs FULL vs ack-only,
+ * `deleted` only from an identity D, the loader ids, the frames, the ack after
+ * every route, the freshness floor, skipped tuples' versions, and fail-open on a
+ * throwing `usesOf` / `encode` / `resolve`. The named scenarios of the plan's
+ * Verification §2 follow.
+ */
+
+import { describe, expect, test } from "bun:test";
+import { z } from "zod";
+import {
+  mintReachPlan,
+  mintRoutePlan,
+  type Route,
+  type TupleUse,
+} from "./routing";
+import {
+  createHarness,
+  makeClientView,
+  tick,
+  type RecordedFrame,
+} from "./test-support";
+import type { ResourceParams, ResourceRuntimeOptions } from "./runtime";
+
+const rowSchema = z.object({
+  id: z.string(),
+  n: z.number(),
+  tag: z.string().nullable(),
+  label: z.string().nullable(),
+});
+const rowsSchema = z.array(rowSchema);
+type Row = z.infer<typeof rowSchema>;
+const keyOf = (r: unknown) => (r as Row).id;
+
+// Two macrotasks: the flush, and a re-drain pass it may schedule.
+const settle = async () => {
+  await tick();
+  await tick();
+};
+
+const sameParams = (a: ResourceParams | undefined, b: ResourceParams) =>
+  a !== undefined &&
+  JSON.stringify(Object.entries(a).sort()) ===
+    JSON.stringify(Object.entries(b).sort());
+
+// --- The simulated database -------------------------------------------------
+
+function makeWorld() {
+  const hosts = new Map<string, { n: number; src: string | null }>();
+  const ext = new Map<string, string>(); // parent_id → tag
+  const sources = new Map<string, { label: string; enabled: boolean }>();
+  const rowOf = (id: string): Row => {
+    const h = hosts.get(id)!;
+    const s = h.src !== null ? sources.get(h.src) : undefined;
+    return { id, n: h.n, tag: ext.get(id) ?? null, label: s?.label ?? null };
+  };
+  const matches = (p: ResourceParams, id: string): boolean => {
+    const h = hosts.get(id);
+    if (!h) return false;
+    if (p.tag !== undefined && ext.get(id) !== p.tag) return false;
+    if (p.enabled === "1" && !(h.src !== null && sources.get(h.src)?.enabled))
+      return false;
+    return true;
+  };
+  const members = (p: ResourceParams): Row[] =>
+    [...hosts.keys()]
+      .filter((id) => matches(p, id))
+      .map(rowOf)
+      .sort((a, b) => a.n - b.n || (a.id < b.id ? -1 : 1));
+  return { hosts, ext, sources, rowOf, matches, members };
+}
+type World = ReturnType<typeof makeWorld>;
+
+type ResolveCall = { changed: string[]; within: string[] | null };
+
+// The compiler-shaped plan for the world: the base table is an identity route,
+// the extension an alias through its `parent_id`, the lookup a reverse route
+// whose `resolve` answers which hosts reference the changed sources.
+function worldRoutes(w: World, log: ResolveCall[]): Route[] {
+  return [
+    {
+      id: "hosts",
+      table: "hosts",
+      map: { kind: "identity" },
+      columns: ["id", "n", "src"],
+    },
+    {
+      id: "ext",
+      table: "hosts_ext",
+      map: { kind: "alias", column: "parent_id" },
+      columns: ["parent_id", "tag"],
+    },
+    {
+      id: "src",
+      table: "sources",
+      map: {
+        kind: "reverse",
+        column: "id",
+        resolve: async (changed, within, cap) => {
+          log.push({
+            changed: [...changed].sort(),
+            within: within ? [...within].sort() : null,
+          });
+          const out = [...w.hosts]
+            .filter(
+              ([id, h]) =>
+                h.src !== null &&
+                changed.includes(h.src) &&
+                (within === null || within.has(id)),
+            )
+            .map(([id]) => id);
+          return out.length > cap ? "over-cap" : out;
+        },
+      },
+      columns: ["id", "label", "enabled"],
+    },
+  ];
+}
+
+// A tuple reads the extension (the lookup) as MEMBERSHIP when it filters by its
+// column, and only as a projected VALUE otherwise.
+const worldUses = (p: ResourceParams): ReadonlyMap<string, TupleUse> =>
+  new Map<string, TupleUse>([
+    ["hosts", { role: "membership" }],
+    ["ext", { role: p.tag !== undefined ? "membership" : "value" }],
+    ["src", { role: p.enabled === "1" ? "membership" : "value" }],
+  ]);
+
+interface FixtureOpts {
+  runtime?: ResourceRuntimeOptions & { sockets?: number };
+  routes?: (w: World, log: ResolveCall[]) => Route[];
+  uses?: (p: ResourceParams) => ReadonlyMap<string, TupleUse>;
+  kind?: "window" | "point" | "alias";
+}
+
+// A routed membership resource "win" over the world. `window` = the first
+// `limit` members; `point` = the ids named by the `ids` param; `alias` = the
+// unbounded `scopedMembership` window. Records every loader call, windowIdsOf
+// run and resolve call; `park()` makes the NEXT loader call capture its rows and
+// then wait — a SELECT that already ran — until released.
+function routed(opts: FixtureOpts = {}) {
+  const w = makeWorld();
+  const loads: Array<{ params: ResourceParams; ids: string[] | "FULL" }> = [];
+  const resolveLog: ResolveCall[] = [];
+  const reports: string[] = [];
+  let windowIdsCalls = 0;
+  let parkNext: Promise<void> | null = null;
+  const h = createHarness({
+    reportError: (ctx) => reports.push(ctx),
+    ...opts.runtime,
+  });
+  const kind = opts.kind ?? "window";
+  const limitOf = (p: ResourceParams) => Number(p.limit ?? "3");
+  const pointIds = (p: ResourceParams) =>
+    (p.ids ?? "").split(",").filter(Boolean);
+  const full = (p: ResourceParams): Row[] =>
+    kind === "point"
+      ? pointIds(p)
+          .filter((id) => w.matches(p, id))
+          .map(w.rowOf)
+      : kind === "alias"
+        ? w.members(p)
+        : w.members(p).slice(0, limitOf(p));
+  const loader = async (
+    p: ResourceParams,
+    c?: { affectedIds: readonly string[] },
+  ): Promise<Row[]> => {
+    loads.push({ params: p, ids: c ? [...c.affectedIds].sort() : "FULL" });
+    const rows = c
+      ? c.affectedIds.filter((id) => w.matches(p, id)).map(w.rowOf)
+      : full(p);
+    const park = parkNext;
+    parkNext = null;
+    if (park) await park;
+    return rows;
+  };
+  const plan = mintRoutePlan({
+    routes: (opts.routes ?? worldRoutes)(w, resolveLog),
+    usesOf: opts.uses ?? worldUses,
+  });
+  const contract = {
+    key: "win",
+    schema: rowsSchema,
+    keyed: { keyOf },
+    validateParams: () => {},
+  };
+  if (kind === "point") {
+    h.runtime.defineResource(contract, {
+      routes: plan,
+      membership: { kind: "point", idsOf: pointIds },
+      loader,
+    });
+  } else if (kind === "alias") {
+    h.runtime.defineResource(contract, {
+      routes: plan,
+      scopedMembership: {
+        orderOf: async (p) => {
+          windowIdsCalls++;
+          return w.members(p).map((r) => r.id);
+        },
+      },
+      loader,
+    });
+  } else {
+    h.runtime.defineResource(contract, {
+      routes: plan,
+      membership: {
+        kind: "window",
+        windowIdsOf: async (p) => {
+          windowIdsCalls++;
+          return w
+            .members(p)
+            .slice(0, limitOf(p))
+            .map((r) => r.id);
+        },
+        orderSignatureOf: (r) => String((r as Row).n),
+      },
+      loader,
+    });
+  }
+  const change = (
+    table: string,
+    op: "I" | "U" | "D",
+    o: {
+      ids?: string[] | null;
+      keys?: Record<string, (string | null)[]> | null;
+      unchanged?: string[] | null;
+      xid?: string;
+    } = {},
+  ) =>
+    h.runtime.routeTableChange({
+      table,
+      op,
+      ids: o.ids ?? null,
+      keys: o.keys ?? null,
+      unchanged: o.unchanged ?? null,
+      ...(o.xid !== undefined ? { xid: o.xid } : {}),
+    });
+  const framesOf = (params: ResourceParams, socket = 0): RecordedFrame[] =>
+    h.frames.filter(
+      (f) =>
+        f.key === "win" && f.socket === socket && sameParams(f.params, params),
+    );
+  return {
+    h,
+    w,
+    loads,
+    resolveLog,
+    reports,
+    change,
+    full,
+    get windowIdsCalls() {
+      return windowIdsCalls;
+    },
+    park(): () => void {
+      let release!: () => void;
+      parkNext = new Promise<void>((r) => {
+        release = r;
+      });
+      return release;
+    },
+    framesOf,
+    pushesOf: (params: ResourceParams) =>
+      framesOf(params).filter((f) => f.kind !== "sub-ack"),
+    /** The client simulator's converged value for a tuple (socket 0). */
+    clientValue(params: ResourceParams): unknown {
+      const v = makeClientView(keyOf);
+      v.applyAll(framesOf(params));
+      return v.value;
+    },
+    loadsSince(n: number) {
+      return loads.slice(n);
+    },
+  };
+}
+type Fixture = ReturnType<typeof routed>;
+
+// h1..h4 at n = 1..4; h1, h2 on source s1 (enabled), h3 on s2 (disabled).
+function seed(f: Fixture): void {
+  f.w.sources.set("s1", { label: "S1", enabled: true });
+  f.w.sources.set("s2", { label: "S2", enabled: false });
+  f.w.hosts.set("h1", { n: 1, src: "s1" });
+  f.w.hosts.set("h2", { n: 2, src: "s1" });
+  f.w.hosts.set("h3", { n: 3, src: "s2" });
+  f.w.hosts.set("h4", { n: 4, src: null });
+}
+
+const W3 = { limit: "3" };
+
+async function seeded(opts: FixtureOpts = {}, params: ResourceParams = W3) {
+  const f = routed(opts);
+  seed(f);
+  await f.h.subscribe("win", params);
+  return f;
+}
+
+const deltas = (frames: RecordedFrame[]) =>
+  frames.filter((f) => f.kind === "delta");
+
+// --- Identity routes ----------------------------------------------------------
+
+describe("identity routes", () => {
+  test("a U refills exactly its ids, scoped, and the client converges", async () => {
+    const f = await seeded();
+    const at = f.loads.length;
+    f.w.hosts.get("h2")!.n = 2.5;
+    f.change("hosts", "U", { ids: ["h2"] });
+    await settle();
+    expect(f.loadsSince(at)[0]).toEqual({ params: W3, ids: ["h2"] });
+    expect(f.loadsSince(at).every((l) => l.ids !== "FULL")).toBe(true);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("an I admits an entrant through windowIdsOf; a D exits with NO loader run for the deleted id", async () => {
+    const f = await seeded();
+    let at = f.loads.length;
+    f.w.hosts.set("h0", { n: 0, src: null });
+    f.change("hosts", "I", { ids: ["h0"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h0"] }]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3)); // h3 squeezed out
+
+    at = f.loads.length;
+    f.w.hosts.delete("h1");
+    f.change("hosts", "D", { ids: ["h1"] });
+    await settle();
+    // No refill of h1 — a deleted row cannot be read; only the backfilled tail.
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h3"] }]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("unknown rows (ids null) recompute the tuple FULL — the bounded window load", async () => {
+    const f = await seeded();
+    const at = f.loads.length;
+    f.change("hosts", "U", { ids: null });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: "FULL" }]);
+  });
+
+  test("a known-empty change (ids: []) touches nothing", async () => {
+    const f = await seeded();
+    const at = f.loads.length;
+    f.change("hosts", "U", { ids: [] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+    expect(f.pushesOf(W3)).toEqual([]);
+  });
+
+  test("an identity route with encode maps a table id into the host's key space", async () => {
+    const f = routed({
+      kind: "point",
+      routes: () => [
+        {
+          id: "arm",
+          table: "hosts",
+          map: { kind: "identity", encode: (v) => `a:${v}` },
+          columns: ["n"],
+        },
+      ],
+      uses: () => new Map([["arm", { role: "membership" }]]),
+    });
+    f.w.hosts.set("a:h1", { n: 1, src: null });
+    const P = { ids: "a:h1" };
+    await f.h.subscribe("win", P);
+    const at = f.loads.length;
+    f.change("hosts", "U", { ids: ["h2"] }); // encodes to a:h2 — not in the set
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: P, ids: ["a:h1"] }]);
+  });
+});
+
+// --- Alias routes (a side table carrying its host key) ------------------------
+
+describe("alias routes", () => {
+  test("value role: a write to a MEMBER's extension refills that member only — no windowIdsOf", async () => {
+    const f = await seeded();
+    const at = f.loads.length;
+    const ids = f.windowIdsCalls;
+    f.w.ext.set("h2", "x");
+    f.change("hosts_ext", "U", { ids: ["h2"], keys: { parent_id: ["h2"] } });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h2"] }]);
+    expect(f.windowIdsCalls).toBe(ids);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("value role: a write to a NON-member's extension on a quiescent tuple loads nothing; its writer gets an ack iff asked, and no version moves", async () => {
+    const f = routed();
+    seed(f);
+    await f.h.subscribe("win", W3, { acks: true });
+    const base = f.framesOf(W3).find((x) => x.kind === "sub-ack")!.version!;
+    const at = f.loads.length;
+    const feed = f.h.runtime.notifyStatsFor("win").feed;
+    f.w.ext.set("h4", "x");
+    f.change("hosts_ext", "I", {
+      ids: ["h4"],
+      keys: { parent_id: ["h4"] },
+      xid: "700",
+    });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+    expect(f.pushesOf(W3).map((x) => [x.kind, x.ackTx])).toEqual([
+      ["ack", ["700"]],
+    ]);
+    // The owed ack is still a feed delivery to the tuple (hand-vs-feed counters).
+    expect(f.h.runtime.notifyStatsFor("win").feed).toBe(feed + 1);
+    // The next real change ships at the sub-ack's version + 1.
+    f.w.hosts.get("h1")!.n = 1.5;
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(deltas(f.pushesOf(W3)).at(-1)!.version).toBe(base + 1);
+  });
+
+  test("a side-table I / U / D is a host U: an extension DELETE refills its host, never deletes it", async () => {
+    const f = await seeded();
+    f.w.ext.set("h2", "x");
+    f.change("hosts_ext", "I", { ids: ["h2"], keys: { parent_id: ["h2"] } });
+    await settle();
+    const at = f.loads.length;
+    f.w.ext.delete("h2");
+    f.change("hosts_ext", "D", { ids: ["h2"], keys: { parent_id: ["h2"] } });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h2"] }]);
+    const last = deltas(f.pushesOf(W3)).at(-1)!;
+    expect(last.deletes ?? []).toEqual([]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("membership role: a joined-filter flip refills the host and admits it through windowIdsOf", async () => {
+    const T = { limit: "3", tag: "x" };
+    const f = await seeded({}, T);
+    expect(f.clientValue(T)).toEqual([]);
+    const ids = f.windowIdsCalls;
+    f.w.ext.set("h3", "x");
+    f.change("hosts_ext", "I", { ids: ["h3"], keys: { parent_id: ["h3"] } });
+    await settle();
+    expect(f.windowIdsCalls).toBe(ids + 1);
+    expect(f.clientValue(T)).toEqual(f.full(T));
+    expect((f.clientValue(T) as Row[]).map((r) => r.id)).toEqual(["h3"]);
+  });
+
+  test("unknown keys: a map reading a non-PK column recomputes FULL", async () => {
+    const f = await seeded();
+    const at = f.loads.length;
+    f.change("hosts_ext", "U", { ids: ["h2"], keys: null });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: "FULL" }]);
+  });
+});
+
+// --- Reverse routes (the host side references the changed row) ----------------
+
+describe("reverse routes", () => {
+  test("value role: resolved in the drain, bounded to the tuple's members", async () => {
+    const f = await seeded();
+    const at = f.loads.length;
+    f.w.sources.get("s1")!.label = "S1'";
+    f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] } });
+    await settle();
+    expect(f.resolveLog).toEqual([
+      { changed: ["s1"], within: ["h1", "h2", "h3"] },
+    ]);
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h1", "h2"] }]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("membership role: resolved unbounded (within null)", async () => {
+    const E = { limit: "3", enabled: "1" };
+    const f = await seeded({}, E);
+    f.change("sources", "U", { ids: ["s2"], keys: { id: ["s2"] } });
+    await settle();
+    expect(f.resolveLog).toEqual([{ changed: ["s2"], within: null }]);
+  });
+
+  test("one flush resolves ONCE per route: over every reading tuple, within the union of their members", async () => {
+    const L2 = { limit: "2" };
+    const f = await seeded();
+    await f.h.subscribe("win", L2);
+    const at = f.loads.length;
+    f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] } });
+    await settle();
+    expect(f.resolveLog).toEqual([
+      { changed: ["s1"], within: ["h1", "h2", "h3"] },
+    ]);
+    expect(f.loadsSince(at).map((l) => [l.params.limit, l.ids])).toEqual([
+      ["3", ["h1", "h2"]],
+      ["2", ["h1", "h2"]],
+    ]);
+  });
+
+  test("a second change for a tuple that already has a pending unions into ONE resolve — unbounded, since the tuple is no longer quiescent", async () => {
+    const f = await seeded();
+    f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] } });
+    f.change("sources", "U", { ids: ["s2"], keys: { id: ["s2"] } });
+    await settle();
+    expect(f.resolveLog).toEqual([{ changed: ["s1", "s2"], within: null }]);
+  });
+
+  test("a membership reader beside a value reader: ONE unbounded resolve, cut to each value reader's members", async () => {
+    const E = { limit: "3", enabled: "1" };
+    const f = await seeded();
+    await f.h.subscribe("win", E);
+    const at = f.loads.length;
+    f.w.sources.get("s1")!.label = "S1'";
+    f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] } });
+    await settle();
+    expect(f.resolveLog).toEqual([{ changed: ["s1"], within: null }]);
+    expect(
+      f
+        .loadsSince(at)
+        .map((l) => [l.params.enabled ?? "-", l.ids])
+        .sort(),
+    ).toEqual([
+      ["-", ["h1", "h2"]],
+      ["1", ["h1", "h2"]],
+    ]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+    expect(f.clientValue(E)).toEqual(f.full(E));
+  });
+
+  test("over the cap, only the membership reader recomputes FULL: the value reader resolves again within its own members", async () => {
+    const E = { limit: "3", enabled: "1" };
+    const f = routed();
+    seed(f);
+    // 501 hosts reference s9, none of them in W3's window.
+    f.w.sources.set("s9", { label: "S9", enabled: false });
+    for (let i = 0; i < 501; i++) {
+      f.w.hosts.set(`z${String(i).padStart(3, "0")}`, {
+        n: 100 + i,
+        src: "s9",
+      });
+    }
+    await f.h.subscribe("win", W3);
+    await f.h.subscribe("win", E);
+    const at = f.loads.length;
+    f.w.sources.get("s9")!.enabled = true;
+    f.change("sources", "U", { ids: ["s9"], keys: { id: ["s9"] } });
+    await settle();
+    expect(f.resolveLog).toEqual([
+      { changed: ["s9"], within: null },
+      { changed: ["s9"], within: ["h1", "h2", "h3"] },
+    ]);
+    // W3 holds none of s9's hosts: nothing to load for it.
+    expect(f.loadsSince(at)).toEqual([{ params: E, ids: "FULL" }]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+    expect(f.clientValue(E)).toEqual(f.full(E));
+  });
+
+  test("a throwing resolve recomputes its readers FULL, and is reported", async () => {
+    const f = routed({
+      routes: (w, log) =>
+        worldRoutes(w, log).map((r) =>
+          r.id === "src"
+            ? {
+                ...r,
+                map: {
+                  kind: "reverse" as const,
+                  column: "id",
+                  resolve: async () => {
+                    throw new Error("resolve failed");
+                  },
+                },
+              }
+            : r,
+        ),
+    });
+    seed(f);
+    await f.h.subscribe("win", W3);
+    const at = f.loads.length;
+    f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] } });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: "FULL" }]);
+    expect(f.reports.some((r) => r.includes('reverse route "src"'))).toBe(true);
+  });
+});
+
+// --- Full routes, the gate, key filters, several routes on one table ----------
+
+describe("full routes, gate, key filter, several routes per table", () => {
+  const blobRoutes = (w: World, log: ResolveCall[]): Route[] => [
+    ...worldRoutes(w, log),
+    {
+      id: "blob",
+      table: "blobs",
+      map: { kind: "full", reason: "a closure nothing can map" },
+      columns: ["id"],
+    },
+  ];
+  const blobUses = (p: ResourceParams) => {
+    const uses = new Map(worldUses(p));
+    if (p.blob === "1") uses.set("blob", { role: "membership" });
+    return uses;
+  };
+
+  test("a full route recomputes exactly the tuples that read it; the others keep their version", async () => {
+    const A = { limit: "3", blob: "1" };
+    const f = routed({ routes: blobRoutes, uses: blobUses });
+    seed(f);
+    await f.h.subscribe("win", A);
+    await f.h.subscribe("win", W3);
+    const at = f.loads.length;
+    f.change("blobs", "U", { ids: ["b1"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: A, ids: "FULL" }]);
+    expect(f.pushesOf(W3)).toEqual([]);
+  });
+
+  test("the gate: a U leaving every referenced column `unchanged` routes nowhere; one column moved, or unknown, routes", async () => {
+    const f = await seeded();
+    let at = f.loads.length;
+    // Only `updated_at` moved: both columns the route reads are listed.
+    f.change("hosts_ext", "U", {
+      ids: ["h1"],
+      keys: { parent_id: ["h1"] },
+      unchanged: ["parent_id", "tag"],
+    });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+    at = f.loads.length;
+    f.change("hosts_ext", "U", {
+      ids: ["h1"],
+      keys: { parent_id: ["h1"] },
+      unchanged: ["parent_id"],
+    });
+    f.change("hosts_ext", "U", {
+      ids: ["h2"],
+      keys: { parent_id: ["h2"] },
+      unchanged: null,
+    });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h1", "h2"] }]);
+  });
+
+  test("the gate: a column the producer did not compare is not listed, so a route reading it is reached — whatever else is listed", async () => {
+    // The trigger compares only the columns of routes narrower than the
+    // table; a whole-table reader's other columns are never listed, and the
+    // `unchanged` set is sound for it without any agreement on the gate.
+    const f = await seeded();
+    const at = f.loads.length;
+    f.change("hosts_ext", "U", {
+      ids: ["h1"],
+      keys: { parent_id: ["h1"] },
+      unchanged: ["parent_id", "other"],
+    });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h1"] }]);
+  });
+
+  test("two routes on one table (a self-join) union their host ids; a full one absorbs them", async () => {
+    const selfJoin = (w: World, log: ResolveCall[]): Route[] => [
+      ...worldRoutes(w, log),
+      {
+        id: "hosts-parent",
+        table: "hosts",
+        map: { kind: "alias", column: "parent" },
+        columns: ["parent"],
+      },
+    ];
+    const uses = (p: ResourceParams) =>
+      new Map(worldUses(p)).set("hosts-parent", { role: "membership" });
+    const f = await seeded({ routes: selfJoin, uses });
+    const at = f.loads.length;
+    f.change("hosts", "U", {
+      ids: ["h4"],
+      keys: { id: ["h4"], parent: ["h1"] },
+    });
+    await settle();
+    expect(f.loadsSince(at)[0]).toEqual({ params: W3, ids: ["h1", "h4"] });
+
+    const withFull = (w: World, log: ResolveCall[]): Route[] => [
+      ...worldRoutes(w, log),
+      {
+        id: "hosts-closure",
+        table: "hosts",
+        map: { kind: "full", reason: "closure" },
+        columns: ["id"],
+      },
+    ];
+    const g = await seeded({
+      routes: withFull,
+      uses: (p) =>
+        new Map(worldUses(p)).set("hosts-closure", { role: "membership" }),
+    });
+    const at2 = g.loads.length;
+    g.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(g.loadsSince(at2)).toEqual([{ params: W3, ids: "FULL" }]);
+  });
+});
+
+// --- `moves`: a U that cannot move the tuple is a value change for it ----------
+
+describe("moves — a membership use's membership-neutral U", () => {
+  // The base moves on `n` (the order) only, the lookup on `enabled` (a
+  // filtered tuple's predicate) and `id` (its join key).
+  const movingUses = (p: ResourceParams): ReadonlyMap<string, TupleUse> =>
+    new Map<string, TupleUse>([
+      ["hosts", { role: "membership", moves: ["n"] }],
+      ["ext", { role: p.tag !== undefined ? "membership" : "value" }],
+      [
+        "src",
+        p.enabled === "1"
+          ? { role: "membership", moves: ["enabled", "id"] }
+          : { role: "value" },
+      ],
+    ]);
+
+  test("an identity U missing every moving column refills only a member, with no windowIdsOf; a non-member loads nothing", async () => {
+    const f = await seeded({ uses: movingUses });
+    const at = f.loads.length;
+    const ids = f.windowIdsCalls;
+    f.w.hosts.get("h1")!.src = "s2";
+    f.change("hosts", "U", { ids: ["h1"], unchanged: ["id", "n"] });
+    await settle();
+    // Quiescent again (a pending would deliver it as membership — the guard).
+    f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "n"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h1"] }]);
+    expect(f.windowIdsCalls).toBe(ids);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("an identity U touching a moving column stays membership: a non-member is a candidate entrant", async () => {
+    const f = await seeded({ uses: movingUses });
+    const at = f.loads.length;
+    f.w.hosts.get("h4")!.n = 0;
+    f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "src"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h4"] }]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("a membership-neutral U to a non-member is still delivered while the tuple has a pending (the quiescence guard)", async () => {
+    const f = await seeded({ uses: movingUses });
+    const at = f.loads.length;
+    f.w.hosts.get("h4")!.n = 0; // a real move: h4 is a candidate entrant…
+    f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "src"] });
+    // …and, in the same flush, a neutral U to non-member h3 (its source).
+    f.w.hosts.get("h3")!.src = "s1";
+    f.change("hosts", "U", { ids: ["h3"], unchanged: ["id", "n"] });
+    await settle();
+    expect(f.loadsSince(at)[0]).toEqual({ params: W3, ids: ["h3", "h4"] });
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("a membership-neutral U to the host a drain is admitting ends fresh (the quiescence race, via `moves`)", async () => {
+    const L2 = { limit: "2" };
+    const f = await seeded({ uses: movingUses }, L2);
+    const release = f.park();
+    f.w.hosts.get("h3")!.n = 0; // h3 enters the window…
+    f.change("hosts", "U", { ids: ["h3"], unchanged: ["id", "src"] });
+    await tick(); // …its refill read source s2 and parked
+    // A neutral U (only `src` moved) commits mid-drain: h3 is no member of
+    // the snapshot yet, but it must not be dropped as a value change.
+    f.w.hosts.get("h3")!.src = "s1";
+    f.change("hosts", "U", { ids: ["h3"], unchanged: ["id", "n"] });
+    release();
+    await settle();
+    await settle();
+    expect(f.clientValue(L2)).toEqual(f.full(L2));
+    expect((f.clientValue(L2) as Row[])[0]).toMatchObject({
+      id: "h3",
+      label: "S1",
+    });
+  });
+
+  test("unknown `unchanged`, an I and a D stay membership whatever `moves` says", async () => {
+    const f = await seeded({ uses: movingUses });
+    const at = f.loads.length;
+    f.w.hosts.set("h0", { n: 0, src: "s1" });
+    f.change("hosts", "I", { ids: ["h0"] });
+    f.change("hosts", "U", { ids: ["h4"], unchanged: null });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h0", "h4"] }]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("a reverse route's U missing its moving columns resolves within the members; one touching them resolves unbounded", async () => {
+    const E = { limit: "3", enabled: "1" };
+    const f = await seeded({ uses: movingUses }, E);
+    f.w.sources.get("s1")!.label = "S1'";
+    f.change("sources", "U", {
+      ids: ["s1"],
+      keys: { id: ["s1"] },
+      unchanged: ["enabled", "id"],
+    });
+    await settle();
+    expect(f.resolveLog).toEqual([{ changed: ["s1"], within: ["h1", "h2"] }]);
+    f.resolveLog.length = 0;
+    f.w.sources.get("s2")!.enabled = true;
+    f.change("sources", "U", {
+      ids: ["s2"],
+      keys: { id: ["s2"] },
+      unchanged: ["id", "label"],
+    });
+    await settle();
+    expect(f.resolveLog).toEqual([{ changed: ["s2"], within: null }]);
+    expect(f.clientValue(E)).toEqual(f.full(E));
+  });
+});
+
+// --- Targets: which tuples a change can reach --------------------------------
+
+describe("targets", () => {
+  test("a param'd routed entry with NO subscriber gets no {} tuple — nothing loads", async () => {
+    const f = routed();
+    seed(f);
+    f.change("hosts", "U", { ids: ["h1"] });
+    f.change("hosts", "U", { ids: null });
+    await settle();
+    expect(f.loads).toEqual([]);
+  });
+
+  test("an unsubscribed tuple leaves the targets", async () => {
+    const f = await seeded();
+    await f.h.unsub("win", W3);
+    const at = f.loads.length;
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+  });
+
+  test("a persisted routed alias keeps its {} value current with nobody subscribed", async () => {
+    const persisted: string[] = [];
+    const f = routed({
+      kind: "alias",
+      runtime: {
+        shouldPersist: () => true,
+        captureWatermark: async () => "1",
+        persistSnapshot: async (key) => {
+          persisted.push(key);
+        },
+      },
+    });
+    seed(f);
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(f.loads).toEqual([{ params: {}, ids: "FULL" }]);
+    expect(persisted).toEqual(["win"]);
+  });
+
+  test("point membership: every route's ids are intersected with the tuple's set; a reverse resolves within it", async () => {
+    const P = { ids: "h1,h3" };
+    const f = routed({ kind: "point" });
+    seed(f);
+    await f.h.subscribe("win", P);
+    let at = f.loads.length;
+    f.change("hosts_ext", "U", { ids: ["h2"], keys: { parent_id: ["h2"] } });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+    f.change("hosts_ext", "U", { ids: ["h3"], keys: { parent_id: ["h3"] } });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: P, ids: ["h3"] }]);
+    at = f.loads.length;
+    f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] } });
+    await settle();
+    expect(f.resolveLog).toEqual([{ changed: ["s1"], within: ["h1", "h3"] }]);
+    expect(f.loadsSince(at)).toEqual([{ params: P, ids: ["h1"] }]);
+  });
+});
+
+// --- Acks ---------------------------------------------------------------------
+
+describe("acks", () => {
+  test("reverse + identity on the same xid: ONE frame, carrying the ack only after every route landed", async () => {
+    const f = routed();
+    seed(f);
+    await f.h.subscribe("win", W3, { acks: true });
+    f.w.hosts.get("h1")!.n = 1.5;
+    f.w.sources.get("s1")!.label = "S1'";
+    f.change("hosts", "U", { ids: ["h1"], xid: "900" });
+    f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] }, xid: "900" });
+    await settle();
+    const pushes = f.pushesOf(W3);
+    expect(pushes.map((x) => [x.kind, x.ackTx])).toEqual([["delta", ["900"]]]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("an ack owed to a skipped tuple folds into that tuple's real pending of the same flush", async () => {
+    const f = routed();
+    seed(f);
+    await f.h.subscribe("win", W3, { acks: true });
+    f.w.hosts.get("h1")!.n = 1.5;
+    f.change("hosts_ext", "U", {
+      ids: ["h4"],
+      keys: { parent_id: ["h4"] },
+      xid: "901",
+    }); // skipped: h4 is no member
+    f.change("hosts", "U", { ids: ["h1"], xid: "902" });
+    await settle();
+    expect(f.pushesOf(W3).map((x) => [x.kind, x.ackTx?.sort()])).toEqual([
+      ["delta", ["901", "902"]],
+    ]);
+  });
+
+  test("a persisted skip NEVER loads: a routed persisted alias's untouched tuple gets only its ack", async () => {
+    const f = routed({
+      kind: "alias",
+      runtime: {
+        shouldPersist: () => true,
+        captureWatermark: async () => "1",
+        persistSnapshot: async () => {},
+      },
+    });
+    seed(f);
+    await f.h.subscribe("win", {}, { acks: true });
+    const at = f.loads.length;
+    // An orphan extension row (its parent is no host): no member is touched.
+    f.change("hosts_ext", "I", {
+      ids: ["nobody"],
+      keys: { parent_id: ["nobody"] },
+      xid: "903",
+    });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+    expect(f.pushesOf({}).map((x) => [x.kind, x.ackTx])).toEqual([
+      ["ack", ["903"]],
+    ]);
+  });
+
+  test("a persisted skip NEVER loads on the legacy path either: an empty cascade into a persisted entry is a skip, not a FULL reload", async () => {
+    let downLoads = 0;
+    const h = createHarness({
+      shouldPersist: (key) => key === "down",
+      captureWatermark: async () => "1",
+      persistSnapshot: async () => {},
+    });
+    const up = h.runtime.defineExternalResource({
+      key: "up",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+    });
+    h.runtime.defineResource({
+      key: "down",
+      mode: "push",
+      schema: z.number(),
+      dependsOn: [{ resource: up, affectedMap: () => [] }],
+      loader: () => ++downLoads,
+    });
+    up.notify(undefined, { affectedIds: ["u1"] });
+    await settle();
+    expect(downLoads).toBe(0);
+  });
+});
+
+// --- Fail open ------------------------------------------------------------------
+
+describe("fail open", () => {
+  test("a throwing usesOf recomputes the tuple FULL, reported once (memoized per tuple)", async () => {
+    const f = await seeded({
+      uses: () => {
+        throw new Error("usesOf failed");
+      },
+    });
+    const at = f.loads.length;
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    f.change("hosts", "U", { ids: ["h2"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([
+      { params: W3, ids: "FULL" },
+      { params: W3, ids: "FULL" },
+    ]);
+    expect(f.reports.filter((r) => r.startsWith("usesOf failed"))).toHaveLength(
+      1,
+    );
+  });
+
+  test("a usesOf naming an unknown route id recomputes FULL, reported (A9)", async () => {
+    const f = await seeded({
+      uses: (p) =>
+        new Map(worldUses(p)).set("no-such-route", { role: "value" }),
+    });
+    const at = f.loads.length;
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: "FULL" }]);
+    expect(
+      f.reports.some((r) => r.startsWith("usesOf named an unknown route")),
+    ).toBe(true);
+  });
+
+  test("a throwing encode recomputes the tuple FULL, reported", async () => {
+    const f = routed({
+      kind: "point",
+      routes: () => [
+        {
+          id: "arm",
+          table: "hosts",
+          map: {
+            kind: "identity",
+            encode: () => {
+              throw new Error("encode failed");
+            },
+          },
+          columns: ["n"],
+        },
+      ],
+      uses: () => new Map([["arm", { role: "membership" }]]),
+    });
+    seed(f);
+    const P = { ids: "h1" };
+    await f.h.subscribe("win", P);
+    const at = f.loads.length;
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: P, ids: "FULL" }]);
+    expect(f.reports.some((r) => r.startsWith("routing failed"))).toBe(true);
+  });
+});
+
+// --- Freshness -------------------------------------------------------------------
+
+describe("freshness", () => {
+  test("a routed FULL refreshes the floor: its drain refuses a read flight that started before the change", async () => {
+    const f = await seeded();
+    const release = f.park();
+    const read = f.h.runtime.handleResourceHttp(
+      new Request("http://x/api/resources/win?limit=3"),
+      { key: "win" },
+    );
+    await tick(); // the HTTP flight has read (and parked)
+    f.w.ext.set("h1", "fresh");
+    f.change("hosts_ext", "U", { ids: ["h1"], keys: null }); // unknown keys ⇒ FULL
+    await settle();
+    // The drain ran its own load instead of joining the pre-change flight.
+    expect(f.loads.filter((l) => l.ids === "FULL")).toHaveLength(3);
+    expect((f.clientValue(W3) as Row[])[0]!.tag).toBe("fresh");
+    release();
+    await read;
+  });
+
+  // The quiescence guard (plan §3.6): a drain admitting h3 may read h3's
+  // extension BEFORE a concurrent write to it commits. Dropping that write as a
+  // value-role non-member change would leave h3 stale for good.
+  test("a side write committing during an admitting drain ends fresh (the quiescence race)", async () => {
+    const f = await seeded({}, { limit: "2" });
+    const L2 = { limit: "2" };
+    const release = f.park();
+    f.w.ext.set("h3", "old");
+    f.w.hosts.get("h3")!.n = 0; // h3 enters the window…
+    f.change("hosts", "U", { ids: ["h3"] });
+    await tick(); // …its refill read `old` and parked
+    f.w.ext.set("h3", "new"); // the side write commits mid-drain
+    f.change("hosts_ext", "U", { ids: ["h3"], keys: { parent_id: ["h3"] } });
+    release();
+    await settle();
+    await settle();
+    expect(f.clientValue(L2)).toEqual(f.full(L2));
+    expect((f.clientValue(L2) as Row[])[0]).toMatchObject({
+      id: "h3",
+      tag: "new",
+    });
+  });
+
+  // A sub-ack whose load started before a push must not regress the snapshot the
+  // push advanced: the value-role drop reads membership off that snapshot, and a
+  // quiescent tuple whose (regressed) snapshot lacks h3 would drop h3's later
+  // side write for good — on every tab that already holds h3.
+  test("a second tab's sub-ack loaded before a drain admitted h3 does not un-admit it from the diff base", async () => {
+    const L2 = { limit: "2" };
+    const f = routed({ runtime: { sockets: 2 } });
+    seed(f);
+    await f.h.subscribe("win", L2); // tab A: [h1, h2]
+    const release = f.park();
+    await f.h.subscribe("win", L2, { socket: 1 }); // tab B's load read [h1, h2] and parked
+    f.w.hosts.get("h3")!.n = 0; // M: h3 enters the window
+    f.change("hosts", "U", { ids: ["h3"] });
+    await settle(); // the drain admitted h3: the diff base is [h3, h1]
+    release();
+    await settle(); // tab B's sub-ack lands
+    const at = f.loads.length;
+    f.w.ext.set("h3", "new"); // W: a value-role write to h3's extension
+    f.change("hosts_ext", "U", { ids: ["h3"], keys: { parent_id: ["h3"] } });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: L2, ids: ["h3"] }]);
+    expect(f.clientValue(L2)).toEqual(f.full(L2));
+    expect((f.clientValue(L2) as Row[])[0]).toMatchObject({
+      id: "h3",
+      tag: "new",
+    });
+  });
+});
+
+// --- Named scenarios (plan, Verification §2) ---------------------------------
+
+describe("named scenarios", () => {
+  test("a cascaded extension D plus its host D, in the SAME flush: one exit, no phantom row", async () => {
+    const f = await seeded();
+    f.w.ext.set("h2", "x");
+    f.change("hosts_ext", "I", { ids: ["h2"], keys: { parent_id: ["h2"] } });
+    await settle();
+    f.w.ext.delete("h2");
+    f.w.hosts.delete("h2");
+    f.change("hosts_ext", "D", { ids: ["h2"], keys: { parent_id: ["h2"] } });
+    f.change("hosts", "D", { ids: ["h2"] });
+    await settle();
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+    expect((f.clientValue(W3) as Row[]).map((r) => r.id)).toEqual([
+      "h1",
+      "h3",
+      "h4",
+    ]);
+  });
+
+  test("a cascaded extension D plus its host D, in SPLIT flushes: the same outcome", async () => {
+    const f = await seeded();
+    f.w.ext.set("h2", "x");
+    f.w.ext.delete("h2");
+    f.w.hosts.delete("h2");
+    f.change("hosts_ext", "D", { ids: ["h2"], keys: { parent_id: ["h2"] } });
+    await settle();
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+    f.change("hosts", "D", { ids: ["h2"] });
+    await settle();
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+    expect(f.h.frames.filter((x) => x.kind === "sub-error")).toEqual([]);
+  });
+
+  test("a key-changing UPDATE: old ∪ new ids exit the old key and admit the new", async () => {
+    const f = await seeded();
+    const h1 = f.w.hosts.get("h1")!;
+    f.w.hosts.delete("h1");
+    f.w.hosts.set("h9", h1); // UPDATE hosts SET id = 'h9' WHERE id = 'h1'
+    f.change("hosts", "U", { ids: ["h1", "h9"] });
+    await settle();
+    expect((f.clientValue(W3) as Row[]).map((r) => r.id)).toEqual([
+      "h9",
+      "h2",
+      "h3",
+    ]);
+    // And a side row moving hosts names both of them (keys over old ∪ new).
+    const at = f.loads.length;
+    f.w.ext.set("h2", "moved");
+    f.change("hosts_ext", "U", {
+      ids: ["e1"],
+      keys: { parent_id: ["h4", "h2"] },
+    });
+    await settle();
+    // h4 is no member of a quiescent tuple: only h2 refills.
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h2"] }]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("an `enabled` flip under the cap refills just the referencing hosts; over the cap it recomputes the bounded window", async () => {
+    const E = { limit: "3", enabled: "1" };
+    const f = await seeded({}, E);
+    expect((f.clientValue(E) as Row[]).map((r) => r.id)).toEqual(["h1", "h2"]);
+    let at = f.loads.length;
+    f.w.sources.get("s2")!.enabled = true;
+    f.change("sources", "U", {
+      ids: ["s2"],
+      keys: { id: ["s2"] },
+      unchanged: ["id", "label"],
+    });
+    await settle();
+    expect(f.loadsSince(at)[0]).toEqual({ params: E, ids: ["h3"] });
+    expect(f.clientValue(E)).toEqual(f.full(E));
+
+    // Over the cap: 501 hosts reference s9.
+    f.w.sources.set("s9", { label: "S9", enabled: false });
+    for (let i = 0; i < 501; i++) {
+      f.w.hosts.set(`z${String(i).padStart(3, "0")}`, {
+        n: 100 + i,
+        src: "s9",
+      });
+    }
+    at = f.loads.length;
+    f.w.sources.get("s9")!.enabled = true;
+    f.change("sources", "U", { ids: ["s9"], keys: { id: ["s9"] } });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: E, ids: "FULL" }]);
+    expect(f.clientValue(E)).toEqual(f.full(E));
+  });
+
+  test("a write to custom column c2 while a tuple sorts by c1 loads nothing (keyed-side key filter)", async () => {
+    // A composite-keyed side table: (data_view_id, row_key, column_id). The route
+    // keeps only its surface's rows; the tuple matches only the column it reads.
+    const custom = (w: World, log: ResolveCall[]): Route[] => [
+      ...worldRoutes(w, log),
+      {
+        id: "cc",
+        table: "custom_values",
+        map: { kind: "alias", column: "row_key" },
+        columns: ["data_view_id", "row_key", "column_id", "value"],
+        rows: { data_view_id: "surface-a" },
+        match: ["column_id"],
+      },
+    ];
+    const uses = (p: ResourceParams) => {
+      const m = new Map(worldUses(p));
+      if (p.sort !== undefined) {
+        m.set("cc", {
+          role: "membership",
+          match: { column_id: new Set([p.sort]) },
+        });
+      }
+      return m;
+    };
+    const S = { limit: "3", sort: "c1" };
+    const f = await seeded({ routes: custom, uses }, S);
+    const at = f.loads.length;
+    const cv = (surface: string, column: string) => ({
+      ids: null,
+      keys: {
+        data_view_id: [surface],
+        row_key: ["h1"],
+        column_id: [column],
+      },
+    });
+    f.change("custom_values", "U", cv("surface-a", "c2"));
+    f.change("custom_values", "U", cv("surface-b", "c1"));
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+    f.change("custom_values", "U", cv("surface-a", "c1"));
+    await settle();
+    expect(f.loadsSince(at)[0]).toEqual({ params: S, ids: ["h1"] });
+  });
+
+  test("a match on a column the route does not declare is refused: reported, and the tuple recomputes FULL", async () => {
+    const custom = (w: World, log: ResolveCall[]): Route[] => [
+      ...worldRoutes(w, log),
+      {
+        id: "cc",
+        table: "custom_values",
+        map: { kind: "alias", column: "row_key" },
+        columns: ["data_view_id", "row_key", "column_id", "value"],
+        rows: { data_view_id: "surface-a" },
+        // No `match`: the feed would not carry `column_id` for it.
+      },
+    ];
+    const uses = (p: ResourceParams) => {
+      const m = new Map(worldUses(p));
+      m.set("cc", {
+        role: "membership",
+        match: { column_id: new Set(["c1"]) },
+      });
+      return m;
+    };
+    const S = { limit: "3", sort: "c1" };
+    const f = await seeded({ routes: custom, uses }, S);
+    const at = f.loads.length;
+    f.change("custom_values", "U", {
+      ids: null,
+      keys: {
+        data_view_id: ["surface-a"],
+        row_key: ["h1"],
+        column_id: ["c2"],
+      },
+    });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: S, ids: "FULL" }]);
+    expect(f.reports).toContain(
+      "usesOf matched on an undeclared column for win",
+    );
+  });
+
+  test("a key-changing identity UPDATE (old ∪ new ids) exits the old id and admits the new", async () => {
+    const f = await seeded();
+    // `UPDATE hosts SET id = 'h1b'`: the routed trigger sends both ids.
+    const h1 = f.w.hosts.get("h1")!;
+    f.w.hosts.delete("h1");
+    f.w.hosts.set("h1b", h1);
+    const at = f.loads.length;
+    f.change("hosts", "U", { ids: ["h1", "h1b"] });
+    await settle();
+    expect(f.loadsSince(at)[0]).toEqual({ params: W3, ids: ["h1", "h1b"] });
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+    expect((f.clientValue(W3) as Row[]).map((r) => r.id)).toEqual([
+      "h1b",
+      "h2",
+      "h3",
+    ]);
+  });
+});
+
+// --- Registration and the legacy path ---------------------------------------
+
+describe("registration and the legacy path", () => {
+  const plan = mintRoutePlan({ routes: [], usesOf: () => new Map() });
+
+  test("A5: a dependsOn edge whose upstream is a routed entry throws — route the table, not the resource", () => {
+    const f = routed();
+    expect(() =>
+      f.h.runtime.defineResource({
+        key: "downstream",
+        mode: "push",
+        schema: z.number(),
+        dependsOn: [{ resource: { key: "win" } as never }],
+        loader: () => 1,
+      }),
+    ).toThrow(/route the table, not the resource/);
+  });
+
+  test("A5 in the other registration order: a routed entry registered after a downstream naming it throws", () => {
+    const h = createHarness();
+    h.runtime.defineResource({
+      key: "downstream",
+      mode: "push",
+      schema: z.number(),
+      dependsOn: [{ resource: { key: "win" } as never }],
+      loader: () => 1,
+    });
+    expect(() =>
+      h.runtime.defineResource(
+        {
+          key: "win",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
+        {
+          routes: mintRoutePlan({
+            routes: [
+              { id: "b", table: "t", map: { kind: "identity" }, columns: [] },
+            ],
+            usesOf: () => new Map(),
+          }),
+          membership: { kind: "point", idsOf: () => [] },
+          loader: () => [],
+        },
+      ),
+    ).toThrow(/"downstream" dependsOn the routed resource "win"/);
+  });
+
+  test("routes need a membership, exclude identityTable, and have unique ids", () => {
+    const h = createHarness();
+    const contract = (key: string) => ({
+      key,
+      schema: rowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    });
+    expect(() =>
+      h.runtime.defineResource(contract("a"), {
+        routes: plan,
+        fanOut: { reason: "x" },
+        loader: () => [],
+      } as never),
+    ).toThrow(/"routes" requires a membership/);
+    expect(() =>
+      h.runtime.defineResource(contract("b"), {
+        routes: plan,
+        identityTable: "t",
+        membership: { kind: "point", idsOf: () => [] },
+        loader: () => [],
+      } as never),
+    ).toThrow(/"routes" and "identityTable" are exclusive/);
+    const dup: Route = {
+      id: "r",
+      table: "t",
+      map: { kind: "identity" },
+      columns: [],
+    };
+    expect(() =>
+      h.runtime.defineResource(contract("c"), {
+        routes: mintRoutePlan({ routes: [dup, dup], usesOf: () => new Map() }),
+        membership: { kind: "point", idsOf: () => [] },
+        loader: () => [],
+      }),
+    ).toThrow(/duplicate route id "r"/);
+    // An external resource's truth is outside Postgres: no table routes into it.
+    expect(() =>
+      h.runtime.defineExternalResource(contract("d"), {
+        routes: plan,
+        membership: { kind: "point", idsOf: () => [] },
+        loader: () => [],
+      } as never),
+    ).toThrow(/no table change may route into it/);
+  });
+
+  test("a plan is minted, never written: an unminted plan an `as` cast let through throws", () => {
+    const h = createHarness();
+    expect(() =>
+      h.runtime.defineResource(
+        {
+          key: "hand",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
+        {
+          routes: {
+            routes: [
+              { id: "b", table: "t", map: { kind: "identity" }, columns: [] },
+            ],
+            usesOf: () => new Map(),
+          } as never,
+          membership: { kind: "point", idsOf: () => [] },
+          loader: () => [],
+        },
+      ),
+    ).toThrow(/was not minted/);
+    expect(() =>
+      h.runtime.defineResource(
+        { key: "hand-groups", schema: z.number(), validateParams: () => {} },
+        {
+          mode: "push",
+          reach: {
+            routes: [
+              {
+                id: "b",
+                table: "t",
+                map: { kind: "full", reason: "x" },
+                columns: [],
+              },
+            ],
+            usesOf: () => new Map(),
+          } as never,
+          loader: () => 1,
+        },
+      ),
+    ).toThrow(/was not minted/);
+  });
+
+  test("a routed entry takes no cascade: routes or reach beside dependsOn throws", () => {
+    const h = createHarness();
+    const upstream = h.runtime.defineResource({
+      key: "up",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+    });
+    expect(() =>
+      h.runtime.defineResource(
+        {
+          key: "routed-down",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
+        {
+          routes: plan,
+          membership: { kind: "point", idsOf: () => [] },
+          dependsOn: [{ resource: upstream }],
+          loader: () => [],
+        } as never,
+      ),
+    ).toThrow(/"routes" and "dependsOn" are exclusive/);
+    expect(() =>
+      h.runtime.defineResource(
+        { key: "reach-down", schema: z.number(), validateParams: () => {} },
+        {
+          mode: "push",
+          reach: mintReachPlan({ routes: [], usesOf: () => new Map() }),
+          dependsOn: [{ resource: upstream }],
+          loader: () => 1,
+        } as never,
+      ),
+    ).toThrow(/"reach" and "dependsOn" are exclusive/);
+  });
+
+  test("a routed entry is served by routeTableChange only — the legacy read-set path never reaches it", async () => {
+    const f = await seeded({ runtime: { readSet: () => ["hosts"] } });
+    const at = f.loads.length;
+    f.h.runtime.applyDbChange({
+      table: "hosts",
+      op: "U",
+      ids: ["h1"],
+      origin: "hosts",
+      identityBase: "hosts",
+    });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h1"] }]);
+  });
+
+  test("the legacy table → resource inversion is memoized on the read-set version, so a same-size swap is seen once the version moves", async () => {
+    const readSets = new Map<string, string[]>([["legacy", ["t1"]]]);
+    let version = 1;
+    let loads = 0;
+    const h = createHarness({
+      readSet: (key) => readSets.get(key) ?? [],
+      readSetVersion: () => version,
+    });
+    h.runtime.defineResource({
+      key: "legacy",
+      mode: "push",
+      schema: z.number(),
+      loader: () => ++loads,
+    });
+    await h.subscribe("legacy");
+    const feed = (table: string) =>
+      h.runtime.applyDbChange({
+        table,
+        op: "U",
+        ids: null,
+        origin: table,
+        identityBase: table,
+      });
+    const at = loads;
+    feed("t1");
+    await settle();
+    expect(loads).toBe(at + 1);
+    readSets.set("legacy", ["t2"]); // same total size as before
+    feed("t2");
+    await settle();
+    expect(loads).toBe(at + 1); // the memo still holds: the version did not move
+    version++;
+    feed("t2");
+    await settle();
+    expect(loads).toBe(at + 2);
+    feed("t1");
+    await settle();
+    expect(loads).toBe(at + 2);
+  });
+});
+
+// --- The non-keyed `reach` arm (a collection's `:groups`) ---------------------
+
+describe("reach — a non-keyed entry routed by full routes", () => {
+  // A grouping over `hosts`: a push value per tuple. The `other` route is read
+  // only by tuples with `joined: "1"` — the per-tuple read-set of a reach plan.
+  function grouping(runtime: ResourceRuntimeOptions = {}) {
+    const loads: ResourceParams[] = [];
+    let value = 0;
+    const reports: string[] = [];
+    const h = createHarness({
+      reportError: (ctx) => reports.push(ctx),
+      ...runtime,
+    });
+    h.runtime.defineResource(
+      { key: "groups", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "push",
+        reach: mintReachPlan({
+          routes: [
+            {
+              id: "base",
+              table: "hosts",
+              map: { kind: "full", reason: "a count" },
+              columns: ["id", "n"],
+            },
+            {
+              id: "other",
+              table: "other",
+              map: { kind: "full", reason: "a joined count" },
+              columns: ["id"],
+            },
+          ],
+          usesOf: (p) =>
+            new Map<string, TupleUse>(
+              p.joined === "1"
+                ? [
+                    ["base", { role: "membership" }],
+                    ["other", { role: "membership" }],
+                  ]
+                : [["base", { role: "membership" }]],
+            ),
+        }),
+        loader: (p) => {
+          loads.push(p);
+          return ++value;
+        },
+      },
+    );
+    const change = (table: string, xid?: string) =>
+      h.runtime.routeTableChange({
+        table,
+        op: "U",
+        ids: ["x"],
+        keys: null,
+        unchanged: null,
+        ...(xid !== undefined ? { xid } : {}),
+      });
+    return { h, loads, reports, change };
+  }
+  const PLAIN = { groupBy: "kind" };
+  const JOINED = { groupBy: "kind", joined: "1" };
+
+  test("a change to a table a tuple reads recomputes it FULL; a tuple that does not read it is untouched", async () => {
+    const g = grouping();
+    await g.h.subscribe("groups", PLAIN);
+    await g.h.subscribe("groups", JOINED);
+    g.loads.length = 0;
+    g.change("hosts");
+    await settle();
+    expect(g.loads.map((p) => p.joined ?? "-").sort()).toEqual(["-", "1"]);
+    g.loads.length = 0;
+    g.change("other");
+    await settle();
+    expect(g.loads).toEqual([JOINED]);
+  });
+
+  test("the legacy read-set path never reaches a reach entry, whatever it captured", async () => {
+    const g = grouping({ readSet: () => ["hosts", "other"] });
+    await g.h.subscribe("groups", PLAIN);
+    g.loads.length = 0;
+    g.h.runtime.applyDbChange({
+      table: "other",
+      op: "U",
+      ids: null,
+      origin: "other",
+      identityBase: "other",
+    });
+    await settle();
+    expect(g.loads).toEqual([]);
+  });
+
+  test("a tuple the change skips owes only its ack — no load", async () => {
+    const g = grouping();
+    await g.h.subscribe("groups", PLAIN, { acks: true });
+    g.loads.length = 0;
+    g.change("other", "tx-9");
+    await settle();
+    expect(g.loads).toEqual([]);
+    expect(
+      g.h.frames.filter((f) => f.kind === "ack").map((f) => f.ackTx),
+    ).toEqual([["tx-9"]]);
+  });
+
+  test("reach is the non-keyed, full-only, table-routed arm: every other spelling throws", () => {
+    const h = createHarness();
+    const full = {
+      id: "r",
+      table: "t",
+      map: { kind: "full" as const, reason: "x" },
+      columns: [],
+    };
+    const reach = mintReachPlan({ routes: [full], usesOf: () => new Map() });
+    expect(() =>
+      h.runtime.defineResource(
+        {
+          key: "k1",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
+        { reach, loader: () => [] } as never,
+      ),
+    ).toThrow(/"reach" is the non-keyed arm/);
+    expect(() =>
+      h.runtime.defineResource(
+        { key: "k2", schema: z.number(), validateParams: () => {} },
+        {
+          mode: "push",
+          // Minted past the type (a cast), so the runtime's own check is reached.
+          reach: mintReachPlan({
+            routes: [{ ...full, map: { kind: "identity" } }] as never,
+            usesOf: () => new Map(),
+          }),
+          loader: () => 1,
+        } as never,
+      ),
+    ).toThrow(/every reach route is "full"/);
+    expect(() =>
+      h.runtime.defineResource(
+        { key: "k3", schema: z.number(), validateParams: () => {} },
+        {
+          mode: "push",
+          reach,
+          identityTable: "t",
+          loader: () => 1,
+        } as never,
+      ),
+    ).toThrow(/"reach" and "identityTable" are exclusive/);
+    expect(() =>
+      h.runtime.defineExternalResource(
+        { key: "k4", schema: z.number(), validateParams: () => {} },
+        {
+          mode: "push",
+          reach,
+          loader: () => 1,
+        } as never,
+      ),
+    ).toThrow(/no table change may route into it/);
+  });
+});
+
+// --- A8: the route drift guard ------------------------------------------------
+
+describe("A8 — a routed loader reading a table no route names", () => {
+  // The per-run capture a server's read-set sink records: this fixture's loader
+  // "reads" `hosts` and, once `stray` is set, one more table.
+  function drifting(strictRoutes: boolean) {
+    let stray: string | null = null;
+    const reports: string[] = [];
+    const h = createHarness({
+      reportError: (ctx) => reports.push(ctx),
+      lastReadSet: () => ["hosts", ...(stray !== null ? [stray] : [])],
+      strictRoutes,
+    });
+    h.runtime.defineResource(
+      {
+        key: "win",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
+      {
+        routes: mintRoutePlan({
+          routes: [
+            {
+              id: "hosts",
+              table: "hosts",
+              map: { kind: "identity" },
+              columns: [],
+            },
+          ],
+          usesOf: () => new Map([["hosts", { role: "membership" as const }]]),
+        }),
+        membership: { kind: "point", idsOf: (p) => [p.id ?? ""] },
+        loader: (p) => [{ id: p.id ?? "", n: 1, tag: null, label: null }],
+      },
+    );
+    return {
+      h,
+      reports,
+      stray: (table: string) => {
+        stray = table;
+      },
+    };
+  }
+
+  test("a capture within the route tables passes silently", async () => {
+    const d = drifting(true);
+    await d.h.subscribe("win", { id: "a" });
+    expect(d.h.frames.map((f) => f.kind)).toEqual(["sub-ack"]);
+    expect(d.reports).toEqual([]);
+  });
+
+  test("a drifted table is reported once per table in a running server", async () => {
+    const d = drifting(false);
+    d.stray("mail_accounts");
+    await d.h.subscribe("win", { id: "a" });
+    await d.h.subscribe("win", { id: "b" });
+    expect(d.h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(2);
+    expect(d.reports).toEqual(["route drift for win"]);
+  });
+
+  test("under strictRoutes (tests) the drifted load fails", async () => {
+    const d = drifting(true);
+    d.stray("mail_accounts");
+    await d.h.subscribe("win", { id: "a" });
+    expect(d.h.frames.map((f) => f.kind)).toEqual(["sub-error"]);
+  });
+});
+
+// --- recomputeOn: a routed entry's non-table input --------------------------
+
+describe("recomputeOn — a routed entry's compiled vocabulary moved", () => {
+  // The routed window, plus an EXTERNAL value standing for a surface's column
+  // definitions (params: { scope }). Counts usesOf calls to witness the memo reset.
+  function withDefs() {
+    const h = createHarness();
+    const loads: Array<{ params: ResourceParams; ids: string | string[] }> = [];
+    let usesCalls = 0;
+    const defs = h.runtime.defineExternalResource({
+      key: "defs",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+    });
+    const plan = mintRoutePlan({
+      routes: [
+        {
+          id: "base",
+          table: "hosts",
+          map: { kind: "identity" },
+          columns: ["id"],
+        },
+      ],
+      usesOf: () => {
+        usesCalls++;
+        return new Map<string, TupleUse>([["base", { role: "membership" }]]);
+      },
+    });
+    h.runtime.defineResource(
+      {
+        key: "win",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
+      {
+        routes: plan,
+        recomputeOn: [{ resource: defs, params: { scope: "s" } }],
+        membership: {
+          kind: "window",
+          windowIdsOf: async () => ["h1"],
+          orderSignatureOf: () => "",
+        },
+        loader: async (p, c) => {
+          loads.push({ params: p, ids: c ? [...c.affectedIds] : "FULL" });
+          return [{ id: "h1", n: 1, tag: null, label: null }];
+        },
+      },
+    );
+    return {
+      h,
+      defs,
+      loads,
+      get usesCalls() {
+        return usesCalls;
+      },
+    };
+  }
+
+  test("the named upstream tuple's change FULL-recomputes every subscribed tuple and drops its read-set memo", async () => {
+    const f = withDefs();
+    await f.h.subscribe("win", W3);
+    f.h.runtime.routeTableChange({
+      table: "hosts",
+      op: "U",
+      ids: ["h1"],
+      keys: null,
+      unchanged: null,
+    });
+    await settle();
+    const usesBefore = f.usesCalls;
+    const at = f.loads.length;
+    f.defs.notify({ scope: "s" });
+    await settle();
+    expect(f.loads.slice(at)).toEqual([{ params: W3, ids: "FULL" }]);
+    // The memo was dropped: the next change asks usesOf again.
+    f.h.runtime.routeTableChange({
+      table: "hosts",
+      op: "U",
+      ids: ["h1"],
+      keys: null,
+      unchanged: null,
+    });
+    await settle();
+    expect(f.usesCalls).toBe(usesBefore + 1);
+  });
+
+  test("another upstream tuple reaches nothing", async () => {
+    const f = withDefs();
+    await f.h.subscribe("win", W3);
+    const at = f.loads.length;
+    f.defs.notify({ scope: "other" });
+    await settle();
+    expect(f.loads.slice(at)).toEqual([]);
+  });
+
+  test("refused on an unrouted entry, a DB-backed upstream, or an unregistered one", () => {
+    const h = createHarness();
+    const external = h.runtime.defineExternalResource({
+      key: "ext",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+    });
+    const db = h.runtime.defineResource({
+      key: "db",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+    });
+    const plan = mintRoutePlan({ routes: [], usesOf: () => new Map() });
+    const contract = {
+      key: "k",
+      schema: rowsSchema,
+      keyed: { keyOf },
+      validateParams: () => {},
+    };
+    const membership = {
+      kind: "window" as const,
+      windowIdsOf: async () => [],
+    };
+    expect(() =>
+      h.runtime.defineResource({
+        key: "plain",
+        mode: "push",
+        schema: z.number(),
+        loader: () => 1,
+        recomputeOn: [{ resource: external, params: {} }],
+      } as never),
+    ).toThrow(/"recomputeOn" is for a routed entry/);
+    expect(() =>
+      // @ts-expect-error — a DB-backed upstream has no `notify`: a type error, and a throw past a cast.
+      h.runtime.defineResource(contract, {
+        routes: plan,
+        membership,
+        recomputeOn: [{ resource: db, params: {} }],
+        loader: async () => [],
+      }),
+    ).toThrow(/which is DB-backed/);
+    expect(() =>
+      h.runtime.defineResource(
+        { ...contract, key: "k2" },
+        {
+          routes: plan,
+          membership,
+          recomputeOn: [{ resource: { key: "nope" } as never, params: {} }],
+          loader: async () => [],
+        },
+      ),
+    ).toThrow(/which is not registered/);
+  });
+});

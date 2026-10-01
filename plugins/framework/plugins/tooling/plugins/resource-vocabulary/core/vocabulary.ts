@@ -275,8 +275,12 @@ export type DescriptorFactoryName = keyof typeof resourceDescriptorFactories;
 export const resourceRegisterMarkers = {
   defineResource: { barrel: SERVER_CORE },
   defineExternalResource: { barrel: SERVER_CORE },
+  // The same registration, its server half compiled at boot once
+  // contributions are collected (a contributed collection's resources).
+  defineDeferredResource: { barrel: SERVER_CORE },
   queryResource: { barrel: QUERY_RESOURCE_SERVER },
   windowQueryResource: { barrel: QUERY_RESOURCE_SERVER },
+  deferredWindowQueryResource: { barrel: QUERY_RESOURCE_SERVER },
   serveCollection: { barrel: LIVE_SERVER },
   serveValue: { barrel: LIVE_SERVER },
 } satisfies Record<string, RegisterMarker>;

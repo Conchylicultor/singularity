@@ -160,6 +160,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `fields/secret/config`
     - `history/dialog`
     - `infra/background/catalog`
+    - `integrations/gmail`
     - `integrations/google-maps`
     - `layouts/route-fallback`
     - `map`

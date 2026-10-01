@@ -125,6 +125,8 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       manualRank: manualOrder?.getRank,
       now: props.now,
       groupOrder: props.groupOrder,
+      rowsComplete: props.rowsComplete,
+      sectionOrder: props.sectionOrder,
       openFolds: props.foldLines?.open,
       selectedRowId: props.selectedRowId,
     },
@@ -132,7 +134,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
   const { probeRef, columns } = useIconColumns();
   const vis = resolveBodyFields(props.fields, props.state.visibleFields);
 
-  const totalCount = sections.reduce((sum, s) => sum + s.count, 0);
+  const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
     return (
       <Center axis="both" className="py-xl">

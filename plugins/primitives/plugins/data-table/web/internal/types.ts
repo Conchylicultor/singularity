@@ -17,6 +17,13 @@ export interface ColumnDef<TRow> {
   /** Text alignment within the column (applies to header + cells). Default `"start"`. */
   align?: "start" | "end" | "center";
   value?: (row: TRow) => string | number | undefined;
+  /**
+   * Whether the header toggles sort on this column. Default: iff `value` is
+   * given (the in-memory sort reads it). A controlled table whose sort runs
+   * elsewhere (a server-ordered DataView) states it, since a column may show a
+   * value it cannot be ordered by.
+   */
+  sortable?: boolean;
   cell?: (row: TRow) => ReactNode;
 }
 

@@ -125,6 +125,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       aggregate,
       now: props.now,
       groupOrder: props.groupOrder,
+      rowsComplete: props.rowsComplete,
+      sectionOrder: props.sectionOrder,
       openFolds: props.foldLines?.open,
       selectedRowId: props.selectedRowId,
     },
@@ -153,7 +155,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
 
   // The host owns the loading→empty precedence: it renders the skeleton and
   // skips this view while loading, so an empty section set always means empty.
-  const totalCount = sections.reduce((sum, s) => sum + s.count, 0);
+  const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
     return (
       <Center axis="both" className="py-xl">

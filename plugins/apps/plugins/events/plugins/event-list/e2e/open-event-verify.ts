@@ -10,8 +10,8 @@
  * source ref the server joins onto each event row, whose answer the source type
  * supplies via `originUrl`.
  *
- * The expected destination is read from the app's own state (the events query +
- * the sources endpoint), never hard-coded here: the script picks a REAL row,
+ * The expected destination is read from the app's own state (the `events.list`
+ * live collection's HTTP read + the sources endpoint), never hard-coded here: the script picks a REAL row,
  * asks the API whether that event carries a link of its own, and asserts the
  * opened tab against whichever answer applies. So it verifies the join, and it
  * keeps working on a machine whose events came from a different page.
@@ -26,6 +26,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { eventsList } from "../core";
 
 const OUT = arg("out") ?? "/tmp/events-open";
 const BOOT_TIMEOUT_MS = 90_000;
@@ -54,14 +55,27 @@ await withBrowser(async (h) => {
   });
   await snap(page, OUT, "1-events-list");
 
-  // The app's own data, through the app's own endpoints — the same session, so
-  // no auth plumbing. `sort: []` + no filter is the unscoped read: whatever the
-  // list would show, disappeared rows excluded by the server's default scope.
-  const eventsRes = await page.request.post(pathUrl("/api/events/query"), {
-    data: { sort: [], filter: null, query: "", cursor: null, limit: 20 },
-  });
-  r.ok("events query answered", eventsRes.ok(), `HTTP ${eventsRes.status()}`);
-  const events = ((await eventsRes.json()) as { items: EventRow[] }).items;
+  // The app's own data, through the app's own read — the collection's HTTP
+  // read, in the same session, so no auth plumbing. The landing view's own
+  // question (Upcoming: from the start of today, soonest first), so the event
+  // picked is one the list renders; disappeared rows and a disabled source's
+  // events are excluded by the collection's default scopes.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const qs = new URLSearchParams(
+    eventsList.window.window.encode({
+      where: { startsAt: { gte: today.toISOString() } },
+      orderBy: [["startsAt", "asc"]],
+      limit: 20,
+    }),
+  ).toString();
+  const eventsRes = await page.request.get(
+    pathUrl(
+      `/api/resources/${encodeURIComponent(eventsList.window.key)}?${qs}`,
+    ),
+  );
+  r.ok("events read answered", eventsRes.ok(), `HTTP ${eventsRes.status()}`);
+  const events = ((await eventsRes.json()) as { value: EventRow[] }).value;
 
   const sourcesRes = await page.request.get(pathUrl("/api/events/sources"));
   r.ok(

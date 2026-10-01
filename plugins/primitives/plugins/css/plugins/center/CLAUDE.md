@@ -90,6 +90,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `debug/trace/pane`
     - `fields/avatar/config`
     - `fields/bool/inline`
+    - `integrations/gmail`
     - `layouts/route-fallback`
     - `map`
     - `map/google`

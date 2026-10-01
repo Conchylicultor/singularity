@@ -630,3 +630,122 @@ describe("which failures are a contract mismatch", () => {
     ).toBe(false);
   });
 });
+
+describe("scroll collection: segment cuts", () => {
+  const scrolled = liveCollection("live-test.codec-scroll", {
+    row: RowSchema,
+    id: "id",
+    filterable: { name: liveText() },
+    sortable: ["createdAt", "name", "id"],
+    default: { orderBy: [["createdAt", "desc"]], limit: 100 },
+    maxLimit: 300,
+    scroll: true,
+  });
+  const codec = scrolled.window.window;
+  // A row key of the default order: createdAt's text, then the id.
+  const cut = JSON.stringify(["2026-09-30 10:00:00.123456+00", "r1"]);
+
+  it("is declared: the collection says so, and only it takes cuts", () => {
+    expect(scrolled.scroll).toBe(true);
+    expect(sources.scroll).toBe(false);
+    expect(() => encode(undefined, { after: cut })).toThrow(
+      /only a collection declared `scroll: true`/,
+    );
+    expect(() => decode({ limit: "100", after: cut })).toThrow(
+      /only a collection declared `scroll: true`/,
+    );
+  });
+
+  it("needs maxLimit ≥ 3 · default.limit", () => {
+    expect(() =>
+      liveCollection("live-test.codec-scroll-tight", {
+        row: RowSchema,
+        id: "id",
+        filterable: {},
+        sortable: ["name"],
+        default: { orderBy: [["name", "asc"]], limit: 100 },
+        maxLimit: 299,
+        scroll: true,
+      }),
+    ).toThrow(/maxLimit ≥ 3 · default.limit \(300\), got 299/);
+  });
+
+  it("cuts are absent by default: the default tuple stays byte-identical", () => {
+    expect(codec.encode()).toEqual({ limit: "100" });
+    expect(codec.encode({}, {})).toEqual({ limit: "100" });
+    expect(scrolled.window.defaultParams).toEqual({ limit: "100" });
+  });
+
+  it("encodes each cut verbatim and round-trips it through the strict decode", () => {
+    const params = codec.encode({ limit: 200 }, { after: cut, until: cut });
+    expect(params).toEqual({ limit: "200", after: cut, until: cut });
+    const decoded = codec.decode(params);
+    expect(decoded.after).toEqual(["2026-09-30 10:00:00.123456+00", "r1"]);
+    expect(decoded.until).toEqual(["2026-09-30 10:00:00.123456+00", "r1"]);
+    // NULL order keys are part of a key; the id never is NULL.
+    const nullKey = JSON.stringify([null, "r2"]);
+    expect(codec.decode({ limit: "100", after: nullKey }).after).toEqual([
+      null,
+      "r2",
+    ]);
+  });
+
+  it("decode is strict on arity: exactly the order's keys, then the id — unless the order names it", () => {
+    expect(() => codec.decode({ limit: "100", after: '["x"]' })).toThrow(
+      /row key of 2 text values/,
+    );
+    expect(() =>
+      codec.decode({ limit: "100", after: '["x","y","z"]' }),
+    ).toThrow(/row key of 2 text values/);
+    // Two order keys + the id.
+    const two = codec.encode(
+      {
+        orderBy: [
+          ["name", "asc"],
+          ["createdAt", "desc"],
+        ],
+      },
+      { until: '["a","b","r1"]' },
+    );
+    expect(codec.decode(two).until).toEqual(["a", "b", "r1"]);
+    expect(() => codec.decode({ ...two, until: '["a","r1"]' })).toThrow(
+      /row key of 3 text values/,
+    );
+    // The order already ends with the id: no second copy of it.
+    const byId = codec.encode(
+      {
+        orderBy: [
+          ["name", "asc"],
+          ["id", "asc"],
+        ],
+      },
+      { after: '["a","r1"]' },
+    );
+    expect(codec.decode(byId).after).toEqual(["a", "r1"]);
+  });
+
+  it("decode rejects a NULL id, a non-text value and a non-canonical spelling", () => {
+    expect(() => codec.decode({ limit: "100", after: '["x",null]' })).toThrow(
+      /row key/,
+    );
+    expect(() => codec.decode({ limit: "100", after: '["x",1]' })).toThrow(
+      /row key/,
+    );
+    expect(() => codec.decode({ limit: "100", after: '["x", "r1"]' })).toThrow(
+      /not canonical/,
+    );
+    expect(() => codec.decode({ limit: "100", after: "not json" })).toThrow(
+      /invalid JSON/,
+    );
+    // A cut that fails to decode is a contract mismatch, like any other param.
+    expect(() => codec.decode({ limit: "100", after: '["x",1]' })).toThrow(
+      ResourceContractError,
+    );
+  });
+
+  it("encode throws where a bad cut was built", () => {
+    expect(() => codec.encode(undefined, { after: '["only"]' })).toThrow(
+      /row key of 2 text values/,
+    );
+  });
+});

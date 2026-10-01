@@ -30,6 +30,8 @@ describe("routeWithSpan", () => {
           ids: ["1", "2"],
           xid: "9",
           changedAt: Date.now() - 50,
+          keys: null,
+          unchanged: null,
         },
         (c) => routed.push(c.table),
       ),
@@ -47,7 +49,15 @@ describe("routeWithSpan", () => {
   test("a FULL change with no timestamp carries no measures", () => {
     const spans = capture(() =>
       routeWithSpan(
-        { table: "tasks", op: "U", ids: null, xid: null, changedAt: null },
+        {
+          table: "tasks",
+          op: "U",
+          ids: null,
+          xid: null,
+          changedAt: null,
+          keys: null,
+          unchanged: null,
+        },
         () => {},
       ),
     );
@@ -57,7 +67,15 @@ describe("routeWithSpan", () => {
   test("a throwing route still throws synchronously", () => {
     expect(() =>
       routeWithSpan(
-        { table: "t", op: "I", ids: [], xid: null, changedAt: null },
+        {
+          table: "t",
+          op: "I",
+          ids: [],
+          xid: null,
+          changedAt: null,
+          keys: null,
+          unchanged: null,
+        },
         () => {
           throw new Error("boom");
         },

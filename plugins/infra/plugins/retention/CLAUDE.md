@@ -100,7 +100,7 @@ violation is boot-fatal. `./singularity build` probes backend health after
 restart and fails loudly ("Check server logs") when the new backend never takes
 over, so a bad cascade claim surfaces as a failed build, not a silently-dead app.
 Precedent for a throwing boot invariant of exactly this shape:
-`plugins/database/plugins/change-feed/server/internal/identity-coverage.ts`.
+`plugins/database/plugins/change-feed/server/internal/route-coverage.ts`.
 
 ## Why there is no `./singularity check`
 

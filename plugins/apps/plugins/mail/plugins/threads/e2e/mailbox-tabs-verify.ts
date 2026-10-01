@@ -4,9 +4,9 @@
  *  1. bare `/mail` lands on the ONE threads surface (`/mail/threads`) — no
  *     `/mail/v/*` route survives;
  *  2. the eight mailboxes render as a TAB STRIP, and switching tab re-scopes the
- *     query (each tab sends its own `filter` in the request body);
- *  3. each tab returns a genuinely DIFFERENT ROW SET — not merely a different
- *     request body. This is the assertion that catches the dangling-rule
+ *     list (each tab's own `filter` is its live window's `where`);
+ *  3. each tab renders a genuinely DIFFERENT ROW SET (read off the rows'
+ *     `data-thread-id`). This is the assertion that catches the dangling-rule
  *     failure mode: a typo'd fieldId/operatorId lowers to nothing on the
  *     client, and the only visible symptom is every tab showing the same rows;
  *  4. the mailbox scope is an ORDINARY, EDITABLE filter rule — not the locked
@@ -20,6 +20,11 @@
  * authored scope comes back — which doubles as proof that the edit really was a
  * config write, not device-local state.
  *
+ * A worktree carries no mail corpus (`mail_threads` is left out of the fork),
+ * so against a worktree whose account holds no thread the script seeds its own
+ * (`fixture.ts`: 25 Inbox, 2 Sent, 1 Draft) and deletes them at the end; on
+ * main it reads the real mailbox and seeds nothing.
+ *
  * Manual only — nothing runs this automatically.
  *   ./singularity run plugins/apps/plugins/mail/plugins/threads/e2e/mailbox-tabs-verify.ts [--headed]
  */
@@ -31,10 +36,13 @@ import {
   boot,
   pathUrl,
   report,
+  onBeforeFinish,
   snap,
   targetNamespace,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { openThreadFixture } from "./fixture";
 
 const MAILBOXES = [
   "Inbox",
@@ -124,11 +132,19 @@ async function awaitServerResolves(
   return false;
 }
 
-// The Filter pill's accessible name IS its rule count: "Filter" with none,
-// "1 rule" / "N rules" otherwise. One attribute read answers "is the scope still
-// applied?" without reaching into the popover.
-const PILL =
-  'button[aria-label="Filter"], button[aria-label$="rule"], button[aria-label$="rules"]';
+// The Filter pill's accessible name IS its summary: "Filter" with no active
+// rule, "Filter: <first rule in words>" (+ ", +N more") otherwise — the control
+// trigger's naming (data-view `control-trigger.tsx`). One attribute read
+// answers "which scope is applied?" without reaching into the popover.
+const PILL = 'button[aria-label^="Filter"]';
+
+/**
+ * The pill's name while exactly one `labels contains <label>` rule is active.
+ * The summary names the operand by its stored Gmail label id (`INBOX`); the
+ * friendly name is asserted inside the open popover below.
+ */
+const scopeLabel = (labelId: string): string =>
+  `Filter: Labels contains ${labelId}`;
 
 /**
  * One mailbox tab. `button[title=…]` rather than `getByRole` because the
@@ -148,250 +164,353 @@ async function openFilter(page: Page): Promise<void> {
   await page.waitForTimeout(400);
 }
 
-await withBrowser(async (h) => {
-  const r = report("mail — mailboxes as DataView tabs");
-  const { page } = await h.session();
-
-  // Every query this run makes, request AND response, so both "did the tab
-  // re-scope?" and "did it actually return different rows?" are answered by what
-  // went over the wire rather than by what the screen looks like.
-  const filtersSent: string[] = [];
-  const pages: { filter: string; ids: string[] }[] = [];
-  await page.route("**/api/mail/threads/query", async (route) => {
-    const body = route.request().postDataJSON() as { filter?: unknown };
-    const filter = JSON.stringify(body.filter);
-    filtersSent.push(filter);
-    const response = await route.fetch();
-    const json = (await response.json()) as { items?: { id: string }[] };
-    pages.push({ filter, ids: (json.items ?? []).map((t) => t.id) });
-    await route.fulfill({ response, json });
-  });
-
-  /**
-   * The rows a given tab's query answered with, found by the tab's own filter.
-   *
-   * Two traps rule out the obvious approaches. Reading `pages.at(-1)` after a
-   * click is wrong because the response may not have landed yet — every count
-   * then shifts by one tab. Waiting for a NEW request is also wrong, because the
-   * DataView caches per view: revisiting a tab correctly issues nothing at all.
-   *
-   * So key the captured pages by the tab's LOWERED filter — the canonical
-   * filter-language tree the DataView host sends, which is exact and unique
-   * per tab (`labels hasAll ["INBOX"]`, …). Every tab is visited once below,
-   * so each has exactly one page to find, whenever it happened to arrive.
-   */
-  const LOWERED_SCOPE: Record<string, string> = {
-    inbox: '{"column":"labels","op":"hasAll","operand":["INBOX"]}',
-    sent: '{"column":"labels","op":"hasAll","operand":["SENT"]}',
-    drafts: '{"column":"labels","op":"hasAll","operand":["DRAFT"]}',
-    all: '{"column":"labels","op":"hasNone","operand":["SPAM"]}',
-    spam: '{"column":"labels","op":"hasAll","operand":["SPAM"]}',
-  };
-  const rowsForView = (viewId: string): string[] | undefined => {
-    const scope = LOWERED_SCOPE[viewId];
-    if (scope === undefined)
-      throw new Error(`no lowered scope for "${viewId}"`);
-    return pages.find((entry) => entry.filter.includes(scope))?.ids;
-  };
-
-  // ---- 0. precondition: start from the AUTHORED state --------------------
-  // This script edits config, and the server's config watcher is slow to notice
-  // (~100s on a loaded host). Back-to-back runs would otherwise start mid-catch-up
-  // from the previous run's cleanup and fail for that reason alone. So clear any
-  // leftover override and wait for the server to be serving the authored origin
-  // BEFORE asserting anything.
-  if (existsSync(USER_OVERRIDE)) rmSync(USER_OVERRIDE);
-  r.ok(
-    "precondition: the server is serving the authored config",
-    await awaitServerResolves(page, (view) => "filter" in view),
-    "a previous run's override may still be resolving",
+/** The thread ids the list renders right now, top to bottom. */
+async function renderedIds(page: Page): Promise<string[]> {
+  const rows = await page.locator("[data-thread-id]").evaluateAll((els) =>
+    els.map((el) => ({
+      id: el.getAttribute("data-thread-id") ?? "",
+      top: el.getBoundingClientRect().top,
+    })),
   );
+  return rows.sort((x, y) => x.top - y.top).map((row) => row.id);
+}
 
-  // ---- 1. one URL -------------------------------------------------------
-  await boot(page, pathUrl("/mail"), {
-    marker: TABS_READY,
-    timeoutMs: BOOT_TIMEOUT_MS,
-    settleMs: 1500,
-  });
-  r.eq(
-    "bare /mail lands on /mail/threads",
-    new URL(page.url()).pathname,
-    "/mail/threads",
-  );
+/** The threads list's empty state (`mailThreadsPane`'s DataView `emptyState`). */
+const EMPTY_STATE = "No conversations";
 
-  // ---- 2. eight mailbox tabs -------------------------------------------
-  for (const name of MAILBOXES) {
-    r.ok(`tab "${name}" is present`, (await tab(page, name).count()) > 0);
+/**
+ * What the list shows right now. Zero rendered rows alone is NOT "empty": a
+ * list still loading, or one whose read failed, renders none either — so empty
+ * is the settled empty state's text, and a failed read is its own arm.
+ */
+type ListState =
+  | { kind: "loading" }
+  | { kind: "empty" }
+  | { kind: "rows"; ids: string[] }
+  | { kind: "error"; text: string };
+
+async function listState(page: Page): Promise<ListState> {
+  const error = page.getByText(/^Couldn't load:/);
+  if ((await error.count()) > 0) {
+    return { kind: "error", text: (await error.first().textContent()) ?? "" };
   }
-  await snap(page, OUT, "tabs");
-
-  // ---- 3. switching tab re-scopes ---------------------------------------
-  const beforeSwitch = filtersSent.length;
-  for (const name of ["Sent", "Spam"]) {
-    await tab(page, name).click();
-    await page.waitForTimeout(1500);
-    r.eq(
-      `"${name}" carries exactly one scope rule`,
-      await pillLabel(page),
-      "1 rule",
-    );
+  if ((await page.getByText(EMPTY_STATE, { exact: true }).count()) > 0) {
+    return { kind: "empty" };
   }
-  const distinct = new Set(filtersSent.slice(beforeSwitch));
-  r.ok(
-    "each tab sent a DISTINCT filter body — the tab IS the scope",
-    distinct.size >= 2,
-    `distinct filters: ${distinct.size} of ${filtersSent.length - beforeSwitch} requests`,
-  );
+  const ids = await renderedIds(page);
+  return ids.length > 0 ? { kind: "rows", ids } : { kind: "loading" };
+}
 
-  // ---- 3b. the tabs return DIFFERENT ROWS, not just different requests -----
-  // The fail-soft trap: a dropped rule yields the unscoped account-wide set, so
-  // every tab would show the SAME first page. Only real rows can rule that out.
-  // Visit every tab once so each has issued its query at least once this run.
-  const TAB_VIEW_IDS: [string, string][] = [
-    ["Inbox", "inbox"],
-    ["Sent", "sent"],
-    ["Drafts", "drafts"],
-    ["All Mail", "all"],
-    ["Spam", "spam"],
-  ];
-  const rowsByTab: Record<string, string[]> = {};
-  for (const [name, viewId] of TAB_VIEW_IDS) {
-    await tab(page, name).click();
-    await page.waitForTimeout(2500);
-    const ids = rowsForView(viewId);
-    if (ids === undefined) {
-      r.fail(`"${name}" never issued a query for view "${viewId}"`);
-      rowsByTab[name] = [];
-    } else {
-      rowsByTab[name] = ids;
-      r.note(`${name}: ${ids.length} rows on its own first page`);
+// Seed a mailbox when the target has none (a worktree): main's is real.
+const fixture =
+  String(targetNamespace()) === "singularity"
+    ? null
+    : await openThreadFixture();
+if (fixture !== null) onBeforeFinish(() => fixture.cleanup());
+
+// `finish()` exits through the teardown hook; a throw exits through `finally`.
+try {
+  await withBrowser(async (h) => {
+    const r = report("mail — mailboxes as DataView tabs");
+
+    // The seeded corpus, when this run seeded one: then every tab's EXACT row
+    // set is known, and the viewport is tall enough to render all of it (no
+    // row windowed out), so the tab checks compare sets, not rendered counts.
+    let seeded: { inbox: string[]; sent: string[]; drafts: string[] } | null =
+      null;
+    if (fixture !== null && fixture.existing === 0) {
+      const inbox: string[] = [];
+      for (let i = 0; i < 25; i++) {
+        const t = await fixture.seed({
+          name: `inbox-${i}`,
+          labels: ["INBOX"],
+          minutesAgo: i,
+        });
+        inbox.push(t.id);
+      }
+      const sent = [
+        (
+          await fixture.seed({
+            name: "sent-0",
+            labels: ["SENT"],
+            minutesAgo: 1,
+          })
+        ).id,
+        (
+          await fixture.seed({
+            name: "sent-1",
+            labels: ["SENT"],
+            minutesAgo: 2,
+          })
+        ).id,
+      ];
+      const drafts = [
+        (
+          await fixture.seed({
+            name: "draft-0",
+            labels: ["DRAFT"],
+            minutesAgo: 3,
+          })
+        ).id,
+      ];
+      seeded = { inbox, sent, drafts };
+      r.note("seeded a synthetic mailbox: 25 Inbox, 2 Sent, 1 Draft");
     }
-  }
-  const inboxRows = rowsByTab["Inbox"] ?? [];
-  const sentRows = rowsByTab["Sent"] ?? [];
-  const draftRows = rowsByTab["Drafts"] ?? [];
-  const spamRows = rowsByTab["Spam"] ?? [];
-  const allRows = rowsByTab["All Mail"] ?? [];
+    const { page } = await h.session(
+      seeded !== null ? { viewport: { width: 1400, height: 2600 } } : {},
+    );
 
-  r.ok(
-    "Inbox returns a full page of rows",
-    inboxRows.length > 20,
-    `${inboxRows.length} rows`,
-  );
-  r.ok(
-    "Sent returns its own SMALL set, not the inbox page",
-    sentRows.length > 0 && sentRows.length < inboxRows.length,
-    `sent=${sentRows.length} inbox=${inboxRows.length}`,
-  );
-  r.ok(
-    "Drafts returns its own set, distinct from Sent",
-    JSON.stringify(draftRows) !== JSON.stringify(sentRows),
-    `drafts=${JSON.stringify(draftRows)} sent=${JSON.stringify(sentRows)}`,
-  );
-  r.ok(
-    "Spam returns ZERO rows — proof the rule applied, since a dropped rule " +
-      "would return the whole account",
-    spamRows.length === 0,
-    `${spamRows.length} rows`,
-  );
-  r.ok(
-    "All Mail is a superset of Inbox and differs from it",
-    allRows.length >= inboxRows.length &&
-      JSON.stringify(allRows) !== JSON.stringify(sentRows),
-  );
-  r.ok(
-    "no two of Inbox / Sent / Drafts returned an identical page",
-    new Set([inboxRows, sentRows, draftRows].map((x) => JSON.stringify(x)))
-      .size === 3,
-  );
+    /**
+     * The rows a tab renders once its list has SETTLED — rows or the empty
+     * state, the same on two reads in a row. A list that never settles, or
+     * whose read failed, throws: zero rows from a list that did not load must
+     * never pass for an empty mailbox.
+     */
+    const rowsOfTab = async (name: string): Promise<string[]> => {
+      await tab(page, name).click();
+      let previous = "";
+      const settled = await waitFor(
+        async () => {
+          const state = await listState(page);
+          const key = JSON.stringify(state);
+          const stable = key === previous;
+          previous = key;
+          return { state, stable };
+        },
+        ({ state, stable }) =>
+          stable && (state.kind === "rows" || state.kind === "empty"),
+        { timeoutMs: 60_000, intervalMs: 400 },
+      );
+      const { state } = settled.value;
+      if (state.kind === "rows") return state.ids;
+      if (state.kind === "empty") return [];
+      throw new Error(
+        `the "${name}" tab never settled: ${JSON.stringify(state)} after ${settled.waitedMs} ms`,
+      );
+    };
 
-  // ---- 4. the scope is an ordinary, EDITABLE rule ------------------------
-  await tab(page, "Inbox").click();
-  await page.waitForTimeout(1200);
-  r.eq(
-    "Inbox's Filter pill counts its scope rule",
-    await pillLabel(page),
-    "1 rule",
-  );
+    // ---- 0. precondition: start from the AUTHORED state --------------------
+    // This script edits config, and the server's config watcher is slow to notice
+    // (~100s on a loaded host). Back-to-back runs would otherwise start mid-catch-up
+    // from the previous run's cleanup and fail for that reason alone. So clear any
+    // leftover override and wait for the server to be serving the authored origin
+    // BEFORE asserting anything.
+    if (existsSync(USER_OVERRIDE)) rmSync(USER_OVERRIDE);
+    r.ok(
+      "precondition: the server is serving the authored config",
+      await awaitServerResolves(page, (view) => "filter" in view),
+      "a previous run's override may still be resolving",
+    );
 
-  await openFilter(page);
-  r.ok(
-    "the scope renders as an editable rule row",
-    (await page.getByText("Where", { exact: true }).count()) > 0,
-  );
-  // v1 rendered the scope as a LOCKED chip with no affordances at all. The
-  // presence of the rule row's own field/operator pickers and its Remove button
-  // is exactly the difference v2 is about.
-  const where = page.getByText("Where", { exact: true });
-  const remove = page.locator('button[aria-label="Remove filter"]').first();
-  const popover = where.locator("xpath=ancestor::*[self::div][3]");
-  r.ok(
-    "the rule reads as `Labels contains Inbox` in friendly names, not raw ids",
-    (await popover.getByText("Labels", { exact: true }).count()) > 0 &&
-      (await popover.getByText("Contains", { exact: true }).count()) > 0 &&
-      (await popover.getByText("Inbox", { exact: true }).count()) > 0,
-  );
-  r.ok(
-    "the rule has a Remove control (it is NOT locked)",
-    (await remove.count()) > 0,
-  );
-  await snap(page, OUT, "filter-open");
+    // ---- 1. one URL -------------------------------------------------------
+    // The landing redirects only once the Gmail integration reports access ready
+    // (`MailRoot`); where it does not (a deploy whose Gmail token is unavailable)
+    // that is recorded, and the rest runs against `/mail/threads` directly.
+    await page.goto(pathUrl("/mail"), {
+      waitUntil: "domcontentloaded",
+      timeout: BOOT_TIMEOUT_MS,
+    });
+    const landed = await waitFor(
+      async () => new URL(page.url()).pathname,
+      (path) => path === "/mail/threads",
+      { timeoutMs: 60_000 },
+    );
+    r.eq("bare /mail lands on /mail/threads", landed.value, "/mail/threads");
+    await boot(page, pathUrl("/mail/threads"), {
+      marker: TABS_READY,
+      timeoutMs: BOOT_TIMEOUT_MS,
+      settleMs: 1500,
+    });
 
-  // ---- 5. an edit persists across reload, into the user config -----------
-  // The trailing actions are hover-revealed (opacity + pointer-events coupled),
-  // so hover the row before reaching for Remove.
-  await where.hover();
-  await page.waitForTimeout(300);
-  await remove.click();
-  await page.waitForTimeout(1000);
-  r.eq("removing the scope empties the pill", await pillLabel(page), "Filter");
+    // ---- 2. eight mailbox tabs -------------------------------------------
+    for (const name of MAILBOXES) {
+      r.ok(`tab "${name}" is present`, (await tab(page, name).count()) > 0);
+    }
+    await snap(page, OUT, "tabs");
 
-  // The write-back is debounced AND the server re-reads on a file-watcher event,
-  // so reload only once the SERVER resolves the edit — otherwise this races two
-  // async hops and reports a false negative.
-  r.ok(
-    "the server resolves the edit (config write-back reached the backend)",
-    await awaitServerResolves(page, (view) => !("filter" in view)),
-  );
-  r.ok(
-    "the edit landed in the user-layer config file, not device-local state",
-    existsSync(USER_OVERRIDE),
-    USER_OVERRIDE,
-  );
+    // ---- 3. switching tab re-scopes ---------------------------------------
+    for (const [name, labelId] of [
+      ["Sent", "SENT"],
+      ["Spam", "SPAM"],
+    ] as const) {
+      await tab(page, name).click();
+      await page.waitForTimeout(1500);
+      r.eq(
+        `"${name}" carries exactly its one scope rule`,
+        await pillLabel(page),
+        scopeLabel(labelId),
+      );
+    }
 
-  await boot(page, pathUrl("/mail/threads"), {
-    marker: TABS_READY,
-    timeoutMs: BOOT_TIMEOUT_MS,
-    settleMs: 2500,
+    // ---- 3b. the tabs render DIFFERENT ROWS --------------------------------
+    // The fail-soft trap: a dropped rule yields the unscoped account-wide set, so
+    // every tab would show the SAME rows. Only real rows can rule that out.
+    const rowsByTab: Record<string, string[]> = {};
+    for (const name of ["Inbox", "Sent", "Drafts", "All Mail", "Spam"]) {
+      rowsByTab[name] = await rowsOfTab(name);
+      r.note(`${name}: ${rowsByTab[name].length} rows rendered`);
+    }
+    const inboxRows = rowsByTab["Inbox"] ?? [];
+    const sentRows = rowsByTab["Sent"] ?? [];
+    const draftRows = rowsByTab["Drafts"] ?? [];
+    const spamRows = rowsByTab["Spam"] ?? [];
+    const allRows = rowsByTab["All Mail"] ?? [];
+
+    const sorted = (ids: readonly string[]) => [...ids].sort();
+    if (seeded !== null) {
+      // The corpus is known and fully rendered: every tab's exact set.
+      r.eq(
+        "Inbox renders exactly the seeded Inbox threads",
+        sorted(inboxRows),
+        sorted(seeded.inbox),
+      );
+      r.eq(
+        "Sent renders exactly the seeded Sent threads",
+        sorted(sentRows),
+        sorted(seeded.sent),
+      );
+      r.eq(
+        "Drafts renders exactly the seeded draft",
+        sorted(draftRows),
+        sorted(seeded.drafts),
+      );
+      r.eq(
+        "All Mail renders every seeded thread (a superset of Inbox)",
+        sorted(allRows),
+        sorted([...seeded.inbox, ...seeded.sent, ...seeded.drafts]),
+      );
+    } else {
+      // A real mailbox: its size is unknown and rows past the viewport are
+      // windowed out (VirtualRows), so only what renders can be compared.
+      r.ok(
+        "Inbox renders rows",
+        inboxRows.length > 0,
+        `${inboxRows.length} rows`,
+      );
+      r.ok(
+        "Sent renders its own set, not the inbox rows",
+        sentRows.length > 0 &&
+          JSON.stringify(sentRows) !== JSON.stringify(inboxRows),
+        `sent=${sentRows.length} inbox=${inboxRows.length}`,
+      );
+      r.ok(
+        "Drafts returns its own set, distinct from Sent",
+        JSON.stringify(draftRows) !== JSON.stringify(sentRows),
+        `drafts=${JSON.stringify(draftRows)} sent=${JSON.stringify(sentRows)}`,
+      );
+      r.ok(
+        "All Mail differs from Sent",
+        JSON.stringify(allRows) !== JSON.stringify(sentRows),
+      );
+    }
+    // `rowsOfTab` returns [] only for the settled empty state — never for a
+    // list that did not load — so this is the rule applying, not a blank list.
+    r.eq(
+      "Spam shows its empty state — proof the rule applied, since a dropped " +
+        "rule would return the whole account",
+      spamRows,
+      [],
+    );
+    r.ok(
+      "no two of Inbox / Sent / Drafts returned an identical page",
+      new Set([inboxRows, sentRows, draftRows].map((x) => JSON.stringify(x)))
+        .size === 3,
+    );
+
+    // ---- 4. the scope is an ordinary, EDITABLE rule ------------------------
+    await tab(page, "Inbox").click();
+    await page.waitForTimeout(1200);
+    r.eq(
+      "Inbox's Filter pill names its scope rule",
+      await pillLabel(page),
+      scopeLabel("INBOX"),
+    );
+
+    await openFilter(page);
+    r.ok(
+      "the scope renders as an editable rule row",
+      (await page.getByText("Where", { exact: true }).count()) > 0,
+    );
+    // v1 rendered the scope as a LOCKED chip with no affordances at all. The
+    // presence of the rule row's own field/operator pickers and its Remove button
+    // is exactly the difference v2 is about.
+    const where = page.getByText("Where", { exact: true });
+    const remove = page.locator('button[aria-label="Remove filter"]').first();
+    const popover = where.locator("xpath=ancestor::*[self::div][3]");
+    r.ok(
+      "the rule reads as `Labels contains Inbox` in friendly names, not raw ids",
+      (await popover.getByText("Labels", { exact: true }).count()) > 0 &&
+        (await popover.getByText("Contains", { exact: true }).count()) > 0 &&
+        (await popover.getByText("Inbox", { exact: true }).count()) > 0,
+    );
+    r.ok(
+      "the rule has a Remove control (it is NOT locked)",
+      (await remove.count()) > 0,
+    );
+    await snap(page, OUT, "filter-open");
+
+    // ---- 5. an edit persists across reload, into the user config -----------
+    // The trailing actions are hover-revealed (opacity + pointer-events coupled),
+    // so hover the row before reaching for Remove.
+    await where.hover();
+    await page.waitForTimeout(300);
+    await remove.click();
+    await page.waitForTimeout(1000);
+    r.eq(
+      "removing the scope empties the pill",
+      await pillLabel(page),
+      "Filter",
+    );
+
+    // The write-back is debounced AND the server re-reads on a file-watcher event,
+    // so reload only once the SERVER resolves the edit — otherwise this races two
+    // async hops and reports a false negative.
+    r.ok(
+      "the server resolves the edit (config write-back reached the backend)",
+      await awaitServerResolves(page, (view) => !("filter" in view)),
+    );
+    r.ok(
+      "the edit landed in the user-layer config file, not device-local state",
+      existsSync(USER_OVERRIDE),
+      USER_OVERRIDE,
+    );
+
+    await boot(page, pathUrl("/mail/threads"), {
+      marker: TABS_READY,
+      timeoutMs: BOOT_TIMEOUT_MS,
+      settleMs: 2500,
+    });
+    r.eq(
+      "…and the removal SURVIVES a reload (config write-back)",
+      await pillLabel(page),
+      "Filter",
+    );
+    await snap(page, OUT, "after-reload");
+
+    // ---- 6. restore ------------------------------------------------------
+    // Dropping the override falls the surface back to the authored origin — which
+    // is both the cleanup AND the proof that the authored scope is what the file
+    // was overriding. A DELETE needs the same server barrier as the write did;
+    // the watcher is no faster at noticing a file vanish than at noticing it
+    // appear (measured ~95s vs ~103s on a loaded host).
+    if (existsSync(USER_OVERRIDE)) rmSync(USER_OVERRIDE);
+    r.ok(
+      "the server falls back to the authored origin",
+      await awaitServerResolves(page, (view) => "filter" in view),
+    );
+    await boot(page, pathUrl("/mail/threads"), {
+      marker: TABS_READY,
+      timeoutMs: BOOT_TIMEOUT_MS,
+      settleMs: 1500,
+    });
+    r.eq(
+      "dropping the override restores the authored scope",
+      await pillLabel(page),
+      scopeLabel("INBOX"),
+    );
+
+    await r.finish();
   });
-  r.eq(
-    "…and the removal SURVIVES a reload (config write-back)",
-    await pillLabel(page),
-    "Filter",
-  );
-  await snap(page, OUT, "after-reload");
-
-  // ---- 6. restore ------------------------------------------------------
-  // Dropping the override falls the surface back to the authored origin — which
-  // is both the cleanup AND the proof that the authored scope is what the file
-  // was overriding. A DELETE needs the same server barrier as the write did;
-  // the watcher is no faster at noticing a file vanish than at noticing it
-  // appear (measured ~95s vs ~103s on a loaded host).
-  if (existsSync(USER_OVERRIDE)) rmSync(USER_OVERRIDE);
-  r.ok(
-    "the server falls back to the authored origin",
-    await awaitServerResolves(page, (view) => "filter" in view),
-  );
-  await boot(page, pathUrl("/mail/threads"), {
-    marker: TABS_READY,
-    timeoutMs: BOOT_TIMEOUT_MS,
-    settleMs: 1500,
-  });
-  r.eq(
-    "dropping the override restores the authored scope",
-    await pillLabel(page),
-    "1 rule",
-  );
-
-  await r.finish();
-});
+} finally {
+  await fixture?.cleanup();
+}

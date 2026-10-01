@@ -8,8 +8,13 @@ import { SectionBody } from "../components/section-body";
 afterEach(cleanup);
 
 const SECTIONS = [
-  { key: "queue", label: "Queue", count: 6, entries: [] },
-  { key: "working", label: "Working", count: 2, entries: [] },
+  { key: "queue", label: "Queue", count: { kind: "exact", n: 6 }, entries: [] },
+  {
+    key: "working",
+    label: "Working",
+    count: { kind: "exact", n: 2 },
+    entries: [],
+  },
 ] as unknown as DataViewSection<unknown>[];
 
 function renderSections(
@@ -93,7 +98,7 @@ describe("GroupedSections — section body", () => {
       {
         key: "done",
         label: "Done",
-        count: 5,
+        count: { kind: "exact", n: 5 },
         entries: [],
         fold: { hidden: 3, open: false },
       },

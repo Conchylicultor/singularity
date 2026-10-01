@@ -146,6 +146,8 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       aggregate,
       now: props.now,
       groupOrder: props.groupOrder,
+      rowsComplete: props.rowsComplete,
+      sectionOrder: props.sectionOrder,
       openFolds: props.foldLines?.open,
       selectedRowId: props.selectedRowId,
     },
@@ -171,7 +173,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   // Documented cast boundary: creators arrives type-erased via render props.
   const creators = props.creators as CreateOption[] | undefined;
 
-  const totalCount = sections.reduce((sum, s) => sum + s.count, 0);
+  const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
     return (
       <Stack align="center" justify="center" gap="md" className="py-xl">

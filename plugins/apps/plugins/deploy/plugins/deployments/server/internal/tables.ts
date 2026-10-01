@@ -155,8 +155,8 @@ export const _deployRuns = pgTable(
     // once it is spawned. The seed is what keeps a freshly-claimed row from
     // looking like an orphan in the window before the child exists.
     //
-    // Internal only — stripped from every wire projection (see
-    // `handle-runs-query.ts`), exactly as `release_runs.pid` is.
+    // Internal only — never on the wire: the history collection projects
+    // exactly `DeployRunRecordSchema`'s keys, exactly as `release_runs.pid` is.
     pid: integer("pid"),
     // The leg an `update` died on. Null unless the run failed on one — a
     // succeeded run has no failing phase, and a single-verb run has no phases.
@@ -198,8 +198,8 @@ export const _deployRuns = pgTable(
     // That index also serves the reconciler's read — every unfinished row this
     // namespace launched, on boot and on every artifact event — because its
     // leading column and its predicate are exactly that query. No second index.
-    // Covers the per-deployment history query's `WHERE deployment_id = ?
-    // ORDER BY started_at DESC` keyset seek + tiebreak.
+    // Covers the per-deployment history window's `WHERE deployment_id = ?
+    // ORDER BY started_at DESC` read and its scroll cuts + tiebreak.
     index("deploy_runs_deployment_started_idx").on(
       t.deploymentId,
       t.startedAt.desc(),

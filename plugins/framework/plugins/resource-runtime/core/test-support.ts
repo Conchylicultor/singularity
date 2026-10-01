@@ -60,6 +60,8 @@ export interface RecordedFrame {
   etag?: string;
   /** Flight-co-produced commit watermark (Rule B′): full frames only. */
   watermark?: string;
+  /** Mutation-ack attribution: feed-driven value frames and `ack` frames. */
+  ackTx?: string[];
   reason?: string;
   /** `sub-error` on contract-mismatch / unknown-key: skew / same-build / unknown. */
   verdict?: string;

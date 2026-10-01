@@ -11,11 +11,14 @@ import {
   type LiveDecodedGroupQuery,
   type LiveDecodedQuery,
   type LiveGroupableDomain,
+  type LiveCutKey,
   type LiveGroupParams,
   type LiveOrderBy,
+  type LiveWindowBounds,
   type LiveSortDirection,
   type LiveWindowParams,
 } from "./query";
+import type { LiveColumnsDeclaration } from "./live-columns";
 
 // The window query codec. A subscription is just a params tuple, so the SAME
 // logical query must always produce the SAME params: encode fills the defaults,
@@ -36,6 +39,14 @@ import {
 
 export interface LiveQueryCodecSpec {
   key: string;
+  /** The row field that identifies a row — the order's tiebreaker, and a cut's last element. */
+  id: string;
+  /** A scroll collection's window takes segment cuts (`after` / `until`); any other refuses them. */
+  scroll: boolean;
+  /** A contributed collection's queries may name its contributors' columns (by wire name); any other's may not. */
+  contributed: boolean;
+  /** A collection's column scope: its queries may name scoped sets of that scope; `null` = none. */
+  columnScope: string | null;
   filterable: Filterable;
   sortable: readonly string[];
   defaultOrderBy: LiveOrderBy<string>;
@@ -48,21 +59,28 @@ type AnyWindowQuery = {
   where?: object;
   orderBy?: LiveOrderBy<string>;
   limit?: number;
+  columns?: readonly LiveColumnsDeclaration[];
 };
 
 /** A grouping query with its column vocabulary erased — the codec validates it at runtime. */
 type AnyGroupQuery = { groupBy: string; where?: object; limit?: number };
 
 export interface LiveQueryCodec<C extends string, S extends string> {
-  encode: (query?: AnyWindowQuery) => LiveWindowParams;
-  decode: (params: Record<string, string>) => LiveDecodedQuery<S>;
+  encode: (
+    query?: AnyWindowQuery,
+    bounds?: LiveWindowBounds,
+  ) => LiveWindowParams;
+  decode: (
+    params: Record<string, string>,
+    columns?: readonly LiveColumnsDeclaration[],
+  ) => LiveDecodedQuery<S>;
   /** Canonical encode of a grouping query — the same `where` canonicalisation as a window. */
   encodeGroups: (query: AnyGroupQuery) => LiveGroupParams;
   /** STRICT decode of a grouping query's params (throws unless exactly canonical). */
   decodeGroups: (params: Record<string, string>) => LiveDecodedGroupQuery<C>;
 }
 
-const PARAM_KEYS = new Set(["limit", "where", "order"]);
+const PARAM_KEYS = new Set(["limit", "where", "order", "after", "until"]);
 const GROUP_PARAM_KEYS = new Set(["groupBy", "limit", "where"]);
 
 /** Keys a `where` object spells a `Filter` tree with — never filterable column names. */
@@ -105,6 +123,70 @@ export function createLiveQueryCodec<C extends string, S extends string>(
       );
     }
   }
+  // A dot is how a contributed column's wire name reads (`<contributor>.<field>`),
+  // so no column of the collection's own may carry one.
+  for (const column of [...Object.keys(spec.filterable), ...spec.sortable]) {
+    if (column.includes(".")) {
+      fail(
+        `"${column}" cannot be a column name — "." separates a contributed column's contributor from its field`,
+      );
+    }
+  }
+
+  /** The columns a query may name: the collection's own, and each handle it brings. */
+  interface Declaration {
+    filterable: Filterable;
+    sortable: readonly string[];
+  }
+  const own: Declaration = {
+    filterable: spec.filterable,
+    sortable: spec.sortable,
+  };
+  const withColumns = new WeakMap<
+    readonly LiveColumnsDeclaration[],
+    Declaration
+  >();
+  const declarationOf = (
+    columns: readonly LiveColumnsDeclaration[] | undefined,
+  ): Declaration => {
+    if (columns === undefined || columns.length === 0) return own;
+    const cached = withColumns.get(columns);
+    if (cached !== undefined) return cached;
+    const names = new Set<string>();
+    let filterable: Filterable = spec.filterable;
+    const sortable: string[] = [...spec.sortable];
+    for (const handle of columns) {
+      if (handle.scope !== null) {
+        if (handle.scope !== spec.columnScope) {
+          fail(
+            spec.columnScope === null
+              ? `a query names scoped columns "${handle.name}", but the collection declares no \`columnScope\``
+              : `scoped columns "${handle.name}" belong to scope "${handle.scope}", not this collection's "${spec.columnScope}"`,
+          );
+        }
+      } else {
+        if (!spec.contributed) {
+          fail(
+            "a query names contributed columns, but the collection is not declared `contributed: true`",
+          );
+        }
+        if (handle.collection !== spec.key) {
+          fail(
+            `contributed columns "${handle.name}" belong to "${handle.collection}"`,
+          );
+        }
+      }
+      if (names.has(handle.name)) {
+        fail(`two contributed column sets are named "${handle.name}"`);
+      }
+      names.add(handle.name);
+      filterable = { ...filterable, ...handle.wireFilterable };
+      sortable.push(...handle.wireSortable);
+    }
+    const decl = { filterable, sortable };
+    withColumns.set(columns, decl);
+    return decl;
+  };
 
   const checkLimit = (
     limit: number,
@@ -165,20 +247,26 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     };
   };
 
-  const encodeWhere = (where: object | undefined): string | undefined => {
+  const encodeWhere = (
+    where: object | undefined,
+    decl: Declaration = own,
+  ): string | undefined => {
     const filter = toFilter(where);
     try {
-      return encodeFilter(filter, spec.filterable);
+      return encodeFilter(filter, decl.filterable);
     } catch (err) {
       if (err instanceof Error) fail(err.message);
       throw err;
     }
   };
 
-  const decodeWhere = (json: string | undefined): Filter | undefined => {
+  const decodeWhere = (
+    json: string | undefined,
+    decl: Declaration = own,
+  ): Filter | undefined => {
     if (json === undefined) return undefined;
     try {
-      return decodeFilter(json, spec.filterable);
+      return decodeFilter(json, decl.filterable);
     } catch (err) {
       if (err instanceof Error) reject(`decode: ${err.message}`);
       throw err;
@@ -187,6 +275,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
 
   const toOrderBy = (
     raw: unknown,
+    decl: Declaration = own,
     onFail: (message: string) => never = fail,
   ): LiveOrderBy<S> => {
     if (!Array.isArray(raw) || raw.length === 0) {
@@ -207,7 +296,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
         );
       }
       const [column, dir] = entry as [string, LiveSortDirection];
-      if (!spec.sortable.includes(column))
+      if (!decl.sortable.includes(column))
         onFail(`"${column}" is not a sortable column`);
       if (seen.has(column)) onFail(`orderBy names "${column}" twice`);
       seen.add(column);
@@ -222,41 +311,103 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     limit: number,
     where: string | undefined,
     orderBy: LiveOrderBy<S>,
+    bounds: LiveWindowBounds | undefined,
   ): LiveWindowParams => {
     const params: LiveWindowParams = { limit: String(limit) };
     if (where !== undefined) params.where = where;
     const order = JSON.stringify(orderBy);
     if (order !== defaultOrderJson) params.order = order;
+    if (bounds?.after !== undefined) params.after = bounds.after;
+    if (bounds?.until !== undefined) params.until = bounds.until;
     return params;
   };
 
-  const encode = (query?: AnyWindowQuery): LiveWindowParams =>
-    windowParams(
-      checkLimit(query?.limit ?? spec.defaultLimit, "limit"),
-      encodeWhere(query?.where),
-      toOrderBy(query?.orderBy ?? spec.defaultOrderBy),
-    );
+  // A cut is a row's `$key` as the server minted it: the canonical JSON array
+  // of the order keys' exact text, then the id — unless the order already
+  // names the id, whose key then is the tiebreaker (the server's key list:
+  // the declared keys, plus the id when no key targets it).
+  const cutArity = (orderBy: LiveOrderBy<S>): number =>
+    orderBy.length + (orderBy.some(([c]) => c === spec.id) ? 0 : 1);
+  const parseCut = (
+    raw: string,
+    orderBy: LiveOrderBy<S>,
+    which: "after" | "until",
+    onFail: (message: string) => never = fail,
+  ): LiveCutKey => {
+    if (!spec.scroll) {
+      onFail(
+        `"${which}" is a segment cut — only a collection declared \`scroll: true\` takes one`,
+      );
+    }
+    const parsed = parseJson(raw, onFail);
+    const arity = cutArity(orderBy);
+    if (
+      !Array.isArray(parsed) ||
+      parsed.length !== arity ||
+      !parsed.every((v) => v === null || typeof v === "string") ||
+      parsed[arity - 1] === null
+    ) {
+      onFail(
+        `"${which}" must be a row key of ${arity} text values (the order's keys, then the id) — got ${JSON.stringify(raw)}`,
+      );
+    }
+    if (JSON.stringify(parsed) !== raw) {
+      onFail(`"${which}" is not canonical — got ${JSON.stringify(raw)}`);
+    }
+    return parsed as LiveCutKey;
+  };
 
-  const decode = (params: Record<string, string>): LiveDecodedQuery<S> => {
+  const encode = (
+    query?: AnyWindowQuery,
+    bounds?: LiveWindowBounds,
+  ): LiveWindowParams => {
+    const decl = declarationOf(query?.columns);
+    const orderBy = toOrderBy(query?.orderBy ?? spec.defaultOrderBy, decl);
+    // Validated here too, so a bad cut throws where it was built.
+    if (bounds?.after !== undefined) parseCut(bounds.after, orderBy, "after");
+    if (bounds?.until !== undefined) parseCut(bounds.until, orderBy, "until");
+    return windowParams(
+      checkLimit(query?.limit ?? spec.defaultLimit, "limit"),
+      encodeWhere(query?.where, decl),
+      orderBy,
+      bounds,
+    );
+  };
+
+  const decode = (
+    params: Record<string, string>,
+    columns?: readonly LiveColumnsDeclaration[],
+  ): LiveDecodedQuery<S> => {
+    const decl = declarationOf(columns);
     for (const k of Object.keys(params)) {
       if (!PARAM_KEYS.has(k)) reject(`decode: unknown param "${k}"`);
     }
-    const { limit, where, order } = params;
+    const { limit, where, order, after, until } = params;
     if (limit === undefined || !/^[1-9][0-9]*$/.test(limit)) {
       reject(
         `decode: params.limit must be a canonical positive-integer string, got ${JSON.stringify(limit)}`,
       );
     }
+    const orderBy =
+      order === undefined
+        ? toOrderBy(spec.defaultOrderBy)
+        : toOrderBy(parseJson(order, reject), decl, reject);
     const decoded: LiveDecodedQuery<S> = {
       limit: checkLimit(Number(limit), "limit", reject),
-      where: decodeWhere(where),
-      orderBy:
-        order === undefined
-          ? toOrderBy(spec.defaultOrderBy)
-          : toOrderBy(parseJson(order, reject), reject),
+      where: decodeWhere(where, decl),
+      orderBy,
+      ...(after !== undefined
+        ? { after: parseCut(after, orderBy, "after", reject) }
+        : {}),
+      ...(until !== undefined
+        ? { until: parseCut(until, orderBy, "until", reject) }
+        : {}),
     };
-    // The filter is already strictly canonical; this pins limit / order.
-    const canonical = windowParams(decoded.limit, where, decoded.orderBy);
+    // The filter and the cuts are already strictly canonical; this pins limit / order.
+    const canonical = windowParams(decoded.limit, where, decoded.orderBy, {
+      after,
+      until,
+    });
     if (!sameParams(canonical, params)) {
       reject(
         `decode: params are not canonical — got ${JSON.stringify(params)}, ` +

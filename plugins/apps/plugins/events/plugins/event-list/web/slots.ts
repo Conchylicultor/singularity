@@ -13,9 +13,10 @@ export const EventList = {
    * type and no source id, ever.
    *
    * A contributed field is a full dimension, not a display-only one: the host
-   * folds it in BEFORE the sort/filter controllers, and the physical column it
-   * projects (`sourceId`) is already bound in the server `COLUMN_MAP`, so
-   * filtering and sorting on it compile to SQL with no edit to this plugin.
+   * folds it in BEFORE the sort/filter controllers, and the column it projects
+   * (`sourceId`) is already declared filterable and sortable on the
+   * `events.list` collection, so filtering and sorting on it compile to SQL
+   * with no edit to this plugin.
    */
   Fields: defineFieldExtensions<SourcedEvent>(),
 };

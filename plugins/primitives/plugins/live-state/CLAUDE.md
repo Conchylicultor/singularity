@@ -78,6 +78,25 @@ params, opts, data)` is the canonical one, seeding a GET endpoint with the exact
 key `useEndpoint` reads (endpoints' `endpointQueryKey`); it lives here because
 live-state already sits downstream of endpoints (via log-channels).
 
+## A varying list of tuples — `useResources`
+
+`useResources(resource, paramsList)` reads a list of tuples of ONE resource
+whose length changes over time (network/live's segmented scroll: one window per
+segment), which a hook call per tuple cannot express. Each tuple is read exactly
+as `useResource` reads it — one shared `tupleQueryOptions` builds the query (key,
+HTTP fallback, placeholder rule, GC rule), the same `observe` / `unobserve`
+refcount (a tuple another component also reads is subscribed once), the same
+cold-start prime, the same pending-mount count until its first value, the same
+once-per-tuple mount→settle report (one shared `reportTupleSettled` feeds
+`slowResourceReportSink`, so a segment's slow read reaches Debug → Slow Ops) —
+and yields the same `ResourceResult` states, in list order. No `select`, no
+`gate`. What is not shared is only the effect shape: one tuple per hook against
+a list moved by diff.
+The subscription set moves by DIFF: a tuple kept across a list change is never
+unobserved and re-observed (its socket subscription would lapse), and a removed
+tuple is released after the new ones are observed. Pinned by
+`web/__tests__/use-resources.test.tsx`.
+
 ## Hazard tests (H1–H7) — the executable correctness argument
 
 The client transport hazards are pinned by named vitest tests under
@@ -864,6 +883,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `useResource`
     - `useResourceAcks`
     - `useResourceContractMismatches`
+    - `useResources`
 - Cross-plugin:
   - Imported by:
     - `active-data`
@@ -879,14 +899,12 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`
-    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
-    - `apps/events/event-list`
     - `apps/events/events-core`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
@@ -912,12 +930,10 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/sonata/library`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
-    - `apps/sonata/playback-history`
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/key-readout`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/songsheet`
-    - `apps/sonata/sources/midi`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transpose`
     - `apps/studio/compositions/release`

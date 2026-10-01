@@ -7,6 +7,8 @@ import type {
   OpsFor,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 
+import type { LiveColumnsDeclaration } from "./live-columns";
+
 // The consumer-facing query language, typed against a collection's
 // declaration: an undeclared column, an op the column's domain does not take,
 // a wrong operand type or a non-sortable `orderBy` column fails in tsc. The
@@ -96,6 +98,12 @@ export interface LiveQuery<F, S extends string> {
   where?: LiveWhere<F>;
   orderBy?: LiveOrderBy<S>;
   limit?: number;
+  /**
+   * The contributed column sets (`liveColumns` handles) this query's `where` /
+   * `orderBy` name by wire name (`<contributor>.<field>`) — what the codec
+   * validates those names against. Not part of the wire params.
+   */
+  columns?: readonly LiveColumnsDeclaration[];
   /** A grouping is its own query shape — {@link LiveGroupQuery}. */
   groupBy?: never;
 }
@@ -153,14 +161,45 @@ export const LIVE_GROUP_DEFAULT_LIMIT = 50;
 /**
  * The window resource's wire params: `limit` always, `where` (the filter
  * language's `encodeFilter`) / `order` as canonical JSON present only when
- * they differ from the default. Additive string keys, so the default window
- * stays byte-identical `{ limit: "100" }`.
+ * they differ from the default, and a segment's cuts (`after` / `until`, a
+ * scroll collection only) present only when set. Additive string keys, so the
+ * default window stays byte-identical `{ limit: "100" }`.
  */
 export type LiveWindowParams = {
   limit: string;
   where?: string;
   order?: string;
+  after?: string;
+  until?: string;
 };
+
+/**
+ * One segment's bounds in a scroll collection's order: `after` an EXCLUSIVE
+ * lower cut, `until` an INCLUSIVE upper one. Each is a row's `$key` exactly as
+ * the server minted it (see {@link LIVE_ROW_KEY}) — never derived on the
+ * client, whose decoded row lost the order columns' exact text (a `Date` holds
+ * milliseconds; Postgres holds microseconds).
+ */
+export interface LiveWindowBounds {
+  after?: string;
+  until?: string;
+}
+
+/**
+ * The reserved window-only row field a scroll collection's window projects: the
+ * canonical JSON array of the row's order-key values as exact Postgres text
+ * (`col::text`), then its id — or `null` when that JSON is over
+ * {@link LIVE_ROW_KEY_MAX_BYTES} (a long text sort key), which the scroll cannot
+ * page past. It is not a row field: the scroll splits it off before rows reach
+ * a consumer.
+ */
+export const LIVE_ROW_KEY = "$key";
+
+/** A `$key` over this many bytes is projected as `null` — cuts ride in every tuple's params. */
+export const LIVE_ROW_KEY_MAX_BYTES = 1024;
+
+/** A decoded cut: each order key's exact text (NULL a NULL key), then the id. */
+export type LiveCutKey = readonly (string | null)[];
 
 /**
  * The groups resource's wire params: `groupBy` and `limit` always, `where` as
@@ -178,6 +217,10 @@ export interface LiveDecodedQuery<S extends string> {
   /** The canonical filter (validated by the strict decode); `undefined` when unfiltered. */
   where: Filter | undefined;
   orderBy: LiveOrderBy<S>;
+  /** The segment's exclusive lower cut (a scroll collection's); absent = the order's start. */
+  after?: LiveCutKey;
+  /** The segment's inclusive upper cut; absent = the order's end. */
+  until?: LiveCutKey;
 }
 
 /** A decoded grouping query with every default filled in. */

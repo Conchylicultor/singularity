@@ -7,22 +7,16 @@ import {
 import {
   DataView,
   defineDataView,
+  liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
-import { useEventsRevision } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
 import {
   externalUrl,
-  type EventRecord,
+  type ListedEvent,
   type SourcedEvent,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
-import {
-  EVENT_LIST_FILTERABLE,
-  EVENT_LIST_SEARCHABLE,
-  queryEvents,
-} from "../core";
+import { EVENT_LIST_SEARCHABLE, eventsList } from "../core";
 import { eventFieldDefs } from "./internal/fields";
 import { useOpenEvent } from "./internal/use-open-event";
 import { EventRow } from "./components/event-row";
@@ -32,9 +26,19 @@ import { EventList } from "./slots";
  * The Events surface id. Config-backed like every DataView: the view instances
  * (`Upcoming`, `All`, `By category`, …) live ONLY in
  * `config/apps/events/event-list/events.list.jsonc` — there is no
- * code-synthesized default, by design.
+ * code-synthesized default, by design. It IS `eventsList`'s column scope
+ * (asserted at mount): the surface whose custom columns sort and filter it.
  */
 const EVENTS_LIST_VIEW = defineDataView("events.list");
+
+/**
+ * The live source: the `events.list` collection, kept fresh by the routed change
+ * feed (an event write, a source's type / config / enabled flip) with no tick
+ * and no refetch. The search box matches what an event is and where it is.
+ */
+const eventsListSource = liveDataSource(eventsList, {
+  searchable: EVENT_LIST_SEARCHABLE,
+});
 
 export const eventListPane = Pane.define({
   title: "Events",
@@ -45,14 +49,6 @@ export const eventListPane = Pane.define({
 });
 
 function EventListPaneView(): ReactElement {
-  // The cheap scalar tick drives an in-place refetch of the loaded window; the
-  // paginated SQL query is the source of truth. While pending, hand a null tick
-  // (no refetch) — the first settled `rev` then refreshes once.
-  const tick = useEventsRevision();
-  const changeTick = matchResource(tick, {
-    loading: () => null,
-    ready: (d) => d.rev,
-  });
   // Activating a row means "show me this event": its own page, else the page it
   // was extracted from. Passed at the host level, so the list rows, the table
   // rows and the gallery cards all open the same thing.
@@ -62,10 +58,8 @@ function EventListPaneView(): ReactElement {
     <PaneChrome pane={eventListPane}>
       <DataView<SourcedEvent>
         storageKey={EVENTS_LIST_VIEW}
-        rows={[]}
         fields={eventFieldDefs}
         fieldExtensions={EventList.Fields}
-        rowKey={(e) => e.id}
         onRowActivate={openEvent}
         views={["list", "table", "gallery"]}
         emptyState={
@@ -76,7 +70,7 @@ function EventListPaneView(): ReactElement {
         viewOptions={{
           list: {
             size: "md",
-            renderRow: (e: EventRecord) => <EventRow event={e} />,
+            renderRow: (e: ListedEvent) => <EventRow event={e} />,
           },
           gallery: {
             // The poster as the card's cover. `imageUrl` is deliberately NOT a
@@ -85,18 +79,13 @@ function EventListPaneView(): ReactElement {
             // accessor rather than `coverField`, which only resolves field ids.
             // No usable poster → `null` → no cover region at all, i.e. exactly
             // the text-only card, never an empty frame or a broken image.
-            cover: (e: EventRecord) => {
+            cover: (e: ListedEvent) => {
               const src = externalUrl(e.imageUrl);
               return src === null ? null : { kind: "image", src };
             },
           },
         }}
-        dataSource={{
-          changeTick,
-          filterable: EVENT_LIST_FILTERABLE,
-          searchable: EVENT_LIST_SEARCHABLE,
-          fetchPage: (args) => fetchEndpoint(queryEvents, {}, { body: args }),
-        }}
+        source={eventsListSource}
       />
     </PaneChrome>
   );

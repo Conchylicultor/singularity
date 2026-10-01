@@ -26,9 +26,9 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 // `View` contribution), so `rebuildTriggers` sees every exclusion regardless of
 // module import order.
 //
-// INVARIANT (enforced at boot by ./identity-coverage): no keyed live-state
-// resource may declare an `identityTable` on an excluded table. Scoped delivery
-// fires only on `origin === identityTable`, which an excluded (trigger-less) table
+// INVARIANT (enforced at boot by ./route-coverage): no live-state resource
+// may depend on an excluded table (an `identityTable`, or a route). Its delivery
+// fires only on a change to that table, which an excluded (trigger-less) table
 // can never produce — so the policy would be dead config that silently degrades
 // the resource to hydrate-on-mount. A surface that reads an excluded table should
 // be an endpoint read on open, like the Slow Ops pane's `listSlowOps` (a live

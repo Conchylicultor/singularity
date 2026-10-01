@@ -22,12 +22,13 @@ there, not in a composition root, unless it is genuinely serve-only.
 - **`exec`** — a short-lived process that runs ONE registered piece of work and
   exits (`cli/run-exec.ts`, exported as `runExec` from
   `@plugins/framework/plugins/server-core/cli`). Runs load waves, `register`,
-  `collectContributions`, the preload-declare assert and the `onReadyBlocking`
-  barrier, and nothing else.
+  `collectContributions`, the deferred-resource bind, the preload-declare assert
+  and the `onReadyBlocking` barrier, and nothing else.
 
 | phase                                          | `serve` | `exec` |
 | ---------------------------------------------- | ------- | ------ |
 | load waves, `register`, `collectContributions` | yes     | yes    |
+| `bindDeferredResources`                        | yes     | yes    |
 | preload-declare assert                         | yes     | yes    |
 | socket bind                                    | yes     | no     |
 | `onReadyBlocking`                              | yes     | yes    |
@@ -43,6 +44,16 @@ forgotten `...served.declare` would otherwise serve but silently lose boot
 hydration and persistence — and the barrier's L2 sweep, which `exec` runs too,
 would delete the key's persisted row. That is why it runs in both modes and
 before the barrier.
+
+**`bindDeferredResources`** (`core/resources.ts`) runs right after
+`collectContributions`: a deferred resource (`defineDeferredResource` — a
+`network/live` collection whose columns other plugins contribute) compiles its
+server half from contributions, which exist only now, and must be bound before
+the preload assert reads the registry and before the barrier's change feed
+rebuilds triggers from the route layout. Then it runs every check registered
+with `onDeferredResourcesBound` (network/live's "a `LiveColumns.Serve` no
+collection here compiles"); a throw from a bind or a check fails boot, so such a
+graph never serves.
 
 ### Both modes declare their namespace FIRST
 
@@ -166,6 +177,7 @@ Each served resource gets `GET /api/resources/<key>/...` (HTTP fallback for WS-d
 - **`mode` is required** on a non-keyed resource — `push` (the value rides the WS) or `invalidate` (a version stamp; each tab refetches over HTTP). It is what `liveValue`'s `load` compiles to, and there is no default.
 - The two-arg form `defineResource(descriptor, serverOpts)` reads `key`, `schema` and keyed-ness (`mode: "keyed"` + `keyOf`) from the client descriptor; a keyed descriptor takes `KeyedServerResourceOptions`, which has no `mode`, and `ServerResourceOptions.mode` excludes `"keyed"`, so a keyed resource cannot drift from its client. The flat one-arg form is push/invalidate only.
 - A DB-backed resource has no `notify()` (the change feed routes commits by the loader's read-set); `defineExternalResource` is the only way to get one.
+- **The loader read-set is runtime-owned** (`core/read-set.ts`): the tables each loader read, captured at the DB pool chokepoint inside the profiler's ambient loader entry and handed here by the sink runtime-profiler's install wires (`recordLoaderReadSet`). It is ROUTING state — the legacy router (`applyDbChange`) inverts it, memoized on its version counter — so the profiler's `SINGULARITY_PROFILING=0` kill-switch and its profile reset leave it alone. `seedReadSetIndex` / `removeReadSetTable` are its boot seed and eviction; tests read it through `core/testing`. Its per-run capture also feeds the runtime's route drift guard (A8, `lastReadSet`): a ROUTED resource (`routes` / `reach`) whose loader reads a table none of its routes names is reported once per table — and fails the load under a test runner (`strictRoutes`, on when `NODE_ENV === "test"`, which bun:test sets).
 - **`Resource.Declare`'s payload** is `{ key, mode, preload?, preloadTuples? }`. `preloadTuples` is set only by `network/live`'s `serveValue`, for a PARAMETERIZED value declared `preload`: it names and loads the tuples the boot snapshot ships (`tuples[key]`). A Declare carrying it is an enumerated preload — the boot snapshot loads it through that function, and L2 (`live-state-snapshot`) neither persists nor force-recomputes the key.
 
 ### Handlers
@@ -266,7 +278,6 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ProfilerHooks`
     - `ProfilerMeasureName`
     - `ProfilerSpanDetail`
-    - `RecomputeIntent`
     - `Registration`
     - `ResourceContract`
     - `ResourceDefinition`
@@ -282,13 +293,17 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ServerPluginDefinition`
     - `ServerResourceOptions`
     - `Span`
+    - `TableChange`
+    - `TableLayoutRequirement`
     - `WsData`
     - `WsHandler`
   - Exports (values):
     - `applyDbChange`
     - `assertPreloadedResourcesDeclared`
+    - `bindDeferredResources`
     - `boundedMembershipKeys`
     - `collectContributions`
+    - `defineDeferredResource`
     - `defineExternalResource`
     - `defineResource`
     - `defineServerContribution`
@@ -301,19 +316,25 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `measureSubscribeCycle`
     - `notificationsWsHandler`
     - `notifyStatsFor`
+    - `onDeferredResourcesBound`
     - `onResourceDelivery`
     - `onResourcePush`
     - `physFootprintBytes`
     - `procMemory`
     - `profilerStart`
     - `recomputeResource`
+    - `recordLoaderReadSet`
     - `recordMemoryCheckpoint`
     - `registeringPlugin`
+    - `removeReadSetTable`
     - `reportServerError`
     - `reportServerFatalSync`
     - `Resource`
-    - `scopedResourceIdentities`
+    - `routedTableRequirements`
+    - `routeTableChange`
+    - `scopedResourceTables`
     - `seedPersistedSnapshot`
+    - `seedReadSetIndex`
     - `serverCollectedDir`
     - `setClientBuildIdentity`
     - `setErrorReporter`
@@ -332,5 +353,8 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `infra/jobs/supervised-job`
 - Cli:
   - Exports (values): `runExec`
+- Test helpers:
+  - Core: `@plugins/framework/plugins/server-core/core/testing`
+    - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
 
 <!-- AUTOGENERATED:END -->

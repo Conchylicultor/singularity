@@ -73,9 +73,10 @@ export const _releaseRuns = pgTable(
     uniqueIndex("release_runs_inflight_uniq")
       .on(t.namespace, t.composition)
       .where(sql`${t.finishedAt} IS NULL`),
-    // Supports the composition-scoped keyset seek (queryReleaseHistory): the
-    // history DataView pages a single composition's runs newest-first, so this
-    // covers the `WHERE namespace = ? AND composition = ? ORDER BY started_at DESC`
+    // Supports the composition-scoped history window (the `release.history`
+    // collection, scoped per composition by the history pane): it reads a
+    // single composition's runs newest-first, so this covers the
+    // `WHERE namespace = ? AND composition = ? ORDER BY started_at DESC`
     // prefix + tiebreak.
     index("release_runs_ns_comp_started_idx").on(
       t.namespace,
@@ -90,9 +91,9 @@ export const _releaseRuns = pgTable(
     // The `(namespace, composition, started_at desc)` index above CANNOT serve
     // it, and that is not obvious: `composition` sits between the constrained
     // leading column and the ordering column, so the walk breaks in the middle.
-    // The two indexes answer different questions — that one covers
-    // queryReleaseHistory's composition-scoped page, this one the unscoped-by-
-    // composition merged list. Neither subsumes the other; do not consolidate.
+    // The two indexes answer different questions — that one covers the
+    // `release.history` window's composition-scoped reads, this one the
+    // unscoped-by-composition merged list. Neither subsumes the other; do not consolidate.
     //
     // `id` is the keyset tiebreak and part of the ordering, not padding — see
     // the twin index on build_runs for the full argument, including why there is

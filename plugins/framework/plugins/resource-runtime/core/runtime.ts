@@ -23,6 +23,21 @@ import {
   type SnapEncoder,
   type SnapEntry,
 } from "./keyed-diff";
+import {
+  isMintedPlan,
+  routeTuple,
+  tableLayoutRequirements,
+  type HostMap,
+  type ReachPlan,
+  type ReverseRoute,
+  type Route,
+  type RoutePlan,
+  type TableChange,
+  type TableLayoutRequirement,
+  type TupleRouting,
+  type TupleUse,
+  type UnresolvedReverse,
+} from "./routing";
 
 // Shared live-state resource runtime. See
 // research/2026-04-15-global-sse-lifecycle-mental-model-v3.md and
@@ -63,24 +78,6 @@ export interface WsHandler {
 
 export type ResourceMode = "push" | "invalidate" | "keyed";
 export type ResourceParams = Record<string, string>;
-
-/**
- * The shared L4 contract: one resolved unit of "this resource (at these params)
- * must recompute because of this DB change". Produced by `applyDbChange` (the DB
- * change-feed router) and today routed straight through `scheduleNotify`. When the
- * work-admission scheduler lands (separate worktree) it consumes this type on the
- * *admit* side; the producer (`applyDbChange`) is unchanged. `delta` is either a
- * scoped row change (op + the changed PK ids) or `"FULL"` (membership/order
- * change, a vanished row, or an over-cap / pk-less write). See
- * research/2026-06-19-global-live-state-l4-db-change-feed.md §2.
- */
-export type RecomputeIntent = {
-  resource: string;
-  key: ResourceParams;
-  delta:
-    | { table: string; ids: string[]; op: "I" | "U" | "D"; xid?: string }
-    | "FULL";
-};
 
 // Upstream edge: when `resource` notifies, this resource is cascaded.
 // `map` translates upstream params (and optionally value) into the list of
@@ -145,6 +142,20 @@ export interface DependsOnEntry<P extends ResourceParams = ResourceParams> {
 }
 
 /**
+ * One upstream tuple a routed entry recomputes on (`ResourceDefinition.recomputeOn`):
+ * an EXTERNAL resource's `params` tuple. Both rules are types: a DB-backed
+ * upstream has no `notify` (its writes are the entry's own routes to name), and
+ * `params` is checked against the upstream's params, never inferred from them
+ * (a tuple that fits no upstream tuple would never match one). `createResource`
+ * still refuses a non-external upstream an erased cast let through.
+ */
+export interface RoutedRecomputeOn<P extends ResourceParams = ResourceParams> {
+  // biome-ignore lint/suspicious/noExplicitAny: upstream payload type is erased — only its key is read.
+  resource: ExternalResource<any, P>;
+  params: NoInfer<P>;
+}
+
+/**
  * Bounded-membership selector for a keyed own-identity resource — the
  * generalization of M5 `scopedMembership` to the bounded working-set contract
  * (`research/2026-07-18-global-bounded-working-set-resource-contract.md`). A
@@ -189,9 +200,12 @@ export type KeyedMembership<P extends ResourceParams = ResourceParams> =
        * leaving it stale. Unchanged-signature refills keep the in-place path
        * (no ids query — the M5 cost model for content-only bumps). Absent ⇒
        * in-place updates never re-derive order (byte-identical prior behavior;
-       * the ORDER BY must then be update-stable).
+       * the ORDER BY must then be update-stable). `params` is the tuple the
+       * row belongs to, so a signature can cover only the columns THAT tuple
+       * orders by: a write to a column another tuple sorts by then does not
+       * cost this one an ids query.
        */
-      orderSignatureOf?: (row: unknown) => string;
+      orderSignatureOf?: (row: unknown, params: P) => string;
     }
   | { kind: "point"; idsOf: (params: P) => readonly string[] };
 
@@ -208,7 +222,7 @@ type MembershipRecord =
       windowIdsOf: (params: ResourceParams) => Promise<string[]>;
       bounded: boolean;
       /** Order-signature seam — see `KeyedMembership`. Never set on the alias. */
-      orderSignatureOf?: (row: unknown) => string;
+      orderSignatureOf?: (row: unknown, params: ResourceParams) => string;
     }
   | { kind: "point"; idsOf: (params: ResourceParams) => readonly string[] };
 
@@ -277,7 +291,7 @@ export interface ResourceDefinition<
    * MUST be a BASE TABLE name, never a view name — `applyDbChange`'s `origin` is
    * always the base table that changed, so a view name here silently never matches
    * and the resource quietly stays on FULL recompute. This is enforced at boot:
-   * the change-feed's `assertScopePoliciesCovered` throws if this table is not one
+   * the change-feed's `assertRouteTablesCovered` throws if this table is not one
    * it installed a trigger on (a view / rollup / excluded / typo'd name), so the
    * silent degrade is now a loud boot failure rather than a latent footgun.
    */
@@ -318,6 +332,47 @@ export interface ResourceDefinition<
    * hash encoder.
    */
   membership?: KeyedMembership<P>;
+  /**
+   * Scoped change routing (see `RoutePlan` in `./routing`): every table
+   * occurrence this resource's compiled query may read, and how each tuple reads
+   * them. Present ⇒ the entry is ROUTED: `routeTableChange` serves it and the
+   * legacy read-set path (`applyDbChange`) never does, so each change reaches it
+   * exactly once. Only on a membership entry (`membership` / `scopedMembership`),
+   * and its `identityTable` is DERIVED from its identity route rather than
+   * declared — both enforced by `ScopePolicy` and, for an untyped caller, by a
+   * loud throw in `createResource`. Exclusive with `dependsOn`: a routed entry
+   * takes no cascade (it routes the tables it reads). Written by a compiler,
+   * never by hand: a route's `columns` gate what the SQL references, so a
+   * hand-kept list could silently drop an update — a `RoutePlan` is minted by
+   * `mintRoutePlan` (type), which only a compiler calls (check), and an unminted
+   * plan throws in `createResource`.
+   */
+  routes?: RoutePlan<P>;
+  /**
+   * The routed spelling for a NON-keyed (`push` / `invalidate`) entry — a
+   * collection's `:groups` aggregate: which tables each tuple reads, with only
+   * `full` routes (see `ReachPlan`). Present ⇒ the entry is ROUTED exactly like
+   * one declaring `routes` (served by `routeTableChange`, never by the legacy
+   * read-set path): a change to a table a tuple reads recomputes that tuple,
+   * and a change to any other table reaches nothing. Exclusive with
+   * `identityTable`, `routes` and `dependsOn`; refused on a keyed or external
+   * entry (a throw in `createResource`). Compiler-minted (`mintReachPlan`),
+   * like `routes`.
+   */
+  reach?: ReachPlan<P>;
+  /**
+   * A ROUTED entry's non-table inputs: upstream tuples of EXTERNAL resources
+   * (`defineExternalResource`, truth outside Postgres) whose change means the
+   * compiled SQL itself moved under the entry — a DataView surface's custom
+   * column definitions, which decide which side-table columns a tuple reads and
+   * how their values cast. Each change FULL-recomputes every subscribed tuple
+   * and drops their memoized read-sets (`usesOf`), which may name the old
+   * vocabulary. Only on a routed entry (`routes`), and only external upstreams:
+   * a table-backed upstream's writes are the entry's own routes to name, and a
+   * cascade from one would serve the entry twice (A5). Both throw in
+   * `createResource`.
+   */
+  recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
   /**
    * Fixed-window trailing debounce (ms) for this resource's flushes. When set
    * (and > 0), a `notify()` (or cascaded `mergePending`) into this entry does
@@ -446,6 +501,15 @@ export interface ResourceDefinition<
  * this arm exists to avoid. See
  * research/2026-08-25-global-own-row-resource-scoping.md §3.
  *
+ * A compiler that emits a `RoutePlan` declares `routes` INSTEAD of
+ * `identityTable`, on a membership arm only: the identity table is derived from
+ * the routes (so the two cannot disagree), and `fanOut` / `recompute` have no
+ * routed spelling — a scoped refill never deletes, so routing a change into a
+ * non-membership drain could not express an exit. A routed arm takes no
+ * `dependsOn` either: it routes the tables it reads itself, and a cascade would
+ * serve it a second time. See
+ * research/2026-09-29-global-scoped-change-routing.md.
+ *
  * `tsc` enforces this at every hand-written call site. The compilers in
  * `@plugins/infra/plugins/query-resource/server` merge their opts behind an
  * `as … & ScopePolicy` cast that `tsc` cannot see through, so each states its
@@ -460,6 +524,8 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
       scopedMembership?: never;
       fanOut?: never;
       recompute?: never;
+      routes?: never;
+      recomputeOn?: never;
     }
   | {
       identityTable: string;
@@ -467,6 +533,28 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
       membership?: never;
       fanOut?: never;
       recompute?: never;
+      routes?: never;
+      recomputeOn?: never;
+    }
+  | {
+      routes: RoutePlan<P>;
+      membership: KeyedMembership<P>;
+      recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
+      identityTable?: never;
+      scopedMembership?: never;
+      fanOut?: never;
+      recompute?: never;
+      dependsOn?: never;
+    }
+  | {
+      routes: RoutePlan<P>;
+      scopedMembership: { orderOf: (params: P) => Promise<string[]> };
+      recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
+      identityTable?: never;
+      membership?: never;
+      fanOut?: never;
+      recompute?: never;
+      dependsOn?: never;
     }
   | {
       identityTable: string;
@@ -474,6 +562,8 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
       membership?: never;
       scopedMembership?: never;
       recompute?: never;
+      routes?: never;
+      recomputeOn?: never;
     }
   | {
       recompute: { kind: "full"; reason: string };
@@ -481,6 +571,8 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
       membership?: never;
       scopedMembership?: never;
       fanOut?: never;
+      routes?: never;
+      recomputeOn?: never;
     };
 
 /**
@@ -509,6 +601,8 @@ export type DefineResourceInput<
   | "recompute"
   | "scopedMembership"
   | "membership"
+  | "routes"
+  | "reach"
   | "preload"
   | "optionalParams"
 > & {
@@ -595,6 +689,15 @@ interface ServerResourceOptionsBase<
   revalidate?: ResourceDefinition<T, P>["revalidate"];
   /** Deferred subscription-authorization seam — see `ResourceDefinition.authorize`. */
   authorize?: ResourceDefinition<T, P>["authorize"];
+  /**
+   * The server's own params gate, REPLACING the contract's — only for a
+   * resource whose server serves more than the shared descriptor can declare
+   * (a `network/live` collection whose column sets are contributed by other
+   * plugins, or are data): its descriptor's decode would refuse their column
+   * names. Throws `ResourceContractError` like the contract's. Absent ⇒ the
+   * contract's `validateParams`.
+   */
+  validateParams?: (params: ResourceParams) => void;
 }
 
 /**
@@ -603,15 +706,20 @@ interface ServerResourceOptionsBase<
  * `defineExternalResource` form. `mode` is required — `push` or `invalidate`,
  * stated where the resource is declared; the runtime has no default. It may set
  * `identityTable` (e.g. a push aggregate that propagates scoped ids
- * downstream), but never a membership: that is keyed-only.
+ * downstream), but never a membership: that is keyed-only. A compiler may
+ * instead declare `reach` (`ReachPlan`), which routes the entry by the tables
+ * each tuple reads — exclusive with `identityTable`, which names the one
+ * identity a routed entry derives from its routes.
  */
-export interface ServerResourceOptions<
+export type ServerResourceOptions<
   T,
   P extends ResourceParams = ResourceParams,
-> extends ServerResourceOptionsBase<T, P> {
+> = ServerResourceOptionsBase<T, P> & {
   mode: "push" | "invalidate";
-  identityTable?: string;
-}
+} & (
+    | { identityTable?: string; reach?: never }
+    | { reach: ReachPlan<P>; identityTable?: never; dependsOn?: never }
+  );
 
 /**
  * Server-only half of a KEYED resource declaration, paired with a
@@ -644,6 +752,9 @@ function contractToDefinition<T, P extends ResourceParams>(
     recompute?: { kind: "full"; reason: string };
     scopedMembership?: ResourceDefinition<T, P>["scopedMembership"];
     membership?: ResourceDefinition<T, P>["membership"];
+    routes?: ResourceDefinition<T, P>["routes"];
+    reach?: ResourceDefinition<T, P>["reach"];
+    recomputeOn?: ResourceDefinition<T, P>["recomputeOn"];
   },
 ): ResourceDefinition<T, P> {
   let mode: ResourceMode;
@@ -677,12 +788,17 @@ function contractToDefinition<T, P extends ResourceParams>(
     recompute: opts.recompute,
     scopedMembership: opts.scopedMembership,
     membership: opts.membership,
+    routes: opts.routes,
+    reach: opts.reach,
+    ...(opts.recomputeOn !== undefined
+      ? { recomputeOn: opts.recomputeOn }
+      : {}),
     debounceMs: opts.debounceMs,
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
     revalidate: opts.revalidate,
     authorize: opts.authorize,
-    validateParams: contract.validateParams,
+    validateParams: opts.validateParams ?? contract.validateParams,
   };
 }
 
@@ -731,6 +847,12 @@ interface DownstreamEdge {
   ) => ResourceParams[];
   /** Cascade to every subscribed downstream tuple (see DependsOnEntry.toSubscribed). */
   toSubscribed?: true;
+  /**
+   * A routed downstream's `recomputeOn` edge: cascade only when THIS upstream
+   * tuple (its canonical params key) changed, and drop the downstream's
+   * memoized read-sets first — its compiled vocabulary moved.
+   */
+  routedRecompute?: { upstreamPk: string };
   affectedMap?: (
     upstreamAffected: ReadonlySet<string>,
     upstreamParams: ResourceParams,
@@ -822,7 +944,93 @@ interface PendingNotify {
    * backstop; a torn set could confirm an op whose rows were never re-read).
    */
   sourceTxOverflow?: boolean;
+  /**
+   * Reverse routes (`HostMap` kind `reverse`) this tuple reads whose changed
+   * values still have to be resolved to host ids — by route id. The drain
+   * resolves them once per (entry, route, flush), before it branches, and merges
+   * the answer into `affected` (`resolveReverseRoutes`), so the ack of a change
+   * leaves only after every route of it has landed. Follows `affected`: FULL
+   * absorbs / drops it, scoped ∪ scoped unions it. Routed entries only.
+   */
+  unresolved?: Map<string, PendingReverse>;
 }
+
+/** One reverse route's changed values awaiting resolution on a pending. */
+interface PendingReverse {
+  route: ReverseRoute;
+  changed: Set<string>;
+  /**
+   * Some contributor read this route in the `membership` role (or was not
+   * quiescent when routed), so its answer may not be bounded by the members the
+   * tuple already holds.
+   */
+  membership: boolean;
+}
+
+/**
+ * What one read flight co-produces (see `getResourceValue`): the value, the
+ * etag it was seeded with, its commit watermark, the ackTx it may stamp, and the
+ * tuple's version when its read started.
+ */
+interface FlightValue {
+  value: unknown;
+  etag: string | undefined;
+  watermark: string | undefined;
+  ackTx: readonly string[] | undefined;
+  baseVersion: number;
+}
+
+/**
+ * The xids owed to one tuple a change SKIPPED — a point empty-intersection, or a
+ * routed tuple none of whose routes saw a relevant row. Kept apart from
+ * `pendingNotifies` so a skip can never be spelled as a recompute: the drain
+ * folds the xids into that tuple's real pending when one exists, and otherwise
+ * broadcasts a standalone ack before any persisted / membership branch runs.
+ */
+interface PendingAck {
+  params: ResourceParams;
+  xids: Set<string>;
+  /** The union crossed `SOURCE_TX_CAP` — ship no ack this cycle (see `sourceTxOverflow`). */
+  overflow: boolean;
+}
+
+/**
+ * A routed entry's plan, indexed for the router (see `ResourceDefinition.routes`
+ * and, for a non-keyed entry, `ResourceDefinition.reach`).
+ */
+interface RoutingRecord {
+  plan: RoutePlan<ResourceParams>;
+  /** The entry's routes on each table (a self-join puts several on one). */
+  byTable: Map<string, Route[]>;
+  routeIds: Set<string>;
+  /** Each route's declared `match` columns, by route id. */
+  matchOf: Map<string, readonly string[]>;
+  /**
+   * A8: the tables a loader run read that no route names, each reported once
+   * (see `checkRouteDrift`).
+   */
+  drifted: Set<string>;
+  /**
+   * Memoized `usesOf` per tracked pk. `null` = the answer was unusable (it threw
+   * or named an unknown route id) — reported once, and that tuple recomputes FULL
+   * on every change of its tables. Evicted with the tuple (N→0).
+   */
+  uses: Map<string, ReadonlyMap<string, TupleUse> | null>;
+}
+
+/**
+ * A `TupleRouting` after the runtime shaped it by the tuple's membership kind
+ * (`shapeForTuple`): every value-only host is either kept as `affected` or
+ * dropped, so no unshaped `valueOnly` set can reach the scheduler.
+ */
+type ShapedRouting =
+  | Exclude<TupleRouting, { kind: "scoped" }>
+  | {
+      kind: "scoped";
+      affected: Set<string>;
+      deleted: Set<string>;
+      unresolved: UnresolvedReverse[];
+    };
 
 interface RegistryEntry {
   key: string;
@@ -920,6 +1128,35 @@ interface RegistryEntry {
   debounceTimer?: ReturnType<typeof setTimeout>;
   /** Global subscriber refcount per params-tuple (across all sockets). */
   subCounts: Map<string, number>;
+  /**
+   * The subscribed tuples, pk → params: maintained next to `subCounts` (set on
+   * the global 0→1, deleted on N→0), so the router reads the tuples it must
+   * consider in O(tuples) instead of scanning every socket.
+   */
+  tracked: Map<string, ResourceParams>;
+  /**
+   * The tracking span each subscribed tuple is in, pk → span number: a fresh
+   * number at the global 0→1, deleted at N→0 (lifecycle of `tracked`). A drain
+   * captures its tuple's span before it awaits and writes the snapshot it
+   * computed only if the span is still the same (`snapshotOwner`): a drain that
+   * outlived the last unsubscribe would otherwise resurrect a snapshot nothing
+   * routes to any more, and the router would read membership off it once the
+   * tuple is subscribed again.
+   */
+  spans: Map<string, number>;
+  /** Acks owed to tuples a change skipped — see `PendingAck`. */
+  pendingAcks: Map<string, PendingAck>;
+  /**
+   * The pks whose pending this entry's drain has taken and not finished — set at
+   * the drain's snapshot+clear, cleared when the drain settles. With
+   * `pendingNotifies` it defines a QUIESCENT tuple: the router may drop a
+   * value-role change to a non-member only when neither holds its pk, since a
+   * drain admitting that host may already have read the side table before the
+   * write committed.
+   */
+  draining: Set<string>;
+  /** Present ⇒ a routed entry (see `ResourceDefinition.routes`). */
+  routing?: RoutingRecord;
   /** Upstream keys this entry listens to (for cycle detection). */
   upstreamKeys: string[];
   /**
@@ -1163,12 +1400,23 @@ export interface ResourceRuntimeOptions {
    *  A `changed: false` push is a wasted no-op (empty keyed diff). */
   onPush?(key: string, info: { subscribers: number; changed: boolean }): void;
   /**
-   * Per-key automatic table read-set for the `_debug` endpoint: the tables this
-   * resource's loader actually read (captured at the DB pool chokepoint), so the
-   * gaps and over-broad edges versus the hand-drawn `dependsOn` graph become
-   * visible. server: from getReadSetIndex(); central: omit (field absent).
+   * Per-key automatic table read-set: the tables this resource's loader actually
+   * read (captured at the DB pool chokepoint), unioned over every run. It is the
+   * legacy router's table → resource inversion (`applyDbChange`, for every entry
+   * that declares no `routes`), and the `_debug` endpoint shows it so gaps and
+   * over-broad edges versus the hand-drawn `dependsOn` graph become visible.
+   * server: server-core's runtime-owned read-set sink (captured whatever the
+   * profiler's kill-switch says); central: omit (field absent, nothing routes).
    */
   readSet?: (key: string) => string[];
+  /**
+   * A counter that moves whenever any key's `readSet` answer may have changed
+   * (a table gained, seeded or removed). The legacy router memoizes its
+   * table → resource inversion on it. Absent ⇒ the inversion is rebuilt on every
+   * change (the DB-free harness, whose injected `readSet` has no counter).
+   * server: the read-set sink's version; central: omit.
+   */
+  readSetVersion?: () => number;
   /**
    * The tables the resource's MOST RECENT loader run read (per-run capture,
    * REPLACED each run — not the append-only union `readSet` returns), or
@@ -1183,10 +1431,18 @@ export interface ResourceRuntimeOptions {
    *
    * Deliberately does NOT feed `applyDbChange`'s live routing — that keeps using
    * the union `readSet`, an over-approximation, so a stale extra edge only causes a
-   * wasteful recompute, never a missed live delivery. server: getLastLoaderReadSet();
+   * wasteful recompute, never a missed live delivery. server: the read-set sink's
+   * per-run capture;
    * central: omitted (undefined → the persist falls back to `readSet`).
    */
   lastReadSet?: (key: string) => string[] | undefined;
+  /**
+   * The route drift guard (A8) throws instead of reporting: a routed entry's
+   * loader reading a table none of its routes names fails that load. server:
+   * on under a test runner, so a compiler that forgets a table fails its suite;
+   * central / DB-free harness: omit (no `lastReadSet`, so the guard is off).
+   */
+  strictRoutes?: boolean;
   /**
    * Map a captured read-set relation to its identity base table, so the debug
    * ceiling compares like-for-like with `coveredOrigins` (stated in base-table
@@ -1264,6 +1520,14 @@ export interface ResourceRuntimeOptions {
   ) => Promise<void>;
 }
 
+/** One table a resource's scoped delivery depends on (see `scopedResourceTables`). */
+export interface ScopedResourceTable {
+  key: string;
+  table: string;
+  /** What names it: `identityTable`, or `route "<id>"` for a routed entry. */
+  via: string;
+}
+
 export interface ResourceRuntime {
   /**
    * Declare a DB-backed resource. Two shapes:
@@ -1294,6 +1558,31 @@ export interface ResourceRuntime {
     ): Resource<T, P>;
   };
   /**
+   * A resource whose server half is compiled at boot, once contributions are
+   * collected (`bindDeferredResources`): its identity (key, mode, schema,
+   * keyed-ness, preload) is the contract's and exists at module eval, so
+   * `Resource.Declare` and the boot snapshot see it; `bind` returns the server
+   * options, checked exactly as `defineResource`'s two-arg form checks them. A
+   * non-keyed deferred resource is a push value. Serving it before it is bound
+   * throws, and so does defining one after the bind ran.
+   */
+  defineDeferredResource: {
+    <T, P extends ResourceParams = ResourceParams>(
+      contract: KeyedResourceContract<T, P>,
+      bind: () => KeyedServerResourceOptions<T, P> & ScopePolicy<P>,
+    ): Resource<T, P>;
+    <T, P extends ResourceParams = ResourceParams>(
+      contract: ResourceContract<T, P> & { keyed?: never },
+      bind: () => ServerResourceOptions<T, P>,
+    ): Resource<T, P>;
+  };
+  /**
+   * Bind every deferred resource (`defineDeferredResource`): compile its server
+   * half and give its entry a loader, scope policy and routes. Once, in the boot
+   * sequence, after contributions are collected and before anything serves.
+   */
+  bindDeferredResources: () => void;
+  /**
    * Like `defineResource`, but the returned handle exposes a callable `notify()`.
    * For escape-hatch resources whose truth lives outside Postgres (the DB
    * change-feed can never reach them). Sets `entry.externalSource = true` for the
@@ -1312,9 +1601,15 @@ export interface ResourceRuntime {
   defineExternalResource: {
     // No `optionalParams` on the flat form: the spelling rule must come from the
     // shared client descriptor (the two-arg form), or the client would key
-    // tuples the server's echoes never match.
+    // tuples the server's echoes never match. No `routes` / `reach` either: an
+    // external resource's truth is outside Postgres, so no table change may
+    // route into it.
     <T, P extends ResourceParams = ResourceParams>(
-      def: ResourceDefinition<T, P> & { optionalParams?: never },
+      def: ResourceDefinition<T, P> & {
+        optionalParams?: never;
+        routes?: never;
+        reach?: never;
+      },
     ): ExternalResource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: KeyedResourceContract<T, P>,
@@ -1322,7 +1617,7 @@ export interface ResourceRuntime {
     ): ExternalResource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: ResourceContract<T, P> & { keyed?: never },
-      opts: ServerResourceOptions<T, P>,
+      opts: ServerResourceOptions<T, P> & { reach?: never },
     ): ExternalResource<T, P>;
   };
   notificationsWsHandler: WsHandler;
@@ -1390,6 +1685,18 @@ export interface ResourceRuntime {
     changedAt?: number;
   }) => void;
   /**
+   * Route one base-table change to the ROUTED entries (those declaring `routes`)
+   * that read the table: per subscribed tuple, only the route occurrences that
+   * tuple's `usesOf` names, mapped to host ids by each route's `HostMap` — so a
+   * side-table write costs O(changed) and reaches only the tuples whose query
+   * reads that table. A tuple the change skips owes at most an ack. Synchronous,
+   * SQL-free and producer-agnostic (every producer calls it; reverse routes
+   * resolve later, in the drain). Never throws. Entries without routes are served
+   * by `applyDbChange` instead — each entry is reached by exactly one of the two.
+   * See research/2026-09-29-global-scoped-change-routing.md.
+   */
+  routeTableChange: (change: TableChange) => void;
+  /**
    * Force a FULL recompute of a single registered resource by key (param-less →
    * key `{}`), routed through the SAME cascade the feed uses (`source: "feed"`).
    * Used by the L2 boot init to recompute resources that have no usable persisted
@@ -1412,18 +1719,28 @@ export interface ResourceRuntime {
    */
   readGateStats: () => { active: number; queued: number; max: number };
   /**
-   * Every registered resource that declared a scoped `identityTable` policy, as
-   * `{ key, identityTable }` (entries on `recompute:{full}` or with no scope
-   * policy are omitted). The change-feed cross-checks these against its
-   * `ExcludeFromChangeFeed` set at boot: a scoped resource whose identity base
-   * has no feed trigger can NEVER receive the `origin === identityTable` scoped
-   * delivery it declares, so the policy is dead config that silently degrades the
-   * resource to hydrate-on-mount with zero signal. The runtime owns the registry;
-   * the change-feed owns the exclusion set — this accessor is the seam that lets
-   * the change-feed (the DB↔live-state wirer) enforce the invariant without the
-   * runtime importing a specific DB plugin.
+   * Every table a registered resource's scoped delivery depends on: one row per
+   * route of a ROUTED entry (`routes` / `reach` — every table it may read, since
+   * only a change to one of them can reach it), and one per legacy scoped
+   * `identityTable` (entries on `recompute:{full}` or with no scope policy are
+   * omitted). The change-feed cross-checks these against the tables it installed
+   * triggers on at boot (A1): a table with no trigger can NEVER produce the
+   * change the resource waits for, so the declaration is dead config that
+   * silently degrades the resource to hydrate-on-mount with zero signal. The
+   * runtime owns the registry; the change-feed owns the trigger set — this
+   * accessor is the seam that lets the change-feed (the DB↔live-state wirer)
+   * enforce the invariant without the runtime importing a specific DB plugin.
    */
-  scopedResourceIdentities: () => Array<{ key: string; identityTable: string }>;
+  scopedResourceTables: () => ScopedResourceTable[];
+  /**
+   * The change-feed trigger layout every ROUTED table needs, derived from the
+   * routes of every bound routed entry (`tableLayoutRequirements`): the key
+   * columns a table's changes must carry, and the columns an UPDATE's `changed`
+   * set is computed over. A table no route names is absent — its trigger keeps
+   * the PK-only layout. Read once by the change feed when it rebuilds triggers
+   * (after deferred resources are bound, before the ready barrier).
+   */
+  routedTableRequirements: () => TableLayoutRequirement[];
   /**
    * Every registered resource whose definition is BOUNDED-membership (a bounded
    * `membership: { kind: "window" }` or `{ kind: "point" }`) — the exact set the
@@ -1502,11 +1819,21 @@ function normalizeEtag(raw: string): string {
 // caller's loop across the wrapOrigin boundary, so it returns this instead.
 const SKIP_EDGE = Symbol("skip-edge");
 
+// The most host ids one reverse route may resolve to in one flush before its
+// reading tuples recompute FULL instead (a bounded window load, for a window).
+// Handed to the route's own `resolve`, which answers "over-cap" past it.
+const REVERSE_RESOLVE_CAP = 500;
+
+// `paramsKey({})` — the one tuple of a param-less resource.
+const EMPTY_PK = "{}";
+
 export function createResourceRuntime(
   opts: ResourceRuntimeOptions = {},
 ): ResourceRuntime {
   const registry = new Map<string, RegistryEntry>();
   const inflight = createInflight();
+  // The last tracking span handed out (see `RegistryEntry.spans`).
+  let lastSpan = 0;
   // Per-runtime read-admission gate (see READ_LOAD_CONCURRENCY). Its `onWait`
   // charges queue-wait to the enclosing entry via the injected hook (server:
   // chargeWait), so a saturated gate is observable rather than hidden.
@@ -1607,6 +1934,15 @@ export function createResourceRuntime(
       feedRingHead = (feedRingHead + 1) % FEED_RING_CAP;
     }
   }
+  // One feed delivery to (key, pk) — a pending or an owed ack: the hand-vs-feed
+  // counters plus the intent a later hand-notify is matched against.
+  function countFeed(key: string, pk: string): void {
+    const now = performance.now();
+    const stats = statsFor(key);
+    stats.feed++;
+    stats.lastFeedAt = now;
+    recordFeedIntent(key, pk, now);
+  }
   function hasRecentFeedIntent(key: string, pk: string, now: number): boolean {
     for (const e of feedRing) {
       if (e.key === key && e.pk === pk && now - e.t <= FEED_MATCH_WINDOW_MS) {
@@ -1616,36 +1952,39 @@ export function createResourceRuntime(
     return false;
   }
 
-  // Memoized `table → resourceKey[]` inverse of the L3 read-set hook. The read-set
-  // index only grows (lazy capture, never evicts), so a cheap (entryCount,
-  // totalReadSetSize) signature is a sufficient staleness key — rebuild only when
-  // either changes. Built by iterating the registry and calling `opts.readSet`.
+  // Memoized `table → resourceKey[]` inverse of the L3 read-set hook — the legacy
+  // router's index. Keyed on the read-set sink's version counter (it moves on
+  // every table gained, seeded or removed) plus the registry size (a new entry),
+  // so a removal that happens to keep the total size cannot serve a stale
+  // inversion, and a hit costs nothing per change. With no counter injected the
+  // inversion is rebuilt on every change. ROUTED entries are skipped: they are
+  // served by `routeTableChange`, so each change reaches each entry exactly once.
   let tableToResourcesCache: Map<string, string[]> | null = null;
-  let tableToResourcesSig = "";
+  let tableToResourcesSig: string | null = null;
   function tableToResources(): Map<string, string[]> {
-    let totalSize = 0;
-    const perKey: Array<[string, string[]]> = [];
-    for (const entry of registry.values()) {
-      const tables = opts.readSet?.(entry.key) ?? [];
-      totalSize += tables.length;
-      perKey.push([entry.key, tables]);
-    }
-    const sig = `${registry.size}:${totalSize}`;
-    if (tableToResourcesCache && sig === tableToResourcesSig) {
+    const version = opts.readSetVersion?.();
+    const sig =
+      version === undefined ? null : `${registry.size}:${String(version)}`;
+    if (tableToResourcesCache && sig !== null && sig === tableToResourcesSig) {
       return tableToResourcesCache;
     }
     const inverse = new Map<string, string[]>();
-    for (const [key, tables] of perKey) {
-      for (const table of tables) {
+    for (const entry of registry.values()) {
+      if (entry.routing) continue;
+      for (const table of opts.readSet?.(entry.key) ?? []) {
         const list = inverse.get(table);
-        if (list) list.push(key);
-        else inverse.set(table, [key]);
+        if (list) list.push(entry.key);
+        else inverse.set(table, [entry.key]);
       }
     }
     tableToResourcesCache = inverse;
     tableToResourcesSig = sig;
     return inverse;
   }
+
+  // The routed entries reading each table — the router's static index, filled at
+  // `createResource` (routes are fixed at registration, so it never needs a memo).
+  const routedByTable = new Map<string, RegistryEntry[]>();
 
   // The set of base tables whose change a resource can absorb through a SINGLE
   // authoritative scoped path — its own `identityTable` plus, transitively, the
@@ -1880,11 +2219,42 @@ export function createResourceRuntime(
     ctx?: { affectedIds: readonly string[] },
   ): Promise<unknown> {
     const run = async () => entry.schema.parse(await entry.loader(params, ctx));
-    if (!opts.wrapLoad) return run();
-    const info: LoadInfo = {};
-    if (Object.keys(params).length > 0) info.variant = paramsKey(params);
-    if (ctx) info.scopedIds = ctx.affectedIds.length;
-    return opts.wrapLoad(entry.key, info, run);
+    let load: Promise<unknown>;
+    if (opts.wrapLoad) {
+      const info: LoadInfo = {};
+      if (Object.keys(params).length > 0) info.variant = paramsKey(params);
+      if (ctx) info.scopedIds = ctx.affectedIds.length;
+      load = opts.wrapLoad(entry.key, info, run);
+    } else {
+      load = run();
+    }
+    return entry.routing && opts.lastReadSet
+      ? load.then(checkRouteDrift(entry))
+      : load;
+  }
+
+  // A8 — the drift guard. A routed entry is reached ONLY through its routes, so a
+  // table its loader reads that no route names is a table whose writes it never
+  // sees: a stale value nothing would reveal. After each loader run, the key's
+  // per-run capture (the read-set sink's, flushed when the wrapped load settles)
+  // must be a subset of its route tables. A miss is reported once per table —
+  // or thrown, under `strictRoutes` (tests). With no capture wired (central, the
+  // DB-free harness) the guard is off; routing never depends on it.
+  function checkRouteDrift(entry: RegistryEntry): (value: unknown) => unknown {
+    return (value) => {
+      const routing = entry.routing!;
+      const unrouted = (opts.lastReadSet!(entry.key) ?? []).filter(
+        (table) => !routing.byTable.has(table) && !routing.drifted.has(table),
+      );
+      if (unrouted.length === 0) return value;
+      const err = new Error(
+        `routed resource "${entry.key}" read ${unrouted.map((t) => `"${t}"`).join(", ")}, which none of its routes names — a write there never reaches it. Its compiler must emit a route for every table the SQL reads.`,
+      );
+      if (opts.strictRoutes) throw err;
+      for (const table of unrouted) routing.drifted.add(table);
+      reportLoaderError(`route drift for ${entry.key}`, err);
+      return value;
+    };
   }
 
   // The one call site of a window's ids-only membership query. `wrapMembership`
@@ -1978,6 +2348,14 @@ export function createResourceRuntime(
   // rows at the fresh version. The client's only guard is numeric, so it applied
   // them — and since the pending had already been cleared, nothing re-read.
   // See research/2026-08-08-global-live-state-flight-freshness.md.
+  //
+  // THE BASE VERSION IS CO-PRODUCED TOO (the fourth): the tuple's version when
+  // the flight's read STARTED, read in the starter's factory. A sub-ack re-seeds
+  // the keyed snapshot only while the version still equals it — i.e. no push
+  // advanced the snapshot since this value's read began. The version the
+  // caller observed itself is not enough: a subscriber that joins a flight
+  // started before a push observes the pushed version and would re-seed the
+  // snapshot from the older read.
   async function getResourceValue(
     entry: RegistryEntry,
     params: ResourceParams,
@@ -1986,20 +2364,17 @@ export function createResourceRuntime(
     gated = false,
     seedAckTx?: readonly string[],
     notBefore?: number,
-  ): Promise<{
-    value: unknown;
-    etag: string | undefined;
-    watermark: string | undefined;
-    ackTx: readonly string[] | undefined;
-  }> {
+  ): Promise<FlightValue> {
     if (ctx) {
       // A scoped load bypasses the inflight entirely, so it can never join
       // anything and `notBefore` has nothing to refuse — ignored, not forgotten.
+      const baseVersion = entry.versions.get(paramsKey(params)) ?? 0;
       return {
         value: await timedLoad(entry, params, ctx),
         etag: undefined,
         watermark: undefined,
         ackTx: seedAckTx,
+        baseVersion,
       };
     }
     // Gate-after-dedup: when `gated` (the read path), the read-admission slot is
@@ -2018,12 +2393,9 @@ export function createResourceRuntime(
     // The flight factory: watermark capture FIRST (Rule B — the floor is valid
     // only if captured before the loader's first read), then the loader. Runs
     // only in the STARTER's frame; joiners coalesce onto the resolved object.
-    const load = async (): Promise<{
-      value: unknown;
-      etag: string | undefined;
-      watermark: string | undefined;
-      ackTx: readonly string[] | undefined;
-    }> => {
+    const load = async (): Promise<FlightValue> => {
+      // Read before any await: the version the value below is at least as new as.
+      const baseVersion = entry.versions.get(paramsKey(params)) ?? 0;
       let watermark: string | undefined;
       if (opts.captureWatermark) {
         try {
@@ -2042,6 +2414,7 @@ export function createResourceRuntime(
         etag: seedEtag,
         watermark,
         ackTx: seedAckTx,
+        baseVersion,
       };
     };
     return inflight.run(
@@ -2081,11 +2454,7 @@ export function createResourceRuntime(
     entry: RegistryEntry,
     params: ResourceParams,
     seedEtag?: string,
-  ): Promise<{
-    value: unknown;
-    etag: string | undefined;
-    watermark: string | undefined;
-  }> {
+  ): Promise<FlightValue> {
     // No ackTx seed and the resolved ackTx is discarded: read-path frames
     // (sub-ack / HTTP body) never carry one — their snapshot watermark subsumes
     // it (Rule B).
@@ -2231,6 +2600,8 @@ export function createResourceRuntime(
   //   scoped   | Set A    | Set D   | union both
   //
   // Omitting `deleted` (every legacy caller) is byte-identical to the pre-M5 merge.
+  // `unresolved` (routed entries: reverse routes still to resolve in the drain)
+  // follows exactly the same rules as `deleted`.
   //
   // `sourceTx` (mutation-ack attribution) is unioned on EVERY branch — including
   // FULL absorb and the degrade-to-FULL — because a FULL recompute reads
@@ -2259,6 +2630,7 @@ export function createResourceRuntime(
     deleted?: Set<string>,
     sourceTx?: ReadonlySet<string>,
     changedAt?: number,
+    unresolved?: readonly UnresolvedReverse[],
   ): void {
     const existing = map.get(pk);
     const now = performance.now();
@@ -2276,6 +2648,7 @@ export function createResourceRuntime(
         lastNotifyAt: now,
         ...(changedAt !== undefined ? { changedAt } : {}),
       };
+      if (incoming !== null) mergeUnresolved(created, unresolved);
       unionSourceTx(created, sourceTx);
       map.set(pk, created);
       return;
@@ -2300,12 +2673,38 @@ export function createResourceRuntime(
     if (incoming === null) {
       existing.affected = null; // degrade to FULL
       existing.deleted = undefined; // FULL recomputes wholesale — drop op-D ids
+      existing.unresolved = undefined; // …and needs no host ids resolved
       return;
     }
     for (const id of incoming) existing.affected.add(id);
     if (deleted && deleted.size > 0) {
       const d = (existing.deleted ??= new Set<string>());
       for (const id of deleted) d.add(id);
+    }
+    mergeUnresolved(existing, unresolved);
+  }
+
+  // Union reverse routes awaiting resolution into a SCOPED pending, by route id.
+  // `membership` is sticky: one contributor that cannot be bounded by the
+  // tuple's members unbounds the whole resolution.
+  function mergeUnresolved(
+    pending: PendingNotify,
+    unresolved: readonly UnresolvedReverse[] | undefined,
+  ): void {
+    if (!unresolved || unresolved.length === 0) return;
+    const map = (pending.unresolved ??= new Map());
+    for (const u of unresolved) {
+      const existing = map.get(u.route.id);
+      if (existing) {
+        for (const v of u.changed) existing.changed.add(v);
+        if (u.role === "membership") existing.membership = true;
+      } else {
+        map.set(u.route.id, {
+          route: u.route,
+          changed: new Set(u.changed),
+          membership: u.role === "membership",
+        });
+      }
     }
   }
 
@@ -2342,16 +2741,128 @@ export function createResourceRuntime(
     entry: RegistryEntry,
     pendingEntry: PendingNotify,
   ): number {
-    const ackTx = pendingAckTx(pendingEntry);
-    if (ackTx === undefined) return 0;
-    const subs = ackSubscribersFor(entry.key, paramsKey(pendingEntry.params));
+    return broadcastAck(entry, pendingEntry.params, pendingAckTx(pendingEntry));
+  }
+  function broadcastAck(
+    entry: RegistryEntry,
+    params: ResourceParams,
+    ackTx: readonly string[] | undefined,
+  ): number {
+    if (ackTx === undefined || ackTx.length === 0) return 0;
+    const subs = ackSubscribersFor(entry.key, paramsKey(params));
     if (subs.length === 0) return 0;
     return broadcastJson(subs, {
       kind: "ack" as const,
       key: entry.key,
-      params: pendingEntry.params,
+      params,
       ackTx,
     });
+  }
+
+  // Validate and index a routed entry's plan (see `ResourceDefinition.routes` /
+  // `.reach`). The types already refuse routes on an external resource, off a
+  // membership arm, a reach on a keyed entry, a non-`full` reach route, either
+  // beside an `identityTable` or a `dependsOn`, and an unminted plan; these
+  // throws hold the same line for an untyped caller or an `as` cast.
+  // A9: route ids must be unique within the resource — `usesOf` names routes by
+  // id, so a duplicate would make a tuple's read-set ambiguous.
+  function routingRecordFor(
+    def: Pick<
+      ResourceDefinition<unknown, ResourceParams>,
+      "key" | "mode" | "identityTable" | "routes" | "reach" | "dependsOn"
+    >,
+    membershipField: "membership" | "scopedMembership" | null,
+    externalSource: boolean,
+  ): RoutingRecord | undefined {
+    const { key } = def;
+    const field = def.routes ? "routes" : def.reach ? "reach" : null;
+    if (field === null) return undefined;
+    if (def.routes && def.reach) {
+      throw new Error(
+        `defineResource: "routes" and "reach" are exclusive for key "${key}" — "routes" is the keyed membership arm, "reach" the non-keyed one`,
+      );
+    }
+    if (externalSource) {
+      throw new Error(
+        `defineExternalResource: "${field}" on key "${key}" — an external resource's truth lives outside Postgres, so no table change may route into it`,
+      );
+    }
+    if (def.identityTable !== undefined) {
+      throw new Error(
+        `defineResource: "${field}" and "identityTable" are exclusive for key "${key}" — a routed entry's identity table is derived from its identity route`,
+      );
+    }
+    // A routed entry takes no cascade: it is reached only through the tables
+    // its routes name. An upstream's cascade would serve it a second time, on a
+    // path the router cannot see — a FULL cascade overriding a scoped routed
+    // refill of the same tuple. Route the upstream's tables instead.
+    if (def.dependsOn?.length) {
+      throw new Error(
+        `defineResource: "${field}" and "dependsOn" are exclusive for key "${key}" — a routed entry takes no cascade; route the tables "${def.dependsOn.map((d) => d.resource.key).join('", "')}" read instead`,
+      );
+    }
+    const plan = (def.routes ?? def.reach)!;
+    // Compiler-written only (see `mintRoutePlan`): a route's `columns` decide
+    // which updates reach the resource, so an unminted plan — a literal an `as`
+    // cast let past the type — is refused.
+    if (!isMintedPlan(plan)) {
+      throw new Error(
+        `defineResource: the "${field}" plan of key "${key}" was not minted — a route plan is written by a query compiler through mintRoutePlan / mintReachPlan, never by hand`,
+      );
+    }
+    if (field === "routes" && !membershipField) {
+      throw new Error(
+        `defineResource: "routes" requires a membership (membership / scopedMembership) for key "${key}" — a scoped refill never deletes, so only a membership drain can turn a routed change into an exit`,
+      );
+    }
+    if (field === "reach") {
+      if (def.mode === "keyed") {
+        throw new Error(
+          `defineResource: "reach" is the non-keyed arm, but key "${key}" is keyed — a keyed entry routes through "routes" and a membership`,
+        );
+      }
+      const mapped = plan.routes.find((r) => r.map.kind !== "full");
+      if (mapped) {
+        throw new Error(
+          `defineResource: "reach" route "${mapped.id}" on key "${key}" maps "${mapped.map.kind}" — a non-keyed value has no host ids to refill, so every reach route is "full"`,
+        );
+      }
+    }
+    const byTable = new Map<string, Route[]>();
+    const routeIds = new Set<string>();
+    const matchOf = new Map<string, readonly string[]>();
+    for (const route of plan.routes) {
+      if (routeIds.has(route.id)) {
+        throw new Error(
+          `defineResource: duplicate route id "${route.id}" for key "${key}"`,
+        );
+      }
+      routeIds.add(route.id);
+      matchOf.set(route.id, route.match ?? []);
+      const list = byTable.get(route.table);
+      if (list) list.push(route);
+      else byTable.set(route.table, [route]);
+    }
+    return {
+      plan: plan as RoutePlan<ResourceParams>,
+      byTable,
+      routeIds,
+      matchOf,
+      drifted: new Set(),
+      uses: new Map(),
+    };
+  }
+
+  // A routed entry's identity table: the table of its unencoded identity route
+  // (its rows ARE the host rows, keyed as the host keys them). A union has none —
+  // its arms encode — and stays undefined.
+  function derivedIdentityTable(routing: RoutingRecord): string | undefined {
+    for (const route of routing.plan.routes) {
+      if (route.map.kind === "identity" && route.map.encode === undefined) {
+        return route.table;
+      }
+    }
+    return undefined;
   }
 
   // Single internal builder. Produces the full runtime object (with a working
@@ -2366,6 +2877,75 @@ export function createResourceRuntime(
     if (registry.has(def.key)) {
       throw new Error(`defineResource: duplicate key "${def.key}"`);
     }
+    const { entry, ownDownstreamEdges } = buildEntry(def, externalSource);
+    registerEntry(entry, ownDownstreamEdges);
+    return handleOf<T, P>(entry);
+  }
+
+  /** Index a built entry: the registry, its route tables, and its upstreams' downstream edges. */
+  function registerEntry(
+    entry: RegistryEntry,
+    ownDownstreamEdges: Array<{ upstreamKey: string; edge: DownstreamEdge }>,
+  ): void {
+    registry.set(entry.key, entry);
+    indexRouting(entry);
+    // Wire this entry as a downstream of its upstreams. Upstreams must be
+    // defined before their downstreams — otherwise the upstream's registry
+    // entry doesn't exist yet. Warned lazily during DAG rebuild.
+    for (const { upstreamKey, edge } of ownDownstreamEdges) {
+      const upstream = registry.get(upstreamKey);
+      if (upstream) upstream.downstream.push(edge);
+    }
+    dagDirty = true;
+  }
+
+  /** Put a routed entry on the index `routeTableChange` reads, once per table it routes. */
+  function indexRouting(entry: RegistryEntry): void {
+    if (!entry.routing) return;
+    for (const table of entry.routing.byTable.keys()) {
+      const list = routedByTable.get(table);
+      if (list) list.push(entry);
+      else routedByTable.set(table, [entry]);
+    }
+  }
+
+  /** The handle `defineResource` / `defineExternalResource` return for an entry. */
+  function handleOf<T, P extends ResourceParams>(
+    entry: RegistryEntry,
+  ): ExternalResource<T, P> {
+    return {
+      key: entry.key,
+      mode: entry.mode,
+      schema: entry.schema as ZodParser<T>,
+      preload: entry.preload,
+      async load(params: P): Promise<T> {
+        // Parse here too: this handle method is the one load path that bypasses
+        // `timedLoad`, so it must validate to keep the guarantee total — and
+        // canonicalize, as every entry point does. The entry's loader, read at
+        // call time: a deferred entry gets its loader at bind.
+        return (entry.schema as ZodParser<T>).parse(
+          await entry.loader(canonicalTuple(entry, params)),
+        );
+      },
+      notify(params?: P, opts?: { affectedIds?: string[] }): void {
+        const affected = opts?.affectedIds ? new Set(opts.affectedIds) : null;
+        scheduleNotify(entry, (params ?? {}) as ResourceParams, affected);
+      },
+    };
+  }
+
+  /**
+   * Validate a definition and build its registry entry — every check and
+   * normalization `createResource` applies, without registering anything, so a
+   * deferred entry binds through exactly the same path.
+   */
+  function buildEntry<T, P extends ResourceParams>(
+    def: ResourceDefinition<T, P>,
+    externalSource: boolean,
+  ): {
+    entry: RegistryEntry;
+    ownDownstreamEdges: Array<{ upstreamKey: string; edge: DownstreamEdge }>;
+  } {
     // `mode` is required on every form (the typed overloads say so); an untyped
     // caller that omits it fails here instead of registering a guessed delivery.
     const mode = def.mode;
@@ -2407,12 +2987,17 @@ export function createResourceRuntime(
           `defineResource: ${membershipField} requires mode "keyed" for key "${def.key}"`,
         );
       }
-      if (!def.identityTable) {
+      if (!def.identityTable && !def.routes) {
         throw new Error(
           `defineResource: ${membershipField} requires an identityTable (an own-identity scoped resource) for key "${def.key}"`,
         );
       }
     }
+    const routing = routingRecordFor(
+      def as ResourceDefinition<unknown, ResourceParams>,
+      membershipField,
+      externalSource,
+    );
     // Normalize both public forms into the one internal record every consumer
     // branches on. The alias is the ONLY unbounded window (`bounded: false`) —
     // it keeps L2 persistence and the retain snapshot encoder; a declared
@@ -2425,7 +3010,8 @@ export function createResourceRuntime(
               params: ResourceParams,
             ) => Promise<string[]>,
             bounded: true,
-            orderSignatureOf: def.membership.orderSignatureOf,
+            orderSignatureOf: def.membership.orderSignatureOf as
+              ((row: unknown, params: ResourceParams) => string) | undefined,
           }
         : {
             kind: "point",
@@ -2465,6 +3051,17 @@ export function createResourceRuntime(
           `defineResource: dependsOn "${dep.resource.key}" sets both "map" and "toSubscribed" for key "${def.key}" — toSubscribed IS the downstream tuple set`,
         );
       }
+      // A5 — route the table, not the resource. A cascade out of a routed entry
+      // cannot be served: the legacy router drops the downstream's own delivery
+      // of an edge-covered origin (expecting the upstream's cascade), while a
+      // routed upstream only drains the tuples a change reaches — so a
+      // subscriber-less upstream tuple would lose the update for good. The
+      // downstream routes the upstream's tables itself instead.
+      if (registry.get(dep.resource.key)?.routing) {
+        throw new Error(
+          `defineResource: "${def.key}" dependsOn the routed resource "${dep.resource.key}" — route the table, not the resource: a routed entry is never a cascade upstream`,
+        );
+      }
       upstreamKeys.push(dep.resource.key);
       ownDownstreamEdges.push({
         upstreamKey: dep.resource.key,
@@ -2493,6 +3090,50 @@ export function createResourceRuntime(
         },
       });
     }
+    // A routed entry's `recomputeOn`: one edge per external upstream tuple.
+    // The upstream must already be registered (a routed entry binds late —
+    // deferred — or registers after the plugin whose value it reads), so its
+    // externality can be checked here rather than guessed.
+    for (const r of def.recomputeOn ?? []) {
+      if (!routing || !def.routes) {
+        throw new Error(
+          `defineResource: "recomputeOn" is for a routed entry (routes) — key "${def.key}" is not one; an unrouted entry takes \`dependsOn\``,
+        );
+      }
+      const upstream = registry.get(r.resource.key);
+      if (!upstream) {
+        throw new Error(
+          `defineResource: "${def.key}" recomputes on "${r.resource.key}", which is not registered — register the upstream first`,
+        );
+      }
+      if (!upstream.externalSource) {
+        throw new Error(
+          `defineResource: "${def.key}" recomputes on "${r.resource.key}", which is DB-backed — a routed entry routes the tables it reads itself; only an external upstream (truth outside Postgres) may recompute it`,
+        );
+      }
+      upstreamKeys.push(upstream.key);
+      ownDownstreamEdges.push({
+        upstreamKey: upstream.key,
+        edge: {
+          downstreamKey: def.key,
+          routedRecompute: {
+            upstreamPk: paramsKey(canonicalTuple(upstream, r.params)),
+          },
+          lastSignatures: new Map(),
+        },
+      });
+    }
+    // A5, the other registration order: a downstream registered first already
+    // names this routed entry as its upstream.
+    if (routing) {
+      for (const other of registry.values()) {
+        if (other.upstreamKeys.includes(def.key)) {
+          throw new Error(
+            `defineResource: "${other.key}" dependsOn the routed resource "${def.key}" — route the table, not the resource: a routed entry is never a cascade upstream`,
+          );
+        }
+      }
+    }
     const entry: RegistryEntry = {
       key: def.key,
       mode,
@@ -2506,7 +3147,9 @@ export function createResourceRuntime(
         ctx?: { affectedIds: readonly string[] },
       ) => Promise<unknown> | unknown,
       keyOf: def.keyOf as ((row: unknown) => string) | undefined,
-      identityTable: def.identityTable,
+      identityTable: routing
+        ? derivedIdentityTable(routing)
+        : def.identityTable,
       recompute: def.recompute,
       membership,
       preload: def.preload,
@@ -2515,6 +3158,11 @@ export function createResourceRuntime(
       pendingNotifies: new Map(),
       debounceMs: def.debounceMs,
       subCounts: new Map(),
+      tracked: new Map(),
+      spans: new Map(),
+      pendingAcks: new Map(),
+      draining: new Set(),
+      ...(routing ? { routing } : {}),
       upstreamKeys,
       downstream: [],
       onFirstSubscribe: def.onFirstSubscribe as
@@ -2527,35 +3175,119 @@ export function createResourceRuntime(
         ((params: ResourceParams) => boolean | Promise<boolean>) | undefined,
       validateParams: def.validateParams ?? acceptAnyParams,
     };
-    registry.set(def.key, entry);
+    return { entry, ownDownstreamEdges };
+  }
 
-    // Wire this entry as a downstream of its upstreams. Upstreams must be
-    // defined before their downstreams — otherwise the upstream's registry
-    // entry doesn't exist yet. Warned lazily during DAG rebuild.
-    for (const { upstreamKey, edge } of ownDownstreamEdges) {
-      const upstream = registry.get(upstreamKey);
-      if (upstream) upstream.downstream.push(edge);
+  // ── Deferred resources ──────────────────────────────────────────────
+  // A resource whose server half can only be compiled once the plugin graph's
+  // contributions are known (a `network/live` collection whose columns other
+  // plugins contribute). Its identity — key, mode, schema, keyed-ness, preload —
+  // exists at module eval (so `Resource.Declare` and the boot snapshot's key set
+  // see it), and its loader, scope policy and routes arrive at
+  // `bindDeferredResources()`, which the boot sequence runs right after
+  // collecting contributions, before anything is served or any trigger is
+  // rebuilt from the route layout. Serving one before it is bound throws.
+  const deferred = new Map<
+    string,
+    {
+      entry: RegistryEntry;
+      bind: () => ResourceDefinition<unknown, ResourceParams>;
     }
-    dagDirty = true;
+  >();
 
-    return {
-      key: def.key,
-      mode,
-      schema: def.schema,
-      preload: def.preload,
-      async load(params: P): Promise<T> {
-        // Parse here too: this handle method is the one load path that bypasses
-        // `timedLoad`, so it must validate to keep the guarantee total — and
-        // canonicalize, as every entry point does.
-        return def.schema.parse(
-          await def.loader(canonicalTuple(entry, params) as P),
-        );
-      },
-      notify(params?: P, opts?: { affectedIds?: string[] }): void {
-        const affected = opts?.affectedIds ? new Set(opts.affectedIds) : null;
-        scheduleNotify(entry, (params ?? {}) as ResourceParams, affected);
-      },
+  function defineDeferredResource<T, P extends ResourceParams = ResourceParams>(
+    contract: KeyedResourceContract<T, P>,
+    bind: () => KeyedServerResourceOptions<T, P> & ScopePolicy<P>,
+  ): Resource<T, P>;
+  function defineDeferredResource<T, P extends ResourceParams = ResourceParams>(
+    contract: ResourceContract<T, P> & { keyed?: never },
+    bind: () => ServerResourceOptions<T, P>,
+  ): Resource<T, P>;
+  function defineDeferredResource<T, P extends ResourceParams = ResourceParams>(
+    contract: ResourceContract<T, P>,
+    bind: () =>
+      | ServerResourceOptions<T, P>
+      | (KeyedServerResourceOptions<T, P> & ScopePolicy<P>),
+  ): Resource<T, P> {
+    const key = contract.key;
+    if (registry.has(key)) {
+      throw new Error(`defineResource: duplicate key "${key}"`);
+    }
+    const unbound = (): never => {
+      throw new Error(
+        `resource "${key}" is deferred and not bound yet — its server half compiles at bindDeferredResources(), after contributions are collected`,
+      );
     };
+    // The placeholder: the contract's own identity, and a loader that refuses.
+    // A non-keyed deferred resource is a push value (its bound options must
+    // say so — checked at bind).
+    const { entry } = buildEntry(
+      {
+        key,
+        schema: contract.schema,
+        mode: contract.keyed ? "keyed" : "push",
+        keyOf: contract.keyed?.keyOf,
+        preload: contract.preload,
+        ...(contract.optionalParams !== undefined
+          ? { optionalParams: contract.optionalParams }
+          : {}),
+        // The contract's gate until the bind hands the server's own.
+        validateParams: contract.validateParams,
+        loader: unbound,
+      } as ResourceDefinition<unknown, ResourceParams>,
+      false,
+    );
+    registerEntry(entry, []);
+    deferred.set(key, {
+      entry,
+      bind: () =>
+        contractToDefinition(
+          contract,
+          bind() as ServerResourceOptions<T, P>,
+        ) as unknown as ResourceDefinition<unknown, ResourceParams>,
+    });
+    return handleOf<T, P>(entry);
+  }
+
+  /**
+   * Bind every deferred resource defined so far: compile its server half (its
+   * `bind`), run it through the same checks every resource gets, and give the
+   * registered entry its loader, scope policy and routes. A bind that throws
+   * fails the call — the boot sequence runs it, so a graph with an unbindable
+   * resource never serves. One defined later stays unbound (serving it throws)
+   * until the next call.
+   */
+  function bindDeferredResources(): void {
+    for (const [key, { entry, bind }] of deferred) {
+      deferred.delete(key);
+      const def = bind();
+      if (def.mode !== entry.mode) {
+        throw new Error(
+          `bindDeferredResources: "${key}" was declared ${entry.mode} and bound ${def.mode}`,
+        );
+      }
+      const built = buildEntry(def, false);
+      Object.assign(entry, {
+        loader: built.entry.loader,
+        identityTable: built.entry.identityTable,
+        recompute: built.entry.recompute,
+        membership: built.entry.membership,
+        debounceMs: built.entry.debounceMs,
+        routing: built.entry.routing,
+        upstreamKeys: built.entry.upstreamKeys,
+        onFirstSubscribe: built.entry.onFirstSubscribe,
+        onLastUnsubscribe: built.entry.onLastUnsubscribe,
+        revalidate: built.entry.revalidate,
+        authorize: built.entry.authorize,
+        validateParams: built.entry.validateParams,
+      } satisfies Partial<RegistryEntry>);
+      indexRouting(entry);
+      for (const { upstreamKey, edge } of built.ownDownstreamEdges) {
+        const upstream = registry.get(upstreamKey);
+        if (upstream) upstream.downstream.push(edge);
+      }
+      dagDirty = true;
+    }
   }
 
   // DB-backed resource: the runtime object carries a `notify` method, but the
@@ -2597,7 +3329,11 @@ export function createResourceRuntime(
   // held to the keyed `ScopePolicy` invariant (no DB feed to scope against), so
   // a keyed contract takes plain `KeyedServerResourceOptions`.
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
-    def: ResourceDefinition<T, P> & { optionalParams?: never },
+    def: ResourceDefinition<T, P> & {
+      optionalParams?: never;
+      routes?: never;
+      reach?: never;
+    },
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     contract: KeyedResourceContract<T, P>,
@@ -2605,7 +3341,7 @@ export function createResourceRuntime(
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     contract: ResourceContract<T, P> & { keyed?: never },
-    opts: ServerResourceOptions<T, P>,
+    opts: ServerResourceOptions<T, P> & { reach?: never },
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     a: ResourceDefinition<T, P> | ResourceContract<T, P>,
@@ -2763,7 +3499,7 @@ export function createResourceRuntime(
       batchDepth--;
       if (batchDepth === 0 && !flushScheduled) {
         for (const entry of registry.values()) {
-          if (entry.pendingNotifies.size > 0) {
+          if (entry.pendingNotifies.size > 0 || entry.pendingAcks.size > 0) {
             scheduleFlush();
             break;
           }
@@ -2785,6 +3521,8 @@ export function createResourceRuntime(
       /** Wall-clock epoch ms of the change (feed). A hand `notify()` defaults to
        *  now — the call IS the change for an external resource. */
       changedAt?: number;
+      /** Reverse routes the drain must resolve (routed entries only). */
+      unresolved?: readonly UnresolvedReverse[];
     },
   ): void {
     // The funnel for `notify`, the change feed, `triggerResourcePush` and the
@@ -2795,34 +3533,30 @@ export function createResourceRuntime(
     const source = opts?.source ?? "hand";
     // A synthetic push (the debug churn emitter) drives the identical cascade but
     // is NOT a real change, so it must not touch the hand-vs-feed self-verification
-    // counters or spam the read-set-gap warning at N/sec — skip the whole stats
-    // block and fall straight through to the shared merge + flush-scheduling tail.
-    if (source !== "synthetic") {
+    // counters or spam the read-set-gap warning at N/sec — it skips both branches
+    // and falls straight through to the shared merge + flush-scheduling tail.
+    if (source === "feed") {
+      countFeed(entry.key, pk);
+    } else if (source === "hand") {
       const now = performance.now();
       const stats = statsFor(entry.key);
-      if (source === "feed") {
-        stats.feed++;
-        stats.lastFeedAt = now;
-        recordFeedIntent(entry.key, pk, now);
-      } else {
-        stats.hand++;
-        stats.lastHandAt = now;
-        // A hand-notify with no recent feed intent for the same (resource, pk)
-        // means the change-feed did NOT cover this change — i.e. the L3 read-set
-        // capture is missing a table this resource reads. That is exactly the bug
-        // class L4 eliminates, so surface it (loud, but not an error — the parallel
-        // run is expected to find these during the migration).
-        //
-        // Never for an external-source entry (`defineExternalResource`): its truth
-        // lives outside Postgres, so a hand-notify is by design its ONLY source and
-        // the feed never has anything to match. The warning was always false for
-        // them — and, for a resource notified on every change, it was most of the
-        // log (main held ~269k lines for `config-v2.values` alone).
-        if (!entry.externalSource && !hasRecentFeedIntent(entry.key, pk, now)) {
-          console.warn(
-            `[live-state] read-set-gap candidate: hand-notify for "${entry.key}" pk=${pk} had no matching change-feed intent within ${FEED_MATCH_WINDOW_MS}ms (a table this resource reads may be missing from the L3 read-set)`,
-          );
-        }
+      stats.hand++;
+      stats.lastHandAt = now;
+      // A hand-notify with no recent feed intent for the same (resource, pk)
+      // means the change-feed did NOT cover this change — i.e. the L3 read-set
+      // capture is missing a table this resource reads. That is exactly the bug
+      // class L4 eliminates, so surface it (loud, but not an error — the parallel
+      // run is expected to find these during the migration).
+      //
+      // Never for an external-source entry (`defineExternalResource`): its truth
+      // lives outside Postgres, so a hand-notify is by design its ONLY source and
+      // the feed never has anything to match. The warning was always false for
+      // them — and, for a resource notified on every change, it was most of the
+      // log (main held ~269k lines for `config-v2.values` alone).
+      if (!entry.externalSource && !hasRecentFeedIntent(entry.key, pk, now)) {
+        console.warn(
+          `[live-state] read-set-gap candidate: hand-notify for "${entry.key}" pk=${pk} had no matching change-feed intent within ${FEED_MATCH_WINDOW_MS}ms (a table this resource reads may be missing from the L3 read-set)`,
+        );
       }
     }
     mergePending(
@@ -2833,7 +3567,43 @@ export function createResourceRuntime(
       opts?.deleted,
       opts?.sourceTx !== undefined ? new Set([opts.sourceTx]) : undefined,
       opts?.changedAt ?? (source === "hand" ? Date.now() : undefined),
+      opts?.unresolved,
     );
+    armFlush(entry);
+  }
+
+  // Owe the writer of `xid` an ack on a tuple its change SKIPPED (see
+  // `PendingAck`): never a pending, so the skip can never reload the tuple — not
+  // even a persisted one, whose pendings always recompute FULL. The caller has
+  // already checked that someone asked for acks on the tuple (`tupleWantsAcks`).
+  // It is still a feed delivery to this tuple, counted as one (`countFeed`), so
+  // the hand-vs-feed counters and the read-set-gap match see it.
+  function scheduleAck(
+    entry: RegistryEntry,
+    pk: string,
+    params: ResourceParams,
+    xid: string,
+  ): void {
+    countFeed(entry.key, pk);
+    let owed = entry.pendingAcks.get(pk);
+    if (!owed) {
+      owed = { params, xids: new Set(), overflow: false };
+      entry.pendingAcks.set(pk, owed);
+    }
+    if (!owed.overflow) {
+      owed.xids.add(xid);
+      if (owed.xids.size > SOURCE_TX_CAP) {
+        owed.overflow = true;
+        owed.xids.clear();
+      }
+    }
+    armFlush(entry);
+  }
+
+  // Get `entry`'s pending work drained: nothing inside a `withNotifyBatch` (its
+  // exit schedules the flush), the entry's debounce window when it declares one,
+  // the next microtask flush otherwise.
+  function armFlush(entry: RegistryEntry): void {
     if (batchDepth > 0) return;
     // Debounced entries do not ride the immediate flush: arm a per-entry
     // fixed-window timer (only if not already armed — never re-armed within a
@@ -2870,6 +3640,32 @@ export function createResourceRuntime(
     return entry.membership?.kind === "window" && !entry.membership.bounded;
   }
 
+  // The M5 exception to "a snapshot lives as long as its tracking span": a
+  // PERSISTED unbounded-window alias recomputes on every change whether or not
+  // anyone is subscribed, and reconstructs its persisted value FROM the
+  // snapshot, so it keeps it across N→0 (see `releaseSubRefcount`).
+  function keepsIdleSnapshot(entry: RegistryEntry): boolean {
+    return (
+      isUnboundedWindow(entry) &&
+      !entry.externalSource &&
+      (opts.shouldPersist?.(entry.key) ?? false)
+    );
+  }
+
+  // Who a drain's snapshot write is for: `"kept"` for a snapshot that outlives
+  // its subscribers (`keepsIdleSnapshot`), else the tuple's tracking span, or
+  // undefined when the tuple is not tracked. A drain reads it before its first
+  // await and writes the snapshot (and its order signatures) — and ships its
+  // frames — only while it is unchanged: across an N→0 the snapshot was evicted
+  // and nothing routes to the tuple, so a write would resurrect a base that goes
+  // stale unseen, and a re-subscribe's routing would read membership off it.
+  function snapshotOwner(
+    entry: RegistryEntry,
+    pk: string,
+  ): number | "kept" | undefined {
+    return keepsIdleSnapshot(entry) ? "kept" : entry.spans.get(pk);
+  }
+
   // The snapshot entry representation for THIS resource, decided statically
   // from the definition so it can never flip between seeding and consumption:
   //
@@ -2893,7 +3689,7 @@ export function createResourceRuntime(
   // the alias, non-membership, or a window that never declared one).
   function orderSignatureFnOf(
     entry: RegistryEntry,
-  ): ((row: unknown) => string) | undefined {
+  ): ((row: unknown, params: ResourceParams) => string) | undefined {
     const m = entry.membership;
     return m?.kind === "window" ? m.orderSignatureOf : undefined;
   }
@@ -2904,11 +3700,12 @@ export function createResourceRuntime(
   // wire order.
   function safeOrderSig(
     entry: RegistryEntry,
-    sigFn: (row: unknown) => string,
+    sigFn: (row: unknown, params: ResourceParams) => string,
     row: unknown,
+    params: ResourceParams,
   ): string | undefined {
     try {
-      return sigFn(row);
+      return sigFn(row, params);
       // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS reported (reportLoaderError), and undefined is not an absorbable empty: it is the documented "unknown" sentinel the callers treat as MOVED — the fail-safe direction (re-derive the window), never a false "unchanged"
     } catch (err) {
       reportLoaderError(`orderSignatureOf failed for ${entry.key}`, err);
@@ -2924,15 +3721,16 @@ export function createResourceRuntime(
   // refill treats it as moved — fail-safe.
   function reseedOrderSigs(
     entry: RegistryEntry,
-    pk: string,
+    params: ResourceParams,
     value: unknown,
   ): void {
+    const pk = paramsKey(params);
     const sigFn = orderSignatureFnOf(entry);
     if (!sigFn || !Array.isArray(value)) return;
     const keyOf = entry.keyOf!;
     const sigs = new Map<string, string>();
     for (const row of value as unknown[]) {
-      const s = safeOrderSig(entry, sigFn, row);
+      const s = safeOrderSig(entry, sigFn, row, params);
       if (s !== undefined) sigs.set(keyOf(row), s);
     }
     (entry.orderSigs ??= new Map()).set(pk, sigs);
@@ -3095,7 +3893,15 @@ export function createResourceRuntime(
       const down = registry.get(edge.downstreamKey);
       if (!down) continue;
       let derived: ResourceParams[];
-      if (edge.toSubscribed) {
+      if (edge.routedRecompute) {
+        // Only the one upstream tuple the routed entry compiles from; its
+        // change moved the SQL, so every tuple's memoized read-set is stale.
+        if (paramsKey(params) !== edge.routedRecompute.upstreamPk) continue;
+        down.routing?.uses.clear();
+        // The tuples a table change would consider (`tracked`, never an
+        // O(sockets) scan).
+        derived = routedTargets(down).map(([, p]) => p);
+      } else if (edge.toSubscribed) {
         derived = subscribedParamsFor(edge.downstreamKey);
       } else if (edge.map) {
         try {
@@ -3224,6 +4030,7 @@ export function createResourceRuntime(
     const version = (entry.versions.get(pk) ?? 0) + 1;
     entry.versions.set(pk, version);
     const subs = subscribersFor(entry.key, pk);
+    const owner = snapshotOwner(entry, pk);
     const hasValueAwareDownstream = entry.downstream.some(
       (d) => d.map !== undefined,
     );
@@ -3309,7 +4116,11 @@ export function createResourceRuntime(
       }
     }
 
-    if (subs.length > 0 && valueComputed) {
+    // The snapshot (and the frames diffed against it) belong to the tracking
+    // span this drain started in; a span that ended while the load ran took its
+    // snapshot and its subscribers with it (`snapshotOwner`).
+    const owns = owner !== undefined && snapshotOwner(entry, pk) === owner;
+    if (owns && subs.length > 0 && valueComputed) {
       const hadSnapshot = entry.snapshots?.has(pk) ?? false;
       const { upserts, deletes, order } = diffKeyed(entry, pk, value); // seeds/replaces snapshot
       let frameChars: number;
@@ -3360,15 +4171,17 @@ export function createResourceRuntime(
         subs.length,
         frameChars,
       );
-    } else if (valueComputed) {
-      // Zero subscribers but a value was computed (persisted / value-aware
-      // downstream): still seed/replace the snapshot so the next membership diff
-      // has a base. This is the M5 difference from the legacy keyed FULL path.
+    } else if (owns && valueComputed) {
+      // Zero subscribers but a value was computed for a snapshot that outlives
+      // them (a persisted alias): still seed/replace the snapshot so the next
+      // membership diff has a base. This is the M5 difference from the legacy
+      // keyed FULL path. An untracked tuple (a value-aware downstream alone)
+      // seeds nothing — no drain would keep that snapshot current.
       diffKeyed(entry, pk, value);
     }
     // The order-signature map's lifecycle mirrors the snapshot's: whenever the
     // FULL value replaced the snapshot above, reseed the sigs from it too.
-    if (valueComputed) reseedOrderSigs(entry, pk, value);
+    if (owns && valueComputed) reseedOrderSigs(entry, params, value);
 
     // A FULL recompute cascades FULL (clears edge signatures inside the helper).
     await cascadeDownstream(
@@ -3402,20 +4215,14 @@ export function createResourceRuntime(
     const keyOf = entry.keyOf!;
     const { params } = pendingEntry;
     const pk = paramsKey(params);
+    // Never empty: `drainPendings` skips a scoped pending naming no id before
+    // it branches here.
     const requestedIds = pendingEntry.affected ?? new Set<string>();
     const deletedIds = pendingEntry.deleted ?? new Set<string>();
-    // Nothing actually changed (an empty scoped set with no deletes) → skip
-    // entirely: no version bump, no frame, no cascade. This is also the ACK-ONLY
-    // pending a point empty-intersection routes here (the change's ids missed
-    // this tuple's set, but the writer still deserves its ack) — broadcast to
-    // the subscribers that asked for acks as a standalone frame, version-less.
-    if (requestedIds.size === 0 && deletedIds.size === 0) {
-      broadcastAckOnly(entry, pendingEntry);
-      return;
-    }
 
     const snapshots = (entry.snapshots ??= new Map());
     const prev = snapshots.get(pk)!; // caller only routes here when a snapshot exists
+    const owner = snapshotOwner(entry, pk);
 
     // Persisted: capture the watermark BEFORE any read, so a write invisible to the
     // refill/orderOf snapshot has xid >= this floor and is replayed by catch-up.
@@ -3508,7 +4315,7 @@ export function createResourceRuntime(
       const storedSigs = entry.orderSigs?.get(pk);
       for (const row of refillRows) {
         const id = keyOf(row);
-        const fresh = safeOrderSig(entry, sigFn, row);
+        const fresh = safeOrderSig(entry, sigFn, row, params);
         freshSigs.set(id, fresh);
         if (!prev.has(id)) continue; // an entrant has no stored sig to compare
         if (fresh === undefined || fresh !== storedSigs?.get(id))
@@ -3580,7 +4387,10 @@ export function createResourceRuntime(
               // A backfilled row is a fresh read too — record its signature so
               // the post-diff map maintenance stores it alongside the refill's.
               if (sigFn && freshSigs)
-                freshSigs.set(keyOf(row), safeOrderSig(entry, sigFn, row));
+                freshSigs.set(
+                  keyOf(row),
+                  safeOrderSig(entry, sigFn, row, params),
+                );
             }
             loaderRan = true;
           } catch (err) {
@@ -3622,6 +4432,28 @@ export function createResourceRuntime(
       keyOf,
       snapEncoderFor(entry),
     );
+    // Downstream cascade: a DELETE forces FULL (a vanished row has no value for an
+    // affectedMap to translate) and clears edge signatures; otherwise the requested
+    // ids (incl. where-flip exits, whose rows still exist) flow through the gate.
+    const cascade = () =>
+      cascadeDownstream(
+        entry,
+        params,
+        deletedIds.size > 0 ? null : requestedIds,
+        refillRows,
+        loaderRan,
+        cascadeSourceTx(pendingEntry),
+        pendingEntry.changedAt,
+      );
+    // The tracking span this drain started in ended while it read: its snapshot
+    // was evicted and its subscribers left (`snapshotOwner`). Writing
+    // `nextSnapshot` back would resurrect a base nothing routes to, so the diff
+    // is dropped whole — no snapshot, no frame, no ack (whoever asked for one is
+    // gone); only the cascade, which reads no snapshot of this tuple, runs.
+    if (snapshotOwner(entry, pk) !== owner) {
+      await cascade();
+      return;
+    }
     snapshots.set(pk, nextSnapshot);
 
     // Maintain the order-signature map in lockstep with the snapshot: refilled
@@ -3715,19 +4547,7 @@ export function createResourceRuntime(
       opts.onPush?.(entry.key, { subscribers: subs.length, changed });
     }
 
-    // Downstream cascade: a DELETE forces FULL (a vanished row has no value for an
-    // affectedMap to translate) and clears edge signatures; otherwise the requested
-    // ids (incl. where-flip exits, whose rows still exist) flow through the gate.
-    const cascadeAffected = deletedIds.size > 0 ? null : requestedIds;
-    await cascadeDownstream(
-      entry,
-      params,
-      cascadeAffected,
-      refillRows,
-      loaderRan,
-      cascadeSourceTx(pendingEntry),
-      pendingEntry.changedAt,
-    );
+    await cascade();
   }
 
   // Drain one entry's pending notifies: load (await), send frames, cascade.
@@ -3737,9 +4557,13 @@ export function createResourceRuntime(
   // next (deeper) level reads it. The per-pk loop stays sequential — the version
   // and keyed snapshot for a single (key,pk) must advance monotonically.
   async function drainEntry(entry: RegistryEntry): Promise<void> {
-    if (entry.pendingNotifies.size === 0) return;
+    if (entry.pendingNotifies.size === 0 && entry.pendingAcks.size === 0) {
+      return;
+    }
     const pending = Array.from(entry.pendingNotifies.values());
     entry.pendingNotifies.clear();
+    const owedAcks = Array.from(entry.pendingAcks.values());
+    entry.pendingAcks.clear();
     // Piggyback: this entry's pending is being drained now (possibly by a flush
     // some other resource scheduled), so cancel any armed debounce timer — it
     // would otherwise fire redundantly on an already-empty pending map.
@@ -3747,6 +4571,192 @@ export function createResourceRuntime(
       clearTimeout(entry.debounceTimer);
       entry.debounceTimer = undefined;
     }
+    // The acks owed to skipped tuples (see `PendingAck`): folded into the
+    // tuple's real pending when this drain has one — its frame (or its own ack)
+    // then carries them — and otherwise sent right here, as a standalone ack,
+    // before any persisted or membership branch can see the tuple.
+    const byPk = new Map<string, PendingNotify>();
+    for (const p of pending) byPk.set(paramsKey(p.params), p);
+    for (const owed of owedAcks) {
+      const real = byPk.get(paramsKey(owed.params));
+      if (!real) {
+        broadcastAck(
+          entry,
+          owed.params,
+          owed.overflow ? undefined : [...owed.xids],
+        );
+      } else if (owed.overflow) {
+        real.sourceTxOverflow = true;
+        real.sourceTx = undefined;
+      } else {
+        unionSourceTx(real, owed.xids);
+      }
+    }
+    if (pending.length === 0) return;
+    // Mark the taken pks as draining until the whole drain settles (see
+    // `RegistryEntry.draining`): coarser than per-pk, which only ever makes the
+    // router deliver a value-role change it could have dropped — never the
+    // reverse.
+    for (const pk of byPk.keys()) entry.draining.add(pk);
+    try {
+      await resolveReverseRoutes(entry, pending);
+      await drainPendings(entry, pending);
+    } finally {
+      for (const pk of byPk.keys()) entry.draining.delete(pk);
+    }
+  }
+
+  // Resolve the reverse routes the router left on these pendings (see
+  // `PendingNotify.unresolved`): once per (entry, route, flush), over the union of
+  // every pending's changed values, so a burst of lookup writes costs one query.
+  // `within` bounds the answer to the ids a tuple can hold — its point set, or
+  // its members when it reads the route in the value role (null = unbounded, a
+  // membership reader); bounded and unbounded readers resolve as two groups (at
+  // most two queries — see below). The answer lands in the SAME pending as
+  // the change's other routes, so its ack leaves only after all of them.
+  // `"over-cap"` or a throw recomputes the readers FULL (a throw is reported).
+  // Runs under the `cascade` origin: like an `affectedMap`, it is an
+  // ids-translation read, not part of the value (and not in its read-set).
+  async function resolveReverseRoutes(
+    entry: RegistryEntry,
+    pending: readonly PendingNotify[],
+  ): Promise<void> {
+    const groups = new Map<
+      string,
+      {
+        route: ReverseRoute;
+        changed: Set<string>;
+        readers: Array<{
+          pending: PendingNotify;
+          within: ReadonlySet<string> | null;
+        }>;
+      }
+    >();
+    for (const p of pending) {
+      const unresolved = p.unresolved;
+      if (!unresolved) continue;
+      p.unresolved = undefined;
+      if (p.affected === null) continue; // FULL already covers every host
+      for (const [routeId, u] of unresolved) {
+        const within = reverseWithin(entry, p, u.membership);
+        if (within === "full") {
+          p.affected = null;
+          p.deleted = undefined;
+          break;
+        }
+        let group = groups.get(routeId);
+        if (!group) {
+          group = { route: u.route, changed: new Set(), readers: [] };
+          groups.set(routeId, group);
+        }
+        for (const v of u.changed) group.changed.add(v);
+        group.readers.push({ pending: p, within });
+      }
+    }
+    for (const group of groups.values()) {
+      const readers = group.readers.filter((r) => r.pending.affected !== null);
+      if (readers.length === 0) continue;
+      const resolve = async (
+        bound: ReadonlySet<string> | null,
+      ): Promise<readonly string[] | "over-cap" | "failed"> => {
+        const run = () =>
+          group.route.map.resolve(
+            [...group.changed],
+            bound,
+            REVERSE_RESOLVE_CAP,
+          );
+        try {
+          return await (opts.wrapOrigin
+            ? opts.wrapOrigin("cascade", entry.key, run)
+            : run());
+        } catch (err) {
+          reportLoaderError(
+            `reverse route "${group.route.id}" failed for ${entry.key}`,
+            err,
+          );
+          return "failed";
+        }
+      };
+      const land = (
+        answer: readonly string[] | "over-cap" | "failed",
+        onto: typeof readers,
+      ): void => {
+        for (const { pending: p, within: own } of onto) {
+          if (p.affected === null) continue;
+          if (answer === "over-cap" || answer === "failed") {
+            p.affected = null; // the reader recomputes FULL — bounded for a window
+            p.deleted = undefined;
+            continue;
+          }
+          for (const id of answer) {
+            if (own === null || own.has(id)) p.affected.add(id);
+          }
+        }
+      };
+      // Two groups, so one unbounded (membership) reader does not unbound the
+      // rest: the unbounded answer, when it fits the cap, is a superset every
+      // bounded reader cuts to its own ids — one query. Only when it is over
+      // the cap do the bounded readers probe again, within the union of their
+      // own ids, instead of all recomputing FULL beside the unbounded ones.
+      const unbounded = readers.filter((r) => r.within === null);
+      const bounded = readers.filter((r) => r.within !== null);
+      let pendingBounded = bounded;
+      if (unbounded.length > 0) {
+        const answer = await resolve(null);
+        land(answer, unbounded);
+        if (answer !== "over-cap") {
+          land(answer, bounded);
+          pendingBounded = [];
+        }
+      }
+      if (pendingBounded.length > 0) {
+        const within = new Set<string>();
+        for (const r of pendingBounded) {
+          for (const id of r.within ?? []) within.add(id);
+        }
+        land(await resolve(within), pendingBounded);
+      }
+    }
+  }
+
+  // The ids one pending's answer from a reverse route is bounded to: a point
+  // tuple's own id set, the members of a window / alias tuple that read the route
+  // only in the value role, or null (unbounded). `"full"` when a point set cannot
+  // be decoded — its refill would otherwise admit ids outside the set.
+  function reverseWithin(
+    entry: RegistryEntry,
+    pending: PendingNotify,
+    membershipRole: boolean,
+  ): ReadonlySet<string> | null | "full" {
+    const membership = entry.membership;
+    if (membership?.kind === "point") {
+      try {
+        return new Set(membership.idsOf(pending.params));
+      } catch (err) {
+        reportLoaderError(`idsOf failed for ${entry.key}`, err);
+        return "full";
+      }
+    }
+    if (membershipRole) return null;
+    const snapshot = entry.snapshots?.get(paramsKey(pending.params));
+    return snapshot ? new Set(snapshot.keys()) : null;
+  }
+
+  // Is `entry` L2-persisted? The drain's gate, and the router's reason to keep
+  // the `{}` tuple current with nobody subscribed.
+  function isPersisted(entry: RegistryEntry): boolean {
+    return (
+      !entry.externalSource &&
+      !membershipBounded(entry) &&
+      (opts.shouldPersist?.(entry.key) ?? false)
+    );
+  }
+
+  // The per-pk half of `drainEntry`, over the pendings it took.
+  async function drainPendings(
+    entry: RegistryEntry,
+    pending: readonly PendingNotify[],
+  ): Promise<void> {
     // L2: persisted entries (boot-critical, DB-backed) always recompute FULL and
     // persist their value to `live_state_snapshot` — even with zero subscribers —
     // so cold boot reads a fresh snapshot instead of a from-scratch rebuild. A
@@ -3761,14 +4771,26 @@ export function createResourceRuntime(
     // materialization. See
     // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.3
     // and research/2026-07-18-global-bounded-working-set-resource-contract.md.
-    const persisted =
-      !entry.externalSource &&
-      !membershipBounded(entry) &&
-      (opts.shouldPersist?.(entry.key) ?? false);
+    const persisted = isPersisted(entry);
 
     for (const pendingEntry of pending) {
       const { params, affected } = pendingEntry;
       const pk = paramsKey(params);
+      // A SCOPED pending that names nothing — no row to refill, none deleted —
+      // changed nothing for this tuple: an empty `notify({ affectedIds: [] })`,
+      // an `affectedMap` that mapped to no downstream row, a reverse route that
+      // resolved to no host. Skip it on EVERY entry kind, before the membership
+      // and persisted branches (a persisted entry forces FULL, so a skip left to
+      // it would reload the whole value): no version bump, no frame, no cascade —
+      // only the standalone ack to the subscribers that asked for one.
+      if (
+        affected !== null &&
+        affected.size === 0 &&
+        (pendingEntry.deleted?.size ?? 0) === 0
+      ) {
+        broadcastAckOnly(entry, pendingEntry);
+        continue;
+      }
       // A membership entry (bounded window / point / the M5 alias) runs the
       // incremental membership path instead of the legacy scoped/FULL branches.
       // Branch 2/3 (FULL: sticky-FULL `affected === null`, or no snapshot yet)
@@ -3787,22 +4809,14 @@ export function createResourceRuntime(
         continue;
       }
       // Scoped notify (Layer 2): `affected !== null` means recompute only those
-      // row ids. An empty scoped set = nothing actually changed → skip the send
-      // entirely (no version bump, no empty delta, no cascade). A persisted entry
-      // is forced to FULL (it cannot persist a scoped partial), so the scoped
-      // bookkeeping below only applies to the non-persisted path.
+      // row ids (an empty set was skipped above). A persisted entry is forced to
+      // FULL (it cannot persist a scoped partial), so the scoped bookkeeping
+      // below only applies to the non-persisted path.
       const scoped = affected !== null && !persisted;
-      if (affected !== null && affected.size === 0 && !persisted) {
-        // Nothing changed for this tuple — no version bump, no empty delta, no
-        // cascade. An ACK-ONLY pending (an empty set carrying only `sourceTx`)
-        // lands here too, so the standalone ack frame goes to the subscribers
-        // that asked for acks. Inert when none did.
-        broadcastAckOnly(entry, pendingEntry);
-        continue;
-      }
       const version = (entry.versions.get(pk) ?? 0) + 1;
       entry.versions.set(pk, version);
       const subs = subscribersFor(entry.key, pk);
+      const owner = snapshotOwner(entry, pk);
 
       // Compute value once if either a subscriber (push mode) or any
       // value-aware downstream `map` needs it. For invalidate-mode upstreams
@@ -3928,6 +4942,13 @@ export function createResourceRuntime(
             version,
           };
           frameChars = broadcastJson(subs, msg);
+        } else if (
+          entry.mode === "keyed" &&
+          snapshotOwner(entry, pk) !== owner
+        ) {
+          // The tracking span ended while the load ran: its subscribers left
+          // and its snapshot was evicted. Nothing to ship, and no snapshot to
+          // write back — it would go stale unseen (`snapshotOwner`).
         } else if (entry.mode === "keyed") {
           // `value` is guaranteed computed (needValue is true for keyed + subs).
           const hadSnapshot = entry.snapshots?.has(pk) ?? false;
@@ -4277,7 +5298,11 @@ export function createResourceRuntime(
     if (alreadyHeldBySocket) return { firstGlobal: false };
     const prev = entry.subCounts.get(pk) ?? 0;
     entry.subCounts.set(pk, prev + 1);
-    if (prev === 0) entry.versions.set(pk, (entry.versions.get(pk) ?? 0) + 1);
+    if (prev === 0) {
+      entry.versions.set(pk, (entry.versions.get(pk) ?? 0) + 1);
+      entry.tracked.set(pk, params);
+      entry.spans.set(pk, ++lastSpan);
+    }
     return { firstGlobal: prev === 0 };
   }
 
@@ -4494,11 +5519,16 @@ export function createResourceRuntime(
     let value: unknown;
     let etag: string | undefined;
     let watermark: string | undefined;
+    let baseVersion: number;
     try {
       // Origin = the subscription: establishes an entry context so the loader
       // span (and any gate waits it charges) is attributed to this `sub` request
       // instead of running with `parent: null`. Gated by the read-admission cap.
-      ({ value, etag, watermark } = await gatedRead(entry, params, freshEtag));
+      ({ value, etag, watermark, baseVersion } = await gatedRead(
+        entry,
+        params,
+        freshEtag,
+      ));
     } catch (err) {
       // A gate gap: the tuple is registered, so evict it everywhere (which
       // tells this socket too) rather than leave every push re-failing.
@@ -4525,9 +5555,20 @@ export function createResourceRuntime(
     await Promise.resolve();
     // Keyed entries: seed the per-pk snapshot from the full sub-ack value so the
     // next notify can diff against it. The sub-ack itself stays full-value.
+    // Never over a snapshot a push advanced since this value's read STARTED
+    // (the flight's `baseVersion`, not the version this subscriber observed —
+    // a joiner observes a push that landed after the flight it joins began):
+    // that push's base is at least as new as its change, while this read may
+    // predate it. Regressing it would be harmless to a diff (an older base
+    // ships extra rows, never fewer), but the router reads membership off it —
+    // a value-role change to a host the regressed base lacks is dropped as a
+    // non-member's, for good.
     if (entry.mode === "keyed") {
-      (entry.snapshots ??= new Map()).set(pk, snapshotOf(entry, value));
-      reseedOrderSigs(entry, pk, value); // lifecycle mirrors the snapshot seed
+      const snapshots = (entry.snapshots ??= new Map());
+      if (!snapshots.has(pk) || (entry.versions.get(pk) ?? 0) === baseVersion) {
+        snapshots.set(pk, snapshotOf(entry, value));
+        reseedOrderSigs(entry, params, value); // lifecycle mirrors the snapshot seed
+      }
     }
     // Stamp the etag the FLIGHT carried, not `freshEtag`. Three cases:
     //   - we started the flight  → `etag === freshEtag` (the common path).
@@ -4821,6 +5862,10 @@ export function createResourceRuntime(
     const next = prev - 1;
     if (next === 0) {
       entry.subCounts.delete(pk);
+      // The tuple leaves the router's targets, and its memoized read-set with it.
+      entry.tracked.delete(pk);
+      entry.spans.delete(pk);
+      entry.routing?.uses.delete(pk);
       // Bound keyed-snapshot memory to actively-observed pks. Re-subscribe
       // re-hydrates via a full sub-ack and rebuilds the snapshot.
       // M5 exception: a PERSISTED `scopedMembership` (unbounded-window alias)
@@ -4830,11 +5875,7 @@ export function createResourceRuntime(
       // opted-in persisted resources; bounded-membership entries (never
       // persisted) evict like any other keyed entry — the resubscribe opens a
       // new tracking span, so it takes the full path and re-seeds.
-      const keepSnapshot =
-        isUnboundedWindow(entry) &&
-        !entry.externalSource &&
-        (opts.shouldPersist?.(entry.key) ?? false);
-      if (!keepSnapshot) {
+      if (!keepsIdleSnapshot(entry)) {
         entry.snapshots?.delete(pk);
         entry.orderSigs?.delete(pk); // lifecycle mirrors the snapshot eviction
       }
@@ -5043,6 +6084,12 @@ export function createResourceRuntime(
       identityTable?: string;
       recompute?: { kind: "full"; reason: string };
       coveredOrigins: string[];
+      routes: Array<{
+        id: string;
+        table: string;
+        map: HostMap["kind"];
+        reason?: string;
+      }> | null;
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
       notifyStats: { hand: number; feed: number };
       subShortCircuits: number;
@@ -5110,6 +6157,17 @@ export function createResourceRuntime(
         // `affectedMap`/`dependsOn` edges. A read-set table OUTSIDE this set
         // silently FULL-recomputes the resource (`coveredOriginsFor`, ~564).
         coveredOrigins: [...coveredOriginsFor(entry.key)].sort(),
+        // A routed entry's routes (null = the legacy read-set path serves it):
+        // every table it can be reached through, how its rows map, and — for a
+        // `full` route — the declared reason, so a routed FULL is never silent.
+        routes: entry.routing
+          ? entry.routing.plan.routes.map((r) => ({
+              id: r.id,
+              table: r.table,
+              map: r.map.kind,
+              ...(r.map.kind === "full" ? { reason: r.map.reason } : {}),
+            }))
+          : null,
         // Loader frequency over the profiling window (server-only hook; absent on
         // central). Surfaces a cheap-but-hot loader the slow-single-call view misses.
         loaderStats: opts.loaderStats?.(entry.key),
@@ -5229,6 +6287,225 @@ export function createResourceRuntime(
       }
     }
     return [...byPk.values()];
+  }
+
+  // --- Scoped change routing (routed entries) ---
+
+  // Route one base-table change to every ROUTED entry reading the table (see
+  // `ResourceRuntime.routeTableChange` and `./routing`). Synchronous: each tuple's
+  // pending is merged in this call, so the whole change rides one flush.
+  // Defensive like `applyDbChange`: a failure is reported, never thrown at the
+  // producer — and isolated per entry (per tuple inside `routeEntryChange`), so
+  // one failing entry cannot take the change from the others.
+  function routeTableChange(change: TableChange): void {
+    for (const entry of routedByTable.get(change.table) ?? []) {
+      try {
+        routeEntryChange(entry, change);
+      } catch (err) {
+        reportLoaderError(
+          `routeTableChange failed for ${entry.key} (table "${change.table}")`,
+          err,
+        );
+      }
+    }
+  }
+
+  // One routed entry, every tuple it must consider: its subscribed tuples
+  // (`tracked` — never an O(sockets) scan), plus `{}` for a persisted entry,
+  // which keeps its value current with nobody subscribed. A param'd window or
+  // point set with no subscriber has nobody to keep current, so it gets nothing:
+  // a fresh subscribe loads from scratch.
+  function routedTargets(
+    entry: RegistryEntry,
+  ): [pk: string, params: ResourceParams][] {
+    const targets = [...entry.tracked];
+    if (isPersisted(entry) && !entry.tracked.has(EMPTY_PK)) {
+      targets.push([EMPTY_PK, {}]);
+    }
+    return targets;
+  }
+
+  function routeEntryChange(entry: RegistryEntry, change: TableChange): void {
+    const routing = entry.routing!;
+    const routes = routing.byTable.get(change.table)!;
+    for (const [pk, params] of routedTargets(entry)) {
+      let outcome: ShapedRouting;
+      try {
+        const uses = usesFor(entry, routing, pk, params);
+        outcome =
+          uses === null
+            ? { kind: "full" }
+            : shapeForTuple(
+                entry,
+                pk,
+                params,
+                routeTuple(change, routes, uses),
+              );
+      } catch (err) {
+        // A throwing `encode` / `idsOf`: fail open — this tuple recomputes FULL.
+        reportLoaderError(
+          `routing failed for ${entry.key} ${pk} (table "${change.table}")`,
+          err,
+        );
+        outcome = { kind: "full" };
+      }
+      try {
+        deliverRouted(entry, pk, params, outcome, change);
+      } catch (err) {
+        // Scheduling the outcome failed: fail open the same way. A second throw
+        // escapes to `routeTableChange`, which reports it for this entry.
+        reportLoaderError(
+          `delivering a routed change failed for ${entry.key} ${pk} (table "${change.table}")`,
+          err,
+        );
+        deliverRouted(entry, pk, params, { kind: "full" }, change);
+      }
+    }
+  }
+
+  // The tuple's memoized read-set (`RoutePlan.usesOf`), or null when it is
+  // unusable — it threw, or it named a route this resource does not have (A9).
+  // Either is reported once, and the tuple then recomputes FULL on every change
+  // of its tables rather than guessing which occurrence it reads.
+  function usesFor(
+    entry: RegistryEntry,
+    routing: RoutingRecord,
+    pk: string,
+    params: ResourceParams,
+  ): ReadonlyMap<string, TupleUse> | null {
+    const memo = routing.uses.get(pk);
+    if (memo !== undefined || routing.uses.has(pk)) return memo ?? null;
+    let uses: ReadonlyMap<string, TupleUse> | null = null;
+    try {
+      const answer = routing.plan.usesOf(params);
+      const unknown = [...answer.keys()].find(
+        (id) => !routing.routeIds.has(id),
+      );
+      // A match on a column its route did not declare: the change feed does
+      // not carry it (the layout is derived from `Route.match`), so the key
+      // filter could only ever read it as unknown.
+      const undeclared =
+        unknown === undefined
+          ? [...answer].find(([id, use]) => {
+              const declared = routing.matchOf.get(id) ?? [];
+              return Object.keys(use.match ?? {}).some(
+                (c) => !declared.includes(c),
+              );
+            })
+          : undefined;
+      if (undeclared !== undefined) {
+        reportLoaderError(
+          `usesOf matched on an undeclared column for ${entry.key}`,
+          new Error(
+            `route "${undeclared[0]}" of ${entry.key} matches on ${JSON.stringify(Object.keys(undeclared[1].match ?? {}))}, but declares match ${JSON.stringify(routing.matchOf.get(undeclared[0]) ?? [])} (tuple ${pk}) — that tuple recomputes FULL on every change of its tables`,
+          ),
+        );
+      } else if (unknown === undefined) {
+        uses = answer;
+      } else {
+        reportLoaderError(
+          `usesOf named an unknown route for ${entry.key}`,
+          new Error(
+            `route id "${unknown}" is not one of ${entry.key}'s routes (tuple ${pk}) — that tuple recomputes FULL on every change of its tables`,
+          ),
+        );
+      }
+    } catch (err) {
+      reportLoaderError(`usesOf failed for ${entry.key} (tuple ${pk})`, err);
+    }
+    routing.uses.set(pk, uses);
+    return uses;
+  }
+
+  // Shape a scoped outcome by the tuple's membership kind. A point tuple keeps
+  // only the ids in its own set, whatever the role. A window / alias tuple keeps
+  // a value-only host (one reached only through value-role routes, which cannot
+  // move membership) only if it is a member — but only while the tuple is
+  // QUIESCENT: a snapshot, no pending, not draining. Otherwise a drain that is
+  // admitting that host may have read the side table before this write
+  // committed, and dropping the change would leave the host stale for good; so it
+  // is delivered as membership instead (one extra refill, at worst). The same
+  // guard turns its value-role reverse routes into membership ones (resolved
+  // without the members bound).
+  function shapeForTuple(
+    entry: RegistryEntry,
+    pk: string,
+    params: ResourceParams,
+    outcome: TupleRouting,
+  ): ShapedRouting {
+    if (outcome.kind !== "scoped") return outcome;
+    const membership = entry.membership!;
+    const { affected, valueOnly, deleted } = outcome;
+    if (membership.kind === "point") {
+      const ids = new Set(membership.idsOf(params));
+      const inSet = (set: ReadonlySet<string>) =>
+        new Set([...set].filter((id) => ids.has(id)));
+      return {
+        kind: "scoped",
+        affected: inSet(new Set([...affected, ...valueOnly])),
+        deleted: inSet(deleted),
+        unresolved: outcome.unresolved,
+      };
+    }
+    const snapshot = entry.snapshots?.get(pk);
+    const quiescent =
+      snapshot !== undefined &&
+      !entry.pendingNotifies.has(pk) &&
+      !entry.draining.has(pk);
+    for (const id of valueOnly) {
+      if (!quiescent || snapshot.has(id)) affected.add(id);
+    }
+    return {
+      kind: "scoped",
+      affected,
+      deleted,
+      unresolved: quiescent
+        ? outcome.unresolved
+        : outcome.unresolved.map((u) => ({
+            ...u,
+            role: "membership" as const,
+          })),
+    };
+  }
+
+  // Schedule the shaped outcome: FULL, a scoped pending (refill ids, identity
+  // deletes, reverse routes to resolve), or — when nothing is left for this
+  // tuple — at most the ack its writer is owed. A skip that owes no ack records
+  // nothing, not even a feed intent: the change did not reach this tuple's value.
+  function deliverRouted(
+    entry: RegistryEntry,
+    pk: string,
+    params: ResourceParams,
+    outcome: ShapedRouting,
+    change: TableChange,
+  ): void {
+    const attribution = {
+      source: "feed" as const,
+      ...(change.xid !== undefined ? { sourceTx: change.xid } : {}),
+      ...(change.changedAt !== undefined
+        ? { changedAt: change.changedAt }
+        : {}),
+    };
+    if (outcome.kind === "full") {
+      scheduleNotify(entry, params, null, attribution);
+      return;
+    }
+    if (
+      outcome.kind === "scoped" &&
+      (outcome.affected.size > 0 ||
+        outcome.deleted.size > 0 ||
+        outcome.unresolved.length > 0)
+    ) {
+      scheduleNotify(entry, params, outcome.affected, {
+        ...attribution,
+        deleted: outcome.deleted,
+        unresolved: outcome.unresolved,
+      });
+      return;
+    }
+    if (change.xid !== undefined && tupleWantsAcks(entry.key, params)) {
+      scheduleAck(entry, pk, params, change.xid);
+    }
   }
 
   // --- L4 DB change-feed routing ---
@@ -5356,36 +6633,15 @@ export function createResourceRuntime(
               // subscriber that asked for acks is still owed the writer's ack (an
               // optimistic client subscribed to THIS tuple may hold a pending
               // op whose write landed outside the tuple's id set — e.g. a
-              // reorder that only moved OTHER rows' ranks). Schedule an
-              // ACK-ONLY pending: an empty scoped set carrying only sourceTx,
-              // which the membership drain resolves to a standalone ack frame
-              // (no version bump, no frame otherwise, no cascade).
+              // reorder that only moved OTHER rows' ranks). Owe it an ack
+              // (`scheduleAck`): the drain sends it standalone — no version
+              // bump, no frame otherwise, no cascade.
               if (change.xid !== undefined && tupleWantsAcks(key, params)) {
-                scheduleNotify(entry, params, new Set<string>(), {
-                  source: "feed",
-                  sourceTx: change.xid,
-                });
+                scheduleAck(entry, paramsKey(params), params, change.xid);
               }
               continue;
             }
           }
-          // Build the RecomputeIntent (the shared L4 contract). Today it is
-          // routed straight through `scheduleNotify`; a future work-admission
-          // scheduler consumes it on the admit side. Construct it so the
-          // producer side is the stable contract surface. Use the REAL op; a
-          // membership DELETE names its removed ids (`deleted`), everything
-          // else the refill ids.
-          const delta: RecomputeIntent["delta"] =
-            tupleAffected === null
-              ? "FULL"
-              : {
-                  table: change.table,
-                  ids: [...(tupleDeleted ?? tupleAffected)],
-                  op: change.op,
-                  ...(change.xid !== undefined ? { xid: change.xid } : {}),
-                };
-          const intent: RecomputeIntent = { resource: key, key: params, delta };
-          void intent;
           scheduleNotify(entry, params, tupleAffected, {
             source: "feed",
             deleted: tupleDeleted,
@@ -5423,17 +6679,35 @@ export function createResourceRuntime(
   // authoritative by the time any boot hook runs) — covers hand-written AND
   // query-resource-compiled resources identically, because the compiler lowers the
   // drizzle table down to the same `identityTable` string the runtime stores here.
-  function scopedResourceIdentities(): Array<{
-    key: string;
-    identityTable: string;
-  }> {
-    const out: Array<{ key: string; identityTable: string }> = [];
+  function scopedResourceTables(): ScopedResourceTable[] {
+    const out: ScopedResourceTable[] = [];
     for (const entry of registry.values()) {
-      if (entry.identityTable) {
-        out.push({ key: entry.key, identityTable: entry.identityTable });
+      if (entry.routing) {
+        for (const route of entry.routing.plan.routes) {
+          out.push({
+            key: entry.key,
+            table: route.table,
+            via: `route "${route.id}"`,
+          });
+        }
+      } else if (entry.identityTable) {
+        out.push({
+          key: entry.key,
+          table: entry.identityTable,
+          via: "identityTable",
+        });
       }
     }
     return out;
+  }
+
+  // Every routed entry's routes, folded into one layout per table.
+  function routedTableRequirements(): TableLayoutRequirement[] {
+    const routes: Route[] = [];
+    for (const entry of registry.values()) {
+      if (entry.routing) routes.push(...entry.routing.plan.routes);
+    }
+    return tableLayoutRequirements(routes);
   }
 
   // The bounded-membership keys — the same set the L2 persist gate excludes via
@@ -5482,12 +6756,15 @@ export function createResourceRuntime(
     if (!entry || !isUnboundedWindow(entry)) return;
     if (entry.snapshots?.get(paramsKey) !== undefined) return;
     (entry.snapshots ??= new Map()).set(paramsKey, snapshotOf(entry, value));
-    reseedOrderSigs(entry, paramsKey, value);
+    // A params key is the tuple's canonical JSON (`paramsKey`).
+    reseedOrderSigs(entry, JSON.parse(paramsKey) as ResourceParams, value);
   }
 
   return {
     defineResource,
     defineExternalResource,
+    defineDeferredResource,
+    bindDeferredResources,
     notificationsWsHandler,
     handleResourceHttp,
     withNotifyBatch,
@@ -5495,9 +6772,11 @@ export function createResourceRuntime(
     measureSubscribeCycle,
     triggerResourcePush,
     applyDbChange,
+    routeTableChange,
     recomputeResource,
     notifyStatsFor,
-    scopedResourceIdentities,
+    scopedResourceTables,
+    routedTableRequirements,
     boundedMembershipKeys,
     unboundedWindowKeys,
     preloadedKeys,

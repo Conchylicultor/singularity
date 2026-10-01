@@ -31,6 +31,25 @@ export const notifyStatsSchema = z.object({
   feed: z.number(),
 });
 
+/**
+ * One route of a ROUTED resource (compiler-emitted — see
+ * research/2026-09-29-global-scoped-change-routing.md): a table it is reached
+ * through, how that table's rows map to its ids, and a `full` route's reason.
+ */
+export const routeSchema = z.union([
+  z.object({
+    id: z.string(),
+    table: z.string(),
+    map: z.literal("full"),
+    reason: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+    table: z.string(),
+    map: z.enum(["identity", "alias", "reverse"]),
+  }),
+]);
+
 export const resourceReadSetSchema = z.object({
   key: z.string(),
   mode: z.string(),
@@ -40,7 +59,10 @@ export const resourceReadSetSchema = z.object({
   dependsOn: z.array(z.string()),
   /** Downstream resource keys this entry cascades to. */
   downstream: z.array(z.string()),
-  /** Captured table names this resource's loader read since boot/reset. */
+  /**
+   * Captured table names this resource's loader read since boot (seeded from
+   * the durable `tables_read`).
+   */
   readSet: z.array(z.string()),
   /**
    * Read-set resolved to base-table space (views → their identity base), for
@@ -57,6 +79,11 @@ export const resourceReadSetSchema = z.object({
     .optional(),
   /** Authoritative scoped-vs-FULL routing set: tables this resource absorbs scoped. */
   coveredOrigins: z.array(z.string()),
+  /**
+   * A routed resource's routes; `null` = the legacy read-set path serves it.
+   * Required, like `coveredOrigins`, so an omission fails loudly.
+   */
+  routes: z.array(routeSchema).nullable(),
   /** Loader call frequency over the profiling window (server-only). */
   loaderStats: loaderStatsSchema.optional(),
   /** Notify provenance counters (hand-called vs DB-change-feed-derived). */
@@ -71,4 +98,5 @@ export const resourcesReadSetSchema = z.object({
 export type LoaderStats = z.infer<typeof loaderStatsSchema>;
 export type NotifyStats = z.infer<typeof notifyStatsSchema>;
 export type ResourceReadSet = z.infer<typeof resourceReadSetSchema>;
+export type ResourceRoute = z.infer<typeof routeSchema>;
 export type ResourcesReadSet = z.infer<typeof resourcesReadSetSchema>;

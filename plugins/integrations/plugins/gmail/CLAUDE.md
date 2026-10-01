@@ -21,6 +21,7 @@ it and **never** import `@plugins/auth/*` directly or name the Gmail scope strin
   - `blocker: "disabled" | "disconnected" | "scopes" | null` — the ONE next unmet prerequisite, in the order it must be resolved. Branch on this rather than re-deriving a precedence from the three booleans, so every Gmail surface offers the same next step.
   - `GmailAccessAction` — renders the control that actually resolves the current `blocker` **in place** (toggle / connect popup / grant popup), or `null` when ready. `reconnect` forces the grant affordance even when local state looks healthy — a server-side auth failure (grant revoked upstream) is invisible to the browser's cached scope list.
   - `GMAIL_BLOCKER_BODY` — the shared per-blocker explanation copy.
+  - `GmailAccessEmptyState({ title?, whenReady? })` — the one "Gmail is not usable yet" surface: the blocker copy above `GmailAccessAction`, centred; the loading state while access resolves; `whenReady` (what the consumer still waits on, no action) when nothing blocks. Mail's landing and its threads pane both render it.
 
 Consumers must depend on these barrels only — the integration brokers all auth
 access on their behalf. In particular, a Gmail surface that can't sync renders
@@ -31,7 +32,7 @@ for themselves.
 
 ## Plugin reference
 
-- Description: Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
+- Description: Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance (and the empty state around it) consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "config"
@@ -45,16 +46,21 @@ for themselves.
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
+    - `primitives/css/center.Center`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceErrorInline`
+    - `primitives/loading.Loading`
   - Exports (types):
     - `GmailAccess`
     - `GmailAccessBlocker`
   - Exports (values):
     - `GMAIL_BLOCKER_BODY`
     - `GmailAccessAction`
+    - `GmailAccessEmptyState`
     - `useGmailAccess`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
@@ -72,6 +78,7 @@ for themselves.
     - `apps/mail/sync`
     - `apps/mail/sync-status`
     - `apps/mail/sync/auto-resume`
+    - `apps/mail/threads`
 - Core:
   - Exports (types): `GmailTokenResult`
   - Exports (values):

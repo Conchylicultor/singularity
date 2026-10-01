@@ -130,6 +130,60 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
     }
   });
 
+  test("a routed payload reaches the route with its layout; a malformed one routes unscoped, never skipped", async () => {
+    const routed: DbChange[] = [];
+    const listener = createChangeFeedListener({
+      connectionString: () => testDb.connectionString,
+      route: (c) => routed.push(c),
+      coveredTables: () => ["side"],
+      livenessIntervalMs: QUIET_LIVENESS_MS,
+    });
+    listener.start();
+    try {
+      await waitForListen();
+      // As live_state_notify_routed() emits it: the row-wise key layout, the
+      // unchanged gate columns.
+      await emitNotify(
+        JSON.stringify({
+          t: "side",
+          op: "U",
+          ids: ["s1"],
+          k: { c: ["host"], r: [["h1"], ["h2"]] },
+          u: ["host"],
+          x: "7",
+        }),
+      );
+      await waitFor(
+        () => findChange(routed, "side", "U", ["s1"]) !== undefined,
+        "routed change delivered",
+      );
+      const scoped = findChange(routed, "side", "U", ["s1"])!;
+      expect(scoped.keys).toEqual({ host: ["h1", "h2"] });
+      expect(scoped.unchanged).toEqual(["host"]);
+      expect(scoped.xid).toBe("7");
+
+      // A layout that does not parse: the table and op are known, so the
+      // change goes out unscoped (FULL for its readers) — as catch-up replays it.
+      await emitNotify(
+        JSON.stringify({
+          t: "side",
+          op: "D",
+          ids: ["s2"],
+          k: { c: ["host"], r: [["h1", "extra"]] },
+        }),
+      );
+      await waitFor(
+        () => findChange(routed, "side", "D", null) !== undefined,
+        "malformed-layout change routed unscoped",
+      );
+      const unscoped = findChange(routed, "side", "D", null)!;
+      expect(unscoped.keys).toBeNull();
+      expect(unscoped.unchanged).toBeNull();
+    } finally {
+      await listener.stop();
+    }
+  });
+
   test("first connect does NOT fullSweep", async () => {
     const routed: DbChange[] = [];
     const listener = createChangeFeedListener({

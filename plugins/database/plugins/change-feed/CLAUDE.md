@@ -13,26 +13,33 @@ hold table locks:
   → rollup reconcile → view rebuild): `onReadyBlocking` hooks run under a flat
   `Promise.all` with no topo order.
 
-### Fast-path: skip when unchanged
+### Fast-path: skip what is unchanged, per object
 
-Mirroring the identical fast-path in
+Mirroring the fast-path in
 [`derived-views`](../derived-views/server/internal/rebuild.ts): the trigger layer
-is a pure function of (schema, denylist, emitted DDL), so the compiled DDL is
-fingerprinted into `live_state_trigger_state` and **the rebuild is skipped
-entirely when the signature matches what is already live**. A steady-state restart
-— the overwhelming majority of boots, since any frontend-only commit leaves the
-trigger set untouched — takes **zero table locks**. The lock window only opens on
-a genuine schema/denylist change.
+is a pure function of (schema, denylist, routed layouts, emitted DDL), so its
+compiled DDL is fingerprinted into `live_state_trigger_state` — **one row per
+object**: a row per triggered table (the hash of its compiled statements) and one
+for the shared layer (the two notify functions and the changelog DDL, under the
+empty name). `planRebuild` compares each against the desired one and **rebuilds
+only what differs**. A steady-state restart — the overwhelming majority of boots,
+since any frontend-only commit leaves the trigger set untouched — takes **zero
+table locks**; a new table, a dropped exclusion or a route's changed layout locks
+exactly the tables whose triggers change. (The first design stored ONE
+whole-layer signature, so any one change rebuilt all ~200 tables, each taking an
+exclusive lock in turn during the hot swap — and routes change layouts far more
+often than the schema changes. A state table still in that one-row shape is
+replaced, which costs one rebuild of every table.)
 
-**The signature is never trusted alone.** `triggerLayerUpToDate` re-verifies from
-the catalog that the function, the changelog table, and every expected trigger
-physically exist, and that no `live_state_*` trigger lingers on an excluded table.
-Anything dropped out of band falls through to a real rebuild. (It reads only
-catalogs — no user-table locks, which is the whole point.)
+**A signature is never trusted alone.** `planRebuild` re-verifies from the catalog
+that both functions and the changelog exist, that each table's three triggers are
+physically present, and that no `live_state_*` trigger lingers on an excluded
+table. Anything dropped out of band is rebuilt. (It reads only catalogs — no
+user-table locks, which is the whole point.)
 
-The signature row lives in the DB so a worktree fork carries it with its triggers
-(`CREATE DATABASE … TEMPLATE` copies both), so a fork skips the rebuild too rather
-than paying a spurious first-boot one.
+The signature rows live in the DB so a worktree fork carries them with its
+triggers (`CREATE DATABASE … TEMPLATE` copies both), so a fork skips the rebuild
+too rather than paying a spurious first-boot one.
 
 ### The real rebuild: one transaction per relation (deadlock impossible)
 
@@ -55,34 +62,118 @@ is impossible, not retried** (there is no `lock_timeout`, no retry loop). A
 per-table tx can still *block* briefly on a live reader's `AccessShare` lock, but
 the old backend's reads are short (ms), so this is a wait, not a hang.
 
-The rebuild runs in three phases, each its own `db.transaction`:
+The tables it must skip beyond its own plumbing — derived-table rollups and
+`ExcludeFromChangeFeed` opt-outs — are contribution sets, so `rebuildTriggers(db,
+exclusions)` takes them as an argument (`TriggerExclusions`): the boot hook reads
+them (contributions are collected by then), and a suite on a throwaway database
+passes its own (`getContributions` throws in a process that never booted).
 
-1. **Prelude tx** — `ensureChangelogTable` + `CREATE OR REPLACE FUNCTION
-   live_state_notify`. The function must exist and be committed before any trigger
-   references it. Neither statement takes a user-table `AccessExclusive` lock.
-2. **Per-relation txs** — one transaction **per table**: for each desired table,
-   its full `DROP…IF EXISTS` + `CREATE` set for all three ops; for each stale
-   (now-excluded) table still carrying `live_state_*` triggers, just its drops.
-   Each touches exactly one table.
-3. **Signature-stamp tx** — `TRIGGER_STATE_DDL` + the signature upsert, **last**,
-   only after every per-relation tx commits.
+The rebuild runs in two phases, each step its own `db.transaction`:
+
+1. **Prelude tx** (only when the shared layer changed or lost an object) —
+   `ensureChangelogTable` + `CREATE OR REPLACE FUNCTION live_state_notify` /
+   `live_state_notify_routed` + the layer's signature. The functions must exist
+   and be committed before any trigger references them. None of it takes a
+   user-table lock, and `ensureChangelogTable` touches the changelog only for a
+   piece the catalog says is missing: every trigger on every table INSERTs into
+   the changelog, and `ALTER TABLE … ADD COLUMN IF NOT EXISTS` (ACCESS EXCLUSIVE)
+   or `CREATE INDEX IF NOT EXISTS` (SHARE) lock it even when there is nothing to
+   do — behind one open writing transaction, every writer in the database would
+   queue on that lock request.
+2. **Per-relation txs** — one transaction **per changed table**: its full
+   `DROP…IF EXISTS` + `CREATE` set for all three ops, plus the upsert of its own
+   signature row; for each stale (now-excluded) table still carrying
+   `live_state_*` triggers, just its drops and the deletion of its row. Each
+   touches exactly one table. Rows of tables that no longer exist are deleted
+   last (bookkeeping, no table lock).
 
 Three self-healing invariants make this safe:
 
 - **No object is ever half-built.** Each table's `DROP…IF EXISTS` + `CREATE` is in
   one tx, so the table always has a *complete* trigger set — old or new, never
-  none. The notify function is committed first, so old and new triggers both call
-  the current function. **No feed event is lost**: a write mid-rebuild fires
+  none. The notify functions are committed first, so old and new triggers both
+  call the current function. **No feed event is lost**: a write mid-rebuild fires
   whichever trigger version is installed, and both emit a compatible NOTIFY
   through the same committed function.
-- **"Done" is recorded last.** The signature is stamped only after all per-table
-  txs commit, and is trusted only alongside the catalog re-verify. A boot that
-  dies mid-loop never records a matching signature ⇒ the next boot re-runs the
-  full (idempotent, `DROP…IF EXISTS` + `CREATE`) rebuild ⇒ converges.
+- **A signature is exactly what is installed.** Each object's signature is
+  stamped IN the transaction that installs it, and is trusted only alongside the
+  catalog re-verify. A boot that dies anywhere leaves each object either rebuilt
+  and stamped, or untouched with its old stamp — the next boot rebuilds exactly
+  the rest, and a rolled-back deploy finds each table's stamp matching what is
+  really there.
 - **Partial state is "old-but-working," never "broken."** The only thing lost vs.
   one-big-tx is "all tables flip in the same instant," which nothing consumes
   (triggers are independent, all call the same function). Worst case is a loud
   error on a concurrent write, self-healed next boot — never silent corruption.
+
+## The routed trigger layout (P3)
+
+A table a compiled route reads gets a richer trigger than the PK-only feed
+(`research/2026-09-29-global-scoped-change-routing.md` P3). Its layout is
+DERIVED from the routes — server-core's `routedTableRequirements()`, read once in
+`onReadyBlocking` (resources register at module eval, deferred ones bind right
+after contributions are collected, both before this barrier) and handed to
+`rebuildTriggers(db, exclusions, requirements)`:
+
+- **carry** — every column a route maps through, filters by (`rows`) or lets a
+  tuple match on (`match`): a custom value's `row_key`, `data_view_id`,
+  `column_id`. The trigger emits them as `keys`, DISTINCT over the rows the
+  statement touched, row-wise (`{ "c": [columns], "r": [[values]] }`, so the
+  columns stay aligned); `parse-payload` turns that into the router's columnar
+  `TableChange.keys`.
+- **gate** — the columns an UPDATE compares old against new: the union of the
+  `columns` of every route that reads FEWER columns than the table has (the
+  requirement's `reads`, one set per route), on a single-column-PK table. Only
+  such a route can be skipped, so a column only whole-table readers read is
+  never compared (a `body_html` would be detoasted and compared on every
+  UPDATE to skip nothing). The events list's lookup reads `id, type, config,
+  enabled` of `event_sources`, which the sources collection lists whole; a
+  sources grouping's narrow route reads `status` too, so the gate is `config,
+  enabled, id, status, type`, and a run's `status` write leaves the lookup's
+  four columns `unchanged`, which skips it. An UPDATE
+  then sends `unchanged`, the gate columns whose value is EQUAL in every row
+  (old and new joined on the PK, compared as text — json has no equality). It
+  is a fact about the rows, whatever the gate: a column not compared is not
+  listed, so the router reads it as possibly changed — soundness never depends
+  on the gate. A PK that moved makes the pairing unknown: `unchanged` is NULL
+  (nothing known). `[]` means every compared column moved.
+- **old ∪ new** — the UPDATE trigger declares `OLD TABLE AS old_rows` too, so
+  `ids` and `keys` cover both sides: a key-changing UPDATE names its old host as
+  well as its new one. A DELETE's keys come from `old_rows`.
+- **over the cap** (a payload past 7000 bytes) `ids` and `keys` drop (FULL for
+  the readers, as before), while `unchanged` — column names, bounded by the
+  gate whatever the row count — stays, so a bulk write of a column no route reads still
+  reaches nothing. Only if the payload is still over the cap does it drop too.
+- The function is `live_state_notify_routed(pk, carry_json, gate_json)`, created
+  beside `live_state_notify()` in the prelude. **Every other table's trigger is
+  byte-identical to the PK-only feed's** — DDL (`compileTableTriggerDdl` with no
+  layout) and payload (`{t, op, ids, x, at}`), pinned by `routed-trigger.test.ts`.
+  A routed table's layout rides its trigger arguments, so a changed layout changes
+  that table's compiled statements and signature: that table alone is rebuilt.
+- **`live_state_changelog` gains `keys jsonb` and `unchanged text[]`** (created
+  with the table, and ALTERed into an older one once — only when the catalog
+  says they are missing), written by the routed function with the post-cap
+  values it NOTIFYs.
+- **A malformed layout routes unscoped, on both paths.** `readLayout`
+  (`parse-payload.ts`) is the one rule the listener and the L2 catch-up apply:
+  a `keys` or `unchanged` that does not parse makes the change unscoped (`ids`,
+  `keys`, `unchanged` all null — FULL for its readers) and is reported, never
+  dropped — the table and op are known, and a dropped change is stale data.
+- **The catch-up replays `unchanged` as written.** A catch-up follows a restart
+  that may have changed the routes, and that is fine: `unchanged` names only
+  columns KNOWN equal, whatever gate compared them, so a route reading a column
+  the old gate did not compare is still reached. `keys` replay as written too:
+  a column the old layout did not carry reads as unknown, which recomputes
+  rather than skips.
+- `resolveLayout` checks the requirement against the catalog: a carried or read
+  column the table does not have throws (boot fails loudly, never an unscoped
+  route).
+- **A3** (`internal/route-layout.ts`, after the rebuild, both paths): every routed
+  table's three installed triggers — read back from `pg_trigger.tgargs` — are the
+  routed function keyed on the table's own single-column PK ('' for a composite
+  one), carrying every required column. Anything else blocks boot. The gate is
+  not checked: whatever it holds, `unchanged` lists only columns it compared
+  and found equal, so a narrower gate only skips less.
 
 ## Boot-time reconciliation against consumers
 
@@ -94,28 +185,32 @@ contribution/registry sets:
 - **`warnOnCoverageGaps`** (`internal/triggers.ts`) — warns if any non-excluded
   public table is missing its `live_state_*` triggers (drift signal; should always
   be empty by construction).
-- **`assertScopePoliciesCovered`** (`internal/identity-coverage.ts`) — **throws
-  (blocks boot)** if any keyed live-state resource declares an `identityTable` on a
-  table the feed installed **no trigger** on. Scoped delivery fires only on
-  `origin === identityTable`, and only a triggered table ever produces that origin,
-  so such a policy is dead config that silently degrades the resource to
+- **`assertRouteTablesCovered`** (`internal/route-coverage.ts`, A1 of
+  `research/2026-09-29-global-scoped-change-routing.md`) — **throws (blocks
+  boot)** if any live-state resource depends on a table the feed installed **no
+  trigger** on: every route table of a ROUTED resource (`routes` / `reach` — it is
+  reached only through them, so an untriggered side table is as dead as an
+  untriggered base), and every legacy `identityTable` (scoped delivery fires only
+  on `origin === identityTable`). Only a triggered table ever produces either, so
+  such a declaration is dead config that silently degrades the resource to
   hydrate-on-mount. The single authoritative test is membership in
   `getCoveredTables()` (the set `rebuildTriggers` just installed) — which subsumes
-  the `ExcludeFromChangeFeed` case AND catches the other ways an `identityTable`
-  ends up untriggered: a **VIEW name** instead of its base table (the documented
-  resource-runtime footgun), a feed-exempt **derived-table rollup**, or a **typo /
-  dropped table**. A legitimate base table is in the covered set by construction,
-  so a miss is never a false positive. Each violation is classified (`excluded` /
-  `rollup` / `uncovered`) so the error carries the right remediation. It
-  cross-checks the resource-runtime's `scopedResourceIdentities()` (surfaced
-  through `server-core`) against `getCoveredTables()`, using `excludedTableNames()`
-  + `feedExemptTables()` only to label the reason. This catches hand-written AND
-  query-resource-compiled resources uniformly, because the check reads the
-  runtime's stored `identityTable` string, not source text. Fix: point the resource
-  at a real triggered base table (not a view/rollup), drop the exclusion, or
-  serve it from an endpoint read on open (like the Slow Ops pane's
-  `listSlowOps`) or refreshed by an in-process revision tick (like the Reports
-  DataView and its `reports.revision` tick).
+  the `ExcludeFromChangeFeed` case AND catches the other ways a table ends up
+  untriggered: a **VIEW name** instead of its base table (the documented
+  resource-runtime footgun; a routed compiler also refuses a view `from`), a
+  feed-exempt **derived-table rollup**, or a **typo / dropped table**. A
+  legitimate base table is in the covered set by construction, so a miss is never
+  a false positive. Each violation is classified (`excluded` / `rollup` /
+  `uncovered`) and names what declared the table (`identityTable` or
+  `route "<id>"`), so the error carries the right remediation. It cross-checks the
+  resource-runtime's `scopedResourceTables()` (surfaced through `server-core`)
+  against `getCoveredTables()`, using `excludedTableNames()` +
+  `feedExemptTables()` only to label the reason. This catches hand-written AND
+  compiled resources uniformly, because the check reads the runtime's stored
+  declarations, not source text. Fix: point the resource at a real triggered base
+  table (not a view/rollup), drop the exclusion, or serve it from an endpoint read
+  on open (like the Slow Ops pane's `listSlowOps`) or refreshed by an in-process
+  revision tick (like the Reports DataView and its `reports.revision` tick).
 
 ## The LISTEN connection
 
@@ -133,12 +228,49 @@ that replaced it or schedule a second reconnect.
 An established LISTEN with no call pending has nothing waiting for a reply, so a
 silent socket is still not detected; that needs a heartbeat.
 
+**One transaction's NOTIFYs route as one burst** (`burst.ts`). The listener buffers
+each parsed change and routes the buffer, in order, from one macrotask. A
+transaction writing N tables sends N NOTIFYs together at commit, but the socket may
+hand them over in several reads, and the runtime drains on the next microtask — so
+routing each one as it arrived could drain between two of them and ship that
+transaction's ack (`ackTx`) before its second change reached the tuple: an
+optimistic client confirms an op whose row it has not been sent yet, and flashes the
+old value. The guarantee is exactly the macrotask boundary — every NOTIFY already
+read off the socket by then; a burst split by a later read still routes in two
+flushes.
+
 Every routed change, including a reconnect sweep's, records a `route` profiler span
 labelled by the table (`route-span.ts`). Its duration is only the synchronous routing
 work. Two numbers ride along as measures: `ids` (how many changed ids) and
 `sinceChangeMs` (the trigger firing → routed). `sinceChangeMs` is a measure rather
 than the duration because it also counts how long the writing transaction stayed
 open.
+
+## One entry, two routers
+
+`routeChange` (`internal/route-change.ts`) is the single entry every change takes —
+the LISTEN consumer, the L2 catch-up replay and the reconnect `fullSweep`. It hands
+each change to BOTH of the runtime's routers, and each resource is served by exactly
+one of them:
+
+- `routeTableChange` — the ROUTED resources, whose compiler declared `routes`
+  (per-table host-id maps and a per-tuple read-set) or, for a non-keyed value,
+  `reach`: a side-table write costs O(changed) and reaches only the tuples whose
+  query reads that table. Every `serveCollection` resource (window, `:rows`,
+  `:groups`) is routed. A routed table's trigger carries its key layout and its
+  `unchanged` set (above), which `routeChange` hands on as `keys` / `unchanged`;
+  every other table's are `null` (unknown).
+- `applyDbChange` — every other resource, through the loader read-set inversion
+  (plus the view forwarding below it), which skips routed keys.
+
+`route-change.test.ts` drives the real `routeChange` into the real server-core
+runtime (a routed and a legacy entry on one table: each refilled exactly once,
+scoped, with the transaction's ack), and then the whole feed on a throwaway
+database — `rebuildTriggers` → a real `UPDATE` → the listener → `routeChange` → a
+delta on the wire. Without it, a `routeChange` that stopped calling a router would
+freeze every collection at its hydrated value with every other suite green.
+
+See `research/2026-09-29-global-scoped-change-routing.md`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -164,6 +296,7 @@ open.
     - `ExcludeFromChangeFeed`
     - `getCoveredTables`
     - `parseLiveStatePayload`
+    - `readLayout`
     - `rebuildTriggers`
     - `routeChange`
 - Cross-plugin:
@@ -178,7 +311,9 @@ open.
     - `reports`
 - Test helpers:
   - Server: `@plugins/database/plugins/change-feed/server/testing`
+    - `createChangeFeedListener`
     - `ensureChangelogTable`
+    - `rebuildTriggers`
 
 <!-- AUTOGENERATED:END -->
 

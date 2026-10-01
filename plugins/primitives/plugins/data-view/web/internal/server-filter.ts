@@ -97,6 +97,25 @@ export class UnavailableFilterRuleError extends Error {
   }
 }
 
+/**
+ * A saved sort rule a live source cannot run: its field's column is not one
+ * the collection declares sortable (or the field no longer exists). Sorting
+ * without it would silently show another order than the view says, so the
+ * query is refused instead — fetchPage's keyset drops such a rule instead.
+ */
+export class UnavailableSortRuleError extends Error {
+  override name = "UnavailableSortRuleError";
+  constructor(readonly fieldIds: readonly string[]) {
+    super(
+      `This view sorts by ${fieldIds
+        .map((f) => `"${f}"`)
+        .join(", ")}, which this list cannot sort by — remove ${
+        fieldIds.length === 1 ? "that rule" : "those rules"
+      } from the sort.`,
+    );
+  }
+}
+
 /** The server query's filter: the canonical tree, or why none can be sent. */
 export type ServerFilterResult =
   | { kind: "ok"; filter: Filter | undefined }

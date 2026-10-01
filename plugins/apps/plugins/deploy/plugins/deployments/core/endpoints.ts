@@ -1,12 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { ServerFilterWireSchema } from "@plugins/primitives/plugins/data-view/core";
-import {
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { DeploymentSchema } from "./schemas";
-import { DeployRunRecordSchema, DeployRunSchema } from "./runs";
+import { DeployRunSchema } from "./runs";
 
 /**
  * A hostname converge will render into a Caddy site block, so it is validated at
@@ -159,80 +154,4 @@ export const runDeployment = defineEndpoint({
   route: "POST /api/deploy/deployments/:id/run",
   body: RunDeploymentBodySchema,
   response: DeployRunSchema,
-});
-
-// Wire mirror of the data-view `SortRule`. data-view/core exports the TYPE but no
-// zod schema for it, so every server-delegated query body declares its own — the
-// `queryReleaseHistory` precedent does the same. (Hoisting one schema into
-// data-view/core would remove both copies; that is a change to the primitive,
-// not to this surface.)
-const SortRuleSchema = z.object({
-  fieldId: z.string(),
-  direction: z.enum(["asc", "desc"]),
-});
-
-/**
- * What the run-history server can filter on, by filter-language domain — the
- * ONE declaration both runtimes read: the web `dataSource.filterable` (so the
- * Filter control offers exactly these) and the server column map
- * (`bindColumns`) the handler strict-decodes against.
- */
-export const DEPLOY_RUN_FILTERABLE = {
-  verb: liveText(),
-  status: liveText(),
-  releaseRunId: liveText(),
-  commitSha: liveText(),
-  message: liveText(),
-  startedAt: liveInstant(),
-  finishedAt: liveInstant(),
-};
-
-/**
- * The text columns the search box matches: "which deploy shipped a1b2c3d" and
- * "which one printed that error" are the two things anyone reaches for.
- */
-export const DEPLOY_RUN_SEARCHABLE = [
-  "releaseRunId",
-  "commitSha",
-  "message",
-] as const;
-
-/**
- * The history query body. The deployment is the route param, not a field here —
- * a ledger window is always *of* one deployment, so there is no way to ask for
- * an unscoped one.
- */
-export const QueryDeployRunsBodySchema = z.object({
-  sort: z.array(SortRuleSchema),
-  // The DataView host's lowered, canonical filter (search folded in); decoded
-  // strictly against DEPLOY_RUN_FILTERABLE (+ custom columns).
-  filter: ServerFilterWireSchema.optional(),
-  cursor: z.string().nullable(),
-  limit: z.number().int().positive().max(200),
-  // The DataView surface id (its `storageKey`), injected by the DataView host
-  // and handed to `augmentServerQuery` so per-surface augmentations (custom
-  // columns) can bind their values into the query.
-  dataViewId: z.string(),
-});
-export type QueryDeployRunsBody = z.infer<typeof QueryDeployRunsBodySchema>;
-
-export const QueryDeployRunsResponseSchema = z.object({
-  items: z.array(DeployRunRecordSchema),
-  nextCursor: z.string().nullable(),
-  hasMore: z.boolean(),
-});
-
-/**
- * This deployment's run ledger, newest first — *what has been put on this box,
- * and what happened*, across backend restarts.
- *
- * POST so the structured filter tree rides in the body. Filter / sort /
- * search compile to SQL server-side and pagination is keyset (cursor), never
- * OFFSET, so the full history is browsable by infinite scroll with no cap — the
- * `queryReleaseHistory` shape, for the same reason: a deploy ledger only grows.
- */
-export const queryDeployRuns = defineEndpoint({
-  route: "POST /api/deploy/deployments/:id/runs/query",
-  body: QueryDeployRunsBodySchema,
-  response: QueryDeployRunsResponseSchema,
 });

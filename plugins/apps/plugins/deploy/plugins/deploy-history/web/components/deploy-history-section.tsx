@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -7,26 +7,30 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
-import {
   DataView,
   defineDataView,
+  liveDataSource,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  DEPLOY_RUN_FILTERABLE,
-  DEPLOY_RUN_SEARCHABLE,
-  deployRunsRevisionResource,
-  queryDeployRuns,
+  deployRunHistory,
   type DeployRunRecord,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { DeployRunItemActions } from "../slots";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+// It IS `deployRunHistory`'s column scope (asserted at mount): the surface
+// whose custom columns sort and filter the live window.
 const DEPLOY_HISTORY_VIEW = defineDataView("deploy.deployment.history");
+
+/**
+ * The live source. "Which deploy shipped a1b2c3d" and "which one printed that
+ * error" are the two things anyone reaches for, so the search box matches the
+ * release, the commit and the message.
+ */
+const deployHistorySource = liveDataSource(deployRunHistory, {
+  searchable: ["releaseRunId", "commitSha", "message"],
+});
 
 // The closed `deploy_runs.status` set, labelled for the enum filter chip and
 // group-by. `running` is a real, readable state here — a row whose backend went
@@ -96,12 +100,11 @@ function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
 
-// Static by construction: the rows are a server-paginated window, so nothing here
-// may be derived from what happens to be loaded. `duration` is the one derived
-// field and is deliberately neither sortable nor filterable — there is no
-// `duration` column for the server to compile those onto, and the query compiler
-// drops an unmapped rule fail-soft, which would read as a control that silently
-// does nothing.
+// Static by construction: the rows are a live window, so nothing here may be
+// derived from what happens to be loaded. `duration` is the one derived field
+// and is deliberately neither sortable nor filterable — there is no `duration`
+// column for the server to compile those onto (a live source offers a field only
+// where its id or `column` names one).
 const fields: FieldDef<DeployRunRecord>[] = [
   {
     id: "status",
@@ -203,30 +206,26 @@ const fields: FieldDef<DeployRunRecord>[] = [
  * the live view — and this is the record beside it. So the pane no longer has to
  * caveat that it forgets.
  *
- * Server-delegated and keyset-paginated (no cap, infinite scroll); the cheap
- * `deploy.runs-revision` scalar tick refreshes the loaded window in place when a
- * run opens or ends.
+ * A live window over the ledger (`deployRunHistory`), scoped to this
+ * deployment: a run opening, finishing or failing moves its row in place, and
+ * the scroll pages past one window with no cap.
  */
 export function DeployHistorySection({
   deploymentId,
 }: {
   deploymentId: string;
 }): ReactNode {
-  // The tick drives an in-place refetch of the loaded window; the keyset query is
-  // the source of truth. While pending, hand a null tick (no refetch) — the first
-  // settled `rev` then refreshes once.
-  const tick = useResource(deployRunsRevisionResource);
-  const changeTick = matchResource(tick, {
-    loading: () => null,
-    ready: (d) => d.rev,
-  });
+  // This deployment's runs: its scope, stated as data (never a filter the
+  // user's Filter control could name or widen).
+  const source = useMemo(
+    () => deployHistorySource.scoped({ where: { deploymentId } }),
+    [deploymentId],
+  );
 
   return (
     <DataView<DeployRunRecord>
       storageKey={DEPLOY_HISTORY_VIEW}
-      rows={[]}
       fields={fields}
-      rowKey={(r) => r.id}
       views={["list", "table"]}
       defaultView="list"
       viewOptions={{
@@ -234,13 +233,7 @@ export function DeployHistorySection({
       }}
       itemActions={DeployRunItemActions}
       emptyState={<>Nothing has been deployed from here yet.</>}
-      dataSource={{
-        changeTick,
-        filterable: DEPLOY_RUN_FILTERABLE,
-        searchable: DEPLOY_RUN_SEARCHABLE,
-        fetchPage: (args) =>
-          fetchEndpoint(queryDeployRuns, { id: deploymentId }, { body: args }),
-      }}
+      source={source}
     />
   );
 }

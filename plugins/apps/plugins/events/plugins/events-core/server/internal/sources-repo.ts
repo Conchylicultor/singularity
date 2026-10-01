@@ -200,7 +200,8 @@ export async function listRunEvents(
       action: _eventSourceRunEvents.action,
       // What the row opens when the event has no page of its own — joined here
       // so the client resolves it without a read of the sources window.
-      source: { type: _eventSources.type, config: _eventSources.config },
+      sourceType: _eventSources.type,
+      sourceConfig: _eventSources.config,
     })
     .from(_eventSourceRunEvents)
     .innerJoin(_events, eq(_events.id, _eventSourceRunEvents.eventId))

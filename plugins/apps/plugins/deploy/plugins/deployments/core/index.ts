@@ -8,20 +8,14 @@ export {
   updateDeployment,
   deleteDeployment,
   runDeployment,
-  queryDeployRuns,
-  DEPLOY_RUN_FILTERABLE,
-  DEPLOY_RUN_SEARCHABLE,
   CreateDeploymentBodySchema,
   UpdateDeploymentBodySchema,
   RunDeploymentBodySchema,
-  QueryDeployRunsBodySchema,
-  QueryDeployRunsResponseSchema,
 } from "./endpoints";
 export type {
   CreateDeploymentBody,
   UpdateDeploymentBody,
   RunDeploymentBody,
-  QueryDeployRunsBody,
 } from "./endpoints";
 export {
   DEPLOY_LOG_CHANNEL,
@@ -30,7 +24,7 @@ export {
   DeployVerbSchema,
   DeployPhaseSchema,
   deployRuns,
-  deployRunsRevisionResource,
+  deployRunHistory,
 } from "./runs";
 export type {
   DeployRun,

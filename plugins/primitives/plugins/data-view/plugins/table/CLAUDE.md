@@ -13,14 +13,23 @@ The host (`<DataView>`) already searches + sorts the rows it passes, so the tabl
 runs with `filter={undefined}` and only reflects/forwards sort state.
 
 `ViewState.sort` is a multi-level `SortRule[]`, but the `data-table` primitive is
-single-sort. `mapPrimary(rules)` maps the **primary** rule (`rules[0]`) onto
-data-table's single-column `SortState` indicator — so the header arrow shows on
-whichever column is sorted first; secondary rules paint no header arrow (the sort
-popover is the full multi-sort surface). A header click routes through
+single-sort. `mapPrimary(rules)` maps the **primary** rule of
+`props.sortHeader.active` (the view's ACTIVE sort — `state.sort` is emptied under
+a server-ordered source, whose rows arrive sorted) onto data-table's
+single-column `SortState` indicator — so the header arrow shows on whichever
+column is sorted first; secondary rules paint no header arrow (the sort popover
+is the full multi-sort surface). A header click routes through
 `props.setSort(columnId)` → the model's primary-rule cycle (asc → desc → drop the
 primary, or promote a new column to primary asc), **preserving secondary rules** —
-so a header click never wipes a multi-sort. The `data-table` primitive is
-load-bearing and stays untouched.
+so a header click never wipes a multi-sort.
+
+**A header sorts only on `props.sortHeader.sortable`** — the Sort control's
+sortable fields, passed per column as `ColumnDef.sortable` (data-table's
+additive flag; it defaults to "has a `value`" for its other consumers). A field
+showing a value is not necessarily one its list can order by: under a live
+source a derived or unsortable column's header would otherwise persist a rule
+the source refuses, replacing the list with its error. The host's `setSort`
+throws for a field outside the set. Pinned by `web/__tests__/header-sort.test.tsx`.
 
 The table has no leading slot: a field declaring `FieldDef.leading` is an
 ordinary column here (see `data-view/CLAUDE.md`, "Leading field").

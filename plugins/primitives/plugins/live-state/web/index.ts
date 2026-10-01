@@ -4,6 +4,7 @@ export {
   NotificationsProvider,
   ensureNotificationsClient,
   useResource,
+  useResources,
   useResourceAcks,
   hydrateResource,
   hydrateQuery,

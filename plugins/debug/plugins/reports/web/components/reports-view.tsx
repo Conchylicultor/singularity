@@ -50,7 +50,6 @@ export function ReportsView({
 
   return (
     <DataView<Report>
-      rows={[]}
       fields={fields}
       rowKey={(r) => r.id}
       views={["table", "list"]}

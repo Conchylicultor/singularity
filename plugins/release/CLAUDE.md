@@ -16,9 +16,9 @@ before first paint. This must live with the value's OWNER: it is read only by
 the Studio release pane, which is lazy-loaded, so nothing else guarantees eager
 registration and boot-snapshot would otherwise file a crash report every boot.
 (The composition-scoped history and its run detail flow through the
-`queryReleaseHistory` keyset endpoint, the `release.history-revision` tick and
-the `release.runs` lookup collection — one run by id — none of which is
-preloaded, so none needs eager registration.)
+`release.history` live collection — a namespace-scoped scroll window — and the
+`release.runs` lookup collection — one run by id — neither of which is
+preloaded, so neither needs eager registration.)
 
 ## How it works
 
@@ -224,9 +224,9 @@ exists.
 Owned here, not by deploy: the only deploy-specific input is the platform, so
 this adds no server-side edge from deploy toward release.
 
-A `dedupe: true` GET, **not** a live resource — a per-composition collection
-resource would be unbounded. Consumers refetch on the `release.history-revision`
-tick.
+A `dedupe: true` GET, **not** a live resource — its answer is a directory walk
+and git, not a table. Consumers refetch on the `release.history-revision` tick
+(its one remaining reader: remote-deploy's release info).
 
 ## `GET /api/release/latest?composition=<name>`
 
@@ -245,28 +245,34 @@ LIMIT 1`, exactly the `release_runs_ns_comp_started_idx` prefix.
 into `undefined`, indistinguishable from still-loading. Applies to any
 `implement()` handler whose absence is meaningful.
 
-**Never borrow `queryReleaseHistory` to fetch one row.** It is a
-server-delegated DataView source whose augmentors key off `dataViewId`; an
-invented surface id works only until an augmentor matches it.
+**Never borrow the history window to fetch one row.** `releaseHistory` is the
+Studio history DataView's live source, scoped to that surface's custom columns;
+the latest run is this endpoint, a run by id is `useLiveRow(releaseRuns, id)`.
 
-`internal/wire-columns.ts` is the one `release_runs` projection the three
-hand-written read paths (history query, candidate, latest run) select; add a
-column there, not per-site. The `releaseRuns` collection is not one of them:
-`serveCollection` projects exactly `ReleaseRunSchema`'s keys, so a new column
-reaches it through the schema.
+`internal/wire-columns.ts` is the one `release_runs` projection the two
+hand-written read paths (candidate, latest run) select; add a column there, not
+per-site. The collections are not among them: `serveCollection` projects exactly
+`ReleaseRunSchema`'s keys, so a new column reaches them through the schema.
 
 ## Public surface (for the Studio UI)
 
 - `@plugins/release/core` — `RELEASE_TARGETS`, `releaseTargetById`,
   `RELEASE_LOG_CHANNEL` (`"release"`), the endpoints
   (`triggerReleaseEndpoint`, `previewEndpoint`, `stopPreviewEndpoint`,
-  `releaseLogsEndpoint`, `queryReleaseHistory` — the composition-scoped
-  keyset history query), and the resources/schemas:
+  `releaseLogsEndpoint`), and the resources/schemas:
   - `ReleaseRun`, `releaseRuns` — a lookup-only `liveCollection`
     (`release.runs:rows`) served from `_releaseRuns`, read one run at a time
-    with `useLiveRow(releaseRuns, runId)` (`found: false` = no such run).
-    Plural so a composition-scoped window can later join the same declaration.
-  - `releaseRunsRevisionResource` — the history invalidation tick.
+    with `useLiveRow(releaseRuns, runId)` (`found: false` = no such run). Any
+    namespace's run resolves by id.
+  - `releaseHistory` — `release.history`, this namespace's runs (a base
+    `where` on `namespace`, read at bind) as a `scroll: true` window: the Studio
+    history DataView's live source, scoped per composition by the pane. Its
+    `columnScope` is that surface (`studio.release.history`), so the surface's
+    custom columns sort and filter it server-side
+    (research/2026-09-29-global-scoped-change-routing.md P3). It replaced the
+    `queryReleaseHistory` keyset endpoint.
+  - `releaseRunsRevisionResource` — a scalar invalidation tick; its one reader
+    is remote-deploy's release info (the candidate refetch).
   - `releasePreviews` / `Preview` — the live preview map, read with
     `useLive(releasePreviews)`.
 
@@ -397,6 +403,9 @@ remote is built here.
 - Server:
   - Contributes:
     - `resource.declare` "release.runs:rows"
+    - `resource.declare` "release.history"
+    - `resource.declare` "release.history:rows"
+    - `resource.declare` "release.history:groups"
     - `resource.declare` "release.history-revision"
     - `resource.declare` "release.previews"
   - Uses:
@@ -414,14 +423,6 @@ remote is built here.
     - `infra/paths.worktreeArtifacts`
     - `network/live.serveCollection`
     - `network/live.serveValue`
-    - `primitives/data-view/server-query.augmentServerQuery`
-    - `primitives/data-view/server-query.bindColumns`
-    - `primitives/data-view/server-query.compileWhere`
-    - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/keyset.buildSortKeys`
-    - `primitives/keyset.keyValuesOf`
-    - `primitives/keyset.orderByClauses`
-    - `primitives/keyset.seekPredicate`
     - `primitives/log-channels.defineLogSink`
     - `release/bundles.compareToHead`
     - `release/bundles.newReleaseRunId`
@@ -439,7 +440,10 @@ remote is built here.
     - `Release`
   - Register: `defineSupervisedJob('release.run.supervised')`
   - Resources:
+    - `release.history` (keyed, window)
     - `release.history-revision` (push)
+    - `release.history:groups` (push)
+    - `release.history:rows` (keyed, point)
     - `release.previews` (push)
     - `release.runs:rows` (keyed, point)
   - Routes:
@@ -449,7 +453,6 @@ remote is built here.
     - `POST /api/release/runs/:id/preview`
     - `POST /api/release/runs/:id/preview/stop`
     - `GET /api/release/runs/:id/logs`
-    - `POST /api/release/history/query`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -457,14 +460,12 @@ remote is built here.
     - `network/live.liveValue`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveText`
-    - `primitives/data-view.ServerFilterWireSchema`
     - `primitives/live-state.resourceDescriptor`
     - `release/bundles.ReleaseManifestSchema`
   - Exports (types):
     - `PlatformTag`
     - `PlatformTagResult`
     - `Preview`
-    - `QueryReleaseHistoryBody`
     - `ReleaseCandidateResponse`
     - `ReleaseIntent`
     - `ReleaseLatestRunResponse`
@@ -485,15 +486,11 @@ remote is built here.
     - `PlatformTagSchema`
     - `previewEndpoint`
     - `PreviewSchema`
-    - `queryReleaseHistory`
-    - `QueryReleaseHistoryBodySchema`
-    - `QueryReleaseHistoryResponseSchema`
-    - `RELEASE_HISTORY_FILTERABLE`
-    - `RELEASE_HISTORY_SEARCHABLE`
     - `RELEASE_LOG_CHANNEL`
     - `RELEASE_TARGETS`
     - `releaseCandidateEndpoint`
     - `ReleaseCandidateResponseSchema`
+    - `releaseHistory`
     - `ReleaseIntentSchema`
     - `releaseLatestRunEndpoint`
     - `ReleaseLatestRunResponseSchema`
@@ -504,7 +501,6 @@ remote is built here.
     - `ReleaseRunSchema`
     - `releaseRunsRevisionResource`
     - `releaseTargetById`
-    - `SortRuleSchema`
     - `STAGED_INTENT`
     - `StalenessSchema`
     - `stopPreviewEndpoint`

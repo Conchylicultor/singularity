@@ -170,7 +170,6 @@ export function RunsDataView({
   return (
     <DataView<UnionRun>
       storageKey={RUNS_VIEW}
-      rows={[]}
       fields={fields}
       fieldExtensions={Runs.Fields}
       rowKey={runRowKey}

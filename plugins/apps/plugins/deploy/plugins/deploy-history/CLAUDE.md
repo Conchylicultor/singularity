@@ -4,11 +4,17 @@
 [`research/2026-08-05-global-deploy-pane-test-locally-and-one-button-deploy.md`](../../../../../../research/2026-08-05-global-deploy-pane-test-locally-and-one-button-deploy.md)
 (Phase C).
 
-One contribution: `DeploymentDetail.Section` "History", a server-delegated
-`DataView` over `POST /api/deploy/deployments/:id/runs/query`. It owns no state
-and no writes — the ledger is the [`deployments`](../deployments/CLAUDE.md)
-sibling's `deploy_runs` table, written by the same two functions that write the
-live `deploy.runs` map.
+One contribution: `DeploymentDetail.Section` "History", a live `DataView` over
+`deployRunHistory` (`source={deployHistorySource.scoped({ where: { deploymentId }
+})}` — the deployment is the scope, stated as data). It owns no state and no
+writes — the ledger is the [`deployments`](../deployments/CLAUDE.md) sibling's
+`deploy_runs` table, written by the same two functions that write the live
+`deploy.runs` map. A run opening, finishing or failing reaches its row through
+the routed runtime: no revision tick, no refetch, and the history pages past one
+window with no cap. The surface's custom columns sort and filter it server-side
+(`deployRunHistory.columnScope` IS this DataView's id, asserted at mount);
+`e2e/history-live-verify.ts` drives a custom value through the API and watches
+the row drop out, come back and move, and a status flip land, without a reload.
 
 ## What this section is for
 
@@ -59,13 +65,12 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
 
 ## Plugin reference
 
-- Description: History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a server-delegated, keyset-paginated DataView — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
+- Description: History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
 - Web:
   - Slots: `DeployRunItemActions` ← `apps.deploy.deploy-history.investigate-failure`
   - Contributes: `DeploymentDetail.Section` "History" → `DeployHistorySection`
   - Uses:
     - `apps/deploy/deployments.DeploymentDetail`
-    - `infra/endpoints.fetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
@@ -76,8 +81,7 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineItemActions`
     - `primitives/data-view.FieldDef`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
+    - `primitives/data-view.liveDataSource`
     - `primitives/relative-time.RelativeTime`
   - Exports (values): `DeployRunItemActions`
 - Cross-plugin:

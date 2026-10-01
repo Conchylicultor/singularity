@@ -2,8 +2,8 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   setLiveStateSnapshotHooks,
   boundedMembershipKeys,
+  seedReadSetIndex,
 } from "@plugins/framework/plugins/server-core/core";
-import { seedReadSetIndex } from "@plugins/infra/plugins/runtime-profiler/core";
 import { ensureSnapshotTable } from "./tables-ddl";
 import {
   shouldPersist,

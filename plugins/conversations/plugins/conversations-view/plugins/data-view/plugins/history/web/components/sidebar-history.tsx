@@ -84,7 +84,6 @@ export function HistorySource({
   return (
     <CloseConversationContext.Provider value={onCloseConversation}>
       {render<Conversation>({
-        rows: [],
         fields: conversationFieldDefs,
         rowKey: (c) => c.id,
         selectedRowId: activeId ?? undefined,

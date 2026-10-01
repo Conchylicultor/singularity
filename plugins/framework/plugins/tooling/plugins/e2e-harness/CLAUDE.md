@@ -172,7 +172,15 @@ predicate the harness keeps internal so no script gains an origin string).
 
 **Do not run two e2e scripts concurrently.** Revert-all is what lets a run repair
 one it did not launch; the price is that one script's end-revert would restore
-another's in-flight writes.
+another's in-flight writes. The same start-of-run repair means **config writes
+belong INSIDE the `withBrowser` callback**: a write made before it opened reads
+as one "left by a previous run" and is reverted before the page loads.
+
+**Rows a script seeds** are not config, so nothing reverts them: `openDeployDb()`
+(`e2e/deploy-db.ts`) opens a `pg.Pool` on the target deploy's database —
+refusing main, whose database is the user's — and the script deletes what it
+seeded itself (`onBeforeFinish`, with a run-unique id prefix and a sweep of a
+killed run's leftovers first).
 
 ## Chromium arrives on demand
 
@@ -274,6 +282,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/chord/piano`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deploy-history/investigate-failure`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
@@ -299,6 +308,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/sonata/progress/loop`
     - `apps/sonata/track-mixer`
     - `apps/sonata/view-options`
+    - `apps/studio/compositions/release`
     - `apps/website/improve`
     - `apps/website/shell`
     - `build`
@@ -354,6 +364,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `primitives/css/space-ramp`
     - `primitives/css/ui-kit`
     - `primitives/data-view`
+    - `primitives/data-view/custom-columns`
     - `primitives/data-view/list`
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`

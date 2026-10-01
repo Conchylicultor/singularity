@@ -5,7 +5,6 @@ export { EventSources } from "./slots";
 export {
   useEventSources,
   useEventSourceRow,
-  useEventsRevision,
   useEventSourceRuns,
   useEventSourceRun,
   useRunEvents,
@@ -19,7 +18,7 @@ export { useEventSourceOrigin } from "./internal/source-origin";
 
 export default {
   description:
-    "Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations.",
+    "Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / run-ledger hooks and the source-CRUD mutations.",
   contributions: [],
   slots: EventSources,
 } satisfies PluginDefinition;

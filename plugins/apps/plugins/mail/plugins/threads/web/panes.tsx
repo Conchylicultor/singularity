@@ -1,8 +1,4 @@
-import { type ReactElement } from "react";
-import {
-  useResource,
-  matchResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useMemo, type ReactElement } from "react";
 import {
   Pane,
   PaneChrome,
@@ -13,17 +9,17 @@ import {
   DataView,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { GmailAccessEmptyState } from "@plugins/integrations/plugins/gmail/web";
 import { threadPane } from "@plugins/apps/plugins/mail/plugins/reading-pane/web";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
-import type { MailThread } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import {
-  MAIL_THREAD_FILTERABLE,
-  MAIL_THREAD_SEARCHABLE,
-  mailThreadsRevisionResource,
-  queryThreads,
-} from "../core";
+  mailAccount,
+  type MailThread,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { useMailThreadFieldDefs } from "./internal/fields";
+import { mailThreadsSource } from "./internal/source";
 import { ThreadRow } from "./components/thread-row";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -40,8 +36,9 @@ const MAIL_THREADS_VIEW = defineDataView("mail-threads");
  * ordinary `filter` — so switching mailbox is switching tab, and the scope is an
  * editable chip in the Filter pill that the user owns. There is no route param
  * and no server-derived scope: the active view's tree travels the standard
- * `filter` → `FilterGroup` → `compileWhere` path like every other rule, and an
- * edit persists straight back into the config row.
+ * filter → live window path like every other rule (the scope of each window
+ * tuple is the connected account's id, stated as data), and an edit persists
+ * straight back into the config row.
  */
 export const mailThreadsPane = Pane.define({
   title: "Mail",
@@ -52,66 +49,79 @@ export const mailThreadsPane = Pane.define({
 });
 
 function MailThreadsPaneView(): ReactElement {
-  // The cheap scalar tick drives an in-place refetch of the loaded window; the
-  // paginated SQL query is the source of truth. While pending, hand a null tick
-  // (no refetch) — the first settled `rev` then refreshes once.
-  const tick = useResource(mailThreadsRevisionResource);
+  // The list is the connected account's threads: its id scopes the live source.
+  // Not known yet is the list's own loading state (its toolbar already up),
+  // never an empty list; a failed read is its error; no account yet is the
+  // not-connected state.
+  const account = useLive(mailAccount);
+  return (
+    <PaneChrome pane={mailThreadsPane}>
+      {matchResource(account, {
+        loading: () => <MailThreadsList accountId={null} />,
+        ready: (data) =>
+          data === null ? (
+            // No account row yet: Gmail is not usable (the integration names
+            // what is missing and renders its fix), or it is and the first
+            // sync has not created the account.
+            <GmailAccessEmptyState whenReady="Gmail is connected — your mailbox appears here once its first sync has run." />
+          ) : (
+            <MailThreadsList accountId={data.id} />
+          ),
+      })}
+    </PaneChrome>
+  );
+}
+
+function MailThreadsList({
+  accountId,
+}: {
+  /** `null`: the account is still loading — the source awaits its scope. */
+  accountId: string | null;
+}): ReactElement {
   const openPane = useOpenPane();
   const fields = useMailThreadFieldDefs();
-  const changeTick = matchResource(tick, {
-    loading: () => null,
-    ready: (d) => d.rev,
-  });
+  // The account is the scope every tuple carries — data, not a server-side
+  // subquery. The DataView never offers a scope column to the Filter control,
+  // so the user can neither name nor widen it.
+  const source = useMemo(
+    () =>
+      accountId === null
+        ? mailThreadsSource.awaitingScope(["accountId"])
+        : mailThreadsSource.scoped({ where: { accountId } }),
+    [accountId],
+  );
 
   // The open thread, straight off the reading pane's own route param — so the
   // list highlights the row the user is reading without holding selection state.
   const selectedRowId = threadPane.useRouteEntry()?.params.threadId;
 
   return (
-    <PaneChrome pane={mailThreadsPane}>
-      <DataView<MailThread>
-        storageKey={MAIL_THREADS_VIEW}
-        rows={[]}
-        fields={fields}
-        rowKey={(t) => t.id}
-        views={["list"]}
-        selectedRowId={selectedRowId}
-        viewOptions={{
-          list: {
-            size: "md",
-            leading: (t: MailThread) =>
-              t.starred ? (
-                <Icon
-                  icon={starIcon}
-                  active
-                  className="icon-auto text-warning"
-                />
-              ) : (
-                <Icon
-                  icon={starIcon}
-                  className="icon-auto text-muted-foreground"
-                />
-              ),
-            renderRow: (t: MailThread) => <ThreadRow thread={t} />,
-          },
-        }}
-        dataSource={{
-          changeTick,
-          filterable: MAIL_THREAD_FILTERABLE,
-          searchable: MAIL_THREAD_SEARCHABLE,
-          // Only the declared body fields — `args` also carries `dataViewId`,
-          // which this endpoint has no use for.
-          fetchPage: ({ sort, filter, cursor, limit }) =>
-            fetchEndpoint(
-              queryThreads,
-              {},
-              { body: { sort, filter, cursor, limit } },
+    <DataView<MailThread>
+      storageKey={MAIL_THREADS_VIEW}
+      fields={fields}
+      views={["list"]}
+      selectedRowId={selectedRowId}
+      // Said once the window settled on no thread — never while it loads.
+      emptyState="No conversations"
+      viewOptions={{
+        list: {
+          size: "md",
+          leading: (t: MailThread) =>
+            t.starred ? (
+              <Icon icon={starIcon} active className="icon-auto text-warning" />
+            ) : (
+              <Icon
+                icon={starIcon}
+                className="icon-auto text-muted-foreground"
+              />
             ),
-        }}
-        onRowActivate={(t) =>
-          openPane(threadPane, { threadId: t.id }, { mode: "push" })
-        }
-      />
-    </PaneChrome>
+          renderRow: (t: MailThread) => <ThreadRow thread={t} />,
+        },
+      }}
+      source={source}
+      onRowActivate={(t) =>
+        openPane(threadPane, { threadId: t.id }, { mode: "push" })
+      }
+    />
   );
 }

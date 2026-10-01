@@ -7,6 +7,11 @@ export default {
   description:
     "Number field type: server text→typed SQL cast capability — presents the raw TEXT storage column as ::numeric for server-delegated DataView filter/sort.",
   contributions: [
-    Fields.ValueTextCast({ type: numberFieldType, cast, domain: "number" }),
+    Fields.ValueTextCast({
+      type: numberFieldType,
+      cast,
+      domain: "number",
+      sqlType: "numeric",
+    }),
   ],
 } satisfies ServerPluginDefinition;

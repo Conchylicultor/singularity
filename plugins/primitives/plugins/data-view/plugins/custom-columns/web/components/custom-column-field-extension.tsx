@@ -16,6 +16,8 @@ import type {
   FieldDef,
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/core";
+import { scopedLiveColumns } from "@plugins/network/plugins/live/core";
+import { CUSTOM_COLUMNS_SET } from "../../core";
 import { useCustomColumnDefs } from "../internal/use-custom-column-defs";
 import {
   useCustomColumnValues,
@@ -36,6 +38,7 @@ import {
 export function CustomColumnFieldExtension({
   storageKey,
   rowKey,
+  liveColumnScope,
   render,
 }: FieldExtensionProps<unknown>): ReactNode {
   const descriptor = getDataViewDescriptor(storageKey);
@@ -49,6 +52,7 @@ export function CustomColumnFieldExtension({
       descriptor={descriptor}
       storageKey={storageKey}
       rowKey={rowKey}
+      liveColumnScope={liveColumnScope}
       render={render}
     />
   );
@@ -68,11 +72,13 @@ function Inner({
   descriptor,
   storageKey,
   rowKey,
+  liveColumnScope,
   render,
 }: {
   descriptor: ConfigDescriptor<FieldsRecord>;
   storageKey: DataViewId;
   rowKey: (row: unknown, index: number) => string;
+  liveColumnScope: string | null;
   render: (fields: FieldDef<unknown>[]) => ReactNode;
 }): ReactNode {
   const { defs } = useCustomColumnDefs(descriptor, storageKey);
@@ -98,77 +104,108 @@ function Inner({
     [values],
   );
 
-  const fields = useMemo(
-    () =>
-      defs.map((def): FieldDef<unknown> => {
-        // Native↔text codec round-trips the typed cell value through the generic
-        // `TEXT` storage column; string types (text/enum) resolve IDENTITY_CODEC.
-        const codec = resolveCodec(def.type);
-        // Capability-derived flags — NO type-name literals. A type is filterable
-        // when it resolves a non-empty filter operator set; sortable when some
-        // type in its `extends` chain declares a `coerce` (the sortable scalar
-        // projection). Hardcoding `true` would show an empty filter UI for types
-        // (e.g. avatar) with no filter operators / no coerce.
-        const filterable = (resolveOps(def.type)?.operators.length ?? 0) > 0;
-        const sortable = resolveTypeChain(def.type, identities).some(
-          (id) => identities.get(id)?.coerce != null,
-        );
-        return {
-          // The type's own projection of its opaque config onto GENERIC FieldDef
-          // keys (enum's `config.options` → `options`), so downstream consumers
-          // read one contract and never crack open `config` themselves. Spread
-          // FIRST: a derivation contributes vocabulary, never identity/storage.
-          ...deriveFromConfig(def.type, def.config),
-          id: def.id,
-          label: def.label,
-          // NOT a literal — the field-type registry is the extension seam; the
-          // type is dispatched through the generic cell/editor/filter slots.
-          type: def.type,
-          // While the values are still loading a cell reads as unset (the
-          // codec's decode of `undefined`) — deliberately: abstaining (no
-          // fields) would drop the columns and leave a view's filter rule on
-          // one dangling, which `lowerFilterGroup` lowers to TRUE (every row).
-          // Same choice, same reason, as the pages `starred` field. A failed
-          // read keeps the last values seen; with none, `readError` below makes
-          // every cell show the failure instead.
-          value: (row) => {
-            const index = foldResource(values, {
-              loading: () => undefined,
-              error: (_error, stale) => stale,
-              ready: (data) => data,
-            });
-            return codec.decode(
-              index?.get(rowKeyRef.current(row, 0))?.get(def.id),
-            );
+  const fields = useMemo(() => {
+    // Capability-derived flags — NO type-name literals. A type is filterable
+    // when it resolves a non-empty filter operator set (in that set's domain);
+    // sortable when some type in its `extends` chain declares a `coerce` (the
+    // sortable scalar projection). Hardcoding `true` would show an empty filter
+    // UI for types (e.g. avatar) with no filter operators / no coerce.
+    const capabilities = new Map(
+      defs.map((def) => {
+        const ops = resolveOps(def.type);
+        return [
+          def.id,
+          {
+            domain:
+              ops !== undefined && ops.operators.length > 0 ? ops.domain : null,
+            sortable: resolveTypeChain(def.type, identities).some(
+              (id) => identities.get(id)?.coerce != null,
+            ),
           },
-          onEdit: (row, next) =>
-            setValue({
-              dataViewId: storageKey,
-              rowKey: rowKeyRef.current(row, 0),
-              columnId: def.id,
-              value: codec.encode(next),
-            }),
-          // Opaque per-type config (e.g. enum options); understood only by the
-          // field type's own code, passed through untouched.
-          config: def.config,
-          sortable,
-          filterable,
-          ...(readError === undefined ? {} : { readError }),
-        };
+        ] as const;
       }),
-    [
-      defs,
-      values,
-      readError,
-      setValue,
-      storageKey,
-      rowKeyRef,
-      resolveCodec,
-      resolveOps,
-      deriveFromConfig,
-      identities,
-    ],
-  );
+    );
+    // Under a live source whose collection takes this surface's scoped
+    // columns, each column sorts and filters server-side as a member of the
+    // `custom` set (`custom.<id>`), declared as the definitions stand now; the
+    // server decodes it against ITS definitions.
+    const scoped =
+      liveColumnScope === null
+        ? null
+        : scopedLiveColumns(
+            liveColumnScope,
+            CUSTOM_COLUMNS_SET,
+            Object.fromEntries(
+              [...capabilities].filter(
+                ([, c]) => c.domain !== null || c.sortable,
+              ),
+            ),
+          );
+    return defs.map((def): FieldDef<unknown> => {
+      // Native↔text codec round-trips the typed cell value through the generic
+      // `TEXT` storage column; string types (text/enum) resolve IDENTITY_CODEC.
+      const codec = resolveCodec(def.type);
+      const { domain, sortable } = capabilities.get(def.id)!;
+      const filterable = domain !== null;
+      return {
+        // The type's own projection of its opaque config onto GENERIC FieldDef
+        // keys (enum's `config.options` → `options`), so downstream consumers
+        // read one contract and never crack open `config` themselves. Spread
+        // FIRST: a derivation contributes vocabulary, never identity/storage.
+        ...deriveFromConfig(def.type, def.config),
+        id: def.id,
+        label: def.label,
+        // NOT a literal — the field-type registry is the extension seam; the
+        // type is dispatched through the generic cell/editor/filter slots.
+        type: def.type,
+        // While the values are still loading a cell reads as unset (the
+        // codec's decode of `undefined`) — deliberately: abstaining (no
+        // fields) would drop the columns and leave a view's filter rule on
+        // one dangling, which `lowerFilterGroup` lowers to TRUE (every row).
+        // Same choice, same reason, as the pages `starred` field. A failed
+        // read keeps the last values seen; with none, `readError` below makes
+        // every cell show the failure instead.
+        value: (row) => {
+          const index = foldResource(values, {
+            loading: () => undefined,
+            error: (_error, stale) => stale,
+            ready: (data) => data,
+          });
+          return codec.decode(
+            index?.get(rowKeyRef.current(row, 0))?.get(def.id),
+          );
+        },
+        onEdit: (row, next) =>
+          setValue({
+            dataViewId: storageKey,
+            rowKey: rowKeyRef.current(row, 0),
+            columnId: def.id,
+            value: codec.encode(next),
+          }),
+        // Opaque per-type config (e.g. enum options); understood only by the
+        // field type's own code, passed through untouched.
+        config: def.config,
+        sortable,
+        filterable,
+        ...(scoped !== null && (filterable || sortable)
+          ? { column: scoped.column(def.id) }
+          : {}),
+        ...(readError === undefined ? {} : { readError }),
+      };
+    });
+  }, [
+    defs,
+    values,
+    readError,
+    setValue,
+    storageKey,
+    rowKeyRef,
+    resolveCodec,
+    resolveOps,
+    deriveFromConfig,
+    identities,
+    liveColumnScope,
+  ]);
 
   return <>{render(fields)}</>;
 }

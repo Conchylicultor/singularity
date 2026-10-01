@@ -90,6 +90,9 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
     - `apps/events/events-core`
     - `apps/mail/reading-pane`
     - `apps/mail/threads`
+    - `apps/sonata/library`
+    - `apps/sonata/playback-history`
+    - `apps/sonata/sources/midi`
     - `conversations/all-conversations`
     - `conversations/summary`
     - `debug/profiling/op-log/op-store`

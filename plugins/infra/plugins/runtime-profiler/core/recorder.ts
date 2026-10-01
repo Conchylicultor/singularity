@@ -437,10 +437,10 @@ export interface EntryContext {
   childUnion: Track;
   /**
    * The set of DB tables this entry read, lazily created on first
-   * `recordReadTables` (unlike the tracks, which are always allocated).
-   * Materialized into `readSetIndex` by `recordEntrySpan` for loader entries
-   * only, so the many non-loader entries that never read tables don't allocate
-   * a Set.
+   * `recordReadTables` (unlike the tracks, which are always allocated). Handed
+   * to the installed loader read-set sink by `recordEntrySpan` for loader
+   * entries only, so the many non-loader entries that never read tables don't
+   * allocate a Set.
    */
   tables?: Set<string>;
 }
@@ -729,31 +729,24 @@ const slowest: Record<SpanKind, SlowSpan[]> = {
 
 let sinceMs = now();
 
-// Automatic loader→table read-set index: each loader entry's captured `tables`
-// set is unioned in here under its `label` (which, for loader entries, IS the
-// resource key) when the entry finishes. Built up via `recordReadTables` mid-load
-// and flushed in `recordEntrySpan`'s finally; surfaced by `getReadSetIndex`.
-//
-// This index is APPEND-ONLY (union): it never sheds a table once captured. That
-// makes it a safe over-approximation for live change-feed routing (`applyDbChange`
-// inverts it table→resource — a stale extra edge only over-recomputes, never
-// misses), which is exactly why it stays union: shedding a table a loader reads
-// only for SOME data (a data-dependent conditional query) would drop a real live
-// dependency. The self-healing counterpart is `lastLoaderReadSet` below, used only
-// on the durable/persisted seam where under-approximation is corrected by the
-// sub-ack re-load. See research/2026-07-07-global-read-set-self-heal-on-full-recompute.md.
-const readSetIndex = new Map<string, Set<string>>();
+// Loader → table read-set sink. Each loader entry's captured `tables` (built up
+// via `recordReadTables` mid-load) is handed to it once, when the entry finishes.
+// The index it feeds is ROUTING state owned by the resource runtime
+// (server-core's read-set) — not profile data: it survives
+// `resetRuntimeProfile`, and it is fed whatever the SINGULARITY_PROFILING
+// kill-switch says, because live-state routing depends on it. This module only
+// owns the capture scope (the ambient loader entry). The server installs the
+// sink at boot (install.ts); none installed (the web, a bare test) = nothing
+// captured. See research/2026-09-29-global-scoped-change-routing.md (P0).
+export type LoaderReadSetSink = (
+  label: string,
+  tables: ReadonlySet<string>,
+) => void;
+let loaderReadSetSink: LoaderReadSetSink | null = null;
 
-// Per-loader PER-RUN read-set: the exact tables the MOST RECENT completed loader
-// run for a key read (overwritten each run, NOT unioned). Where `readSetIndex`
-// answers "every table this loader has EVER read", this answers "every table this
-// loader read on its LAST run" — the authoritative, self-healing capture the
-// resource runtime persists after a FULL recompute so a dependency dropped by a
-// code change (or a historical mis-attribution) is shed from the durable
-// `tables_read` column instead of carried forever. Only written for loader entries
-// that actually read ≥1 table (same gate as `readSetIndex`), so a run that reads
-// nothing leaves the prior capture intact (never replaces a real set with empty).
-const lastLoaderReadSet = new Map<string, Set<string>>();
+export function installLoaderReadSetSink(sink: LoaderReadSetSink): void {
+  loaderReadSetSink = sink;
+}
 
 function parentKey(parent: SpanRef): string {
   return `${parent.kind}:${parent.label}`;
@@ -1346,10 +1339,14 @@ export function chargeWait(layer: string, ms: number): void {
  * pool wrapper calls this with the tables a loader query touched (extracted from
  * the compiled SQL) while the loader's ambient context is still active. The names
  * accumulate on `cur.tables` (lazily created — read-set only applies to entries
- * that actually query) and are flushed into `readSetIndex` by `recordEntrySpan`
- * when the loader entry finishes. If no entry is active, do nothing: a read-set
- * only makes sense inside an entry. Read+charge synchronously, before any await,
- * so the ambient context is still active.
+ * that actually query) and are handed to the loader read-set sink by
+ * `recordEntrySpan` when the loader entry finishes. If no entry is active, do
+ * nothing: a read-set only makes sense inside an entry. Read+charge
+ * synchronously, before any await, so the ambient context is still active.
+ *
+ * NOT gated on the SINGULARITY_PROFILING kill-switch: the read-set is routing
+ * state (see `installLoaderReadSetSink`), and a kill-switched profiler must not
+ * silently stop live-state routing.
  *
  * Honors `runWithoutProfiling` suppression for the same reason `record` does:
  * the observability subsystem (reports, slow-ops) issues its own DB writes
@@ -1362,13 +1359,12 @@ export function chargeWait(layer: string, ms: number): void {
  * `recordEntrySpan`'s child-propagation loop: a detached/fire-and-forget
  * continuation still carries its originating loader's `EntryContext` via the
  * ambient runtime after `recordEntrySpan`'s `finally` has closed the entry and
- * flushed `ctx.tables` into `readSetIndex`. An append to a finished context's
+ * flushed `ctx.tables` to the sink. An append to a finished context's
  * `tables` would be silently lost (the entry flushes exactly once), so making
  * it a structural no-op keeps capture correctness from silently depending on
  * every loader DB read completing before the loader's own return chain settles.
  */
 export function recordReadTables(tables: readonly string[]): void {
-  if (process.env.SINGULARITY_PROFILING === "0") return;
   if (suppressionRuntime.suppressed()) return;
   const cur = contextRuntime.current();
   if (cur && !cur.closed) {
@@ -1586,21 +1582,12 @@ export async function recordEntrySpan<T>(
       waitBands,
       detail,
     );
-    // Flush the loader's captured table read-set into the index, keyed by label
+    // Hand the loader's captured table read-set to the sink, keyed by label
     // (the resource key). Gating on `loader` kind means a stray table captured
     // under a non-loader entry is never indexed. Done after `record` so it can
-    // never affect span recording.
+    // never affect span recording — and whatever `record` decided to keep.
     if (kind === "loader" && ctx.tables && ctx.tables.size > 0) {
-      let set = readSetIndex.get(label);
-      if (!set) {
-        set = new Set();
-        readSetIndex.set(label, set);
-      }
-      for (const table of ctx.tables) set.add(table);
-      // Also record this run's exact table set (replace, not union) for the
-      // self-healing persist seam. A fresh Set — `ctx.tables` is discarded with
-      // the closed context, so we own this copy.
-      lastLoaderReadSet.set(label, new Set(ctx.tables));
+      loaderReadSetSink?.(label, ctx.tables);
     }
   }
 }
@@ -1654,85 +1641,6 @@ export function getRuntimeProfile(): {
   return { aggregates: aggOut, slowest: slowOut, sinceMs };
 }
 
-/**
- * The automatic loader→table read-set index, materialized as a plain object
- * mapping each loader label (resource key) to a sorted list of the tables its
- * loader read since the last profile reset. Consumed by the resource runtime's
- * `_debug` payload (server-only).
- */
-export function getReadSetIndex(): Record<string, string[]> {
-  const out: Record<string, string[]> = {};
-  for (const [label, tables] of readSetIndex) {
-    out[label] = Array.from(tables).sort();
-  }
-  return out;
-}
-
-/**
- * The tables the MOST RECENT completed loader run for `key` read (sorted), or
- * `undefined` if no loader run has captured tables for it since the last reset.
- * Unlike `getReadSetIndex` (the append-only union of every run), this is the
- * per-run snapshot — REPLACED, not unioned, each run — so it reflects what the
- * loader reads for the CURRENT data/code, shedding a dependency a code change
- * removed. The resource runtime persists this after a FULL recompute so the
- * durable `tables_read` seed self-heals instead of carrying a stale edge forever.
- *
- * Read it synchronously right after awaiting the loader (before any further
- * await), so the value is that load's own capture and not a concurrent run's.
- */
-export function getLastLoaderReadSet(key: string): string[] | undefined {
-  const set = lastLoaderReadSet.get(key);
-  return set ? Array.from(set).sort() : undefined;
-}
-
-/**
- * Seed the loader→table read-set index from a persisted snapshot of it (the
- * durable `tables_read` column on `live_state_snapshot`). Each `seed[key]`'s
- * tables are UNIONED into `readSetIndex[key]` — append-only, identical to how a
- * live loader's captured tables merge in `recordEntrySpan`'s finally; it never
- * clears. Called once at boot (before the readiness barrier) so the in-memory
- * table→resource inversion (`getReadSetIndex` / `tableToResources`) is non-empty
- * for the first `applyDbChange` of catch-up, WITHOUT any loader having run.
- */
-export function seedReadSetIndex(
-  seed: Record<string, readonly string[]>,
-): void {
-  for (const key in seed) {
-    const tables = seed[key]!;
-    if (tables.length === 0) continue;
-    let set = readSetIndex.get(key);
-    if (!set) {
-      set = new Set();
-      readSetIndex.set(key, set);
-    }
-    for (const table of tables) set.add(table);
-  }
-}
-
-/**
- * Remove `table` from the in-memory read-set of every resource key EXCEPT those
- * in `keepKeys`. The read-set index is append-only (see `seedReadSetIndex`), so a
- * table mis-attributed to a resource that never reads it persists forever with no
- * eviction path. A table's OWNER (which knows its true reader set) uses this to
- * assert its invariant and evict stale edges. Safe: dropping a table a resource
- * does not read only removes a spurious catch-up recompute trigger, never causes
- * staleness. Returns the resource keys whose read-set changed (for logging).
- */
-export function removeReadSetTable(
-  table: string,
-  keepKeys: readonly string[],
-): string[] {
-  const keep = new Set(keepKeys);
-  const changed: string[] = [];
-  for (const [key, set] of readSetIndex) {
-    if (keep.has(key)) continue;
-    // Do NOT delete now-empty sets: an empty read-set is meaningful (matches the
-    // existing semantics — `getReadSetIndex` still lists the key with []).
-    if (set.delete(table)) changed.push(key);
-  }
-  return changed;
-}
-
 // Clears every per-aggregate accumulator (the new maxAtMs/recentBuckets/totals
 // live on the aggregate objects, so dropping the maps drops them too). Live
 // EntryContexts are intentionally untouched: an in-flight entry records into
@@ -1742,8 +1650,6 @@ export function resetRuntimeProfile(): void {
     aggregates[kind].clear();
     slowest[kind].length = 0;
   }
-  readSetIndex.clear();
-  lastLoaderReadSet.clear();
   // The flight ring is profile data — clear it. Gate gauges are structural
   // registrations (like slow-span subscribers), not profile data, so they
   // survive. `openEntries` is owned by the in-flight calls themselves: each

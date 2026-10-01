@@ -43,12 +43,16 @@ neither did.
   omission; now every composition row is reachable, so the section disables Run and
   says why when `category !== "app"` — the other categories are inspection lenses
   with no product to build.
-- **The history is composition-scoped and unbounded.** The section is a
-  server-delegated DataView over `queryReleaseHistory` (`POST
-  /api/release/history/query`) — a keyset-paginated query scoped to this
-  composition's runs, kept live by the `release.history-revision` tick. There is
-  no 50-run cap and no client-side filter: a composition's full run history is
-  browsable via infinite scroll. Each run's detail pane resolves its run by id
+- **The history is composition-scoped and unbounded.** The section is a live
+  DataView over `releaseHistory` (`source={releaseHistorySource.scoped({ where:
+  { composition } })}`) — a segmented scroll of this namespace's runs, scoped to
+  the composition as data; a run starting, finishing or failing reaches the rows
+  through the routed runtime (no tick, no refetch). There is no 50-run cap: the
+  full run history pages past one window. The surface's custom columns sort and
+  filter it server-side (`releaseHistory.columnScope` IS this DataView's id,
+  asserted at mount); `e2e/history-live-verify.ts` drives a custom value written
+  through the API and watches the row drop out, come back and move, and a status
+  flip land, without a reload. Each run's detail pane resolves its run by id
   through the `release.runs` lookup collection (`useLiveRow`), so an old run's
   detail resolves regardless of age.
 
@@ -72,11 +76,12 @@ top-level and untouched by this; only the Studio UI lives here.
     - `apps/studio/compositions.CompositionDetail`
     - `build/serve-composition.ServeTargetPanel`
     - `build/serve-composition.useServeStatus`
-    - `infra/endpoints.fetchEndpoint`
+    - `config_v2.useConfigResult`
     - `infra/endpoints.useEndpointMutation`
     - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
@@ -85,9 +90,9 @@ top-level and untouched by this; only the Studio UI lives here.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
+    - `primitives/data-view.liveDataSource`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

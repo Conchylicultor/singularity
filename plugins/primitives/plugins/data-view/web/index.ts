@@ -87,6 +87,7 @@ export type { SectionBodyProps } from "./components/section-body";
 export type { GroupedSectionsProps } from "./internal/grouped-sections";
 export { useGroupByController } from "./internal/use-group-by-controller";
 export type { GroupByController } from "./internal/use-group-by-controller";
+export { liveDataSource } from "./internal/live-data-source";
 export { useServerDataSource } from "./internal/use-server-data-source";
 export type { ServerDataSourceResult } from "./internal/use-server-data-source";
 export { applyFilter } from "./internal/evaluate-filter";

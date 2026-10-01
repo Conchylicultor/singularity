@@ -6,6 +6,7 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
+  recordLoaderReadSet,
   setProfilerHooks,
   type ProfilerMeasureName,
   type ProfilerSpanDetail,
@@ -14,13 +15,12 @@ import {
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
   installBackgroundLaneRuntime,
+  installLoaderReadSetSink,
   recordEntrySpan,
   runTracked,
   recordSpan,
   chargeWait,
   getRuntimeProfile,
-  getReadSetIndex,
-  getLastLoaderReadSet,
   registerGateGauge,
   type EntryContext,
   type SpanKind,
@@ -64,6 +64,13 @@ installBackgroundLaneRuntime({
   active: () => backgroundLaneAls.getStore() === true,
 });
 
+// Each finished loader entry hands its captured tables to server-core's
+// runtime-owned read-set — routing state the live-state change router inverts,
+// so it lives with the runtime rather than in this recorder (whose profile data
+// a reset clears and whose kill-switch drops spans). This plugin owns only the
+// capture scope: the ambient loader entry installed above.
+installLoaderReadSetSink(recordLoaderReadSet);
+
 // Inject the profiler into server-core's resource runtime. server-core declares
 // the seam (core/profiler-hooks.ts) with no-op defaults and never imports this
 // plugin — inverting what would otherwise be a server-core ⇄ runtime-profiler
@@ -93,8 +100,6 @@ setProfilerHooks({
     detail?: ProfilerSpanDetail,
   ): void => recordSpan(kind as SpanKind, label, durationMs, detail),
   chargeWait,
-  getReadSetIndex,
-  getLastLoaderReadSet,
   registerGateGauge: (layer: string, read: () => unknown): void =>
     registerGateGauge(layer, read as () => GateGauge),
   getRuntimeProfile: () => {

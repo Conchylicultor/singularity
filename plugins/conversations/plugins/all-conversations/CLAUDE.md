@@ -36,6 +36,7 @@
     - `database.db`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `primitives/data-view/server-query.applyJoin`
     - `primitives/data-view/server-query.augmentServerQuery`
     - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`

@@ -4,6 +4,11 @@ import { handleSetCustomColumnValue } from "./internal/handle-set-custom-column-
 import { handleDeleteCustomColumnValues } from "./internal/handle-delete-custom-column-values";
 import { customColumnValuesServed } from "./internal/resource";
 import { customColumnsQueryAugmentor } from "./internal/query-augmentor";
+import {
+  customColumnDefsServed,
+  customColumnsScoped,
+  watchScopedDefinitions,
+} from "./internal/scoped-columns";
 
 export { _dataViewCustomValues } from "./internal/tables";
 
@@ -16,6 +21,13 @@ export default {
   },
   contributions: [
     ...customColumnValuesServed.declare,
+    ...customColumnDefsServed.declare,
     customColumnsQueryAugmentor,
+    customColumnsScoped,
   ],
+  // The surfaces a live collection is scoped to were collected at bind; the
+  // config registry is up by now.
+  onReady() {
+    watchScopedDefinitions();
+  },
 } satisfies ServerPluginDefinition;

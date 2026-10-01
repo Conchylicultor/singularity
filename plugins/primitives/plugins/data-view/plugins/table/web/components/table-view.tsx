@@ -34,6 +34,7 @@ import {
   RankReorderProvider,
   useRankSortableItem,
 } from "@plugins/primitives/plugins/rank-reorder/web";
+import { formatSectionCount } from "@plugins/primitives/plugins/data-view/core";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
 function coerce(value: FieldValue): string | number | undefined {
@@ -48,7 +49,7 @@ function coerce(value: FieldValue): string | number | undefined {
  * indicator. Secondary rules don't paint a header arrow (the sort popover is the
  * full multi-sort surface); the data-table primitive stays single-sort.
  */
-function mapPrimary(rules: SortRule[]): TableSortState | null {
+function mapPrimary(rules: readonly SortRule[]): TableSortState | null {
   const p = rules[0];
   return p ? { columnId: p.fieldId, direction: p.direction } : null;
 }
@@ -90,6 +91,8 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
       aggregate,
       now: props.now,
       groupOrder: props.groupOrder,
+      rowsComplete: props.rowsComplete,
+      sectionOrder: props.sectionOrder,
       openFolds: props.foldLines?.open,
       selectedRowId: props.selectedRowId,
     },
@@ -132,7 +135,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
 
   // The host owns loading→empty precedence (it skips this view while loading),
   // so an empty section set always means confirmed-empty.
-  const totalCount = sections.reduce((sum, s) => sum + s.count, 0);
+  const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   // DataTable's `emptyLabel` is string-only; render a custom empty node here so
   // the host-provided `emptyState` (ReactNode) is honored.
   if (totalCount === 0 && props.emptyState !== undefined) {
@@ -165,6 +168,10 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     width: f.width,
     align: f.align,
     value: f.value ? (row: unknown) => coerce(f.value!(row)) : undefined,
+    // The host's sortable set, never `value`'s presence: a field showing a
+    // value its list cannot order by (a live source's derived or unsortable
+    // column) offers no header sort.
+    sortable: props.sortHeader.sortable.has(f.id),
     cell: (row: unknown) => {
       const cell = (
         <FieldCell
@@ -200,7 +207,9 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   const shared = {
     columns,
     rowKey: props.rowKey,
-    sortState: mapPrimary(props.state.sort),
+    // The ACTIVE sort, for the arrow — `state.sort` is empty under a
+    // server-ordered source.
+    sortState: mapPrimary(props.sortHeader.active),
     onToggleSort: (columnId: string) => props.setSort(columnId),
     // `DataTable.onRowClick` is a TABLE-level prop (and has consumers outside
     // data-view), so the table's granularity stays table-level: rows are
@@ -277,7 +286,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
                 onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
                 actions={
                   <Text variant="caption" tone="muted">
-                    {section.count}
+                    {formatSectionCount(section.count)}
                   </Text>
                 }
               >

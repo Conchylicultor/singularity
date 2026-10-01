@@ -1,7 +1,8 @@
 /**
  * End-to-end: a `compileWindowQuery`-compiled window / point resource wired
- * into a real `createResourceRuntime`, driven through the L4 change-feed
- * (`applyDbChange`). The deep membership semantics are pinned by
+ * into a real `createResourceRuntime`, driven through the L4 change-feed's two
+ * routers (`routeTableChange`, which serves these routed resources, and the
+ * legacy `applyDbChange`, which must skip them). The deep membership semantics are pinned by
  * `resource-runtime/core/runtime-window-membership.test.ts`; THIS suite pins
  * that the compiled artifacts (params-decoded windowed loader, `windowIdsOf`,
  * the codec-derived `idsOf`) wire those semantics correctly. The fake `db`
@@ -176,6 +177,26 @@ function harness(table = "rows") {
     deltas(key: string) {
       return frames.filter((f) => f.key === key && f.kind === "delta");
     },
+    // One base-table change as the change feed delivers it (`routeChange`): to
+    // BOTH routers — the compiled resources are routed, so `routeTableChange`
+    // serves them and the legacy `applyDbChange` must skip them (a double
+    // delivery would show as a second delta).
+    feed(changed: string, op: "I" | "U" | "D", ids: string[]) {
+      runtime.routeTableChange({
+        table: changed,
+        op,
+        ids,
+        keys: null,
+        unchanged: null,
+      });
+      runtime.applyDbChange({
+        table: changed,
+        op,
+        ids,
+        origin: changed,
+        identityBase: changed,
+      });
+    },
   };
 }
 
@@ -211,13 +232,7 @@ describe("compiled window resource — end-to-end", () => {
     ]); // bounded, never d
 
     table.set("a", { n: 1 }); // sorts first → enters, c squeezed out
-    h.runtime.applyDbChange({
-      table: "rows",
-      op: "I",
-      ids: ["a"],
-      origin: "rows",
-      identityBase: "rows",
-    });
+    h.feed("rows", "I", ["a"]);
     await tick();
 
     const ds = h.deltas(key);
@@ -248,13 +263,7 @@ describe("compiled window resource — end-to-end", () => {
     await h.subscribe(key, descriptor.defaultParams); // window [a,b]
 
     table.delete("b");
-    h.runtime.applyDbChange({
-      table: "rows",
-      op: "D",
-      ids: ["b"],
-      origin: "rows",
-      identityBase: "rows",
-    });
+    h.feed("rows", "D", ["b"]);
     await tick();
 
     const ds = h.deltas(key);
@@ -289,13 +298,7 @@ describe("compiled window resource — end-to-end", () => {
     // UPDATE (membership `where` untouched). b sorts past d → leaves the window
     // via the fresh order; d is pulled in as the new tail.
     table.set("b", { n: 9 });
-    h.runtime.applyDbChange({
-      table: "rows",
-      op: "U",
-      ids: ["b"],
-      origin: "rows",
-      identityBase: "rows",
-    });
+    h.feed("rows", "U", ["b"]);
     await tick();
 
     const ds = h.deltas(key);
@@ -354,13 +357,7 @@ describe("compiled window resource — per-params orderBy, end-to-end", () => {
     // its window — c sorts last and leaves via `order`, a is pulled in. The byN
     // tuple does not sort by m and c is not its member: nothing ships there.
     table.set("c", { n: 3, m: 9 });
-    h.runtime.applyDbChange({
-      table: "sorted",
-      op: "U",
-      ids: ["c"],
-      origin: "sorted",
-      identityBase: "sorted",
-    });
+    h.feed("sorted", "U", ["c"]);
     await tick();
 
     const ds = h.deltas(key);
@@ -395,38 +392,20 @@ describe("compiled point resource — end-to-end", () => {
 
     // In-set update → one scoped upsert.
     table.set("a", { n: 5 });
-    h.runtime.applyDbChange({
-      table: "rows",
-      op: "U",
-      ids: ["a"],
-      origin: "rows",
-      identityBase: "rows",
-    });
+    h.feed("rows", "U", ["a"]);
     await tick();
     expect(h.deltas(key)).toHaveLength(1);
     expect(h.deltas(key)[0]!.upserts).toEqual([["a", { id: "a", n: 5 }]]);
 
     // Foreign-id update → no frame at all.
     table.set("z", { n: 10 });
-    h.runtime.applyDbChange({
-      table: "rows",
-      op: "U",
-      ids: ["z"],
-      origin: "rows",
-      identityBase: "rows",
-    });
+    h.feed("rows", "U", ["z"]);
     await tick();
     expect(h.deltas(key)).toHaveLength(1); // unchanged
 
     // The missing subscribed id appearing → entrant append.
     table.set("b", { n: 7 });
-    h.runtime.applyDbChange({
-      table: "rows",
-      op: "I",
-      ids: ["b"],
-      origin: "rows",
-      identityBase: "rows",
-    });
+    h.feed("rows", "I", ["b"]);
     await tick();
     const ds = h.deltas(key);
     expect(ds).toHaveLength(2);

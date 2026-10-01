@@ -8,6 +8,7 @@ import { parseLiveStatePayload, type DbChange } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
 import { routeChange } from "./route-change";
 import { routeWithSpan } from "./route-span";
+import { createBurstRouter } from "./burst";
 import { changeFeedLog as log } from "./log-sink";
 
 // How often the liveness timer re-checks the socket. This is NOT change-polling
@@ -55,6 +56,11 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   let connecting = false;
   let firstConnect = true;
   let reconnectDelay = reconnectMinMs;
+  // One transaction's NOTIFYs route together, so its ack leaves only after
+  // every one of them landed (see `createBurstRouter`).
+  const routeNotify = createBurstRouter((change) =>
+    routeWithSpan(change, opts.route),
+  );
 
   // A single dedicated pg client on the DIRECT socket (connectionString()
   // bypasses pgbouncer, which breaks LISTEN — the same path graphile-worker
@@ -106,7 +112,14 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
 
       c.on("notification", (n) => {
         if (!n.payload) return;
-        const change = parseLiveStatePayload(n.payload);
+        const change = parseLiveStatePayload(n.payload, (degraded) =>
+          // Routed unscoped (FULL for its readers), never dropped — the same
+          // rule the catch-up replay applies to the row.
+          log.publish(
+            `[change-feed] malformed key layout on a "${degraded.table}" change — routing it unscoped: ${n.payload}`,
+            "stderr",
+          ),
+        );
         if (!change) {
           // Defensive skip — a malformed payload must never crash the listener.
           log.publish(
@@ -115,7 +128,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
           );
           return;
         }
-        routeWithSpan(change, opts.route);
+        routeNotify(change);
       });
 
       await c.connect();
@@ -185,7 +198,15 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
       // A reconnect sweep is a synthesized FULL invalidation — no source
       // transaction corresponds, so no ack attribution (`xid: null`).
       routeWithSpan(
-        { table, op: "U", ids: null, xid: null, changedAt: null },
+        {
+          table,
+          op: "U",
+          ids: null,
+          xid: null,
+          changedAt: null,
+          keys: null,
+          unchanged: null,
+        },
         opts.route,
       );
     }

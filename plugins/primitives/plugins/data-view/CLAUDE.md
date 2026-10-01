@@ -436,6 +436,7 @@ const rowOrderEnabled =
   activeSupportsManualOrder &&   // list / table only — gallery/tree have no flat rank axis
   manualOrder == null &&         // a consumer's domain order wins
   props.dataSource == null &&    // server-paginated ⇒ the client cannot own the order
+  props.source == null &&        // a live source is server-sorted ⇒ likewise
   aggregate == null;             // an aggregate representative's rank cannot stand for its members
 ```
 
@@ -1451,16 +1452,22 @@ a cross-cutting contributor can key its per-row data over the surface; one that
 doesn't need them just ignores them:
 
 ```tsx
-function PlaybackFields({ render }: FieldExtensionProps<Song>) {
-  const map = usePlaybackHistoryMap();
-  const fields = useMemo<FieldDef<Song>[]>(() => [
-    { id: "playCount", label: "Plays", type: "int",
-      value: (s) => map.get(s.id)?.playCount ?? 0, sortable: true },
-  ], [map]);
+function RatingFields({ render }: FieldExtensionProps<Item>) {
+  const ratings = useRatingsMap();          // hypothetical: this plugin's own live read
+  const fields = useMemo<FieldDef<Item>[]>(() => [
+    { id: "rating", label: "Rating", type: "int",
+      value: (it) => ratings.get(it.id) ?? null, sortable: true },
+  ], [ratings]);
   return <>{render(fields)}</>;  // ignores storageKey/rowKey — it keys off its own resource
 }
-MyFields({ id: "playback", section: null, component: PlaybackFields });
+MyFields({ id: "rating", section: null, component: RatingFields });
 ```
+
+Under a live `source` a contributor needs no hook at all when its data rides on
+the rows: a contributed column (`network/live`'s `liveColumns`) is read off the
+row and bound as the field's `column`, so the server sorts and filters by it —
+Sonata's play-count field is `{ value: (s) => playbackColumns.read(s).playCount,
+column: playbackColumns.column("playCount") }`.
 
 **Two registration entry points, one mechanism.** A field extension reaches the
 host through exactly one of two places — the difference is only the **registration
@@ -1686,6 +1693,109 @@ original index. Hook:
 `filterPresetMatchesGroup` live next to the sort readers. A preset's group is
 stored opaquely as a `jsonField<FilterGroup>` (validated whole through
 `FilterGroupSchema` on read), git-promotable like every config row.
+
+### Live sources (`source`): a `network/live` collection as a segmented scroll
+
+A DataView's rows come from exactly ONE origin — `DataViewProps` is a union, so a
+stand-in (`rows={[]}` beside a server origin) cannot be spelled:
+
+- `{ rows; loading?; rowKey }` — in memory;
+- `{ dataSource; rowKey }` — fetchPage + a `changeTick` refetch (above);
+- `{ source }` — a live collection (`liveDataSource`, web; its types are
+  core's), read as
+  `network/live`'s segmented scroll (`useLiveScroll`). It refuses `rowKey` (the
+  row key is the collection's `id`, the one the runtime keys its deltas by),
+  `hierarchy` (a tree over a paged set orphans children), `manualOrder` (a rank
+  would reorder server-sorted segments) and `searchAccessor` (search is the
+  source's `searchable`); the contributed `RowOrder` stays off too.
+  `DataViewSourceBundle` is a DISTRIBUTIVE `Omit`, so the `MergedDataView` path
+  keeps the union (pinned by `web/internal/body-types.test.ts`).
+
+```ts
+// web — once, next to the list (the collection is declared `scroll: true`)
+export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject", "snippet"] });
+// web
+<DataView<MailThread> storageKey={…} fields={fields} views={["list"]}
+                      source={threadsSource.scoped({ where: { accountId } })} … />
+{ id: "labels", column: mailThreads.column("labelIds"), values: (t) => t.labelIds, … }
+```
+
+- **`scoped({ where })`** ANDs a base filter into every tuple, before the view's
+  own; its columns must be filterable (the codec checks). While the scope's
+  VALUE is still loading (mail's account, a composition's name), mount the
+  DataView anyway over `source.awaitingScope([columns])`: it reads nothing and
+  shows the list's own loading state with its toolbar already up — one loading
+  state, not a bare skeleton the toolbar then pushes down. The Filter control
+  never offers a field over a column the scope constrains (`resolveLiveFields`
+  leaves it out of `filterFields` — it still sorts), so the user can neither
+  name nor widen the scope: a rule over it could only restate it or contradict
+  it into an empty list.
+- **`FieldDef.column`** maps a field onto a collection column when its id is not
+  that column's name — minted only by `collection.column(name)` or a
+  contributed-column handle's `.column(field)`, carrying its collection's key.
+  Field ids stay the persisted vocabulary. A field without one lowers under its
+  own id; a field bound to no column (a derived value) is display-only. A SCOPED
+  column's ref (`scopedLiveColumns(...).column(member)` — a surface's custom
+  column) names a scope instead of a collection, and resolves only on a source
+  whose collection's `columnScope` is that scope.
+- **A collection with a `columnScope` is listed on that one surface**: the host
+  asserts at mount that it IS the DataView's `storageKey`
+  (`liveColumnScopeOf`), and hands it to every field extension as
+  `FieldExtensionProps.liveColumnScope` (`null` on any other origin) — the
+  custom-columns contributor binds its fields under it, so a custom column sorts
+  and filters on the server like any column.
+- **Checked where declared** (`web/internal/live-fields.ts`): a field bound to a
+  column must resolve — marked `sortable: true` over a column that does not sort
+  throws, a filterable one whose operator set lowers over another domain than its
+  column throws, a ref naming another collection throws. The host's own fields
+  are checked in `DataViewBody`; a `FieldExtension` contributor's inside its own
+  `render(fields)`, so its item boundary contains the crash and the error names
+  it. A `column` on an in-memory or fetchPage DataView throws (it would be
+  ignored).
+- **Lowering** (`web/internal/live-source.ts`, `useLiveSource`): the Filter
+  control offers only fields whose column is filterable, the Sort control only
+  those whose column sorts. The view's `FilterGroup` lowers as fetchPage's does
+  (`useServerFilter`, relative dates on the day clock), then each clause's field
+  id is renamed to its column, ANDed after the source's scope with the search box
+  (debounced 200 ms, `or(contains …)` over `searchable`), and canonicalized; a
+  tree over the language's bounds is the error arm. Sort rules map to columns (an
+  empty sort takes the collection default); a duplicate column is dropped. A
+  query naming a contributed column hands the codec that handle.
+- **A saved rule that does not resolve** is PENDING while the deferred plugin
+  tier is still loading (a contributor may not have registered its field yet —
+  the skeleton), and the error arm once it settled
+  (`UnavailableSortRuleError` / `UnavailableFilterRuleError`).
+- **Group-by.** A `FieldGrouping` may declare `oneBucketPerValue: true` (identity,
+  enum and bool do; a date bucket never can). Under a live source such a grouping
+  over a sortable column is PREPENDED to the order, and its sections follow first
+  appearance in the rows (`DataViewRenderProps.sectionOrder: "appearance"`): an
+  enum's sections then read in stored-value order, as its sort does. Any other
+  grouping prepends nothing and keeps its bucket order. This rests on the
+  contract every live lowering does (`FieldDef.column`): a field's `value` IS
+  its column's value — a field showing a derived value is offered for none of
+  sort, filter and group-by.
+- **Section counts are a type** (`SectionCount`: `exact` | `atLeast`), printed by
+  one formatter (`formatSectionCount`: `n` / `n+`) and derived from loaded rows
+  only: exact when every row is loaded (`DataViewRenderProps.rowsComplete` —
+  always in memory; a server-ordered origin once read to its end, fetchPage
+  included), or — sections in row order — when a later section has started.
+- **States.** The skeleton while the head segment (or a pending rule) is pending;
+  the empty state once every segment settled with no row; a head error or an
+  unavailable rule in place of the view; a failure paging stopped on
+  (`LiveSegmentError.blocksPaging` — the tail's, a failed page, or one holding
+  the scroll short of its end) in the footer (its own Retry —
+  `useInfiniteScroll`'s `retry`, never the next page); any other segment's error
+  as one notice above the rows ("Rows after ‹row› could not refresh — Retry"),
+  keyed by the failing read. A search-only change keeps the previous rows until the new head
+  settles; any other query change starts over. A scroll that cannot page past
+  its tail says so in the footer (`InfiniteScrollFooter`'s `truncated`), in the
+  user's words per `ScrollTruncation` kind (`TRUNCATION_HINT`: the segment cap,
+  an over-long sort key); the plan's own wording goes to the `live-scroll` log.
+- **Column headers sort only what the source sorts.** `DataViewRenderProps.sortHeader`
+  carries the Sort control's sortable field ids and the ACTIVE sort (for the
+  arrow — `state.sort` is emptied under a server-ordered origin); the table
+  offers header sort on those fields only, and the host's `setSort` throws for
+  any other, so a click can never persist a rule the source refuses.
 
 ### Typed fields are the generic extension point
 

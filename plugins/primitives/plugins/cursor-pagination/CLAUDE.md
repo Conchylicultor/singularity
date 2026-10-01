@@ -12,7 +12,7 @@ lint rule. What still belongs *here* is `fetchNextPage()` behind the error gate:
 that pattern has a latent hot-loop, and every copy of it re-introduces one.
 
 - **`useInfiniteScroll({ hasNextPage, isFetchingNextPage, isFetchNextPageError,
-  fetchNextPage, rootMargin? })`** owns the observer and returns an
+  fetchNextPage, retry?, rootMargin? })`** owns the observer and returns an
   `InfiniteScrollHandle` (`{ sentinelRef, hasNextPage, isFetchingNextPage,
   isFetchNextPageError, retry }`). The observer fires **only** while
   `hasNextPage && !isFetchingNextPage && !isFetchNextPageError`. The
@@ -20,13 +20,19 @@ that pattern has a latent hot-loop, and every copy of it re-introduces one.
   `isFetchingNextPage` flips false→true→false, which re-runs the effect and
   recreates the observer; without the gate a fresh observer immediately re-fires
   against the still-intersecting sentinel, retrying the failing request in a
-  tight loop. `retry` (= `fetchNextPage`) is the manual recovery path; calling it
+  tight loop. `retry` is the manual recovery path — `fetchNextPage` by default
+  (right when the failed request IS the next page); a source whose failing read
+  is something else passes its own (a segmented scroll's tail window re-reads
+  that window, and a Retry never asks for yet another page). Calling it
   re-enters `isFetchingNextPage`, re-runs the effect, and re-arms the observer.
   `rootMargin` (e.g. `"400px"`) grows the trigger box for early prefetch.
 - **`<InfiniteScrollFooter handle={…} />`** is the reusable footer: a spinner
   while fetching, a "Couldn't load more." placeholder + **Retry** button while
   errored, and the `ScrollSentinel` (hidden while errored). Render it once at the
   bottom of any infinite list — it is the single home for the load-more/retry UX.
+  `truncated={{ shown, reason }}` adds the line a list that STOPS (and cannot
+  page further — a live scroll at its segment cap) owes: "Showing the first N —
+  narrow the filter", so a list that stopped never reads as a list that ended.
 - **`useCursorPagination`** is the keyset-cursor convenience wrapper (frozen
   cursor + `useInfiniteQuery` + `useInfiniteScroll`); its handle is
   `{ items } & InfiniteScrollHandle`, so it drops straight into

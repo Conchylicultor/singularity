@@ -1,7 +1,7 @@
 export { SongSchema } from "./schemas";
-export type { Song } from "./schemas";
 
-export { songs } from "./resources";
+export { songLibrary } from "./resources";
+export type { Song } from "./resources";
 
 export { deleteSong, updateSong } from "./endpoints";
 export type { UpdateSongBody } from "./endpoints";

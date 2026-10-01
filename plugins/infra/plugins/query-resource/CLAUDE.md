@@ -9,6 +9,8 @@ compile to, plus the last resources that have not moved:
 - **`windowQueryResource`** — the bounded (window / point) compiler.
   `serveCollection` runs every collection's window and `:rows` sibling through
   it (see *Bounded membership* below).
+- **`compileGroupsQuery`** — the grouping compiler: a collection's `:groups`
+  sibling (see *Routes* below).
 - **`queryResource`** + **`queryResourceDescriptor`** — the unbounded keyed
   form. Only the task tree's resources still use it (`tasks`,
   `conversations-active` / `-system`, and `task-categories`, bounded by
@@ -20,12 +22,204 @@ compile to, plus the last resources that have not moved:
 way, test files included.
 
 Both compilers take ONE constrained drizzle declaration and derive the FULL
-loader, the Layer-2 scoped loader, the `identityTable` (hand-authored elsewhere,
-and free to drift from what the loader actually reads), and the client keyField
-— producing exactly the object the two-arg keyed
+loader, the Layer-2 scoped loader, the scope policy (`queryResource`: the
+`identityTable`, hand-authored elsewhere and free to drift from what the loader
+actually reads; `windowQueryResource`: the ROUTES — see *Routes*), and the client
+keyField — producing exactly the object the two-arg keyed
 `defineResource(descriptor, KeyedServerResourceOptions & ScopePolicy)` already
-accepts (a keyed contract takes no `mode`). **Zero changes to
-`resource-runtime`.**
+accepts (a keyed contract takes no `mode`).
+
+## Routes: the bounded and grouping compilers emit what their SQL reads
+
+`windowQueryResource` and `compileGroupsQuery` are **routed**
+(`research/2026-09-29-global-scoped-change-routing.md`, P1): instead of an
+`identityTable`, each emits, from the same declaration it renders the SQL from,
+the `RoutePlan` the runtime's `routeTableChange` serves it by (`internal/routes.ts`):
+
+- **window / point** — `routes`: an `identity` route (`base`) on the base table,
+  read by every tuple in the `membership` role, plus one route per declared join
+  (see *Joins*). When the identity pk IS the table's primary key the change
+  feed's ids are the host ids as they stand; otherwise the route reads the pk
+  column off the change's key layout (`tableLayoutRequirements` carries every
+  map `column`, so the routed trigger sends it) — scoped as well.
+- **grouping** — `reach` (the non-keyed arm): one `full` route per relation (the
+  base table, and each join). A write to a table a grouping reads recomputes it;
+  a write to any other table reaches none.
+- A route's `columns` (what the `unchanged` gate skips on, P4) are exactly the columns of
+  its table the compiled SQL may reference over every tuple — projection,
+  identity, join conditions, a static `where`, the declared per-params `where`
+  columns (`whereReads` on the window spec, `reads` on the grouping spec) and
+  the order signature. A function `where` with no declared universe makes them
+  every column of every relation (the safe over-approximation); with one, each
+  tuple's `where` is checked against it and a column outside throws.
+- **A routed compile reads a base table, never a view** (A1): a change arrives
+  under its base tables' names, which no route of a view can state. The spec's
+  `from` is typed `RoutedSource` (`PgTable | EntitySource`), and an untyped view
+  throws at module eval. The change-feed's boot assertion checks every route table
+  is triggered (`change-feed/server/internal/route-coverage.ts`).
+- **No `rel()` edges** on a bounded spec: a routed entry is never a cascade
+  upstream, and routes the tables it reads itself (the runtime refuses `dependsOn`
+  beside `routes` / `reach`).
+- **`internal/routes.ts` is the one production minter.** A plan is made by
+  `mintRoutePlan` / `mintReachPlan` (resource-runtime), never written as a literal
+  (a type brand), and the `resource-runtime:compiled-routes` check allows the
+  minters only there and in test code: a route's `columns` gate which updates reach
+  the resource, so only the code that renders the SQL may state them.
+- The runtime's drift guard (A8) checks each loader run's captured tables against
+  the route tables, so a compiler that forgets a table fails its tests loudly.
+
+## Joins: provenance-driven read-sets (`core/internal/joins.ts`, `server/internal/joins.ts`)
+
+A bounded or grouping compile reads its base table plus declared **joins, as
+data** (`JoinSpec`, in `core/`, type-only so the browser bundle pulls no
+drizzle):
+
+| Kind | Join | Route |
+|---|---|---|
+| `extension` — a 1:1 side table (`infra/entity-extensions`' `ext.join(alias)`) | LEFT, `key = parentKey` (the host id) | `alias` on the side table's pk: a side I / U / D is a host U |
+| `lookup` — N:1 on `pk`, `on` a column of the base or an EARLIER join (chainable) | INNER when `required`, else LEFT | `reverse` on `pk` (see *Reverse routes*), or `alias` when `on` is the host identity |
+| `keyed-side` — a composite-keyed side table (`hostKey` + fixed `selectors` covering its pk) | LEFT, on the host identity (compared as `hostKey`'s type) | `alias` on `hostKey`, `rows` = the selectors — scoped on the routed trigger's key layout |
+
+- **Every join renders against its alias** (`"playback"."last_played_at"`), so
+  the relation a column belongs to is read off the SQL itself. `compileJoins`
+  (`server/internal/joins.ts`) renders and checks the specs, and walks any SQL
+  fragment for the relations it reads (`columnsIn` / `relationsIn`); a relation
+  that is neither the base nor a declared join throws ("declare it as a join").
+  Raw `sql.raw` text carries no column objects and is invisible to the walk — a
+  routed compile's SQL is built from drizzle columns.
+- **A tuple reads a join** when its SQL references it: projected, a required
+  lookup, named by its `where` / order, or hung off by one that is. Every shape
+  of that tuple — full, scoped refill, `windowIdsOf`, point, grouping — joins
+  exactly those relations, and `usesOf(params)` names exactly them, so the
+  loader and the membership authority read one relation set (the provenance
+  property test in `network/live`'s `serve-collection-joins.test.ts`).
+- **Role.** A join is `membership` for a tuple when it is required (INNER) or its
+  `where` / order reads it — directly or through a later join in its chain (the
+  chain's ancestors too); otherwise `value` (a LEFT join that is only projected).
+  A membership use (the base's included) also carries **`moves`**: the columns of
+  its table whose change can move that tuple — its `where` and order columns,
+  and the conditions of the joins it reads as membership. A `U` touching none of
+  them is a value change for the tuple (`resource-runtime`'s `TupleUse.moves`):
+  an event's title edit reaches only the windows holding it, a source's config
+  edit resolves within the members.
+  The runtime drops a value-role write to a row the tuple does not hold, while
+  the tuple is quiescent (`resource-runtime`'s quiescence guard). A grouping
+  joins only what its grouped column and `where` read (plus required lookups),
+  and every use is `membership`.
+- **A4 — checked at module eval:** a `ColumnRef.col` belongs to the relation
+  `from` names; a lookup's `on` names an earlier relation, and its `pk` is its
+  table's primary key or unique; a keyed side's `hostKey` + selectors cover its
+  primary key; an extension hangs off the base table, its key is its own
+  primary key and its parent key the resource's identity; aliases are unique and
+  never `base` or the base table's name; a join needs an explicit `select`; the
+  key field projects the base identity; a joined sortable column is projected and
+  in the order signature (matched by relation AND name, so a join's `created_at`
+  is never the base's). A column a LEFT join reads is NULL for a host with no
+  joined row, so it orders as nullable.
+- **T2 — types:** a column override returns one of the refs its `j` offers
+  (`JoinRef<JoinRefs<…>>`: `j.<relation>.<column>` is a `TypedColumnRef` naming
+  both), so an undeclared relation, another table's column, or a server-only
+  column is a tsc error. `j` offers each relation's WIRE columns: the base
+  source's (an entity's `wireColumns`), and a join's `wireColumns` when it
+  carries them (an extension handle's `join()` does), else its table's columns.
+  A lookup's `on` stays a plain `ColumnRef`, checked by A4.
+- **A spec with no `select`** (a select-all) projects every column of its
+  source, so its route columns are all of them — the exact-columns rule reads
+  the projection, never only the declared `select`.
+- **A missing extension row reads its defaults** (`ReadColumn`): an EXTENSION
+  join's column whose table column declares a literal default (drizzle's
+  `.default(value)` — an entity extension's meta `default`) renders as
+  `COALESCE("alias"."col", <default>)` wherever the SQL reads it — the
+  projection, a filter, an order key, a cut. An extension row that does not
+  exist means its declared defaults, so a never-played song has `playCount = 0`
+  in SQL. Such a column is never NULL (`JoinPlan.canBeNull`: non-nullable keyset
+  keys, exempt from the LEFT-join nullable-field rule); its provenance is still
+  the alias column (`columnOf`, a module-level map, so a plan handed another
+  plan's rendered columns still reads them). A join CONDITION always compares the
+  raw stored key, and a static predicate's `j` (`JoinPlan.columns()`) offers the
+  raw columns — a predicate states its own NULL handling. A computed default
+  (`defaultNow()`, SQL) is never coalesced.
+- `QueryDb`'s step gains `leftJoin` / `innerJoin`; `server/testing`'s
+  `recordingQueryDb` is the fake that renders every query through drizzle's real
+  dialect.
+
+### Reverse routes — a lookup's changes, resolved to hosts (P4)
+
+A lookup is joined N:1 from the host side, so a change to a looked-up row names
+the ROW, not its hosts: its route is `reverse` on the lookup's `pk`, and its
+`resolve(changed, within, cap)` (`server/internal/joins.ts`, `reverseMap`) is the
+probe the runtime runs in the drain, once per flush:
+
+```sql
+SELECT DISTINCT <host pk> FROM <base> [the joins up to `on`'s relation]
+ WHERE <on> = ANY($changed::<type>[]) [AND <host pk> = ANY($within::<type>[])]
+ LIMIT cap + 1                       -- more than cap ⇒ "over-cap" (the readers go FULL)
+```
+
+- **One array param per list**, cast to the column's own type, so the column's
+  index serves the probe and the statement is one shape whatever the count.
+- **A10 — the FK-direction rule.** Resolved after commit, the probe is complete
+  when it reads only HOST-side rows: the base (a self-join too — `nodes.parent_id`
+  of the host rows) or earlier joins over OTHER tables. The referencing column is
+  still there whatever happened to the looked-up row (a deleted source's events
+  still name it), and a host row that moved its own key is a change of its own
+  table, routed by its own route. A chain whose hop is a join over the CHANGED
+  table itself would read the post-image of the very rows that changed; that
+  route is `full`, reason `pre-image needed: …` (listed by the Read-set pane).
+- A tuple reads the lookup as `membership` (required, or filtered / sorted by it)
+  — resolved unbounded — or `value` — resolved within its members; `moves` turns a
+  `U` of the lookup's projected-only columns into the latter.
+- **Host ids are the pk's own values.** The probe answers the host pk as it is
+  stored and reads `within` the same way, so `compiledRoutePlan` refuses a
+  reverse route beside an identity route that `encode`s its ids (a union arm's
+  `kind:id`): a compiler emitting both must encode the answer and decode
+  `within` through the identity's codec first.
+- **The probe does not apply the collection's predicates** (base `where`,
+  default scopes): hosts no tuple can hold count toward the cap. A default is
+  per tuple, and a predicate reading the looked-up row must not filter the
+  post-image (a disabled source's events are exactly the ones to exit), so a
+  host-only static predicate is the one that could be ANDed in — no collection
+  has one beside a lookup yet.
+- The grouping compiler's routes stay `full` (a count has no hosts); a keyed
+  side's `full` route there carries its selectors as `rows`, so a write to
+  another scope's or member's rows moves no count.
+
+### Join families — members joined per tuple (P3)
+
+A **`JoinFamily`** (`core/`) is a composite-keyed side table whose set of
+MEMBERS is data, not code — a DataView surface's custom columns: `hostKey` +
+fixed `selectors` (the surface) + a `member` column (`column_id`) + the `value`
+each member reads. A window spec takes them as `families: { joins, valuesKey }`
+(window kind only).
+
+- **A member is a keyed-side join** (`familyMember(family, m)`, alias
+  `familyMemberAlias(id, m)` — injective: every character outside `[A-Za-z0-9]` is
+  spelled `_<hex>_`; a spelling past Postgres's 63-byte identifier limit becomes
+  `<id>___h<128-bit hash>`, a form no spelled alias can take, and two members
+  meeting on one alias fail the compile). The caller renders a member's value through its plan
+  (`JoinPlan.readMember(familyId, m, read?)`, compiled on first use; `read` is a
+  cast and the SQL type it produces), and every plan over the same family object
+  finds that member again by its alias (a module-level registry, like the
+  defaulted-column one), so the plan that applies a tuple's joins knows it.
+- **A tuple joins exactly the members its `where` / order names** (read off its
+  SQL like any join), as `membership`. ONE route serves the whole family
+  (`familyRoute`): an `alias` on `hostKey`, `rows` = the selectors, `match` on the
+  member column; a tuple's use matches the members it reads, so a write to
+  another member, or another scope's rows, reaches no tuple.
+- **A member the tuple orders by is projected** (`__family_<i>`) and folded into
+  `row[valuesKey]` by join alias, where its order signature reads it (the
+  signature universe `signatureColumns` is static; members are not in it).
+  `whereReads` does not apply to members: their route's columns are the family's.
+- A cast member's scroll cut casts back through the expression's own SQL type
+  (`JoinPlan.sqlTypeOf`), not its raw column's. A per-tuple order is memoized by
+  its keys' RENDERING (an expression key by its object and SQL type), not by
+  relation and column name — a retyped member keeps its alias and column but
+  reads through a new cast, so its ORDER BY, `__family_<i>` projection and cut
+  casts follow the retype on the next load.
+- **`recomputeOn`** on the spec is handed to the runtime as the routed entry's
+  `recomputeOn`: an external value tuple whose change moved the family's members
+  (a column added, dropped, retyped) FULLs every subscribed tuple and drops its
+  read-set memo.
 
 The tree resources are declared like this — kept for them, **not** a precedent
 for new work:
@@ -166,7 +360,8 @@ windowQueryResource(c.rows, {
 //      found / not found, O(1), no .find(); useLive(c, { ids }) → Row[] for a set.
 ```
 
-What the compiler derives per kind:
+What the compiler derives per kind (both kinds also emit their identity route —
+see *Routes* above):
 
 - **window** — the windowed FULL loader (`where → ORDER BY → LIMIT`, the limit
   decoded from the params via the descriptor codec and clamped to `maxLimit`),
@@ -190,24 +385,56 @@ What the compiler derives per kind:
 the order its own params resolve (the rendered ORDER BY is memoized per
 canonical order; the pk tiebreaker and NULLS LAST are still appended). A
 function `orderBy` **requires `signatureColumns`** — the union of every column it
-may sort by. The order signature is one per resource, so an UPDATE to any listed
-column re-derives each member tuple's window (one bounded ids query), even a
-tuple not sorting by it. A resolved order column outside `signatureColumns`
-throws on first use; a static `orderBy` may pass `signatureColumns` too (it must
-cover the declared order columns). A richer window codec may carry extra params
-keys (`{ limit; where?; order? }`) — descriptor, contract and compiler are
+may sort by, each projected. The order signature is **per tuple**:
+`orderSignatureOf(row, params)` covers only the columns that tuple orders by,
+cut from `signatureColumns`, so an UPDATE to a column re-derives the windows of
+the tuples sorting by it (one bounded ids query each) and costs a tuple sorting
+by another column nothing — a playback write under a `title` sort stays on the
+in-place path. A resolved order column outside `signatureColumns` throws on
+first use; a static `orderBy` may pass `signatureColumns` too (it must cover the
+declared order columns; the signature is still the order's own columns). A
+richer window codec may carry extra params keys (`{ limit; where?; order? }`) — descriptor, contract and compiler are
 generic over `P extends WindowParams` — and may carry `window.maxLimit` on the
 descriptor instead of the spec (both given ⇒ must be equal; neither ⇒ throw).
 
-**Order-column updates are HANDLED.** `orderSignatureOf` is the canonical join of
-the declared order columns' wire values (the auto pk tiebreaker is excluded; every
-declared order column must be projected, or module eval throws). The runtime
+**Order-column updates are HANDLED.** `orderSignatureOf(row, params)` is the
+canonical join of the wire values of the columns that tuple orders by (the auto
+pk tiebreaker is excluded; every signature column must be projected, or module
+eval throws). The runtime
 compares it per refilled member row and re-derives the window via `windowIdsOf`
 when it moved, so a `createdAt` resurface reorders the wire window instead of
 leaving it stale. **Cost note:** each order-column update costs one O(window) ids
 query (content-only updates stay on the zero-ids-query in-place path), so prefer
 mostly-stable order columns for very hot rows. The mutable-`where` rule above does
 NOT apply here: a where-flip is a detected membership exit/entry.
+
+**Scroll segments (`scroll`).** A window spec may declare `scroll: { cutsOf,
+keyField, maxKeyBytes }` (network/live passes it for a collection declared
+`scroll: true`): each tuple may be one segment of a deep scroll — its order cut
+by an exclusive `after` and an inclusive `until` row key — and every full and
+scoped row carries its own row key in `keyField`. ONE key list per tuple order
+(the declared keys, then the pk unless one already is) feeds the ORDER BY, the
+cuts and the row keys, so the three cannot disagree. The row key is the
+canonical JSON of each key's `col::text` (projected under `__row_key_<i>` and
+folded in JS, `null` over `maxKeyBytes`); cuts render on the order side
+(`primitives/keyset`'s `seekPredicate` for `after`, `atOrBeforePredicate` for
+`until`, each operand cast `$n::<the key column's type>`), ANDed after the
+tuple's `where` has been checked against its `whereReads` universe — so a
+sortable-but-not-filterable order column takes cuts. Cuts read only order
+columns, which the routes and the signature already cover: routes, `usesOf` and
+roles are unchanged. More spec seams serve it: `window.limitOf` (decode the
+tuple's limit when the descriptor's codec needs more than the params — a
+contributed collection decodes against the column sets it serves),
+`window.validateParams` (the params gate for the same reason — it replaces the
+descriptor's on the server, through the runtime's
+`ServerResourceOptions.validateParams`) and `readField` (where an `encodeRow`
+moved a projected field — the order signature reads it there).
+
+**Deferred compile (`deferredWindowQueryResource`).** The same compile, run at
+`bindDeferredResources` (server-core's boot step after contributions are
+collected): the resource registers now under its descriptor and `specOf()`
+compiles at the bind, through the same checks. For a spec that depends on
+contributions (network/live's `contributed` collections).
 
 Structural differences from `queryResource`: no `limit` / `recompute` /
 `scopedMembership` fields exist on the spec (the bound comes from the params;
@@ -276,23 +503,30 @@ importing `db` never touches a worktree — no test env shim needed.
 - `core/` — `queryResourceDescriptor` + the contract types (`QueryResourceContract`,
   `WindowQueryResourceContract`, `PointQueryResourceContract`). Web-safe:
   **no drizzle** (bundled into the browser).
-- `server/` — `queryResource`, `windowQueryResource`, `compileQuery`,
-  `compileEdges`, `rel`, and the spec types. Owns all drizzle usage and the
-  `identityTable`/keyField derivation. `server/testing` publishes
-  `compileWindowQuery` (the bounded compiler without registering) for
-  `network/live`'s tests.
+- `core/` also holds the join vocabulary's types (`JoinSpec`, `ColumnRef`,
+  `JoinRefs`, `JoinRef`, `JoinColumns`) and `BASE_RELATION` — type-only drizzle
+  imports.
+- `server/` — `queryResource`, `windowQueryResource`, `compileGroupsQuery`,
+  `compileJoins` / `joinRefs`, `compileQuery`, `compileEdges`, `rel`, and the
+  spec types. Owns all drizzle usage and the `identityTable` / routes / keyField
+  derivation. `server/testing` publishes `compileWindowQuery` (the bounded
+  compiler without registering) and `recordingQueryDb` for `network/live`'s
+  tests.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.
+- Description: Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (an identityTable, or for a bounded window / point set and a grouping the routes the change router serves it by), and client keyOf for live-state resources.
 - Server:
   - Uses:
     - `database.db`
+    - `primitives/keyset.atOrBeforePredicate`
     - `primitives/keyset.orderByClauses`
+    - `primitives/keyset.seekPredicate`
     - `primitives/keyset.SortKey`
   - Exports (types):
+    - `CompiledGroups`
     - `CompiledQuery`
     - `Edge`
     - `EntitySource`
@@ -300,12 +534,18 @@ importing `db` never touches a worktree — no test env shim needed.
     - `QueryDb`
     - `QueryResourceSpec`
     - `QuerySource`
+    - `ReadColumn`
+    - `RoutedSource`
     - `SelectMap`
     - `WindowOrderKey`
     - `WindowQueryResourceSpec`
   - Exports (values):
     - `compileEdges`
+    - `compileGroupsQuery`
+    - `compileJoins`
     - `compileQuery`
+    - `deferredWindowQueryResource`
+    - `joinRefs`
     - `queryResource`
     - `rel`
     - `windowQueryResource`
@@ -319,10 +559,25 @@ importing `db` never touches a worktree — no test env shim needed.
     - `primitives/live-state.WindowResourceDescriptor`
     - `primitives/live-state.WindowSelector`
   - Exports (types):
+    - `ColumnRef`
+    - `ColumnRefsOf`
+    - `ExtensionJoin`
+    - `JoinColumns`
+    - `JoinFamily`
+    - `JoinRef`
+    - `JoinRefs`
+    - `JoinSpec`
+    - `JoinWireColumns`
+    - `KeyedSideJoin`
+    - `LookupJoin`
     - `PointQueryResourceContract`
     - `QueryResourceContract`
     - `WindowQueryResourceContract`
-  - Exports (values): `queryResourceDescriptor`
+  - Exports (values):
+    - `BASE_RELATION`
+    - `familyMember`
+    - `familyMemberAlias`
+    - `queryResourceDescriptor`
 - Cross-plugin:
   - Imported by:
     - `conversations/agents`
@@ -332,5 +587,7 @@ importing `db` never touches a worktree — no test env shim needed.
 - Test helpers:
   - Server: `@plugins/infra/plugins/query-resource/server/testing`
     - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.
+    - `recordingQueryDb` — A `QueryDb` that renders every query through drizzle's real `PgDialect` — the SQL a compiler would send — records it, and answers with `script`'s rows instead of running it.
+    - Types: `RecordedQuery`
 
 <!-- AUTOGENERATED:END -->

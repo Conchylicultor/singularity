@@ -2,7 +2,8 @@
  * `compileCollection` end-to-end: a `liveCollection`'s window and `:rows`
  * specs compiled by `compileWindowQuery`, wired into a real
  * `createResourceRuntime`, reading a real Postgres table (a throwaway database)
- * and driven through the change feed (`applyDbChange`). The membership
+ * and driven through the change feed's two routers (`routeTableChange` serves
+ * these routed resources; `applyDbChange` must skip them). The membership
  * semantics themselves are pinned by `resource-runtime`'s
  * `runtime-window-membership` suite; THIS suite pins that the decoded
  * where / order / limit reach the SQL each subscription tuple runs.
@@ -224,13 +225,26 @@ function attach(
           f.kind === "update" && f.key === key && sameParams(f.params, params),
       );
     },
+    // One change as the change feed delivers it (`routeChange`): to BOTH
+    // routers. Every served resource is routed, so `routeTableChange` serves
+    // it and the legacy `applyDbChange` must skip it.
     change(op: "I" | "U" | "D", ids: string[]) {
-      runtime.applyDbChange({
-        table,
+      this.changeOn(table, op, ids);
+    },
+    changeOn(changed: string, op: "I" | "U" | "D", ids: string[]) {
+      runtime.routeTableChange({
+        table: changed,
         op,
         ids,
-        origin: table,
-        identityBase: table,
+        keys: null,
+        unchanged: null,
+      });
+      runtime.applyDbChange({
+        table: changed,
+        op,
+        ids,
+        origin: changed,
+        identityBase: changed,
       });
     },
   };
@@ -544,7 +558,17 @@ describe("serveCollection — :groups", () => {
     expect(String(failure)).toMatch(/does not parse as the row schema's field/);
   });
 
-  test("a subscribed grouping is re-run and re-pushed on a table change (read-set routing)", async () => {
+  test("the grouping is routed by one full route on the table it reads", () => {
+    const specs = compileCollection(collection(), {
+      from: srcT,
+      db: db as unknown as QueryDb,
+    });
+    expect(specs.groups.reach.routes.map((r) => [r.table, r.map.kind])).toEqual(
+      [[TABLE, "full"]],
+    );
+  });
+
+  test("a subscribed grouping is re-run and re-pushed on a change to its table, never another's (reach routing)", async () => {
     const c = collection();
     const h = serve(c);
     await seed();
@@ -566,6 +590,12 @@ describe("serveCollection — :groups", () => {
       { value: "alert", count: 4 },
       { value: "build", count: 3 },
     ]);
+
+    // A table the grouping never reads reaches nothing.
+    const before = h.frames.length;
+    h.changeOn("some_other_table", "U", ["i"]);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(h.frames.length).toBe(before);
   });
 });
 

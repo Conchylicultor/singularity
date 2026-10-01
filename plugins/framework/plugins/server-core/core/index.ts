@@ -34,14 +34,22 @@ export {
 } from "./profiler";
 export type { PhaseId, Span, MemoryCheckpoint } from "./profiler";
 export { isServerReady, markServerReady } from "./readiness";
+export {
+  recordLoaderReadSet,
+  removeReadSetTable,
+  seedReadSetIndex,
+} from "./read-set";
 export { getBootMode, registeringPlugin } from "./boot-mode";
 export type { BootMode } from "./boot-mode";
 export {
   Resource,
   applyDbChange,
   assertPreloadedResourcesDeclared,
+  bindDeferredResources,
+  defineDeferredResource,
   defineResource,
   defineExternalResource,
+  onDeferredResourcesBound,
   handleResourceHttp,
   loadResourceByKey,
   measureSubscribeCycle,
@@ -50,7 +58,9 @@ export {
   onResourceDelivery,
   onResourcePush,
   recomputeResource,
-  scopedResourceIdentities,
+  routeTableChange,
+  scopedResourceTables,
+  routedTableRequirements,
   boundedMembershipKeys,
   unboundedWindowKeys,
   seedPersistedSnapshot,
@@ -65,8 +75,9 @@ export type {
   DependsOnEntry,
   ExternalResource,
   LiveStateSnapshotHooks,
-  RecomputeIntent,
   ResourceDefinition,
+  TableChange,
+  TableLayoutRequirement,
   ResourceContract,
   ResourceDeliveryObserver,
   ResourcePushObserver,

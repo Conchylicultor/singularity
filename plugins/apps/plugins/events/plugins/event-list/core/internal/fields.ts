@@ -7,21 +7,21 @@ import {
 import { EVENT_CATEGORIES } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 // The single shared field vocabulary driving BOTH the web `FieldDef[]` (added
-// `value`/`cell` accessors) and the server `FieldColumnMap` (added drizzle
-// columns), so the two runtimes can never drift on which dimensions exist, what
-// type they are, or what enum choices they offer. Plain data only (browser-safe)
-// — no React, no drizzle.
+// `value`/`cell` accessors) and the live collection's declaration (what the
+// server filters and sorts on), so the two runtimes can never drift on which
+// dimensions exist, what type they are, or what enum choices they offer. Plain
+// data only (browser-safe) — no React, no drizzle.
 //
 // `description` / `imageUrl` / `allDay` / `date` are deliberately NOT fields:
 // they are display or formatting inputs the row renderer reads straight off the
 // record, and promoting them here would only add dead sort/filter axes.
-// (`description` is still reachable — the server search covers it via ILIKE.)
+// (`description` is still reachable — the search box covers it.)
 // `date` in particular is jsonb: the queryable dimensions are its denormalized
 // projections (`startsAt`, `recurring`), which are indexed columns and already
 // fields below.
 //
-// `sourceId` is deliberately absent too: the `source` dimension arrives later as
-// a CONTRIBUTED field extension (its label and its option list are the sources
+// `sourceId` is deliberately absent too: the `source` dimension arrives as a
+// CONTRIBUTED field extension (its label and its option list are the sources
 // plugin's to own, since only that plugin holds the live source rows). The
 // column is declared in `EVENT_LIST_FILTERABLE` under the same id, so the
 // contributed field filters and sorts server-side with no edit here — this
@@ -35,14 +35,13 @@ export interface EventFieldSpec {
   /** Tree/primary label field (the one rendered as the row title). */
   primary?: boolean;
   /**
-   * Sortable in the toolbar Sort pill (also the keyset-sortable set). Left
-   * undefined = the `FieldDef` default (sortable when a `value` projection
-   * exists); set `false` for a field with no server column binding, so the pill
-   * never offers a sort the server would silently drop.
+   * Sortable in the toolbar Sort pill. Left undefined = the `FieldDef` default
+   * (sortable when a `value` projection exists) — the collection must then
+   * declare the column sortable (`eventsList`), or the live source refuses the
+   * field at mount; set `false` for a field the server cannot order (a jsonb
+   * array), so the pill never offers it.
    */
   sortable?: boolean;
-  /** Column may be NULL — drives null-aware keyset seek terms server-side. */
-  nullable?: boolean;
   /** Table/list trailing alignment for this field. */
   align?: "start" | "end" | "center";
   /** enum choices — drives the Filter pill multiselect and the enum chip cell. */
@@ -66,16 +65,16 @@ export const EVENT_LIST_FIELDS: EventFieldSpec[] = [
     type: "enum",
     options: EVENT_CATEGORY_OPTIONS,
   },
-  { id: "venue", label: "Venue", type: "text", nullable: true },
-  { id: "city", label: "City", type: "text", nullable: true },
+  { id: "venue", label: "Venue", type: "text" },
+  { id: "city", label: "City", type: "text" },
   // Free text ("Free", "12–18 €") — venues do not publish a normalizable
   // number, so this is a text dimension, never a `number` one.
-  { id: "price", label: "Price", type: "text", nullable: true },
+  { id: "price", label: "Price", type: "text" },
   { id: "recurring", label: "Recurring", type: "bool" },
   // `tags` is the jsonb string array, filtered in the `stringArray` domain
   // (has all / any / none of). Not sortable: a jsonb array has no keyset order.
   { id: "tags", label: "Tags", type: "tags", sortable: false },
-  { id: "url", label: "Link", type: "text", nullable: true, sortable: false },
+  { id: "url", label: "Link", type: "text", sortable: false },
   // The soft-deletion stamp. A real, filterable dimension on purpose: the query
   // hides disappeared events BY DEFAULT, and an explicit rule on this field is
   // how a view says "I know about disappearance — here is what I want".
@@ -83,22 +82,19 @@ export const EVENT_LIST_FIELDS: EventFieldSpec[] = [
     id: "disappearedAt",
     label: "Disappeared",
     type: "date",
-    nullable: true,
     sortable: false,
   },
 ];
 
 /**
- * What the server can filter on, by filter-language domain — the ONE
- * declaration both runtimes read: the web `dataSource.filterable` (so the
- * Filter control offers exactly these) and the server column map
- * (`bindColumns`) the handler strict-decodes against.
+ * What the server can filter on, by filter-language domain — the events list
+ * collection's `filterable` (`eventsList`), so the DataView's Filter control
+ * offers exactly these and the server strict-decodes against them.
  *
- * Three ids have no field in `EVENT_LIST_FIELDS`, on purpose:
+ * Two ids have no field in `EVENT_LIST_FIELDS`, on purpose:
  *
  * - `sourceId` — the contributed `source` dimension (see above).
- * - `description` / `tagsText` — searched only: `tagsText` is the tags array
- *   rendered as text (`tags::text`), so the search box still finds a tag.
+ * - `description` — searched only.
  */
 export const EVENT_LIST_FILTERABLE = {
   title: liveText(),
@@ -110,21 +106,34 @@ export const EVENT_LIST_FILTERABLE = {
   price: liveText(),
   recurring: liveBoolean(),
   tags: liveStringArray(),
-  tagsText: liveText(),
   url: liveText(),
   disappearedAt: liveInstant(),
   sourceId: liveText(),
 };
 
 /**
+ * What the list sorts by: every field the Sort pill offers (a field left
+ * `sortable` undefined sorts), plus the contributed `sourceId`. Never `tags`
+ * (a jsonb array has no order), `url` or `disappearedAt` (not offered).
+ */
+export const EVENT_LIST_SORTABLE = [
+  "title",
+  "startsAt",
+  "category",
+  "venue",
+  "city",
+  "price",
+  "recurring",
+  "sourceId",
+] as const;
+
+/**
  * The text columns the search box matches (any of, case-insensitively): what an
- * event is (title / description), where it is (venue / city), and how it is
- * labelled (its tags, as text).
+ * event is (title / description) and where it is (venue / city).
  */
 export const EVENT_LIST_SEARCHABLE = [
   "title",
   "description",
   "venue",
   "city",
-  "tagsText",
 ] as const;

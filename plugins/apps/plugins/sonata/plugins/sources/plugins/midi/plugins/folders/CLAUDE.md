@@ -8,7 +8,9 @@ labelled **"File"**, not "Source" — the library already ships a `source` enum
 field, and two columns headed "Source" is unreadable) —
 kept separate from `midi`'s field contributor because the semantics are this
 plugin's, and one contributor per plugin is the boundary rule. Being a field, "show
-me the songs whose file vanished" is a filter, not a visual scan.
+me the songs whose file vanished" is a filter, not a visual scan — run on the
+server over the MIDI source's `midi.sourceMissing` library column (its public
+`midiColumns` handle), which every library row carries.
 
 Two mechanisms keep the DB in sync with disk:
 

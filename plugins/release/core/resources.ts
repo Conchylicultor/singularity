@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveInstant,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 
 // WHY a run was cut. `candidate` is packed and built for a named platform — a
 // bundle `ship` can pick; `staged` is a `--dev` run that claims no
@@ -53,9 +57,8 @@ export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 // regardless of age — and `found: false` is "no such run". The `:rows` point
 // routing sends a status flip to that run's readers alone.
 //
-// Plural on purpose: a composition-scoped window (`default` / `sortable` /
-// `filterable` by composition) can later join this SAME declaration and retire
-// the `queryReleaseHistory` keyset endpoint and the revision tick below.
+// The history window is `releaseHistory` below: namespace-scoped, which a
+// by-id read must not be.
 //
 // NOT preloaded (a lookup-only collection cannot be; the run-detail pane lives
 // deep in Studio, not first paint). The server projects exactly this schema's
@@ -65,12 +68,49 @@ export const releaseRuns = liveCollection("release.runs", {
   id: "id",
 });
 
+/**
+ * The Studio release-history DataView's id (its `storageKey`): the surface
+ * `releaseHistory` is listed on, whose custom columns sort and filter it. The
+ * DataView declares the same literal with `defineDataView` (a web-only marker
+ * the codegen scrapes); the DataView asserts at mount that the two agree.
+ */
+const RELEASE_HISTORY_VIEW_ID = "studio.release.history";
+
+// This namespace's release runs, newest first — the Studio release-history
+// DataView's live source (research/2026-09-29-global-scoped-change-routing.md
+// P3). A scroll collection (segments past `maxLimit`), scoped by the pane to
+// one composition (`scoped({ where: { composition } })`) and by the server to
+// this namespace's runs (a worktree's fork inherits main's rows); a status flip
+// or a new run reaches the tuples holding it, through the routed runtime —
+// no revision tick, no refetch. Its `columnScope` is the history surface, so
+// the surface's custom columns sort and filter it server-side.
+//
+// Its own collection beside `releaseRuns`: the lookup resolves a run by id
+// whichever namespace produced it, while this window is namespace-scoped (a
+// collection's base `where` applies to its `:rows` read too).
+export const releaseHistory = liveCollection("release.history", {
+  row: ReleaseRunSchema,
+  id: "id",
+  filterable: {
+    composition: liveText(),
+    target: liveText(),
+    status: liveText(ReleaseRunStatusSchema),
+    platform: liveText(),
+    startedAt: liveInstant(),
+    finishedAt: liveInstant(),
+  },
+  sortable: ["target", "status", "platform", "startedAt", "finishedAt"],
+  default: { orderBy: [["startedAt", "desc"]], limit: 100 },
+  maxLimit: 500,
+  scroll: true,
+  columnScope: RELEASE_HISTORY_VIEW_ID,
+});
+
 // Scalar invalidation tick: a cheap `{ rev }` hash the server pushes only when a
-// real change lands (new run / status flip). The composition-scoped release-history
-// DataView keeps it OUT of its query key and instead refetches the loaded window in
-// place when `rev` changes. Browser-safe descriptor; the server half (loader + push
-// mode) is built from it via `defineResource`. Not preloaded (mirrors
-// `conversationsRevisionResource` — the section lives deep in a detail pane).
+// real change lands (new run / status flip). Its one reader is remote-deploy's
+// release info, which refetches the candidate endpoint (a directory walk and
+// git, not a table) when it moves. Browser-safe descriptor; the server half
+// (loader + push mode) is built from it via `defineResource`. Not preloaded.
 export const releaseRunsRevisionResource = resourceDescriptor<{ rev: string }>(
   "release.history-revision",
   z.object({ rev: z.string() }),

@@ -67,5 +67,12 @@ function planEnumBuckets(
 }
 
 export const enumGroupings: FieldGrouping[] = [
-  { id: "value", label: "Value", plan: planEnumBuckets },
+  // One section per stored value: a live source may order its sections by the
+  // column itself (stored-value order, as its sort is).
+  {
+    id: "value",
+    label: "Value",
+    oneBucketPerValue: true,
+    plan: planEnumBuckets,
+  },
 ];

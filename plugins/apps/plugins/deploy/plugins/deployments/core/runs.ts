@@ -1,6 +1,9 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import { liveValue } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveInstant,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 
 /**
  * The verbs over a deployment, as the app launches them.
@@ -205,17 +208,45 @@ export const DeployRunRecordSchema = z.object({
 export type DeployRunRecord = z.infer<typeof DeployRunRecordSchema>;
 
 /**
- * Scalar invalidation tick for the deploy ledger — a cheap `{ rev }` hash the
- * server pushes only when `deploy_runs` actually changes.
- *
- * The history DataView is a server-delegated keyset query, so it keeps this OUT
- * of its query key and refetches its loaded window in place when `rev` moves.
- * A per-deployment live resource over the rows themselves would be an unbounded
- * collection, which the working-set contract forbids; a scalar hash is bounded
- * by construction. Mirrors `release.history-revision` exactly.
+ * The deploy history DataView's id (its `storageKey`): the surface
+ * `deployRunHistory` is listed on, whose custom columns sort and filter it.
+ * The DataView declares the same literal with `defineDataView` (a web-only
+ * marker the codegen scrapes) and asserts at mount that the two agree.
  */
-export const deployRunsRevisionResource = resourceDescriptor<{ rev: string }>(
-  "deploy.runs-revision",
-  z.object({ rev: z.string() }),
-  { rev: "" },
-);
+const DEPLOY_HISTORY_VIEW_ID = "deploy.deployment.history";
+
+/**
+ * The `deploy_runs` ledger as a live window — the deployment pane's History
+ * DataView source (research/2026-09-29-global-scoped-change-routing.md P3), the
+ * pane scoping it to one deployment (`scoped({ where: { deploymentId } })`).
+ * A run opening, finishing or failing reaches the tuples holding it through
+ * the routed runtime: no revision tick, no refetch. A scroll collection
+ * (segments past `maxLimit` — a ledger only grows), and its `columnScope` is the
+ * history surface, so that surface's custom columns sort and filter it.
+ */
+export const deployRunHistory = liveCollection("deploy.run-history", {
+  row: DeployRunRecordSchema,
+  id: "id",
+  filterable: {
+    deploymentId: liveText(),
+    verb: liveText(DeployVerbSchema),
+    status: liveText(),
+    releaseRunId: liveText(),
+    commitSha: liveText(),
+    message: liveText(),
+    startedAt: liveInstant(),
+    finishedAt: liveInstant(),
+  },
+  sortable: [
+    "status",
+    "verb",
+    "commitSha",
+    "releaseRunId",
+    "startedAt",
+    "finishedAt",
+  ],
+  default: { orderBy: [["startedAt", "desc"]], limit: 100 },
+  maxLimit: 500,
+  scroll: true,
+  columnScope: DEPLOY_HISTORY_VIEW_ID,
+});

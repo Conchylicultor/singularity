@@ -145,6 +145,19 @@ ruleTester.run(
         code: `export { windowQueryResource, queryResource as q } from "${QUERY_RESOURCE_SERVER}";`,
         errors: [legacy("windowQueryResource"), legacy("queryResource")],
       },
+      // The deferred / multi-tuple substrate is a substrate spelling too.
+      {
+        code: `
+          import { defineDeferredResource } from "${SERVER_CORE}";
+          import { deferredWindowQueryResource } from "${QUERY_RESOURCE_SERVER}";
+          import { useResources } from "${LIVE_STATE_WEB}";
+        `,
+        errors: [
+          legacy("defineDeferredResource"),
+          legacy("deferredWindowQueryResource"),
+          legacy("useResources"),
+        ],
+      },
       // A member read off a namespace import, dotted and computed.
       {
         code: `

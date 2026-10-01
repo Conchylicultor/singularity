@@ -20,6 +20,12 @@ export interface FieldValueTextCastContribution {
    * no cast is read as its raw TEXT, i.e. the `text` domain.
    */
   domain: FilterDomainId;
+  /**
+   * The SQL type the CAST produces (`numeric`, `boolean`, `timestamptz`) —
+   * what an operand compared against it must be cast back to (a keyset cut
+   * over a sorted custom column carries the value as its exact text).
+   */
+  sqlType: string;
 }
 
 /** Per-type text→typed SQL cast registry. Read at REQUEST time (inside a server
@@ -36,6 +42,8 @@ export const ValueTextCast =
 export interface FieldValueTextRead {
   cast: ValueTextCast | undefined;
   domain: FilterDomainId;
+  /** The SQL type the read produces: the cast's, or `text` for the raw column. */
+  sqlType: string;
 }
 
 /** Resolve a field type's text→typed read by exact token (no `extends`
@@ -44,6 +52,6 @@ export interface FieldValueTextRead {
 export function resolveFieldValueTextCast(typeId: string): FieldValueTextRead {
   const c = ValueTextCast.getContributions().find((x) => x.type.id === typeId);
   return c
-    ? { cast: c.cast, domain: c.domain }
-    : { cast: undefined, domain: "text" };
+    ? { cast: c.cast, domain: c.domain, sqlType: c.sqlType }
+    : { cast: undefined, domain: "text", sqlType: "text" };
 }

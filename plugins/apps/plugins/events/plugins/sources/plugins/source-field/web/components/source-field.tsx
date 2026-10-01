@@ -43,10 +43,10 @@ const NO_SOURCES: readonly EventSource[] = [];
  * The options are every source (up to the collection's `maxLimit`), sorted by
  * name on the server — not the newest-100 default window.
  *
- * The field id is **`sourceId`**, matching the physical column already bound in
- * `event-list`'s server `COLUMN_MAP` — that binding is what makes filtering and
- * sorting by source compile to SQL with zero edits to `event-list`. Renaming the
- * id here silently downgrades the dimension to client-side-only.
+ * The field id is **`sourceId`**, matching the column the `events.list`
+ * collection declares filterable and sortable — that is what makes filtering
+ * and sorting by source compile to SQL with zero edits to `event-list`. A field
+ * id naming no column of the collection is refused by the live source at mount.
  */
 export function SourceField({
   render,

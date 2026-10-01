@@ -13,6 +13,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
+  formatSectionCount,
   type DataViewGroupHeaders,
   type DataViewSection,
 } from "@plugins/primitives/plugins/data-view/core";
@@ -133,11 +134,11 @@ export function GroupedSections({
           // trailing cluster.
           const count = quiet ? (
             <Text variant="caption" tone="faint" className="font-semibold">
-              {section.count}
+              {formatSectionCount(section.count)}
             </Text>
           ) : (
             <Text variant="caption" tone="muted">
-              {section.count}
+              {formatSectionCount(section.count)}
             </Text>
           );
           return (

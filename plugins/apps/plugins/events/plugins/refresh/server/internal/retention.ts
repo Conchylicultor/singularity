@@ -27,9 +27,8 @@ import {
  * leak: a source that flickers (a page that 500s, a listing pulled and reposted)
  * gets its rows back via the next successful upsert, which un-disappears them.
  *
- * A DELETE needs no `updated_at` stamp to reach the live DataView — the
- * `events.revision` tick is `count(*) + max(updated_at)`, and removing rows moves
- * the count.
+ * A DELETE needs no `updated_at` stamp to reach the live DataView — the change
+ * feed routes each deleted row to the `events.list` tuples holding it.
  */
 export const eventsRetention = defineRetention({
   table: eventsTable,

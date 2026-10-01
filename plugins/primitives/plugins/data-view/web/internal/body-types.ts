@@ -50,6 +50,11 @@ export interface DataViewShellChrome {
   stickyRef: (node: HTMLElement | null) => void;
 }
 
+/** `Omit` over each member of a union — a plain `Omit` of a union is not a union. */
+export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+  ? Omit<T, K>
+  : never;
+
 /**
  * Everything a data source supplies: the full `DataViewProps` surface minus the
  * per-surface keys the shell owns (`storageKey` / `title` / `actions` /
@@ -60,8 +65,12 @@ export interface DataViewShellChrome {
  * SURFACE, not the data bundle, and the body reads it off `chrome`. Omitting it
  * here means a source contributor cannot even spell a density the host would
  * then silently ignore.
+ *
+ * DISTRIBUTIVE over the data-origin union: a plain `Omit` would merge its arms
+ * into one object type, and `{ source, rows }` would type-check again on the
+ * `MergedDataView` path.
  */
-export type DataViewSourceBundle<TRow> = Omit<
+export type DataViewSourceBundle<TRow> = DistributiveOmit<
   DataViewProps<TRow>,
   | "storageKey"
   | "title"
@@ -74,8 +83,9 @@ export type DataViewSourceBundle<TRow> = Omit<
   | "searchPlaceholder"
 >;
 
-/** Props of the per-active-instance body (`DataViewBody`). */
-export interface DataViewBodyProps<TRow> extends DataViewSourceBundle<TRow> {
+/** Props of the per-active-instance body (`DataViewBody`) — an intersection,
+ *  since an interface cannot extend the bundle's union. */
+export type DataViewBodyProps<TRow> = DataViewSourceBundle<TRow> & {
   storageKey: DataViewId;
   viewModel: ReadyViewModel;
   activeInstance: ResolvedViewInstance<DataViewContribution>;
@@ -83,4 +93,4 @@ export interface DataViewBodyProps<TRow> extends DataViewSourceBundle<TRow> {
   /** Scopes the server-page cache per source; `""` (the default) on the
    *  single-source path. See `useServerDataSource`. */
   sourceScope?: string;
-}
+};

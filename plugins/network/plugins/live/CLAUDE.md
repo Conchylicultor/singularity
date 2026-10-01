@@ -72,34 +72,76 @@ useLiveRow(eventSources, sourceId);                                   // one row
   grouping queries at boot. Default `"none"`. The scanners read the flag through the resource
   vocabulary (`tooling/resource-vocabulary`: each factory names the field it
   spells its preload with, and each mint whether the flag reaches it).
-- **Serve.** `serveCollection(c, { from, where?, columns? })` binds every ROW
+- **Serve.** `serveCollection(c, { from, joins?, where?, columns? })` binds every ROW
   field to a column of `from` (a `PgTable`, or an Entity's wire columns) BY
   PROPERTY NAME — type-checked: a field that is not a column fails in `tsc` until
-  it is given in `columns: { name: table.col }` (and throws at module eval if it
-  still binds nowhere).
+  it is given in `columns: { name: (j) => j.base.col }` (and throws at module eval
+  if it still binds nowhere).
+  - **Joins.** `joins: [songPlayback.join("playback"), lookup, keyedSide]`
+    reads other tables beside `from` (the vocabulary, its routes and checks:
+    `plugins/infra/plugins/query-resource/CLAUDE.md`, *Joins*). A joined column
+    binds through an override, `columns: { lastPlayedAt: (j) => j.playback.lastPlayedAt }`
+    — `j` offers only the base's and each declared join's WIRE columns, and an
+    override returns one of them, so another relation, another table's column
+    or a server-only column cannot be spelled (tsc); a `ColumnRef` naming a
+    column of the wrong relation, or one `j` did not offer, throws. A joined
+    field filters, sorts (in the order signature like any sortable field),
+    groups and is wire-encoded (`withWire`) like a base one; the id binds to the
+    base. A field read through a LEFT join is NULL for a host with no joined
+    row, so its row schema field must accept null — module eval throws
+    otherwise.
+    Routing: a write to a joined table refills only the host rows it keys, and
+    only in the tuples whose SQL reads the join — as `value` (projected only: a
+    write to a row the tuple does not hold loads nothing) or `membership` (its
+    where / order reads it, or a required lookup). A grouping joins only what its
+    column and `where` read.
   - **The projection is derived from the row schema**: exactly its keys, so a
     server-only column (a dedup key, a secret) can never reach the wire.
   - **`where`** is the collection's base membership — the collection IS the rows
     of `from` matching it. It is ANDed into the window, the `:rows` point reads
     and every grouping. A mutable column is fine: a flip is a membership exit for
     a window tuple and a point tuple (the point refill omits the id), and a
-    recount for the groups.
+    recount for the groups. A predicate over the joins is `(j) => …` over their
+    rendered columns (`(j) => gt(j.playback.plays, 0)`), and makes each join it
+    reads membership for every tuple. A table the predicate reads that is not the
+    base or a declared join throws at module eval.
+  - **`defaults`** — DEFAULT scopes: `[{ unless: "sourceId", where: (j) =>
+    eq(j.source.enabled, true) }]`. Each predicate is ANDed into a window or
+    grouping tuple UNLESS that tuple's filter names its `unless` column (any op) —
+    a default the user overrides by asking about the column, not base membership
+    (the events list hides a disabled source's events and soft-deleted ones, and
+    a filter on `sourceId` / `disappearedAt` shows them). Written like `where`,
+    checked like it (an `unless` that is not filterable throws), routed like it
+    (its columns are route columns, and a join it reads is membership for the
+    tuples it applies to); never ANDed into the `:rows` point read.
   - The window and `:rows` compile through `windowQueryResource`: the window
     decodes `where` / `order` per subscription tuple (the filter compiles
     through the filter language's `filterSql`, over each column RENDERED as SQL,
-    never the column object) with every sortable column in the order signature;
+    never the column object) with every sortable column as the universe each
+    tuple's order signature is cut from (a tuple signs only what it sorts by);
     the point sibling is
     `point: { by: <id column> }` with no client filter.
-  - `:groups` is a plain (non-keyed) push value per grouping tuple, served by
-    `defineResource(desc, { mode: "push", loader })`: `SELECT col AS value,
-    count(*) … WHERE <base> AND <where> GROUP BY col ORDER BY count(*) DESC, col
-    NULLS LAST LIMIT n`. It declares no scope policy: its read-set (captured
-    automatically at the DB pool chokepoint) routes a table change as a FULL
-    recompute of every subscribed grouping tuple, and push mode drops a
-    byte-identical result. Each value is checked against the ROW schema's field
-    (a group value is a stored value; an operand narrowing like
-    `liveText(Enum)` is tsc-only), so a value the row type cannot hold fails
-    loudly.
+  - `:groups` is a plain (non-keyed) push value per grouping tuple, compiled by
+    query-resource's `compileGroupsQuery`: `SELECT col AS value, count(*) …
+    WHERE <base> AND <where> GROUP BY col ORDER BY count(*) DESC, col NULLS LAST
+    LIMIT n`. A write to the table recomputes every subscribed grouping tuple
+    (its `reach` plan: one `full` route on the table), a write to any other
+    table reaches none, and push mode drops a byte-identical result. Each value
+    is checked against the ROW schema's field (a group value is a stored value;
+    an operand narrowing like `liveText(Enum)` is tsc-only), so a value the row
+    type cannot hold fails loudly.
+  - **All three are ROUTED** (research/2026-09-29-global-scoped-change-routing.md):
+    each compiler emits the routes its SQL reads, and the runtime's
+    `routeTableChange` serves them — never the loader read-set — so a change
+    reaches exactly the tuples whose query reads the changed table. `from` is
+    therefore a base table or an Entity, never a view (`CollectionSource`), and
+    every table a collection reads must be triggered (the change-feed's boot
+    assertion). Each route's columns are exact: the window declares the
+    filterable columns and the base predicate as its `whereReads`, the grouping
+    as its `reads`. The joined read-sets are pinned by
+    `server/internal/serve-collection-joins.test.ts` (routes, roles, the
+    provenance property over random params) and, on a real database through the
+    real feed, `serve-collection-oracle.test.ts` (the differential oracle).
   - **A column type's wire form.** A column built through sql-column's
     `withWire` (collab-doc's `bytea` → unfolded base64) is encoded IN JS on every
     row a loader returns (`encodeRow` on the window / point spec) — never in SQL,
@@ -165,6 +207,175 @@ useLiveRow(eventSources, sourceId);                                   // one row
 - `useLive` is on `live-state/no-pending-data-collapse`'s watched list
   (`useLiveRow` has no `data` to collapse), and both on `no-ready-negation`'s:
   never `status !== "ready"` — name `"loading"` and `"error"`.
+
+## Scroll collections — `scroll: true` / `useLiveScroll`
+
+A list that scrolls past `maxLimit` (a live DataView source) reads a collection
+declared `scroll: true` as a **segmented scroll**: several windows, each ≤
+`maxLimit`, that tile the order by cuts — and every loaded segment stays live.
+Design: research/2026-09-29-global-scoped-change-routing.md, "P2 — DataView
+live-window adapter".
+
+- **Declare.** `scroll: true` needs `maxLimit ≥ 3 · default.limit` (a
+  declaration throw): a full segment splits at `maxLimit − default.limit` and two
+  merge below `maxLimit − 2 · default.limit`. The collection is typed
+  `LiveScrollCollection` (`scroll: true`), which is what `useLiveScroll` and
+  `liveDataSource` take.
+- **`$key` — the server-minted row key.** Every full and scoped row of a scroll
+  window carries `$key`: the canonical JSON array of the tuple's order keys as
+  exact Postgres text (`col::text` — a µs `timestamptz`, a long `numeric`, a
+  `float8` cross exactly), then the id (omitted when the order already names it).
+  Over `LIVE_ROW_KEY_MAX_BYTES` (1 KiB, a long text sort key) it is `null`: the
+  scroll cannot cut there. It is declared on the window's wire schema only (never
+  a row field, never on `:rows`), and every read hands rows out WITHOUT it
+  (`useLive` and `useLiveScroll` split it off, one copy per row object).
+- **Cuts.** A window tuple may carry `after` (exclusive) and `until` (inclusive)
+  — each a `$key` verbatim, never derived on the client (a decoded row lost the
+  exact text). The codec refuses them on a collection not declared `scroll`, and
+  decodes them strictly (exactly the order's arity, a non-NULL id, canonical
+  JSON). The compiler renders them on the ORDER side over the tuple's own keys
+  (keyset's `seekPredicate` / `atOrBeforePredicate`, each operand cast back to its
+  column's type) — never through `where`, so a sortable-but-not-filterable order
+  column takes cuts, and the routes and roles are those of the tuple without them.
+- **`useLiveScroll(c, query | null, { resetKey? })`** → `{ status: "loading" }
+  | { status: "error"; error; refetch }` (the first segment failed with no rows)
+  `| { status: "ready"; rows; exhausted; canGrow; growing; loadMore; truncated;
+  segmentErrors }`. The plan is pure data (`shared/scroll-plan.ts`,
+  shared by the hook and the DB oracle); the hook reads one window tuple per
+  segment through live-state's `useResources` (subscribed by diff).
+  - Grow by `default.limit` up to `maxLimit`; a full segment at `maxLimit` splits
+    at row `maxLimit − default.limit` (`S1 = (a, cut]` at `maxLimit`, `S2 = (cut, b]`
+    at `2·default.limit`); neighbours holding ≤ `maxLimit − 2·default.limit` rows
+    merge; an empty segment folds into its neighbour at once.
+  - **The rows counted are a gap-free prefix of the order** — the segments up to
+    and including the first full BOUNDED one (it may hide rows). `exhausted`,
+    `canGrow` and the empty state read that prefix only.
+  - **Cap and collapse.** At most `MAX_SCROLL_SEGMENTS` (16). A segment that must
+    split and cannot (the cap, a `null` key) drops every segment after it and
+    becomes the tail at `maxLimit` (one `clientLog` line); only a tail that cannot
+    split says `truncated` — a `ScrollTruncation` KIND (`"segment-cap"` |
+    `"long-sort-key"`, exported for the surface to word for its user), logged
+    once in the plan's own terms (`TRUNCATION_DETAIL`).
+  - **Handoff.** Every structural change mints new tuples; the replaced segments
+    stay subscribed and rendered until every replacement settles, so the result
+    never flips back from `ready`. A replacement that fails keeps the old rows and
+    adds a `segmentErrors` entry (`key`, `afterRowId`, `error`, `blocksPaging`,
+    `retry` — which re-reads that tuple, never `loadMore`). The failed change is
+    SET ASIDE (`ScrollState.stalled`), not held open: its replacements stay read
+    (a retry, or the server answering again, commits it), the scroll is idle
+    again, and it is not re-minted while it is still the step to take — so a
+    failed merge never stops the tail from paging. `blocksPaging` marks the
+    failure paging stopped on: the tail's own read, a failed page past the tail,
+    or — when the scroll can neither grow nor is exhausted — every failure
+    (`growing` is false once a page's read failed).
+  - **Keys.** A plan is one collection's: its key is the collection's key and
+    the query's encoding, so a surface switching collection starts over even
+    when the two queries encode alike. A query changed and then changed back
+    before the new head settled restores the plan still on screen.
+  - **`resetKey`**: a query change under the same key keeps the previous rows until
+    the new head settles (a search typed into a list); any other change starts over,
+    loading. A `null` collection and query read nothing (a surface whose origin is
+    not live still calls the hook, so its hook order is fixed).
+
+## Contributed columns — `contributed: true` / `liveColumns` / `serveColumns`
+
+A collection declared `contributed: true` can be sorted and filtered by columns
+OTHER plugins own (Sonata's library by a song's play count). The set is open, so
+the collection names none of them.
+
+```ts
+// the contributor's core — a handle, nothing registered
+export const playbackColumns = liveColumns(songLibrary, "playback", {
+  row: z.object({ playCount: z.number(), lastPlayedAt: z.coerce.date().nullable() }),
+  filterable: { playCount: liveNumber() },
+  sortable: ["playCount", "lastPlayedAt"],
+});
+// the contributor's server — a contribution, not a registry
+contributions: [LiveColumns.Serve(serveColumns(playbackColumns, { join: songPlayback.join("playback") }))]
+// web
+{ id: "plays", value: (s) => playbackColumns.read(s).playCount, column: playbackColumns.column("playCount") }
+```
+
+- **Rows.** The row type is `Row & { $columns }`: the row schema declares
+  `$columns` (a zod `extend`, so its keys stay readable); each contributed column
+  is projected flat under its wire name (`<contributor>.<field>`), wire-encoded
+  like any column (`withWire`), and folded into `$columns[contributor][field]`;
+  `:rows` points carry it too (one row shape per collection). `handle.read(row)`
+  parses a contributor's slice with its own schema, once per row object. A row
+  always carries every contributor's slice.
+- **Queries.** A query names a contributed column by wire name and hands the codec
+  the handles it names (`LiveQuery.columns`); the server decodes against every
+  handle it serves — its params gate too (the window spec's
+  `window.validateParams`, replacing the descriptor's, whose decode knows no
+  contributed or scoped column). There is no registry. A collection's own column cannot contain
+  `.`. Groupings stay over the collection's own columns.
+- **Serving.** `serveColumns(handle, { join, columns? })` — `join` is an
+  EXTENSION join (`ext.join(alias)`: LEFT, 1:1 on the host's id — typed, and
+  thrown on at compile for a cast), so a contributor can neither drop host rows
+  (a required lookup's INNER join) nor change routing roles; a field binds to its
+  join's wire column of the same name, or through `columns` (typed like
+  `serveCollection`'s overrides). A `contributed` collection's `serveCollection`
+  registers its three resources DEFERRED (`defineDeferredResource`: key, preload
+  and `Resource.Declare` at module eval) and compiles them at
+  `bindDeferredResources` — the boot step right after contributions are
+  collected — folding every `LiveColumns.Serve` naming it. Boot fails on two
+  contributions of one name and on a `Serve` for a collection nothing serves here;
+  `liveColumns` itself refuses a collection not declared `contributed`.
+- **The `live:contributed-columns-served` check**: every `const x =
+  liveColumns(` handle has a `serveColumns(x` in its own plugin's `server/` —
+  an unserved handle's columns reach no row. It reads whole files with comments
+  and strings masked (a call wrapped over lines still reads), resolves a serve
+  through the file's import aliases, ignores test code on both sides, and
+  reports a `liveColumns(` call no `const` binds.
+- **Defaults.** An extension column with a literal default reads it where the side
+  row is missing (query-resource's `ReadColumn`: `COALESCE`), so a never-played
+  song has `playCount = 0` in SQL — in a filter, a sort and the projection.
+- **Custom columns** (data-view's user-defined columns) are the open-vocabulary
+  twin of this seam: a *scoped* column set, below.
+
+## Scoped column sets — `columnScope` / `LiveColumns.Scoped` / `scopedLiveColumns`
+
+A collection declared with `columnScope: "<DataView id>"` sorts and filters by
+columns whose SET is data, not code — the custom columns defined on that one
+DataView surface (research/2026-09-29-global-scoped-change-routing.md P3).
+
+- **Server** (the column set's owner — data-view's custom-columns):
+  `LiveColumns.Scoped(serveScopedColumns({ name, table, scope, hostKey, member,
+  value, members, recomputeOn }))` — one composite-keyed side table (scope, host
+  key, member, value), `members(scope)` the members a scope has NOW (each's filter
+  domain and, for a typed value, its cast and the SQL type it produces), and
+  `recomputeOn(scope)` the external value tuple notified when they change.
+  Collected at boot; every `columnScope` collection's `serveCollection` (deferred,
+  like a `contributed` one) folds every contribution as a query-resource join
+  FAMILY bound to its scope (`query-resource/CLAUDE.md`, *Join families*). The
+  fold is the set's `bind(scope)`, which records the scope: `scopes()` is exactly
+  the scopes served, which the owner watches to notify `recomputeOn(scope)`.
+- **Wire names** are `<name>.<member>` (`custom.cc-1`). The server decodes a tuple
+  against the members it has at decode time (a declaration rebuilt when they
+  change); a member's value is read through its cast at LOAD time, so a retyped
+  column reads its new type on the next load, and a member the scope lost fails the
+  load loudly.
+- **One route per set**, whatever its members: an alias on the host key, kept to
+  the scope's rows, matched per tuple on the members its `where` / order names (as
+  membership). A write to a member a tuple does not read, or to another surface's
+  rows, reaches no tuple; the values table's routed trigger carries the key
+  columns, so a write reaches only the hosts it names.
+- **A member a tuple ORDERS BY** rides the window row under `$scoped`
+  (`LIVE_SCOPED_KEY`, by join alias) — declared on the window's wire schema like
+  `$key`, read by the order signature, split off by every read (`useLive`,
+  `useLiveScroll`). Values a list DISPLAYS still come from the custom-columns value
+  (`customColumnValues`): only a sort / filter joins a member, so an unused column
+  costs nothing.
+- **`recomputeOn`**: the window's routed entry recomputes on each set's
+  `recomputeOn(scope)` — a column added, dropped or retyped FULLs every subscribed
+  tuple once (the runtime's routed `recomputeOn`).
+- **Browser**: `scopedLiveColumns(scope, name, members)` declares the members as
+  the browser knows them (built from the definitions each render) and mints their
+  refs (`.column(member)`, carrying `scope` instead of a collection key). The codec
+  takes a scoped set only on a collection whose `columnScope` is its scope. A
+  DataView listing a scoped collection must BE its scope (its `storageKey` —
+  asserted at mount), and hands the scope to its field extensions
+  (`FieldExtensionProps.liveColumnScope`).
 
 ## Values — `liveValue` / `serveValue` / `useLive(value)`
 
@@ -389,11 +600,12 @@ grouped under the wave or item that removes it
 
 ## Wire params
 
-- Window: `{ limit: string; where?: string; order?: string }` — `where` is the
-  filter language's `encodeFilter` output (e.g.
-  `{"column":"enabled","op":"eq","operand":true}`), `order` canonical JSON; each
-  present only when it differs from the default, so the default window stays
-  byte-identical `{ limit: "100" }`.
+- Window: `{ limit: string; where?: string; order?: string; after?: string;
+  until?: string }` — `where` is the filter language's `encodeFilter` output
+  (e.g. `{"column":"enabled","op":"eq","operand":true}`), `order` canonical
+  JSON, `after` / `until` a scroll segment's cuts (server-minted `$key`s,
+  verbatim); each present only when it differs from the default, so the default
+  window stays byte-identical `{ limit: "100" }`.
 - Groups: `{ groupBy: string; limit: string; where?: string }` — `where` is the
   same encoding, present only when not the absent filter.
 - Decode is STRICT for both: the filter through `decodeFilter` (throws unless

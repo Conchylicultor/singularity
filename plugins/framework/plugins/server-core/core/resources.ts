@@ -9,17 +9,17 @@ import type {
   ResourceMode as RtMode,
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
-  RecomputeIntent as RtRecomputeIntent,
+  TableChange as RtTableChange,
+  TableLayoutRequirement as RtTableLayoutRequirement,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   recordEntrySpan,
   recordSpan,
   chargeWait,
   getRuntimeProfile,
-  getReadSetIndex,
-  getLastLoaderReadSet,
   registerGateGauge,
 } from "./profiler-hooks";
+import { getLastLoaderReadSet, readSetOf, readSetVersion } from "./read-set";
 import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
 
@@ -73,10 +73,11 @@ export type KeyedServerResourceOptions<
 > = RtKeyedServerOpts<T, P>;
 export type DependsOnEntry<P extends ResourceParams = ResourceParams> =
   RtDep<P>;
-// The shared L4 change-feed contract (see resource-runtime/core). The DB
-// change-feed plugin consumes `applyDbChange` (below); this type is the producer
-// surface a future work-admission scheduler reconciles against.
-export type RecomputeIntent = RtRecomputeIntent;
+// What a change producer hands `routeTableChange` (see resource-runtime/core's
+// `routing.ts`): the DB change-feed builds one per NOTIFY, catch-up row and sweep.
+export type TableChange = RtTableChange;
+// One routed table's trigger layout (`routedTableRequirements`).
+export type TableLayoutRequirement = RtTableLayoutRequirement;
 
 // Resource.Declare stays here — its ~37 contributors import it from server-core.
 // `preload` (`"boot"` / `"boot-and-keep"`) is a param-less resource's opt-in to
@@ -314,15 +315,22 @@ const runtime = createResourceRuntime({
       maxMs: agg.maxMs,
     };
   },
-  // Automatic loader→table read-set for the _debug endpoint: the tables each
-  // loader actually read, captured at the DB pool chokepoint. central: omitted
-  // (field absent). Surfaces gaps/over-broad edges vs the hand-drawn dependsOn.
-  readSet: (key) => getReadSetIndex()[key] ?? [],
+  // Automatic loader→table read-set: the tables each loader actually read,
+  // captured at the DB pool chokepoint into the runtime-owned sink (./read-set —
+  // independent of the profiler's kill-switch and resets). The legacy router
+  // inverts it, and the _debug endpoint shows it. central: omitted.
+  readSet: (key) => readSetOf(key),
+  // The sink's version: the legacy router's table → resource memo key.
+  readSetVersion: () => readSetVersion(),
   // Per-run read-set of the key's LAST loader run — the self-healing capture the
   // runtime persists after a FULL recompute (replace, not union), so a dropped
   // dependency is shed from the durable `tables_read` seed instead of carried
   // forever. central: omitted (undefined → persist falls back to `readSet`).
   lastReadSet: (key) => getLastLoaderReadSet(key),
+  // A8: a routed resource reading a table none of its routes names fails its
+  // load under a test runner (bun:test sets NODE_ENV=test), and is reported
+  // once per table in a running server.
+  strictRoutes: process.env.NODE_ENV === "test",
   // Resolve a read-set relation to its identity base table, so the _debug ceiling
   // compares the base-resolved read-set against the base-table `coveredOrigins`.
   // The closure reads the boot-injected holder at call time (set by change-feed
@@ -387,6 +395,10 @@ export const {
   // Escape-hatch factory: resources whose truth lives outside Postgres keep a
   // callable `notify()`. DB-backed resources use `defineResource` (no `notify`).
   defineExternalResource,
+  // A resource whose server half compiles at boot, once contributions are
+  // collected (a collection other plugins contribute columns to) — bound by
+  // `bindDeferredResources` below, from the shared boot sequence.
+  defineDeferredResource,
   notificationsWsHandler,
   handleResourceHttp,
   withNotifyBatch,
@@ -400,14 +412,23 @@ export const {
   // L4 DB change-feed router: the change-feed plugin's LISTEN consumer calls this
   // with each parsed DB change to route it through the recompute cascade.
   applyDbChange,
+  // Scoped change routing for ROUTED entries (compiler-emitted routes): every
+  // change producer calls it beside `applyDbChange`; each entry is served by
+  // exactly one of the two.
+  routeTableChange,
   // L2 boot init: force a FULL recompute of one resource (no usable persisted
   // read-set yet), re-persisting its value AND read-set for the next boot.
   recomputeResource,
   // L4 self-verification counters (hand vs feed) for the read-set debug pane.
   notifyStatsFor,
-  // Scoped keyed resources ({ key, identityTable }) — the change-feed cross-checks
-  // these against its ExcludeFromChangeFeed set at boot to reject dead scope policy.
-  scopedResourceIdentities,
+  // Every table a resource's scoped delivery depends on (each route of a routed
+  // entry, each legacy identityTable) — the change-feed cross-checks these against
+  // the tables it installed triggers on at boot to reject dead scope policy.
+  scopedResourceTables,
+  // The trigger layout each routed table needs (carried key columns, the
+  // column sets its routes read) — the change feed installs the richer
+  // trigger from it.
+  routedTableRequirements,
   // Bounded-membership keys (window/point) — the live-state-snapshot boot sweep
   // deletes leftover persisted rows for these (they are never persisted going
   // forward, so any snapshot row is stale from a pre-migration boot).
@@ -418,6 +439,31 @@ export const {
   // L2 boot seed: restore a persisted alias's in-memory diff base before catch-up.
   seedPersistedSnapshot,
 } = runtime;
+
+// ── Boot: bind the deferred resources ──────────────────────────────────────
+// A deferred resource (`defineDeferredResource`) compiles its server half from
+// the plugin graph's contributions, so it binds right after they are collected
+// (`../shared/boot-stages.ts`) — before the preload assert below reads the
+// registry, and before the ready barrier rebuilds triggers from the route
+// layout. Checks over what the binds consumed (`onDeferredResourcesBound`) run
+// right after, still inside the boot sequence, so a mis-contributed graph
+// never serves.
+const boundChecks: (() => void)[] = [];
+
+/**
+ * Register a check to run once every deferred resource is bound (a contributor
+ * no bind consumed, a duplicate name). Registered at module eval by the
+ * plugin that owns the deferred compile; a throw fails boot.
+ */
+export function onDeferredResourcesBound(check: () => void): void {
+  boundChecks.push(check);
+}
+
+/** Bind every deferred resource, then run the bound checks. Boot only. */
+export function bindDeferredResources(): void {
+  runtime.bindDeferredResources();
+  for (const check of boundChecks) check();
+}
 
 // ── Boot assert: every registered preloaded resource is declared ────────────
 // `preload` reaches its consumers ONLY through `Resource.Declare`: the boot

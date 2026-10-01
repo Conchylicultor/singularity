@@ -19,6 +19,8 @@ import type { FieldGrouping, FieldGroupingSet } from "../../core";
 export const IDENTITY_GROUPING: FieldGrouping = {
   id: "value",
   label: "Value",
+  // One section per distinct value.
+  oneBucketPerValue: true,
   plan: ({ values }) => {
     const orderByKey = new Map<string, number>();
     [...values].sort(compareValues).forEach((value, index) => {

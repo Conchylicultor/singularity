@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Sonata,
   useSonata,
@@ -11,9 +12,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenSong } from "../hooks";
 import { useCurrentSong } from "../use-current-song";
+import type { Song } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -27,24 +30,31 @@ const playArrowIcon = symbol("play-arrow");
  * one in the background — and `null` otherwise. It surfaces the in-place
  * playback the library started without navigating: the song identity, a
  * play/pause toggle, and the shared transport scrubber for seeking. Clicking the
- * title opens the full player. The title is read from the canonical
- * `songs` row (`useCurrentSong`), never a shell-context mirror.
+ * title opens the full player. The title is read from the canonical library
+ * row (`useCurrentSong`), never a shell-context mirror.
  */
 export function NowPlayingBar() {
   const { isPlaying, play, stop } = useSonata();
   const current = useCurrentSong();
   const openSong = useOpenSong();
-  // Nothing to show until the open song's canonical row is available (no song
-  // open, or the live `songs` value still loading). A failed read keeps the
-  // row it last saw (`stale`); with none the bar stays hidden — the library
-  // body above it renders that same read's failure, with its retry.
-  const song = foldResource(current, {
-    loading: () => null,
-    error: (_error, stale) => stale ?? null,
-    ready: (row) => row,
-  });
-  if (!song) return null;
-  const title = song.title;
+  // While the open song's row loads — pressing Play on another song mints a
+  // new point read — the bar STAYS and only its title waits (a shimmer, or the
+  // read's error over the row as last seen), so a song change never blinks the
+  // bar out and back.
+  let song: Song | undefined;
+  switch (current.status) {
+    case "loading":
+      song = undefined;
+      break;
+    case "error":
+      song = current.stale;
+      break;
+    case "ready":
+      // No song open, or the open id names no song: no bar.
+      if (!current.found) return null;
+      song = current.row;
+      break;
+  }
   return (
     <div className="border-t border-border bg-background">
       <Inset x="xl" y="sm">
@@ -53,23 +63,34 @@ export function NowPlayingBar() {
             <Icon icon={musicNoteIcon} className="size-4" />
           </Center>
           {/* Title block — rigid (capped width), title truncates in its Line. */}
-          <button
-            type="button"
-            aria-label={`Open ${title} in player`}
-            onClick={() => openSong({ id: song.id, title })}
-            className="w-44 text-left hover:underline"
-          >
-            <Stack gap="none">
-              <Text variant="eyebrow" tone="muted">
-                Now playing
-              </Text>
-              <Line>
+          {song !== undefined ? (
+            <button
+              type="button"
+              aria-label={`Open ${song.title} in player`}
+              onClick={() => openSong({ id: song.id, title: song.title })}
+              className="w-44 text-left hover:underline"
+            >
+              <NowPlayingTitle>
                 <Text variant="caption" className="font-medium text-foreground">
-                  {title}
+                  {song.title}
                 </Text>
-              </Line>
-            </Stack>
-          </button>
+              </NowPlayingTitle>
+            </button>
+          ) : (
+            <div className="w-44">
+              <NowPlayingTitle>
+                {current.status === "error" ? (
+                  <ResourceErrorInline
+                    error={current.error}
+                    refetch={current.refetch}
+                    variant="inline"
+                  />
+                ) : (
+                  <Loading variant="block" className="h-4 w-32" />
+                )}
+              </NowPlayingTitle>
+            </div>
+          )}
           <IconButton
             icon={isPlaying ? pauseIcon : playArrowIcon}
             label={isPlaying ? "Pause" : "Play"}
@@ -84,5 +105,17 @@ export function NowPlayingBar() {
         </Stack>
       </Inset>
     </div>
+  );
+}
+
+/** The title block's two lines: the "Now playing" eyebrow over the title slot. */
+function NowPlayingTitle({ children }: { children: ReactNode }) {
+  return (
+    <Stack gap="none">
+      <Text variant="eyebrow" tone="muted">
+        Now playing
+      </Text>
+      <Line>{children}</Line>
+    </Stack>
   );
 }

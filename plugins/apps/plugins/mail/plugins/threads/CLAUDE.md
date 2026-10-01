@@ -18,43 +18,65 @@ else:
 
 ```
 active view's `filter`  →  lowered in the browser (operator sets → the filter
-language)  →  request body `Filter`  →  strict decode  →  compileWhere  →  SQL
+language, `labels` renamed to its column `labelIds`)  →  the `mail.threads`
+window tuple's `where`  →  strict decode  →  filterSql  →  SQL
 ```
 
-There is no `view` field on the request, no server-side scope derivation, no
-locked chips, no `baseFilter`. The Filter pill shows `Labels contains Inbox` as
-an ordinary removable chip; editing it rewrites the config row and persists. The
-old "a user must not pull Spam into Inbox" invariant is retired by decision —
-that is the user's call if they set up the filters (v2 design doc).
+There is no `view` field on the query, no server-side scope derivation, no
+locked chips. The Filter pill shows `Labels contains Inbox` as an ordinary
+removable chip; editing it rewrites the config row and persists. The old "a user
+must not pull Spam into Inbox" invariant is retired by decision — that is the
+user's call if they set up the filters (v2 design doc).
 
 **The failure mode to know about:** an unresolvable `fieldId`/`operatorId` is a
 *dangling* rule — it lowers to nothing in the browser — so a typo in the config
 makes a tab silently show every thread rather than error. (The server can no
-longer drop a rule: it strict-decodes the lowered filter against
-`MAIL_THREAD_FILTERABLE` and 400s on anything else.)
-`web/__tests__/authored-views.test.ts` reads the real config file, lowers every
-authored filter through the real tags / bool operator sets and asserts each
-tab's scope survives — that test is the guard, keep it green.
+longer drop a rule: the window codec strict-decodes the filter against
+`mailThreads.filterable`.) `web/__tests__/authored-views.test.ts` reads the real
+config file, lowers every authored filter through the real tags / bool operator
+sets, renames each field to its column and asserts each tab's scope survives —
+that test is the guard, keep it green.
 
-## Server
+## The live collection (`mail.threads`)
 
-- **`queryThreads`** (`POST /api/mail/threads/query`) — one keyset page.
-  `buildThreadsWhere` ANDs `[account, the compiled filter (the search box
-  arrives folded into it as `contains` over `MAIL_THREAD_SEARCHABLE`: subject /
-  snippet), the null-aware keyset seek]`. The account predicate is identity, not
-  scope — it is the only server-owned conjunct, and `accountId` is not a
-  filterable column.
-- **`mailThreadsRevisionResource`** — a coarse `${count}:${maxUpdatedMs}` tick
-  over `mail_threads` (`mode:"push"`). Tab-independent on purpose: a thread can
-  move between mailboxes, so any thread write refetches the loaded window in
-  place (no scroll reset).
+`mailThreads` (`core/internal/collection.ts`) is a `liveCollection` declared
+`scroll: true` over `MailThreadSchema` — H 100, M 500, default order
+`lastMessageAt desc` — served by `serveCollection(mailThreads, { from:
+_mailThreads })` (`server/internal/collection.ts`): one table, identity routes
+only. The DataView reads it as a segmented scroll through `mailThreadsSource`
+(`web/internal/source.ts`, `liveDataSource(…, { searchable: ["subject",
+"snippet"] })`), so a thread write (sync marking it read, a new message)
+refills exactly that thread in the segments that hold or now admit it — no
+revision tick, no refetch of the loaded pages.
+
+- **The account is a scope, stated as data.** The pane reads mail-core's
+  `mailAccount` value (the earliest-connected account, `{ id, email } | null`):
+  pending is the loading state, a failed read its error, `null` the
+  not-connected state (the Gmail integration's `GmailAccessEmptyState`: the
+  blocker copy + its fix, or "first sync has not run"), and an id mounts the
+  list with `source={mailThreadsSource.scoped({ where: { accountId } })}`.
+  `accountId` is a filterable column routed like any other, but no field can
+  bind it (`MailThreadColumn` excludes it) and the DataView never offers a
+  scope column to the Filter control, so the user can neither name nor widen it
+  — under the single-instance ADR the client choosing its own scope is not a
+  security boundary. The server never reads `mail_accounts` for the list (a subquery
+  there would be a second table the routes cannot see).
+- **Field ids stay the persisted vocabulary.** `MAIL_THREAD_FIELDS` names each
+  field's column when it differs (`labels` → `labelIds`); the web fields bind it
+  with `mailThreads.column(…)`. `sender`/`snippet` are display-only, not fields —
+  the search box covers `snippet`.
+- **Custom columns sort and filter server-side**: `mailThreads.columnScope` is
+  this DataView's id (`mail-threads`), so a custom column defined on the list
+  binds as `custom.<id>` (P3 of
+  `research/2026-09-29-global-scoped-change-routing.md`).
 
 ## Web
 
 - **`mailThreadsPane`** (`segment: "threads"`, no params). Two-line `ThreadRow`
   via `viewOptions.list.renderRow` + a leading star; `onRowActivate` pushes
   `threadPane`; `selectedRowId` comes off `threadPane`'s own route param, so the
-  open thread's row is highlighted.
+  open thread's row is highlighted. A settled empty window says "No
+  conversations" (never while it loads).
 - `MAIL_THREAD_FIELDS` drives the Sort pill (Subject / Date / Messages) and the
   Filter pill, and is the contract the authored config rows are written against —
   rename a field id and the matching config rules go with it. **`labels` (type
@@ -62,29 +84,39 @@ tab's scope survives — that test is the guard, keep it green.
   has no order); its `options` map label id → friendly name (system ids locally,
   user labels from `mail-core`'s `mailLabels` live value, read with `useLive`
   and projected in a `useMemo` — the system ids alone while it is pending),
-  which is what keeps "Label_12" off the screen. `sender`/`snippet` are
-  display-only, not fields — the search box covers `snippet` (declared
-  filterable for that alone).
+  which is what keeps "Label_12" off the screen.
 
 ## Boundaries
 
-Consumes only barrels: `mail-core` (schema/types, `mailLabels`,
-`resolveMailAccountId`, `_mailThreads`), `reading-pane/web` (`threadPane`), and
-the data-view / server-query / endpoint / live-state / network-live / pane
-primitives. It must **never** be imported by the mail `shell` (that would
-cycle) — the `/mail` landing repoint is the route STRING `/mail/threads`.
+Consumes only barrels: `mail-core` (schema/types, `mailAccount`, `mailLabels`,
+`_mailThreads`), `reading-pane/web` (`threadPane`), `integrations/gmail/web`
+(the not-connected state), and the data-view / network-live / pane primitives.
+It must **never** be imported by the mail `shell` (that would cycle) — the
+`/mail` landing repoint is the route STRING `/mail/threads`.
+
+## E2E
+
+- `e2e/mailbox-tabs-verify.ts` — the tabs are the mailboxes, each returns its
+  own rows, and the scope rule is editable and persists. It reads each tab once
+  its list SETTLED (rows or the empty state, stable across two reads; a failed
+  read throws), and on a seeded worktree compares each tab's exact row set.
+- `e2e/threads-live-verify.ts` — seeds synthetic threads for the connected
+  account (`e2e/fixture.ts` reads it from the `mailAccount` value over HTTP, and
+  refuses main), then writes them in the DB and asserts the open list
+  follows without a reload: a new message moves a thread to the top, a label
+  change drops it out of Inbox.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter travelling the standard server-delegated keyset query path. Threads DataView server: the keyset thread query (POST /api/mail/threads/query) over mail_threads — the active tab's whole FilterGroup (mailbox scope included) compiles through the standard compileWhere path — plus the scalar revision-tick live resource that keeps the loaded window fresh.
+- Description: The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter — read as a live segmented scroll of the `mail.threads` collection, scoped to the connected account. Threads DataView server: serves the `mail.threads` live collection over mail_threads — the active tab's whole filter (mailbox scope included) and the pane's account scope compile into each window tuple, and the routed change feed refills exactly the threads a write touches.
 - Web:
   - Slots: `mailThreadsPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "mail-threads"
   - Uses:
     - `apps/mail/reading-pane.threadPane`
-    - `infra/endpoints.fetchEndpoint`
+    - `integrations/gmail.GmailAccessEmptyState`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -92,9 +124,9 @@ cycle) — the `/mail` landing repoint is the route STRING `/mail/threads`.
     - `primitives/css/text.Text`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
+    - `primitives/data-view.liveDataSource`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
@@ -103,50 +135,32 @@ cycle) — the `/mail` landing repoint is the route STRING `/mail/threads`.
     - `ui/icons.Icon`
   - Exports (values): `mailThreadsPane`
 - Server:
-  - Contributes: `resource.declare` "mail-threads-revision"
+  - Contributes:
+    - `resource.declare` "mail.threads"
+    - `resource.declare` "mail.threads:rows"
+    - `resource.declare` "mail.threads:groups"
   - Uses:
     - `apps/mail/mail-core._mailThreads`
-    - `apps/mail/mail-core.resolveMailAccountId`
-    - `database.db`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `primitives/data-view/server-query.bindColumns`
-    - `primitives/data-view/server-query.compileWhere`
-    - `primitives/data-view/server-query.decodeFilterBody`
-    - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/keyset.buildSortKeys`
-    - `primitives/keyset.keyValuesOf`
-    - `primitives/keyset.orderByClauses`
-    - `primitives/keyset.seekPredicate`
-  - Exports (values):
-    - `buildThreadsWhere`
-    - `handleQuery`
-    - `mailThreadsRevisionServerResource`
-  - Resources: `mail-threads-revision` (push)
-  - Routes: `POST /api/mail/threads/query`
+    - `network/live.serveCollection`
+  - Resources:
+    - `mail.threads` (keyed, window)
+    - `mail.threads:groups` (push)
+    - `mail.threads:rows` (keyed, point)
 - Core:
   - Uses:
     - `apps/mail/mail-core.MailThreadSchema`
-    - `infra/endpoints.defineEndpoint`
+    - `network/live.liveCollection`
     - `network/live/filter.liveBoolean`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveNumber`
     - `network/live/filter.liveStringArray`
     - `network/live/filter.liveText`
-    - `primitives/data-view.ServerFilterWireSchema`
-    - `primitives/live-state.resourceDescriptor`
   - Exports (types):
+    - `MailThreadColumn`
     - `MailThreadFieldSpec`
     - `MailThreadFieldType`
-    - `QueryThreadsBody`
   - Exports (values):
     - `MAIL_THREAD_FIELDS`
-    - `MAIL_THREAD_FILTERABLE`
-    - `MAIL_THREAD_SEARCHABLE`
-    - `mailThreadsRevisionResource`
-    - `queryThreads`
-    - `QueryThreadsBodySchema`
-    - `QueryThreadsResponseSchema`
-    - `SortRuleSchema`
+    - `mailThreads`
 
 <!-- AUTOGENERATED:END -->

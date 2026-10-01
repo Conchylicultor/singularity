@@ -86,33 +86,60 @@ state, and the `useAvailable` gate. Sonata-specific on top of it:
 - The shell exports the shared `useAvailable` gates `useHasChords` /
   `useHasDerivedChord` / `useHasVoicedChords`.
 
-## The song list (`songs`)
+## The song list (`songLibrary`)
 
-`songs` (`core/resources.ts`, key `"sonata-songs"`) is a `liveValue` of the
-whole `sonata_songs` table, newest-first, served by `songsServed`
-(`serveValue({ source: "db", unbounded: { reason } })`) and read with
-`useLive(songs)` — by `SongLibrary`, `useCurrentSong`, and the player pane's
-title and resolve hooks (each a `.find` / `.some` over the settled list). No
-placeholder: pending renders DataView's loading skeleton, never the empty state,
-and the player's `resolve` stays pending until the list settles.
+`songLibrary` (`core/resources.ts`, key `"sonata.songs"`) is a `liveCollection`
+over `sonata_songs` — H 100, M 500, default order `createdAt desc` — declared
+`scroll: true` (the library DataView reads it as a segmented scroll through
+`songLibrarySource`, `web/source.ts`, searching title and composer) and
+`contributed: true`. Served by `songLibraryServed` (`serveCollection(songLibrary,
+{ from: _songs })`), which compiles at boot once the contributions are collected.
 
-It is whole-table only until Resources item 7: the library DataView sorts and
-filters every song client-side, including the side-table field-extension
-columns (plays, tracks, file-missing), and a bounded window needs joined
-side-table sort/filter columns, the host rows in data-view's
-`FieldExtensionProps`, and live-window paging in DataView.
+- **Contributed columns.** Other plugins add columns to every row — the library
+  names none of them. Each declares a `liveColumns` handle in its core and serves
+  it over its entity extension (`LiveColumns.Serve(serveColumns(handle, { join:
+  ext.join(alias) }))`): playback-history's `playback.playCount` /
+  `playback.lastPlayedAt`, the MIDI source's `midi.trackCount` /
+  `midi.sourceMissing`. A row carries them under `$columns` (`Song` is
+  `WithContributedColumns<SongRow>`), each contributor's `Library.Fields` field
+  reads its slice with `handle.read(song)` and binds `handle.column(…)`, so the
+  list sorts and filters by them on the server — "Most played", "Recently
+  played" and "Unplayed" keep their meaning (a never-played song reads its
+  extension default, `playCount = 0`). A play refills exactly that song in the
+  tuples that read the join.
+- **Field → column.** A library field whose id is not its column binds it:
+  `duration` → `durationSec`, `added` → `createdAt`. Field ids stay the persisted
+  vocabulary (saved views, presets).
+- **Readers.** `SongLibrary` (the DataView; a `useLive(songLibrary, { limit: 1
+  })` probe decides the first-run onboarding — settled with no row — and
+  otherwise the DataView owns its skeleton and errors); `useCurrentSong`, the
+  player title (`useSongTitle`) and its resolve gate (`useSonataPlayerResolve`)
+  each read ONE row with `useLiveRow(songLibrary, id)`, whose rows carry
+  `$columns` too.
+- **Behaviour under a live source.** Nulls sort last in both directions (the
+  keyset rule; the nullable sortable columns are `composer`,
+  `playback.lastPlayedAt` and `midi.trackCount`), an enum sort or group
+  (`source`, the cards view's sections) reads in stored-value order, a section's
+  count is exact only once a later section has started in the loaded rows or
+  the scroll has read to the end (a library past one window, 100 songs, shows
+  its last loaded section as `n+` until then).
+- **Custom columns sort and filter server-side.** `songLibrary.columnScope` is
+  the library DataView's id (`sonata.library`, asserted at mount), so a
+  user-defined custom column binds as `custom.<id>` (the `custom` scoped column
+  set — P3 of `research/2026-09-29-global-scoped-change-routing.md`), which
+  lifted P2's accepted regression.
 
 ## Song title ownership
 
 `sonata_songs.title` has exactly **one** client-side owner: this plugin's
-`songs` value. There is no shell-context mirror of it. Anything that needs the
-open song's title reads it through `useCurrentSong()` (the canonical row for
-`currentSongId`, straight from `songs`, preserving the `pending`
+`songLibrary` collection. There is no shell-context mirror of it. Anything that
+needs the open song's title reads it through `useCurrentSong()` (the canonical
+row for `currentSongId`, one `useLiveRow` point read, preserving the `pending`
 discriminant), and the title is *edited* in exactly one place — the inline
 `SongTitle` field, which is the player pane's TITLE node
 (`title: { component: SongTitle }` on its `Pane.define`, `web/components/song-title-field.tsx`) and
 patches `PATCH /api/sonata/songs/:id`
-via `updateSong`. Mirroring the `PageHeader` pattern, `matchResource` gates the
+via `updateSong`. Mirroring the `PageHeader` pattern, the pending arm gates the
 mount so `useEditableField` only ever seeds from a settled title, and an
 empty/whitespace-only draft is never persisted (re-mounting re-seeds from the
 canonical value). Source editors (chord-grid, ultimate-guitar) no longer write
@@ -122,7 +149,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
 
 ## Plugin reference
 
-- Description: Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
+- Description: Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by the columns other plugins contribute). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
 - Web:
   - Slots:
     - `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
@@ -144,7 +171,10 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/shell.TEMPO_MATH_FLOOR`
     - `apps/sonata/shell.useSonata`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.LiveRowResult`
+    - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live.useLiveRow`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -168,21 +198,20 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineFieldExtensions`
     - `primitives/data-view.defineItemActions`
+    - `primitives/data-view.liveDataSource`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Hint`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
-    - `primitives/pane.resolveFrom`
     - `primitives/pane.ResolveResult`
+    - `primitives/pane.resolveRow`
     - `primitives/pane.type`
     - `primitives/pane.useOpenPane`
     - `primitives/pane.usePaneStore`
@@ -197,14 +226,17 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `useCurrentSong`
     - `useOpenSong`
 - Server:
-  - Contributes: `resource.declare` "sonata-songs"
+  - Contributes:
+    - `resource.declare` "sonata.songs"
+    - `resource.declare` "sonata.songs:rows"
+    - `resource.declare` "sonata.songs:groups"
   - Uses:
     - `database.db`
     - `infra/attachments.Attachments`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
-    - `network/live.serveValue`
+    - `network/live.serveCollection`
   - DB schema:
     - `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`
     - `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
@@ -216,7 +248,10 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `createSongRow`
     - `songAttachments`
     - `updateSongMeta`
-  - Resources: `sonata-songs` (push, unbounded: the whole song library — whole-table only until Resources item 7: the library DataView sorts and filters every song client-side, including side-table field-extension columns (plays, tracks, file-missing), and a bounded window needs joined side-table sort/filter columns, the host rows in data-view's FieldExtensionProps, and live-window paging in DataView)
+  - Resources:
+    - `sonata.songs` (keyed, window)
+    - `sonata.songs:groups` (push)
+    - `sonata.songs:rows` (keyed, point)
   - Routes:
     - `DELETE /api/sonata/songs/:id`
     - `PATCH /api/sonata/songs/:id`
@@ -229,13 +264,16 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `fields/float/config.floatField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
-    - `network/live.liveValue`
+    - `network/live.liveCollection`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveNumber`
+    - `network/live/filter.liveText`
   - Exports (types):
     - `Song`
     - `UpdateSongBody`
   - Exports (values):
     - `deleteSong`
-    - `songs`
+    - `songLibrary`
     - `SongSchema`
     - `updateSong`
 - Cross-plugin:

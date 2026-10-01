@@ -7,6 +7,7 @@ import {
 import { setBootMode, setRegisteringPlugin } from "../core/boot-mode";
 import {
   assertPreloadedResourcesDeclared,
+  bindDeferredResources,
   collectContributions,
   profilerStart,
   recordMemoryCheckpoint,
@@ -114,6 +115,13 @@ export async function bootPluginGraph(
   // Collect declarative contributions from all plugins before onReady.
   // Consuming plugins call Token.getContributions() in their onReady.
   collectContributions(ordered);
+
+  // A deferred resource compiles its server half from contributions (a
+  // collection whose columns other plugins contribute), so it binds now: the
+  // full contributor set is known, nothing has served yet, and the ready
+  // barrier — whose change feed rebuilds triggers from the route layout — has
+  // not run. In both modes, and before the preload assert reads the registry.
+  bindDeferredResources();
 
   // Every server module has registered its resources (module eval) and every
   // `Resource.Declare` is now collected, so a preloaded resource whose plugin

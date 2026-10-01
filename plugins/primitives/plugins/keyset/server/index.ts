@@ -8,6 +8,7 @@ export type {
   Tiebreaker,
 } from "./internal/seek";
 export {
+  atOrBeforePredicate,
   buildSortKeys,
   orderByClauses,
   seekPredicate,

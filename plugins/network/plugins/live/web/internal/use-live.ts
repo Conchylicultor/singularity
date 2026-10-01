@@ -16,6 +16,7 @@ import type {
   LiveValue,
   LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
+import { withoutWindowFields } from "./window-fields";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
 // (`where` / `orderBy` / `limit`), a grouping (`groupBy`) or an explicit id set
@@ -120,11 +121,11 @@ function listShape<Row, F, S extends string>(
     };
   }
   const codec = collection.window.window;
-  const { where, orderBy } = (query ?? {}) as LiveQuery<F, S>;
+  const { where, orderBy, columns } = (query ?? {}) as LiveQuery<F, S>;
   return {
     descriptor: collection.window as AnyDescriptor,
-    base: JSON.stringify(["window", codec.encode({ where, orderBy })]),
-    encode: (limit) => codec.encode({ where, orderBy, limit }),
+    base: JSON.stringify(["window", codec.encode({ where, orderBy, columns })]),
+    encode: (limit) => codec.encode({ where, orderBy, columns, limit }),
     askedLimit: query?.limit ?? codec.defaultLimit,
     step: codec.defaultLimit,
     maxLimit: codec.maxLimit,
@@ -300,10 +301,23 @@ function useCollection<Row, F, S extends string>(
     if (base === null || next === limit) return;
     setGrown({ base, from: limit, limit: next });
   }, [base, limit, step, maxLimit, setGrown]);
+  // A scroll collection's window rows carry `$key`, a scoped one's `$scoped`;
+  // a list read hands rows out without them (a grouping's rows never have one).
+  const strip =
+    shape !== null &&
+    shape.descriptor === (collection as { window?: unknown }).window &&
+    ((collection as { scroll?: boolean }).scroll === true ||
+      ((collection as { columnScope?: string | null }).columnScope ?? null) !==
+        null);
+  const rowsOf = useCallback(
+    (data: unknown[]): unknown[] =>
+      strip ? data.map(withoutWindowFields) : data,
+    [strip],
+  );
   const list = useMemo((): LiveListResult<unknown> => {
     switch (current.status) {
       case "ready": {
-        const data = current.data as unknown[];
+        const data = rowsOf(current.data as unknown[]);
         return {
           ...current,
           data,
@@ -319,7 +333,7 @@ function useCollection<Row, F, S extends string>(
         if (growUnsettled && previous.status === "ready") {
           return {
             status: "ready",
-            data: previous.data as unknown[],
+            data: rowsOf(previous.data as unknown[]),
             refetch: previous.refetch,
             canGrow: false,
             growing: true,
@@ -338,13 +352,19 @@ function useCollection<Row, F, S extends string>(
           return {
             status: "error",
             error: current.error,
-            stale: previous.data as unknown[],
+            stale: rowsOf(previous.data as unknown[]),
             refetch: current.refetch,
           };
         }
-        return current as LiveListResult<unknown>;
+        // The last-known rows on the error arm are handed out like ready
+        // ones — without the window fields.
+        return (
+          current.stale === undefined
+            ? current
+            : { ...current, stale: rowsOf(current.stale as unknown[]) }
+        ) as LiveListResult<unknown>;
     }
-  }, [growUnsettled, previous, current, limit, maxLimit, loadMore]);
+  }, [growUnsettled, previous, current, limit, maxLimit, loadMore, rowsOf]);
 
   if (shape === null) return current as ResourceResult<Row[]>;
   return list;

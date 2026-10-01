@@ -5,9 +5,11 @@ import {
   executeOne,
   executeRows,
 } from "@plugins/database/plugins/sql-rows/core";
-import { Resource } from "@plugins/framework/plugins/server-core/core";
+import {
+  Resource,
+  removeReadSetTable,
+} from "@plugins/framework/plugins/server-core/core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
-import { removeReadSetTable } from "@plugins/infra/plugins/runtime-profiler/core";
 import { emitReadSetShrink } from "./read-set-shrink-hook";
 
 // The set of resource keys L2 persists: preloaded (with ONE default tuple) AND

@@ -1,5 +1,5 @@
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import {
@@ -29,25 +29,37 @@ const CONTROL_HEIGHT: Record<ControlSize, string> = {
  * (`Pane.define({ title: { component: SongTitle } })`), not a header
  * contribution: a pane already contributes exactly one `title` item into its
  * own header, and this is what that item paints. The song title has exactly ONE client-side owner — the library's
- * `songs` value — so this reads the canonical row via `useCurrentSong()` and
+ * `songLibrary` collection — so this reads the canonical row via `useCurrentSong()` and
  * patches it through `PATCH /api/sonata/songs/:id`. There is no shell-context
  * mirror to seed from, and no source editor writes the title anymore.
  *
- * `matchResource` gates the mount so `useEditableField` is only ever seeded from
- * a *settled* title (the sanctioned "never autosave from a not-yet-loaded value"
+ * The loading arm (its shimmer) and the error arm (the failure, with Retry) gate
+ * the mount so `useEditableField` is only ever seeded from a *ready* title (the sanctioned "never autosave from a not-yet-loaded value"
  * guard, mirroring `PageHeader`). Renders nothing until a song row exists.
  */
 export function SongTitle() {
   const size = useControlSize();
   const current = useCurrentSong();
-  return matchResource(current, {
-    // A title-shaped shimmer, not the word "Loading…" — this slot IS the header.
-    // `Loading` only fades in after ~120ms, so a warm resource never flashes it.
-    loading: () => (
-      <Loading variant="block" className={cn(CONTROL_HEIGHT[size], "w-56")} />
-    ),
-    ready: (song) => (song ? <SongTitleInner song={song} /> : null),
-  });
+  switch (current.status) {
+    case "loading":
+      // A title-shaped shimmer, not the word "Loading…" — this slot IS the
+      // header. `Loading` only fades in after ~120ms, so a warm row never
+      // flashes it.
+      return (
+        <Loading variant="block" className={cn(CONTROL_HEIGHT[size], "w-56")} />
+      );
+    case "error":
+      // A failed read says why — never a shimmer that waits forever.
+      return (
+        <ResourceErrorInline
+          error={current.error}
+          refetch={current.refetch}
+          variant="inline"
+        />
+      );
+    case "ready":
+      return current.found ? <SongTitleInner song={current.row} /> : null;
+  }
 }
 
 function SongTitleInner({ song }: { song: Song }) {

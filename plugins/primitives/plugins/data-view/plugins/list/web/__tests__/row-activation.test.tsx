@@ -49,10 +49,13 @@ function renderList(over: Partial<DataViewRenderProps<Row>>) {
     rowKey: (r) => r.id,
     state: { sort: [], query: "", filter: null },
     setSort: () => {},
+    sortHeader: { active: [], sortable: new Set<string>() },
     setFilter: () => {},
     setExpanded: () => {},
     now: 0,
     groupOrder: "asc",
+    rowsComplete: true,
+    sectionOrder: "bucket",
     options: undefined,
     ...over,
   };

@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type {
-  DataViewSection,
-  FieldDef,
-  FieldGrouping,
-  GroupByRule,
+import {
+  formatSectionCount,
+  type DataViewSection,
+  type FieldDef,
+  type FieldGrouping,
+  type GroupByRule,
 } from "../../core";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import {
@@ -115,7 +116,7 @@ describe("partitionIntoSections", () => {
     const [only] = sections;
     expect(only!.key).toBeNull();
     expect(only!.label).toBeUndefined();
-    expect(only!.count).toBe(2);
+    expect(only!.count).toEqual({ kind: "exact", n: 2 });
     expect(only!.entries.map((e) => e.row)).toEqual(rows);
     expect(only!.entries.map((e) => e.key)).toEqual(["a", "b"]);
   });
@@ -151,7 +152,7 @@ describe("partitionIntoSections", () => {
     // order (done, todo, doing) and NOT value order (doing, done, todo).
     expect(sections.map((s) => s.key)).toEqual(["todo", "doing", "done"]);
     expect(sections.map((s) => s.label)).toEqual(["To do", "Doing", "Done"]);
-    expect(sections.map((s) => s.count)).toEqual([2, 1, 1]);
+    expect(sections.map((s) => s.count.n)).toEqual([2, 1, 1]);
     // Within-section row order preserved (the two "todo" rows in input order).
     expect(sections[0]!.entries.map((e) => e.key)).toEqual(["2", "3"]);
   });
@@ -253,7 +254,7 @@ describe("partitionIntoSections", () => {
     expect(sections.filter((s) => s.label === "None")).toHaveLength(1);
     const none = sections.at(-1)!;
     expect(none.label).toBe("None");
-    expect(none.count).toBe(3);
+    expect(none.count).toEqual({ kind: "exact", n: 3 });
     expect(none.entries.map((e) => e.row.id)).toEqual(["2", "3", "4"]);
   });
 
@@ -330,7 +331,7 @@ describe("partitionIntoSections", () => {
     expect(sections.map((s) => s.key)).toEqual(["todo", expect.any(String)]);
     const noneSection = sections[1]!;
     expect(noneSection.label).toBe("None");
-    expect(noneSection.count).toBe(1);
+    expect(noneSection.count).toEqual({ kind: "exact", n: 1 });
     expect(noneSection.entries[0]!.row.id).toBe("1");
     // The null bucket key is the internal sentinel, distinct from any real value.
     expect(noneSection.key).not.toBe("todo");
@@ -363,7 +364,7 @@ describe("aggregateSections", () => {
     expect(entry!.row.id).toBe("a");
     expect(entry!.key).toBe("a");
     // section.count stays the pre-collapse member count.
-    expect(section!.count).toBe(3);
+    expect(section!.count).toEqual({ kind: "exact", n: 3 });
   });
 
   test("null keys pass through 1:1 with no aggregateCount/members", () => {
@@ -437,7 +438,7 @@ describe("aggregateSections", () => {
     // dup="p" collapses within each section separately — NOT across sections.
     expect(aggregated[0]!.entries).toHaveLength(1);
     expect(aggregated[0]!.entries[0]!.aggregateCount).toBe(2);
-    expect(aggregated[0]!.count).toBe(2);
+    expect(aggregated[0]!.count).toEqual({ kind: "exact", n: 2 });
     expect(aggregated[1]!.entries).toHaveLength(1);
     expect(aggregated[1]!.entries[0]!.aggregateCount).toBe(1);
   });
@@ -448,7 +449,7 @@ describe("aggregateSections", () => {
     // the first in that order (b), not the original input order.
     const section: DataViewSection<Item> = {
       key: null,
-      count: 3,
+      count: { kind: "exact", n: 3 },
       entries: [
         { row: { id: "b", group: "g" }, key: "b" },
         { row: { id: "a", group: "g" }, key: "a" },
@@ -472,7 +473,7 @@ describe("orderSectionsByRank", () => {
     entries: Ranked[],
   ): DataViewSection<Ranked> => ({
     key,
-    count: entries.length,
+    count: { kind: "exact", n: entries.length },
     entries: entries.map((row) => ({ row, key: row.id })),
   });
 
@@ -626,7 +627,7 @@ describe("the identity grouping (the built-in fallback)", () => {
     // type's own contribution, not from here.
     expect(sections.map((s) => s.key)).toEqual(["doing", "done", "todo"]);
     expect(sections.map((s) => s.label)).toEqual(["doing", "done", "todo"]);
-    expect(sections.map((s) => s.count)).toEqual([1, 1, 2]);
+    expect(sections.map((s) => s.count.n)).toEqual([1, 1, 2]);
     expect(sections[2]!.entries.map((e) => e.key)).toEqual(["1", "3"]);
   });
 
@@ -657,7 +658,7 @@ describe("the identity grouping (the built-in fallback)", () => {
     // the old hardcoded Yes/No branch produced. (The Yes/No LABELS are the bool
     // type's own contribution now.)
     expect(sections.map((s) => s.key)).toEqual(["false", "true"]);
-    expect(sections.map((s) => s.count)).toEqual([1, 2]);
+    expect(sections.map((s) => s.count.n)).toEqual([1, 2]);
   });
 
   test("its ordinal is monotonic across duplicates and reverses cleanly", () => {
@@ -683,5 +684,106 @@ describe("the identity grouping (the built-in fallback)", () => {
     );
     expect(asc.map((s) => s.key)).toEqual(["a", "b", "c"]);
     expect(desc.map((s) => s.key)).toEqual(["c", "b", "a"]);
+  });
+});
+
+describe("a server-ordered rows set: section order and counts", () => {
+  // Rows as a live source returns them under a one-bucket-per-value grouping:
+  // sorted by the grouped column's STORED value (done < doing < todo), which
+  // is not the enum's options order (todo, doing, done).
+  const sorted: Task[] = [
+    { id: "1", status: "doing" },
+    { id: "2", status: "done" },
+    { id: "3", status: "done" },
+    { id: "4", status: "todo" },
+    { id: "5", status: null },
+  ];
+
+  test("sections follow first appearance in the rows, not the bucket ordinal — None still trails", () => {
+    const sections = partitionIntoSections(
+      sorted,
+      [statusField],
+      by("status"),
+      rowKey,
+      {
+        ...stubOpts({ enum: optionOrderGrouping }),
+        sectionOrder: "appearance",
+        rowsComplete: false,
+      },
+    );
+    expect(sections.map((s) => s.label)).toEqual([
+      "Doing",
+      "Done",
+      "To do",
+      "None",
+    ]);
+    // A section a later one follows is complete; the last may still grow.
+    expect(sections.map((s) => s.count)).toEqual([
+      { kind: "exact", n: 1 },
+      { kind: "exact", n: 2 },
+      { kind: "exact", n: 1 },
+      { kind: "atLeast", n: 1 },
+    ]);
+  });
+
+  test("once every row is loaded, every count is exact", () => {
+    const sections = partitionIntoSections(
+      sorted,
+      [statusField],
+      by("status"),
+      rowKey,
+      {
+        ...stubOpts({ enum: optionOrderGrouping }),
+        sectionOrder: "appearance",
+        rowsComplete: true,
+      },
+    );
+    expect(sections.every((s) => s.count.kind === "exact")).toBe(true);
+  });
+
+  test("a bucketed grouping keeps its ordinal order, and while rows may still load no count is a total", () => {
+    const sections = partitionIntoSections(
+      sorted,
+      [statusField],
+      by("status"),
+      rowKey,
+      {
+        ...stubOpts({ enum: optionOrderGrouping }),
+        sectionOrder: "bucket",
+        rowsComplete: false,
+      },
+    );
+    // The options order — To do, Doing, Done — as in memory.
+    expect(sections.map((s) => s.label)).toEqual([
+      "To do",
+      "Doing",
+      "Done",
+      "None",
+    ]);
+    expect(sections.every((s) => s.count.kind === "atLeast")).toBe(true);
+  });
+
+  test("ungrouped: one section, exact only when complete", () => {
+    const [partial] = partitionIntoSections(
+      sorted,
+      [statusField],
+      undefined,
+      rowKey,
+      { ...stubOpts(), rowsComplete: false },
+    );
+    expect(partial!.count).toEqual({ kind: "atLeast", n: 5 });
+    const [whole] = partitionIntoSections(
+      sorted,
+      [statusField],
+      undefined,
+      rowKey,
+      stubOpts(),
+    );
+    expect(whole!.count).toEqual({ kind: "exact", n: 5 });
+  });
+
+  test("the formatter prints a lower bound as n+", () => {
+    expect(formatSectionCount({ kind: "exact", n: 3 })).toBe("3");
+    expect(formatSectionCount({ kind: "atLeast", n: 3 })).toBe("3+");
   });
 });

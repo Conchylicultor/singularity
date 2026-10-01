@@ -32,19 +32,41 @@ export const SourceRefSchema = EventSourceSchema.pick({
 export type SourceRef = z.infer<typeof SourceRefSchema>;
 
 /**
- * An event as a LIST serves it: the event row plus its source's
- * {@link SourceRef}, joined server-side in the same query.
+ * An event as a list shows it: the row without its extraction sighting stamps
+ * (`firstSeenAt` / `lastSeenAt`). A re-extraction that finds an event unchanged
+ * re-stamps them on every run; nothing a list renders reads them, so a list
+ * row that carried them would change — and be pushed to every open list — for
+ * a change no one can see.
+ */
+export const ListedEventSchema = EventSchema.omit({
+  firstSeenAt: true,
+  lastSeenAt: true,
+});
+export type ListedEvent = z.infer<typeof ListedEventSchema>;
+
+/**
+ * An event as a LIST serves it: the {@link ListedEvent} plus its source's
+ * {@link SourceRef} — `sourceType` / `sourceConfig` — joined server-side in the
+ * same query.
  *
  * The source travels with the row so a surface resolving "where did this come
  * from?" needs no second read — no subscription to the sources window, no bound
  * on which sources it can see, and no "not loaded yet" to mistake for "has no
- * page". The one cost is staleness: an edit to the source's config reaches the
- * row on the list's next fetch.
+ * page". Flat, not nested, because a list's row is a projection of columns
+ * (the events list is a live collection: `sourceType` / `sourceConfig` are the
+ * joined source row's columns, so an edit to the source's type or config
+ * reaches every listed event of it). {@link sourceRefOf} reads the ref back.
  */
-export const SourcedEventSchema = EventSchema.extend({
-  source: SourceRefSchema,
+export const SourcedEventSchema = ListedEventSchema.extend({
+  sourceType: EventSourceSchema.shape.type,
+  sourceConfig: EventSourceSchema.shape.config,
 });
 export type SourcedEvent = z.infer<typeof SourcedEventSchema>;
+
+/** The source ref a listed event carries. */
+export function sourceRefOf(event: SourcedEvent): SourceRef {
+  return { type: event.sourceType, config: event.sourceConfig };
+}
 
 export const EventSourceRunSchema = fieldsToZodObject(eventSourceRunFields);
 export type EventSourceRun = z.infer<typeof EventSourceRunSchema>;
@@ -59,7 +81,6 @@ export type EventSourceRunEvent = z.infer<typeof EventSourceRunEventSchema>;
  * run did to it. The action is resolved server-side and travels flat, because
  * every consumer of it is a DataView — a nested `{ action, event }` would make
  * `action` a second-class dimension the field schema cannot sort or filter on.
- * (`source` stays nested: it is what the row opens, not a dimension.)
  */
 export const RunEventSchema = SourcedEventSchema.extend({
   action: z.enum(RUN_EVENT_ACTIONS),

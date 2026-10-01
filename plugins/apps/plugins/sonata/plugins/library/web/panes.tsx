@@ -5,10 +5,10 @@ import {
   type,
   type Hint,
   defineRoute,
-  resolveFrom,
+  resolveRow,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -21,7 +21,7 @@ import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { songs, type Song } from "../core";
+import { songLibrary } from "../core";
 import { Library } from "./slots";
 import { SonataLibrarySurface } from "./components/library-surface";
 import { SongTitle } from "./components/song-title-field";
@@ -58,23 +58,23 @@ function SonataLibraryBody(): ReactElement {
  * and back/forward. Opened with `mode:"root"` so each open replaces the route
  * with a single full-surface pane (a fresh instance, hence a remount). The
  * optimistic `title` rides in `hint` purely as a DISPLAY value for `title.text`
- * (the browser-tab / tab-strip label before the live `songs` value settles) —
+ * (the browser-tab / tab-strip label before the song's live row settles) —
  * it is NOT a data source: the header title and every consumer read the
- * canonical row from `songs`. `useResolve` hydrates every source for the song on
+ * canonical row from `songLibrary`. `useResolve` hydrates every source for the song on
  * direct navigation / reload (see {@link useSonataPlayerResolve}).
  */
 export const sonataPlayerPane = Pane.define({
   route: defineRoute({ id: "sonata-player", segment: "song/:songId" }),
   app: sonataApp,
   // Display-only optimistic label for `title.text` (tab/document title) before the
-  // `songs` value settles. Structurally unwritable: `Hint.pick` hands it back
+  // song's row settles. Structurally unwritable: `Hint.pick` hands it back
   // only alongside the canonical value, and it is never persisted. The title is
-  // library-owned (`songs`); the shell keeps no mirror.
+  // library-owned (`songLibrary`); the shell keeps no mirror.
   hint: type<{ title: string }>(),
   useResolve: useSonataPlayerResolve,
   component: SonataPlayerSurface,
-  // Title: `text` (tab/document title) is the canonical song name from the live
-  // `songs` value (reflects renames), falling back to the optimistic hint
+  // Title: `text` (tab/document title) is the canonical song name from its live
+  // library row (reflects renames), falling back to the optimistic hint
   // carried at open time while it loads. Self-contained — `useSonata()` context
   // is unavailable at the tab-surface level where it runs. The header paints
   // `component` instead: the inline-editable title, mounted inside the pane so
@@ -84,24 +84,24 @@ export const sonataPlayerPane = Pane.define({
   titleOwner: true,
 });
 
-/** Canonical song title from the live `songs` value, or the optimistic open hint. */
+/** Canonical song title from its live library row, or the optimistic open hint. */
 function useSongTitle(
   { songId }: { songId: string },
   hint: Hint<{ title: string }>,
 ): string | undefined {
-  const library = useLive(songs);
-  // `canonical` stays `undefined` until the value settles — precisely what
+  const song = useLiveRow(songLibrary, songId);
+  // `canonical` stays `undefined` until the row settles — precisely what
   // `pick` reads as "not known yet", so the hint shows through in the meantime
   // and is superseded the instant the real row (and any rename) arrives. A
-  // failed read offers its last-seen list (`stale`), else the hint stays.
-  const titleIn = (list: readonly Song[]) =>
-    list.find((s) => s.id === songId)?.title;
-  const canonical = foldResource(library, {
-    loading: () => undefined,
-    error: (_error, stale) =>
-      stale === undefined ? undefined : titleIn(stale),
-    ready: titleIn,
-  });
+  // failed read offers its last-seen row (`stale`), else the hint stays.
+  const canonical = foldResource(
+    mapRow(song, (row) => row?.title),
+    {
+      loading: () => undefined,
+      error: (_error, stale) => stale,
+      ready: (title) => title,
+    },
+  );
   return hint.pick("title", canonical);
 }
 
@@ -113,7 +113,7 @@ function useSongTitle(
  * `undefined` and is skipped.
  */
 function useSonataPlayerResolve({ songId }: { songId: string }): ResolveResult {
-  const library = useLive(songs);
+  const song = useLiveRow(songLibrary, songId);
   const sources = Library.Source.useContributions();
   const { setRawMap } = useSonata();
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
@@ -144,10 +144,10 @@ function useSonataPlayerResolve({ songId }: { songId: string }): ResolveResult {
 
   const hydrated = hydratedFor === songId;
   // Not known yet until BOTH the hydration effect above has completed and the
-  // `songs` value has settled — a loading library is never read as "no such
-  // song" (a not-found flash on a deep link whose hydration beat the value).
+  // song's row has settled — a loading row is never read as "no such song" (a
+  // not-found flash on a deep link whose hydration beat the read).
   if (!hydrated) return { status: "pending" };
-  return resolveFrom(library, (list) => list.some((s) => s.id === songId));
+  return resolveRow(song);
 }
 
 /**
@@ -172,7 +172,7 @@ function SonataPlayerSurface(): ReactElement {
   // Mark this song open on mount (once per open — each open is a fresh
   // `mode:"root"` instance, so this fires exactly once and bumps `songOpenEpoch`).
   // Clear on unmount so library-state effects don't mis-attribute playback. Only
-  // the bare id is marked open: the title is library-owned (`songs`), so
+  // the bare id is marked open: the title is library-owned (`songLibrary`), so
   // there is nothing to seed here.
   useEffect(() => {
     setCurrentSong(songId);

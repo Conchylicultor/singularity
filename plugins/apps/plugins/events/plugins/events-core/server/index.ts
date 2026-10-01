@@ -28,7 +28,6 @@ import {
 } from "./internal/handlers";
 import {
   eventSourcesServed,
-  eventsRevisionServerResource,
   eventRunsRevisionServerResource,
 } from "./internal/resources";
 
@@ -81,13 +80,12 @@ export { registerRefreshRunner } from "./internal/refresh-runner";
 export type { RefreshRunner } from "./internal/refresh-runner";
 export {
   eventSourcesServed,
-  eventsRevisionServerResource,
   eventRunsRevisionServerResource,
 } from "./internal/resources";
 
 export default {
   description:
-    "Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + events revision tick.",
+    "Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + the run ledger's revision tick.",
   httpRoutes: {
     [listEventSources.route]: handleListSources,
     [createEventSource.route]: handleCreateSource,
@@ -102,7 +100,6 @@ export default {
   },
   contributions: [
     ...eventSourcesServed.declare,
-    Resource.Declare(eventsRevisionServerResource),
     Resource.Declare(eventRunsRevisionServerResource),
   ],
 } satisfies ServerPluginDefinition;

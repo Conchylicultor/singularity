@@ -1,57 +1,55 @@
-import { useMemo } from "react";
 import type {
   FieldDef,
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { Song } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { usePlaybackHistoryMap } from "../hooks";
+import { playbackColumns } from "../../core";
 
 /**
- * Field extension contributed into the library's `Library.Fields` factory: a
- * render-callback component that reads this plugin's own live playback rollup
- * (`usePlaybackHistoryMap`) and yields two `FieldDef<Song>` closed over the map.
- * Because the fields carry a synchronous `value` projection + `sortable`, they
- * show up in the DataView's Sort pill, Filter pill, and table columns for free —
- * so "Most played" / "Recently played" are plain config sort presets over
- * `playCount` / `lastPlayedAt`, with no bespoke toolbar chip.
+ * The Plays / Last played fields, read off every library row's `playback`
+ * columns (`playbackColumns.read`) — the library's live collection carries
+ * them, so there is no side read to wait for and nothing to stand in for while
+ * it loads. Each binds its column, so the library sorts and filters by it on
+ * the server: "Most played" / "Recently played" are plain config sort presets
+ * over `playCount` / `lastPlayedAt`, and "Unplayed" a filter preset.
  */
+const PLAYBACK_FIELDS: FieldDef<Song>[] = [
+  {
+    id: "playCount",
+    label: "Plays",
+    type: "int",
+    // Wide enough for the `cell`'s longest string ("Not played yet"), not
+    // just for the digits — at 5rem the unplayed case clipped mid-word.
+    width: "8rem",
+    align: "end",
+    value: (s) => playbackColumns.read(s).playCount,
+    // The copy the old per-card `PlayStats` strip owned, recovered as this
+    // field's cell — so the number reads as a sentence on the card (and in
+    // the table) instead of a bare `0`.
+    cell: (s) => {
+      const n = playbackColumns.read(s).playCount;
+      return n ? `${n} ${n === 1 ? "play" : "plays"}` : "Not played yet";
+    },
+    sortable: true,
+    column: playbackColumns.column("playCount"),
+  },
+  {
+    id: "lastPlayedAt",
+    label: "Last played",
+    type: "date",
+    width: "8rem",
+    value: (s) => playbackColumns.read(s).lastPlayedAt,
+    cell: (s) => {
+      const at = playbackColumns.read(s).lastPlayedAt;
+      return at ? formatRelativeTime(at) : "—";
+    },
+    sortable: true,
+    column: playbackColumns.column("lastPlayedAt"),
+  },
+];
+
+/** Field extension contributed into the library's `Library.Fields` factory. */
 export function PlaybackFields({ render }: FieldExtensionProps<Song>) {
-  const map = usePlaybackHistoryMap();
-  const fields = useMemo<FieldDef<Song>[]>(
-    () => [
-      {
-        id: "playCount",
-        label: "Plays",
-        type: "int",
-        // Wide enough for the `cell`'s longest string ("Not played yet"), not
-        // just for the digits — at 5rem the unplayed case clipped mid-word.
-        width: "8rem",
-        align: "end",
-        value: (s) => map.get(s.id)?.playCount ?? 0,
-        // The copy the old per-card `PlayStats` strip owned, recovered as this
-        // field's cell — so the number reads as a sentence on the card (and in
-        // the table) instead of a bare `0`.
-        cell: (s) => {
-          const n = map.get(s.id)?.playCount ?? 0;
-          return n ? `${n} ${n === 1 ? "play" : "plays"}` : "Not played yet";
-        },
-        sortable: true,
-      },
-      {
-        id: "lastPlayedAt",
-        label: "Last played",
-        type: "date",
-        width: "8rem",
-        value: (s) => map.get(s.id)?.lastPlayedAt ?? null,
-        cell: (s) => {
-          const at = map.get(s.id)?.lastPlayedAt;
-          return at ? formatRelativeTime(at) : "—";
-        },
-        sortable: true,
-      },
-    ],
-    [map],
-  );
-  return <>{render(fields)}</>;
+  return <>{render(PLAYBACK_FIELDS)}</>;
 }

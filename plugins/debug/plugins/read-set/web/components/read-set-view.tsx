@@ -20,14 +20,15 @@ import type { ResourceReadSet } from "../../shared/schema";
 // `resources[].readSetBases` (that read-set resolved into base-table space —
 // views mapped to their identity base — for like-for-like comparison with
 // coveredOrigins), `resources[].coveredOrigins` (the runtime's authoritative
-// scoped-vs-FULL routing set), `resources[].dependsOn` (the hand-drawn cascade
+// scoped-vs-FULL routing set), `resources[].routes` (a routed resource's
+// compiler-emitted routes), `resources[].dependsOn` (the hand-drawn cascade
 // graph), and `resources[].notifyStats` (notify provenance counters). Four
 // sections:
 //   A — the captured index, inverted to table → [resource keys] (raw read-set).
 //   B — the read-set ceiling: keyed resources whose base-resolved read-set
-//       escapes their coveredOrigins silently FULL-recompute; explicit
-//       `recompute: full` opt-outs are surfaced separately (declared, not a
-//       degradation).
+//       escapes their coveredOrigins (a routed resource: its route tables)
+//       silently FULL-recompute; explicit `recompute: full` opt-outs and routed
+//       `full` routes are surfaced separately (declared, not a degradation).
 //   C — the over-broad-edges diff vs `dependsOn` (cascade amplification, raw read-set).
 //   D — notify provenance: per-resource hand vs feed counts during the L4
 //       parallel run, flagging read-set-gap candidates (hand > 0 && feed === 0).
@@ -41,13 +42,18 @@ interface SilentFullFlag {
   key: string;
   /** Base tables R reads (views resolved) OUTSIDE coveredOrigins → silently FULL-recompute R. */
   uncovered: string[];
-  /** The resource's scoped-vs-FULL routing set (its declared `identityTable` ∪ edges). */
+  /**
+   * The resource's scoped-vs-FULL routing set: its declared `identityTable` ∪
+   * edges, or — for a routed resource — its route tables.
+   */
   coveredOrigins: string[];
 }
 
 interface ExplicitFullFlag {
   key: string;
-  /** The declared opt-out reason from `recompute: { kind: "full", reason }`. */
+  /** The table a routed `full` route recomputes on; absent for a `recompute` opt-out. */
+  table?: string;
+  /** The declared reason: `recompute: { kind: "full", reason }`, or a `full` route's. */
   reason: string;
 }
 
@@ -94,9 +100,13 @@ function buildCapturedIndex(resources: ResourceReadSet[]): TableEntry[] {
  * - SILENT FULL (the bug signal): a resource declaring `identityTable` (intent to
  *   be scoped) whose base read-set contains a table OUTSIDE `coveredOrigins` —
  *   that table's change silently degrades the carefully-scoped cascade to FULL.
+ *   A ROUTED resource is covered by its route tables instead: a table outside
+ *   them is one its writes never reach (the runtime's drift guard, A8).
  * - EXPLICIT FULL (expected): a resource with a declared `recompute: full`
- *   opt-out — surfaced informationally, never a warning.
- * - `scoped` counts the keyed-and-scoped resources with zero uncovered tables.
+ *   opt-out, and every routed `full` route with its reason — surfaced
+ *   informationally, never a warning.
+ * - `scoped` counts the scoped resources (legacy or routed) with zero uncovered
+ *   tables.
  */
 function computeCeiling(resources: ResourceReadSet[]): {
   silentFull: SilentFullFlag[];
@@ -112,23 +122,38 @@ function computeCeiling(resources: ResourceReadSet[]): {
       explicitFull.push({ key: r.key, reason: r.recompute.reason });
       continue; // declared opt-out — not a scoped resource to flag
     }
-    if (!r.identityTable || r.readSetBases.length === 0) continue; // no scoped intent / loader never ran
+    for (const route of r.routes ?? []) {
+      if (route.map !== "full") continue;
+      explicitFull.push({
+        key: r.key,
+        table: route.table,
+        reason: route.reason,
+      });
+    }
+    // A routed resource is reached through exactly its route tables; a legacy
+    // one scoped through its coveredOrigins, when it declares an identityTable.
+    const coveredOrigins = r.routes
+      ? [...new Set(r.routes.map((route) => route.table))].sort()
+      : r.identityTable
+        ? [...r.coveredOrigins].sort()
+        : null;
+    if (coveredOrigins === null || r.readSetBases.length === 0) continue; // no scoped intent / loader never ran
 
-    const covered = new Set(r.coveredOrigins);
+    const covered = new Set(coveredOrigins);
     const uncovered = r.readSetBases.filter((t) => !covered.has(t)).sort();
     if (uncovered.length > 0) {
-      silentFull.push({
-        key: r.key,
-        uncovered,
-        coveredOrigins: [...r.coveredOrigins].sort(),
-      });
+      silentFull.push({ key: r.key, uncovered, coveredOrigins });
     } else {
       scoped += 1;
     }
   }
 
   silentFull.sort((a, b) => a.key.localeCompare(b.key));
-  explicitFull.sort((a, b) => a.key.localeCompare(b.key));
+  explicitFull.sort(
+    (a, b) =>
+      a.key.localeCompare(b.key) ||
+      (a.table ?? "").localeCompare(b.table ?? ""),
+  );
   return { silentFull, explicitFull, scoped };
 }
 
@@ -436,14 +461,14 @@ function CeilingSection({
           <Stack gap="2xs">
             {explicitFull.map((e) => (
               <Stack
-                key={e.key}
+                key={e.table === undefined ? e.key : `${e.key} ${e.table}`}
                 direction="row"
                 gap="sm"
                 align="baseline"
                 justify="between"
               >
                 <Text variant="caption" className="font-mono">
-                  {e.key}
+                  {e.table === undefined ? e.key : `${e.key} ← ${e.table}`}
                 </Text>
                 <Text as="span" variant="caption" tone="muted">
                   {e.reason}

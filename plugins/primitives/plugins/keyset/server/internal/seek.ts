@@ -139,6 +139,55 @@ export function seekPredicate(
 }
 
 /**
+ * Strict "before this value on `key`" term under NULLS LAST — the mirror of
+ * {@link afterTerm}. A NULL cut value sits in the trailing NULL region, so every
+ * non-null row precedes it (`col IS NOT NULL`); a non-null cut value is preceded
+ * only by non-null values on the near side (a NULL comparison is not TRUE, so a
+ * NULL row is correctly never "before" a value).
+ */
+function beforeTerm(key: SortKey, value: unknown): SQL {
+  if (value == null) return sql`${key.col} IS NOT NULL`;
+  return key.dir === "asc"
+    ? sql`${key.col} < ${value}`
+    : sql`${key.col} > ${value}`;
+}
+
+/**
+ * Null-aware lexicographic "rows at or before the cut tuple" — the exact
+ * complement of {@link seekPredicate} over the same keys, written as its own
+ * positive predicate rather than `NOT seek`: a negated NULL comparison is NULL,
+ * not TRUE, and would drop rows the order places before the cut.
+ *
+ *   OR_i [ eq(k_0)..eq(k_{i-1}) AND before(k_i) ]  OR  eq(k_0)..eq(k_n)
+ *
+ * The final all-equal branch keeps the cut row itself (the cut is inclusive).
+ * The keys must end in a non-null total-order tiebreaker (the pk, as
+ * `buildSortKeys` appends), so `seek(c)` and `atOrBefore(c)` split any row set
+ * exactly in two, and each agrees with `ORDER BY … NULLS LAST`.
+ *
+ * Operands are interpolated as given: a caller whose cut values arrive as text
+ * passes them pre-cast (`sql\`${v}::timestamptz\``), exactly as for the seek.
+ */
+export function atOrBeforePredicate(
+  keys: SortKey[],
+  cutValues: unknown[],
+): SQL {
+  if (cutValues.length !== keys.length) {
+    throw new Error(
+      `atOrBeforePredicate: the cut has ${cutValues.length} value(s) for ${keys.length} key(s) — a cut names every key, the tiebreaker included.`,
+    );
+  }
+  const branches: SQL[] = [];
+  for (let i = 0; i <= keys.length; i++) {
+    const terms: SQL[] = [];
+    for (let j = 0; j < i; j++) terms.push(eqTerm(keys[j]!, cutValues[j]));
+    if (i < keys.length) terms.push(beforeTerm(keys[i]!, cutValues[i]));
+    branches.push(terms.length === 1 ? terms[0]! : and(...terms)!);
+  }
+  return or(...branches)!;
+}
+
+/**
  * Extract the cursor key tuple from a result row, in key order. Defaults to
  * reading `row[key.fieldId]` for each key; pass `fieldIdsInKeyOrder` to override
  * (e.g. when the projected row keys differ from the field ids).

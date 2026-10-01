@@ -1,7 +1,8 @@
 import {
   setRelationResolver,
   setFeedExemptTables,
-  scopedResourceIdentities,
+  scopedResourceTables,
+  routedTableRequirements,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
 import { db, loadKnownRelations } from "@plugins/database/server";
@@ -15,7 +16,8 @@ import { relationIdentityBase } from "@plugins/database/plugins/derived-views/se
 import { feedExemptTables } from "@plugins/database/plugins/derived-tables/server";
 import { rebuildTriggers, getCoveredTables } from "./internal/triggers";
 import { excludedTableNames } from "./internal/exclusion";
-import { assertScopePoliciesCovered } from "./internal/identity-coverage";
+import { assertRouteTablesCovered } from "./internal/route-coverage";
+import { assertRouteLayoutsInstalled } from "./internal/route-layout";
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
 
@@ -23,7 +25,7 @@ export { rebuildTriggers, getCoveredTables } from "./internal/triggers";
 // Opt a high-churn observability table out of the L4 change-feed (see
 // ./internal/exclusion for the trade this makes).
 export { ExcludeFromChangeFeed } from "./internal/exclusion";
-export { parseLiveStatePayload } from "./internal/parse-payload";
+export { parseLiveStatePayload, readLayout } from "./internal/parse-payload";
 export type { DbChange } from "./internal/parse-payload";
 // The single source of change routing — reused by the L2 cold-boot catch-up
 // driver (live-state-snapshot) so replay can never drift from the live LISTEN
@@ -57,6 +59,16 @@ export default {
   // barrier so the feed's triggers exist before any traffic — and the listener
   // (started in onReady, after the barrier) is guaranteed to find them.
   async onReadyBlocking() {
+    // The contributed exclusions, read once here: contributions were collected
+    // before this barrier.
+    const exclusions = {
+      feedExempt: feedExemptTables(),
+      optedOut: excludedTableNames(),
+    };
+    // The routed tables' trigger layouts, derived from every registered route —
+    // resources register at module eval and deferred ones bind right after
+    // contributions are collected, both before this barrier.
+    const layouts = routedTableRequirements();
     // Per-table DROP+CREATE TRIGGER can wait on the previous backend's readers
     // during a hot-swap: widen the query deadline for the rebuild's own queries.
     await withQueryDeadline(
@@ -64,27 +76,33 @@ export default {
         ms: BOOT_DDL_QUERY_DEADLINE_MS,
         reason: "boot: change-feed trigger rebuild",
       },
-      () => rebuildTriggers(db),
+      () => rebuildTriggers(db, exclusions, layouts),
     );
-    // Reject dead scope policy: a keyed resource whose identityTable names a table
-    // the feed installed no trigger on can never receive its declared scoped
-    // delivery (scoped fires only on origin === identityTable, and only a
-    // triggered table produces that origin). `getCoveredTables()` is the single
-    // authoritative set — just populated by `rebuildTriggers` above — so this one
-    // check subsumes the ExcludeFromChangeFeed case AND catches typo / view /
-    // rollup / nonexistent identity tables; the exclusion + exempt sets only
-    // classify the reason for the diagnostic. All inputs are authoritative here —
-    // contributions were collected before this barrier and the resource registry
-    // is populated at module-import. Throws loudly (blocks boot) rather than
-    // warning: it is always a definite bug, never transient drift. A legitimate
-    // base table is present in the covered set by construction, so a miss is never
-    // a false positive. See ./internal/identity-coverage.
-    assertScopePoliciesCovered(
-      scopedResourceIdentities(),
+    // Reject dead scope policy (A1): a resource depending on a table the feed
+    // installed no trigger on can never receive the delivery it declares — a
+    // routed resource is reached only through its route tables, a legacy scoped
+    // one only on origin === identityTable, and only a triggered table produces
+    // either. `getCoveredTables()` is the single authoritative set — just
+    // populated by `rebuildTriggers` above — so this one check subsumes the
+    // ExcludeFromChangeFeed case AND catches typo / view / rollup / nonexistent
+    // tables; the exclusion + exempt sets only classify the reason for the
+    // diagnostic. All inputs are authoritative here — contributions were
+    // collected before this barrier and the resource registry is populated at
+    // module-import. Throws loudly (blocks boot) rather than warning: it is always
+    // a definite bug, never transient drift. A legitimate base table is present in
+    // the covered set by construction, so a miss is never a false positive. See
+    // ./internal/route-coverage.
+    assertRouteTablesCovered(
+      scopedResourceTables(),
       new Set(getCoveredTables()),
-      excludedTableNames(),
-      new Set(feedExemptTables()),
+      exclusions.optedOut,
+      exclusions.feedExempt,
     );
+    // A3: every column a route maps through, filters or matches on is carried
+    // by its table's installed trigger — read back from the catalog (the
+    // trigger arguments), so a layout the routes derive but the database does
+    // not carry blocks boot instead of recomputing its readers FULL forever.
+    await assertRouteLayoutsInstalled(db, layouts);
     // `rebuildTriggers` above creates `live_state_changelog`, which did not exist
     // yet when the database plugin took its own snapshot of the public relations.
     // Take it again so a loader naming the changelog unquoted is recognised too.

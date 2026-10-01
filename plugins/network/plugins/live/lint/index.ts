@@ -112,11 +112,7 @@ export default {
       "plugins/conversations/plugins/all-conversations/server/internal/revision-resource.ts",
       "plugins/conversations/plugins/all-conversations/web/panes.tsx",
       "plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/history/web/components/sidebar-history.tsx",
-      // · deploy.runs-revision
-      "plugins/apps/plugins/deploy/plugins/deploy-history/web/components/deploy-history-section.tsx",
-      "plugins/apps/plugins/deploy/plugins/deployments/core/runs.ts",
-      "plugins/apps/plugins/deploy/plugins/deployments/server/internal/runs-revision-resource.ts",
-      // · events.revision, events.runs-revision
+      // · events.runs-revision
       "plugins/apps/plugins/events/plugins/events-core/core/internal/resources.ts",
       "plugins/apps/plugins/events/plugins/events-core/server/internal/resources.ts",
       "plugins/apps/plugins/events/plugins/events-core/web/internal/hooks.ts",
@@ -124,13 +120,9 @@ export default {
       "plugins/debug/plugins/latency-ledger/core/internal/resources.ts",
       "plugins/debug/plugins/latency-ledger/server/internal/revision-resource.ts",
       "plugins/stats/plugins/responsiveness/web/components/responsiveness-section.tsx",
-      // · mail-threads-revision
-      "plugins/apps/plugins/mail/plugins/threads/core/internal/resources.ts",
-      "plugins/apps/plugins/mail/plugins/threads/server/internal/revision-resource.ts",
-      "plugins/apps/plugins/mail/plugins/threads/web/panes.tsx",
-      // · release.history-revision
+      // · release.history-revision (the history window is live; the candidate
+      //   refetch in remote-deploy is its one remaining reader)
       "plugins/apps/plugins/deploy/plugins/remote-deploy/web/internal/use-release-info.ts",
-      "plugins/apps/plugins/studio/plugins/compositions/plugins/release/web/components/release-history-section.tsx",
       "plugins/release/core/resources.ts",
       "plugins/release/server/internal/history-revision-resource.ts",
       // · reports.revision

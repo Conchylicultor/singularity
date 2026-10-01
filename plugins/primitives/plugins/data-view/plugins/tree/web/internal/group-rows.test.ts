@@ -51,7 +51,7 @@ function sectionsOf(
   return groups.map(([key, roots]) => ({
     key,
     label: key,
-    count: roots.length,
+    count: { kind: "exact", n: roots.length },
     entries: roots.map((p) => ({ row: p, key: p.id })),
   }));
 }
@@ -115,7 +115,10 @@ describe("bucketRowsByRootSection", () => {
     const a1 = proj("a1", "a");
     // Interleaved input (the sorted order) — the bucket keeps it verbatim.
     const rows = [a, b, b1, a1];
-    const [bucket] = bucketRowsByRootSection(rows, sectionsOf(["open", [a, b]]));
+    const [bucket] = bucketRowsByRootSection(
+      rows,
+      sectionsOf(["open", [a, b]]),
+    );
     expect(bucket!.map((p) => p.id)).toEqual(["a", "b", "b1", "a1"]);
   });
 

@@ -8,6 +8,13 @@ export interface InfiniteScrollOptions {
   isFetchNextPageError: boolean;
   fetchNextPage: () => void;
   /**
+   * The footer's Retry after a failed next page. Defaults to `fetchNextPage` —
+   * right when the failed request IS the next page; a source whose failing read
+   * is something else (a segmented scroll's tail window) passes its own, so a
+   * Retry never asks for yet another page.
+   */
+  retry?: () => void;
+  /**
    * `IntersectionObserver` `rootMargin` — grow the sentinel's trigger box to
    * prefetch the next page before it scrolls fully into view (e.g. `"400px"`).
    * Omitted → the sentinel fires only once actually intersecting.
@@ -33,7 +40,8 @@ export interface InfiniteScrollHandle {
  * the still-intersecting sentinel — retrying the failing request in a tight
  * loop. `retry` (== `fetchNextPage`) is the manual recovery path; calling it
  * re-enters `isFetchingNextPage`, which rebuilds the observer and re-arms it
- * once the error clears.
+ * once the error clears. A source whose failed read is not "the next page"
+ * passes its own `retry`.
  */
 export function useInfiniteScroll(
   opts: InfiniteScrollOptions,
@@ -43,6 +51,7 @@ export function useInfiniteScroll(
     isFetchingNextPage,
     isFetchNextPageError,
     fetchNextPage,
+    retry = fetchNextPage,
     rootMargin,
   } = opts;
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -83,6 +92,6 @@ export function useInfiniteScroll(
     hasNextPage,
     isFetchingNextPage,
     isFetchNextPageError,
-    retry: fetchNextPage,
+    retry,
   };
 }

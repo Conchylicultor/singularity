@@ -4,7 +4,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type { EventRecord } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import type { ListedEvent } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { EVENT_CATEGORY_OPTIONS } from "../../core";
 import { formatEventWhen, formatPlace } from "../internal/format";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -25,7 +25,7 @@ const CATEGORY_LABEL = new Map(
  * `Fill` holds the leaf that truncates under pressure, so the trailing metadata
  * keeps a real track and can never be overlapped by a long title or venue name.
  */
-export function EventRow({ event }: { event: EventRecord }): ReactElement {
+export function EventRow({ event }: { event: ListedEvent }): ReactElement {
   const place = formatPlace(event.venue, event.city);
 
   return (

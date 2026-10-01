@@ -21,12 +21,13 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 import {
-  getReadSetIndex,
+  installLoaderReadSetSink,
   installSpanContextRuntime,
   recordEntrySpan,
   resetRuntimeProfile,
   type EntryContext,
 } from "@plugins/infra/plugins/runtime-profiler/core";
+import { getReadSetIndex } from "@plugins/framework/plugins/server-core/core/testing";
 import { pagesResource } from "../../core/resources";
 import {
   createTestDb,
@@ -34,7 +35,10 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { recordTrashEntry } from "@plugins/infra/plugins/trash/server";
-import { collectContributions } from "@plugins/framework/plugins/server-core/core";
+import {
+  collectContributions,
+  recordLoaderReadSet,
+} from "@plugins/framework/plugins/server-core/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { defineBlock } from "../../core";
 import { pageBlockHandle } from "../../core/schemas";
@@ -321,7 +325,7 @@ describe("cycle guard", () => {
  * uninstrumented pool.
  */
 describe("read-set (Hole A)", () => {
-  // Inject the recorder's ambient runtime exactly the way
+  // Inject the recorder's ambient runtime and the read-set sink exactly the way
   // runtime-profiler/server/internal/install.ts does at boot.
   beforeEach(() => {
     const als = new AsyncLocalStorage<EntryContext>();
@@ -329,6 +333,7 @@ describe("read-set (Hole A)", () => {
       run: (ctx, fn) => als.run(ctx, fn),
       current: () => als.getStore(),
     });
+    installLoaderReadSetSink(recordLoaderReadSet);
     resetRuntimeProfile();
   });
 

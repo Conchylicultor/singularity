@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
   defineDataView,
@@ -17,10 +17,11 @@ import {
   Sonata,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { songs, updateSong } from "../../core";
+import { songLibrary, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
 import { useOpenSong } from "../hooks";
+import { songLibrarySource } from "../source";
 import { formatDuration } from "../format-duration";
 import { NowPlayingBar } from "./now-playing-bar";
 import { SonataOnboarding } from "./onboarding";
@@ -38,8 +39,10 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * `Library.Source` registry (see `useOpenSong`) and switches to the player —
  * the library never names MIDI (or any source). Each source's create affordance
  * (`Library.Source.createOption`, a data-view `CreateOption`) is mapped into the
- * DataView's `creators` — rendered as a toolbar "+" menu (N sources). The song
- * list is reactive via the live `songs` value.
+ * DataView's `creators` — rendered as a toolbar "+" menu (N sources). The list
+ * reads the live `songLibrary` collection as a segmented scroll
+ * (`source={songLibrarySource}`): sort, filter and search run on the server,
+ * and every loaded song stays live.
  *
  * There is no bespoke card: the gallery builds the standard `DataCard` from this
  * schema, plus a `leading` music-note block. Everything the old `SongCard` drew
@@ -49,19 +52,27 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  *
  * Extra fields (e.g. play-count / last-played from `playback-history`) are
  * injected via the `Library.Fields` extension factory passed as
- * `fieldExtensions` — they appear in the Sort pill, the Filter pill, and as
- * table columns for free, so prerecorded orderings are just named sort presets
+ * `fieldExtensions` — each binds one of its plugin's contributed columns, so it
+ * appears in the Sort pill, the Filter pill, and as a table column, sorted and
+ * filtered on the server; prerecorded orderings are just named sort presets
  * (authored in config) over those fields rather than bespoke toolbar chips.
  */
 export function SongLibrary() {
-  const library = useLive(songs);
+  // Does the library hold any song at all? One row answers it — the first-run
+  // onboarding replaces the list only once that is known to be none.
+  const anySong = useLive(songLibrary, { limit: 1 });
+  const confirmedEmpty = foldResource(anySong, {
+    loading: () => false,
+    error: () => false,
+    ready: (rows) => rows.length === 0,
+  });
   const openSong = useOpenSong();
   // The background-playing song (if any) — highlights its table row and feeds
   // the now-playing footer below.
   const { currentSongId } = useSonata();
   // Write-back for inline cell editing (title / composer) in the table view.
-  // Fire-and-forget: the server's `updateSongMeta` write recomputes the live
-  // `songs` value, so the edited cell settles from server truth; a failed
+  // Fire-and-forget: the server's `updateSongMeta` write refills that song in
+  // the live collection, so the edited cell settles from server truth; a failed
   // write surfaces via the global mutation toast (no local onError).
   const { mutate: saveSong } = useEndpointMutation(updateSong);
   const sources = Library.Source.useContributions();
@@ -139,6 +150,7 @@ export function SongLibrary() {
         value: (s) => s.durationSec,
         cell: (s) => formatDuration(s.durationSec),
         sortable: true,
+        column: songLibrary.column("durationSec"),
         width: "5rem",
         align: "end",
       },
@@ -151,71 +163,62 @@ export function SongLibrary() {
         value: (s) => s.createdAt,
         cell: (s) => formatRelativeTime(s.createdAt),
         sortable: true,
+        column: songLibrary.column("createdAt"),
         width: "7rem",
       },
     ],
     [saveSong, sourceOptions],
   );
 
-  // One render path for every state: while loading, DataView renders its
-  // skeleton, and on a failed read its error (with Retry) — `readiness` — while
-  // the chrome (title / search / add actions) stays stable. The "No songs yet"
-  // empty state requires confirmed-empty.
-  const renderLibrary = (rows: Song[]) => (
-    <DataView<Song>
-      rows={rows}
-      fields={fields}
-      fieldExtensions={Library.Fields}
-      rowKey={(s) => s.id}
-      views={["gallery", "table"]}
-      defaultView="gallery"
-      storageKey={LIBRARY_VIEW}
-      // The one per-row action set, rendered by both views: Play/Pause at rest
-      // (zone "persistent") and Delete on hover. Highlight the background-
-      // playing row.
-      itemActions={Library.SongActions}
-      selectedRowId={currentSongId ?? undefined}
-      // The "Library" title is owned by the enclosing `PaneChrome` (the pane
-      // header), so the DataView omits its own to avoid a duplicate.
-      readiness={library}
-      // Per-source create affordances (e.g. MIDI Import, New Chord Grid),
-      // mapped from the `Library.Source` registry into the data-view "+"
-      // menu. The library stays source-agnostic — it threads an opaque
-      // `createOption` and never names MIDI.
-      creators={sources
-        .map((s) => s.createOption)
-        .filter((c): c is CreateOption => Boolean(c))}
-      onRowActivate={(s) => void openSong(s)}
-      emptyState={<>No songs yet — add one to get started.</>}
-      viewOptions={{
-        gallery: {
-          // The card's identity block, beside the body — the one piece of the
-          // old SongCard that was a real gap in the generic card.
-          leading: () => (
-            <Center className="size-10 rounded-md bg-primary/10 text-primary">
-              <Icon icon={musicNoteIcon} className="size-5" />
-            </Center>
-          ),
-        },
-      }}
-    />
-  );
-
   return (
     <Column
       fill
       className="h-full"
-      body={matchResource(library, {
-        // DataView renders the skeleton / the failure itself (`readiness`).
-        loading: () => renderLibrary([]),
-        error: () => renderLibrary([]),
-        // Confirmed-empty (ready + 0 rows) → the first-run onboarding takeover
-        // (hero + source cards). Any songs → the DataView. Keeping onboarding to
-        // the ready-empty case means loading/error still show the DataView's
-        // own states, never a flash of the empty state.
-        ready: (rows) =>
-          rows.length === 0 ? <SonataOnboarding /> : renderLibrary(rows),
-      })}
+      body={
+        // Confirmed-empty (ready, no song) → the first-run onboarding
+        // takeover (hero + source cards). Anything else → the DataView, which
+        // owns its loading skeleton and its errors: a loading or failed
+        // library never flashes the onboarding.
+        confirmedEmpty ? (
+          <SonataOnboarding />
+        ) : (
+          <DataView<Song>
+            source={songLibrarySource}
+            fields={fields}
+            fieldExtensions={Library.Fields}
+            views={["gallery", "table"]}
+            defaultView="gallery"
+            storageKey={LIBRARY_VIEW}
+            // The one per-row action set, rendered by both views: Play/Pause
+            // at rest (zone "persistent") and Delete on hover. Highlight the
+            // background-playing row.
+            itemActions={Library.SongActions}
+            selectedRowId={currentSongId ?? undefined}
+            // The "Library" title is owned by the enclosing `PaneChrome` (the
+            // pane header), so the DataView omits its own to avoid a duplicate.
+            // Per-source create affordances (e.g. MIDI Import, New Chord Grid),
+            // mapped from the `Library.Source` registry into the data-view "+"
+            // menu. The library stays source-agnostic — it threads an opaque
+            // `createOption` and never names MIDI.
+            creators={sources
+              .map((s) => s.createOption)
+              .filter((c): c is CreateOption => Boolean(c))}
+            onRowActivate={(s) => void openSong(s)}
+            emptyState={<>No songs match.</>}
+            viewOptions={{
+              gallery: {
+                // The card's identity block, beside the body — the one piece of
+                // the old SongCard that was a real gap in the generic card.
+                leading: () => (
+                  <Center className="size-10 rounded-md bg-primary/10 text-primary">
+                    <Icon icon={musicNoteIcon} className="size-5" />
+                  </Center>
+                ),
+              },
+            }}
+          />
+        )
+      }
       footer={<NowPlayingBar />}
     />
   );

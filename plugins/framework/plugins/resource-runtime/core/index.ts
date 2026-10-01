@@ -13,11 +13,27 @@ export type {
   ResourceMode,
   ResourceParams,
   DependsOnEntry,
-  RecomputeIntent,
   KeyedMembership,
+  ScopedResourceTable,
+  RoutedRecomputeOn,
   WsData,
   WsHandler,
 } from "./runtime";
+export {
+  mintReachPlan,
+  mintRoutePlan,
+  tableLayoutRequirements,
+} from "./routing";
+export type {
+  FullRoute,
+  HostMap,
+  ReachPlan,
+  Route,
+  RoutePlan,
+  TableChange,
+  TableLayoutRequirement,
+  TupleUse,
+} from "./routing";
 export { diffKeyedScopedMembership, retainSnapEncoder } from "./keyed-diff";
 export type {
   KeyedDiff,

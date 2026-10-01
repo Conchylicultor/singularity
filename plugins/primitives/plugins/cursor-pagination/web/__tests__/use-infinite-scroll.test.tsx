@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { act, render } from "@testing-library/react";
+import { act, render, renderHook } from "@testing-library/react";
 import {
   useInfiniteScroll,
   type InfiniteScrollOptions,
@@ -122,6 +122,30 @@ describe("useInfiniteScroll", () => {
     );
     fireIntersecting();
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("Retry is fetchNextPage by default — existing callers keep their behaviour", () => {
+    const fetchNextPage = vi.fn();
+    const { result } = renderHook(() =>
+      useInfiniteScroll(
+        baseOpts({ fetchNextPage, isFetchNextPageError: true }),
+      ),
+    );
+    result.current.retry();
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("a separate retry re-reads what failed, never fetching another page", () => {
+    const fetchNextPage = vi.fn();
+    const retry = vi.fn();
+    const { result } = renderHook(() =>
+      useInfiniteScroll(
+        baseOpts({ fetchNextPage, retry, isFetchNextPageError: true }),
+      ),
+    );
+    result.current.retry();
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(fetchNextPage).not.toHaveBeenCalled();
   });
 
   it("passes rootMargin through to the observer for early prefetch", () => {

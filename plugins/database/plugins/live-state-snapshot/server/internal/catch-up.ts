@@ -5,7 +5,10 @@ import {
   executeOne,
   executeRows,
 } from "@plugins/database/plugins/sql-rows/core";
-import { routeChange } from "@plugins/database/plugins/change-feed/server";
+import {
+  readLayout,
+  routeChange,
+} from "@plugins/database/plugins/change-feed/server";
 import type { DbChange } from "@plugins/database/plugins/change-feed/server";
 import {
   LIVE_STATE_CHANGELOG_TABLE,
@@ -20,11 +23,19 @@ import { snapshotLog as log } from "./log-sink";
 // are the trigger function's I/U/D, so the enum is the check that was previously
 // a bare assertion. `ids` is the one genuinely nullable column: a bulk statement
 // with no single-column PK writes NULL, which the replay routes as FULL.
+//
+// `keys` / `unchanged` are a routed table's key layout and known-unchanged
+// column set — written by `live_state_notify_routed()` exactly as it NOTIFYs
+// them, and NULL for every other table. `keys` is `jsonb` (decoded to its object), parsed by
+// the same reader as the live payload so the replay routes exactly what the
+// NOTIFY would have.
 const ChangelogRowSchema = z.object({
   xid: z.string(),
   t: z.string(),
   op: z.enum(["I", "U", "D"]),
   ids: z.array(z.string()).nullable(),
+  keys: z.unknown(),
+  unchanged: z.array(z.string()).nullable(),
 });
 type ChangelogRow = z.infer<typeof ChangelogRowSchema>;
 
@@ -49,15 +60,32 @@ function replayChange(
   row: ChangelogRow,
   route: (change: DbChange) => void,
 ): void {
+  // The layout is read by the live NOTIFY's own rule (`readLayout`): one that
+  // does not parse replays the row unscoped (FULL for its readers) rather than
+  // drop it — a missed change is the one outcome catch-up exists to prevent.
+  const { scope, malformed } = readLayout(row.ids, row.keys, row.unchanged);
+  if (malformed) {
+    log.publish(
+      `[live-state-snapshot] catch-up: malformed key layout on a "${row.t}" changelog row — replaying it unscoped`,
+      "stderr",
+    );
+  }
   // `xid: null` — catch-up replays run at boot, before any client subscribes, so
   // ack attribution has no consumer here; a missing ack is safe by design (the
   // client's resub snapshot watermark backstops any op the downtime absorbed).
+  //
+  // `unchanged` replays as written, though a catch-up follows a restart that
+  // may have been a deploy that changed the routes: it lists columns KNOWN
+  // equal in every row, a fact whatever gate the trigger compared under — a
+  // column a new route reads that the old gate did not compare is simply not
+  // listed, so that route is reached. Likewise its `keys`: a column the old
+  // layout did not carry reads as unknown, which recomputes — never skips.
   route({
     table: row.t,
     op: row.op,
-    ids: row.ids,
     xid: null,
     changedAt: null,
+    ...scope,
   });
 }
 
@@ -129,7 +157,7 @@ export async function runCatchUp(
 
   const rows = await executeRows(db, {
     query: drizzleSql`
-      SELECT xid::text AS xid, t, op, ids
+      SELECT xid::text AS xid, t, op, ids, keys, unchanged
       FROM ${drizzleSql.raw(LIVE_STATE_CHANGELOG_TABLE)}
       WHERE xid >= ${minPosition}::numeric
       ORDER BY seq
@@ -167,6 +195,9 @@ async function fullRecomputeChangedTables(
     label: "fullRecomputeChangedTables",
   });
   for (const { t } of changed) {
-    replayChange({ xid: "0", t, op: "U", ids: null }, route);
+    replayChange(
+      { xid: "0", t, op: "U", ids: null, keys: null, unchanged: null },
+      route,
+    );
   }
 }

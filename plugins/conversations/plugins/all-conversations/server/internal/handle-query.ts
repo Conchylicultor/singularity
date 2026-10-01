@@ -4,6 +4,7 @@ import { db } from "@plugins/database/server";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
+  applyJoin,
   augmentServerQuery,
   compileWhere,
 } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
@@ -89,7 +90,7 @@ export const handleQuery = implement(queryConversations, async ({ body }) => {
     .select({ ...viewColumns(conversations), ...aug.projection })
     .from(conversations)
     .$dynamic();
-  for (const j of aug.joins) q = j.apply(q);
+  for (const j of aug.joins) q = applyJoin(q, j, conversations.id);
   const rows = await q
     .where(where)
     .orderBy(...orderByClauses(keys))

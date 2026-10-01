@@ -13,10 +13,11 @@ export {
   GmailAccessAction,
   GMAIL_BLOCKER_BODY,
 } from "./components/gmail-access-action";
+export { GmailAccessEmptyState } from "./components/gmail-access-empty-state";
 
 export default {
   description:
-    "Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance consumers render in place of routing the user to Settings.",
+    "Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance (and the empty state around it) consumers render in place of routing the user to Settings.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: gmailConfig }),
     Auth.ScopeRequirement({

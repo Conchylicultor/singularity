@@ -7,6 +7,7 @@ import type {
   FilterDomainId,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
+import type { LiveColumnRef } from "@plugins/network/plugins/live/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
@@ -19,6 +20,7 @@ import type {
   ToolbarArrangement,
 } from "./toolbar-arrangement";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { LiveDataSource } from "./live-data-source";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
@@ -238,6 +240,15 @@ export interface FieldExtensionProps<TRow> {
    *  the host's own. `render` stays strict, so the reverse (an extension for a
    *  narrower row on a wider surface) is still a type error. */
   rowKey: BivariantRowKey<TRow>;
+  /**
+   * The column scope of the live collection this surface reads — its
+   * `columnScope`, which the host asserts IS this surface's `storageKey` — or
+   * `null` (not a live source, or a collection that takes no scoped columns).
+   * A contributor serving scoped columns (custom columns) binds its fields to
+   * them (`FieldDef.column`) only under a scope; anywhere else a `column` ref
+   * would mean nothing (and is refused).
+   */
+  liveColumnScope: string | null;
   /** Hand the host this contributor's extra fields (called in render — the
    *  component is mounted, so it may load hook-backed data first). */
   render: (fields: FieldDef<TRow>[]) => ReactNode;
@@ -350,6 +361,23 @@ export interface FieldDef<TRow> {
   groupable?: boolean;
   /** Include in default search accessor; default true for text/enum. */
   filterable?: boolean;
+  /**
+   * Under a live `source`: the collection column this field sorts and filters
+   * by, when its id is not that column's name (`labels` → `labelIds`) — minted
+   * by `collection.column(name)` (or a contributed-column handle), never
+   * written. Field ids stay the persisted vocabulary (saved views, presets),
+   * so nothing in config moves. A field without one lowers under its own id.
+   * On an in-memory or fetchPage DataView it would mean nothing, so it throws
+   * at mount.
+   *
+   * Either way the field's `value` must BE that column's value: the server
+   * filters, sorts and — for a one-bucket-per-value grouping — orders and
+   * counts sections by the column, so a field showing a derived value (a
+   * sender's name over an email column) would be filtered, sorted and grouped
+   * by something other than what it shows. A derived field declares none of
+   * `sortable` / `filterable` / `groupable` under a live source.
+   */
+  column?: LiveColumnRef;
   /**
    * CSS grid track size for the table column. Default `"auto"` (content-sized).
    * e.g. `"12rem"` (fixed), `"minmax(0,1fr)"` (absorbs leftover space + truncates).
@@ -524,8 +552,9 @@ export interface DataViewSection<TRow> {
   /** Header label; absent for the implicit (`key === null`) section. */
   label?: ReactNode;
   /** Member-row count (pre-aggregation, pre-fold) — the header's number stays
-   *  the section's TOTAL while some of its rows are folded. */
-  count: number;
+   *  the section's TOTAL while some of its rows are folded. A lower bound when
+   *  more rows may still load into the section (see {@link SectionCount}). */
+  count: SectionCount;
   entries: DataViewRowEntry<TRow>[];
   /**
    * Present only when the view's fold is in effect AND ≥1 entry of this section
@@ -537,6 +566,16 @@ export interface DataViewSection<TRow> {
    */
   fold?: { hidden: number; open: boolean };
 }
+
+/**
+ * How many rows a section holds, as far as the loaded rows can say: `exact`
+ * when nothing more can arrive in it (every row is loaded, or — sections in
+ * row order — a later section has started), else `atLeast` the rows loaded so
+ * far. Printed by one formatter (`formatSectionCount`: `n` / `n+`), so a view
+ * cannot print a lower bound as a total.
+ */
+export type SectionCount =
+  { kind: "exact"; n: number } | { kind: "atLeast"; n: number };
 
 /**
  * One row entry within a `DataViewSection`. For group-by (Sub-task 1) it is a
@@ -682,8 +721,20 @@ export interface DataViewRenderProps<TRow> {
   rowKey: (row: TRow, index: number) => string;
   /** This view's own state. */
   state: ViewState;
-  /** null→asc→desc→null cycle; writes THIS view's sort only. */
+  /**
+   * null→asc→desc→null cycle; writes THIS view's sort only. Throws for a field
+   * outside `sortHeader.sortable` — a rule this list cannot sort by would
+   * replace a live list with its error, persisted in the view's config.
+   */
   setSort: (fieldId: string) => void;
+  /**
+   * What a view's column headers show and offer. `active`: the view's sort
+   * rules, for DISPLAY (a header's arrow) — `state.sort` is emptied under a
+   * server-ordered source, whose rows arrive sorted. `sortable`: the fields a
+   * sort may name (the Sort control's sortable fields — under a live source,
+   * the fields bound to a sortable column); a header offers sort on these only.
+   */
+  sortHeader: { active: readonly SortRule[]; sortable: ReadonlySet<string> };
   /** Writes THIS view's whole filter tree (null clears it). */
   setFilter: (filter: FilterGroup | null) => void;
   /**
@@ -753,6 +804,20 @@ export interface DataViewRenderProps<TRow> {
    * server-sorted grouped view still reads the right way round.
    */
   groupOrder: "asc" | "desc";
+  /**
+   * Whether `rows` is the whole set: always in memory; a server-ordered list
+   * (live or fetchPage) only once read to its end. Section counts are exact
+   * only when it is (or when a later section has started — see `sectionOrder`).
+   */
+  rowsComplete: boolean;
+  /**
+   * How grouped sections are ordered: `"bucket"` — by their bucket's ordinal
+   * (in memory, and a grouping the server does not order by); `"appearance"` —
+   * by first appearance in the rows, because the server sorts by the grouped
+   * column first (a one-bucket-per-value grouping under a live source), which
+   * also makes every section but the last complete.
+   */
+  sectionOrder: "bucket" | "appearance";
   /** Device-local set of collapsed group-by section keys (absence = expanded).
    *  Flat views render group headers and hide a section's members when collapsed. */
   collapsedSections?: ReadonlySet<string>;
@@ -1072,13 +1137,93 @@ export type DataViewSurfaceChrome =
     };
 
 export type DataViewProps<TRow> = DataViewBaseProps<TRow> &
+  DataViewDataOrigin<TRow> &
   DataViewSurfaceChrome;
 
-/** Every `DataViewProps` key except the surface chrome ({@link DataViewSurfaceChrome}). */
-export interface DataViewBaseProps<TRow> {
-  rows: readonly TRow[];
-  fields: FieldDef<TRow>[];
+/**
+ * The props a surface's rows are identified and shaped by — for rows the
+ * consumer holds (in memory, or fetchPage pages). A live `source` refuses all
+ * four: its row key is its collection's `id`, a tree over a partial paged set
+ * orphans children, a consumer's rank would reorder server-sorted segments,
+ * and its search is the source's `searchable`.
+ */
+interface DataViewHeldRowProps<TRow> {
   rowKey: (row: TRow, index: number) => string;
+  searchAccessor?: (row: TRow) => string;
+  /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */
+  hierarchy?: HierarchyConfig<TRow>;
+  /**
+   * Flat manual-order accessors + mutation. Present → views that opt in
+   * (`supportsManualOrder`: list/table) order by `getRank` and enable rank-based
+   * drag reordering; the host hides the Sort control on the active view while
+   * manual order is active. Composes with group-by: in-section drags reorder as
+   * usual, and cross-section drags are accepted only when the config supplies
+   * `onReseat` (otherwise the other sections paint no drop zone).
+   */
+  manualOrder?: ManualOrderConfig<TRow>;
+}
+
+/** Rows the consumer holds, all of them. */
+export interface DataViewInMemoryOrigin<
+  TRow,
+> extends DataViewHeldRowProps<TRow> {
+  rows: readonly TRow[];
+  /**
+   * The state of the read backing `rows` — pass the read itself
+   * (`readiness={result}`: any `useLive` / `useResource` / combined result).
+   * `loading` renders `loadingState` (default: the view's skeleton), `error`
+   * renders `errorState` (default: the failure with Retry), and only `ready`
+   * renders the view — so neither a loading nor a failed list can masquerade
+   * as a confirmed-empty one (`emptyState` needs `ready` and zero rows).
+   */
+  readiness?: ResourceReadiness;
+  dataSource?: never;
+  source?: never;
+}
+
+/**
+ * Server-delegated pages (`fetchPage` + a `changeTick` refetch). Filter / sort
+ * / search / paginate run server-side over the live `activeState` the host
+ * owns; the accumulated pages are the rows and the client pipeline collapses
+ * to a pass-through.
+ */
+export interface DataViewFetchPageOrigin<
+  TRow,
+> extends DataViewHeldRowProps<TRow> {
+  dataSource: ServerDataSourceSpec<TRow>;
+  rows?: never;
+  readiness?: never;
+  source?: never;
+}
+
+/**
+ * A live `network/live` collection read as a segmented scroll
+ * (`liveDataSource`): the view's sort, filter, search and group-by lower onto
+ * its window params, and the rows stay live through the routed runtime.
+ */
+export interface DataViewLiveOrigin<TRow> {
+  source: LiveDataSource<TRow>;
+  rows?: never;
+  readiness?: never;
+  dataSource?: never;
+  rowKey?: never;
+  searchAccessor?: never;
+  hierarchy?: never;
+  manualOrder?: never;
+}
+
+/** Where a DataView's rows come from — exactly one, so a stand-in (`rows={[]}` beside a server source) cannot be spelled. */
+export type DataViewDataOrigin<TRow> =
+  | DataViewInMemoryOrigin<TRow>
+  | DataViewFetchPageOrigin<TRow>
+  | DataViewLiveOrigin<TRow>;
+
+/**
+ * Every `DataViewProps` key except the data origin ({@link DataViewDataOrigin})
+ * and the surface chrome ({@link DataViewSurfaceChrome}).
+ */
+export interface DataViewBaseProps<TRow> {
+  fields: FieldDef<TRow>[];
   /** Restrict + order by view id; omitted → all contributions by order/title. */
   views?: string[];
   defaultView?: string;
@@ -1100,7 +1245,6 @@ export interface DataViewBaseProps<TRow> {
    */
   pinnedView?: string;
   storageKey: DataViewId;
-  searchAccessor?: (row: TRow) => string;
   /**
    * Per-row emphasis — see {@link RowTone}. A data accessor closed over row
    * identity (the `searchAccessor` shape), NOT a declaration about the surface
@@ -1144,15 +1288,6 @@ export interface DataViewBaseProps<TRow> {
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
   selectedRowId?: string;
   emptyState?: ReactNode;
-  /**
-   * The state of the read backing `rows` — pass the read itself
-   * (`readiness={result}`: any `useLive` / `useResource` / combined result).
-   * `loading` renders `loadingState` (default: the view's skeleton), `error`
-   * renders `errorState` (default: the failure with Retry), and only `ready`
-   * renders the view — so neither a loading nor a failed list can masquerade
-   * as a confirmed-empty one (`emptyState` needs `ready` and zero rows).
-   */
-  readiness?: ResourceReadiness;
   /** Override the loading render; default is each view's own skeleton shape. */
   loadingState?: ReactNode;
   /**
@@ -1163,17 +1298,6 @@ export interface DataViewBaseProps<TRow> {
   errorState?: ReactNode;
   /** Opaque per-view options channel, keyed by view id. */
   viewOptions?: Record<string, unknown>;
-  /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */
-  hierarchy?: HierarchyConfig<TRow>;
-  /**
-   * Flat manual-order accessors + mutation. Present → views that opt in
-   * (`supportsManualOrder`: list/table) order by `getRank` and enable rank-based
-   * drag reordering; the host hides the Sort control on the active view while
-   * manual order is active. Composes with group-by: in-section drags reorder as
-   * usual, and cross-section drags are accepted only when the config supplies
-   * `onReseat` (otherwise the other sections paint no drop zone).
-   */
-  manualOrder?: ManualOrderConfig<TRow>;
   /**
    * Aggregating sections — collapse rows sharing a non-null `getKey` into one
    * representative row + count badge (within each group-by section). Present →
@@ -1205,13 +1329,6 @@ export interface DataViewBaseProps<TRow> {
    * — a `CreateOption` carries only `id`/`label`/`icon`/`description`/`onSelect`.
    */
   creators?: CreateOption[];
-  /**
-   * Optional server-delegated data source. Present → filter/sort/search/paginate
-   * run server-side (compiled to SQL) over the live `activeState` the host owns;
-   * the accumulated pages replace `rows` and the client pipeline collapses to a
-   * pass-through. Absent → the in-memory path over `rows` (unchanged default).
-   */
-  dataSource?: ServerDataSourceSpec<TRow>;
   /**
    * How much room this surface gives the view — see {@link DataViewDensity}.
    * A small popover or a dense side panel declares `"compact"` and gets the

@@ -7,17 +7,23 @@ import {
   canonicalizeFilter,
   clause,
   type Filter,
+  type Filterable,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
   FieldDef,
   FilterGroup,
   FilterOperatorSet,
 } from "@plugins/primitives/plugins/data-view/core";
-import { lowerFilterGroup } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  lowerFilterGroup,
+  renameColumns,
+  resolveLiveFields,
+} from "@plugins/primitives/plugins/data-view/web/testing";
 import { tagsOperatorSet } from "@plugins/fields/plugins/tags/plugins/filter/web/testing";
 import { boolOperatorSet } from "@plugins/fields/plugins/bool/plugins/filter/web/testing";
 import type { MailThread } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { MAIL_THREAD_FIELDS, MAIL_THREAD_FILTERABLE } from "../../core";
+import { MAIL_THREAD_FIELDS, mailThreads } from "../../core";
+import { mailThreadsSource } from "../internal/source";
 
 /**
  * The eight mailbox tabs are AUTHORED CONFIG, not code — and a rule whose
@@ -27,8 +33,9 @@ import { MAIL_THREAD_FIELDS, MAIL_THREAD_FILTERABLE } from "../../core";
  *
  * So this suite reads the real config file and lowers each authored filter
  * through the REAL operator sets the Filter control runs, asserting every tab
- * lowers to its scope — and that the scope is a filter the server's declaration
- * accepts. It is the only thing standing between a typo'd operator id and a
+ * lowers to its scope — and that the scope, renamed by the live source's own
+ * field plan to the column each field binds (`labels` → `labelIds`), is a
+ * filter the collection's declaration accepts. It is the only thing standing between a typo'd operator id and a
  * Spam tab showing the inbox.
  */
 const CONFIG_PATH = join(
@@ -63,15 +70,31 @@ const SETS: FilterOperatorSet[] = [tagsOperatorSet, boolOperatorSet];
 const resolve = (typeId: string): FilterOperatorSet | undefined =>
   SETS.find((s) => s.match === typeId);
 
-// Only the ids + types the lowering reads; the tabs filter on tags / bool.
+// The fields as the pane declares them for lowering: each binds its column
+// through the collection's own ref (`labels` → `labelIds`), exactly as
+// `useMailThreadFieldDefs` does. Only what the lowering reads.
 const fields: FieldDef<MailThread>[] = MAIL_THREAD_FIELDS.map((spec) => ({
   id: spec.id,
   label: spec.label,
   type: spec.type,
+  ...(spec.column === undefined
+    ? {}
+    : { column: mailThreads.column(spec.column) }),
 }));
 
+// The live source's real field plan — which fields the Filter control offers
+// and the column each lowers to — under the pane's account scope.
+const plan = resolveLiveFields(
+  fields,
+  mailThreadsSource.scoped({ where: { accountId: "account" } }),
+  resolve,
+  "authored-views test",
+);
+
+const FILTERABLE: Filterable = mailThreads.filterable;
+
 const labels = (op: "hasAll" | "hasNone", tag: string) =>
-  clause("labels", op, [tag]);
+  clause("labelIds", op, [tag]);
 
 const EXPECTED: Record<string, Filter> = {
   inbox: labels("hasAll", "INBOX"),
@@ -106,13 +129,20 @@ describe("the authored mailbox tabs lower to their scope", () => {
       if (!expected) throw new Error(`unexpected authored view id "${row.id}"`);
       const { filter } = lowerFilterGroup(
         row.view.filter ?? null,
-        fields,
+        plan.filterFields,
         resolve,
         0,
       );
-      expect(filter).toBeDefined();
-      expect(canonicalizeFilter(filter, MAIL_THREAD_FILTERABLE)).toEqual(
-        canonicalizeFilter(expected, MAIL_THREAD_FILTERABLE),
+      if (filter === undefined) throw new Error("the tab lowered no filter");
+      // The live source's own rename, field id → column.
+      const renamed = renameColumns(filter, (id) => {
+        const column = plan.columnOf.get(id);
+        if (column === undefined)
+          throw new Error(`"${id}" lowers to no column`);
+        return column;
+      });
+      expect(canonicalizeFilter(renamed, FILTERABLE)).toEqual(
+        canonicalizeFilter(expected, FILTERABLE),
       );
     });
   }

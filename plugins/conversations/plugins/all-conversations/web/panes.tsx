@@ -53,7 +53,6 @@ function AllConversationsView(): ReactElement {
     <PaneChrome pane={allConversationsPane}>
       <DataView<Conversation>
         storageKey={ALL_CONVERSATIONS_VIEW}
-        rows={[]}
         fields={conversationFieldDefs}
         rowKey={(c) => c.id}
         views={["table", "list"]}

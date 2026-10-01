@@ -15,6 +15,16 @@ export interface FieldGrouping {
   /** How the granularity picker names this choice: "Smart", "Day", "Month". */
   readonly label: string;
   /**
+   * Every distinct value is its own bucket (the identity grouping, an enum by
+   * option) — declared by the grouping, never inferred from the field type.
+   * Such a grouping over a column a server sorts by can put its sections in
+   * row order: a live source prepends the grouped column to the order, and
+   * the sections follow first appearance, so a later page only ever adds
+   * sections after the loaded tail. A bucketing grouping (a date by day) is
+   * not a function SQL can order by, so it never declares this.
+   */
+  readonly oneBucketPerValue?: true;
+  /**
    * Build the bucketing function for ONE render. Two-phase on purpose: a
    * grouping that needs to see the whole set before it can order its sections
    * (enum by `options` index, the identity fallback by value order, a future

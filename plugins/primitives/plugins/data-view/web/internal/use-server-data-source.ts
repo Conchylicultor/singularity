@@ -29,6 +29,8 @@ export interface ServerDataSourceResult<TRow> {
    */
   error: Error | null;
   scroll: InfiniteScrollHandle;
+  /** The last page said there is no more: every row of the query is loaded. */
+  rowsComplete: boolean;
 }
 
 /**
@@ -170,5 +172,6 @@ export function useServerDataSource<TRow>(
     loading: sendable && isFetching && rows.length === 0,
     error,
     scroll,
+    rowsComplete: data !== undefined && !hasNextPage,
   };
 }

@@ -1,4 +1,4 @@
-import { Column, getTableColumns, is } from "drizzle-orm";
+import { Column, getTableColumns, getTableName, is } from "drizzle-orm";
 import {
   PgTable,
   PgView,
@@ -73,9 +73,10 @@ function singlePrimary(
 
 /**
  * The JS/alias key under which `column` is projected, or undefined when it is
- * not projected. Matched by column identity OR DB column NAME (view columns are
- * distinct objects from the base table's, so object identity is unreliable
- * across the view boundary; the DB column name is stable). With a select
+ * not projected. Matched by column identity first, else by DB column NAME (view
+ * columns are distinct objects from the base table's, so object identity is
+ * unreliable across the view boundary; the DB column name is stable) — never
+ * a joined column's. With a select
  * projection, the alias key is returned; without one, the JS property name off
  * the relation's column record. Shared by the pk keyField derivation below and
  * compile-window's order-signature field resolution.
@@ -86,12 +87,19 @@ export function wireFieldFor(
   column: PgColumn,
 ): string | undefined {
   const map: Record<string, unknown> = selectMap ?? columns;
-  for (const [key, value] of Object.entries(map)) {
-    if (value === column || (is(value, Column) && value.name === column.name)) {
-      return key;
-    }
-  }
-  return undefined;
+  const entries = Object.entries(map);
+  for (const [key, value] of entries) if (value === column) return key;
+  // By name: first within the column's own relation — a joined `id` (rendered
+  // against its join's alias) is not the base's — then across relations (a
+  // view's columns are its base table's under the view's name).
+  const relation = getTableName(column.table);
+  const byName = entries.filter(
+    ([, value]) => is(value, Column) && value.name === column.name,
+  );
+  const own = byName.find(
+    ([, value]) => getTableName((value as Column).table) === relation,
+  );
+  return (own ?? byName[0])?.[0];
 }
 
 // The pk's wire field, or a loud throw — a keyed resource must project its
@@ -156,7 +164,10 @@ export function resolveIdentity(
           `identityTable declaration.`,
       );
     }
-    const columns = getViewConfig(from).selectedFields as Record<string, PgColumn>;
+    const columns = getViewConfig(from).selectedFields as Record<
+      string,
+      PgColumn
+    >;
     return {
       tableName,
       rel: from,

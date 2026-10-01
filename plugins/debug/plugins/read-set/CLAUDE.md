@@ -10,7 +10,8 @@ route (it does not implement it) and consumes it via `useEndpoint`, polling ever
 
 Sections, all derived purely client-side from `resources[].readSet`,
 `resources[].readSetBases`, `resources[].coveredOrigins`,
-`resources[].identityTable`/`recompute`, and `resources[].dependsOn`:
+`resources[].identityTable`/`recompute`, `resources[].routes`, and
+`resources[].dependsOn`:
 
 - **Captured index** — the inverted, searchable `table → readers` list (raw
   read-set, i.e. the VIEW/table names loaders actually read).
@@ -30,7 +31,13 @@ Sections, all derived purely client-side from `resources[].readSet`,
   `identityTable` is the "self" covered origin) so the gap reads at a glance.
   Resources with a declared `recompute: { kind: "full", reason }` opt-out are
   listed separately as *explicit FULL* — informational, never a warning, because
-  the FULL is deliberate, not a degradation. This replaces the old *missing
+  the FULL is deliberate, not a degradation. A **routed** resource
+  (`resources[].routes` non-null — compiler-emitted routes, see
+  `research/2026-09-29-global-scoped-change-routing.md`) is covered by its route
+  tables instead of `coveredOrigins`: a captured table outside them is one whose
+  writes never reach it, flagged the same way. Each of its `full` routes is
+  listed under *explicit FULL* with the route's table and reason (A7), so a
+  routed FULL is never silent. This replaces the old *missing
   edges* signal, whose latent-stale-UI premise no longer holds under the L4
   change-feed (an uncovered table is still delivered — it just FULL-recomputes).
 - **Over-broad edges — cascade amplification** — declared `dependsOn` upstreams

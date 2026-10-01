@@ -1,18 +1,13 @@
-import { desc } from "drizzle-orm";
-import { db } from "@plugins/database/server";
-import { serveValue } from "@plugins/network/plugins/live/server";
-import { songs } from "../../core/resources";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { songLibrary } from "../../core/resources";
 import { _songs } from "./tables";
 
-// `_songs.$inferSelect ≡ Song` by construction — both derive from the single
-// `songFields` record (core) — so the loader returns `db.select()` rows verbatim
-// (newest-first) with no projection and no `toSong` helper. Recomputed on every
-// write to `sonata_songs`, which the loader's captured read-set routes here.
-export const songsServed = serveValue(songs, {
-  source: "db",
-  unbounded: {
-    reason:
-      "the whole song library — whole-table only until Resources item 7: the library DataView sorts and filters every song client-side, including side-table field-extension columns (plays, tracks, file-missing), and a bounded window needs joined side-table sort/filter columns, the host rows in data-view's FieldExtensionProps, and live-window paging in DataView",
-  },
-  loader: async () => db.select().from(_songs).orderBy(desc(_songs.createdAt)),
+// The song library, served off `sonata_songs`. It is `contributed`, so its
+// three resources compile at boot, once every `LiveColumns.Serve` naming it
+// (playback-history's plays, the MIDI source's tracks and file-missing flag) is
+// collected: each contributor's extension joins in LEFT, 1:1 on the song id,
+// and its writes refill exactly the songs they key — as `value` in a tuple that
+// only projects them, `membership` in one that sorts or filters by them.
+export const songLibraryServed = serveCollection(songLibrary, {
+  from: _songs,
 });

@@ -9,7 +9,9 @@ import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core"
  * query key and refetches its loaded window in place when `rev` moves. A live
  * resource over the rows themselves would be an unbounded collection across
  * four growing ledgers, which the working-set contract forbids; a hash of a
- * bounded window is bounded by construction. Mirrors `deploy.runs-revision`.
+ * bounded window is bounded by construction. (The runs union moves onto a
+ * routed live window in P6 of research/2026-09-29-global-scoped-change-routing.md,
+ * which deletes this tick.)
  *
  * `hasRuns` rides along because the surface has to tell "this machine has never
  * run anything" apart from "nothing matches this view" — every tab here is a

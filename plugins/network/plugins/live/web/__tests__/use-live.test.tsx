@@ -966,3 +966,38 @@ describe("status arms", () => {
     expect(result.current).toMatchObject({ found: true, row: rows(1)[0] });
   });
 });
+
+describe("useLive — a scroll collection's window", () => {
+  it("hands rows out without `$key` — the error arm's last-known rows too", async () => {
+    const c = liveCollection(`test.use-live.scroll.${seq++}`, {
+      row: Row,
+      id: "id",
+      filterable: { on: liveBoolean() },
+      sortable: ["n"],
+      default: { orderBy: [["n", "asc"]], limit: 2 },
+      maxLimit: 6,
+      scroll: true,
+    });
+    const client = makeClient();
+    const { result, notifications } = mount(client, () => useLive(c));
+    const keyed = rows(2).map((r) => ({ ...r, $key: `["${r.n}","${r.id}"]` }));
+    act(() => {
+      client.setQueryData(queryKeyFor(c.key, { limit: "2" }), keyed);
+    });
+    await waitFor(() =>
+      expect(result.current).toMatchObject({ status: "ready", data: rows(2) }),
+    );
+
+    const fetch = vi
+      .spyOn(notifications, "fetchOverHttp")
+      .mockRejectedValue(new Error("late"));
+    await act(async () => {
+      await client.refetchQueries({ queryKey: [c.key] });
+    });
+    fetch.mockRestore();
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    const r = result.current;
+    if (r.status !== "error") throw new Error("unreachable");
+    expect(r.stale).toEqual(rows(2));
+  });
+});

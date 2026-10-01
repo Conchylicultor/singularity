@@ -6,8 +6,9 @@ entries (today just Search — the mailboxes are the `threads` DataView's own ta
 strip, not a sidebar nav), and registers the index pane (`mail-root`,
 `appIndex: true` so bare `/mail` lands here). The index pane is a
 capability-driven empty-state: it branches on `useGmailAccess().blocker` and
-renders the integration's `GmailAccessAction`, which resolves the blocker in
-place (enable / connect / grant) — never a "go to Settings" dead end. Once
+renders the integration's `GmailAccessEmptyState`: its copy over
+`GmailAccessAction`, which resolves the blocker in place (enable / connect /
+grant) — never a "go to Settings" dead end. Once
 ready it redirects to `/mail/threads` as a route STRING, so the shell never
 imports the `threads` plugin (`threads → shell` stays one-way and acyclic).
 Auth state and affordances come only from
@@ -30,15 +31,13 @@ Auth state and affordances come only from
   - Uses:
     - `apps-core.Apps`
     - `apps-core/tabs.navigate`
-    - `integrations/gmail.GMAIL_BLOCKER_BODY`
-    - `integrations/gmail.GmailAccessAction`
+    - `integrations/gmail.GmailAccessEmptyState`
     - `integrations/gmail.useGmailAccess`
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/inline.Inline`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`

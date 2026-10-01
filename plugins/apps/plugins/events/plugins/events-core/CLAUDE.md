@@ -41,10 +41,11 @@ A type also answers "which page does a configured source of mine stand for?" via
 the optional web-slot `originUrl(config)`, read back through
 `useEventSourceOrigin()`. It takes a `SourceRef` (`{ type, config }`) and needs
 nothing but the registry: the Sources list passes its row, and an events list
-passes the ref the server joined onto each event row (`SourcedEvent` — the
-`queryEvents` and `listRunEvents` rows), so no caller ever looks a `sourceId` up
-in the bounded sources window. Either way a surface names no source type. Omit `originUrl` for a type that
-stands for no page (`manual`).
+passes the ref the server joined onto each event row (`SourcedEvent`, whose flat
+`sourceType` / `sourceConfig` `sourceRefOf` reads back — the `events.list`
+collection's and `listRunEvents`' rows), so no caller ever looks a `sourceId` up
+in the bounded sources window. Either way a surface names no source type. Omit
+`originUrl` for a type that stands for no page (`manual`).
 
 Both gate the answer through `externalUrl` at the mint: a type reads its URL out
 of a free-text config field, so what it returns is untrusted, and gating it once
@@ -114,18 +115,15 @@ and the plugin's own `events/no-raw-events-write` lint rule fails any
 declare `touchedBy` in `server/internal/tables.ts`; a DB trigger bumps
 `updated_at` only on a real change to a counted column and raises on any write
 to it. On `events` every list-visible column counts and the sighting stamps do
-not, so the `events.revision` tick (`count(*) + max(updated_at)`) moves on every
-visible change and stays still on a content-identical re-extraction. On
-`event_sources` only the user's configuration (name, config, refresh, enabled)
-counts, never the run bookkeeping.
+not. On `event_sources` only the user's configuration (name, config, refresh,
+enabled) counts, never the run bookkeeping.
 
-That tick means "the events QUERY's result may have moved", so it also folds in
-an md5 of the **enabled source ids** — the query hides events of a disabled
-source, so toggling one changes the result with no `events` write. Ids only,
-never `event_sources.updated_at`: a run flips `status` several times, which would
-pulse every open list for a change it cannot see. The loader reading
-`event_sources` is what puts it in the resource's read-set (that, not
-`identityTable`, is what decides which tables recompute it).
+The events LIST is not this plugin's: it is `event-list`'s `events.list` live
+collection, kept fresh by the routed change feed (there is no `events.revision`
+tick any more). What this plugin gives it is `SourcedEvent` — a `ListedEvent`
+(the event row without its sighting stamps, so a content-identical re-extraction
+moves no listed row) plus its source's `sourceType` / `sourceConfig`
+(`sourceRefOf` reads the ref back) — and the read handles it joins.
 
 Retention (`events` disappeared > 90 d, runs > 30 d) belongs to the `refresh`
 plugin, which owns the sweeps.
@@ -148,7 +146,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 
 ## Plugin reference
 
-- Description: Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + events revision tick.
+- Description: Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / run-ledger hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + the run ledger's revision tick.
 - Web:
   - Slots: `EventSources.Type` ← `apps.events.sources.coworkmeet`, `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
   - Uses:
@@ -159,7 +157,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `network/live.useLive`
     - `network/live.useLiveRow`
     - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useEndpointResource`
     - `primitives/live-state.useResource`
   - Exports (values):
@@ -171,7 +168,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useEventSourceRun`
     - `useEventSourceRuns`
     - `useEventSources`
-    - `useEventsRevision`
     - `useRefreshAllEventSources`
     - `useRefreshEventSourceNow`
     - `useRunEvents`
@@ -181,7 +177,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `resource.declare` "events.sources"
     - `resource.declare` "events.sources:rows"
     - `resource.declare` "events.sources:groups"
-    - `resource.declare` "events.revision"
     - `resource.declare` "events.runs-revision"
   - Uses:
     - `database.db`
@@ -209,7 +204,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `deleteSource`
     - `eventRunsRevisionServerResource`
     - `eventSourcesServed`
-    - `eventsRevisionServerResource`
     - `eventsTable`
     - `getEventSourceType`
     - `listEventSourceTypes`
@@ -224,7 +218,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `updateSource`
     - `upsertEvents`
   - Resources:
-    - `events.revision` (push)
     - `events.runs-revision` (push)
     - `events.sources` (keyed, window)
     - `events.sources:groups` (push)
@@ -268,6 +261,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `ExtractedEvent`
     - `ExtractionResult`
     - `ExtractionStatus`
+    - `ListedEvent`
     - `RefreshAllResult`
     - `RefreshCadence`
     - `RefreshSourceResult`
@@ -294,7 +288,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceRunSchema`
     - `eventSources`
     - `EventSourceSchema`
-    - `eventsRevisionResource`
     - `externalUrl`
     - `ExtractedEventSchema`
     - `EXTRACTION_STATUSES`
@@ -318,6 +311,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `SOURCE_STATES`
     - `SOURCE_STATUSES`
     - `SourcedEventSchema`
+    - `sourceRefOf`
     - `SourceRefSchema`
     - `sourceState`
     - `updateEventSource`

@@ -27,19 +27,12 @@ export {
   stopPreviewEndpoint,
   releaseLogsEndpoint,
   ReleaseLogsResponseSchema,
-  SortRuleSchema,
-  queryReleaseHistory,
-  RELEASE_HISTORY_FILTERABLE,
-  RELEASE_HISTORY_SEARCHABLE,
-  QueryReleaseHistoryBodySchema,
-  QueryReleaseHistoryResponseSchema,
 } from "./endpoints";
 export type {
   ReleaseIntent,
   ReleaseLatestRunResponse,
   ReleaseLogLine,
   ReleaseLogsResponse,
-  QueryReleaseHistoryBody,
 } from "./endpoints";
 export {
   BundleResolutionSchema,
@@ -50,6 +43,7 @@ export type { ReleaseCandidateResponse } from "./candidate";
 export {
   ReleaseRunSchema,
   releaseRuns,
+  releaseHistory,
   releaseRunsRevisionResource,
   PreviewSchema,
   releasePreviews,
