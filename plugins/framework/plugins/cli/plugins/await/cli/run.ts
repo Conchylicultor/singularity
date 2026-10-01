@@ -26,7 +26,7 @@ import {
   readOpRecords,
   readOpenWait,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
-import { createFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import { watchForCommand } from "@plugins/infra/plugins/file-watcher/cli";
 import {
   checkoutNamespace,
   worktreeDataDir,
@@ -309,7 +309,7 @@ async function watchUntil(
   done: () => Promise<boolean>,
   onReconcile?: () => void,
 ): Promise<void> {
-  const watcher = await createFileWatcher({
+  const watcher = await watchForCommand({
     dirs: Array.isArray(dirs) ? dirs : [dirs],
     name: "await",
     debounceMs: 50,

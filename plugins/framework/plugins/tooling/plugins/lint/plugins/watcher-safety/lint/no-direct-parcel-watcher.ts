@@ -4,8 +4,11 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-/** The single sanctioned chokepoint for loading @parcel/watcher. */
-const FILE_WATCHER_DIR = "plugins/infra/plugins/file-watcher/";
+/**
+ * The single sanctioned chokepoint for loading @parcel/watcher: the
+ * file-watcher plugin's engine (`shared/engine.ts`) and its siblings.
+ */
+const FILE_WATCHER_DIR = "plugins/infra/plugins/file-watcher/shared/";
 
 export default createRule({
   name: "no-direct-parcel-watcher",
@@ -18,23 +21,21 @@ export default createRule({
     schema: [],
     messages: {
       directImport:
-        "Import `@parcel/watcher` only inside the file-watcher plugin. Use " +
-        "`getParcelWatcher()` or `createFileWatcher` from " +
-        "`@plugins/infra/plugins/file-watcher/server` so the release's vendored " +
-        "native addon (SINGULARITY_PARCEL_WATCHER_NODE) is honored. " +
-        "Type-only imports are allowed.",
+        "Import `@parcel/watcher` only inside the file-watcher engine. Declare " +
+        "the watcher with `defineFileWatcher` from " +
+        "`@plugins/infra/plugins/file-watcher/server` (or `watchForCommand` " +
+        "from its `cli` barrel in a foreground command), so the release's " +
+        "vendored native addon (SINGULARITY_PARCEL_WATCHER_NODE) is honored " +
+        "and the watcher is listed in Background activity. Type-only imports " +
+        "are allowed.",
     },
   },
   defaultOptions: [],
   create(context) {
-    const filename = (
-      context.filename ??
-      context.getFilename?.() ??
-      ""
-    )
+    const filename = (context.filename ?? context.getFilename?.() ?? "")
       .split("\\")
       .join("/");
-    // The file-watcher plugin owns the native-addon loader chokepoint.
+    // The file-watcher engine owns the native-addon loader chokepoint.
     if (filename.includes(FILE_WATCHER_DIR)) return {};
 
     return {

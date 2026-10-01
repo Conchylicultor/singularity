@@ -11,8 +11,11 @@ import {
   handleTokenMix,
   handleTotals,
 } from "./internal/handlers";
-import { costUsageWarmup } from "./internal/load-usage";
-import { archiveShrinkKind, unpricedModelKind } from "./internal/cost-report-kinds";
+import { costUsageWarmup, costUsageWatcher } from "./internal/load-usage";
+import {
+  archiveShrinkKind,
+  unpricedModelKind,
+} from "./internal/cost-report-kinds";
 import { costRefreshJob } from "./internal/refresh-job";
 import {
   getCostDaily,
@@ -33,7 +36,7 @@ export default {
     unpricedModelKind,
     archiveShrinkKind,
   ],
-  register: [costUsageWarmup, costRefreshJob],
+  register: [costUsageWarmup, costUsageWatcher, costRefreshJob],
   httpRoutes: {
     [getCostDaily.route]: handleDaily,
     [getCostDailyByFamily.route]: handleDailyByFamily,

@@ -6,7 +6,7 @@ import {
   createFileWatcher,
   WRITES_WHILE_OPEN_MAX_ENTRIES,
   type FileWatcher,
-} from "./create-file-watcher";
+} from "./engine";
 
 let dir: string | null = null;
 let watcher: FileWatcher | null = null;

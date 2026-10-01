@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
-import { createFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
@@ -113,12 +113,23 @@ export interface CorpusIndex<TPartial> {
   /**
    * Main-only push freshness via `@parcel/watcher`: a corpus change marks the
    * index dirty and warms it in the background. No-op off main / if already started.
+   * Requires {@link watcher} to be mounted in the calling plugin's `register`
+   * (on main it throws otherwise).
    */
   startWatcher(): Promise<void>;
   /**
+   * The index's declared file watcher (`corpus-index.<name>`, main-only),
+   * opened by {@link startWatcher}. Mount it in `register: [...]` next to the
+   * warm-up that calls `startWatcher()` — {@link warmup} does not include it.
+   * An index that never calls `startWatcher()` (it owns its own watcher and
+   * uses `markDirty()`) leaves it unmounted.
+   */
+  watcher: Registration;
+  /**
    * Convenience: a `defineWarmup({ scope, run: startWatcher + ensureFresh })`
-   * Registration. Consumers with EXTRA warm work (e.g. pricing) should instead
-   * write their own `defineWarmup` that calls `ensureFresh`/`startWatcher`.
+   * Registration (mount {@link watcher} with it). Consumers with EXTRA warm
+   * work (e.g. pricing) should instead write their own `defineWarmup` that
+   * calls `ensureFresh`/`startWatcher`.
    */
   warmup(): Registration;
 }
@@ -360,6 +371,8 @@ export interface CorpusIndexEnv {
     dirs: string[];
     onChange: () => void;
   }) => Promise<void>;
+  /** The declaration `startFileWatcher` opens (surfaced as `CorpusIndex.watcher`). */
+  watcherRegistration: Registration;
 }
 
 /**
@@ -467,7 +480,22 @@ export function createCorpusIndex<TPartial>(
     });
   }
 
-  return { ensureFresh, entries, markDirty, startWatcher, warmup };
+  return {
+    ensureFresh,
+    entries,
+    markDirty,
+    startWatcher,
+    watcher: env.watcherRegistration,
+    warmup,
+  };
+}
+
+/**
+ * The index watcher's catalog description, DERIVED from the index's own so no
+ * corpus index has a second sentence to forget or let drift.
+ */
+export function corpusWatcherDescription(indexDescription: string): string {
+  return `Marks the index stale and re-indexes it in the background when a file under its roots changes (every 30 s as a backstop). ${indexDescription}`;
 }
 
 /**
@@ -488,19 +516,27 @@ export function defineCorpusIndex<TPartial>(
 export function defineCorpusIndex<TPartial>(
   spec: CorpusIndexSpec<TPartial>,
 ): CorpusIndex<TPartial> {
+  // One watcher declaration per index, at define time. Main-only: only main
+  // keeps a `host` index fresh by push (startWatcher is isMain()-gated too).
+  //
+  // The reconcile tick re-runs the same re-index as a change would; it is a
+  // backstop for a dropped fsevent, and cheap because the pass is
+  // fingerprint-gated (nothing changed ⇒ nothing re-parsed).
+  const watcher = defineFileWatcher({
+    name: `corpus-index.${spec.name}`,
+    description: corpusWatcherDescription(spec.description),
+    mainOnly: true,
+    reconcileMs: 30_000,
+  });
   return createCorpusIndex(spec, {
     isMain,
     withSlot: withHeavyReadSlot,
     yieldMacrotask,
+    watcherRegistration: watcher,
     startFileWatcher: async ({ dirs, onChange }) => {
       // Process-lifetime watcher — the handle is intentionally discarded (the
       // original stats/cost watcher was likewise fire-and-forget, main-only).
-      //
-      // The reconcile tick re-runs the same re-index as a change would; it is a
-      // backstop for a dropped fsevent, and cheap because the pass is
-      // fingerprint-gated (nothing changed ⇒ nothing re-parsed). Spelled out
-      // because the primitive no longer runs a timer nobody asked for.
-      await createFileWatcher({
+      await watcher.start({
         dirs,
         onChange: () => onChange(),
         onReconcile: () => onChange(),

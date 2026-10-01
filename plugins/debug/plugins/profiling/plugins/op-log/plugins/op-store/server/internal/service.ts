@@ -6,7 +6,7 @@ import {
   OP_LOG_FILE,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
@@ -20,6 +20,13 @@ import { isOpLive, reconcileOps } from "./reconcile";
 // SIGKILL leaves no filesystem event; the tick is what notices the dead pid).
 
 const LOG_NAME = basename(OP_LOG_FILE);
+
+export const opLogWatcher = defineFileWatcher({
+  name: "op-store.op-log",
+  description:
+    "Watches the host-global op log and its rotations and ingests new op lines into this backend's op table, re-draining every 30 seconds in case an event was missed.",
+  reconcileMs: 30_000,
+});
 
 let watcher: FileWatcher | null = null;
 // Passes are serialized: two overlapping drains would both plan from the same
@@ -85,16 +92,14 @@ export async function startOpStore(): Promise<void> {
   }
   const dir = dirname(OP_LOG_FILE);
   mkdirSync(dir, { recursive: true });
-  watcher = await createFileWatcher({
+  watcher = await opLogWatcher.start({
     dirs: [dir],
-    name: "op-store",
     onChange: (events) => {
       // `op-log.jsonl` and its rotations; anything else in the dir is not ours.
       if (events.some((e) => basename(e.path).startsWith(LOG_NAME)))
         schedulePass();
     },
     onReconcile: () => schedulePass(),
-    reconcileMs: 30_000,
   });
   schedulePass();
 }

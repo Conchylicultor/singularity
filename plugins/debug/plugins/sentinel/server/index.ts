@@ -8,6 +8,7 @@ import { duressEpisodeKind } from "./internal/duress-episode-kind";
 import { sentinelDownKind } from "./internal/sentinel-down-kind";
 import {
   sentinelStatusServed,
+  sentinelStatusWatcher,
   sentinelVitalsServed,
   startStatusWatcher,
   stopStatusWatcher,
@@ -28,6 +29,7 @@ export default {
     ...sentinelVitalsServed.declare,
     ConfigV2.Register({ descriptor: sentinelConfig }),
   ],
+  register: [sentinelStatusWatcher],
   // The status watcher runs on EVERY backend (each serves the Machine watcher
   // health row from the host-global status file); the sampler itself runs on
   // the host singleton only — the one backend that owns the cluster-wide

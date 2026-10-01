@@ -110,7 +110,7 @@ export const RUNTIME_FORWARDED_ENV = {
   SINGULARITY_MIGRATIONS_DIR:
     "the vendored .sql tree, since a compiled backend cannot read its own (database/migrations/server/internal/runner.ts)",
   SINGULARITY_PARCEL_WATCHER_NODE:
-    "the vendored @parcel/watcher addon, which `bun --compile` cannot embed (infra/file-watcher create-file-watcher.ts)",
+    "the vendored @parcel/watcher addon, which `bun --compile` cannot embed (infra/file-watcher shared/engine.ts)",
   SINGULARITY_SENTINEL_WORKER_JS:
     "the vendored cluster-sentinel worker, which `bun --compile` does not trace (debug/sentinel worker-host.ts)",
   SINGULARITY_REPO_CONFIG_DIR:

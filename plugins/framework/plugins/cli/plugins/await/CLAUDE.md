@@ -82,7 +82,7 @@ non-zero.
 
 ## Waiting is push-based
 
-`createFileWatcher` over two directories — the checkout's `ops/` and the op
+`watchForCommand` (file-watcher's CLI barrel) over two directories — the checkout's `ops/` and the op
 log's — so the wait settles on a filesystem event, not a tick. The watcher's own
 `reconcileMs` is the only timer, and it is a safety net: a missed event must
 cost seconds, not the whole wait. Waiting forever on a signal that never arrives
@@ -99,6 +99,8 @@ Design: [`research/2026-09-20-global-subagent-op-wakeup.md`](../../../../../../r
 ## Plugin reference
 
 - Description: `./singularity await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
+- Cli:
+  - Uses: `infra/file-watcher.watchForCommand`
 - Core:
   - Exports (types):
     - `AwaitedOp`

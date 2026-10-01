@@ -160,6 +160,24 @@ export interface FileWatcher {
   stop(): Promise<void>;
 }
 
+/**
+ * The native backend a watcher runs on, as parcel picks it for this platform:
+ * FSEvents on darwin (kqueue when `writesWhileOpen`), inotify on Linux,
+ * ReadDirectoryChangesW on Windows, and parcel's own default elsewhere. The one
+ * statement of that choice — the engine subscribes with it and the Background
+ * activity catalog reports it.
+ */
+export type WatcherBackend =
+  "fs-events" | "kqueue" | "inotify" | "windows" | "platform-default";
+
+export function watcherBackend(writesWhileOpen: boolean): WatcherBackend {
+  const platform = process.platform;
+  if (platform === "darwin") return writesWhileOpen ? "kqueue" : "fs-events";
+  if (platform === "linux") return "inotify";
+  if (platform === "win32") return "windows";
+  return "platform-default";
+}
+
 export async function createFileWatcher(
   opts: FileWatcherOptions,
 ): Promise<FileWatcher> {
@@ -224,7 +242,7 @@ export async function createFileWatcher(
     }
   }
 
-  const useKqueue = writesWhileOpen && process.platform === "darwin";
+  const useKqueue = watcherBackend(writesWhileOpen) === "kqueue";
   const parcelOptions: ParcelOptions | undefined =
     ignore || useKqueue
       ? {

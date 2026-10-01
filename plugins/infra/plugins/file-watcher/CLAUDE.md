@@ -1,7 +1,56 @@
 # file-watcher
 
-One `@parcel/watcher` subscription per consumer, with the debounce + ceiling
-flush and an optional reconcile timer wrapped around it.
+Every in-process file watcher is **declared once** with `defineFileWatcher`
+and opened as instances of that declaration. The engine underneath
+(`shared/engine.ts`) is one `@parcel/watcher` subscription per watched dir, with
+the debounce + ceiling flush, an optional reconcile timer and kqueue sizing.
+
+## Declaration vs instance
+
+```ts
+// module scope, in the owning plugin — the static policy, the same for every instance
+export const allowFilesWatcher = defineFileWatcher({
+  name: "conversation-view.allow-files",            // unique per process; a duplicate throws on register
+  description: "Notices when a conversation's worktree gains or loses a bypass-permission file.",
+  extensions: [".json"], debounceMs: 200,             // extensions?, ignore?, debounceMs?, ceilingMs?,
+  // writesWhileOpen?, reconcileMs?, mainOnly?
+});
+// server/index.ts: register: [allowFilesWatcher]
+
+// per instance, wherever one is opened:
+const w = await allowFilesWatcher.start({ dirs: [worktree], label: conversationId, onChange });
+await w.stop();
+```
+
+- `description` is required: a tsc error when missing, a throw when empty. It is
+  the sentence Debug → Background activity shows for the entry.
+- `start()` throws when the declaration was never mounted in `register: [...]`
+  (it would watch without being listed), and when `mainOnly` is set off main.
+- `label` names the instance in the catalog (a conversation id, a worktree).
+  Omit it for a watcher with one instance.
+- Each declaration is one catalog entry (the `background-arm` child): open
+  instances and their dirs, the backend (FSEvents / kqueue / inotify), the last
+  change batch, and every `onChange` / `onReconcile` dispatch as a run. A
+  throwing handler is recorded as failed and still rethrown. Recording is O(1)
+  per dispatch and the catalog push is throttled (outcome change, instance
+  open/close, or a quiet minute), so a `debounceMs: 0` watcher costs nothing.
+- The registry lives in `shared/registry.ts`. The file-watcher barrels never
+  import the catalog's server barrel — they are imported early at boot.
+
+## In a CLI command: `watchForCommand`
+
+A foreground `./singularity` command that waits on the disk (`await`) imports
+`watchForCommand` from `@plugins/infra/plugins/file-watcher/cli`: the same
+engine, no registry (a CLI process has no catalog, and a wait is not background
+activity). It takes the engine's options directly — `dirs` + `onChange`
+required.
+
+## Other ways to watch are lint errors
+
+`watcher-safety/no-direct-parcel-watcher` keeps `@parcel/watcher` inside this
+plugin's `shared/`; `watcher-safety/no-raw-fs-watch` bans `fs.watch` /
+`watchFile` / `fs.promises.watch` / chokidar in host-process code, with a
+reasoned `ignores` list.
 
 ## `onChange` and `onReconcile` are different questions
 
@@ -9,15 +58,17 @@ flush and an optional reconcile timer wrapped around it.
 - `onReconcile()` — the timer came round; re-derive whatever a dropped fsevent
   could have left stale.
 
-The reconcile timer **only exists if you pass `onReconcile`**, and there is no
-spelling that routes the tick into `onChange`. It used to fall back to
+The reconcile timer **only exists if the declaration sets `reconcileMs`**,
+which makes `onReconcile` required on every `start()` (and passing one without
+`reconcileMs` a type error); there is no spelling that routes the tick into
+`onChange`. It used to fall back to
 `onChange([])`, which meant every consumer written as `onChange: () => rebuild()`
 — the common shape, since most of them rebuild wholesale and never read the
 events — was told "something changed" every 30 seconds, forever, on an idle
 machine. The prototypes gallery believed it: its version resource is the iframe
 cache-bust, so every open prototype reloaded every 30s and the author lost
-whatever state they had clicked into. `reconcileMs` without `onReconcile` is now
-a type error rather than a knob that does nothing.
+whatever state they had clicked into. A declared `reconcileMs` whose instance
+passes no `onReconcile` is a type error rather than a knob that does nothing.
 
 A reconcile is a *backstop*, not a change poll — if reacting to it is expensive,
 gate it on a cheap signature of the watched tree and return early when nothing

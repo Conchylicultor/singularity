@@ -145,6 +145,7 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
   - Imported by:
     - `infra/background/timer`
     - `infra/events`
+    - `infra/file-watcher/background-arm`
     - `infra/jobs/background-arm`
     - `infra/warmup/background-arm`
 

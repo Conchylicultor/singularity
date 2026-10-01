@@ -2,7 +2,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { basename } from "node:path";
 import { closeSync, existsSync, mkdirSync, openSync } from "node:fs";
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import {
@@ -39,6 +39,29 @@ import { createTranscriptTail, type TranscriptTail } from "./tail";
  */
 const RECONCILE_MS = 60_000;
 
+/**
+ * The runs-dir watcher: one instance, open only while a run is live (see
+ * `syncWatcher`).
+ */
+export const supervisedRunWatcher = defineFileWatcher({
+  name: "supervised-job.runs-dir",
+  description:
+    "While a detached child runs, follows its transcript and exit marker in the runs directory to stream its output live and settle the run the moment it ends.",
+  // A transcript grows continuously, so the debounce is what turns a build's
+  // thousands of writes into a bounded number of pumps. Each pump then reads
+  // everything that accumulated, so nothing is lost by waiting.
+  extensions: [RUN_TRANSCRIPT_SUFFIX, RUN_TERMINAL_SUFFIX],
+  // The child writes its transcript through ONE descriptor it holds open for
+  // the whole run. macOS FSEvents reports that file's changes only when the
+  // descriptor closes — at exit — so without this the tail was pumped once, at
+  // the end, and a live run published nothing until it finished. Its cost (one
+  // descriptor per entry, kqueue on darwin) is bounded here: the runs dir is
+  // flat and capped by `pruneWorktreeRunArtifacts`, and the watcher exists only
+  // while a run is live.
+  writesWhileOpen: true,
+  reconcileMs: RECONCILE_MS,
+});
+
 /** A run this process is currently tailing. */
 interface LiveRun {
   readonly kind: SupervisedRunKind;
@@ -65,7 +88,7 @@ interface LiveRun {
 
 const live = new Map<string, LiveRun>();
 let watcher: FileWatcher | null = null;
-// The in-flight `createFileWatcher`, so two concurrent starts share one
+// The in-flight `supervisedRunWatcher.start`, so two concurrent starts share one
 // subscription instead of racing to leave an orphan nothing can stop.
 let watcherStarting: Promise<void> | null = null;
 
@@ -345,22 +368,8 @@ async function syncWatcher(): Promise<void> {
   const dir = worktreeArtifacts.runsDir(runtimeNamespace());
   mkdirSync(dir, { recursive: true });
   watcherStarting = (async () => {
-    watcher = await createFileWatcher({
+    watcher = await supervisedRunWatcher.start({
       dirs: [dir],
-      name: "supervised-run",
-      // A transcript grows continuously, so the debounce is what turns a
-      // build's thousands of writes into a bounded number of pumps. Each pump
-      // then reads everything that accumulated, so nothing is lost by waiting.
-      extensions: [RUN_TRANSCRIPT_SUFFIX, RUN_TERMINAL_SUFFIX],
-      // The child writes its transcript through ONE descriptor it holds open
-      // for the whole run. macOS FSEvents reports that file's changes only when
-      // the descriptor closes — at exit — so without this the tail was pumped
-      // once, at the end, and a live run published nothing until it finished.
-      // Its cost (one descriptor per entry, kqueue on darwin) is bounded here:
-      // the runs dir is flat and capped by `pruneWorktreeRunArtifacts`, and the
-      // watcher exists only while a run is live.
-      writesWhileOpen: true,
-      reconcileMs: RECONCILE_MS,
       onChange: (events) => {
         void runTracked("watch:supervised-run", () => onArtifactEvents(events));
       },

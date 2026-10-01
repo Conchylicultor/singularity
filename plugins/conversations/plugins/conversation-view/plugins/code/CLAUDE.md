@@ -30,7 +30,8 @@ that settles would stop retrying and would render as a permanent answer.
 - Server:
   - Contributes: `resource.declare` "edited-files"
   - Uses:
-    - `infra/file-watcher.getParcelWatcher`
+    - `infra/file-watcher.defineFileWatcher`
+    - `infra/file-watcher.FileWatcher`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `network/live.serveValue`
@@ -41,6 +42,7 @@ that settles would stop retrying and would render as a permanent answer.
     - `editedFilesServed`
     - `editedFilesSignature`
     - `getEditedFiles`
+  - Register: `defineFileWatcher('conversation-view.edited-files')`
   - Resources: `edited-files` (invalidate)
 - Web:
   - Uses: `network/live.useLive`

@@ -24,10 +24,11 @@ The value is the `allowFiles` live value (`allow-files`, params `{ id }` — the
 - Server:
   - Contributes: `resource.declare` "allow-files"
   - Uses:
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `network/live.serveValue`
     - `tasks/tasks-core.getConversation`
+  - Register: `defineFileWatcher('conversation-view.allow-files')`
   - Resources: `allow-files` (push)
 - Shared:
   - Exports (types): `AllowFiles`

@@ -1,7 +1,11 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { refAdvanced } from "./internal/tables-ref-advanced";
 import { refHeadServed } from "./internal/ref-head-resource";
-import { startGitWatcher, stopGitWatcher } from "./internal/watcher";
+import {
+  gitRefsWatcher,
+  startGitWatcher,
+  stopGitWatcher,
+} from "./internal/watcher";
 
 export { refHeadServed } from "./internal/ref-head-resource";
 export {
@@ -18,7 +22,7 @@ export default {
     "Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the git-watcher.refHead live value, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).",
   loadBearing: true,
   contributions: [...refHeadServed.declare],
-  register: [refAdvanced],
+  register: [refAdvanced, gitRefsWatcher],
   onReady: async () => {
     await startGitWatcher();
   },

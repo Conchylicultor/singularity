@@ -243,6 +243,7 @@ override where it survives.
   - DB schema: `plugins/stats/plugins/cost/server/internal/price-table.ts`
   - Register:
     - `defineWarmup('stats.cost.usage')`
+    - `defineFileWatcher('corpus-index.stats.cost.usage')`
     - `defineJob('stats.cost.refresh')`
   - Routes:
     - `GET /api/stats/cost/daily`

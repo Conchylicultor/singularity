@@ -6,6 +6,7 @@ import {
   removeDescriptorScope as removeDescriptorScopeEndpoint,
 } from "../core";
 import {
+  configFilesWatcher,
   initConfigWatcher,
   shutdownConfigWatcher,
 } from "./internal/config-watcher";
@@ -68,6 +69,7 @@ export default {
     ...configModifiedCountsServed.declare,
     ...configTiersServed.declare,
   ],
+  register: [configFilesWatcher],
   httpRoutes: {
     [forkScopeEndpoint.route]: handleForkScope,
     [deleteScopeEndpoint.route]: handleDeleteScope,

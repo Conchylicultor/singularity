@@ -7,6 +7,8 @@
 //    which renders its interval trigger and its recent runs.
 // 3. A warm-up row (kind `warmup`) opens its detail pane, which renders
 //    "After boot".
+// 4. A file-watcher row (kind `file-watcher`, from `defineFileWatcher`)
+//    renders its file-change trigger and its open instance.
 //
 // Usage:
 //   ./singularity run plugins/infra/plugins/background/plugins/catalog/e2e/verify.ts [--headed] [--out /tmp/bg-verify]
@@ -91,6 +93,31 @@ await withBrowser(async (h) => {
     (await page.locator("body").innerText()).includes("After boot"),
   );
   await snap(page, OUT, "warmup");
+
+  // ── 4. A file watcher's detail pane ─────────────────────────────────────
+  // config_v2's watcher is started on every backend at boot, so it has one
+  // open instance watching the config directory.
+  await page.goto(
+    pathUrl("/debug/background/activity/file-watcher/config_v2.config-files"),
+  );
+  await page
+    .getByRole("heading", { name: /Watches the config directory/ })
+    .waitFor({ timeout: TIMEOUT_MS });
+  const watcherText = (await page.locator("body").innerText()).replace(
+    /\s+/g,
+    " ",
+  );
+  r.ok(
+    "the watcher's detail renders its trigger",
+    watcherText.includes("When watched files change"),
+    watcherText.slice(0, 600),
+  );
+  r.ok(
+    "the watcher's detail lists its open instance",
+    /Open\s*1/.test(watcherText) && watcherText.includes("Watching"),
+    watcherText.slice(0, 600),
+  );
+  await snap(page, OUT, "watcher");
 });
 
 await r.finish();

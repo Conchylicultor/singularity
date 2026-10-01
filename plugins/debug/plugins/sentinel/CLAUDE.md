@@ -329,7 +329,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `debug/sentinel/status-file.writeSentinelVitals`
     - `debug/trace/engine.captureTrace`
     - `debug/trace/engine.defineTraceEventClass`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/host/duress/latch.clearDuress`
     - `infra/host/duress/latch.duressLatchDir`
@@ -347,6 +347,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `reports.recordReport`
     - `reports.ReportKind`
   - Exports (values): `readDuressEpisodes`
+  - Register: `defineFileWatcher('sentinel.status')`
   - Resources:
     - `sentinel.status` (push)
     - `sentinel.vitals` (push)

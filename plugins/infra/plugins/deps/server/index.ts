@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { installDepEndpoint, removeDepEndpoint } from "../core";
 import { handleInstallDep, handleRemoveDep } from "./internal/handlers";
 import { depsInstallJob } from "./internal/install-job";
-import { depsStatesServed } from "./internal/live";
+import { depsCacheWatcher, depsStatesServed } from "./internal/live";
 import { depsSweepJob } from "./internal/sweep-job";
 
 // The server half: the install job (and `requestDep`, which enqueues it from
@@ -18,6 +18,6 @@ export default {
     [installDepEndpoint.route]: handleInstallDep,
     [removeDepEndpoint.route]: handleRemoveDep,
   },
-  register: [depsInstallJob, depsSweepJob],
+  register: [depsInstallJob, depsSweepJob, depsCacheWatcher],
   contributions: [...depsStatesServed.declare],
 } satisfies ServerPluginDefinition;

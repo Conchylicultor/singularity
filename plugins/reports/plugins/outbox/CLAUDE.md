@@ -33,7 +33,7 @@ await fileReportFromProcess({ kind, message, data, code? });
 ## Reading: the drain (server, main only)
 
 `server/internal/watcher.ts` drains the directory once in `onReady`, then on
-every change `createFileWatcher` reports. No timer: a write is the signal. It is
+every change its `reportOutboxWatcher` (a main-only `defineFileWatcher`) reports. No timer: a write is the signal. It is
 main-only because the directory is host-global and one reader is the whole
 design — a worktree backend would race main and file under its own namespace.
 
@@ -89,10 +89,11 @@ pass the same `code` field.
 - Description: Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
 - Server:
   - Uses:
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `reports.isReportKindRegistered`
     - `reports.recordReport`
+  - Register: `defineFileWatcher('reports-outbox.outbox-dir')`
 - Core:
   - Uses:
     - `infra/paths.REPO_ROOT`

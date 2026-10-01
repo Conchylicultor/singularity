@@ -150,10 +150,11 @@ over:
   - Uses:
     - `auth.getTokenFromCentral`
     - `infra/endpoints.implement`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `network/live.serveValue`
   - Exports (types): `MapsKeyResult`
   - Exports (values): `getMapsKey`
+  - Register: `defineFileWatcher('google-maps.browser-config')`
   - Resources: `google-maps.browser-config` (push)
   - Routes:
     - `POST /api/google-maps/browser-config`

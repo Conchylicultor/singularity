@@ -13,6 +13,7 @@ import { z } from "zod";
  * - `boot` — once, after the server starts.
  * - `on-demand` — only when something asks for it.
  * - `interval` — every `everyMs`, in process.
+ * - `file-change` — when files it watches change on disk (a declared watcher).
  */
 export const BackgroundTriggerSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -26,6 +27,7 @@ export const BackgroundTriggerSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("boot") }),
   z.object({ kind: z.literal("on-demand") }),
   z.object({ kind: z.literal("interval"), everyMs: z.number() }),
+  z.object({ kind: z.literal("file-change") }),
 ]);
 export type BackgroundTrigger = z.infer<typeof BackgroundTriggerSchema>;
 

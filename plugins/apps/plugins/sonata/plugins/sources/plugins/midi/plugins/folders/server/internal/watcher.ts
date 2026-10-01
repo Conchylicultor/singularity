@@ -1,5 +1,6 @@
 import {
-  createFileWatcher,
+  defineFileWatcher,
+  type FileChangeEvent,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -9,10 +10,22 @@ import {
   getSongMidiBySourcePath,
   setSourceMissing,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server";
-import type * as parcel from "@parcel/watcher";
 import { midiFoldersConfig } from "../../shared/config";
 import { importMidiFileJob } from "./import-job";
 import { reconcile, watchedDirsSync } from "./reconcile";
+
+/**
+ * One instance over the configured folders, re-opened (stop + start) whenever
+ * the folder list changes.
+ */
+export const midiFoldersWatcher = defineFileWatcher({
+  name: "sonata-midi-folders.folders",
+  description:
+    "Watches your MIDI folders: imports a .mid file when it is added or edited and badges its song when the file is deleted.",
+  extensions: [".mid", ".midi"],
+  // A backstop for a dropped fsevent: re-derives the whole folder set.
+  reconcileMs: 30_000,
+});
 
 // Mirrors infra/git/git-watcher's manager: module-level mutable watcher, `started`
 // guard, async start/stop. The watcher set is rebuilt whenever the configured
@@ -26,7 +39,7 @@ let started = false;
 // racing the immediate-on-register call) must not create two live watchers.
 let reconfiguring: Promise<void> = Promise.resolve();
 
-async function onChange(events: parcel.Event[]): Promise<void> {
+async function onChange(events: FileChangeEvent[]): Promise<void> {
   for (const event of events) {
     if (event.type === "create" || event.type === "update") {
       await importMidiFileJob.enqueue({ sourcePath: event.path });
@@ -54,9 +67,8 @@ async function reconfigure(opts: { reconcile: boolean }): Promise<void> {
     }
     const dirs = watchedDirsSync();
     if (dirs.length > 0) {
-      watcher = await createFileWatcher({
+      watcher = await midiFoldersWatcher.start({
         dirs,
-        extensions: [".mid", ".midi"],
         onChange: (events) => {
           void runTracked("midi-folders:change", () => onChange(events));
         },

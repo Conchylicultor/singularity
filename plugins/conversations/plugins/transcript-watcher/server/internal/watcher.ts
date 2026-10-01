@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -95,10 +95,21 @@ const rooms = new Map<string, Room>();
  */
 const watchIndex = new Map<string, Set<string>>();
 
+// Every event is dispatched at once (debounceMs: 0) — a transcript line is
+// something a subscriber is waiting to render.
+export const transcriptsWatcher = defineFileWatcher({
+  name: "transcript-watcher.transcripts",
+  description:
+    "Watches every Claude Code transcript (.jsonl) under the projects directory and re-reads the conversations and sub-agents whose files changed, re-checking all of them every 30 seconds in case an event was missed.",
+  extensions: [".jsonl"],
+  debounceMs: 0,
+  reconcileMs: 30_000,
+});
+
 let watcher: FileWatcher | null = null;
 
 export async function startTranscriptWatcher(): Promise<void> {
-  watcher = await createFileWatcher({
+  watcher = await transcriptsWatcher.start({
     dirs: [CLAUDE_PROJECTS_DIR],
     onChange: (events) => {
       // Collapse the batch per room FIRST. Parcel delivers many events at once
@@ -126,8 +137,6 @@ export async function startTranscriptWatcher(): Promise<void> {
           reconcileRoom(room),
         );
     },
-    extensions: [".jsonl"],
-    debounceMs: 0,
   });
 }
 

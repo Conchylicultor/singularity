@@ -206,6 +206,7 @@ function env(overrides: Partial<CorpusIndexEnv> = {}): CorpusIndexEnv {
     withSlot: (fn) => fn(),
     yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
     startFileWatcher: async () => {},
+    watcherRegistration: { register: () => {} },
     ...overrides,
   };
 }

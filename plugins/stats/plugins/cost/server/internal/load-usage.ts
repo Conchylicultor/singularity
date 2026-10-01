@@ -262,6 +262,10 @@ export async function captureCostHistory(): Promise<void> {
   await flushArchive(costUsageDir.path, merged);
 }
 
+// The usage index's declared file watcher (main-only), opened by the warm-up's
+// `startWatcher()` below — mounted next to it.
+export const costUsageWatcher = costIndex.watcher;
+
 // Declared heavy boot warm-up (replacing the former raw `onReady` prewarm): warm
 // the host-global usage index and start the corpus watcher on MAIN
 // ONLY (`scope: "host"`), DEFERRED past serving-ready and THROTTLED by the

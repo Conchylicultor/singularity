@@ -387,7 +387,7 @@ list, a `0` version or an empty history.
 - `prototypes.statuses` (`prototypeStatuses` / `prototypeStatusesServed`,
   `status.ts`) — every recorded Done status, keyed by id (push); see Status.
 
-`onReady` starts a `createFileWatcher` over `prototypes/`, watching every
+`onReady` starts the `prototypesTreeWatcher` declaration (`defineFileWatcher`) over `prototypes/`, watching every
 extension a prototype can ship (`.html/.css/.js/.json` plus images and
 `.woff2`); `onShutdown` stops it. No polling.
 
@@ -451,7 +451,7 @@ for the `checkpoints` plugin's end-of-turn job.
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
     - `network/live.serveValue`
@@ -460,6 +460,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `listPrototypeMetas`
     - `onPrototypesChanged`
     - `readPrototypeTitle`
+  - Register: `defineFileWatcher('prototypes-files.tree')`
   - Resources:
     - `prototypes.history` (push)
     - `prototypes.list` (push)

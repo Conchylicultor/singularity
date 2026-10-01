@@ -1,5 +1,5 @@
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -15,6 +15,39 @@ import {
 } from "./resources";
 import { changedPrototypes, readPrototypesSignature } from "./signature";
 import { classifyTreePath } from "./tree-path";
+
+/**
+ * The one watcher over `prototypes/`. Push-based — no polling; the 30s
+ * reconcile is a backstop for an fsevent parcel drops, and costs one stat per
+ * prototype file because it changes nothing when the signature matches.
+ */
+export const prototypesTreeWatcher = defineFileWatcher({
+  name: "prototypes-files.tree",
+  description:
+    "Watches the prototypes folder and reloads open prototypes, their history, picks and status when a file really changes.",
+  // Everything a self-contained prototype can ship. No `.jsx`: JSX lives
+  // inline in index.html, because Babel fetches an external `src` with XHR
+  // and Chrome blocks that over file:// (the `prototypes:self-contained`
+  // check rejects such a script tag, so an external .jsx cannot exist).
+  // `.json` also passes each history's `latest.json` stamp — git's own
+  // files carry no extension, so they never reach `onChange` — and each
+  // `_picks/<id>.json` and `_status/<id>.json` (their `.lock` and
+  // `.json.tmp` do not pass).
+  extensions: [
+    ".html",
+    ".css",
+    ".js",
+    ".json",
+    ".svg",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".woff2",
+  ],
+  reconcileMs: 30_000,
+});
 
 let watcher: FileWatcher | null = null;
 let started = false;
@@ -150,29 +183,8 @@ export async function startPrototypesWatcher(): Promise<void> {
     adoptPrototypeHistories(),
   );
 
-  watcher = await createFileWatcher({
+  watcher = await prototypesTreeWatcher.start({
     dirs: [prototypesDir.path],
-    // Everything a self-contained prototype can ship. No `.jsx`: JSX lives
-    // inline in index.html, because Babel fetches an external `src` with XHR
-    // and Chrome blocks that over file:// (the `prototypes:self-contained`
-    // check rejects such a script tag, so an external .jsx cannot exist).
-    // `.json` also passes each history's `latest.json` stamp — git's own
-    // files carry no extension, so they never reach `onChange` — and each
-    // `_picks/<id>.json` and `_status/<id>.json` (their `.lock` and
-    // `.json.tmp` do not pass).
-    extensions: [
-      ".html",
-      ".css",
-      ".js",
-      ".json",
-      ".svg",
-      ".png",
-      ".jpg",
-      ".jpeg",
-      ".webp",
-      ".gif",
-      ".woff2",
-    ],
     onChange: (events) => {
       onTreeEvents(events.map((e) => e.path));
     },

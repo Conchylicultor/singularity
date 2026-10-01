@@ -100,7 +100,7 @@ filesystem event; the 30 s tick is what notices it.
     - `database/sql-column.parsedText`
     - `debug/profiling/op-log.appendOpLog`
     - `debug/profiling/op-log.OP_LOG_FILE`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/retention.defineRetention`
     - `infra/worktree.listWorktreeOps`
@@ -108,7 +108,9 @@ filesystem event; the 30 s tick is what notices it.
     - `network/live.serveCollection`
   - DB schema: `plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/server/internal/tables.ts`
   - Exports (values): `_opLogOps`
-  - Register: `defineJob('retention.op_log_ops')`
+  - Register:
+    - `defineJob('retention.op_log_ops')`
+    - `defineFileWatcher('op-store.op-log')`
   - Resources:
     - `op-store.history` (keyed, window)
     - `op-store.history:groups` (push)

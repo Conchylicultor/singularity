@@ -93,7 +93,7 @@ version-mismatch → rebuild.
 - Description: Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness.
 - Server:
   - Uses:
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/warmup.defineWarmup`
   - Exports (types):

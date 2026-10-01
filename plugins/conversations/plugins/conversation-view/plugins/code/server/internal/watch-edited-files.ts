@@ -1,31 +1,40 @@
-import type * as parcel from "@parcel/watcher";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { getParcelWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import {
+  defineFileWatcher,
+  type FileWatcher,
+} from "@plugins/infra/plugins/file-watcher/server";
 import type { EditedFile } from "../../core/protocol";
 import { computeEditedFiles } from "./compute-edited-files";
 import { editedFilesSignature } from "./edited-files-signature";
 import { getEditedFiles } from "./get-edited-files";
 import { evictEditedFiles, primeEditedFiles } from "./edited-files-cache";
 
-const DEBOUNCE_MS = 200;
-const CEILING_MS = 2000;
-
-const IGNORE = [
-  "**/.git/**",
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/build/**",
-  "**/.next/**",
-  "**/.turbo/**",
-  "**/.cache/**",
-  "**/coverage/**",
-];
+// One instance per watched worktree (a room), labelled by its path. The events
+// themselves are never read — any change batch triggers one recompute, batched
+// for 200 ms and forced at least every 2 s while changes keep coming.
+export const editedFilesWatcher = defineFileWatcher({
+  name: "conversation-view.edited-files",
+  description:
+    "Watches an open conversation's worktree and recomputes its list of edited files when anything outside build output and dependencies changes.",
+  debounceMs: 200,
+  ceilingMs: 2000,
+  ignore: [
+    "**/.git/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/.turbo/**",
+    "**/.cache/**",
+    "**/coverage/**",
+  ],
+});
 
 type Listener = (files: EditedFile[]) => void;
 
 interface Room {
   worktreePath: string;
-  subscription: parcel.AsyncSubscription | null;
+  watcher: FileWatcher | null;
   opening: Promise<void> | null;
   serialized: string;
   // null = never successfully computed. A git-failed initial load must NOT
@@ -34,9 +43,6 @@ interface Room {
   // are handed nothing and fall back to the resource loader (which throws on a
   // git failure — stale-safe). Only a real successful compute sets this.
   lastFiles: EditedFile[] | null;
-  debounceTimer: ReturnType<typeof setTimeout> | null;
-  lastRecomputeAt: number;
-  ceilingTimer: ReturnType<typeof setTimeout> | null;
   subscribers: Set<Listener>;
 }
 
@@ -50,13 +56,10 @@ export function watchEditedFiles(
   if (!room) {
     room = {
       worktreePath,
-      subscription: null,
+      watcher: null,
       opening: null,
       serialized: "",
       lastFiles: null,
-      debounceTimer: null,
-      lastRecomputeAt: 0,
-      ceilingTimer: null,
       subscribers: new Set(),
     };
     rooms.set(worktreePath, room);
@@ -96,61 +99,35 @@ async function openRoom(room: Room): Promise<void> {
     const files = await getEditedFiles(room.worktreePath);
     room.lastFiles = files;
     room.serialized = JSON.stringify(files);
-    room.lastRecomputeAt = Date.now();
     fanOut(room, files);
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[watch-edited-files] initial load failed", err);
   }
 
   try {
-    const parcelWatcher = await getParcelWatcher();
-    room.subscription = await parcelWatcher.subscribe(
-      room.worktreePath,
-      (err: Error | null) => {
-        if (err) {
-          console.error("[watch-edited-files] watcher error", err);
-          return;
-        }
-        scheduleRecompute(room);
+    const watcher = await editedFilesWatcher.start({
+      dirs: [room.worktreePath],
+      label: room.worktreePath,
+      onChange: () => {
+        void runTracked("watch-edited-files:recompute", () => recompute(room));
       },
-      { ignore: IGNORE },
-    );
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    });
+    // The last subscriber may have left while the watch was opening: this room
+    // is already closed, so nothing else would ever stop it.
+    if (rooms.get(room.worktreePath) !== room) {
+      await watcher.stop();
+      return;
+    }
+    room.watcher = watcher;
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[watch-edited-files] failed to open watcher", err);
   }
 }
 
-function scheduleRecompute(room: Room): void {
-  if (room.debounceTimer) return;
-  const since = Date.now() - room.lastRecomputeAt;
-  const delay = since >= CEILING_MS ? DEBOUNCE_MS : Math.min(DEBOUNCE_MS, CEILING_MS - since);
-  room.debounceTimer = setTimeout(() => {
-    room.debounceTimer = null;
-    void runTracked("watch-edited-files:recompute", () => recompute(room));
-  }, delay);
-
-  // Safety ceiling: guarantee a recompute at least every CEILING_MS.
-  if (!room.ceilingTimer) {
-    room.ceilingTimer = setTimeout(() => {
-      room.ceilingTimer = null;
-      if (room.debounceTimer) {
-        clearTimeout(room.debounceTimer);
-        room.debounceTimer = null;
-        void runTracked("watch-edited-files:recompute", () => recompute(room));
-      }
-    }, CEILING_MS);
-  }
-}
-
 async function recompute(room: Room): Promise<void> {
   if (!rooms.has(room.worktreePath)) return;
-  room.lastRecomputeAt = Date.now();
-  if (room.ceilingTimer) {
-    clearTimeout(room.ceilingTimer);
-    room.ceilingTimer = null;
-  }
   try {
     // Direct (un-memoized) compute: the watcher must never read its own cache. A
     // memo hit here could be ≤1 event stale (the mid-flight joiner contract), and
@@ -176,7 +153,7 @@ async function recompute(room: Room): Promise<void> {
     room.serialized = serialized;
     room.lastFiles = files;
     fanOut(room, files);
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[watch-edited-files] recompute failed", err);
   }
@@ -186,7 +163,7 @@ function fanOut(room: Room, files: EditedFile[]): void {
   for (const listener of room.subscribers) {
     try {
       listener(files);
-    // eslint-disable-next-line promise-safety/no-bare-catch
+      // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error("[watch-edited-files] listener threw", err);
     }
@@ -201,11 +178,9 @@ function closeRoom(room: Room): void {
   // any later reader probes the CURRENT content signature, so a surviving entry is
   // served only if it genuinely matches git state.
   evictEditedFiles(room.worktreePath);
-  if (room.debounceTimer) clearTimeout(room.debounceTimer);
-  if (room.ceilingTimer) clearTimeout(room.ceilingTimer);
-  if (room.subscription) {
-    // eslint-disable-next-line promise-safety/no-bare-catch, detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget subscription cleanup
-    void room.subscription.unsubscribe().catch((err: unknown) => {
+  if (room.watcher) {
+    // eslint-disable-next-line promise-safety/no-bare-catch, detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget watcher cleanup
+    void room.watcher.stop().catch((err: unknown) => {
       console.error("[watch-edited-files] unsubscribe failed", err);
     });
   }

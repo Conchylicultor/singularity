@@ -34,7 +34,7 @@ the durable emit that follows.
   - Contributes: `resource.declare` "git-watcher.refHead"
   - Uses:
     - `infra/events.defineTriggerEvent`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`
@@ -52,7 +52,9 @@ the durable emit that follows.
     - `lastKnownMainSha`
     - `refAdvanced`
     - `refHeadServed`
-  - Register: `defineTriggerEvent('git.refAdvanced')`
+  - Register:
+    - `defineTriggerEvent('git.refAdvanced')`
+    - `defineFileWatcher('git-watcher.refs')`
   - Resources: `git-watcher.refHead` (push)
 - Core:
   - Uses: `network/live.liveValue`

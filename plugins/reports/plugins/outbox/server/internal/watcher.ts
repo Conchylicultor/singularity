@@ -1,6 +1,6 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -10,6 +10,13 @@ import { isReportKindRegistered, recordReport } from "@plugins/reports/server";
 import { reportOutboxDir } from "../../data-dirs";
 import { drainOutbox, type DrainDeps } from "./drain";
 import { checkStaleness } from "./staleness";
+
+export const reportOutboxWatcher = defineFileWatcher({
+  name: "reports-outbox.outbox-dir",
+  description:
+    "Watches the host-global report outbox and files every report a CLI run or supervised child dropped there.",
+  mainOnly: true,
+});
 
 let watcher: FileWatcher | null = null;
 // Passes are serialized: two overlapping passes would both read an entry
@@ -83,9 +90,8 @@ export async function startReportOutbox(): Promise<void> {
   if (!isMain()) return;
   if (watcher) return;
   const dir = reportOutboxDir.ensure();
-  watcher = await createFileWatcher({
+  watcher = await reportOutboxWatcher.start({
     dirs: [dir],
-    name: "report-outbox",
     onChange: () => scheduleDrain(),
   });
   // After subscribing, so an entry written between the first pass's listing

@@ -62,7 +62,7 @@ dynamic value.
 - Description: Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
 - Server:
   - Uses:
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/git/git-read-cache.createGitStateMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
@@ -71,7 +71,9 @@ dynamic value.
   - Exports (values):
     - `getFacetsTreeCached`
     - `getStructureTreeCached`
-  - Register: `defineWarmup('plugin-tree.trees')`
+  - Register:
+    - `defineWarmup('plugin-tree.trees')`
+    - `defineFileWatcher('plugin-tree.plugins-dir')`
 - Core:
   - Uses:
     - `framework/plugin-id.asPluginId`

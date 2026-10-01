@@ -1,6 +1,6 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -24,6 +24,15 @@ async function computeTrackedRefs(): Promise<string[]> {
   }
   return refs;
 }
+
+// The reconcile tick (30s) is the safety net for packed-refs-only movement,
+// which writes no loose ref under refs/ and so fires no event.
+export const gitRefsWatcher = defineFileWatcher({
+  name: "git-watcher.refs",
+  description:
+    "Watches the repository's loose git refs and, when main or this worktree's branch moves, re-reads its sha and announces the advance.",
+  reconcileMs: 30_000,
+});
 
 const lastKnownSha = new Map<string, string | null>();
 let watcher: FileWatcher | null = null;
@@ -77,7 +86,7 @@ export async function startGitWatcher(): Promise<void> {
   // deletes it when packing) → we get the event and re-read the true sha via
   // `git rev-parse` (which also resolves packed-refs). The reconcile timer is
   // the safety net for packed-refs-only movement.
-  watcher = await createFileWatcher({
+  watcher = await gitRefsWatcher.start({
     dirs: [`${commonDir}/refs`],
     onChange: () => {
       void runTracked("git-watcher:recompute", () => recompute());

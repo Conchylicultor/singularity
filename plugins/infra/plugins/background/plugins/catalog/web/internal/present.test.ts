@@ -21,5 +21,8 @@ describe("formatPeriod", () => {
     expect(triggerWords({ kind: "interval", everyMs: 5_000 })).toBe(
       "Every 5 seconds",
     );
+    expect(triggerWords({ kind: "file-change" })).toBe(
+      "When watched files change",
+    );
   });
 });

@@ -2,7 +2,7 @@ import { basename, dirname, join } from "path";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { BYPASS_TOKENS } from "@plugins/framework/plugins/tooling/plugins/guards/core";
@@ -17,6 +17,13 @@ const IGNORE = [
   "**/dist/**",
   "**/build/**",
 ];
+
+export const allowFilesWatcher = defineFileWatcher({
+  name: "conversation-view.allow-files",
+  description:
+    "Watches an open conversation's worktree and refreshes its bypass-permission indicator when an allow file appears or disappears at the worktree root.",
+  ignore: IGNORE,
+});
 
 async function loadAllowFiles(conversationId: string): Promise<AllowFiles> {
   const conversation = await getConversation(conversationId);
@@ -38,10 +45,9 @@ async function watchAllowFiles(
   const conversation = await getConversation(conversationId);
   const worktreePath = conversation?.worktreePath;
   if (!worktreePath) return null;
-  const watcher = await createFileWatcher({
+  const watcher = await allowFilesWatcher.start({
     dirs: [worktreePath],
-    ignore: IGNORE,
-    name: "allow-files",
+    label: conversationId,
     onChange: (events) => {
       const touched = events.some(
         (e) =>
@@ -63,7 +69,7 @@ export const allowFilesServed = serveValue(allowFiles, {
   // One watcher per watched conversation, for as long as it has a subscriber.
   // The start stays SYNC: an async start is awaited on the subscribe path, so
   // it would hold the sub-ack behind the watch opening on the worktree root.
-  // The watcher is instead held as a promise (`createFileWatcher` is async), and
+  // The watcher is instead held as a promise (`start()` is async), and
   // the stop chains on it — the last subscriber can leave before it resolves.
   whileSubscribed: ({ id }, notify) => {
     const watcher = watchAllowFiles(id, notify);

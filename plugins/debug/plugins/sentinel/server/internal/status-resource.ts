@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import {
@@ -93,6 +93,13 @@ export function resourcesForFile(path: string): {
   }
 }
 
+export const sentinelStatusWatcher = defineFileWatcher({
+  name: "sentinel.status",
+  description:
+    "Watches the host-global sentinel status, vitals and duress-latch files and pushes the sentinel status and vitals values when one of them is rewritten.",
+  extensions: [".json", ".latch"],
+});
+
 let watcher: FileWatcher | null = null;
 
 export async function startStatusWatcher(): Promise<void> {
@@ -100,10 +107,8 @@ export async function startStatusWatcher(): Promise<void> {
   // Subscribing to a missing directory fails; both dirs are host-global and cheap.
   const statusDir = sentinelStatusDir.ensure();
   const latchDir = duressLatchDir.ensure();
-  watcher = await createFileWatcher({
+  watcher = await sentinelStatusWatcher.start({
     dirs: [statusDir, latchDir],
-    extensions: [".json", ".latch"],
-    name: "sentinel-status",
     onChange: (events) => {
       let status = false;
       let vitals = false;

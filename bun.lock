@@ -3291,6 +3291,10 @@
       "name": "@singularity/plugin-infra-file-watcher",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/file-watcher/plugins/background-arm": {
+      "name": "@singularity/plugin-infra-file-watcher-background-arm",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/git": {
       "name": "@singularity/plugin-infra-git",
       "version": "0.0.1",
@@ -7643,6 +7647,8 @@
     "@singularity/plugin-infra-file-sink": ["@singularity/plugin-infra-file-sink@workspace:plugins/infra/plugins/file-sink"],
 
     "@singularity/plugin-infra-file-watcher": ["@singularity/plugin-infra-file-watcher@workspace:plugins/infra/plugins/file-watcher"],
+
+    "@singularity/plugin-infra-file-watcher-background-arm": ["@singularity/plugin-infra-file-watcher-background-arm@workspace:plugins/infra/plugins/file-watcher/plugins/background-arm"],
 
     "@singularity/plugin-infra-git": ["@singularity/plugin-infra-git@workspace:plugins/infra/plugins/git"],
 

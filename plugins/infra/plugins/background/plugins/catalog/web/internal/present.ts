@@ -55,6 +55,8 @@ export function triggerWords(trigger: BackgroundTrigger): string {
       return "When asked";
     case "interval":
       return `Every ${formatPeriod(trigger.everyMs)}`;
+    case "file-change":
+      return "When watched files change";
   }
 }
 

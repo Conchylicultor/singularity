@@ -5,7 +5,7 @@ import {
 import { createGitStateMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
@@ -26,13 +26,20 @@ import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 // live-state resource re-subscribing at once) onto ONE build — the many concurrent
 // callers share the single in-flight compute instead of each walking the tree.
 
+/** The one lazy watcher over `PLUGINS_DIR`, opened by the first tree read. */
+export const pluginsDirWatcher = defineFileWatcher({
+  name: "plugin-tree.plugins-dir",
+  description:
+    "Watches the plugins folder so the next plugin-tree read rebuilds after a plugin is added, removed or edited.",
+  ignore: ["**/.git/**", "**/node_modules/**", "**/dist/**", "**/build/**"],
+});
+
 let generation = 0;
 let watcherStarted: Promise<FileWatcher> | null = null;
 
 function ensureWatcher(): Promise<FileWatcher> {
-  watcherStarted ??= createFileWatcher({
+  watcherStarted ??= pluginsDirWatcher.start({
     dirs: [PLUGINS_DIR],
-    ignore: ["**/.git/**", "**/node_modules/**", "**/dist/**", "**/build/**"],
     onChange: (events) => {
       if (events.length > 0) generation++;
     },

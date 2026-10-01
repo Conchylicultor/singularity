@@ -27,6 +27,7 @@ import {
   prototypesVersionServed,
 } from "./internal/resources";
 import {
+  prototypesTreeWatcher,
   startPrototypesWatcher,
   stopPrototypesWatcher,
 } from "./internal/watcher";
@@ -68,6 +69,7 @@ export default {
     ...prototypePicksServed.declare,
     ...prototypeStatusesServed.declare,
   ],
+  register: [prototypesTreeWatcher],
   onReady: async () => {
     await startPrototypesWatcher();
   },

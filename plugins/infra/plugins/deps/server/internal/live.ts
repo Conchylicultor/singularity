@@ -1,4 +1,4 @@
-import { createFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { depsStates, type DepRow } from "../../core";
@@ -20,6 +20,16 @@ async function loadDepRows(): Promise<DepRow[]> {
   );
 }
 
+/** Open only while someone is subscribed to `deps.states` (see below). */
+export const depsCacheWatcher = defineFileWatcher({
+  name: "deps.cache",
+  description:
+    "While Settings → Dependencies is open, watches the dependency cache so an install or removal by any process shows up at once.",
+  // The payloads: a `uv sync` writes thousands of files there, and only the
+  // state files beside them matter.
+  ignore: ["**/env/**"],
+});
+
 /**
  * Every declared dependency with its state, pushed.
  *
@@ -35,10 +45,8 @@ export const depsStatesServed = serveValue(depsStates, {
   source: "external",
   loader: loadDepRows,
   whileSubscribed: async (_params, notify) => {
-    const watcher = await createFileWatcher({
+    const watcher = await depsCacheWatcher.start({
       dirs: [depsCacheDir.ensure()],
-      name: "deps-cache",
-      ignore: ["**/env/**"],
       onChange: () => notify(),
     });
     // The stop is fire-and-forget (unsubscribing does not wait on parcel),
