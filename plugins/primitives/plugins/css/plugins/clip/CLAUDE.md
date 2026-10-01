@@ -69,6 +69,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `fields/tags/table`
     - `page/bookmark`
     - `page/code-block`
+    - `page/links`
     - `page/map`
     - `page/math/equation`
     - `primitives/app-shell`

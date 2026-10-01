@@ -44,14 +44,15 @@ interface Span {
 }
 
 /**
- * `text` with every token a contributed family recognises rewritten as
- * `<kind id="<token>" title="<title>"/>`, so a model reads the referent's name
- * next to its id. A token whose referent does not exist stays as written.
- * Generic: names no family — a new chip family is covered the day it
- * contributes an {@link InlineTokenReferentSource}.
+ * `text` with every token a contributed family recognises and resolves
+ * rewritten by `render(kind, token, title)`. A token whose referent does not
+ * exist stays as written. Where two families' patterns overlap the one that
+ * starts first wins (a `[[page:<id>]]` token over the bare id inside it).
+ * Generic: names no family.
  */
-export async function expandInlineTokenReferents(
+async function rewriteInlineTokenReferents(
   text: string,
+  render: (kind: string, token: string, title: string) => string,
 ): Promise<string> {
   const spans: Span[] = [];
   for (const source of InlineTokenReferentSource.getContributions()) {
@@ -73,13 +74,15 @@ export async function expandInlineTokenReferents(
       spans.push({
         start: m.index,
         end: m.index + m[0].length,
-        replacement: `<${source.kind} id="${escapeAttr(m[0])}" title="${escapeAttr(referent.title)}"/>`,
+        replacement: render(source.kind, m[0], referent.title),
       });
     }
   }
 
   // First span wins where two families' patterns overlap; the rest keep order.
-  spans.sort((a, b) => a.start - b.start);
+  // Equal starts: the LONGER span wins, so a token enclosing another's pattern
+  // is read as the enclosing token.
+  spans.sort((a, b) => a.start - b.start || b.end - a.end);
   let out = "";
   let cursor = 0;
   for (const span of spans) {
@@ -88,4 +91,30 @@ export async function expandInlineTokenReferents(
     cursor = span.end;
   }
   return out + text.slice(cursor);
+}
+
+/**
+ * `text` with every token a contributed family recognises rewritten as
+ * `<kind id="<token>" title="<title>"/>`, so a model reads the referent's name
+ * next to its id. A token whose referent does not exist stays as written.
+ * Generic: names no family — a new chip family is covered the day it
+ * contributes an {@link InlineTokenReferentSource}.
+ */
+export function expandInlineTokenReferents(text: string): Promise<string> {
+  return rewriteInlineTokenReferents(
+    text,
+    (kind, token, title) =>
+      `<${kind} id="${escapeAttr(token)}" title="${escapeAttr(title)}"/>`,
+  );
+}
+
+/**
+ * `text` as a PERSON reads it: every token a contributed family resolves is
+ * replaced by its referent's title alone — what the chip shows in the app. For
+ * plain-text excerpts of stored content (a backlink's snippet), where the XML
+ * form {@link expandInlineTokenReferents} hands a model would be noise. A token
+ * whose referent does not exist stays as written.
+ */
+export function inlineTokensAsText(text: string): Promise<string> {
+  return rewriteInlineTokenReferents(text, (_kind, _token, title) => title);
 }

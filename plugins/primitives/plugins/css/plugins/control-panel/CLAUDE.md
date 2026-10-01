@@ -16,7 +16,11 @@ than any one field.
 ## The five invariants
 
 1. **One rail.** Every label in every panel starts at the same x.
-2. **One row height**, in every panel, always.
+2. **One row height**, in every panel, always — with ONE declared exception: a
+   row passing `description` (a visible, wrapping second line under its label)
+   is as tall as its two lines. It is opt-in per row and exclusive with `hint`
+   (the tooltip, which costs no height), for a choice whose meaning must be read
+   before it is picked — the page-kind menu. Everything else keeps `hint`.
 3. **One selection language per meaning** — check, radio, switch. There is no
    fourth, and the three cannot be mixed on one row.
 4. **Footers are rows**, never ghost buttons pinned to opposite corners — and
@@ -573,6 +577,7 @@ The primitive needs **no** new lint exemptions: it inherits the
   - Uses:
     - `primitives/css/rail.useRailGuard`
     - `primitives/css/selection-indicator.CheckboxIndicator`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/switch.SwitchIndicator`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`

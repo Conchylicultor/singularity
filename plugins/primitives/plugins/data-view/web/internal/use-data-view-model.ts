@@ -10,6 +10,7 @@ import type {
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type {
   FilterGroup,
+  FilterScope,
   FoldRule,
   GroupByRule,
   SortRule,
@@ -73,6 +74,10 @@ export interface ReadyViewModel {
   collapsedSectionsFor: (id: string) => ReadonlySet<string>;
   /** Collapse/expand a group-by section for THIS view (device-local). */
   setSectionCollapsed: (id: string, key: string, collapsed: boolean) => void;
+  /** THIS view's presentation as a section of a sections surface. */
+  sectionFor: (id: string) => SectionPresentation;
+  /** Fold / unfold THIS view as a whole section (device-local). */
+  setViewCollapsed: (id: string, collapsed: boolean) => void;
   /** Instance actions for the editable switcher (always present). */
   actions: ViewActions;
 }
@@ -168,6 +173,32 @@ function readFold(view: VariantValue | undefined): FoldRule | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const { keep } = raw as Partial<FoldRule>;
   return keep && isFilterGroup(keep) ? (raw as FoldRule) : undefined;
+}
+
+/**
+ * Read the authored filter scope off a row's raw variant value. Only the two
+ * known spellings count; anything else (absent, a typo) is the default `rows`
+ * scope, reported as `undefined` so the state stays terse.
+ */
+function readFilterScope(
+  view: VariantValue | undefined,
+): FilterScope | undefined {
+  const raw = view?.filterScope;
+  return raw === "roots" || raw === "rows" ? raw : undefined;
+}
+
+/**
+ * A view instance's presentation as a SECTION of a `{ kind: "sections" }`
+ * surface — host-injected keys of the config row read like `groupBy`, plus the
+ * device-local collapse. Meaningless (and unread) under any other chrome.
+ */
+export interface SectionPresentation {
+  /** `view.hideWhenEmpty`: render nothing while the view has no rows. */
+  hideWhenEmpty: boolean;
+  /** `view.description`: what the section holds, for its header tooltip. */
+  description: string | null;
+  /** Device-local: whether the section is folded to its header. */
+  collapsed: boolean;
 }
 
 /**
@@ -318,11 +349,27 @@ export function useDataViewModel(
         visibleFields: readVisibleFields(core.viewFor(id)),
         groupBy: readGroupBy(core.viewFor(id)),
         fold: readFold(core.viewFor(id)),
+        filterScope: readFilterScope(core.viewFor(id)),
         query: local.query,
         expanded: local.expanded,
       };
     },
     [core, ephemeral, sortFor, filterFor],
+  );
+
+  const sectionFor = useCallback(
+    (id: string): SectionPresentation => {
+      const view = core.viewFor(id);
+      return {
+        hideWhenEmpty: view?.hideWhenEmpty === true,
+        description:
+          typeof view?.description === "string" && view.description.length > 0
+            ? view.description
+            : null,
+        collapsed: ephemeral.localFor(id).collapsed,
+      };
+    },
+    [core, ephemeral],
   );
 
   const actions = useMemo<ViewActions>(
@@ -355,6 +402,8 @@ export function useDataViewModel(
       setExpanded: ephemeral.setExpanded,
       collapsedSectionsFor,
       setSectionCollapsed: ephemeral.setSectionCollapsed,
+      sectionFor,
+      setViewCollapsed: ephemeral.setViewCollapsed,
       actions,
     }),
     [
@@ -367,6 +416,7 @@ export function useDataViewModel(
       setGroupBy,
       setFold,
       collapsedSectionsFor,
+      sectionFor,
       ephemeral,
       actions,
     ],

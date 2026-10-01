@@ -5,7 +5,8 @@ import {
   defineFieldExtensions,
   defineItemActions,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { PageRow } from "@plugins/page/plugins/editor/core";
+import type { Block, PageRow } from "@plugins/page/plugins/editor/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * Sections rendered below a page's editor in the page-detail pane. The host
@@ -32,7 +33,44 @@ const pageDetailSections = defineDetailSections<{
   { inset: "none" },
 );
 
+/**
+ * A piece of the page's title header — a tool in the hover row above the title,
+ * or a row under it. The header paints it bare, at the header's own inset: the
+ * contribution owns its content and nothing else.
+ *
+ * A contribution that has nothing to offer on the open page declares
+ * `useAvailable` rather than returning `null` — the same gate `Section` takes,
+ * resolved by the header before anything is painted, so a hover row whose tools
+ * are all unavailable disappears instead of leaving an empty band.
+ */
+export interface PageHeaderPart {
+  component: ComponentType<PageHeaderPartProps>;
+  useAvailable?: Hook<(props: PageHeaderPartProps) => boolean>;
+}
+
+/**
+ * What the header hands each part: the open page's id and its row, already
+ * resolved — a part is painted only once the page is known, so it never reads
+ * the pages list itself.
+ */
+export interface PageHeaderPartProps {
+  pageId: string;
+  page: Block;
+}
+
 export const PageDetail = {
+  /**
+   * The hover-revealed tool row above the page title (Add icon / Change icon /
+   * Add cover): quiet ghost buttons that appear while the pointer is over the
+   * header.
+   */
+  HeaderTool: defineRenderSlot<PageHeaderPart>({ docLabel: (p) => p.id }),
+  /**
+   * Rows under the page title, in the header's flow: what is ABOUT the page as
+   * a whole (the pages linking here; later, its properties) — distinct from
+   * `Section`, a card below the whole document.
+   */
+  UnderTitle: defineRenderSlot<PageHeaderPart>({ docLabel: (p) => p.id }),
   Section: pageDetailSections.Section,
   /** Renders every contributed section. Mounted by `pageDetailPane`. */
   Host: pageDetailSections.Host,

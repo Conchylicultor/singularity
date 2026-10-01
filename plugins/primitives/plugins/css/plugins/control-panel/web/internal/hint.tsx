@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type React from "react";
 
@@ -8,6 +9,13 @@ export interface HintedLabelCellProps {
    * plain `<span>` it has always been, with no tooltip machinery around it.
    */
   hint?: string;
+  /**
+   * A VISIBLE second line under the label — muted prose that reserves its own
+   * height (it wraps, never truncates). The deliberate opposite of `hint`, for a
+   * choice whose meaning must be read before it is picked (a page's kind). See
+   * `ControlPanelRowCommon.description`.
+   */
+  description?: string;
   /** From the host's own `useId()`, so the row can point at it. */
   descriptionId: string;
   className?: string;
@@ -46,10 +54,22 @@ export interface HintedLabelCellProps {
  */
 export function HintedLabelCell({
   hint,
+  description,
   descriptionId,
   className,
   children,
 }: HintedLabelCellProps) {
+  if (description !== undefined) {
+    return (
+      <DescribedLabelCell
+        description={description}
+        descriptionId={descriptionId}
+        className={className}
+      >
+        {children}
+      </DescribedLabelCell>
+    );
+  }
   const cell = (
     <span data-cp-cell="label" className={cn("truncate", className)}>
       {children}
@@ -62,4 +82,49 @@ export function HintedLabelCell({
   );
   if (!hint) return cell;
   return <WithTooltip content={hint}>{cell}</WithTooltip>;
+}
+
+/**
+ * The label cell of a row that carries a visible `description`: the label on
+ * its own line (still truncating), the description under it as muted caption
+ * prose that WRAPS. A flow container, so it resets the row's single-line
+ * contract for the description only; the label keeps its own `truncate`.
+ *
+ * The description is the row's accessible description by `aria-describedby`
+ * (the host points at `descriptionId`) and is `aria-hidden` inside the cell, so
+ * the row's NAME stays its label alone — the same split `hint` makes.
+ *
+ * The cell pads itself vertically so two lines sit inside the row's box with
+ * the breathing room a one-line row gets from `--cp-row-h`; the row's
+ * `min-height` then grows to fit rather than clipping.
+ */
+function DescribedLabelCell({
+  description,
+  descriptionId,
+  className,
+  children,
+}: {
+  description: string;
+  descriptionId: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Stack
+      as="span"
+      gap="none"
+      data-cp-cell="label"
+      data-cp-described=""
+      className={cn("min-w-0 py-xs", className)}
+    >
+      <span className="truncate">{children}</span>
+      <span
+        aria-hidden
+        id={descriptionId}
+        className="text-caption whitespace-normal text-muted-foreground"
+      >
+        {description}
+      </span>
+    </Stack>
+  );
 }

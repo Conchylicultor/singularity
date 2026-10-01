@@ -147,12 +147,57 @@ export interface HostedToolbar {
   forms?: HostedToolbarForms;
 }
 
-/** `DataViewProps.toolbar`: a band layout, or a host-drawn frame. */
-export type DataViewToolbarSpec = ToolbarArrangement | HostedToolbar;
+/**
+ * The forms the host builds a sections surface's headers in — data, like
+ * {@link HostedToolbarForms}: the host still builds every header.
+ */
+export interface SectionsToolbarForms {
+  /**
+   * `eyebrow` (default): the small muted caps label a sidebar names its runs
+   * of rows with ("FAVORITES"). `group`: the quiet group-by heading — a
+   * semibold value set in the `group` type role.
+   */
+  header: "eyebrow" | "group";
+}
+
+/**
+ * A DataView with NO active instance: EVERY authored view instance renders,
+ * stacked in config order, each under its own collapsible header — a sidebar's
+ * "Favorites / Private / Scratch" as one surface. There is no switcher (every
+ * view is on screen) and no band; each section header carries its own `+`
+ * (the surface's `creators`, narrowed by `CreateOption.views`) and `⋯` (that
+ * view's controls, its settings, and "Add section").
+ *
+ * Views read two extra host-injected keys off their config row in this mode:
+ * `hideWhenEmpty` (the section is not rendered while its view has no rows —
+ * and not while that is still unknown) and `description` (the header's
+ * tooltip). A section's collapse is device-local, beside the view's expand map.
+ *
+ * `title` / `actions` / `pinnedView` are not accepted alongside it: there is no
+ * band to hold the first two, and a pinned surface shows one instance by
+ * definition.
+ */
+export interface SectionsToolbar {
+  kind: "sections";
+  /** The shape of each part the host builds; absent ⇒ `{ header: "eyebrow" }`. */
+  forms?: SectionsToolbarForms;
+}
+
+/** `DataViewProps.toolbar`: a band layout, a host-drawn frame, or stacked
+ *  sections. */
+export type DataViewToolbarSpec =
+  ToolbarArrangement | HostedToolbar | SectionsToolbar;
 
 /** Narrow a toolbar spec to the hosted form. */
 export function isHostedToolbar(
   spec: DataViewToolbarSpec | undefined,
 ): spec is HostedToolbar {
   return spec !== undefined && "kind" in spec && spec.kind === "hosted";
+}
+
+/** Narrow a toolbar spec to the sections form. */
+export function isSectionsToolbar(
+  spec: DataViewToolbarSpec | undefined,
+): spec is SectionsToolbar {
+  return spec !== undefined && "kind" in spec && spec.kind === "sections";
 }

@@ -29,7 +29,8 @@ consumer cannot classify provenance slightly differently from its neighbour.
 ## Consumers
 
 - **`apps/pages/agent-origin`** stamps a marker on every page an agent created,
-  segregates them into an `[Agent]` sidebar section, and sweeps them after 24h.
+  segregates them into the Pages sidebar's Scratch section, and sweeps them
+  after 24h.
   [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../../../../research/2026-07-29-global-agent-origin-provenance-for-pages.md)
 - **[`agent-write-ledger`](plugins/agent-write-ledger/CLAUDE.md)** (sub-plugin)
   snapshots the pre-write bytes of whatever an agent-origin request overwrites,

@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 
 /**
- * Per-instance **render** state: each instance's `{ query, expanded }`. The
+ * Per-instance **render** state: each instance's `{ query, expanded }` (plus
+ * the group-by and whole-view collapse flags). The
  * active-instance selection is *model* state and lives in view-core
  * (`useActiveViewId`); durable `sort`/`filter` live on the instance's config row
  * (the config-backed engine owns them). The reader stays tolerant of legacy blobs
@@ -11,6 +12,7 @@ import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
  * State split (see CLAUDE.md):
  *   - active id           → view-core `${storageKey}:active-view`   (device-local)
  *   - expand + collapse   → `${storageKey}:view-state`              (device-local)
+ *     (group-by sections AND, on a sections surface, the whole view)
  *   - query               → `${storageKey}:view-query`              (per browser tab)
  *
  * **The search query is deliberately NOT device-local.** Durable narrowings are
@@ -31,6 +33,13 @@ interface LocalViewState {
   expanded: Record<string, boolean>;
   /** Collapsed group-by section keys (absence = expanded). */
   collapsedSections: string[];
+  /**
+   * The whole VIEW folded to its header — a view rendered as one section of a
+   * `{ kind: "sections" }` surface. A view-level flag, deliberately not a key in
+   * `collapsedSections`: those are the view's own group-by values, and no
+   * sentinel key can be guaranteed never to be one.
+   */
+  collapsed: boolean;
 }
 type LocalMap = Record<string, LocalViewState>;
 
@@ -40,6 +49,7 @@ type QueryMap = Record<string, string>;
 const EMPTY_LOCAL: LocalViewState = {
   expanded: {},
   collapsedSections: [],
+  collapsed: false,
 };
 
 /** What `localFor` hands back: the durable blob plus this tab's query. */
@@ -70,7 +80,7 @@ function writeString(store: Storage, key: string, value: string): void {
   }
 }
 
-/** Parse the per-instance `{expanded, collapsedSections}` map, tolerant of
+/** Parse the per-instance `{expanded, collapsedSections, collapsed}` map, tolerant of
  *  partial / legacy shapes. A legacy blob's `sort`/`filter`/`query` keys are
  *  ignored — so a query stranded in `localStorage` by the old device-local
  *  behavior is dropped on the next read rather than needing a migration. */
@@ -91,6 +101,7 @@ function readLocalMap(key: string): LocalMap {
       collapsedSections: Array.isArray(r.collapsedSections)
         ? (r.collapsedSections as string[]).filter((k) => typeof k === "string")
         : [],
+      collapsed: r.collapsed === true,
     };
   }
   return out;
@@ -122,6 +133,8 @@ export interface EphemeralViewState {
     key: string,
     collapsed: boolean,
   ) => void;
+  /** Fold/unfold the whole view as one section of a sections surface. */
+  setViewCollapsed: (viewId: string, collapsed: boolean) => void;
 }
 
 /**
@@ -198,8 +211,21 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
     [writeLocal],
   );
 
+  const setViewCollapsed = useCallback(
+    (viewId: string, collapsed: boolean) => {
+      writeLocal(viewId, (prev) => ({ ...prev, collapsed }));
+    },
+    [writeLocal],
+  );
+
   return useMemo(
-    () => ({ localFor, setQuery, setExpanded, setSectionCollapsed }),
-    [localFor, setQuery, setExpanded, setSectionCollapsed],
+    () => ({
+      localFor,
+      setQuery,
+      setExpanded,
+      setSectionCollapsed,
+      setViewCollapsed,
+    }),
+    [localFor, setQuery, setExpanded, setSectionCollapsed, setViewCollapsed],
   );
 }

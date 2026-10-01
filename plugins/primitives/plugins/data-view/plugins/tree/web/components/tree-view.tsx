@@ -23,6 +23,7 @@ import {
   type ItemActionsDescriptor,
   type RowTone,
 } from "@plugins/primitives/plugins/data-view/web";
+import { scopeFilterRows } from "@plugins/primitives/plugins/data-view/core";
 import type {
   ExpandChange,
   TreeNode,
@@ -253,8 +254,8 @@ function DefaultRow<TRow>(props: {
  *
  * Deliberately NOT gated on `options.expandAll`. That option names the
  * whole-view TOOLBAR button, and a surface that keeps its chrome minimal by
- * omitting it — the Pages sidebar, which is also the app's grouped tree — is
- * exactly the surface this exists for. Gating on it would reproduce the defect
+ * omitting it — a narrow sidebar tree like the Pages sidebar's — is exactly
+ * the surface this exists for. Gating on it would reproduce the defect
  * the per-row fold was ungated to avoid: an affordance a new tree has to
  * remember to ask for, which the trees that most need it never do.
  */
@@ -354,36 +355,31 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   }, [rows, rowKey, hierarchy, expanded, options.defaultExpanded]);
 
   // The view's filter as a row predicate — the same `useRowFilter` lowering the
-  // flat views use, so filter semantics are identical across all views. Filtering is
-  // *subtree-preserving* (mirrors the tree's search): a node survives if it
-  // matches the filter or has a matching descendant — i.e. matches plus the
-  // ancestor chain of every match — so filtered rows keep their hierarchical
-  // context instead of being orphaned to the root.
+  // flat views use, so filter semantics are identical across all views. What it
+  // is evaluated ON is the view's `filterScope` (the shared `scopeFilterRows`,
+  // the same function the host's hide-when-empty check reads):
+  //   - `rows` (default) is *subtree-preserving*, mirroring the tree's search: a
+  //     node survives if it matches or has a matching descendant — matches plus
+  //     the ancestor chain of every match — so filtered rows keep their
+  //     hierarchical context instead of being orphaned to the root;
+  //   - `roots` tests the ROOTS only, and a kept root keeps its whole subtree —
+  //     the partition `groupBy` makes of the roots, as a filter, so sibling view
+  //     instances over one tree (the Pages sidebar's Private / Scratch) each own
+  //     whole subtrees and never pull in another's ancestor.
   const matchesFilter = useRowFilter(
     props.state.filter,
     fields,
     resolveOperatorSet,
   );
+  const filterScope = props.state.filterScope ?? "rows";
   const visibleProjected = useMemo(() => {
     if (!matchesFilter) return projected;
-    const matched = new Set<string>();
-    for (const p of projected) {
-      if (matchesFilter(p.__row)) {
-        matched.add(p.id);
-      }
-    }
-    if (matched.size === projected.length) return projected;
-    const parentById = new Map(projected.map((p) => [p.id, p.parentId]));
-    const keep = new Set<string>(matched);
-    for (const id of matched) {
-      let cur = parentById.get(id) ?? null;
-      while (cur && !keep.has(cur)) {
-        keep.add(cur);
-        cur = parentById.get(cur) ?? null;
-      }
-    }
-    return projected.filter((p) => keep.has(p.id));
-  }, [projected, matchesFilter]);
+    return scopeFilterRows(projected, filterScope, {
+      key: (p) => p.id,
+      parentOf: (p) => p.parentId,
+      matches: (p) => matchesFilter(p.__row),
+    });
+  }, [projected, matchesFilter, filterScope]);
 
   // Field sort (default: manual/rank order). Empty rules → `null` comparator →
   // the projected rows keep their incoming (rank) order, i.e. the manual sort the

@@ -1,5 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -7,10 +12,14 @@ import {
   defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  HostedToolbar,
+  HostedToolbarParts,
+} from "@plugins/primitives/plugins/data-view/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
 import { pageBacklinks } from "../../core";
-import type { BacklinkRow } from "../../core";
+import type { BacklinkRow, BacklinkSnippet } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const linkIcon = symbol("link");
@@ -22,14 +31,38 @@ export interface BacklinksProps {
 
 const BACKLINKS_VIEW = defineDataView("page.links.backlinks");
 
+/**
+ * The list unfolds under the page title as plain rows (the mockup's in-place
+ * list), so it draws no toolbar band: a handful of rows needs no view switcher,
+ * search field or filter strip. The one options trigger (search, sort, filter)
+ * still sits at the list's right edge, hover-revealed, so nothing is
+ * unreachable. Module scope, so the frame's identity is stable.
+ */
+function BacklinksFrame({ options, body }: HostedToolbarParts): ReactNode {
+  return (
+    <Stack direction="row" gap="xs" align="start">
+      <Fill>{body}</Fill>
+      {options}
+    </Stack>
+  );
+}
+
+const BACKLINKS_TOOLBAR: HostedToolbar = {
+  kind: "hosted",
+  frame: BacklinksFrame,
+};
+
+/** Separator between the ancestor titles of a backlink's path. */
+const PATH_SEPARATOR = " / ";
+
 // Lists the pages that link to `documentId` as a DataView (search/sort come
 // free). Subscribes to the `pageBacklinks` value so it updates live as edits
-// reindex. Renders nothing when there are no backlinks — so a page without
-// inbound links shows no DataView toolbar either. Title-less on purpose: this is
-// a body, and whatever hosts it (the Pages page-detail section, whose host paints
-// the "Linked from" card) owns the heading. No coupling to the pages app or any
-// block type — navigation is whatever the surrounding host declared through
-// `page-reference`, the same seam the reference blocks inside a page read.
+// reindex. Each row is two lines: the source page (icon, title, and its place
+// in the page tree) and, under it, the excerpt of its first linking block with
+// the link marked. Title-less on purpose: this is a body, and whatever hosts it
+// owns the heading. No coupling to the pages app or any block type — navigation
+// is whatever the surrounding host declared through `page-reference`, the same
+// seam the reference blocks inside a page read.
 export function Backlinks({ documentId }: BacklinksProps) {
   const nav = usePageNavigation();
   const result = useLive(pageBacklinks, { pageId: documentId });
@@ -42,6 +75,18 @@ export function Backlinks({ documentId }: BacklinksProps) {
         type: "text",
         value: (row) => row.title || "Untitled",
         primary: true,
+      },
+      {
+        id: "path",
+        label: "Location",
+        type: "text",
+        value: (row) => row.path.join(PATH_SEPARATOR),
+      },
+      {
+        id: "snippet",
+        label: "Excerpt",
+        type: "text",
+        value: (row) => (row.snippet === null ? "" : snippetText(row.snippet)),
       },
     ],
     [],
@@ -68,6 +113,7 @@ export function Backlinks({ documentId }: BacklinksProps) {
       rowKey={(row) => row.id}
       views={["list"]}
       storageKey={BACKLINKS_VIEW}
+      toolbar={BACKLINKS_TOOLBAR}
       onRowActivate={(row) => nav?.open(row.id)}
       viewOptions={{
         list: {
@@ -80,8 +126,53 @@ export function Backlinks({ documentId }: BacklinksProps) {
               />
             </Center>
           ),
+          renderRow: (row: BacklinkRow) => <BacklinkBody row={row} />,
         },
       }}
     />
+  );
+}
+
+/** The snippet as one string — what search matches against. */
+function snippetText(s: BacklinkSnippet): string {
+  return s.before + s.match + s.after;
+}
+
+/**
+ * A backlink row's body: the title line (title, then the source page's place
+ * in the tree, muted, truncating from its lead so the nearest parent stays
+ * readable) and — when the link sits inside text — the excerpt around it, the
+ * link itself marked. A block that IS the link has no excerpt (`snippet: null`)
+ * and the row is its title line alone.
+ */
+function BacklinkBody({ row }: { row: BacklinkRow }) {
+  return (
+    // Clipping floors this flex item's automatic minimum size at 0, so the
+    // lines inside can truncate against the row's width.
+    <Stack gap="none" className={clipClasses({ axis: "both", fill: true })}>
+      <Line className="gap-sm">
+        <Fill>
+          <Text variant="label" tone="strong">
+            {row.title || "Untitled"}
+          </Text>
+        </Fill>
+        {row.path.length > 0 && (
+          <Text variant="caption" tone="faint" side="start">
+            {row.path.join(PATH_SEPARATOR)}
+          </Text>
+        )}
+      </Line>
+      {row.snippet !== null && (
+        <Line>
+          <Text variant="caption" tone="muted">
+            {row.snippet.before}
+            <mark className="bg-transparent font-medium text-foreground">
+              {row.snippet.match}
+            </mark>
+            {row.snippet.after}
+          </Text>
+        </Line>
+      )}
+    </Stack>
   );
 }

@@ -1,40 +1,44 @@
 // @hash 6ec84829688d
 {
-  // The two sidebar view instances. The DataView's view switcher IS the sidebar
-  // chrome — there are no section headers.
+  // The Pages sidebar's sections. The surface renders with the DataView
+  // `sections` chrome (`pages-sidebar.tsx`): EVERY view instance below is on
+  // screen at once, stacked in this order, each under its own collapsible
+  // header — there is no view switcher. A header's `+` offers the creators
+  // whose `views` name it (only `pages`: "New page"), and its `⋯` holds that
+  // view's search / filter / sort plus "Section settings" and "Add section".
   //
-  // `visibleFields: ["title"]` on both keeps the contributed `starred` bool a pure
-  // FILTER dimension: the default (absent) shows every schema field, which would
-  // render a checkbox chip on every row. Filter/sort/search always see the full
-  // schema, so `starred` stays usable in the Filter pill.
+  // `visibleFields: ["title"]` on every view keeps the contributed `starred`
+  // bool and `origin` enum pure FILTER dimensions: the default (absent) shows
+  // every schema field, which would render a chip on every row. Filter/sort/
+  // search always see the full schema.
   //
-  // Favorites is a `list`, not a filtered `tree`: the tree's filter is
-  // subtree-preserving (it keeps the ancestor chain of every match), so a filtered
-  // tree would render the UNSTARRED ancestors of every starred page.
-  // Its row order is owned by the view instance (data-view/view-order), which is
-  // why `starred` needs no rank column.
+  // Favorites is a `list`, not a filtered `tree`: a starred page is shown on
+  // its own, never with its unstarred ancestors. Its row order is owned by the
+  // view instance (data-view/view-order), which is why `starred` needs no rank
+  // column. `hideWhenEmpty`: nothing starred → no Favorites header at all.
+  //
+  // Private and Scratch partition the page tree by the contributed `origin`
+  // enum (agent-origin): pages written by an automated session are `agent`,
+  // everything else `user`. `filterScope: "roots"` tests the ROOTS only and
+  // keeps each kept root's whole subtree, so a subtree is never split between
+  // the two and neither pulls in the other's ancestors (the default `rows`
+  // scope would keep a matching child's whole ancestor chain). Scratch is
+  // `hideWhenEmpty`: it appears only while agent pages exist, which the 24h
+  // agent-origin sweep moves to trash.
   //
   // Each view's `id` is authored explicitly (enforced by the
   // `config-stable-list-ids` check): view ids key `data_view_row_order`, so a
-  // derived/auto id would shift on rename/edit and orphan the saved order.
-  //
-  // `groupBy: "origin"` on Pages segregates pages written by an automated
-  // session (the contributed `origin` enum from `agent-origin`) into their own
-  // **Agent** section, below **Mine**. The tree partitions ROOTS only and every
-  // descendant follows its root's section, so a subtree is never split. Unmarked
-  // pages project "user", so there is no "None" bucket.
+  // derived/auto id would shift on rename/edit and orphan the saved order. The
+  // main tree keeps the id `pages` under its new name "Private" for exactly
+  // that reason.
   "views": [
-    {
-      "id": "pages",
-      "name": "Pages",
-      "view": { "type": "tree", "visibleFields": ["title"], "groupBy": "origin" }
-    },
     {
       "id": "favorites",
       "name": "Favorites",
       "view": {
         "type": "list",
         "visibleFields": ["title"],
+        "hideWhenEmpty": true,
         "filter": {
           "kind": "group",
           "id": "fav",
@@ -46,6 +50,54 @@
               "fieldId": "starred",
               "operatorId": "is",
               "value": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "pages",
+      "name": "Private",
+      "view": {
+        "type": "tree",
+        "visibleFields": ["title"],
+        "filterScope": "roots",
+        "filter": {
+          "kind": "group",
+          "id": "private",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "private-origin",
+              "fieldId": "origin",
+              "operatorId": "is",
+              "value": "user"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "scratch",
+      "name": "Scratch",
+      "view": {
+        "type": "tree",
+        "visibleFields": ["title"],
+        "filterScope": "roots",
+        "hideWhenEmpty": true,
+        "description": "Pages created by agent runs — moved to trash after 24h",
+        "filter": {
+          "kind": "group",
+          "id": "scratch",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "scratch-origin",
+              "fieldId": "origin",
+              "operatorId": "is",
+              "value": "agent"
             }
           ]
         }

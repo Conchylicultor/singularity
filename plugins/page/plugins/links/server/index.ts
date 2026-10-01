@@ -7,6 +7,10 @@ import {
 } from "@plugins/page/plugins/editor/server";
 import { reindexLinksJob } from "./internal/reindex-job";
 import {
+  backfillPageLinksJob,
+  pageLinksBackfillWarmup,
+} from "./internal/backfill-job";
+import {
   pageBacklinksServed,
   pageLinksLiveResource,
 } from "./internal/resources";
@@ -24,7 +28,9 @@ export { reindexPage } from "./internal/reindex";
 export default {
   description:
     "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.",
-  register: [reindexLinksJob],
+  // The backfill warm-up rebuilds every page's edges off the serving-critical
+  // boot path; the jobs back both it and the steady-state reindex trigger.
+  register: [reindexLinksJob, backfillPageLinksJob, pageLinksBackfillWarmup],
   contributions: [
     ...pageBacklinksServed.declare,
     Resource.Declare(pageLinksLiveResource),

@@ -49,6 +49,7 @@
     - `primitives/action-presentation`
     - `primitives/command-palette`
     - `primitives/css/control-panel`
+    - `primitives/data-view`
     - `primitives/icon-button`
     - `primitives/launch`
     - `primitives/overlay/image-viewer`

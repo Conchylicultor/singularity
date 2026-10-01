@@ -1,8 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { PageLinks } from "@plugins/page/plugins/links/server";
 import { Editor } from "@plugins/page/plugins/editor/server";
+import { InlineTokenReferentSource } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import { PAGE_LINK_TOKEN_PATTERN, pageLinkInlineNode } from "../core";
 import { extractInlinePageLinks } from "./internal/extract-inline-links";
+import { resolvePageLinkReferent } from "./internal/referent";
 
 export default {
   description:
@@ -26,6 +28,16 @@ export default {
       // separate field from `pattern` because most tokens do NOT.
       markdownSpan: "protect",
       node: pageLinkInlineNode,
+    }),
+    // What the token names, read on the server: the linked page's title. Text a
+    // model reads gets `<page id title/>` for it, and text a person reads (a
+    // backlink's snippet) gets the title the chip shows — instead of the raw
+    // `[[page:<id>]]` bytes, or the bare-block-id family reading the id INSIDE
+    // them (this span starts first, so it wins the overlap).
+    InlineTokenReferentSource({
+      kind: "page",
+      pattern: PAGE_LINK_TOKEN_PATTERN,
+      resolve: resolvePageLinkReferent,
     }),
   ],
 } satisfies ServerPluginDefinition;

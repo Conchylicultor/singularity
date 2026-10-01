@@ -12,7 +12,11 @@ import { handleTurnIntoPage } from "./internal/handle-turn-into-page";
 import { handleSetPageKind } from "./internal/handle-set-page-kind";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
-import { pagesLiveResource, pageBlocksServed } from "./internal/resources";
+import {
+  pagesLiveResource,
+  pageBlocksServed,
+  pageEditedAtServed,
+} from "./internal/resources";
 import {
   restoreTrashedBlocks,
   purgeTrashedBlocks,
@@ -136,6 +140,7 @@ export default {
   contributions: [
     Resource.Declare(pagesLiveResource),
     ...pageBlocksServed.declare,
+    ...pageEditedAtServed.declare,
     // `page` is owned here, not by the `sub-page` renderer: page rows are written
     // directly by turn-into-page / restorePageContent, so their validation must not
     // depend on the sub-page plugin being enabled. sub-page contributes only its web

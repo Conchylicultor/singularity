@@ -12,7 +12,12 @@ import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/c
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
-import type { HostedToolbar, ToolbarArrangement } from "./toolbar-arrangement";
+import type { FilterScope } from "./filter-scope";
+import type {
+  HostedToolbar,
+  SectionsToolbar,
+  ToolbarArrangement,
+} from "./toolbar-arrangement";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
@@ -149,6 +154,12 @@ export interface CreateOption {
   icon?: ReactNode;
   /** Longer description shown as a muted sub-line in the N-creator menu only. */
   description?: string;
+  /**
+   * On a `{ kind: "sections" }` surface: the view-instance ids whose section
+   * header offers this creator. Absent ⇒ every section. Ignored by every
+   * other chrome, which has one create affordance for the whole surface.
+   */
+  views?: readonly string[];
   /** Run the create action. May be async — the host tracks in-flight busy state. */
   onSelect: () => void | Promise<unknown>;
 }
@@ -451,6 +462,14 @@ export interface ViewState {
    * The host suspends it while a search query is typed.
    */
   fold?: FoldRule;
+  /**
+   * What the filter is evaluated on in a hierarchical view — matching rows plus
+   * their ancestors (`rows`, the default) or roots, each keeping its whole
+   * subtree (`roots`). See {@link FilterScope}. Persisted in the per-instance
+   * config row beside `filter` (host-injected, read-only here — authored, never
+   * written by a control). Flat views ignore it.
+   */
+  filterScope?: FilterScope;
   /** Local expand state for hierarchical views lacking server-persisted expansion. */
   expanded?: Record<string, boolean>;
 }
@@ -1007,13 +1026,16 @@ export interface ServerDataSourceSpec<TRow> {
 }
 
 /**
- * The surface's chrome: a toolbar band (optionally laid out by an arrangement)
- * with its `title` / `actions`, or a {@link HostedToolbar} whose frame is the
- * surface's own header — which is why `title` / `actions` do not type-check
- * alongside it: the frame renders its own, and a second source would be
- * silently dropped.
+ * The chromes that show ONE active instance: a toolbar band (optionally laid
+ * out by an arrangement) with its `title` / `actions`, or a
+ * {@link HostedToolbar} whose frame is the surface's own header — which is why
+ * `title` / `actions` do not type-check alongside it: the frame renders its
+ * own, and a second source would be silently dropped.
+ *
+ * `MergedDataView` takes only these: it mounts ONE source's data at a time,
+ * so it cannot stack every instance as {@link SectionsToolbar} does.
  */
-export type DataViewSurfaceChrome =
+export type DataViewActiveChrome =
   | {
       title?: ReactNode;
       actions?: ReactNode;
@@ -1031,6 +1053,22 @@ export type DataViewSurfaceChrome =
       actions?: never;
       /** No band: the surface's own frame places the options trigger. */
       toolbar: HostedToolbar;
+    };
+
+/**
+ * The surface's chrome: one of the {@link DataViewActiveChrome}s, or
+ * {@link SectionsToolbar} — every instance stacked, each under its own header.
+ * A sections surface has no band for `title` / `actions` and no single
+ * instance to pin, so all three are type errors beside it.
+ */
+export type DataViewSurfaceChrome =
+  | DataViewActiveChrome
+  | {
+      title?: never;
+      actions?: never;
+      pinnedView?: never;
+      /** Every view instance, stacked in config order. */
+      toolbar: SectionsToolbar;
     };
 
 export type DataViewProps<TRow> = DataViewBaseProps<TRow> &

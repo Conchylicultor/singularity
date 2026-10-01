@@ -95,6 +95,10 @@ A row is authored terse (`{ name, view }`); view-core's `normalizeRows` derives
 `id` on read and **array position is the canonical order** (no `rank` field) — see
 view-core's CLAUDE.md. The `view` blob is `{ type, sort?, filter?, …opts }`;
 `sort`/`filter`/`groupBy` are host-injected keys read via `viewFor`/`updateView`.
+So are three authored-only keys (no control writes them): `filterScope`
+(`"rows" | "roots"`, what a hierarchical view's filter tests — see the tree
+child's CLAUDE.md "Filter"; flat views ignore it), and, read only by the
+`sections` chrome, `hideWhenEmpty` and `description` (see "Sections toolbar").
 `groupBy` is a `GroupByRule` (`{ fieldId, groupingId }` — see "Grouping is a field-type
 contribution"), with the legacy bare `"<fieldId>"` string migrated on read. `sort` is a
 `SortRule[]` (ordered multi-level; each `{ fieldId, direction }`, priority = list
@@ -136,7 +140,7 @@ Storage for non-config state):
 |---|---|
 | Instance def `{ id, name, view:{ type, sort?, filter?, …opts } }` (array-ordered) | `viewsDescriptor` config row (user-global layer) |
 | Active instance id | localStorage `${storageKey}:active-view` (per device) |
-| Tree expand map, collapsed group sections | localStorage `${storageKey}:view-state` (per device) |
+| Tree expand map, collapsed group sections, collapsed view section (`collapsed`, sections chrome) | localStorage `${storageKey}:view-state` (per device) |
 | Search query | **sessionStorage** `${storageKey}:view-query` (per browser tab) |
 
 The localStorage reader ignores legacy `sort`/`filter`/`query` keys in a
@@ -772,6 +776,11 @@ while pending, so no consumer hand-rolls a per-call-site `useState`. The creator
 are also threaded into `DataViewRenderProps.creators` so views can opt into their
 own create UI (the gallery's trailing "+" card + empty-state CTA).
 
+`CreateOption.views?: string[]` names the view instances whose section header
+offers the creator on a `sections` surface (absent ⇒ every section) — data, so
+the host still builds the one `CreatorsControl`. Every other chrome has one
+create affordance for the whole surface and ignores it.
+
 ## Toolbar arrangements
 
 The toolbar's **parts** are the host's; their **layout** is an arrangement's.
@@ -868,6 +877,58 @@ unless the frame attaches `stickyRef` to a sticky header of its own.
 Declare `frame` at module scope: it is a component, and a new identity per render
 remounts the whole card. **Config is unchanged** — a hosted surface still has
 its `defineDataView` id and authored config file like any other.
+
+## Sections toolbar: every view at once
+
+`toolbar={{ kind: "sections", forms? }}` renders EVERY authored view instance,
+stacked in config order, each under its own collapsible header — a sidebar's
+"Favorites / Private / Scratch" as one surface. There is no active instance and
+no switcher. The Pages sidebar is the reference.
+
+- **Shell.** `DataViewShellFrame` hands `renderSections(instances, …)` the whole
+  list instead of calling its one-instance child; `DataView` renders
+  `DataViewSectionsBody`, which hoists the field-extension fold above the
+  sections (contributed fields subscribe once per surface) and mounts one
+  `DataViewBodyInner` per instance, keyed by its id. The body needs nothing
+  else: every controller in it is already keyed by view id through the
+  id-parameterised `ReadyViewModel`. The model stays ONE hook in the shell —
+  `useViewEphemeral` is a single `useState` over the whole map, so per-section
+  models would overwrite each other's writes.
+- **Header** (`web/components/view-section.tsx`, `ViewSection`): a
+  `SectionHeaderRow` (`forms.header`: `eyebrow` default, or `group`) with the
+  chevron trailing on hover, inside a DOM-less `CollapsibleProvider`. Its
+  hover-revealed `RowActions` cluster holds `+` (the surface's `creators`
+  narrowed by `CreateOption.views`) and `⋯` — a `ControlPanelPopover` whose
+  first page is the compact fold's own (`CompactRootPanel`: search + one row per
+  applicable control, under a `DataViewControlsProvider` for THAT view), then
+  "Section settings" (view-core's `ViewSettingsPopover`: rename, type/options,
+  duplicate, delete) and "Add section" (a page of the addable types). The
+  cluster stays visible while the panel is open or a query narrows the view.
+- **Sticky.** Each section is its own containing block, so its header pins
+  while the section is on screen and hands off to the next one (not the
+  accumulating `StickyStack` of group headers). Its body re-publishes
+  `--dv-header-offset` as the header's measured height, so a grouped view's
+  group headers pin under the section header. The shell's `stickyRef` is unused.
+- **Collapse** is device-local: a view-level `collapsed` flag beside the view's
+  expand map in `${storageKey}:view-state` — never a key in
+  `collapsedSections`, which holds the view's group-by values.
+- **`hideWhenEmpty`** (view row key): the body decides before the view mounts —
+  hidden while its rows' `readiness` is loading (not-known-yet is never painted
+  as an empty section, nor flashed in and out), hidden once ready with no row
+  surviving the view's filter (the same `useRowFilter` predicate, under the
+  same `filterScope` via the shared `scopeFilterRows` — "any root matches" for
+  a roots-scoped tree), shown otherwise, a failed read included. A
+  server-delegated source reports its own filtered page.
+- **`description`** (view row key): the header label's tooltip, and the first
+  line of its `⋯` panel.
+- **`selectedRowId` stays surface-level.** It highlights the row in EVERY
+  section that shows it — a starred page is selected in Favorites and in the
+  tree at once, as in Notion.
+- `title` / `actions` / `pinnedView` are type errors beside it (no band; a
+  pinned surface has one instance). `MergedDataView` takes
+  `DataViewActiveChrome`, the union without this arm, so it cannot be spelled
+  there: a merged surface mounts one source at a time. Section reorder is
+  config order; drag-reordering sections is a follow-up.
 
 ## Toolbar controls
 

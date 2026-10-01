@@ -40,6 +40,29 @@ icon is set) and, above it, whatever `footerActions` renders — typed
 `ControlPanel.Row`. That prop is the extension point for an action beside Remove
 (the auto-icon plugin's Regenerate); the header passes it through.
 
+## The title header is slots, not a hardcoded row
+
+`PageHeader` paints the icon, then two contributed parts around the title:
+
+- `PageDetail.HeaderTool` — the hover-revealed tool row above the title (Add
+  cover, Add icon, Change icon);
+- `PageDetail.UnderTitle` — rows under the title ("Linked from N pages", which
+  expands in place into the backlinks list; properties later).
+
+Both take `{ component, useAvailable? }`, the same gate `Section` takes: a tool
+that would change nothing on this page (Add icon on a page that has one)
+declares it unavailable rather than rendering `null`, so the header resolves
+it before painting. Each part is handed `{ pageId, page }` — the header paints
+parts only once the page row is known, so no part reads the pages list itself.
+Writes go through `useSavePageData(page)` (`web/internal/use-save-page-data.ts`),
+which spreads over the page's CURRENT data so two parts never clobber each
+other's keys.
+
+"Edited 2h ago" (`pageDetailPane.Actions` `edited`) reads the editor's
+`pageEditedAt` — the newest `updatedAt` across the page row AND its live
+content blocks: a content edit stamps only the edited block's row, never the
+page row.
+
 ## One row-action registry, no `rowMenu`
 
 Every trailing affordance on a sidebar row is a `PageTree.RowActions`
@@ -52,6 +75,21 @@ of them.
 
 `AddPageBelowAction` returns `null` when there are no row controls — Favorites is
 a flat `list` view, so that is the normal non-tree case, not a failure.
+
+## The sidebar is a sections DataView
+
+`PagesSidebar` renders the `pages-sidebar` DataView with the `sections` chrome
+(`toolbar={{ kind: "sections" }}`): every view instance authored in
+`config/apps/pages/page-tree/pages-sidebar.jsonc` is on screen at once, stacked
+under its own collapsible header — **Favorites** (a `list` of starred pages),
+**Private** (the tree, `origin is user`) and **Scratch** (the tree, `origin is
+agent`). Private and Scratch split the tree with `filterScope: "roots"`, so a
+subtree stays whole in one of them; Favorites and Scratch are `hideWhenEmpty`.
+The main tree keeps the view id `pages` (its saved row order is keyed by it).
+The one `new-page` creator names `views: ["pages"]`, so only Private's header
+offers `+`. The sidebar's footer rows are separate `Pages.Sidebar` items —
+**New page** (`NewPageItem`, here) and **Trash** — placed after the tree's
+growing `Scroll` by `config/apps/pages/shell/sidebar.jsonc`.
 
 ## The tree has two hosts, and reads which one it is in
 
@@ -103,11 +141,13 @@ it, so an id means the same thing wherever it is clicked.
 - Description: Sidebar page-tree plus the page-detail pane (header, editor, sections slot) and the block-detail pane (one block of a page, opened as a page of its own) for the Pages app, with useBlockTarget — the one resolver of a bare block id to the pane that shows it.
 - Web:
   - Slots:
-    - `PageDetail.Section` ← `apps.pages.page-tree`
+    - `PageDetail.HeaderTool` ← `apps.pages.page-tree`
+    - `PageDetail.UnderTitle` ← `apps.pages.page-tree`
+    - `PageDetail.Section`
     - `PageDetail.Overlay` ← `apps.pages.page-outline`
     - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`
     - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
-    - `pageDetailPane.Actions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.page-author`, `apps.pages.starred`, `primitives.pane`
+    - `pageDetailPane.Actions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.page-author`, `apps.pages.page-tree`, `apps.pages.starred`, `primitives.pane`
     - `blockDetailPane.Actions` ← `primitives.pane`
     - `pagesTreePane.Actions` ← `primitives.pane`
   - Contributes:
@@ -115,7 +155,12 @@ it, so an id means the same thing wherever it is clicked.
     - `Pane.Register` "block-detail"
     - `Pane.Register` "pages-tree"
     - `Pages.Sidebar` "Pages" → `PagesSidebar`
-    - `PageDetail.Section` "Linked from" → `BacklinksSection`
+    - `Pages.Sidebar` "New page" → `NewPageItem`
+    - `PageDetail.HeaderTool` "add-icon" → `AddIconTool`
+    - `PageDetail.HeaderTool` "change-icon" → `ChangeIconTool`
+    - `PageDetail.HeaderTool` "add-cover" → `AddCoverTool`
+    - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
+    - `pageDetailPane.Actions` "edited" → `EditedLabel`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
   - Uses:
@@ -141,6 +186,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/app-shell.SidebarItem`
     - `primitives/breadcrumb.Breadcrumb`
     - `primitives/breadcrumb.BreadcrumbSegment`
+    - `primitives/collapsible.useCollapsible`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/control-panel.ControlPanel`
@@ -148,6 +194,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
@@ -179,6 +226,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/pane.useOpenPane`
     - `primitives/pane.usePaneStore`
     - `primitives/pane.useSurfaceAppId`
+    - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `primitives/tree.useOptionalRowControls`

@@ -335,6 +335,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `page/editor`
     - `page/editor-collab`
     - `page/inline-date`
+    - `page/inline-page-link`
     - `page/links`
     - `page/markdown-apply`
     - `page/page-link`

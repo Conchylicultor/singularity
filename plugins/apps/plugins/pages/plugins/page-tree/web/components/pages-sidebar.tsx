@@ -12,6 +12,7 @@ import {
   defineDataView,
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { SectionsToolbar } from "@plugins/primitives/plugins/data-view/core";
 import {
   pagesResource,
   updateBlock,
@@ -31,6 +32,13 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const addIcon = symbol("add");
 
 const PAGES_SIDEBAR_VIEW = defineDataView("pages-sidebar");
+
+/**
+ * Every authored view instance at once — Favorites, Private, Scratch — each
+ * under its own collapsible header, instead of a switcher showing one. Module
+ * scope: a toolbar spec is data the host reads, one value for the surface.
+ */
+const SECTIONS: SectionsToolbar = { kind: "sections" };
 
 const NO_LINK_PARENTS: readonly string[] = [];
 
@@ -73,8 +81,10 @@ export function PagesSidebar() {
 
   // Build rows only under the ready guard (never the `pending ? [] : data`
   // collapse that makes loading look like a confirmed-empty tree); the DataView
-  // gets `readiness={result}`, so the switcher chrome paints immediately and
-  // only the body shows the skeleton — or the failure, with Retry.
+  // gets `readiness={result}`, so the section headers paint immediately and
+  // only their bodies show the skeleton — or the failure, with Retry. A
+  // `hideWhenEmpty` section (Favorites, Scratch) stays absent until the rows
+  // are known, rather than flashing in empty.
   let rows: PageRow[] = [];
   if (result.status === "ready") {
     rows = result.data;
@@ -105,9 +115,10 @@ export function PagesSidebar() {
         // carries ONE action registry with one authored overflow bucket instead
         // of the tree's "⋯" growing a second, parallel menu beside it.
         //
-        // Root creation lives on the DataView `creators` "+" (Notion-style), and
-        // per-row sub-page creation on each row's hover "+", so the persistent
-        // footer "New Page" line is dropped for a more compact tree.
+        // Root creation lives on the Private section header's "+" (the DataView
+        // `creators`, narrowed to that section) and the sidebar's own "New page"
+        // row, and per-row sub-page creation on each row's hover "+", so the
+        // tree's own footer "Add" line is dropped for a more compact tree.
         addLabel: null,
         dragOverlay: (b: PageRow) => pageData(b).title || "Untitled",
         // A decorated KIND of page (an agent-authored one, …) keeps its wash
@@ -122,12 +133,11 @@ export function PagesSidebar() {
           );
         },
       },
-      // Favorites (a filtered `list` view) gets the same page icon + density.
+      // Favorites (a filtered `list` view) gets the same page icon and the tree's row size.
       list: {
         leading: (b: PageRow) => (
           <PageIcon icon={pageData(b).icon} className="size-4" />
         ),
-        size: "sm" as const,
       },
     }),
     [tintOf],
@@ -144,13 +154,19 @@ export function PagesSidebar() {
         label: "New page",
         icon: <Icon icon={addIcon} />,
         onSelect: createRootPage,
+        // Only the Private section's header offers it: a new page is a user
+        // root page, which lands there — never in Favorites or Scratch.
+        views: ["pages"],
       },
     ];
   }, [openPane, openMode]);
 
-  // The DataView's view switcher IS the sidebar chrome (no SidebarPaneSection).
-  // This `Scroll` is the direct flex child of the app-shell sidebar `Stack`;
-  // the DataView never owns a scroll — its `Sticky` toolbar pins against it.
+  // The DataView's section headers ARE the sidebar chrome (no
+  // SidebarPaneSection): every view instance stacks in config order under its
+  // own collapsible header. This `Scroll` is the direct flex child of the
+  // app-shell sidebar `Stack` — and its only growing item, so the `New page` /
+  // `Trash` rows after it sit at the bottom; the DataView never owns a scroll —
+  // each section's `Sticky` header pins against it.
   return (
     <Scroll fill className="py-xs">
       <DataView<PageRow>
@@ -181,6 +197,7 @@ export function PagesSidebar() {
         rowKey={(b) => b.id}
         views={["tree", "list"]}
         storageKey={PAGES_SIDEBAR_VIEW}
+        toolbar={SECTIONS}
         fieldExtensions={PageTree.Fields}
         creators={creators}
         selectedRowId={selectedId}

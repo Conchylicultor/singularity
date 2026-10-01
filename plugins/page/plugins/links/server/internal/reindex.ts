@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
   liveBlocks,
@@ -11,9 +11,9 @@ import { _pageLinks } from "./tables";
 //
 // 1. Load the page's content blocks (`pageId = pageId`).
 // 2. Dispatch each block generically by `block.type` over the collected
-//    extractors (collection-consumer separation — never names a block type).
-// 3. Dedupe targets, drop self-references and ids that aren't `type="page"`
-//    blocks.
+//    extractors (collection-consumer separation — never names a block type),
+//    recording WHICH block each link came from: an edge is (target, block).
+// 3. Drop self-references and ids that aren't `type="page"` blocks.
 // 4. Diff against the existing page_links rows for this source; insert added
 //    edges, delete removed ones. Each affected target's backlinks panel
 //    refreshes automatically — the page_links insert/delete is invalidated by
@@ -31,23 +31,31 @@ export async function reindexPage(pageId: string): Promise<void> {
   }
 
   const blocks = await db
-    .select({ type: liveBlocks.type, data: liveBlocks.data })
+    .select({ id: liveBlocks.id, type: liveBlocks.type, data: liveBlocks.data })
     .from(liveBlocks)
     .where(eq(liveBlocks.pageId, pageId));
 
-  const targets = new Set<string>();
-  const collect = (extract: (data: unknown) => string[], data: unknown) => {
-    for (const id of extract(data)) {
-      if (id && id !== pageId) targets.add(id);
+  // `edgeKey(target, block)` → the edge, deduped (two extractors, or one
+  // extractor naming a target twice, still make one edge per block).
+  const found = new Map<string, Edge>();
+  const collect = (
+    extract: (data: unknown) => string[],
+    block: { id: string; data: unknown },
+  ) => {
+    for (const targetPageId of extract(block.data)) {
+      if (!targetPageId || targetPageId === pageId) continue;
+      const edge = { targetPageId, sourceBlockId: block.id };
+      found.set(edgeKey(edge), edge);
     }
   };
   for (const block of blocks) {
     const extract = extractors.get(block.type);
-    if (extract) collect(extract, block.data);
-    for (const g of globalExtractors) collect(g, block.data);
+    if (extract) collect(extract, block);
+    for (const g of globalExtractors) collect(g, block);
   }
 
   // Validate targets against pages — drop links to non-existent / non-page ids.
+  const targets = new Set([...found.values()].map((e) => e.targetPageId));
   let validTargets = new Set<string>();
   if (targets.size > 0) {
     const existing = await db
@@ -61,23 +69,26 @@ export async function reindexPage(pageId: string): Promise<void> {
       );
     validTargets = new Set(existing.map((r) => r.id));
   }
+  const next = new Map(
+    [...found].filter(([, e]) => validTargets.has(e.targetPageId)),
+  );
 
   const existingEdges = await db
-    .select({ targetPageId: _pageLinks.targetPageId })
+    .select({
+      targetPageId: _pageLinks.targetPageId,
+      sourceBlockId: _pageLinks.sourceBlockId,
+    })
     .from(_pageLinks)
     .where(eq(_pageLinks.sourcePageId, pageId));
-  const oldTargets = new Set(existingEdges.map((r) => r.targetPageId));
+  const old = new Map(existingEdges.map((e) => [edgeKey(e), e]));
 
-  const toInsert = [...validTargets].filter((t) => !oldTargets.has(t));
-  const toDelete = [...oldTargets].filter((t) => !validTargets.has(t));
+  const toInsert = [...next].filter(([k]) => !old.has(k)).map(([, e]) => e);
+  const toDelete = [...old].filter(([k]) => !next.has(k)).map(([, e]) => e);
 
   if (toInsert.length > 0) {
-    await db.insert(_pageLinks).values(
-      toInsert.map((targetPageId) => ({
-        sourcePageId: pageId,
-        targetPageId,
-      })),
-    );
+    await db
+      .insert(_pageLinks)
+      .values(toInsert.map((e) => ({ sourcePageId: pageId, ...e })));
   }
   if (toDelete.length > 0) {
     await db
@@ -85,8 +96,24 @@ export async function reindexPage(pageId: string): Promise<void> {
       .where(
         and(
           eq(_pageLinks.sourcePageId, pageId),
-          inArray(_pageLinks.targetPageId, toDelete),
+          or(
+            ...toDelete.map((e) =>
+              and(
+                eq(_pageLinks.targetPageId, e.targetPageId),
+                eq(_pageLinks.sourceBlockId, e.sourceBlockId),
+              ),
+            ),
+          ),
         ),
       );
   }
 }
+
+interface Edge {
+  targetPageId: string;
+  sourceBlockId: string;
+}
+
+/** One spelling of an edge's identity within its source page. */
+const edgeKey = (e: Edge): string =>
+  `${e.targetPageId}\u0000${e.sourceBlockId}`;

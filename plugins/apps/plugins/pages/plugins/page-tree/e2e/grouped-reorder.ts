@@ -1,13 +1,15 @@
 /**
  * Pins the regression: the Pages sidebar tree must stay **drag-reorderable while
- * grouped**.
+ * it shows only part of the roots**.
  *
- * `groupBy: "origin"` is on by default for this surface, and the tree used to
- * drop `hierarchy.onMove` whenever a group-by was active — so reordering
- * silently stopped working in the default view, with no visible cause. The
- * suspension existed because a per-section `TreeList` could mint a rank
- * colliding with a hidden root of another section; the drop contract now carries
- * only an anchor, which the server resolves against the complete sibling set
+ * The sidebar splits the page tree into sections — Private (`origin is user`)
+ * and Scratch (`origin is agent`), each a root-scoped filter of its own view —
+ * and before that into `groupBy: "origin"` groups. The tree used to drop
+ * `hierarchy.onMove` whenever it saw only part of the roots (under a group-by)
+ * — so reordering silently stopped working in the default view, with no
+ * visible cause. The suspension existed because a partial `TreeList` could mint
+ * a rank colliding with a hidden root; the drop contract now carries only an
+ * anchor, which the server resolves against the complete sibling set
  * (`research/2026-07-30-global-anchor-only-rank-authority.md`).
  *
  * ## What this asserts, and why it is the affordance rather than a gesture
@@ -74,15 +76,15 @@ await withBrowser(async (h) => {
   });
   await row(page, SECOND).waitFor({ state: "visible", timeout: 30_000 });
 
-  // The surface really is grouped — otherwise nothing below proves anything.
+  // The surface really is sectioned — otherwise nothing below proves anything.
   // `isVisible()` already answers false for a missing locator, so a catch here
   // would only turn a real Playwright fault into a passing-looking absence.
   const grouped = await page
-    .getByText(/^(Mine|Agent)$/)
+    .getByRole("button", { name: /^Private/ })
     .first()
     .isVisible();
   r.ok(
-    "the sidebar renders a group-by section header (groupBy is live)",
+    "the sidebar renders the Private section header (sections are live)",
     grouped,
   );
 

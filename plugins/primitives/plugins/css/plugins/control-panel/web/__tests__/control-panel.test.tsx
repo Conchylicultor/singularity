@@ -759,6 +759,54 @@ describe("ControlPanel — hint is a tooltip, never a line", () => {
   });
 });
 
+// `description` is the visible twin of `hint`: a second line under the label
+// that reserves its own height — a separate prop, because `hint` stays a
+// tooltip by contract (above).
+describe("ControlPanel — description is a visible second line", () => {
+  it("renders the description under the label, inside the label cell", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Section label="Page kind">
+          <ControlPanel.Row
+            select="radio"
+            checked
+            description="Agents can write all of it."
+            onSelect={vi.fn()}
+          >
+            Agent page
+          </ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>,
+    );
+    // The row's NAME is its label alone — the description is not folded in.
+    const row = screen.getByRole("radio", { name: "Agent page" });
+    const describedBy = row.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    const description = document.getElementById(describedBy!);
+    expect(description?.textContent).toBe("Agents can write all of it.");
+    // Visible, NOT the zero-box `sr-only` a hint uses: it takes a line.
+    expect(description?.className).not.toContain("sr-only");
+    const cell = description?.closest('[data-cp-cell="label"]');
+    expect(cell).not.toBeNull();
+    expect(cell?.hasAttribute("data-cp-described")).toBe(true);
+    // Under the label, in document order, and wrapping rather than truncating.
+    expect(cell?.firstElementChild?.textContent).toBe("Agent page");
+    expect(cell?.lastElementChild).toBe(description);
+    expect(description?.className).toContain("whitespace-normal");
+    // No tooltip trigger wraps it: a description is read, not hovered for.
+    expect(container.querySelector("[data-cp-described] .sr-only")).toBeNull();
+  });
+
+  it("leaves an undescribed row's label cell a plain single line", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row onSelect={vi.fn()}>Plain</ControlPanel.Row>
+      </ControlPanel>,
+    );
+    expect(container.querySelector("[data-cp-described]")).toBeNull();
+  });
+});
+
 // A Section's description is prose about the BAND — not a row, so invariant #2
 // never sees it.
 describe("ControlPanel.Section — description", () => {

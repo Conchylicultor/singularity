@@ -15,6 +15,7 @@ import {
   type DataViewProps,
   type DataViewToolbarSpec,
   isHostedToolbar,
+  isSectionsToolbar,
 } from "../../core";
 import {
   CollapsedViewSwitcher,
@@ -32,7 +33,7 @@ import type { DataViewShellChrome } from "../internal/body-types";
 import { useDataViewDevGuards } from "../internal/use-dev-guards";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { CreatorsControl, hostedCreators } from "./creators-control";
-import { DataViewBody } from "./data-view-body";
+import { DataViewBody, DataViewSectionsBody } from "./data-view-body";
 
 /**
  * Host entry point. Every DataView is config-backed (config mode is universal):
@@ -77,6 +78,14 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       toolbar={props.toolbar}
       searchPlaceholder={props.searchPlaceholder}
       pinnedView={props.pinnedView}
+      renderSections={(instances, chrome, readyModel) => (
+        <DataViewSectionsBody<TRow>
+          {...props}
+          viewModel={readyModel}
+          instances={instances}
+          chrome={chrome}
+        />
+      )}
     >
       {(activeInstance, chrome, readyModel) => (
         <DataViewBody<TRow>
@@ -121,6 +130,18 @@ export function DataViewShellFrame(props: {
     chrome: DataViewShellChrome,
     viewModel: ReadyViewModel,
   ) => ReactNode;
+  /**
+   * Renders EVERY instance, stacked — what a `{ kind: "sections" }` toolbar
+   * shows instead of `children`'s one active instance. Only the single-source
+   * `DataView` passes it: `MergedDataView` cannot take a sections toolbar (its
+   * props exclude it), so its absence there is unreachable, and a sections
+   * toolbar without it throws rather than silently rendering one section.
+   */
+  renderSections?: (
+    instances: readonly ResolvedViewInstance<DataViewContribution>[],
+    chrome: DataViewShellChrome,
+    viewModel: ReadyViewModel,
+  ) => ReactNode;
 }): ReactNode {
   const {
     storageKey,
@@ -134,6 +155,7 @@ export function DataViewShellFrame(props: {
     searchPlaceholder,
     pinnedView,
     children,
+    renderSections,
   } = props;
 
   // DataView is always natural-height and never owns a scroller — the pane owns
@@ -163,12 +185,19 @@ export function DataViewShellFrame(props: {
   // root is the options trigger's hover-reveal group — the band that anchors it
   // otherwise does not exist.
   const hosted = isHostedToolbar(toolbar);
+  // Sections: no band and no frame — every instance under its own header, so
+  // a state with no instance is just its content.
+  const sectioned = isSectionsToolbar(toolbar);
   const rootClassName = hosted ? hoverRevealGroup : undefined;
   // The chrome of a state with no active instance (loading, or no views
   // authored): the band's stand-in toolbar, or the hosted frame without its
   // options — there is no instance for them to act on yet.
   const withoutInstance = (content: ReactNode): ReactNode =>
-    hosted ? (
+    sectioned ? (
+      <Stack gap="none" ref={rootRef}>
+        <div className="rail-follow py-md">{content}</div>
+      </Stack>
+    ) : hosted ? (
       <Stack gap="none" ref={rootRef} className={rootClassName}>
         <toolbar.frame
           options={null}
@@ -202,6 +231,41 @@ export function DataViewShellFrame(props: {
   }
 
   const { instances, activeId } = viewModel;
+
+  if (sectioned) {
+    if (!renderSections) {
+      throw new Error(
+        `DataView(${storageKey}): a sections toolbar needs a host that ` +
+          "renders every instance — MergedDataView cannot.",
+      );
+    }
+    if (instances.length === 0) {
+      return withoutInstance(
+        <Placeholder>
+          No views configured — author{" "}
+          <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>
+        </Placeholder>,
+      );
+    }
+    // No switcher (every instance is on screen) and no band to measure: each
+    // section publishes its own header's height to the views inside it, so
+    // the root's offset stays the `0px` of an unattached `stickyRef`.
+    const sectionsChrome: DataViewShellChrome = {
+      switcher: { strip: null, chip: null },
+      switcherCount: instances.length,
+      density,
+      groupHeaders,
+      toolbar,
+      searchPlaceholder,
+      stickyRef: toolbarRef,
+    };
+    return (
+      <Stack gap="none" ref={rootRef}>
+        {renderSections(instances, sectionsChrome, viewModel)}
+      </Stack>
+    );
+  }
+
   const pinned = pinnedView !== undefined;
   const matched = instances.find((r) => r.instance.id === activeId) ?? null;
   // The first-instance fallback is for an UNPINNED surface, whose active id can

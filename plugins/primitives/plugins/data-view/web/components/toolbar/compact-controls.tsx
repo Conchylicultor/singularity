@@ -158,8 +158,10 @@ export function CompactControls({
 /**
  * The fold's first page. A component of its own because it calls
  * `usePanelStack()`, which only exists inside the stack the popover mounts.
+ * Also the head of a sections surface's per-section `⋯` panel
+ * (`view-section.tsx`), so a section's controls read exactly like the fold's.
  */
-function CompactRootPanel({
+export function CompactRootPanel({
   controls,
   search,
 }: {

@@ -4,16 +4,17 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   ControlPanel,
   ControlPanelPopover,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import {
+  Button,
   cn,
   useControlSize,
   type ControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   pagesResource,
   pageData,
@@ -27,18 +28,20 @@ import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 const autoAwesomeIcon = symbol("auto-awesome");
 const descriptionIcon = symbol("description");
 const menuBookIcon = symbol("menu-book");
+const expandIcon = symbol("expand-more");
 
 /**
- * The square an icon button occupies at each density, so the placeholder holds
- * exactly the button's place in the strip and nothing shifts when it arrives.
- * Spelled out per density because Tailwind only emits class names it can see as
- * literals (a `control-icon-${size}` template would compile to nothing).
+ * The box the labelled pill occupies at each density — the control's height and
+ * about the width of "Page ▾" — so the placeholder holds the pill's place in the
+ * strip and nothing jumps when it arrives. Spelled out per density because
+ * Tailwind only emits class names it can see as literals (a
+ * `control-${size}` template would compile to nothing).
  */
-const ICON_BOX: Record<ControlSize, string> = {
-  xs: "control-icon-xs",
-  sm: "control-icon-sm",
-  md: "control-icon-md",
-  lg: "control-icon-lg",
+const PILL_BOX: Record<ControlSize, string> = {
+  xs: "control-xs w-16",
+  sm: "control-sm w-20",
+  md: "control-md w-20",
+  lg: "control-lg w-24",
 };
 
 /** How the control shows each kind: its icon, its name, and its pressed tint. */
@@ -94,16 +97,17 @@ function kindFor(k: PageKind["kind"]): PageKind {
  * the parent page), with a Global switch that hands those instructions to every
  * conversation at its start.
  *
- * One icon button whose icon names the current kind (tinted when it is not an
- * ordinary page), opening a small panel of three radio rows plus the switch. A
+ * One labelled ghost pill — the kind's icon, its name, a chevron — tinted when
+ * it is not an ordinary page, opening a small panel of three radio rows (each
+ * with its meaning as a visible line: the kind IS a policy, so it is read
+ * before it is picked) plus the switch. A
  * choice asks the server to change the page's kind (`setPageKind`, the one way a
  * kind changes after a page is born). It is deliberately not optimistic: the
  * trigger changes when the live `pagesResource` push lands — the same push that
  * re-tints the parent page's row and the sidebar.
  *
  * While the pages resource is still loading it renders a placeholder the size of
- * the button, never the button: that would claim a kind before anything is
- * known.
+ * the pill, never the pill: that would claim a kind before anything is known.
  */
 export function PageKindControl() {
   const { pageId } = pageDetailPane.useParams();
@@ -112,7 +116,7 @@ export function PageKindControl() {
   const { mutateAsync } = useEndpointMutation(setPageKind);
 
   if (result.status === "loading") {
-    return <Loading variant="block" className={ICON_BOX[size]} />;
+    return <Loading variant="block" className={PILL_BOX[size]} />;
   }
   if (result.status === "error") {
     return (
@@ -140,13 +144,18 @@ export function PageKindControl() {
       align="end"
       label="Page kind"
       trigger={
-        <IconButton
-          icon={look.icon}
-          label={look.label}
-          tooltip={`${look.label}: ${look.hint} Click to change.`}
+        // No tooltip: the label names the kind, and the panel it opens reads
+        // out what each kind means.
+        <Button
+          variant="ghost"
+          aria-label={`Page kind: ${look.label}`}
           aria-pressed={kind.kind !== "page"}
-          className={cn(look.tint)}
-        />
+          className={cn("text-muted-foreground", look.tint)}
+        >
+          <Icon icon={look.icon} />
+          {look.label}
+          <Icon icon={expandIcon} />
+        </Button>
       }
     >
       <ControlPanel.Section label="Page kind">
@@ -155,7 +164,7 @@ export function PageKindControl() {
             key={k}
             select="radio"
             checked={kind.kind === k}
-            hint={KIND_LOOK[k].hint}
+            description={KIND_LOOK[k].hint}
             onSelect={() => {
               if (kind.kind !== k) void choose(kindFor(k));
             }}
@@ -169,7 +178,7 @@ export function PageKindControl() {
           <ControlPanel.Row
             select="switch"
             checked={kind.global}
-            hint="Hand these instructions to every agent conversation at its start, wherever it works."
+            description="Hand these instructions to every agent conversation at its start, wherever it works."
             onSelect={() => {
               void choose({ kind: "instructions", global: !kind.global });
             }}

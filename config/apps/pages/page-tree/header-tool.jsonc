@@ -1,0 +1,17 @@
+// @hash 2a95fb6269c9
+// @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
+//   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+//   Hide: { "item": "<key>", "hidden": true }
+//   Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+//   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+//   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+{
+  // The hover row above the page title, read left to right: the cover first
+  // (it sits above everything), then the icon — Add icon on a page without
+  // one, Change icon on a page with one (each gated, so one of the two shows).
+  "items": [
+    "apps.pages.page-tree:add-cover",
+    "apps.pages.page-tree:add-icon",
+    "apps.pages.page-tree:change-icon"
+  ]
+}

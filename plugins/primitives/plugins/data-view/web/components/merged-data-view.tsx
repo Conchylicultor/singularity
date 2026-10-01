@@ -7,7 +7,7 @@ import type {
   DataViewDensity,
   DataViewGroupHeaders,
   DataViewId,
-  DataViewSurfaceChrome,
+  DataViewActiveChrome,
 } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
@@ -25,10 +25,13 @@ import type {
 import { DataViewShellFrame } from "./data-view";
 import { DataViewBody } from "./data-view-body";
 
-/** The surface chrome (`title` / `actions` / `toolbar`) is the same union
- *  `DataViewProps` takes — a hosted toolbar excludes `title` / `actions`. */
+/** The surface chrome (`title` / `actions` / `toolbar`) is the part of
+ *  `DataViewProps`' union that shows ONE active instance — a hosted toolbar
+ *  excludes `title` / `actions`, and the `sections` chrome is a type error
+ *  here: a merged surface mounts one source's data at a time, so it cannot
+ *  stack every instance. */
 export type MergedDataViewProps<THostProps> =
-  MergedDataViewBaseProps<THostProps> & DataViewSurfaceChrome;
+  MergedDataViewBaseProps<THostProps> & DataViewActiveChrome;
 
 interface MergedDataViewBaseProps<THostProps> {
   storageKey: DataViewId;

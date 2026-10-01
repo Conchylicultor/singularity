@@ -20,8 +20,9 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
   until the window lands.
 - **Favorites is a filtered `list` view instance** of the `pages-sidebar`
   DataView (authored in `page-tree`'s config, filtering on `starred = true`) —
-  not a separate `Pages.Sidebar` contribution. The DataView's view switcher is
-  the sidebar chrome.
+  not a separate `Pages.Sidebar` contribution. The DataView renders with the
+  `sections` chrome, so Favorites is its first section, and `hideWhenEmpty`
+  keeps its header off the sidebar while nothing is starred.
 - The Favorites **row order belongs to the view** (`data-view/view-order`, keyed
   by `(dataViewId, viewId)`), not to this table. Consequently there is no rank
   column and no reorder endpoint.

@@ -192,6 +192,7 @@ genuine transient-chrome list escapes with
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/pages/content-search`
+    - `apps/pages/page-tree`
     - `apps/pages/trash`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`

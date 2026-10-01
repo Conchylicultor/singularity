@@ -82,7 +82,7 @@ async function reachedPath(s: Session, path: string): Promise<boolean> {
  * A page to drive the checks against, made by the Pages landing surface's own
  * "Blank page" tile — no hardcoded block id to rot when this worktree's DB is
  * re-forked. The harness stamps every request agent-origin, so the page lands
- * in the segregated `[Agent]` section and its 24h sweep reclaims it.
+ * in the sidebar's Scratch section and its 24h sweep reclaims it.
  */
 async function mintPage(h: Harness): Promise<string | undefined> {
   const s = await h.session();

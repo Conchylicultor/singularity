@@ -150,9 +150,13 @@ await withBrowser(async (h) => {
   // `AddPageBelowAction` reads the tree row's controls, so it renders null here.
   // That is the normal non-tree case: the bucket must degrade to its remaining
   // members, not crash and not paint an empty menu.
-  // `title=` targets the view-switcher chip itself — a bare role/name lookup also
-  // matches the sortable wrapper reorder puts around every switcher chip.
-  await page.locator('button[title="Favorites"]').click();
+  // The sidebar renders every view as a section (Favorites first), so there is
+  // no switcher to click: wait for the Favorites header, then take the FIRST
+  // "Todos" — the Favorites row, which sits above the Private tree's.
+  await page
+    .getByRole("button", { name: /^Favorites/ })
+    .first()
+    .waitFor({ state: "visible", timeout: 10_000 });
   const favLabel = page.getByText("Todos", { exact: true }).first();
   await favLabel.waitFor({ state: "visible", timeout: 10_000 });
   await favLabel.hover();

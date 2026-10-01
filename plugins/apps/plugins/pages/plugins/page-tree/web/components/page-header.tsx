@@ -4,40 +4,34 @@ import {
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   pagesResource,
-  updateBlock,
   pageData,
+  updateBlock,
   type Block,
-  type PageCover,
 } from "@plugins/page/plugins/editor/core";
 import type {
   BlockEditorHandle,
   CaretSurface,
 } from "@plugins/page/plugins/editor/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { RegenerateIconAction } from "@plugins/apps/plugins/pages/plugins/auto-icon/web";
-import {
-  PageIconButton,
-  PageIconPicker,
-  type PageIconFooterActions,
-  type PageIconValue,
-} from "./page-icon-button";
-import { ChangeCoverPopover } from "./change-cover-popover";
+import { PageIconButton } from "./page-icon-button";
 import { PageTitle } from "./page-title";
+import {
+  PageDetail,
+  type PageHeaderPart,
+  type PageHeaderPartProps,
+} from "../slots";
+import { useSavePageData } from "../internal/use-save-page-data";
 import "./page-header.css";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const imageIcon = symbol("image");
-const moodIcon = symbol("mood");
 
 export function PageHeader({
   pageId,
@@ -80,9 +74,7 @@ function PageHeaderInner({
   titleRef?: Ref<CaretSurface>;
 }) {
   const data = page ? pageData(page) : undefined;
-  const hasIcon = data?.icon != null;
   const hasCover = data?.cover != null;
-
   const { mutateAsync } = useEndpointMutation(updateBlock);
 
   const title = useEditableField({
@@ -96,33 +88,8 @@ function PageHeaderInner({
     },
   });
 
-  const iconValue: PageIconValue = { icon: data?.icon ?? null };
-
-  // Both pickers (the big icon's and "Add icon") offer Regenerate beside Remove.
-  const iconFooterActions: PageIconFooterActions = () => (
-    <RegenerateIconAction pageId={pageId} />
-  );
-
-  const saveIcon = async (next: PageIconValue) => {
-    if (!page) return;
-    await mutateAsync({
-      params: { id: pageId },
-      body: {
-        data: { ...pageData(page), icon: next.icon },
-      },
-    });
-  };
-
-  const saveCover = async (next: PageCover) => {
-    if (!page) return;
-    await mutateAsync({
-      params: { id: pageId },
-      body: { data: { ...pageData(page), cover: next } },
-    });
-  };
-
   return (
-    // `group/header` drives the hover-revealed affordance row. The header owns no
+    // `group/header` drives the hover-revealed tool row. The header owns no
     // horizontal geometry: the enclosing `PageContentColumn` already places it on
     // the block editor's content edge, so the title `<input>` below sits directly
     // on that edge with no padding of its own. When a cover is present the large
@@ -130,48 +97,79 @@ function PageHeaderInner({
     // ramp doesn't model — applied via inline negative margin, never a margin
     // utility).
     <Stack gap="xs" className={cn(hoverRevealGroup, "group/header pt-lg")}>
-      {hasIcon && (
-        <PageIconButton
-          value={iconValue}
-          onChange={saveIcon}
-          footerActions={iconFooterActions}
-          className="relative z-raised"
-          style={hasCover ? { marginTop: "-3.5rem" } : undefined}
-        />
+      {page && data?.icon != null && (
+        <HeaderIcon page={page} raised={hasCover} />
       )}
 
-      {/* Hover affordance row — only rendered when there's something to add. */}
-      {(!hasIcon || !hasCover) && (
+      {/* The hover row: every contributed header tool, each gated on what the
+          page already has (Add icon / Change icon / Add cover). A page the list
+          does not hold has nothing to add to. */}
+      {page && (
         <Stack direction="row" gap="2xs" className={hoverRevealTarget}>
-          {!hasIcon && (
-            <PageIconPicker
-              value={iconValue}
-              onChange={saveIcon}
-              footerActions={iconFooterActions}
-              trigger={
-                <Button variant="ghost" className="text-muted-foreground">
-                  <Icon icon={moodIcon} />
-                  Add icon
-                </Button>
-              }
-            />
-          )}
-          {!hasCover && (
-            <ChangeCoverPopover
-              current={null}
-              onPick={saveCover}
-              trigger={
-                <Button variant="ghost" className="text-muted-foreground">
-                  <Icon icon={imageIcon} />
-                  Add cover
-                </Button>
-              }
-            />
-          )}
+          <PageDetail.HeaderTool.Render>
+            {(part) => <HeaderPart part={part} entity={{ pageId, page }} />}
+          </PageDetail.HeaderTool.Render>
         </Stack>
       )}
 
       <PageTitle field={title} body={body} ref={titleRef} />
+
+      {page && (
+        <PageDetail.UnderTitle.Render>
+          {(part) => <HeaderPart part={part} entity={{ pageId, page }} />}
+        </PageDetail.UnderTitle.Render>
+      )}
     </Stack>
   );
+}
+
+/** The large page icon over the title, opening the icon picker. */
+function HeaderIcon({ page, raised }: { page: Block; raised: boolean }) {
+  const save = useSavePageData(page);
+  return (
+    <PageIconButton
+      value={{ icon: pageData(page).icon ?? null }}
+      onChange={(next) => save({ icon: next.icon })}
+      footerActions={() => <RegenerateIconAction pageId={page.id} />}
+      className="relative z-raised"
+      style={raised ? { marginTop: "-3.5rem" } : undefined}
+    />
+  );
+}
+
+/**
+ * One header contribution, behind its `useAvailable` gate. The branch is on the
+ * hook's PRESENCE (stable per contribution), so both leaves stay rules-of-hooks
+ * clean — the same split `defineDetailSections` makes for `Section`.
+ */
+function HeaderPart({
+  part,
+  entity,
+}: {
+  part: PageHeaderPart;
+  entity: PageHeaderPartProps;
+}) {
+  if (part.useAvailable) {
+    return (
+      <GatedHeaderPart
+        useAvailable={part.useAvailable}
+        Part={part.component}
+        entity={entity}
+      />
+    );
+  }
+  const Part = part.component;
+  return <Part {...entity} />;
+}
+
+function GatedHeaderPart({
+  useAvailable,
+  Part,
+  entity,
+}: {
+  useAvailable: NonNullable<PageHeaderPart["useAvailable"]>;
+  Part: PageHeaderPart["component"];
+  entity: PageHeaderPartProps;
+}) {
+  return useAvailable(entity) ? <Part {...entity} /> : null;
 }

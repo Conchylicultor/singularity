@@ -25,3 +25,14 @@ export const pageBlocks = liveValue("page-blocks", {
   schema: z.array(BlockSchema),
   params: ["pageId"],
 });
+
+// When the page was last edited: the newest `updatedAt` across the page row AND
+// every live block of its content.
+// The page row alone would not do: a content edit stamps only the edited
+// block's own row (`page_blocks.updated_at` is per row), never the page row.
+// `null` when no such live page exists. A scalar per page, recomputed by the
+// change feed on any write to the page's blocks.
+export const pageEditedAt = liveValue("page-edited-at", {
+  schema: z.object({ editedAt: z.coerce.date() }).nullable(),
+  params: ["pageId"],
+});

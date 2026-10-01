@@ -11,12 +11,13 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   //
   // Field extensions folded into the pages-sidebar DataView schema, in fold order.
-  // Both are filter/group-only dimensions — hidden from every view's body via each
+  // Both are filter-only dimensions — hidden from every view's body via each
   // view instance's `visibleFields`, so neither renders a chip on a row.
   //
-  // `starred` is what the Favorites view filters on.
-  // `origin` is what the Pages tree groups on: it splits the tree into a `Mine`
-  // section and an `Agent` section holding pages an automated session created.
+  // `starred` is what the Favorites section filters on.
+  // `origin` is what splits the page tree into the Private section and the
+  // Scratch section holding pages an automated session created (each a
+  // root-scoped filter on it).
   // It sorts after `starred` so the Filter pill lists the older dimension first.
   "items": [
     "apps.pages.starred:starred",

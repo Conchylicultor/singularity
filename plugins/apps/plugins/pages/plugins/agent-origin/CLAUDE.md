@@ -29,15 +29,18 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
   `useLive(agentPages)`. The sibling `starred` is the same shape on a bigger
   window. The 24h TTL keeps the live set in single digits, so the 200-row window
   is never the binding constraint.
-- **The `[Agent]` section is a contributed field + a config-authored `groupBy`.**
-  `OriginField` yields one `origin` enum `FieldDef<PageRow>` into
-  `PageTree.Fields`; `config/apps/pages/page-tree/pages-sidebar.jsonc` turns
-  `"groupBy": "origin"` on for the `pages` view. Unmarked rows project `"user"`
-  (never null), so there is no "None" bucket and the section order follows the
-  options: **Mine**, then **Agent**. The tree partitions ROOTS only and every
-  descendant follows its root's section, so a subtree is never split.
-  Drag-reorder keeps working while grouped: the tree's drop contract carries an
-  anchor, not a rank, so a per-section `TreeList` cannot mint a colliding key.
+- **The Scratch section is a contributed field + config-authored filters.**
+  `OriginField` yields one `origin` enum `FieldDef<PageRow>` (options
+  **Private** / **Scratch**) into `PageTree.Fields`;
+  `config/apps/pages/page-tree/pages-sidebar.jsonc` authors two tree views of
+  the `sections`-chrome sidebar over it — `pages` ("Private", `origin is user`)
+  and `scratch` ("Scratch", `origin is agent`, `hideWhenEmpty`) — both with
+  `filterScope: "roots"`. Unmarked rows project `"user"` (never null), so every
+  page lands in exactly one section. The root scope tests ROOTS only and keeps
+  each kept root's whole subtree, so a subtree is never split between the two
+  and neither pulls in the other's ancestors. Drag-reorder works in both: the
+  tree's drop contract carries an anchor, not a rank, so a section seeing only
+  its own roots cannot mint a colliding key.
 - **The sweep is `defineRetention` + its `beforeDelete` seam**, mirroring how
   trash drives `purgeTrashedPages`: the primitive's DELETE clears the MARKER,
   the callback removes the PAGES through `deleteBlocksSubtree` — the delete
@@ -53,7 +56,7 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
 
 ## Plugin reference
 
-- Description: Agent-origin provenance for pages: contributes an `origin` enum field (Mine / Agent) into the Pages sidebar DataView, so pages written by an automated session segregate into their own `[Agent]` section of the tree. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, a bounded live resource exposes the marker set to the Pages sidebar's `origin` field, and a 24h retention sweep trashes the marked pages.
+- Description: Agent-origin provenance for pages: contributes an `origin` enum field (Private / Scratch) into the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, a bounded live resource exposes the marker set to the Pages sidebar's `origin` field, and a 24h retention sweep trashes the marked pages.
 - Web:
   - Contributes: `PageTree.Fields` "origin" → `OriginField`
   - Uses:

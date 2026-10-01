@@ -196,6 +196,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `apps/mail/threads`
     - `apps/pages/auto-icon`
     - `apps/pages/content-search`
+    - `apps/pages/page-author`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`
     - `apps/pages/trash`

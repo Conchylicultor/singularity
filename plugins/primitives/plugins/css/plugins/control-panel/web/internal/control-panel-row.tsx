@@ -19,14 +19,36 @@ const dragIndicatorIcon = symbol("drag-indicator");
 export type ControlPanelRowSelect = "check" | "radio" | "switch";
 export type ControlPanelRowTone = "default" | "danger";
 
+/**
+ * How a row explains itself: a tooltip (`hint`) or a visible line
+ * (`description`) — one or the other, never both, so a row cannot say the same
+ * thing twice.
+ */
+type ControlPanelRowExplanation =
+  | {
+      /**
+       * Explanatory prose as a TOOLTIP, wired by `aria-describedby` — never a
+       * second line. A second line is the one change that breaks invariant #2 in
+       * every panel at once; a muted pseudo-row breaks invariant #1's meaning (a row
+       * that is not a control still opening the rails). See `HintedLabelCell`.
+       */
+      hint?: string;
+      description?: never;
+    }
+  | {
+      /**
+       * Explanatory prose as a VISIBLE second line under the label — muted, wrapping,
+       * and reserving its own height. Opt-in and the one sanctioned exception to
+       * invariant #2 (one row height): a row that says what a choice MEANS before it
+       * is picked (the page-kind menu, where each kind is a policy) cannot hide that
+       * behind a tooltip the user has to discover. Everything else keeps `hint`.
+       * A row takes one or the other, never both.
+       */
+      description: string;
+      hint?: never;
+    };
+
 interface ControlPanelRowCommon {
-  /**
-   * Explanatory prose as a TOOLTIP, wired by `aria-describedby` — never a
-   * second line. A second line is the one change that breaks invariant #2 in
-   * every panel at once; a muted pseudo-row breaks invariant #1's meaning (a row
-   * that is not a control still opening the rails). See `HintedLabelCell`.
-   */
-  hint?: string;
   /** Shows the drag handle in the gutter track (revealed on row hover/focus). */
   handle?: boolean;
   /** dnd-kit listeners/attributes (and an activator `ref`) for that handle. */
@@ -101,23 +123,25 @@ interface ControlPanelRowCommon {
  * its box with a trash button is a mis-click waiting to happen. Excluded at the
  * type level rather than dropped at render, the same way `icon` is.
  */
-export type ControlPanelRowProps =
-  | (ControlPanelRowCommon & {
-      icon?: React.ReactNode;
-      select?: never;
-      checked?: never;
-    })
-  | (ControlPanelRowCommon & {
-      select: "check" | "radio";
-      checked: boolean;
-      icon?: never;
-    })
-  | (ControlPanelRowCommon & {
-      select: "switch";
-      checked: boolean;
-      icon?: React.ReactNode;
-      actions?: never;
-    });
+export type ControlPanelRowProps = ControlPanelRowExplanation &
+  (
+    | (ControlPanelRowCommon & {
+        icon?: React.ReactNode;
+        select?: never;
+        checked?: never;
+      })
+    | (ControlPanelRowCommon & {
+        select: "check" | "radio";
+        checked: boolean;
+        icon?: never;
+      })
+    | (ControlPanelRowCommon & {
+        select: "switch";
+        checked: boolean;
+        icon?: React.ReactNode;
+        actions?: never;
+      })
+  );
 
 /**
  * The hover-reveal recipe for the drag handle. Opacity and pointer-events are
@@ -181,6 +205,7 @@ const HANDLE_REVEAL =
 export function ControlPanelRow({
   icon,
   hint,
+  description,
   select,
   checked,
   handle,
@@ -292,7 +317,10 @@ export function ControlPanelRow({
   // The description hangs off the HOST, so assistive tech reads the row's name
   // and then its hint. The node it points at is a zero-box `sr-only` sibling
   // inside the label cell, which is why the hint opens no track.
-  const described = hint ? { "aria-describedby": hintId } : undefined;
+  const described =
+    hint !== undefined || description !== undefined
+      ? { "aria-describedby": hintId }
+      : undefined;
 
   // Each cell names itself (`data-cp-cell`), and the two LEADING cells also
   // declare whether they are OCCUPIED (`data-cp-handle` / `data-cp-icon`). The
@@ -328,7 +356,11 @@ export function ControlPanelRow({
       >
         {leading}
       </span>
-      <HintedLabelCell hint={hint} descriptionId={hintId}>
+      <HintedLabelCell
+        hint={hint}
+        description={description}
+        descriptionId={hintId}
+      >
         {children}
       </HintedLabelCell>
     </>

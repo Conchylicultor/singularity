@@ -4189,6 +4189,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Contributes:
     - `resource.declare` "pages"
     - `resource.declare` "page-blocks"
+    - `resource.declare` "page-edited-at"
     - `page.block-data` "page"
     - `page.block-annotation`
   - Uses:
@@ -4252,6 +4253,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `defineTrashSource('page-blocks')`
   - Resources:
     - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
+    - `page-edited-at` (push)
     - `pages` (push)
   - Routes:
     - `GET /api/pages`
@@ -4396,6 +4398,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageCoverSchema`
     - `pageData`
     - `PageDataSchema`
+    - `pageEditedAt`
     - `pageKindOf`
     - `PageKindSchema`
     - `PageRowSchema`

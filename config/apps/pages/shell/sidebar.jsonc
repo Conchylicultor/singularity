@@ -1,4 +1,4 @@
-// @hash a242b2029b0b
+// @hash 8554a7157dd5
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -7,11 +7,14 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
-  // Favorites is no longer a sidebar section — it is a filtered `list` view
-  // instance of the page-tree DataView, reachable from its view switcher.
+  // Favorites / Private / Scratch are not sidebar items — they are the view
+  // instances of the page-tree DataView (`pages`), each rendered as its own
+  // section. `pages` is the one growing item (a `Scroll fill`), so "New page"
+  // and "Trash" after it sit at the bottom of the sidebar.
   "items": [
     "apps.pages.content-search:search",
     "apps.pages.page-tree:pages",
+    "apps.pages.page-tree:new-page",
     "apps.pages.trash:trash"
   ]
 }

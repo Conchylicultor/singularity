@@ -6,7 +6,8 @@ a nested, draggable, inline-renameable tree rendered through the shared
 `FieldDef` schema. It **defaults to manual (rank) order** — the DnD-reorderable
 order the tree ships — and honors `ViewState.sort` when a field sort is picked
 (see "Sort" below). It also honors **filter**, subtree-preserving, and
-**group-by** (see "Group-by" below).
+**group-by** (see "Group-by" below), and a root-scoped filter
+(`filterScope: "roots"`, see "Filter").
 
 ## What it is
 
@@ -56,12 +57,25 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   names / secondary fields to match on more than the label.
 - **Filter** — the view's `state.filter` is applied through the same
   `useRowFilter` lowering (into the filter language) the flat views use, so filter semantics are identical
-  across every view. Filtering is subtree-preserving (mirrors search): a node
-  survives if it matches or has a matching descendant — matches plus the ancestor
-  chain of each match — so filtered rows keep their hierarchical context instead
-  of being orphaned to the root. Evaluation lives in this adapter (not the
-  generic `tree` primitive) because it needs the `FieldDef` schema + per-type
-  operator sets, which are a data-view concern.
+  across every view. WHAT it tests is the view's `filterScope` (an authored
+  config-row key, through data-view's shared `scopeFilterRows` — the same
+  function the host's `hideWhenEmpty` check reads):
+  - **`rows`** (default) — subtree-preserving (mirrors search): a node survives
+    if it matches or has a matching descendant — matches plus the ancestor chain
+    of each match — so filtered rows keep their hierarchical context instead of
+    being orphaned to the root.
+  - **`roots`** — only the ROOTS (orphan rule, as `buildTree`) are tested, and a
+    kept root keeps its WHOLE subtree whatever its descendants hold; no ancestor
+    is ever pulled in. The partition a `groupBy` makes of the roots, as a filter:
+    the Pages sidebar's Private / Scratch sections are two views over one tree,
+    `origin is user` / `origin is agent`, and a subtree is never split between
+    them. DnD stays on, for the same reason it does under group-by (see below):
+    the drop is an anchor the server resolves against the full sibling set, and
+    a root-scoped subtree is never split.
+
+  Evaluation lives in this adapter (not the generic `tree` primitive) because it
+  needs the `FieldDef` schema + per-type operator sets, which are a data-view
+  concern.
 - **Sort** — **defaults to manual (rank) order**: an empty `ViewState.sort`
   resolves to a `null` comparator (`makeSortComparator`), so the projected rows
   keep their incoming rank order — the order DnD reorders. Picking a field sort
@@ -103,8 +117,8 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   descendant under its ROOT's section, so a group never holds half a subtree.
   Three choices to leave alone:
   - **Not gated on `options.expandAll`.** That option names the whole-view
-    *toolbar* button, and the surfaces that omit it to stay minimal — the Pages
-    sidebar, the app's grouped tree — are exactly the ones this exists for. Same
+    *toolbar* button, and the surfaces that omit it to stay minimal — a narrow
+    sidebar tree like the Pages sidebar's — are exactly the ones this exists for. Same
     reasoning that left the tree primitive's per-row fold ungated.
   - Built from the **pure** `flatExpandAll`, not the hook, so a section with
     nothing expandable answers `null`. A hook would need a child component, and

@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, max, or } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
@@ -6,7 +6,7 @@ import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { Rank, withRank } from "@plugins/primitives/plugins/rank/core";
 import { PageRowSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
-import { pagesResource, pageBlocks } from "../../core/resources";
+import { pagesResource, pageBlocks, pageEditedAt } from "../../core/resources";
 import type { Block, PageRow } from "../../core/schemas";
 import { docOrderPaths } from "./page-doc-order";
 import { liveBlocks } from "./live-blocks";
@@ -141,5 +141,33 @@ export const pageBlocksServed = serveValue(pageBlocks, {
       .where(eq(liveBlocks.pageId, pageId))
       .orderBy(asc(liveBlocks.rank), asc(liveBlocks.createdAt));
     return rows.map(withRank);
+  },
+});
+
+// The newest `updated_at` over the page row and its live content. Two indexed
+// reads (the page row by id, then a `max` over `page_id`); a db-arm value, so
+// any write to the page's blocks recomputes it and push drops an unchanged
+// result. Live rows only, like every read here: a deleted block's own stamp
+// leaves with it (the trash is its record).
+export const pageEditedAtServed = serveValue(pageEditedAt, {
+  source: "db",
+  loader: async ({ pageId }) => {
+    const [page] = await db
+      .select({ id: liveBlocks.id })
+      .from(liveBlocks)
+      .where(
+        and(eq(liveBlocks.id, pageId), eq(liveBlocks.type, PAGE_BLOCK_TYPE)),
+      )
+      .limit(1);
+    if (!page) return null;
+    const [row] = await db
+      .select({ editedAt: max(liveBlocks.updatedAt) })
+      .from(liveBlocks)
+      .where(or(eq(liveBlocks.id, pageId), eq(liveBlocks.pageId, pageId)));
+    // The page row itself matched, so the max is never null here.
+    if (!row?.editedAt) {
+      throw new Error(`page ${pageId} is live but has no updated_at`);
+    }
+    return { editedAt: row.editedAt };
   },
 });

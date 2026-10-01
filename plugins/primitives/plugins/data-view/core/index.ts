@@ -10,9 +10,14 @@ export type {
   HostedToolbar,
   HostedToolbarParts,
   HostedToolbarForms,
+  SectionsToolbar,
+  SectionsToolbarForms,
   DataViewToolbarSpec,
 } from "./internal/toolbar-arrangement";
-export { isHostedToolbar } from "./internal/toolbar-arrangement";
+export {
+  isHostedToolbar,
+  isSectionsToolbar,
+} from "./internal/toolbar-arrangement";
 
 export {
   FilterGroupSchema,
@@ -24,6 +29,12 @@ export {
 export { IDENTITY_CODEC, UNGROUPED_FOLD_KEY } from "./internal/types";
 
 export { compareValues } from "./internal/grouping";
+
+export { scopeFilterRows } from "./internal/filter-scope";
+export type {
+  FilterScope,
+  FilterScopeAccessors,
+} from "./internal/filter-scope";
 
 export {
   splitFieldSections,
@@ -65,6 +76,7 @@ export type {
   DataViewRenderProps,
   DataViewProps,
   DataViewSurfaceChrome,
+  DataViewActiveChrome,
   DataViewDensity,
   DataViewGroupHeaders,
   TableCellProps,

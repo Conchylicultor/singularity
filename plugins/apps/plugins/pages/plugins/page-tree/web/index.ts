@@ -3,10 +3,20 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import { blockDetailPane, pageDetailPane, pagesTreePane } from "./panes";
 import { PagesSidebar } from "./components/pages-sidebar";
+import { NewPageItem } from "./components/new-page-item";
 import {
-  BacklinksSection,
+  BacklinksUnderTitle,
   useHasBacklinks,
 } from "./components/backlinks-section";
+import {
+  AddCoverTool,
+  AddIconTool,
+  ChangeIconTool,
+  useHasIcon,
+  useHasNoCover,
+  useHasNoIcon,
+} from "./components/header-tools";
+import { EditedLabel } from "./components/edited-label";
 import { DeletePageAction } from "./components/delete-page-action";
 import { AddPageBelowAction } from "./components/add-page-below-action";
 import { PageDetail, PageTree } from "./slots";
@@ -39,12 +49,33 @@ export default {
       icon: symbol("description"),
       component: PagesSidebar,
     }),
-    PageDetail.Section({
+    Pages.Sidebar({
+      id: "new-page",
+      title: "New page",
+      icon: symbol("add"),
+      component: NewPageItem,
+    }),
+    PageDetail.HeaderTool({
+      id: "add-icon",
+      component: AddIconTool,
+      useAvailable: useHasNoIcon,
+    }),
+    PageDetail.HeaderTool({
+      id: "change-icon",
+      component: ChangeIconTool,
+      useAvailable: useHasIcon,
+    }),
+    PageDetail.HeaderTool({
+      id: "add-cover",
+      component: AddCoverTool,
+      useAvailable: useHasNoCover,
+    }),
+    PageDetail.UnderTitle({
       id: "backlinks",
-      label: "Linked from",
-      component: BacklinksSection,
+      component: BacklinksUnderTitle,
       useAvailable: useHasBacklinks,
     }),
+    pageDetailPane.Actions({ id: "edited", component: EditedLabel }),
     PageTree.RowActions({ id: "delete", component: DeletePageAction }),
     PageTree.RowActions({ id: "add-below", component: AddPageBelowAction }),
   ],

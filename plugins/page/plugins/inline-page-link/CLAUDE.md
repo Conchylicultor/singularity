@@ -48,9 +48,13 @@ cannot paint itself outside Lexical is a tsc error.
   - Contributes:
     - `page.links.extractor` "* (all blocks)"
     - `page.inline-token` "\[\[(?:page:([^[\]\n]+)|(block-\d+-[a-z0-9]+))\]\]"
+    - `primitives.text-editor.inline-chip.referent` "\[\[(?:page:([^[\]\n]+)|(block-\d+-[a-z0-9]+))\]\]"
   - Uses:
+    - `database.db`
     - `page/editor.Editor`
+    - `page/editor.liveBlocks`
     - `page/links.PageLinks`
+    - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`

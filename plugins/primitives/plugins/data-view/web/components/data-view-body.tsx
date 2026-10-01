@@ -6,6 +6,8 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   isHostedToolbar,
+  isSectionsToolbar,
+  scopeFilterRows,
   type DataViewRenderProps,
   type FieldDef,
   type FieldExtensionsDescriptor,
@@ -14,7 +16,8 @@ import {
   type DataViewFoldLines,
   type SortRule,
 } from "../../core";
-import { DataViewSlots } from "../slots";
+import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import { DataViewSlots, type DataViewContribution } from "../slots";
 import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { useServerDataSource } from "../internal/use-server-data-source";
 import { resolveBodyState } from "../internal/body-state";
@@ -53,6 +56,7 @@ import type { DataViewBodyProps } from "../internal/body-types";
 import { DataViewToolbar } from "./toolbar/data-view-toolbar";
 import { HostedOptions } from "./toolbar/hosted-options";
 import { hostedCreators } from "./creators-control";
+import { ViewSection } from "./view-section";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
@@ -65,58 +69,118 @@ import {
  * early-returns first).
  */
 export function DataViewBody<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
-  // Fold cross-plugin field contributions into `fields` BEFORE the controllers,
-  // so the merged schema reaches `useSortController`, `useFilterController`, and
-  // `renderProps.fields` uniformly (automatic once it is the `fields` prop). ONE
-  // fold over an ordered list of sources:
-  //
-  //  1. the **global** `DataViewSlots.FieldExtension` slot — always folded (every
-  //     DataView), the cross-cutting contributor case (e.g. custom-columns); then
-  //  2. the **per-consumer** `props.fieldExtensions` factory (Sonata's play-count
-  //     / last-played fields) — appended only when present.
-  //
-  // Both are the same `FieldExtensionsDescriptor`; the fold threads
-  // `{ storageKey, rowKey }` to every contributor (a per-consumer contributor
-  // ignores the coordinates it does not need). The host names no individual
-  // contributor: custom-columns folds in through the generic global slot,
-  // inverting the old host→child bridge.
-  //
-  // The fold runs in `unknown` row space (the global slot spans disjoint consumer
-  // row types), so `props.fields`/`rowKey` and the merged result cross a safe
-  // `FieldDef<unknown>`↔`FieldDef<TRow>` boundary cast.
-  //
-  // The global slot is folded in its OWN pass so the body knows which fields it
-  // contributed: those are served server-side by the slot's server twin
-  // (`DataViewServer.QueryAugmentor`), so a server-delegated source may filter
-  // on them without declaring them (see `serverFilterFields`).
+  return (
+    <CollectBodyFields source={props}>
+      {(fields, globalExtensionIds) => (
+        <DataViewBodyInner
+          {...props}
+          fields={fields as FieldDef<TRow>[]}
+          globalExtensionIds={globalExtensionIds}
+        />
+      )}
+    </CollectBodyFields>
+  );
+}
+
+/**
+ * The `{ kind: "sections" }` body: EVERY instance, stacked in config order,
+ * each a full `DataViewBodyInner` (its own controllers, server source, row
+ * order and view) rendered under its own section header. The inner body is
+ * already keyed by view id through the id-parameterised `ReadyViewModel`, so a
+ * section is simply the body with that instance as its "active" one — and the
+ * model stays ONE hook in the shell (per-section models would each hold their
+ * own copy of the ephemeral map and overwrite each other's writes).
+ *
+ * The field-extension fold is hoisted ABOVE the sections, so contributed
+ * fields (custom columns) subscribe once per surface, not once per section.
+ */
+export function DataViewSectionsBody<TRow>(
+  props: Omit<DataViewBodyProps<TRow>, "activeInstance"> & {
+    instances: readonly ResolvedViewInstance<DataViewContribution>[];
+  },
+): ReactNode {
+  const { instances, ...rest } = props;
+  return (
+    <CollectBodyFields source={rest}>
+      {(fields, globalExtensionIds) =>
+        instances.map((instance) => (
+          <DataViewBodyInner
+            key={instance.instance.id}
+            {...rest}
+            activeInstance={instance}
+            fields={fields as FieldDef<TRow>[]}
+            globalExtensionIds={globalExtensionIds}
+          />
+        ))
+      }
+    </CollectBodyFields>
+  );
+}
+
+/**
+ * Fold cross-plugin field contributions into `fields` BEFORE the controllers,
+ * so the merged schema reaches `useSortController`, `useFilterController`, and
+ * `renderProps.fields` uniformly (automatic once it is the `fields` prop). ONE
+ * fold over an ordered list of sources:
+ *
+ *  1. the **global** `DataViewSlots.FieldExtension` slot — always folded (every
+ *     DataView), the cross-cutting contributor case (e.g. custom-columns); then
+ *  2. the **per-consumer** `props.fieldExtensions` factory (Sonata's play-count
+ *     / last-played fields) — appended only when present.
+ *
+ * Both are the same `FieldExtensionsDescriptor`; the fold threads
+ * `{ storageKey, rowKey }` to every contributor (a per-consumer contributor
+ * ignores the coordinates it does not need). The host names no individual
+ * contributor: custom-columns folds in through the generic global slot,
+ * inverting the old host→child bridge.
+ *
+ * The fold runs in `unknown` row space (the global slot spans disjoint consumer
+ * row types), so `props.fields`/`rowKey` and the merged result cross a safe
+ * `FieldDef<unknown>`↔`FieldDef<TRow>` boundary cast.
+ *
+ * The global slot is folded in its OWN pass so the body knows which fields it
+ * contributed: those are served server-side by the slot's server twin
+ * (`DataViewServer.QueryAugmentor`), so a server-delegated source may filter
+ * on them without declaring them (see `serverFilterFields`).
+ */
+function CollectBodyFields<TRow>(props: {
+  source: Pick<
+    DataViewBodyProps<TRow>,
+    "fields" | "fieldExtensions" | "storageKey" | "rowKey"
+  >;
+  children: (
+    fields: FieldDef<unknown>[],
+    globalExtensionIds: ReadonlySet<string>,
+  ) => ReactNode;
+}): ReactNode {
+  const { source, children } = props;
   return (
     <CollectFieldExtensions
       sources={[DataViewSlots.FieldExtension]}
-      base={props.fields as FieldDef<unknown>[]}
-      storageKey={props.storageKey}
-      rowKey={props.rowKey as (row: unknown, index: number) => string}
+      base={source.fields as FieldDef<unknown>[]}
+      storageKey={source.storageKey}
+      rowKey={source.rowKey as (row: unknown, index: number) => string}
     >
       {(withGlobal) => (
         <CollectFieldExtensions
           sources={
-            props.fieldExtensions
-              ? [props.fieldExtensions as FieldExtensionsDescriptor<unknown>]
+            source.fieldExtensions
+              ? [source.fieldExtensions as FieldExtensionsDescriptor<unknown>]
               : []
           }
           base={withGlobal}
-          storageKey={props.storageKey}
-          rowKey={props.rowKey as (row: unknown, index: number) => string}
+          storageKey={source.storageKey}
+          rowKey={source.rowKey as (row: unknown, index: number) => string}
         >
-          {(fields) => (
-            <DataViewBodyInner
-              {...props}
-              fields={fields as FieldDef<TRow>[]}
-              globalExtensionIds={globalExtensionIds(
-                props.fields as FieldDef<unknown>[],
+          {(fields) =>
+            children(
+              fields,
+              globalExtensionIds(
+                source.fields as FieldDef<unknown>[],
                 withGlobal,
-              )}
-            />
-          )}
+              ),
+            )
+          }
         </CollectFieldExtensions>
       )}
     </CollectFieldExtensions>
@@ -433,6 +497,54 @@ function DataViewBodyInner<TRow>(
   // read > loading > the view (see `resolveBodyState`).
   const bodyState = resolveBodyState({ server, readiness });
 
+  // A sections surface renders this view as one section, and a section whose
+  // config row says `hideWhenEmpty` is decided HERE, before the view mounts:
+  // hidden while the rows are not known yet (a loading section would otherwise
+  // paint "empty" for an unknown — or flash in and vanish), hidden once they
+  // are known and none survive the view's filter, shown otherwise (a failed
+  // read included, so its error is not swallowed). The same predicate the views
+  // apply — `useRowFilter` over the same fields — under the same scope
+  // (`scopeFilterRows`, the tree's own function), so a section can never be
+  // shown empty or hidden while its view would render rows.
+  const sectioned = isSectionsToolbar(chrome.toolbar);
+  const presentation = viewModel.sectionFor(activeViewId);
+  const decideEmptiness = sectioned && presentation.hideWhenEmpty;
+  const emptinessFilter = useRowFilter(
+    decideEmptiness && !server ? activeState.filter : null,
+    fields,
+    resolveOperatorSet,
+  );
+  const rootsScoped =
+    activeState.filterScope === "roots" &&
+    hierarchy != null &&
+    activeInstance.viewType.hierarchical === true;
+  const hasNoRows = useMemo(() => {
+    if (!decideEmptiness) return false;
+    // A server-delegated source already filtered in SQL.
+    if (server) return server.rows.length === 0;
+    const matches = emptinessFilter ?? (() => true);
+    if (!rootsScoped || !hierarchy) return !rows.some((row) => matches(row));
+    const items = rows.map((row, i) => ({ row, key: rowKey(row, i) }));
+    return (
+      scopeFilterRows(items, "roots", {
+        key: (item) => item.key,
+        parentOf: (item) => hierarchy.getParentId(item.row),
+        matches: (item) => matches(item.row),
+      }).length === 0
+    );
+  }, [
+    decideEmptiness,
+    server,
+    emptinessFilter,
+    rootsScoped,
+    rows,
+    rowKey,
+    hierarchy,
+  ]);
+  const sectionHidden =
+    decideEmptiness &&
+    (bodyState.kind === "loading" || (bodyState.kind === "view" && hasNoRows));
+
   // The fold line's controls, handed to every view — present exactly when a fold
   // is in effect, so a view never draws a line for a rule that is suspended.
   const foldSummary = fold
@@ -453,6 +565,8 @@ function DataViewBodyInner<TRow>(
           : undefined,
       }
     : undefined;
+
+  if (sectionHidden) return null;
 
   // Fold the global `RowOrder` slot around the whole render. The children-callback
   // is a plain function call (invoked in the fold's base case), NOT a component —
@@ -638,6 +752,33 @@ function DataViewBodyInner<TRow>(
             {server ? <InfiniteScrollFooter handle={server.scroll} /> : null}
           </>
         );
+
+        // Sections: this view is one section of the surface, under its own
+        // header — no band, no frame. The header's `⋯` holds this view's
+        // controls, so the controls provider wraps that panel alone, exactly as
+        // it wraps a hosted frame's options trigger.
+        if (isSectionsToolbar(chrome.toolbar)) {
+          return (
+            <ViewSection
+              instance={activeInstance}
+              presentation={presentation}
+              setCollapsed={(collapsed) =>
+                viewModel.setViewCollapsed(activeViewId, collapsed)
+              }
+              header={chrome.toolbar.forms?.header ?? "eyebrow"}
+              creators={creators?.filter(
+                (c) => c.views === undefined || c.views.includes(activeViewId),
+              )}
+              controls={controlsContext}
+              query={activeState.query}
+              onQueryChange={onQueryChange}
+              searchPlaceholder={chrome.searchPlaceholder}
+              actions={viewModel.actions}
+            >
+              {body}
+            </ViewSection>
+          );
+        }
 
         // Hosted: no band. The surface's frame is its own header and places the
         // options trigger; the controls provider wraps that trigger alone, so the

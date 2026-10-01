@@ -1,4 +1,4 @@
-// @hash a242b2029b0b
+// @hash 8554a7157dd5
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   "items": [
     "apps.pages.content-search:search",
     "apps.pages.page-tree:pages",
+    "apps.pages.page-tree:new-page",
     "apps.pages.trash:trash"
   ]
 }
