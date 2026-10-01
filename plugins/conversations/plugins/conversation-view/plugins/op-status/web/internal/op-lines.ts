@@ -2,6 +2,7 @@ import {
   WAIT_KINDS,
   liveTimes,
   type OpLiveTimes,
+  type WaitKind,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import {
   opRowToFoldState,
@@ -75,10 +76,24 @@ export function stateLine(row: OpRow, now: number): string {
   return `${label} — ${WAIT_KINDS[wait.kind].sentence(wait.reason)}${requeue} · ${clock}`;
 }
 
-/** `waited 1:22:10 · worked 9:04`, or null when the op never meaningfully waited. */
-export function splitLine(times: OpLiveTimes): string | null {
-  if (times.waitingMs < 1000) return null;
-  return `waited ${formatElapsed(times.waitingMs)} · worked ${formatElapsed(times.workingMs)}`;
+/**
+ * How a row of the expanded list reads at a glance. `queued` is waiting its
+ * turn in an ordinary line (the push mutex, the build lock, the host grant) —
+ * the expected case, told by the glyph alone. `held` is a wait nobody queues
+ * for (the duress valve) and says so in words. `Record<WaitKind, …>` keeps it
+ * complete: a new wait kind is a type error until it is classified.
+ */
+export type RowPhase = "working" | "queued" | "held";
+
+const WAIT_PHASE: Record<WaitKind, RowPhase> = {
+  "push-mutex": "queued",
+  "build-lock": "queued",
+  "host-grant": "queued",
+  "duress-valve": "held",
+};
+
+export function phaseOf(row: OpRow): RowPhase {
+  return row.openWait ? WAIT_PHASE[row.openWait.kind] : "working";
 }
 
 /** One row of the expanded list. `queuePos` is the 1-based global push-queue position. */
@@ -89,24 +104,28 @@ export interface QueueRow {
   isSelf: boolean;
 }
 
+/** One section of the expanded list: every in-flight op of one kind. */
+export interface OpSection {
+  kind: OpKind;
+  /** `Push queue` for pushes (the one global queue), else the kind's label. */
+  title: string;
+  rows: QueueRow[];
+}
+
 const byTime =
   (at: (r: OpRow) => number) =>
   (a: OpRow, b: OpRow): number =>
     at(a) - at(b);
 const requestedMs = (r: OpRow) => r.requestedAt.getTime();
 
+const PHASE_RANK: Record<RowPhase, number> = { working: 0, held: 1, queued: 2 };
+
 /**
- * Every in-flight op, ordered: the global push queue first — `#1` the push that
- * holds the mutex (granted), then the pushes parked on the mutex in the order
- * they joined it, then any push not yet at the mutex — then every other op
- * (builds, checks, tests, e2e runs, which serialize per worktree or on the host
- * grant and have no global queue position) by request time.
+ * The global push queue, in order: `#1` the push that holds the mutex
+ * (granted), then the pushes parked on the mutex in the order they joined it,
+ * then any push not yet at the mutex.
  */
-export function buildQueue(
-  rows: readonly OpRow[],
-  selfSlug: string,
-): QueueRow[] {
-  const pushes = rows.filter((r) => r.kind === "push");
+function pushQueue(pushes: readonly OpRow[]): OpRow[] {
   const holders = pushes
     .filter((r) => r.grantedAt !== null)
     .sort(byTime((r) => r.grantedAt?.getTime() ?? 0));
@@ -117,16 +136,45 @@ export function buildQueue(
   const beforeMutex = ungranted
     .filter((r) => r.openWait?.kind !== "push-mutex")
     .sort(byTime(requestedMs));
-  const others = rows
-    .filter((r) => r.kind !== "push")
-    .sort(byTime(requestedMs));
+  return [...holders, ...onMutex, ...beforeMutex];
+}
 
+/**
+ * Every in-flight op, one section per kind: the section holding this
+ * worktree's own op first, then the rest in `OP_KINDS` order. Pushes keep their
+ * global queue order and positions; every other kind (which serializes per
+ * worktree or on the host grant, with no global position) reads working → held
+ * → queued, then by request time — the order they will run in.
+ */
+export function buildSections(
+  rows: readonly OpRow[],
+  selfSlug: string,
+): OpSection[] {
   const toRow = (row: OpRow, queuePos: number | null): QueueRow => {
     const slug = opSlugOf(row);
     return { row, slug, queuePos, isSelf: slug === selfSlug };
   };
-  return [
-    ...[...holders, ...onMutex, ...beforeMutex].map((r, i) => toRow(r, i + 1)),
-    ...others.map((r) => toRow(r, null)),
-  ];
+  const sections: OpSection[] = [];
+  for (const kind of Object.keys(OP_KINDS) as OpKind[]) {
+    const ofKind = rows.filter((r) => r.kind === kind);
+    if (ofKind.length === 0) continue;
+    const ordered =
+      kind === "push"
+        ? pushQueue(ofKind).map((r, i) => toRow(r, i + 1))
+        : [...ofKind]
+            .sort(
+              (a, b) =>
+                PHASE_RANK[phaseOf(a)] - PHASE_RANK[phaseOf(b)] ||
+                requestedMs(a) - requestedMs(b),
+            )
+            .map((r) => toRow(r, null));
+    sections.push({
+      kind,
+      title: kind === "push" ? "Push queue" : OP_KINDS[kind].label,
+      rows: ordered,
+    });
+  }
+  const selfAt = sections.findIndex((s) => s.rows.some((r) => r.isSelf));
+  if (selfAt > 0) sections.unshift(...sections.splice(selfAt, 1));
+  return sections;
 }

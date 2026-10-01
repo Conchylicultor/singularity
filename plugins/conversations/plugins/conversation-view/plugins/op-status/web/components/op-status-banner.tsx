@@ -4,14 +4,13 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import {
-  Rigid,
-  rigidClass,
-} from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversationTitleBySlug } from "@plugins/conversations/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { WAIT_KINDS } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import {
   formatElapsed,
   useNow,
@@ -19,19 +18,21 @@ import {
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
-  buildQueue,
+  buildSections,
   opsOfSlug,
+  phaseOf,
   slugOf,
-  splitLine,
   stateLine,
   timesOf,
   type QueueRow,
+  type RowPhase,
 } from "../internal/op-lines";
 import { useOpsInFlight } from "../internal/use-worktree-op";
 
 const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 const hourglassEmptyIcon = symbol("hourglass-empty");
+const queuedIcon = symbol("radio-button-unchecked");
 
 // Parked in a wait → hourglass (warning tone); working → spinner.
 function StateIcon({
@@ -51,6 +52,59 @@ function StateIcon({
   );
 }
 
+// Glyph per phase: working spins, held is the warning hourglass, queued is a
+// quiet hollow dot — waiting its turn is the expected case, not an alarm.
+function PhaseIcon({ phase }: { phase: RowPhase }) {
+  if (phase === "working")
+    return <Spinner className={cn("size-3.5", rigidClass())} />;
+  return (
+    <Icon
+      icon={phase === "held" ? hourglassEmptyIcon : queuedIcon}
+      className={cn(
+        "size-3.5",
+        phase === "held" ? "text-warning" : "text-muted-foreground/60",
+        rigidClass(),
+      )}
+    />
+  );
+}
+
+const TIME_COL = "w-12 text-right font-mono tabular-nums";
+
+/** A waited / worked cell: a faint dash under a second, dimmed when `dim`. */
+function TimeCell({ ms, dim }: { ms: number; dim: boolean }) {
+  if (ms < 1000)
+    return (
+      <span className={cn(TIME_COL, "text-muted-foreground/30", rigidClass())}>
+        —
+      </span>
+    );
+  return (
+    <span
+      className={cn(
+        TIME_COL,
+        dim ? "text-muted-foreground/70" : "text-foreground",
+        rigidClass(),
+      )}
+    >
+      {formatElapsed(ms)}
+    </span>
+  );
+}
+
+function RowTooltip({ item, now }: { item: QueueRow; now: number }) {
+  const times = timesOf(item.row, now);
+  return (
+    <Stack gap="2xs">
+      <span>{stateLine(item.row, now)}</span>
+      <span className="text-muted-foreground">
+        waited {formatElapsed(times.waitingMs)} · worked{" "}
+        {formatElapsed(times.workingMs)}
+      </span>
+    </Stack>
+  );
+}
+
 function QueueRowView({
   item,
   title,
@@ -62,58 +116,84 @@ function QueueRowView({
 }) {
   const { row, slug, queuePos, isSelf } = item;
   const times = timesOf(row, now);
-  const split = splitLine(times);
+  const phase = phaseOf(row);
   return (
-    <Text
-      as="div"
-      variant="caption"
-      className={isSelf ? "bg-primary/5" : undefined}
-    >
-      <Stack direction="row" gap="sm" align="center" className="px-md py-xs">
-        {queuePos !== null ? (
+    <WithTooltip content={<RowTooltip item={item} now={now} />} side="left">
+      <div className={isSelf ? "bg-primary/5" : undefined}>
+        <Stack direction="row" gap="sm" align="center" className="px-md py-2xs">
+          <PhaseIcon phase={phase} />
           <span
             className={cn(
-              "w-6 text-center font-mono tabular-nums text-muted-foreground",
+              "w-4 text-right font-mono tabular-nums text-muted-foreground",
               rigidClass(),
             )}
           >
-            #{queuePos}
+            {queuePos}
           </span>
-        ) : (
-          <Rigid as="span" className="w-6" />
-        )}
-        <StateIcon waiting={row.openWait !== null} className="text-warning" />
-        <Fill as="span" className="truncate">
-          {title ? (
-            <span className="truncate">{title}</span>
-          ) : (
-            <span className="font-mono">{slug}</span>
-          )}
-          {isSelf && (
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own
-            <span className="ml-1.5 text-muted-foreground">
-              (this conversation)
+          <Fill
+            as="span"
+            className={cn(
+              "truncate",
+              isSelf ? "font-medium text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {title ? (
+              <span className="truncate">{title}</span>
+            ) : (
+              <span className="font-mono">{slug}</span>
+            )}
+            {isSelf && (
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own
+              <span className="ml-1.5 font-normal text-primary">
+                this conversation
+              </span>
+            )}
+          </Fill>
+          {phase === "held" && row.openWait && (
+            <span className={cn("truncate text-warning", rigidClass())}>
+              {WAIT_KINDS[row.openWait.kind].sentence(null)}
             </span>
           )}
-        </Fill>
-        <span className={cn("truncate text-muted-foreground", rigidClass())}>
-          {stateLine(row, now)}
-        </span>
-        {split !== null && (
-          <span className={cn("text-muted-foreground/70", rigidClass())}>
-            {split}
+          <TimeCell ms={times.waitingMs} dim />
+          <TimeCell ms={times.workingMs} dim={phase === "queued"} />
+        </Stack>
+      </div>
+    </WithTooltip>
+  );
+}
+
+/** A section's small caps header; the first carries the time columns' labels. */
+function SectionHeader({
+  title,
+  withColumns,
+}: {
+  title: string;
+  withColumns: boolean;
+}) {
+  return (
+    <Stack
+      direction="row"
+      gap="sm"
+      align="baseline"
+      className="px-md pt-xs text-muted-foreground"
+    >
+      <Fill
+        as="span"
+        className="truncate text-2xs font-semibold uppercase tracking-wide"
+      >
+        {title}
+      </Fill>
+      {withColumns && (
+        <>
+          <span className={cn(TIME_COL, "font-sans", rigidClass())}>
+            waited
           </span>
-        )}
-        <span
-          className={cn(
-            "font-mono tabular-nums text-muted-foreground",
-            rigidClass(),
-          )}
-        >
-          {formatElapsed(times.elapsedMs)}
-        </span>
-      </Stack>
-    </Text>
+          <span className={cn(TIME_COL, "font-sans", rigidClass())}>
+            worked
+          </span>
+        </>
+      )}
+    </Stack>
   );
 }
 
@@ -151,11 +231,10 @@ export function OpStatusBanner({
   const op = mine[0];
   if (!op) return null;
 
-  const rows = buildQueue(result.data, selfSlug);
+  const sections = buildSections(result.data, selfSlug);
   const waiting = op.openWait !== null;
   const times = timesOf(op, now);
-  const split = splitLine(times);
-  const others = rows.length - 1;
+  const others = result.data.length - 1;
 
   return (
     <Text as="div" variant="caption">
@@ -186,11 +265,6 @@ export function OpStatusBanner({
                 +{others} other{others === 1 ? "" : "s"}
               </span>
             )}
-            {split !== null && (
-              <span className={cn("text-muted-foreground/70", rigidClass())}>
-                {split}
-              </span>
-            )}
             <span
               className={cn(
                 "font-mono tabular-nums text-muted-foreground",
@@ -207,13 +281,18 @@ export function OpStatusBanner({
         </button>
         {expanded && (
           <div className="border-t border-border/60 bg-background/40 py-xs text-foreground">
-            {rows.map((item) => (
-              <QueueRowView
-                key={item.row.opId}
-                item={item}
-                title={titleBySlug[item.slug]}
-                now={now}
-              />
+            {sections.map((section, i) => (
+              <div key={section.kind}>
+                <SectionHeader title={section.title} withColumns={i === 0} />
+                {section.rows.map((item) => (
+                  <QueueRowView
+                    key={item.row.opId}
+                    item={item}
+                    title={titleBySlug[item.slug]}
+                    now={now}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         )}

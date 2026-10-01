@@ -31,16 +31,21 @@ A web-only plugin: it reads the op-store's `opsInFlight` live collection
     e.g. `Build — held: host under duress (loadRatio) · requeue #6 · 12:03`;
   - working: `{Kind} — {progressive}` (`Build — Building`).
 
-  The right side is the op's total elapsed and, once it has waited at all,
-  `waited X · worked Y` — both from op-log's `liveTimes`, the one derivation of
-  the split. The banner's **warning tone means "parked in a wait"**, before the
-  grant or after it (a build waiting on the duress valve after its lock is as
-  stuck as one waiting for the lock).
-- **The expanded list** (`buildQueue`) reconstructs the global push queue —
-  `#1` the push holding the mutex (`grantedAt` set), then the pushes parked on
-  the mutex by `openWait.startedAt`, then any push not at the mutex yet — then
-  every other op by `requestedAt`, each with the same state line. The current
-  worktree's row is highlighted; rows are labelled with a conversation title via
+  The right side is the op's total elapsed. The banner's **warning tone means
+  "parked in a wait"**, before the grant or after it (a build waiting on the
+  duress valve after its lock is as stuck as one waiting for the lock).
+- **The expanded list** (`buildSections`) is one small-caps section per kind —
+  the section holding this worktree's op first, then `OP_KINDS` order. The
+  **Push queue** section reconstructs the global queue with positions: `1` the
+  push holding the mutex (`grantedAt` set), then the pushes parked on the mutex
+  by `openWait.startedAt`, then any push not at the mutex yet. Every other
+  section reads working → held → queued, then by `requestedAt`. Each row is a
+  phase glyph (`phaseOf`: spinner = working, hollow dot = **queued** in an
+  ordinary line, warning hourglass = **held** by the duress valve — the one
+  phase that also says so in words), the title, and two columns, **waited** and
+  **worked** (`liveTimes`), labelled once on the first header. The full state
+  line and split are the row's tooltip. The current worktree's row is
+  highlighted; rows are labelled with a conversation title via
   `useConversationTitleBySlug()` (`conversations/web`), falling back to the slug.
 - **The chip** (`Item.Chips`) reads the same subscription through
   `useWorktreeOp(conversationId)`, a `ResourceResult<OpRow | null>`: loading or
@@ -86,7 +91,6 @@ mode (the reconciler's own terminal event) so no dead row lingers.
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
-    - `primitives/css/rigid.Rigid`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`

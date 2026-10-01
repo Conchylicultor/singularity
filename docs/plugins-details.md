@@ -12139,7 +12139,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/clip.Clip`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
-              - `primitives/css/rigid.Rigid`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/spinner.Spinner`
