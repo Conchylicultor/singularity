@@ -25,7 +25,7 @@ import { reindexPage } from "./reindex";
 export const backfillPageLinksJob = defineJob({
   name: "page.links.backfill",
   description:
-    "Rebuild every live page's outgoing links (the backlinks index), so edges that predate the per-block index are filled in",
+    "Rebuilds every page's outgoing links, so each page's backlinks list is complete.",
   hold: "instant",
   input: z.object({}).default({}),
   event: z.never(),
@@ -45,6 +45,8 @@ export const backfillPageLinksJob = defineJob({
 // enqueues; the scan runs in the job.
 export const pageLinksBackfillWarmup = defineWarmup({
   name: "page.links.backfill",
+  description:
+    "Starts a catch-up pass at boot so every page's backlinks are complete.",
   scope: "worktree",
   run: async () => {
     await backfillPageLinksJob.enqueue({});
