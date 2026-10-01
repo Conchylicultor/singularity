@@ -78,6 +78,7 @@ export function FolderPickerPopover({
       </Fill>
 
       <InlinePopover
+        resetOnClose
         open={open}
         onOpenChange={setOpen}
         align="end"

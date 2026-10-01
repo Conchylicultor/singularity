@@ -224,6 +224,7 @@ function Investigate({
   return (
     <Stack align="start" gap="none">
       <LaunchAgentPopover
+        draftKey={`report-investigate:${report.id}`}
         trigger={
           <Button variant="default" className="gap-xs">
             <Icon icon={autoFixHighIcon} className="size-4" />

@@ -63,6 +63,7 @@ export function DatePickerPopover({
 
   return (
     <InlinePopover
+      resetOnClose
       trigger={trigger}
       open={isOpen}
       onOpenChange={setOpen}

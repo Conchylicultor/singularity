@@ -89,6 +89,7 @@ function newApp(): void {
   void openDialog(
     (close) => (
       <LaunchAgentForm
+        draftKey="new-app"
         title="New app"
         description="Describe the app you want. An agent plans it with you, builds it in its own worktree, and hands you a link to try it before anything ships."
         placeholder="What should the app do? e.g. a reading list that saves links and tracks what I've finished…"

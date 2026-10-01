@@ -73,6 +73,7 @@ function DateMentionView({
 
   return (
     <InlinePopover
+      resetOnClose
       open={open}
       onOpenChange={setOpen}
       width="content"

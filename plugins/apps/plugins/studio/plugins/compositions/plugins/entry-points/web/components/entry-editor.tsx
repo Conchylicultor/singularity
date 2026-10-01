@@ -94,6 +94,7 @@ export function EntryEditor({
       <Stack direction="row" align="center" justify="between" gap="sm">
         <SectionLabel>Entry points</SectionLabel>
         <InlinePopover
+          resetOnClose
           open={open}
           onOpenChange={setOpen}
           align="end"

@@ -52,6 +52,7 @@ export function TodoDispatch({
     <Stack gap="md">
       {dispatched ? <DispatchedTask task={dispatched} onOpen={close} /> : null}
       <LaunchAgentForm
+        draftKey={`todo-dispatch:${blockId}`}
         title={dispatched ? "Dispatch another agent" : "Dispatch an agent"}
         description={
           dispatched

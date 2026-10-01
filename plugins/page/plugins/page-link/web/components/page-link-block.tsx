@@ -92,6 +92,7 @@ function PagePicker({
 
   return (
     <InlinePopover
+      resetOnClose
       trigger={trigger}
       open={open}
       onOpenChange={onOpenChange}

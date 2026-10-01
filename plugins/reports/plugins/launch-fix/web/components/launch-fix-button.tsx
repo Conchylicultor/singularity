@@ -24,6 +24,9 @@ export function LaunchFixButton({
 
   return (
     <LaunchAgentPopover
+      // Not the report id: it is still null while the crash is being recorded,
+      // and the draft must not move when it arrives.
+      draftKey={`crash-fix:${report.slot}:${report.label}:${report.error.message}`}
       trigger={
         <button
           title={

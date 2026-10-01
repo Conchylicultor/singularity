@@ -155,6 +155,7 @@ function InstrumentPicker({
 
   return (
     <InlinePopover
+      resetOnClose
       open={open}
       onOpenChange={setOpen}
       tooltip="Track instrument"

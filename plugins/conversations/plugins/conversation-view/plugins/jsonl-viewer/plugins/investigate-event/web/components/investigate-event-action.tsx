@@ -29,6 +29,7 @@ export function InvestigateEventAction({ event }: { event: JsonlEvent }) {
   const label = outcome.key;
   return (
     <LaunchAgentPopover
+      draftKey={`add-renderer:${label}`}
       align="end"
       title="Add a renderer"
       description={`Nothing renders \`${label}\` yet, so this row falls back to raw JSON. Launch an agent to build a proper renderer for it.`}

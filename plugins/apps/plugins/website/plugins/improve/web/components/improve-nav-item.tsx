@@ -48,6 +48,7 @@ export function ImproveNavItem() {
   const [picking, setPicking] = useState(false);
   return (
     <InlinePopover
+      resetOnClose
       open={open}
       onOpenChange={(next) => {
         if (next && !open) track("improve_open");

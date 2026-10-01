@@ -295,6 +295,7 @@ function DependenciesButtonInner({
     <WithTooltip content={peekContent} side="top" className="max-w-md">
       <ButtonGroup>
         <InlinePopover
+          resetOnClose
           open={blockedByOpen}
           onOpenChange={setBlockedByOpen}
           align="end"
@@ -335,6 +336,7 @@ function DependenciesButtonInner({
         </Center>
 
         <InlinePopover
+          resetOnClose
           open={blockingOpen}
           onOpenChange={setBlockingOpen}
           align="end"

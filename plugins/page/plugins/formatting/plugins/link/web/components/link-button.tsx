@@ -97,6 +97,7 @@ export function LinkButton() {
 
   return (
     <InlinePopover
+      resetOnClose
       open={open}
       onOpenChange={(next) => (next ? openPopover() : closePopover())}
       width="lg"

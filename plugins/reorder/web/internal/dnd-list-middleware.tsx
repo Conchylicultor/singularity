@@ -650,6 +650,7 @@ function ReorderInner({
         </ReorderEffectiveEditModeContext.Provider>
         {/* Editing happens in a roomy vertical popover — the only drag surface. */}
         <InlinePopover
+          resetOnClose
           open={popoverOpen}
           onOpenChange={setPopoverOpen}
           tooltip="Edit layout"

@@ -15,6 +15,15 @@ a plain **Launch** button. `LaunchControl` is still right everywhere else — ro
 actions, task details, fork buttons have no field to hang a bar on, and its
 `mod+N` launches ARE the control.
 
+## The draft survives everything but a launch
+
+`draftKey` is required and names what the launch is about (a run id, a report
+id, a page block). The typed context, picked options and flipped toggles are
+saved under it through `persistent-draft`, so closing the popover, the host
+unmounting or a reload never loses them; a successful launch clears it. Pick a
+key that is stable for the subject — not one that is still `null` while the
+subject loads.
+
 ## The form files a task
 
 Submitting does not create a bare conversation: it files a task carrying the
@@ -68,6 +77,7 @@ started" notification confirms it), so its props are the form's minus
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.PaneOpenMode`
     - `primitives/pane.useOpenPane`
+    - `primitives/persistent-draft.useDraft`
     - `primitives/shortcuts.formatShortcutLabel`
     - `primitives/text-editor/composer.ComposerField`
     - `tasks/launch-options.LaunchOptionPills`

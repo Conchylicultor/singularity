@@ -31810,6 +31810,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/pane.PaneOpenMode`
           - `primitives/pane.useOpenPane`
+          - `primitives/persistent-draft.useDraft`
           - `primitives/shortcuts.formatShortcutLabel`
           - `primitives/text-editor/composer.ComposerField`
           - `tasks/launch-options.LaunchOptionPills`
@@ -33467,6 +33468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/color-picker`
           - `primitives/detail-sections`
           - `primitives/dom/auto-scroll`
+          - `primitives/launch`
           - `primitives/usage-rank`
           - `tasks/task-draft-form`
       - Web:

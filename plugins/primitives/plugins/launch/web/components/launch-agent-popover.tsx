@@ -25,6 +25,7 @@ import {
 } from "@plugins/tasks/plugins/launch-options/web";
 import { launchTask, type LaunchTaskResponse } from "@plugins/tasks/core";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 
 /**
  * An on/off choice the caller adds to the form. The form draws it and hands
@@ -51,7 +52,23 @@ export type LaunchAgentRequest = { prompt: string } & (
   { taskId: string } | { categoryId: string }
 );
 
+/** Everything the user has entered and not launched yet. */
+type LaunchDraft = {
+  text: string;
+  /** Only the options the user changed — see `picked` in the form. */
+  picked: LaunchOptionValues;
+  toggles: Record<string, boolean>;
+};
+
 export type LaunchAgentFormProps = {
+  /**
+   * Names WHAT this launch is about (e.g. `build-fix:<runId>`), so the user's
+   * unsent draft — context text, options, toggles — is saved under it and comes
+   * back when the form is shown again: after the popover is closed, the host
+   * unmounts, or the page reloads. Cleared once the launch is filed. Required:
+   * a launch form that loses what was typed into it is a bug, not a default.
+   */
+  draftKey: string;
   title: string;
   description: React.ReactNode;
   placeholder?: string;
@@ -95,6 +112,7 @@ export type LaunchAgentFormProps = {
  * `InlinePopover` nested in another popover is not an option.
  */
 export function LaunchAgentForm({
+  draftKey,
   title,
   description,
   placeholder = "Extra context (optional)…",
@@ -105,17 +123,23 @@ export function LaunchAgentForm({
   openAfterLaunch = false,
   openMode = "push",
 }: LaunchAgentFormProps) {
-  const [text, setText] = useState("");
+  const [draft, setDraft, clearDraft] = useDraft<LaunchDraft>(
+    `launch-agent:${draftKey}`,
+    { text: "", picked: {}, toggles: {} },
+  );
+  const { text, picked } = draft;
   // Only what the user changed; the rest reads through to the registry's
   // defaults, so an option registered after mount is still sent with its seed.
   const defaults = useLaunchOptionDefaults();
-  const [picked, setPicked] = useState<LaunchOptionValues>({});
   const options: LaunchOptionValues = { ...defaults, ...picked };
   const registered = TaskLaunch.Option.useContributions();
-  const [toggleValues, setToggleValues] = useState<Record<string, boolean>>(
-    () =>
-      Object.fromEntries(toggles.map((t) => [t.id, t.defaultValue ?? false])),
-  );
+  // Same read-through for toggles: the draft holds only flipped ones.
+  const toggleValues: Record<string, boolean> = {
+    ...Object.fromEntries(toggles.map((t) => [t.id, t.defaultValue ?? false])),
+    ...draft.toggles,
+  };
+  const setPickedOptions = (next: LaunchOptionValues) =>
+    setDraft((d) => ({ ...d, picked: next }));
   // Stable per-instance Lexical namespace so multiple forms don't collide.
   const editorId = useId();
   const openPane = useOpenPane();
@@ -139,6 +163,7 @@ export function LaunchAgentForm({
         },
       },
     );
+    clearDraft();
     onSubmitted?.(result);
     if (result.started && openAfterLaunch)
       openPane(
@@ -160,7 +185,7 @@ export function LaunchAgentForm({
       </Stack>
       <ComposerField
         value={text}
-        onChange={setText}
+        onChange={(next) => setDraft((d) => ({ ...d, text: next }))}
         placeholder={placeholder}
         submitMode="none"
         minRows={3}
@@ -170,7 +195,7 @@ export function LaunchAgentForm({
           <LaunchOptionPills
             side="start"
             values={options}
-            onChange={setPicked}
+            onChange={setPickedOptions}
             disabled={disabled ?? false}
           />
         }
@@ -178,7 +203,7 @@ export function LaunchAgentForm({
           <LaunchOptionPills
             side="end"
             values={options}
-            onChange={setPicked}
+            onChange={setPickedOptions}
             disabled={disabled ?? false}
           />
         }
@@ -189,7 +214,10 @@ export function LaunchAgentForm({
           toggle={t}
           checked={toggleValues[t.id] ?? false}
           onCheckedChange={(checked) =>
-            setToggleValues((prev) => ({ ...prev, [t.id]: checked }))
+            setDraft((d) => ({
+              ...d,
+              toggles: { ...d.toggles, [t.id]: checked },
+            }))
           }
         />
       ))}

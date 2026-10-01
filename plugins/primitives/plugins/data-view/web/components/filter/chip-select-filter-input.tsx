@@ -91,6 +91,7 @@ export function ChipSelectFilterInput(
 
   return (
     <InlinePopover
+      resetOnClose
       open={open}
       onOpenChange={setOpen}
       width="md"

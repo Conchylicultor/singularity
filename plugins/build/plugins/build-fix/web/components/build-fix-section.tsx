@@ -86,6 +86,7 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
 
   return (
     <LaunchAgentPopover
+      draftKey={`build-fix:${runId}`}
       trigger={
         <Button variant="destructive">
           <Icon icon={autoFixHighIcon} className="size-4" />

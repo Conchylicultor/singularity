@@ -93,6 +93,7 @@ export function InvestigateFailureAction({
 
   return (
     <LaunchAgentPopover
+      draftKey={`deploy-investigate:${row.id}`}
       align="end"
       title="Investigate this failure"
       description={`Launch an agent briefed on this failed ${row.verb} of ${row.compositionId} — the CLI's own message, the run's identity, and where the transcript is.`}

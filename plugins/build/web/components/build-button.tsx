@@ -152,6 +152,7 @@ function BuildButtonInner({
 
   const popover = (
     <InlinePopover
+      resetOnClose
       open={open}
       onOpenChange={setOpen}
       trigger={trigger}

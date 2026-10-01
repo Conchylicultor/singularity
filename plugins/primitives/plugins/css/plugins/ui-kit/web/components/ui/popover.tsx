@@ -1,4 +1,4 @@
-import type * as React from "react";
+import * as React from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
@@ -11,6 +11,12 @@ import type {
   PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
+
+/**
+ * Whether this popover has ever been open. Once it has, its content stays
+ * mounted (hidden) across closes — see `PopoverContent`'s `resetOnClose`.
+ */
+const PopoverEverOpenedContext = React.createContext(false);
 
 function Popover({
   open,
@@ -28,14 +34,22 @@ function Popover({
   // A click inside an iframe never reaches base-ui's outside-press listener.
   const actionsRef =
     useFrameFocusDismiss<PopoverPrimitive.Root.Actions>(isOpen);
+  // Latched on first open (the render-phase "adjust state on prop change"
+  // pattern): a popover never opened mounts nothing, one opened once keeps its
+  // content — so whatever the user typed in it survives closing it.
+  const [everOpened, setEverOpened] = React.useState(isOpen);
+  if (isOpen && !everOpened) setEverOpened(true);
+  // Outside the Root: its children may be a payload render function.
   return (
-    <PopoverPrimitive.Root
-      open={open}
-      defaultOpen={defaultOpen}
-      onOpenChange={handleOpenChange}
-      actionsRef={actionsRef}
-      {...props}
-    />
+    <PopoverEverOpenedContext.Provider value={everOpened}>
+      <PopoverPrimitive.Root
+        open={open}
+        defaultOpen={defaultOpen}
+        onOpenChange={handleOpenChange}
+        actionsRef={actionsRef}
+        {...props}
+      />
+    </PopoverEverOpenedContext.Provider>
   );
 }
 
@@ -53,6 +67,7 @@ function PopoverContent({
   padding = "md",
   maxHeight = "viewport",
   header,
+  resetOnClose = false,
   className,
   children,
   ...props
@@ -80,6 +95,19 @@ function PopoverContent({
     maxHeight?: PopoverMaxHeight;
     /** Optional sticky header rendered above the content, full-bleed through the padding. */
     header?: React.ReactNode;
+    /**
+     * Unmount the content on close, so every open starts from fresh state.
+     *
+     * Default `false`: once opened, the content stays mounted (hidden) while
+     * closed, so a draft typed into it — a launch prompt, a filter value, a
+     * half-written link — is never lost to dismissing the popover. Opt in only
+     * where fresh state is the point: content that seeds its state once from a
+     * value that may change while closed, or that runs live work (streams,
+     * subscriptions) that must stop while hidden. A draft that must also
+     * survive the HOST unmounting (reload, navigation) belongs in
+     * `persistent-draft`, not here.
+     */
+    resetOnClose?: boolean;
   }) {
   // Portaled content escapes the originating window's DOM subtree to
   // document.body, so it no longer matches that window's [data-theme-scope]
@@ -90,8 +118,12 @@ function PopoverContent({
   // Inside a PortalHost (a fullscreen region), draw there: under `body` the
   // popup would be invisible.
   const container = usePortalContainer();
+  const everOpened = React.useContext(PopoverEverOpenedContext);
   return (
-    <PopoverPrimitive.Portal container={container}>
+    <PopoverPrimitive.Portal
+      container={container}
+      keepMounted={everOpened && !resetOnClose}
+    >
       <PopoverPrimitive.Positioner
         {...forwarded}
         className="isolate z-popover outline-none"

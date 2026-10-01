@@ -15,7 +15,7 @@ import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip
 
 type ContentPositionerProps = Pick<
   ComponentProps<typeof PopoverContent>,
-  "align" | "side" | "finalFocus"
+  "align" | "side" | "finalFocus" | "resetOnClose"
 >;
 
 export interface InlinePopoverProps extends ContentPositionerProps {
@@ -57,6 +57,7 @@ export function InlinePopover({
   maxHeight,
   contentClassName,
   finalFocus,
+  resetOnClose,
   open,
   onOpenChange,
 }: InlinePopoverProps) {
@@ -76,6 +77,7 @@ export function InlinePopover({
         padding={padding}
         maxHeight={maxHeight}
         finalFocus={finalFocus}
+        resetOnClose={resetOnClose}
         className={contentClassName}
       >
         {children}

@@ -33,6 +33,7 @@ export function FieldPicker<TRow>(props: {
 
   return (
     <InlinePopover
+      resetOnClose
       open={open}
       onOpenChange={setOpen}
       align="start"

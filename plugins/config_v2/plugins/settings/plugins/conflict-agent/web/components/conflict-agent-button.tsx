@@ -29,6 +29,7 @@ export function ConflictAgentButton({
 }) {
   return (
     <LaunchAgentPopover
+      draftKey={`config-conflict:${conflict.storePath}:${conflict.scopeId ?? ""}:${conflict.kind}`}
       trigger={
         <Button variant="ghost" className={conflict.actionClassName}>
           <Icon icon={autoAwesomeIcon} className="size-3.5" />

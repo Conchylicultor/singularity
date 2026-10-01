@@ -115,6 +115,7 @@ export function ControlPanelPopover({
     <Popover open={open} onOpenChange={onOpenChange}>
       {trigger ? <PopoverTrigger render={trigger} /> : null}
       <PopoverContent
+        resetOnClose
         anchor={anchor}
         align={align}
         side={side}

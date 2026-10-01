@@ -133,6 +133,7 @@ export function PrototypeGallery() {
 
   const newButton = (
     <LaunchAgentPopover
+      draftKey="new-prototype"
       trigger={
         <Button variant="default">
           <Icon icon={addIcon} />
