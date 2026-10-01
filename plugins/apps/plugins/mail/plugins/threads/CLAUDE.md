@@ -51,7 +51,7 @@ revision tick, no refetch of the loaded pages.
 
 - **The account is a scope, stated as data.** The pane reads mail-core's
   `mailAccount` value (the earliest-connected account, `{ id, email } | null`):
-  pending is the loading state, a failed read its error, `null` the
+  loading is the list's loading state, a failed read its error, `null` the
   not-connected state (the Gmail integration's `GmailAccessEmptyState`: the
   blocker copy + its fix, or "first sync has not run"), and an id mounts the
   list with `source={mailThreadsSource.scoped({ where: { accountId } })}`.

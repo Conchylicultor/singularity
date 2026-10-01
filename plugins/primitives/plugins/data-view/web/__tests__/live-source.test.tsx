@@ -11,7 +11,9 @@
  * - a saved rule on a field that does not resolve is pending while the
  *   deferred tier loads, and the error arm once it settled;
  * - the skeleton until the head settles, then an empty set is empty;
- * - the footer: `hasNextPage` from `canGrow` and the paging hold.
+ * - the footer: `hasNextPage` from `canGrow` and the paging hold;
+ * - a failed head read is the body's read-error arm: the failure with Retry,
+ *   whose click re-reads the head (never a bare "Couldn't load" line).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,7 +22,15 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
   clientLog: () => {},
 }));
 
-import { act, renderHook, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import { z } from "zod";
@@ -28,6 +38,7 @@ import { markDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/cor
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
   NotificationsProvider,
+  ResourceError,
   getNotificationsClient,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -48,12 +59,15 @@ import {
   type FieldDef,
   type FieldGrouping,
   type FilterOperatorSet,
+  type LiveDataSource,
   type ViewState,
 } from "../../core";
 import { liveDataSource } from "../internal/live-data-source";
 import { resolveLiveFields } from "../internal/live-fields";
 import { useLiveSource } from "../internal/live-source";
 import { UnavailableSortRuleError } from "../internal/server-filter";
+import { resolveBodyState } from "../internal/body-state";
+import { BodyFallback } from "../components/body-fallback";
 
 const Thread = z.object({
   id: z.string(),
@@ -230,7 +244,10 @@ const wire = (ids: number[]) =>
   }));
 
 beforeEach(() => resetDeferredLoadStateForTests());
-afterEach(() => resetDeferredLoadStateForTests());
+afterEach(() => {
+  cleanup();
+  resetDeferredLoadStateForTests();
+});
 
 describe("useLiveSource — lowering", () => {
   it("renames a field onto its column, ANDs the scope first, and sorts by columns", () => {
@@ -408,5 +425,106 @@ describe("useLiveSource — states", () => {
     expect(Object.keys(result.current!.rows[0]!)).not.toContain("$key");
     rerender({ state: baseState, hold: true });
     expect(result.current!.scroll.hasNextPage).toBe(false);
+  });
+});
+
+/**
+ * The body's path for a live source, minus the views: the adapter's answer,
+ * `resolveBodyState`, and what renders in place of the view.
+ */
+function LiveBody(props: {
+  source: LiveDataSource<Thread>;
+  fields: FieldDef<Thread>[];
+}) {
+  const plan = resolveLiveFields(
+    props.fields,
+    props.source,
+    resolveOperatorSet,
+    "host",
+  );
+  const origin = useLiveSource<Thread>({
+    source: props.source,
+    plan,
+    fields: props.fields,
+    state: baseState,
+    resolveOperatorSet,
+    resolveGrouping,
+    holdPaging: () => false,
+  });
+  const state = resolveBodyState({ server: origin, readiness: undefined });
+  return state.kind === "view" ? (
+    <ul>
+      {origin!.rows.map((r) => (
+        <li key={r.id}>{r.subject}</li>
+      ))}
+    </ul>
+  ) : (
+    <BodyFallback
+      state={state}
+      errorState={undefined}
+      loadingState={<p>loading</p>}
+      loadingVariant={undefined}
+      loadingCount={undefined}
+    />
+  );
+}
+
+describe("useLiveSource — a failed head read", () => {
+  it("renders the read's failure with Retry, and Retry re-reads the head", async () => {
+    const c = threads();
+    const client = makeClient();
+    const source = liveDataSource(c, { searchable: ["subject"] });
+    render(
+      <NotificationsProvider queryClient={client}>
+        <LiveBody source={source} fields={fieldsOf(c)} />
+      </NotificationsProvider>,
+    );
+    const notifications = getNotificationsClient();
+    if (!notifications) throw new Error("NotificationsClient not created");
+    vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+    expect(screen.getByText("loading")).toBeTruthy();
+
+    const head = queryKeyFor(c.key, { limit: "2" });
+    const fetch = vi
+      .spyOn(notifications, "fetchOverHttp")
+      .mockRejectedValueOnce(new Error("boom"));
+    await act(async () => {
+      await expect(
+        client.getQueryCache().find({ queryKey: head, exact: true })!.fetch(),
+      ).rejects.toThrow("boom");
+    });
+    // The read's own failure, typed — not a bare server-error line.
+    await waitFor(() => expect(screen.getByText(/boom/)).toBeTruthy());
+    const retry = screen.getByRole("button", { name: "Retry" });
+
+    fetch.mockResolvedValueOnce(wire([1, 2]));
+    await act(async () => {
+      fireEvent.click(retry);
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(screen.getByText("s1")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  it("the adapter hands the head failure over as a read error, not a query error", async () => {
+    const c = threads();
+    const client = makeClient();
+    const { result } = mount(client, c, { state: baseState });
+    const notifications = getNotificationsClient()!;
+    vi.spyOn(notifications, "fetchOverHttp").mockRejectedValueOnce(
+      new Error("boom"),
+    );
+    await act(async () => {
+      await expect(
+        client
+          .getQueryCache()
+          .find({ queryKey: queryKeyFor(c.key, { limit: "2" }), exact: true })!
+          .fetch(),
+      ).rejects.toThrow("boom");
+    });
+    await waitFor(() => expect(result.current!.readError).not.toBeNull());
+    expect(result.current!.error).toBeNull();
+    expect(result.current!.loading).toBe(false);
+    expect(result.current!.readError!.error).toBeInstanceOf(ResourceError);
   });
 });

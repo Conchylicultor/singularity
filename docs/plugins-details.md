@@ -1530,13 +1530,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
-        - **`deploy-history`** — History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a server-delegated, keyset-paginated DataView — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
+        - **`deploy-history`** — History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
           - Web:
             - Slots: `DeployRunItemActions` ← `apps.deploy.deploy-history.investigate-failure`
             - Contributes: `DeploymentDetail.Section` "History" → `DeployHistorySection`
             - Uses:
               - `apps/deploy/deployments.DeploymentDetail`
-              - `infra/endpoints.fetchEndpoint`
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
@@ -1547,8 +1546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineItemActions`
               - `primitives/data-view.FieldDef`
-              - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
+              - `primitives/data-view.liveDataSource`
               - `primitives/relative-time.RelativeTime`
             - Exports (values): `DeployRunItemActions`
           - Cross-plugin:
@@ -1561,7 +1559,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/deploy/deploy-history.DeployRunItemActions`
                   - `primitives/icon-button.IconButton`
                   - `primitives/launch.LaunchAgentPopover`
-        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
               - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`, `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
@@ -1636,7 +1634,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `resource.declare` "deploy.deployments:rows"
               - `resource.declare` "deploy.deployments:groups"
               - `resource.declare` "deploy.runs"
-              - `resource.declare` "deploy.runs-revision"
+              - `resource.declare` "deploy.run-history"
+              - `resource.declare` "deploy.run-history:rows"
+              - `resource.declare` "deploy.run-history:groups"
             - Uses:
               - `apps/deploy/health.serverHealth`
               - `apps/deploy/servers._deployServers`
@@ -1655,14 +1655,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/retention.defineRetention`
               - `network/live.serveCollection`
               - `network/live.serveValue`
-              - `primitives/data-view/server-query.augmentServerQuery`
-              - `primitives/data-view/server-query.bindColumns`
-              - `primitives/data-view/server-query.compileWhere`
-              - `primitives/data-view/server-query.FieldColumnMap`
-              - `primitives/keyset.buildSortKeys`
-              - `primitives/keyset.keyValuesOf`
-              - `primitives/keyset.orderByClauses`
-              - `primitives/keyset.seekPredicate`
               - `primitives/log-channels.defineLogSink`
               - `release.awaitRelease`
               - `release.enqueueRelease`
@@ -1679,8 +1671,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `deploy.deployments` (keyed, window)
               - `deploy.deployments:groups` (push)
               - `deploy.deployments:rows` (keyed, point)
+              - `deploy.run-history` (keyed, window)
+              - `deploy.run-history:groups` (push)
+              - `deploy.run-history:rows` (keyed, point)
               - `deploy.runs` (push)
-              - `deploy.runs-revision` (push)
             - Routes:
               - `GET /api/deploy/deployments`
               - `POST /api/deploy/deployments`
@@ -1688,7 +1682,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PATCH /api/deploy/deployments/:id`
               - `DELETE /api/deploy/deployments/:id`
               - `POST /api/deploy/deployments/:id/run`
-              - `POST /api/deploy/deployments/:id/runs/query`
           - Core:
             - Uses:
               - `apps/deploy/servers.serverDetailRoute`
@@ -1697,8 +1690,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live.liveValue`
               - `network/live/filter.liveInstant`
               - `network/live/filter.liveText`
-              - `primitives/data-view.ServerFilterWireSchema`
-              - `primitives/live-state.resourceDescriptor`
               - `primitives/pane.defineRoute`
             - Exports (types):
               - `CreateDeploymentBody`
@@ -1708,7 +1699,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DeployRunRecord`
               - `DeployVerb`
               - `InstallLayout`
-              - `QueryDeployRunsBody`
               - `RunDeploymentBody`
               - `UpdateDeploymentBody`
             - Exports (values):
@@ -1719,16 +1709,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DEFAULT_LOOPBACK_PORT`
               - `deleteDeployment`
               - `DEPLOY_LOG_CHANNEL`
-              - `DEPLOY_RUN_FILTERABLE`
-              - `DEPLOY_RUN_SEARCHABLE`
               - `deploymentDetailRoute`
               - `deployments`
               - `DeploymentSchema`
               - `DeployPhaseSchema`
+              - `deployRunHistory`
               - `DeployRunRecordSchema`
               - `deployRuns`
               - `DeployRunSchema`
-              - `deployRunsRevisionResource`
               - `DeployVerbSchema`
               - `deriveInstall`
               - `getDeployment`
@@ -1738,9 +1726,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `LOOPBACK_HOST`
               - `loopbackOnlySentence`
               - `publicUrls`
-              - `queryDeployRuns`
-              - `QueryDeployRunsBodySchema`
-              - `QueryDeployRunsResponseSchema`
               - `releaseAppPath`
               - `releaseDir`
               - `REMOTE_SCRIPT_SHEBANG`
@@ -2156,7 +2141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RecurrenceRuleSchema`
               - `resolveAnchor`
               - `WEEKDAYS`
-        - **`event-list`** — The events DataView: a server-delegated keyset query over the events table rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the keyset events query (POST /api/events/query) over the events table — filter/sort/search compiled to SQL, cursor-paginated, with soft-deleted events hidden by default.
+        - **`event-list`** — The events DataView: the live `events.list` collection (a segmented scroll kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the `events.list` live collection over the events table joined to its source (a required lookup, routed in reverse: a source write refills that source's events, gated on the columns the list reads), with soft-deleted events and a disabled source's events hidden by default.
           - Web:
             - Slots:
               - `EventList.Fields` ← `apps.events.sources.source-field`
@@ -2166,9 +2151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Events.Sidebar` "Events"
             - Uses:
               - `apps/events/events-core.useEventSourceOrigin`
-              - `apps/events/events-core.useEventsRevision`
               - `apps/events/shell.Events`
-              - `infra/endpoints.fetchEndpoint`
               - `primitives/css/badge.Badge`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
@@ -2178,7 +2161,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineFieldExtensions`
-              - `primitives/live-state.matchResource`
+              - `primitives/data-view.liveDataSource`
               - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
@@ -2192,51 +2175,40 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useEventUrl`
               - `useOpenEvent`
           - Server:
+            - Contributes:
+              - `resource.declare` "events.list"
+              - `resource.declare` "events.list:rows"
+              - `resource.declare` "events.list:groups"
             - Uses:
               - `apps/events/events-core._eventSources`
               - `apps/events/events-core.eventsTable`
-              - `database.db`
-              - `infra/endpoints.HttpError`
-              - `infra/endpoints.implement`
-              - `primitives/data-view/server-query.bindColumns`
-              - `primitives/data-view/server-query.compileWhere`
-              - `primitives/data-view/server-query.decodeFilterBody`
-              - `primitives/data-view/server-query.FieldColumnMap`
-              - `primitives/data-view/server-query.filterableOf`
-              - `primitives/keyset.buildSortKeys`
-              - `primitives/keyset.keyValuesOf`
-              - `primitives/keyset.orderByClauses`
-              - `primitives/keyset.seekPredicate`
-            - Exports (values): `handleQuery`
-            - Routes: `POST /api/events/query`
+              - `network/live.serveCollection`
+            - Resources:
+              - `events.list` (keyed, window)
+              - `events.list:groups` (push)
+              - `events.list:rows` (keyed, point)
           - Core:
             - Uses:
               - `apps/events/events-core.EVENT_CATEGORIES`
               - `apps/events/events-core.SourcedEventSchema`
-              - `infra/endpoints.defineEndpoint`
+              - `network/live.liveCollection`
               - `network/live/filter.liveBoolean`
               - `network/live/filter.liveInstant`
               - `network/live/filter.liveStringArray`
               - `network/live/filter.liveText`
-              - `primitives/data-view.ServerFilterWireSchema`
             - Exports (types):
               - `EventFieldSpec`
               - `EventFieldType`
-              - `QueryEventsBody`
             - Exports (values):
               - `EVENT_CATEGORY_OPTIONS`
               - `EVENT_LIST_FIELDS`
-              - `EVENT_LIST_FILTERABLE`
               - `EVENT_LIST_SEARCHABLE`
-              - `queryEvents`
-              - `QueryEventsBodySchema`
-              - `QueryEventsResponseSchema`
-              - `SortRuleSchema`
+              - `eventsList`
           - Cross-plugin:
             - Imported by:
               - `apps/events/sources/source-detail/runs/extracted-events`
               - `apps/events/sources/source-field`
-        - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + events revision tick.
+        - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / run-ledger hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + the run ledger's revision tick.
           - Web:
             - Slots: `EventSources.Type` ← `apps.events.sources.coworkmeet`, `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
             - Uses:
@@ -2247,7 +2219,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live.useLive`
               - `network/live.useLiveRow`
               - `primitives/live-state.foldResource`
-              - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useEndpointResource`
               - `primitives/live-state.useResource`
             - Exports (values):
@@ -2259,7 +2230,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useEventSourceRun`
               - `useEventSourceRuns`
               - `useEventSources`
-              - `useEventsRevision`
               - `useRefreshAllEventSources`
               - `useRefreshEventSourceNow`
               - `useRunEvents`
@@ -2269,7 +2239,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `resource.declare` "events.sources"
               - `resource.declare` "events.sources:rows"
               - `resource.declare` "events.sources:groups"
-              - `resource.declare` "events.revision"
               - `resource.declare` "events.runs-revision"
             - Uses:
               - `database.db`
@@ -2297,7 +2266,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `deleteSource`
               - `eventRunsRevisionServerResource`
               - `eventSourcesServed`
-              - `eventsRevisionServerResource`
               - `eventsTable`
               - `getEventSourceType`
               - `listEventSourceTypes`
@@ -2312,7 +2280,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `updateSource`
               - `upsertEvents`
             - Resources:
-              - `events.revision` (push)
               - `events.runs-revision` (push)
               - `events.sources` (keyed, window)
               - `events.sources:groups` (push)
@@ -2356,6 +2323,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ExtractedEvent`
               - `ExtractionResult`
               - `ExtractionStatus`
+              - `ListedEvent`
               - `RefreshAllResult`
               - `RefreshCadence`
               - `RefreshSourceResult`
@@ -2382,7 +2350,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventSourceRunSchema`
               - `eventSources`
               - `EventSourceSchema`
-              - `eventsRevisionResource`
               - `externalUrl`
               - `ExtractedEventSchema`
               - `EXTRACTION_STATUSES`
@@ -2406,6 +2373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SOURCE_STATES`
               - `SOURCE_STATUSES`
               - `SourcedEventSchema`
+              - `sourceRefOf`
               - `SourceRefSchema`
               - `sourceState`
               - `updateEventSource`
@@ -2972,7 +2940,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `remote-images`
               - `search`
               - `sync`
-              - `threads`
         - **`gmail-api`** — Stateless typed Gmail REST API v1 client (profile, messages, history, labels) with concurrency-bounded batched gets and exponential backoff. Takes an access token per call; never touches auth or storage.
           - Cross-plugin:
             - Imported by:
@@ -3006,10 +2973,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `GmailApiError`
               - `GmailHistoryExpiredError`
-        - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared user-labels live resource.
+        - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.
           - Server:
             - Contributes:
               - `resource.declare` "mail-labels"
+              - `resource.declare` "mail-account"
               - `fork-data-exclusion` "mail_messages"
               - `fork-data-exclusion` "mail_threads"
               - `fork-data-exclusion` "mail_message_labels"
@@ -3043,7 +3011,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `mailDraftAttachments`
               - `requireGmailToken`
               - `resolveMailAccountId`
-            - Resources: `mail-labels` (push, unbounded: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
+            - Resources:
+              - `mail-account` (push)
+              - `mail-labels` (push, unbounded: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
           - Core:
             - Uses:
               - `fields.FieldsRecord`
@@ -3085,6 +3055,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `MAIL_SYNC_ERROR_CODES`
               - `MAIL_SYNC_REMEDIATION`
               - `MAIL_SYNC_STATUSES`
+              - `mailAccount`
               - `mailAccountFields`
               - `MailAccountSchema`
               - `MailAddressSchema`
@@ -3234,15 +3205,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps-core.Apps`
               - `apps-core/tabs.navigate`
-              - `integrations/gmail.GMAIL_BLOCKER_BODY`
-              - `integrations/gmail.GmailAccessAction`
+              - `integrations/gmail.GmailAccessEmptyState`
               - `integrations/gmail.useGmailAccess`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
               - `primitives/css/inline.Inline`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
@@ -3339,13 +3308,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.ResourceResult`
               - `ui/icons.Icon`
-        - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter travelling the standard server-delegated keyset query path. Threads DataView server: the keyset thread query (POST /api/mail/threads/query) over mail_threads — the active tab's whole FilterGroup (mailbox scope included) compiles through the standard compileWhere path — plus the scalar revision-tick live resource that keeps the loaded window fresh.
+        - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter — read as a live segmented scroll of the `mail.threads` collection, scoped to the connected account. Threads DataView server: serves the `mail.threads` live collection over mail_threads — the active tab's whole filter (mailbox scope included) and the pane's account scope compile into each window tuple, and the routed change feed refills exactly the threads a write touches.
           - Web:
             - Slots: `mailThreadsPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "mail-threads"
             - Uses:
               - `apps/mail/reading-pane.threadPane`
-              - `infra/endpoints.fetchEndpoint`
+              - `integrations/gmail.GmailAccessEmptyState`
               - `network/live.useLive`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
@@ -3353,9 +3322,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
+              - `primitives/data-view.liveDataSource`
               - `primitives/live-state.foldResource`
               - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -3364,51 +3333,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/icons.Icon`
             - Exports (values): `mailThreadsPane`
           - Server:
-            - Contributes: `resource.declare` "mail-threads-revision"
+            - Contributes:
+              - `resource.declare` "mail.threads"
+              - `resource.declare` "mail.threads:rows"
+              - `resource.declare` "mail.threads:groups"
             - Uses:
               - `apps/mail/mail-core._mailThreads`
-              - `apps/mail/mail-core.resolveMailAccountId`
-              - `database.db`
-              - `infra/endpoints.HttpError`
-              - `infra/endpoints.implement`
-              - `primitives/data-view/server-query.bindColumns`
-              - `primitives/data-view/server-query.compileWhere`
-              - `primitives/data-view/server-query.decodeFilterBody`
-              - `primitives/data-view/server-query.FieldColumnMap`
-              - `primitives/keyset.buildSortKeys`
-              - `primitives/keyset.keyValuesOf`
-              - `primitives/keyset.orderByClauses`
-              - `primitives/keyset.seekPredicate`
-            - Exports (values):
-              - `buildThreadsWhere`
-              - `handleQuery`
-              - `mailThreadsRevisionServerResource`
-            - Resources: `mail-threads-revision` (push)
-            - Routes: `POST /api/mail/threads/query`
+              - `network/live.serveCollection`
+            - Resources:
+              - `mail.threads` (keyed, window)
+              - `mail.threads:groups` (push)
+              - `mail.threads:rows` (keyed, point)
           - Core:
             - Uses:
               - `apps/mail/mail-core.MailThreadSchema`
-              - `infra/endpoints.defineEndpoint`
+              - `network/live.liveCollection`
               - `network/live/filter.liveBoolean`
               - `network/live/filter.liveInstant`
               - `network/live/filter.liveNumber`
               - `network/live/filter.liveStringArray`
               - `network/live/filter.liveText`
-              - `primitives/data-view.ServerFilterWireSchema`
-              - `primitives/live-state.resourceDescriptor`
             - Exports (types):
+              - `MailThreadColumn`
               - `MailThreadFieldSpec`
               - `MailThreadFieldType`
-              - `QueryThreadsBody`
             - Exports (values):
               - `MAIL_THREAD_FIELDS`
-              - `MAIL_THREAD_FILTERABLE`
-              - `MAIL_THREAD_SEARCHABLE`
-              - `mailThreadsRevisionResource`
-              - `queryThreads`
-              - `QueryThreadsBodySchema`
-              - `QueryThreadsResponseSchema`
-              - `SortRuleSchema`
+              - `mailThreads`
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`agent-origin`** — Agent-origin provenance for pages: contributes an `origin` enum field (Private / Scratch) into the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, a bounded live resource exposes the marker set to the Pages sidebar's `origin` field, and a 24h retention sweep trashes the marked pages.
@@ -4584,7 +4535,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/shortcuts.getFocusedSurfaceId`
               - `primitives/shortcuts.targetClaimsKey`
               - `primitives/shortcuts.useSurfaceShortcuts`
-        - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
+        - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by the columns other plugins contribute). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots:
               - `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
@@ -4606,7 +4557,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.TEMPO_MATH_FLOOR`
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.LiveRowResult`
+              - `network/live.mapRow`
               - `network/live.useLive`
+              - `network/live.useLiveRow`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -4630,21 +4584,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineFieldExtensions`
               - `primitives/data-view.defineItemActions`
+              - `primitives/data-view.liveDataSource`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/live-state.foldResource`
-              - `primitives/live-state.mapResource`
-              - `primitives/live-state.matchResource`
-              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Hint`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
-              - `primitives/pane.resolveFrom`
               - `primitives/pane.ResolveResult`
+              - `primitives/pane.resolveRow`
               - `primitives/pane.type`
               - `primitives/pane.useOpenPane`
               - `primitives/pane.usePaneStore`
@@ -4659,14 +4612,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useCurrentSong`
               - `useOpenSong`
           - Server:
-            - Contributes: `resource.declare` "sonata-songs"
+            - Contributes:
+              - `resource.declare` "sonata.songs"
+              - `resource.declare` "sonata.songs:rows"
+              - `resource.declare` "sonata.songs:groups"
             - Uses:
               - `database.db`
               - `infra/attachments.Attachments`
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
-              - `network/live.serveValue`
+              - `network/live.serveCollection`
             - DB schema:
               - `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`
               - `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
@@ -4678,7 +4634,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `createSongRow`
               - `songAttachments`
               - `updateSongMeta`
-            - Resources: `sonata-songs` (push, unbounded: the whole song library — whole-table only until Resources item 7: the library DataView sorts and filters every song client-side, including side-table field-extension columns (plays, tracks, file-missing), and a bounded window needs joined side-table sort/filter columns, the host rows in data-view's FieldExtensionProps, and live-window paging in DataView)
+            - Resources:
+              - `sonata.songs` (keyed, window)
+              - `sonata.songs:groups` (push)
+              - `sonata.songs:rows` (keyed, point)
             - Routes:
               - `DELETE /api/sonata/songs/:id`
               - `PATCH /api/sonata/songs/:id`
@@ -4691,13 +4650,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/float/config.floatField`
               - `fields/text/config.textField`
               - `infra/endpoints.defineEndpoint`
-              - `network/live.liveValue`
+              - `network/live.liveCollection`
+              - `network/live/filter.liveInstant`
+              - `network/live/filter.liveNumber`
+              - `network/live/filter.liveText`
             - Exports (types):
               - `Song`
               - `UpdateSongBody`
             - Exports (values):
               - `deleteSong`
-              - `songs`
+              - `songLibrary`
               - `SongSchema`
               - `updateSong`
           - Cross-plugin:
@@ -4976,7 +4938,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/sonata/rich/chord-readout`
               - `apps/sonata/rich/key-readout`
-        - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and contributes Plays / Last-played fields (Library.Fields) so they appear on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
+        - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and contributes Plays / Last-played fields (Library.Fields) so they appear on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves them as the song library's `playback` columns (LiveColumns.Serve).
           - Web:
             - Contributes:
               - `Sonata.Effect` "record-play" → `RecordPlayObserver`
@@ -4986,23 +4948,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.fetchEndpoint`
-              - `network/live.useLive`
-              - `primitives/live-state.foldResource`
               - `primitives/relative-time.formatRelativeTime`
-            - Exports (values): `usePlaybackHistoryMap`
           - Server:
-            - Contributes: `resource.declare` "sonata-playback-history"
+            - Contributes: `live.columns.serve` "sonata.songs ← playback"
             - Uses:
               - `apps/sonata/library._songs`
               - `database.db`
               - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
-              - `network/live.serveValue`
+              - `network/live.LiveColumns`
+              - `network/live.serveColumns`
             - DB schema: `plugins/apps/plugins/sonata/plugins/playback-history/server/internal/tables.ts`
             - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_playback`)
             - Exports (values): `songPlayback`
-            - Resources: `sonata-playback-history` (push, unbounded: one row per played song (sonata_songs_ext_playback) — whole-table only until Resources item 7: the library's Plays / Last-played field extension sorts every song client-side, and a bounded read needs joined side-table sort/filter columns on the songs collection, the host rows in data-view's FieldExtensionProps, and live-window paging in DataView)
             - Routes: `POST /api/sonata/songs/:id/play`
+          - Core:
+            - Uses:
+              - `apps/sonata/library.songLibrary`
+              - `network/live.liveColumns`
+              - `network/live/filter.liveInstant`
+              - `network/live/filter.liveNumber`
+            - Exports (values): `playbackColumns`
         - **`primitives`** — Umbrella for Sonata-local client primitives.
           - Plugins:
             - **`inertial-drag`** — 1-D pointer drag-to-scrub hook with exponential-friction release momentum (flick → coast → settle).
@@ -5651,7 +5617,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `POST /api/sonata/songs/chord-grid`
                   - `GET /api/sonata/songs/:id/chord-grid`
                   - `PUT /api/sonata/songs/:id/chord-grid`
-            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and the Tracks field. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the reactive MIDI rollup, and seeds the bundled public-domain MIDI starters at boot.
+            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and the Tracks field. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the song library's `midi` columns (track count, file-missing), and seeds the bundled public-domain MIDI starters at boot.
               - Web:
                 - Contributes:
                   - `Sonata.Source` "MIDI File"
@@ -5664,19 +5630,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/attachments.getAttachmentFile`
                   - `infra/attachments.uploadAttachment`
                   - `infra/endpoints.fetchEndpoint`
-                  - `network/live.useLive`
                   - `primitives/css/line.Line`
                   - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
-                  - `primitives/live-state.foldResource`
                   - `ui/icons.Icon`
-                - Exports (values):
-                  - `MIDI_SOURCE_ID`
-                  - `useSongMidiMap`
+                - Exports (values): `MIDI_SOURCE_ID`
               - Server:
-                - Contributes: `resource.declare` "sonata-song-midi"
+                - Contributes: `live.columns.serve` "sonata.songs ← midi"
                 - Uses:
                   - `apps/sonata/library._songs`
                   - `apps/sonata/library.createSongRow`
@@ -5687,7 +5649,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/attachments.getAttachment`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
-                  - `network/live.serveValue`
+                  - `network/live.LiveColumns`
+                  - `network/live.serveColumns`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_midi`)
                 - Exports (types): `ImportMidiSongInput`
@@ -5697,10 +5660,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `listFolderImportedSongs`
                   - `setSourceMissing`
                   - `songMidi`
-                - Resources: `sonata-song-midi` (push, unbounded: one row per MIDI song (sonata_songs_ext_midi) — whole-table only until Resources item 7: the library's Tracks / File-missing field extensions sort and filter every song client-side, and a bounded read needs joined side-table sort/filter columns on the songs collection, the host rows in data-view's FieldExtensionProps, and live-window paging in DataView)
                 - Routes:
                   - `POST /api/sonata/songs/midi`
                   - `GET /api/sonata/songs/:id/midi`
+              - Core:
+                - Uses:
+                  - `apps/sonata/library.songLibrary`
+                  - `network/live.liveColumns`
+                  - `network/live/filter.liveBoolean`
+                  - `network/live/filter.liveNumber`
+                - Exports (values): `midiColumns`
               - Cross-plugin:
                 - Imported by: `apps/sonata/sources/midi/folders`
               - Plugins:
@@ -5711,7 +5680,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `Library.Fields` "source-missing" → `SourceMissingField`
                     - Uses:
                       - `apps/sonata/library.Library`
-                      - `apps/sonata/sources/midi.useSongMidiMap`
                       - `config_v2.ConfigV2`
                       - `primitives/css/badge.Badge`
                   - Server:
@@ -6206,11 +6174,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/studio/compositions.CompositionDetail`
                   - `build/serve-composition.ServeTargetPanel`
                   - `build/serve-composition.useServeStatus`
-                  - `infra/endpoints.fetchEndpoint`
+                  - `config_v2.useConfigResult`
                   - `infra/endpoints.useEndpointMutation`
                   - `plugin-meta/composition.useManifestItems`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
+                  - `primitives/css/placeholder.Placeholder`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/text.Text`
@@ -6219,9 +6188,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/data-view.DataView`
                   - `primitives/data-view.defineDataView`
                   - `primitives/data-view.FieldDef`
+                  - `primitives/data-view.liveDataSource`
                   - `primitives/detail-sections.defineDetailSections`
                   - `primitives/live-state.matchResource`
-                  - `primitives/live-state.useResource`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
                   - `primitives/pane.useOpenPane`
@@ -8934,6 +8903,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/sonata/sources/midi/folders`
       - `apps/sonata/view-options`
       - `apps/sonata/voicing`
+      - `apps/studio/compositions/release`
       - `auth/apple-signing`
       - `auth/apple-signing/setup-wizard`
       - `auth/google`
@@ -9726,6 +9696,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database.db`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `primitives/data-view/server-query.applyJoin`
           - `primitives/data-view/server-query.augmentServerQuery`
           - `primitives/data-view/server-query.bindColumns`
           - `primitives/data-view/server-query.compileWhere`
@@ -13215,14 +13186,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/deploy/deployments`
       - `apps/deploy/health`
       - `apps/deploy/servers`
-      - `apps/events/event-list`
       - `apps/events/events-core`
       - `apps/events/refresh`
       - `apps/events/sources/manual`
       - `apps/mail/attachments`
       - `apps/mail/mail-core`
       - `apps/mail/sync`
-      - `apps/mail/threads`
       - `apps/pages/agent-origin`
       - `apps/pages/auto-icon`
       - `apps/pages/content-search`
@@ -13271,7 +13240,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/query-resource`
       - `infra/retention`
       - `infra/trash`
-      - `network/live`
       - `page/annotations/agent-access`
       - `page/annotations/agent-notes/authorship`
       - `page/annotations/instructions`
@@ -13409,6 +13377,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ExcludeFromChangeFeed`
           - `getCoveredTables`
           - `parseLiveStatePayload`
+          - `readLayout`
           - `rebuildTriggers`
           - `routeChange`
       - Cross-plugin:
@@ -13423,7 +13392,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports`
       - Test helpers:
         - Server: `@plugins/database/plugins/change-feed/server/testing`
+          - `createChangeFeedListener`
           - `ensureChangelogTable`
+          - `rebuildTriggers`
     - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
       - Cross-plugin:
         - Imported by: `database/admin`
@@ -13660,6 +13631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `database.db`
           - `database/admin.ExcludeFromFork`
+          - `database/change-feed.readLayout`
           - `database/change-feed.routeChange`
           - `infra/jobs.defineJob`
           - `primitives/log-channels.defineLogSink`
@@ -17957,11 +17929,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DefineResourceInput`
           - `DependsOnEntry`
           - `ExternalResource`
+          - `FullRoute`
+          - `HostMap`
           - `KeyedDiff`
           - `KeyedMembership`
           - `KeyedMembershipInput`
           - `KeyedServerResourceOptions`
-          - `RecomputeIntent`
+          - `ReachPlan`
           - `Resource`
           - `ResourceContract`
           - `ResourceDefinition`
@@ -17969,16 +17943,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ResourceParams`
           - `ResourceRuntime`
           - `ResourceRuntimeOptions`
+          - `Route`
+          - `RoutedRecomputeOn`
+          - `RoutePlan`
+          - `ScopedResourceTable`
           - `ScopePolicy`
           - `ServerResourceOptions`
           - `SnapEncoder`
           - `SnapEntry`
+          - `TableChange`
+          - `TableLayoutRequirement`
+          - `TupleUse`
           - `WsData`
           - `WsHandler`
         - Exports (values):
           - `createResourceRuntime`
           - `diffKeyedScopedMembership`
+          - `mintReachPlan`
+          - `mintRoutePlan`
           - `retainSnapEncoder`
+          - `tableLayoutRequirements`
       - Cross-plugin:
         - Imported by:
           - `framework/central-core`
@@ -17989,7 +17973,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `diffKeyedFull` — Full diff: compare the new array `value` against `prev` (the prior snapshot, or `undefined` on first notify).
           - `diffKeyedScoped` — Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed affected rows.
           - `hashSnapEncoder`
-          - Types: `KeyedSnapshot`
+          - `makeClientView`
+          - Types: `ClientView`, `KeyedSnapshot`, `RecordedFrame`
     - **`server-core`**
       - Core:
         - Uses:
@@ -18010,7 +17995,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ProfilerHooks`
           - `ProfilerMeasureName`
           - `ProfilerSpanDetail`
-          - `RecomputeIntent`
           - `Registration`
           - `ResourceContract`
           - `ResourceDefinition`
@@ -18026,13 +18010,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ServerPluginDefinition`
           - `ServerResourceOptions`
           - `Span`
+          - `TableChange`
+          - `TableLayoutRequirement`
           - `WsData`
           - `WsHandler`
         - Exports (values):
           - `applyDbChange`
           - `assertPreloadedResourcesDeclared`
+          - `bindDeferredResources`
           - `boundedMembershipKeys`
           - `collectContributions`
+          - `defineDeferredResource`
           - `defineExternalResource`
           - `defineResource`
           - `defineServerContribution`
@@ -18045,19 +18033,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `measureSubscribeCycle`
           - `notificationsWsHandler`
           - `notifyStatsFor`
+          - `onDeferredResourcesBound`
           - `onResourceDelivery`
           - `onResourcePush`
           - `physFootprintBytes`
           - `procMemory`
           - `profilerStart`
           - `recomputeResource`
+          - `recordLoaderReadSet`
           - `recordMemoryCheckpoint`
           - `registeringPlugin`
+          - `removeReadSetTable`
           - `reportServerError`
           - `reportServerFatalSync`
           - `Resource`
-          - `scopedResourceIdentities`
+          - `routedTableRequirements`
+          - `routeTableChange`
+          - `scopedResourceTables`
           - `seedPersistedSnapshot`
+          - `seedReadSetIndex`
           - `serverCollectedDir`
           - `setClientBuildIdentity`
           - `setErrorReporter`
@@ -18076,6 +18070,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs/supervised-job`
       - Cli:
         - Exports (values): `runExec`
+      - Test helpers:
+        - Core: `@plugins/framework/plugins/server-core/core/testing`
+          - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:
         - Imported by:
@@ -18550,6 +18547,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/piano`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
+              - `apps/deploy/deploy-history`
               - `apps/deploy/deploy-history/investigate-failure`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
@@ -18575,6 +18573,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/track-mixer`
               - `apps/sonata/view-options`
+              - `apps/studio/compositions/release`
               - `apps/website/improve`
               - `apps/website/shell`
               - `build`
@@ -18630,6 +18629,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/space-ramp`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
+              - `primitives/data-view/custom-columns`
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
@@ -19821,13 +19821,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/chord/video-availability`
           - `apps/deploy/analytics/collect`
           - `apps/deploy/analytics/dashboard`
-          - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
           - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
-          - `apps/events/event-list`
           - `apps/events/events-core`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
@@ -19841,7 +19839,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/sync`
           - `apps/mail/sync-status`
           - `apps/mail/sync/auto-resume`
-          - `apps/mail/threads`
           - `apps/pages/auto-icon`
           - `apps/pages/history`
           - `apps/pages/page-author`
@@ -21415,13 +21412,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SECRETS_DIR_DISPLAY`
               - `USER_CONFIG_DIR_DISPLAY`
               - `WORKTREES_DIR_DISPLAY`
-    - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.
+    - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (an identityTable, or for a bounded window / point set and a grouping the routes the change router serves it by), and client keyOf for live-state resources.
       - Server:
         - Uses:
           - `database.db`
+          - `primitives/keyset.atOrBeforePredicate`
           - `primitives/keyset.orderByClauses`
+          - `primitives/keyset.seekPredicate`
           - `primitives/keyset.SortKey`
         - Exports (types):
+          - `CompiledGroups`
           - `CompiledQuery`
           - `Edge`
           - `EntitySource`
@@ -21429,12 +21429,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `QueryDb`
           - `QueryResourceSpec`
           - `QuerySource`
+          - `ReadColumn`
+          - `RoutedSource`
           - `SelectMap`
           - `WindowOrderKey`
           - `WindowQueryResourceSpec`
         - Exports (values):
           - `compileEdges`
+          - `compileGroupsQuery`
+          - `compileJoins`
           - `compileQuery`
+          - `deferredWindowQueryResource`
+          - `joinRefs`
           - `queryResource`
           - `rel`
           - `windowQueryResource`
@@ -21448,10 +21454,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.WindowResourceDescriptor`
           - `primitives/live-state.WindowSelector`
         - Exports (types):
+          - `ColumnRef`
+          - `ColumnRefsOf`
+          - `ExtensionJoin`
+          - `JoinColumns`
+          - `JoinFamily`
+          - `JoinRef`
+          - `JoinRefs`
+          - `JoinSpec`
+          - `JoinWireColumns`
+          - `KeyedSideJoin`
+          - `LookupJoin`
           - `PointQueryResourceContract`
           - `QueryResourceContract`
           - `WindowQueryResourceContract`
-        - Exports (values): `queryResourceDescriptor`
+        - Exports (values):
+          - `BASE_RELATION`
+          - `familyMember`
+          - `familyMemberAlias`
+          - `queryResourceDescriptor`
       - Cross-plugin:
         - Imported by:
           - `conversations/agents`
@@ -21461,6 +21482,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Test helpers:
         - Server: `@plugins/infra/plugins/query-resource/server/testing`
           - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.
+          - `recordingQueryDb` — A `QueryDb` that renders every query through drizzle's real `PgDialect` — the SQL a compiler would send — records it, and answers with `script`'s rows instead of running it.
+          - Types: `RecordedQuery`
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
       - Core:
         - Exports (types): `WriteOrigin`
@@ -21591,12 +21614,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `currentCallerKind`
           - `currentEntryLabel`
           - `currentOriginClass`
-          - `getLastLoaderReadSet`
-          - `getReadSetIndex`
           - `getRuntimeProfile`
           - `getSelfMeter`
           - `installBackgroundLaneRuntime`
           - `installClock`
+          - `installLoaderReadSetSink`
           - `installProfilingSuppressionRuntime`
           - `installSpanContextRuntime`
           - `onSlowSpan`
@@ -21606,12 +21628,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `recordReadTables`
           - `recordSpan`
           - `registerGateGauge`
-          - `removeReadSetTable`
           - `resetRuntimeProfile`
           - `runInBackgroundLane`
           - `runTracked`
           - `runWithoutProfiling`
-          - `seedReadSetIndex`
           - `SPAN_KINDS`
           - `SPAN_MEASURES`
           - `waitSplit`
@@ -21997,7 +22017,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
-    - **`gmail`** — Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
+    - **`gmail`** — Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance (and the empty state around it) consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "config"
@@ -22011,16 +22031,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
+          - `primitives/css/center.Center`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/live-state.foldResource`
           - `primitives/live-state.ResourceError`
           - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
         - Exports (types):
           - `GmailAccess`
           - `GmailAccessBlocker`
         - Exports (values):
           - `GMAIL_BLOCKER_BODY`
           - `GmailAccessAction`
+          - `GmailAccessEmptyState`
           - `useGmailAccess`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
@@ -22038,6 +22063,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/sync`
           - `apps/mail/sync-status`
           - `apps/mail/sync/auto-resume`
+          - `apps/mail/threads`
       - Core:
         - Exports (types): `GmailTokenResult`
         - Exports (values):
@@ -22412,30 +22438,42 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means, and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Uses:
           - `primitives/live-state.ResourceDescriptor`
           - `primitives/live-state.ResourceError`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.useResource`
+          - `primitives/live-state.useResources`
+          - `primitives/log-channels.clientLog`
         - Exports (types):
           - `LiveIdsQuery`
           - `LiveListResult`
           - `LivePaging`
           - `LiveRowResult`
+          - `LiveScrollOptions`
+          - `LiveSegmentError`
+          - `ScrollTruncation`
         - Exports (values):
           - `mapRow`
           - `useLive`
           - `useLiveRow`
+          - `useLiveScroll`
       - Server:
         - Uses:
-          - `database.db`
           - `database/sql-column.ColumnWire`
           - `database/sql-column.columnWireCodec`
           - `database/sql-column.WireCodec`
+          - `infra/query-resource.CompiledGroups`
+          - `infra/query-resource.compileGroupsQuery`
+          - `infra/query-resource.compileJoins`
+          - `infra/query-resource.deferredWindowQueryResource`
           - `infra/query-resource.EntitySource`
+          - `infra/query-resource.joinRefs`
           - `infra/query-resource.QueryDb`
+          - `infra/query-resource.ReadColumn`
+          - `infra/query-resource.RoutedSource`
           - `infra/query-resource.SelectMap`
           - `infra/query-resource.WindowOrderKey`
           - `infra/query-resource.windowQueryResource`
@@ -22447,16 +22485,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CompiledValue`
           - `LiveValueSource`
           - `LookupCollectionSpecs`
+          - `ScopedMemberRead`
           - `ServeCollectionOptions`
           - `ServedCollection`
+          - `ServedColumns`
           - `ServedExternalValue`
           - `ServedLookupCollection`
+          - `ServedScopedColumns`
           - `ServedValue`
           - `ServeValueOptions`
         - Exports (values):
           - `compileCollection`
           - `compileValue`
+          - `LiveColumns`
           - `serveCollection`
+          - `serveColumns`
+          - `serveScopedColumns`
           - `serveValue`
       - Core:
         - Uses:
@@ -22474,10 +22518,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.WindowParams`
           - `primitives/live-state.WindowSelector`
         - Exports (types):
+          - `ContributedColumns`
           - `LiveCentralValueSpec`
           - `LiveCollection`
+          - `LiveCollectionOf`
           - `LiveCollectionSpec`
           - `LiveColumnFilter`
+          - `LiveColumnRef`
+          - `LiveColumnsDeclaration`
+          - `LiveColumnsHandle`
+          - `LiveContributedCollection`
+          - `LiveCutKey`
           - `LiveDecodedGroupQuery`
           - `LiveDecodedQuery`
           - `LiveFilterable`
@@ -22501,6 +22552,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LiveReservedColumn`
           - `LiveRowSchema`
           - `LiveRowsCollection`
+          - `LiveScopedColumns`
+          - `LiveScrollCollection`
           - `LiveSortDirection`
           - `LiveValue`
           - `LiveValueOrigin`
@@ -22508,12 +22561,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LiveValueSpec`
           - `LiveWhere`
           - `LiveWhereObject`
+          - `LiveWindowBounds`
           - `LiveWindowCodec`
           - `LiveWindowDescriptor`
           - `LiveWindowParams`
+          - `ScopedColumnMember`
+          - `WithContributedColumns`
         - Exports (values):
+          - `LIVE_COLUMNS_KEY`
+          - `LIVE_ROW_KEY`
+          - `LIVE_ROW_KEY_MAX_BYTES`
+          - `LIVE_SCOPED_KEY`
           - `liveCollection`
+          - `liveColumns`
           - `liveValue`
+          - `scopedLiveColumns`
       - Cross-plugin:
         - Imported by:
           - `active-data`
@@ -22532,6 +22594,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/local-serve`
           - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
+          - `apps/events/event-list`
           - `apps/events/events-core`
           - `apps/events/sources/source-field`
           - `apps/mail/mail-core`
@@ -22620,6 +22683,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/links`
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
+          - `primitives/data-view`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-order`
           - `primitives/usage-rank`
@@ -22652,6 +22716,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/events-core`
               - `apps/mail/reading-pane`
               - `apps/mail/threads`
+              - `apps/sonata/library`
+              - `apps/sonata/playback-history`
+              - `apps/sonata/sources/midi`
               - `conversations/all-conversations`
               - `conversations/summary`
               - `debug/profiling/op-log/op-store`
@@ -27000,6 +27067,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/pane`
               - `fields/avatar/config`
               - `fields/bool/inline`
+              - `integrations/gmail`
               - `layouts/route-fallback`
               - `map`
               - `map/google`
@@ -27998,6 +28066,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/notation`
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/studio/compositions/release`
               - `apps/studio/contributions/tables/columns`
               - `apps/studio/contributions/tables/foreign-keys`
               - `apps/studio/contributions/tables/indexes`
@@ -28465,7 +28534,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/home/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
-              - `apps/mail/shell`
               - `apps/mail/sync-status`
               - `apps/mail/threads`
               - `apps/pages/history`
@@ -28636,6 +28704,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `history/dialog`
               - `infra/background/catalog`
               - `infra/events-test`
+              - `integrations/gmail`
               - `integrations/google-maps`
               - `layouts/miller`
               - `layouts/route-fallback`
@@ -29182,6 +29251,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/background/catalog`
               - `infra/claude-cli`
               - `infra/events-test`
+              - `integrations/gmail`
               - `integrations/google-maps`
               - `layouts/route-fallback`
               - `map/google`
@@ -30063,6 +30133,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
           - `fields.Fields`
+          - `network/live.LiveSegmentError`
+          - `network/live.ScrollTruncation`
+          - `network/live.useLiveScroll`
           - `primitives/collapsible.CollapsibleContent`
           - `primitives/collapsible.CollapsibleProvider`
           - `primitives/css/control-panel.ControlPanel`
@@ -30112,6 +30185,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/latest-ref.useLatestRef`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
+          - `primitives/loading.LoadingVariant`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/row-actions.RowActions`
@@ -30222,6 +30296,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `isFilterGroup`
           - `isGroupableField`
           - `leadingSlot`
+          - `liveDataSource`
           - `makeSortComparator`
           - `MergedDataView`
           - `MissingDataCellError`
@@ -30258,9 +30333,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `ConfigV2.Register` ×42: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
         - Uses:
           - `config_v2.getConfig`
+          - `config_v2.watchConfig`
           - `primitives/data-view/view-core.buildViewConfigRegistrations`
           - `primitives/data-view/view-core.viewsDescriptor`
-        - Exports (values): `readDataViewConfigDoc`
+        - Exports (values):
+          - `readDataViewConfigDoc`
+          - `watchDataViewConfigDoc`
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deploy-history`
@@ -30335,7 +30413,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/table`
           - `primitives/data-view/tree`
           - `primitives/data-view/view-order`
-          - `release`
           - `reports`
           - `runs`
           - `tasks/task-deps-tree`
@@ -30349,10 +30426,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CreateOption`
           - `DataViewActiveChrome`
           - `DataViewAggregateConfig`
+          - `DataViewBaseProps`
+          - `DataViewDataOrigin`
           - `DataViewDensity`
+          - `DataViewFetchPageOrigin`
           - `DataViewFoldLines`
           - `DataViewGroupHeaders`
           - `DataViewId`
+          - `DataViewInMemoryOrigin`
+          - `DataViewLiveOrigin`
           - `DataViewProps`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
@@ -30390,8 +30472,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ItemActionProps`
           - `ItemActionsDescriptor`
           - `ItemActionZone`
+          - `LiveDataSource`
+          - `LiveDataSourceOf`
+          - `LiveSearchableColumn`
+          - `LiveSourceScope`
           - `ManualOrderConfig`
           - `RowTone`
+          - `SectionCount`
           - `SectionsToolbar`
           - `SectionsToolbarForms`
           - `SelectionConfig`
@@ -30406,12 +30493,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ValueCodec`
           - `ViewState`
         - Exports (values):
+          - `atLeastCount`
           - `compareValues`
           - `DATA_VIEW_HEADER_OFFSET_VAR`
           - `defineDataView`
+          - `exactCount`
           - `FilterGroupSchema`
           - `FilterNodeSchema`
           - `FilterRuleSchema`
+          - `formatSectionCount`
           - `IDENTITY_CODEC`
           - `isHostedToolbar`
           - `isSectionsToolbar`
@@ -30425,6 +30515,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Web: `@plugins/primitives/plugins/data-view/web/testing`
           - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.
           - `lowersToMatch` — Does a rule `op(operand)` keep a row whose field projects to `value`? — the in-memory evaluator's exact path for one rule: `op.lower` over a column of `domain` (an incomplete rule, `undefined`, keeps every row), the DataView domain adapter, then the filter language's `matchesFilter`.
+          - `renameColumns` — Rename every clause's column through `rename` (field id → column name).
+          - `resolveLiveFields` — Resolve a schema against a live source — and check it where it is declared.
       - Plugins:
         - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.
           - Web:
@@ -30479,20 +30571,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes:
               - `resource.declare` "data-view-custom-values"
+              - `resource.declare` "data-view-custom-column-defs"
               - `data-view.query-augmentor`
+              - `live.columns.scoped` "custom"
             - Uses:
               - `database.db`
               - `database/derived-updated-at.deriveUpdatedAt`
               - `fields/server-capabilities.resolveFieldValueTextCast`
               - `infra/endpoints.implement`
+              - `network/live.LiveColumns`
+              - `network/live.ScopedMemberRead`
+              - `network/live.serveScopedColumns`
               - `network/live.serveValue`
+              - `primitives/data-view.readDataViewConfigDoc`
+              - `primitives/data-view.watchDataViewConfigDoc`
               - `primitives/data-view/server-query.AugmentedColumn`
               - `primitives/data-view/server-query.DataViewServer`
               - `primitives/data-view/server-query.QueryAugmentor`
               - `primitives/data-view/server-query.QueryAugmentorContext`
             - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`
             - Exports (values): `_dataViewCustomValues`
-            - Resources: `data-view-custom-values` (push, unbounded: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
+            - Resources:
+              - `data-view-custom-column-defs` (push)
+              - `data-view-custom-values` (push, unbounded: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
             - Routes:
               - `POST /api/data-view/custom-values`
               - `POST /api/data-view/custom-values/delete-column`
@@ -30506,6 +30607,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DeleteCustomColumnValuesBody`
               - `SetCustomColumnValueBody`
             - Exports (values):
+              - `CUSTOM_COLUMNS_SET`
+              - `customColumnDefs`
               - `CustomColumnDefSchema`
               - `CustomColumnValueRowSchema`
               - `customColumnValues`
@@ -30513,6 +30616,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DeleteCustomColumnValuesBodySchema`
               - `setCustomColumnValue`
               - `SetCustomColumnValueBodySchema`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/deploy/deploy-history`
+              - `apps/studio/compositions/release`
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
@@ -30642,12 +30749,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `AugmentedColumn`
               - `ColumnBinding`
-              - `DataViewJoin`
               - `FieldColumnMap`
               - `QueryAugmentor`
               - `QueryAugmentorContext`
               - `ServerQueryAugmentation`
             - Exports (values):
+              - `applyJoin`
               - `augmentServerQuery`
               - `bindColumns`
               - `compileWhere`
@@ -30656,13 +30763,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `filterableOf`
           - Cross-plugin:
             - Imported by:
-              - `apps/deploy/deployments`
-              - `apps/events/event-list`
-              - `apps/mail/threads`
               - `conversations/all-conversations`
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/union-query`
-              - `release`
               - `reports`
               - `runs`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
@@ -31584,13 +31687,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`keyset`** — Field-agnostic keyset (cursor) pagination machinery. Null-aware keyset seek/order-by compiler over drizzle SQL (server) paired with the browser-safe cursor codec + sort signature (core). No data-view dependency, so any server-delegated windowed query can reuse it.
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/deployments`
-          - `apps/events/event-list`
-          - `apps/mail/threads`
           - `conversations/all-conversations`
           - `infra/query-resource`
           - `primitives/data-view/union-query`
-          - `release`
           - `reports`
           - `runs`
       - Server:
@@ -31601,6 +31700,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SortKey`
           - `Tiebreaker`
         - Exports (values):
+          - `atOrBeforePredicate`
           - `buildSortKeys`
           - `keyValuesOf`
           - `orderByClauses`
@@ -31872,6 +31972,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useResource`
           - `useResourceAcks`
           - `useResourceContractMismatches`
+          - `useResources`
       - Cross-plugin:
         - Imported by:
           - `active-data`
@@ -31887,14 +31988,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/chord/trainer`
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/composition`
-          - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
           - `apps/deploy/local-serve`
           - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
-          - `apps/events/event-list`
           - `apps/events/events-core`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
@@ -31920,12 +32019,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/library`
           - `apps/sonata/notation`
           - `apps/sonata/piano-roll`
-          - `apps/sonata/playback-history`
           - `apps/sonata/rich/chord-mode`
           - `apps/sonata/rich/key-readout`
           - `apps/sonata/rich/rhythm-controls`
           - `apps/sonata/songsheet`
-          - `apps/sonata/sources/midi`
           - `apps/sonata/track-mixer`
           - `apps/sonata/transpose`
           - `apps/studio/compositions/release`
@@ -32215,6 +32312,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/secret/config`
           - `history/dialog`
           - `infra/background/catalog`
+          - `integrations/gmail`
           - `integrations/google-maps`
           - `layouts/route-fallback`
           - `map`
@@ -32379,6 +32477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/host/duress`
           - `infra/jobs`
           - `integrations/youtube/audio-fetch`
+          - `network/live`
           - `page/annotations/agent-access`
           - `primitives/live-state`
           - `release`
@@ -34634,6 +34733,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Contributes:
       - `resource.declare` "release.runs:rows"
+      - `resource.declare` "release.history"
+      - `resource.declare` "release.history:rows"
+      - `resource.declare` "release.history:groups"
       - `resource.declare` "release.history-revision"
       - `resource.declare` "release.previews"
     - Uses:
@@ -34651,14 +34753,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/paths.worktreeArtifacts`
       - `network/live.serveCollection`
       - `network/live.serveValue`
-      - `primitives/data-view/server-query.augmentServerQuery`
-      - `primitives/data-view/server-query.bindColumns`
-      - `primitives/data-view/server-query.compileWhere`
-      - `primitives/data-view/server-query.FieldColumnMap`
-      - `primitives/keyset.buildSortKeys`
-      - `primitives/keyset.keyValuesOf`
-      - `primitives/keyset.orderByClauses`
-      - `primitives/keyset.seekPredicate`
       - `primitives/log-channels.defineLogSink`
       - `release/bundles.compareToHead`
       - `release/bundles.newReleaseRunId`
@@ -34676,7 +34770,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `Release`
     - Register: `defineSupervisedJob('release.run.supervised')`
     - Resources:
+      - `release.history` (keyed, window)
       - `release.history-revision` (push)
+      - `release.history:groups` (push)
+      - `release.history:rows` (keyed, point)
       - `release.previews` (push)
       - `release.runs:rows` (keyed, point)
     - Routes:
@@ -34686,7 +34783,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `POST /api/release/runs/:id/preview`
       - `POST /api/release/runs/:id/preview/stop`
       - `GET /api/release/runs/:id/logs`
-      - `POST /api/release/history/query`
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
@@ -34694,14 +34790,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `network/live.liveValue`
       - `network/live/filter.liveInstant`
       - `network/live/filter.liveText`
-      - `primitives/data-view.ServerFilterWireSchema`
       - `primitives/live-state.resourceDescriptor`
       - `release/bundles.ReleaseManifestSchema`
     - Exports (types):
       - `PlatformTag`
       - `PlatformTagResult`
       - `Preview`
-      - `QueryReleaseHistoryBody`
       - `ReleaseCandidateResponse`
       - `ReleaseIntent`
       - `ReleaseLatestRunResponse`
@@ -34722,15 +34816,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `PlatformTagSchema`
       - `previewEndpoint`
       - `PreviewSchema`
-      - `queryReleaseHistory`
-      - `QueryReleaseHistoryBodySchema`
-      - `QueryReleaseHistoryResponseSchema`
-      - `RELEASE_HISTORY_FILTERABLE`
-      - `RELEASE_HISTORY_SEARCHABLE`
       - `RELEASE_LOG_CHANNEL`
       - `RELEASE_TARGETS`
       - `releaseCandidateEndpoint`
       - `ReleaseCandidateResponseSchema`
+      - `releaseHistory`
       - `ReleaseIntentSchema`
       - `releaseLatestRunEndpoint`
       - `ReleaseLatestRunResponseSchema`
@@ -34741,7 +34831,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReleaseRunSchema`
       - `releaseRunsRevisionResource`
       - `releaseTargetById`
-      - `SortRuleSchema`
       - `STAGED_INTENT`
       - `StalenessSchema`
       - `stopPreviewEndpoint`
@@ -35002,6 +35091,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/host/duress.ShedSummary`
       - `infra/retention.defineRetention`
       - `infra/warmup.defineWarmup`
+      - `primitives/data-view/server-query.applyJoin`
       - `primitives/data-view/server-query.augmentServerQuery`
       - `primitives/data-view/server-query.bindColumns`
       - `primitives/data-view/server-query.compileWhere`

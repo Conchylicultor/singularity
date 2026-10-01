@@ -1780,8 +1780,12 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
   always in memory; a server-ordered origin once read to its end, fetchPage
   included), or — sections in row order — when a later section has started.
 - **States.** The skeleton while the head segment (or a pending rule) is pending;
-  the empty state once every segment settled with no row; a head error or an
-  unavailable rule in place of the view; a failure paging stopped on
+  the empty state once every segment settled with no row; an unavailable rule
+  (or a filter over the bounds) in place of the view, as its message; a head
+  read that failed with nothing to show as `SourceView.readError` — the same
+  `error` arm a `readiness` read fails with (`resolveBodyState` → `errorState`,
+  else `ResourceErrorInline`: Retry, or Reload for an out-of-date tab), so a
+  live list fails exactly as a resource-backed one does; a failure paging stopped on
   (`LiveSegmentError.blocksPaging` — the tail's, a failed page, or one holding
   the scroll short of its end) in the footer (its own Retry —
   `useInfiniteScroll`'s `retry`, never the next page); any other segment's error
@@ -2028,6 +2032,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `fields.Fields`
+    - `network/live.LiveSegmentError`
+    - `network/live.ScrollTruncation`
+    - `network/live.useLiveScroll`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleProvider`
     - `primitives/css/control-panel.ControlPanel`
@@ -2077,6 +2084,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
+    - `primitives/loading.LoadingVariant`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/row-actions.RowActions`
@@ -2187,6 +2195,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `isFilterGroup`
     - `isGroupableField`
     - `leadingSlot`
+    - `liveDataSource`
     - `makeSortComparator`
     - `MergedDataView`
     - `MissingDataCellError`
@@ -2223,9 +2232,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
   - Contributes: `ConfigV2.Register` ×42: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
   - Uses:
     - `config_v2.getConfig`
+    - `config_v2.watchConfig`
     - `primitives/data-view/view-core.buildViewConfigRegistrations`
     - `primitives/data-view/view-core.viewsDescriptor`
-  - Exports (values): `readDataViewConfigDoc`
+  - Exports (values):
+    - `readDataViewConfigDoc`
+    - `watchDataViewConfigDoc`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deploy-history`
@@ -2300,7 +2312,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/table`
     - `primitives/data-view/tree`
     - `primitives/data-view/view-order`
-    - `release`
     - `reports`
     - `runs`
     - `tasks/task-deps-tree`
@@ -2314,10 +2325,15 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `CreateOption`
     - `DataViewActiveChrome`
     - `DataViewAggregateConfig`
+    - `DataViewBaseProps`
+    - `DataViewDataOrigin`
     - `DataViewDensity`
+    - `DataViewFetchPageOrigin`
     - `DataViewFoldLines`
     - `DataViewGroupHeaders`
     - `DataViewId`
+    - `DataViewInMemoryOrigin`
+    - `DataViewLiveOrigin`
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewRowEntry`
@@ -2355,8 +2371,13 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActionProps`
     - `ItemActionsDescriptor`
     - `ItemActionZone`
+    - `LiveDataSource`
+    - `LiveDataSourceOf`
+    - `LiveSearchableColumn`
+    - `LiveSourceScope`
     - `ManualOrderConfig`
     - `RowTone`
+    - `SectionCount`
     - `SectionsToolbar`
     - `SectionsToolbarForms`
     - `SelectionConfig`
@@ -2371,12 +2392,15 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ValueCodec`
     - `ViewState`
   - Exports (values):
+    - `atLeastCount`
     - `compareValues`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `defineDataView`
+    - `exactCount`
     - `FilterGroupSchema`
     - `FilterNodeSchema`
     - `FilterRuleSchema`
+    - `formatSectionCount`
     - `IDENTITY_CODEC`
     - `isHostedToolbar`
     - `isSectionsToolbar`
@@ -2390,6 +2414,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
   - Web: `@plugins/primitives/plugins/data-view/web/testing`
     - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.
     - `lowersToMatch` — Does a rule `op(operand)` keep a row whose field projects to `value`? — the in-memory evaluator's exact path for one rule: `op.lower` over a column of `domain` (an incomplete rule, `undefined`, keeps every row), the DataView domain adapter, then the filter language's `matchesFilter`.
+    - `renameColumns` — Rename every clause's column through `rename` (field id → column name).
+    - `resolveLiveFields` — Resolve a schema against a live source — and check it where it is declared.
 - Sub-plugins:
   - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.

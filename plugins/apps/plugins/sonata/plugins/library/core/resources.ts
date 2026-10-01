@@ -11,7 +11,7 @@ import { SongSchema, type SongRow } from "./schemas";
  * The song library: `sonata_songs` as a live collection, read by the library
  * DataView as a segmented scroll (`scroll: true`) and by the player one row at
  * a time (`useLiveRow`). No placeholder: a window or row not loaded yet is
- * `pending`, never `[]` / not-found.
+ * `loading`, never `[]` / not-found.
  *
  * `contributed: true` — other plugins add columns to every row, which the list
  * sorts and filters by like its own: playback-history's play count and

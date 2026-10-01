@@ -134,13 +134,13 @@ over `sonata_songs` — H 100, M 500, default order `createdAt desc` — declare
 `sonata_songs.title` has exactly **one** client-side owner: this plugin's
 `songLibrary` collection. There is no shell-context mirror of it. Anything that
 needs the open song's title reads it through `useCurrentSong()` (the canonical
-row for `currentSongId`, one `useLiveRow` point read, preserving the `pending`
-discriminant), and the title is *edited* in exactly one place — the inline
+row for `currentSongId`, one `useLiveRow` point read, preserving the `status`
+arms (loading / error / ready)), and the title is *edited* in exactly one place — the inline
 `SongTitle` field, which is the player pane's TITLE node
 (`title: { component: SongTitle }` on its `Pane.define`, `web/components/song-title-field.tsx`) and
 patches `PATCH /api/sonata/songs/:id`
-via `updateSong`. Mirroring the `PageHeader` pattern, the pending arm gates the
-mount so `useEditableField` only ever seeds from a settled title, and an
+via `updateSong`. Mirroring the `PageHeader` pattern, the loading and error arms
+gate the mount so `useEditableField` only ever seeds from a ready title, and an
 empty/whitespace-only draft is never persisted (re-mounting re-seeds from the
 canonical value). Source editors (chord-grid, ultimate-guitar) no longer write
 the title — a chord-grid save endpoint physically cannot carry one.

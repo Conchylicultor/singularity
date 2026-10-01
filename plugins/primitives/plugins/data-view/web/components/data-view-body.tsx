@@ -3,8 +3,6 @@ import { type ReactNode, useCallback, useMemo, useState } from "react";
 import type { ScrollTruncation } from "@plugins/network/plugins/live/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   isHostedToolbar,
   isSectionsToolbar,
@@ -23,6 +21,7 @@ import { DataViewSlots, type DataViewContribution } from "../slots";
 import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { useServerDataSource } from "../internal/use-server-data-source";
 import { resolveBodyState } from "../internal/body-state";
+import { BodyFallback } from "./body-fallback";
 import {
   useFilterController,
   type FilterController,
@@ -48,17 +47,9 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResolveOperatorSet } from "../filter-slot";
 import { useGroupingClock } from "../internal/use-grouping-clock";
 import { useRowFilter } from "../internal/use-row-filter";
-import {
-  serverFilterFields,
-  UnavailableFilterRuleError,
-  UnavailableSortRuleError,
-  useServerFilter,
-} from "../internal/server-filter";
+import { serverFilterFields, useServerFilter } from "../internal/server-filter";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import {
-  FilterError,
-  type Filterable,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+import type { Filterable } from "@plugins/network/plugins/live/plugins/filter/core";
 import { PendingMoveOverlay } from "../internal/use-pending-move-overlay";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import { CollectRowOrder } from "../internal/row-order";
@@ -492,6 +483,7 @@ function DataViewBodyInner<TRow>(
           rows: server.rows,
           loading: server.loading,
           error: server.error,
+          readError: null,
           scroll: server.scroll,
           rowsComplete: server.rowsComplete,
           sectionOrder: "bucket",
@@ -841,30 +833,14 @@ function DataViewBodyInner<TRow>(
                 caches, inline editors, and local tree expand state are per-instance
                 and must not leak between two instances of the same view type. */}
             <ControlSizeProvider key={activeViewId} size="xs">
-              {bodyState.kind === "server-error" ? (
-                <Placeholder tone="error">
-                  {bodyState.error instanceof FilterError
-                    ? `This filter is too large to run: ${bodyState.error.message}`
-                    : bodyState.error instanceof UnavailableFilterRuleError ||
-                        bodyState.error instanceof UnavailableSortRuleError
-                      ? bodyState.error.message
-                      : `Couldn't load: ${bodyState.error.message}`}
-                </Placeholder>
-              ) : bodyState.kind === "error" ? (
-                (errorState ?? (
-                  <ResourceErrorInline
-                    error={bodyState.error.error}
-                    refetch={bodyState.error.refetch}
-                    variant="block"
-                  />
-                ))
-              ) : bodyState.kind === "loading" ? (
-                (loadingState ?? (
-                  <Loading
-                    variant={activeInstance.viewType.loadingVariant ?? "rows"}
-                    count={activeInstance.viewType.loadingCount}
-                  />
-                ))
+              {bodyState.kind !== "view" ? (
+                <BodyFallback
+                  state={bodyState}
+                  errorState={errorState}
+                  loadingState={loadingState}
+                  loadingVariant={activeInstance.viewType.loadingVariant}
+                  loadingCount={activeInstance.viewType.loadingCount}
+                />
               ) : (
                 // Holds a dropped row at its new slot until the producer's
                 // own order carries the move — no snap-back while the write

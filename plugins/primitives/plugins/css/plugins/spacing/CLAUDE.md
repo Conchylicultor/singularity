@@ -125,7 +125,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/home/shell`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
-    - `apps/mail/shell`
     - `apps/mail/sync-status`
     - `apps/mail/threads`
     - `apps/pages/history`
@@ -296,6 +295,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `history/dialog`
     - `infra/background/catalog`
     - `infra/events-test`
+    - `integrations/gmail`
     - `integrations/google-maps`
     - `layouts/miller`
     - `layouts/route-fallback`

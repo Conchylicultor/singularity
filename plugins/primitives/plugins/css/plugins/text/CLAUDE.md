@@ -496,6 +496,7 @@ to reconcile them; they never needed reconciling.
     - `infra/background/catalog`
     - `infra/claude-cli`
     - `infra/events-test`
+    - `integrations/gmail`
     - `integrations/google-maps`
     - `layouts/route-fallback`
     - `map/google`

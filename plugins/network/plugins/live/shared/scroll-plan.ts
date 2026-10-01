@@ -27,8 +27,12 @@ export interface SegmentEntry {
   key: string | null;
 }
 
-/** What one segment's window read says right now. */
-export type SegmentObservation =
+/**
+ * What one segment's window read says right now. `E` is the reader's error
+ * type — the plan only carries it, so a reader's typed error (a live read's
+ * `ResourceError`) reaches what it assembles unwidened.
+ */
+export type SegmentObservation<E extends Error = Error> =
   /** No value has landed yet. */
   | { kind: "pending" }
   /**
@@ -38,10 +42,10 @@ export type SegmentObservation =
   | {
       kind: "settled";
       entries: readonly SegmentEntry[];
-      error: Error | null;
+      error: E | null;
     }
   /** The first read failed: no value to show. */
-  | { kind: "failed"; error: Error };
+  | { kind: "failed"; error: E };
 
 /** A structural change in flight: `committed[from..to]` becomes `next` once every `next` read settles. */
 export interface SegmentChange {
@@ -124,7 +128,7 @@ function allClean(observations: readonly SegmentObservation[]): boolean {
 }
 
 /** The read's error, if it is failing (with or without a last value). */
-function errorOf(o: SegmentObservation): Error | null {
+function errorOf<E extends Error>(o: SegmentObservation<E>): E | null {
   return o.kind === "failed" ? o.error : o.kind === "settled" ? o.error : null;
 }
 
@@ -395,12 +399,12 @@ export function growTail(
 }
 
 /** The segment a committed index renders, or its failing replacement. */
-export interface SegmentFailure {
+export interface SegmentFailure<E extends Error = Error> {
   /** The committed segment whose rows stay on screen. */
   index: number;
   /** The read that failed: the committed segment's own, or a replacement's. */
   failed: Segment;
-  error: Error;
+  error: E;
   /**
    * Paging is stopped on it: the tail's own read, a failed page past the
    * tail, or — when the scroll can neither grow nor is exhausted and nothing
@@ -410,7 +414,7 @@ export interface SegmentFailure {
 }
 
 /** What the committed segments assemble into, over the gap-free prefix. */
-export interface Assembly {
+export interface Assembly<E extends Error = Error> {
   /** Each committed segment's entries, concatenated in order, deduped by id (first wins). */
   entries: readonly SegmentEntry[];
   /** Every committed segment has a value (the head's first read may not). */
@@ -423,16 +427,16 @@ export interface Assembly {
   growing: boolean;
   truncated: ScrollTruncation | null;
   /** Reads failing under rows still on screen: committed segments and replacements. */
-  failures: readonly SegmentFailure[];
+  failures: readonly SegmentFailure<E>[];
   /** The head's first read failed — no row to show. */
-  headError: Error | null;
+  headError: E | null;
 }
 
-export function assemble(
+export function assemble<E extends Error>(
   state: ScrollState,
-  observe: (seg: Segment) => SegmentObservation,
+  observe: (seg: Segment) => SegmentObservation<E>,
   limits: ScrollLimits,
-): Assembly {
+): Assembly<E> {
   const { committed, change, stalled } = state;
   const K = committed.length;
   const obs = committed.map(observe);
@@ -468,7 +472,7 @@ export function assemble(
   const stuck =
     loaded && change === null && !exhausted && !canGrow && truncated === null;
 
-  const failures: SegmentFailure[] = [];
+  const failures: SegmentFailure<E>[] = [];
   obs.forEach((o, index) => {
     const error = errorOf(o);
     if (error === null) return;

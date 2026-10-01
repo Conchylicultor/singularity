@@ -238,7 +238,9 @@ live-window adapter".
   column's type) — never through `where`, so a sortable-but-not-filterable order
   column takes cuts, and the routes and roles are those of the tuple without them.
 - **`useLiveScroll(c, query | null, { resetKey? })`** → `{ status: "loading" }
-  | { status: "error"; error; refetch }` (the first segment failed with no rows)
+  | { status: "error"; error; refetch }` (the first segment failed with no rows;
+  `error` is that read's `ResourceError`, unwidened — the plan is generic over
+  its reader's error type — so a consumer renders it like any read's error arm)
   `| { status: "ready"; rows; exhausted; canGrow; growing; loadMore; truncated;
   segmentErrors }`. The plan is pure data (`shared/scroll-plan.ts`,
   shared by the hook and the DB oracle); the hook reads one window tuple per
@@ -616,30 +618,42 @@ grouped under the wave or item that removes it
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means, and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Uses:
     - `primitives/live-state.ResourceDescriptor`
     - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
+    - `primitives/live-state.useResources`
+    - `primitives/log-channels.clientLog`
   - Exports (types):
     - `LiveIdsQuery`
     - `LiveListResult`
     - `LivePaging`
     - `LiveRowResult`
+    - `LiveScrollOptions`
+    - `LiveSegmentError`
+    - `ScrollTruncation`
   - Exports (values):
     - `mapRow`
     - `useLive`
     - `useLiveRow`
+    - `useLiveScroll`
 - Server:
   - Uses:
-    - `database.db`
     - `database/sql-column.ColumnWire`
     - `database/sql-column.columnWireCodec`
     - `database/sql-column.WireCodec`
+    - `infra/query-resource.CompiledGroups`
+    - `infra/query-resource.compileGroupsQuery`
+    - `infra/query-resource.compileJoins`
+    - `infra/query-resource.deferredWindowQueryResource`
     - `infra/query-resource.EntitySource`
+    - `infra/query-resource.joinRefs`
     - `infra/query-resource.QueryDb`
+    - `infra/query-resource.ReadColumn`
+    - `infra/query-resource.RoutedSource`
     - `infra/query-resource.SelectMap`
     - `infra/query-resource.WindowOrderKey`
     - `infra/query-resource.windowQueryResource`
@@ -651,16 +665,22 @@ grouped under the wave or item that removes it
     - `CompiledValue`
     - `LiveValueSource`
     - `LookupCollectionSpecs`
+    - `ScopedMemberRead`
     - `ServeCollectionOptions`
     - `ServedCollection`
+    - `ServedColumns`
     - `ServedExternalValue`
     - `ServedLookupCollection`
+    - `ServedScopedColumns`
     - `ServedValue`
     - `ServeValueOptions`
   - Exports (values):
     - `compileCollection`
     - `compileValue`
+    - `LiveColumns`
     - `serveCollection`
+    - `serveColumns`
+    - `serveScopedColumns`
     - `serveValue`
 - Core:
   - Uses:
@@ -678,10 +698,17 @@ grouped under the wave or item that removes it
     - `primitives/live-state.WindowParams`
     - `primitives/live-state.WindowSelector`
   - Exports (types):
+    - `ContributedColumns`
     - `LiveCentralValueSpec`
     - `LiveCollection`
+    - `LiveCollectionOf`
     - `LiveCollectionSpec`
     - `LiveColumnFilter`
+    - `LiveColumnRef`
+    - `LiveColumnsDeclaration`
+    - `LiveColumnsHandle`
+    - `LiveContributedCollection`
+    - `LiveCutKey`
     - `LiveDecodedGroupQuery`
     - `LiveDecodedQuery`
     - `LiveFilterable`
@@ -705,6 +732,8 @@ grouped under the wave or item that removes it
     - `LiveReservedColumn`
     - `LiveRowSchema`
     - `LiveRowsCollection`
+    - `LiveScopedColumns`
+    - `LiveScrollCollection`
     - `LiveSortDirection`
     - `LiveValue`
     - `LiveValueOrigin`
@@ -712,12 +741,21 @@ grouped under the wave or item that removes it
     - `LiveValueSpec`
     - `LiveWhere`
     - `LiveWhereObject`
+    - `LiveWindowBounds`
     - `LiveWindowCodec`
     - `LiveWindowDescriptor`
     - `LiveWindowParams`
+    - `ScopedColumnMember`
+    - `WithContributedColumns`
   - Exports (values):
+    - `LIVE_COLUMNS_KEY`
+    - `LIVE_ROW_KEY`
+    - `LIVE_ROW_KEY_MAX_BYTES`
+    - `LIVE_SCOPED_KEY`
     - `liveCollection`
+    - `liveColumns`
     - `liveValue`
+    - `scopedLiveColumns`
 - Cross-plugin:
   - Imported by:
     - `active-data`
@@ -736,6 +774,7 @@ grouped under the wave or item that removes it
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
+    - `apps/events/event-list`
     - `apps/events/events-core`
     - `apps/events/sources/source-field`
     - `apps/mail/mail-core`
@@ -824,6 +863,7 @@ grouped under the wave or item that removes it
     - `page/links`
     - `page/prompt/link`
     - `plugin-meta/plugin-health`
+    - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-order`
     - `primitives/usage-rank`

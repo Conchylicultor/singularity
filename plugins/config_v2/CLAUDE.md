@@ -503,6 +503,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `apps/sonata/sources/midi/folders`
     - `apps/sonata/view-options`
     - `apps/sonata/voicing`
+    - `apps/studio/compositions/release`
     - `auth/apple-signing`
     - `auth/apple-signing/setup-wizard`
     - `auth/google`

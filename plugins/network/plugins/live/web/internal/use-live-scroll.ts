@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   useResources,
   type ResourceDescriptor,
+  type ResourceError,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
@@ -57,7 +58,7 @@ export interface LiveSegmentError {
   key: string;
   /** The last row before the failing segment; `null` = it is the head. */
   afterRowId: string | null;
-  error: Error;
+  error: ResourceError;
   /**
    * Paging is stopped on it — the tail's own read, a failed page past the
    * tail, or a failure that holds the scroll short of its end — so it belongs
@@ -76,7 +77,7 @@ export interface LiveSegmentError {
  */
 export type LiveScrollResult<Row> =
   | { status: "loading" }
-  | { status: "error"; error: Error; refetch: () => Promise<void> }
+  | { status: "error"; error: ResourceError; refetch: () => Promise<void> }
   | {
       status: "ready";
       rows: readonly Row[];
@@ -252,12 +253,15 @@ export function useLiveScroll<Row, F, S extends string>(
   const byTuple = useMemo(() => {
     const map = new Map<
       string,
-      { result: ResourceResult<Row[]>; obs: SegmentObservation }
+      {
+        result: ResourceResult<Row[]>;
+        obs: SegmentObservation<ResourceError>;
+      }
     >();
     reads.keys.forEach((tk, i) => {
       const result = results[i]!;
       const rows = rowsOfResult(result);
-      const obs: SegmentObservation =
+      const obs: SegmentObservation<ResourceError> =
         rows === undefined
           ? result.status === "error"
             ? { kind: "failed", error: result.error }

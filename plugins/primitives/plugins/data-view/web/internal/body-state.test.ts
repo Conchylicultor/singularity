@@ -49,15 +49,33 @@ describe("resolveBodyState", () => {
     const err = new Error("sql");
     expect(
       resolveBodyState({
-        server: { loading: false, error: err },
+        server: { loading: false, error: err, readError: null },
         readiness: { status: "loading" },
       }),
     ).toEqual({ kind: "server-error", error: err });
     expect(
       resolveBodyState({
-        server: { loading: true, error: null },
+        server: { loading: true, error: null, readError: null },
         readiness: undefined,
       }).kind,
     ).toBe("loading");
+  });
+
+  test("a server-ordered read that failed renders the read error, not a server error", () => {
+    const readError = { status: "error" as const, error: failure, refetch };
+    expect(
+      resolveBodyState({
+        server: { loading: false, error: null, readError },
+        readiness: undefined,
+      }),
+    ).toEqual({ kind: "error", error: readError });
+    // The query it could not form outranks it — nothing was read.
+    const err = new Error("filter");
+    expect(
+      resolveBodyState({
+        server: { loading: false, error: err, readError },
+        readiness: undefined,
+      }).kind,
+    ).toBe("server-error");
   });
 });

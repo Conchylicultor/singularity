@@ -72,7 +72,6 @@ is drift repair, not a correctness dependency.
     - `Library.Fields` "source-missing" → `SourceMissingField`
   - Uses:
     - `apps/sonata/library.Library`
-    - `apps/sonata/sources/midi.useSongMidiMap`
     - `config_v2.ConfigV2`
     - `primitives/css/badge.Badge`
 - Server:

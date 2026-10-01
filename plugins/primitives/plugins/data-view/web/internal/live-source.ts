@@ -19,6 +19,7 @@ import {
   type LiveSegmentError,
   type ScrollTruncation,
 } from "@plugins/network/plugins/live/web";
+import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import {
   useInfiniteScroll,
   type InfiniteScrollHandle,
@@ -70,8 +71,18 @@ export interface LiveSegmentNotice {
 export interface SourceView<TRow> {
   rows: readonly TRow[];
   loading: boolean;
-  /** Why no rows can be shown — rendered in place of the view. */
+  /**
+   * Why no query can be read — the view's own sort/filter/search lowering, or
+   * a fetched page — rendered in place of the view.
+   */
   error: Error | null;
+  /**
+   * The read itself failed with nothing to show (a live scroll's head): the
+   * same arm a `readiness` read fails with, so it renders the same way — the
+   * host's `errorState`, else `ResourceErrorInline` with Retry (and the reload
+   * a stale tab needs).
+   */
+  readError: Extract<ResourceReadiness, { status: "error" }> | null;
   scroll: InfiniteScrollHandle;
   /** Every row of the query is loaded — section counts may be exact. */
   rowsComplete: boolean;
@@ -318,6 +329,7 @@ export function useLiveSource<TRow>(args: {
       rows: NO_ROWS as readonly TRow[],
       loading: false,
       error: lowering.error,
+      readError: null,
       scroll: handle,
       rowsComplete: false,
       sectionOrder: "bucket",
@@ -328,7 +340,8 @@ export function useLiveSource<TRow>(args: {
   return {
     rows,
     loading: lowering.kind !== "ok" || scroll.status === "loading",
-    error: scroll.status === "error" ? scroll.error : null,
+    error: null,
+    readError: scroll.status === "error" ? scroll : null,
     scroll: handle,
     rowsComplete: settled?.exhausted ?? false,
     sectionOrder: lowering.kind === "ok" ? lowering.sectionOrder : "bucket",
