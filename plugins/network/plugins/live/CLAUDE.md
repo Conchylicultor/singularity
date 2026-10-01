@@ -583,6 +583,7 @@ grouped under the wave or item that removes it
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/notes`
     - `conversations/conversation-view/op-status`
+    - `conversations/conversation-view/open-app`
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/queue`

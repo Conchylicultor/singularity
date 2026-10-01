@@ -4,13 +4,14 @@
 
 ## Plugin reference
 
-- Description: Opens the conversation's namespace at `http://<id>.localhost:9000`, on the page its task was filed from when one was attached (else `/`).
+- Description: Opens the conversation's namespace at `http://<id>.localhost:9000`, on the page its task was filed from when one was attached (else `/`). Disabled until the worktree has a successful build (op-store build history).
 - Web:
   - Contributes: `Conversation.ActionBar` → `OpenAppButton`
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
+    - `network/live.useLive`
     - `primitives/pane.PaneIconAction`
     - `tasks/task-source-url.useAttemptSourceUrl`
 

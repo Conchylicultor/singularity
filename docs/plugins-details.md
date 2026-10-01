@@ -12171,13 +12171,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/relative-time.formatElapsed`
               - `primitives/relative-time.useNow`
               - `ui/icons.Icon`
-        - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000`, on the page its task was filed from when one was attached (else `/`).
+        - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000`, on the page its task was filed from when one was attached (else `/`). Disabled until the worktree has a successful build (op-store build history).
           - Web:
             - Contributes: `Conversation.ActionBar` → `OpenAppButton`
             - Uses:
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
+              - `network/live.useLive`
               - `primitives/pane.PaneIconAction`
               - `tasks/task-source-url.useAttemptSourceUrl`
         - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
@@ -22590,6 +22591,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/op-status`
+          - `conversations/conversation-view/open-app`
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/queue`
