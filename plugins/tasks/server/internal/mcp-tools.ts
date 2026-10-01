@@ -36,10 +36,18 @@ The agent that picks up the task will design and plan the solution itself.
 Good: "Login button unresponsive on mobile". Bad: "Fix login button by
 adding a touchstart handler in auth.tsx".
 
-## track (required) — is it on the critical path?
+## track (required) — who asked for it?
 
-Decide it for every task with ONE question: is the feature you are working
-on unfinished until this task is done?
+The quick heuristic is WHERE THE TASK CAME FROM:
+
+- The USER asked for it (they requested the feature, reported the issue,
+  or told you to file it) → \`main\`.
+- YOU came up with it (something you noticed, a caveat, a cleanup, an
+  idea, a bug you found along the way) → \`sidequest\`.
+
+The heuristic stands for the underlying question: is the feature you are
+working on unfinished until this task is done? What the user asked for is
+the critical path. What an agent finds along the way usually is not.
 
 - \`main\` — yes, it is ON THE CRITICAL PATH: a remaining step without which
   the feature is not done. Main-track tasks are spliced into the dependency
@@ -56,7 +64,8 @@ on unfinished until this task is done?
   A sidequest cannot be a \`prerequisite\` (it would block the main track).
 
 Being a follow-up of your work does NOT make a task main — every filed task
-comes after something. Only the critical path decides. When unsure, file a
+comes after something. An issue you discovered yourself is a sidequest even
+when it feels important; the user can promote it. When unsure, file a
 sidequest: a misfiled main task launches an agent on its own; a misfiled
 sidequest just waits for a human to promote it.
 
@@ -131,7 +140,8 @@ the dependency graph.`,
           "do this for any non-mechanical task, even if a broader plan already exists.",
       ),
     track: TaskTrackSchema.describe(
-      "`main`: on the critical path — the current feature is unfinished until it is done; chained and auto-started. " +
+      "Heuristic: the user asked for it → `main`; you (the agent) came up with it → `sidequest`. " +
+        "`main`: on the critical path — the current feature is unfinished until it is done; chained and auto-started. " +
         "`sidequest`: off the critical path — any follow-up, caveat, bug or cleanup the feature can ship without; " +
         "runs after the target, never spliced into its chain, never auto-started. When unsure, `sidequest`.",
     ),
