@@ -26,6 +26,7 @@ dense-list spelling for a trailing time column, where "ago" is implied.
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/mail/threads`
+    - `apps/pages/page-tree`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/canvas`

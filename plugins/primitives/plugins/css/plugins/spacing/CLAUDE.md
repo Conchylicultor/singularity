@@ -314,6 +314,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `page/formatting/link`
     - `page/image`
     - `page/inline-date`
+    - `page/links`
     - `page/map`
     - `page/math/inline`
     - `page/page-link`
@@ -341,6 +342,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/css/cluster`
+    - `primitives/css/control-panel`
     - `primitives/css/inline`
     - `primitives/css/layout-harness`
     - `primitives/css/radio-group`

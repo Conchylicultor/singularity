@@ -80,6 +80,7 @@ attribute type carries.
     - `page/annotations/todo/task-link`
     - `page/formatting/link`
     - `page/inline-date`
+    - `page/links`
     - `page/place`
     - `page/place/map-layer`
     - `page/prompt/block`

@@ -1958,6 +1958,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/view-core.EditableViewSwitcher`
     - `primitives/data-view/view-core.ResolvedViewInstance`
     - `primitives/data-view/view-core.useViewModel`
+    - `primitives/data-view/view-core.ViewSettingsPopover`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
@@ -1967,6 +1968,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/row-actions.RowActions`
     - `primitives/search.SearchInput`
     - `primitives/search.useTextFilter`
@@ -2200,6 +2202,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ColumnConfigDerive`
     - `ColumnConfigProps`
     - `CreateOption`
+    - `DataViewActiveChrome`
     - `DataViewAggregateConfig`
     - `DataViewDensity`
     - `DataViewFoldLines`
@@ -2228,6 +2231,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterOperatorSet`
     - `FilterPreset`
     - `FilterRule`
+    - `FilterScope`
+    - `FilterScopeAccessors`
     - `FilterValueInputProps`
     - `FoldRule`
     - `GroupBucket`
@@ -2242,6 +2247,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActionZone`
     - `ManualOrderConfig`
     - `RowTone`
+    - `SectionsToolbar`
+    - `SectionsToolbarForms`
     - `SelectionConfig`
     - `ServerDataSourceSpec`
     - `ServerPage`
@@ -2262,7 +2269,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterRuleSchema`
     - `IDENTITY_CODEC`
     - `isHostedToolbar`
+    - `isSectionsToolbar`
     - `orderFieldsBySection`
+    - `scopeFilterRows`
     - `ServerFilterWireSchema`
     - `SHARED_FIELD_SECTION`
     - `splitFieldSections`

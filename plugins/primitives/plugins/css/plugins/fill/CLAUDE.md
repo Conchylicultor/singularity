@@ -167,6 +167,7 @@ primitive exists to name.
     - `page/file`
     - `page/formatting/link`
     - `page/inline-date`
+    - `page/links`
     - `page/place`
     - `page/place/map-layer`
     - `page/prompt/block`

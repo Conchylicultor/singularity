@@ -25,6 +25,7 @@
     - `apps/sonata/sources/midi/folders`
     - `infra/corpus-index`
     - `infra/warmup/background-arm`
+    - `page/links`
     - `plugin-meta/plugin-tree`
     - `reports`
     - `stats/cost`

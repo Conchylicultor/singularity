@@ -24,6 +24,8 @@ import { reindexPage } from "./reindex";
 // collapses repeated enqueues to one outstanding run.
 export const backfillPageLinksJob = defineJob({
   name: "page.links.backfill",
+  description:
+    "Rebuild every live page's outgoing links (the backlinks index), so edges that predate the per-block index are filled in",
   hold: "instant",
   input: z.object({}).default({}),
   event: z.never(),

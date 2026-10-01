@@ -509,6 +509,7 @@ to reconcile them; they never needed reconciling.
     - `page/formatting/color`
     - `page/formatting/link`
     - `page/inline-date`
+    - `page/links`
     - `page/map`
     - `page/math/equation`
     - `page/math/inline`
