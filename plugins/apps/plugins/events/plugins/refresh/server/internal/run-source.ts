@@ -11,6 +11,7 @@ import {
   type EventSourceType,
   type ProbeContext,
 } from "@plugins/apps/plugins/events/plugins/events-core/server";
+import { extractionCacheKey } from "./cache-key";
 import { classifyRefreshError, isNonRetryable } from "./classify-error";
 import { planEventWrites } from "./plan-writes";
 import {
@@ -73,7 +74,7 @@ function probeContext(
 /**
  * Refresh one source, end to end.
  *
- *     mark running → probe → fingerprint matched ?
+ *     mark running → probe → (config, fingerprint) matched ?
  *        yes → record run{unchanged}, bump the watermark, DONE (no extraction)
  *        no  → extract → derive identities → upsert → stamp disappearances
  *            → record run{extracted}, store the fingerprint, bump the watermark
@@ -115,7 +116,9 @@ export async function runSource(sourceId: string): Promise<void> {
     // bare throw with nothing on screen to explain it.
     const sourceType = requireSourceType(source);
     const probed = await sourceType.probe(probeContext(source, runId));
-    const fingerprint = probed.fingerprint;
+    // Keyed on the config too: `extract` may apply it (filters), so an edited
+    // config must re-extract even when the material did not move.
+    const fingerprint = extractionCacheKey(source.config, probed.fingerprint);
     // The cache hit — the ONLY path that skips extraction. A `null` fingerprint
     // is never a hit however often it repeats: the source type is declaring it
     // cannot fingerprint cheaply, so it must always extract. Do not "simplify"

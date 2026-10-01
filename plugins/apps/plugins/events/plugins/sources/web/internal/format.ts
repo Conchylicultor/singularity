@@ -207,10 +207,15 @@ export function formatDuration(ms: number | null): string | null {
  * page did not move, so the expensive phase was skipped on purpose) is the whole
  * payoff of the probe/extract split. Hiding or shortening it is what makes the
  * cache look like a bug.
+ *
+ * Worded for EVERY source type: not every one reads a "page" (some read a JSON
+ * API) and not every extraction calls a model (structured sources map rows
+ * directly), so neither is claimed. The cache key covers the config too, so
+ * "unchanged" also means the filters are the ones last applied.
  */
 export function describeRun(run: EventSourceRun): string {
   if (run.outcome === "unchanged") {
-    return "Page unchanged — extraction skipped, no model call.";
+    return "Source and settings unchanged since the last extraction — skipped.";
   }
   if (run.outcome === "failed") {
     return run.error ?? "Failed with no recorded error.";
