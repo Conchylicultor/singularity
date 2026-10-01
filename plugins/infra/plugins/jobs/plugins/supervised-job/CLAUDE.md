@@ -636,7 +636,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `database.db`
     - `database/admin.ExcludeFromFork`
     - `infra/events.defineTriggerEvent`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/host/host-admission.withHostGrant`
     - `infra/jobs.abortDurableRun`
@@ -678,6 +678,7 @@ construction, and the job and the body it spawns cannot drift apart.
   - Register:
     - `defineTriggerEvent('supervisedRun.ended')`
     - `defineJob('retention.supervised_job_runs')`
+    - `defineFileWatcher('supervised-job.runs-dir')`
 - Core:
   - Uses:
     - `infra/paths.worktreeArtifacts`

@@ -284,7 +284,7 @@ torch.
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/jobs.defineJob`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/worktree.listWorktreePaths`
@@ -297,6 +297,7 @@ torch.
   - Register:
     - `defineSupervisedJob('deps.install')`
     - `defineJob('deps.sweep')`
+    - `defineFileWatcher('deps.cache')`
   - Resources: `deps.states` (push)
   - Routes:
     - `POST /api/deps/install`

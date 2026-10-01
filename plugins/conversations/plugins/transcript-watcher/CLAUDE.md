@@ -87,7 +87,7 @@ memo degrades to a full chain re-read on every push.
   - Contributes: `report-kind` "conversation-foreign-session"
   - Uses:
     - `conversations/session-chain.listSessionChain`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.CLAUDE_PROJECTS_DIR`
     - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
@@ -114,6 +114,7 @@ memo degrades to a full chain re-read on every push.
     - `watchPaths`
     - `watchTranscript`
     - `watchTranscriptFile`
+  - Register: `defineFileWatcher('transcript-watcher.transcripts')`
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/checkpoints`

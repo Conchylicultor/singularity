@@ -352,7 +352,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `resource.declare` "config-v2.modified-counts"
     - `resource.declare` "config-v2.tiers"
   - Uses:
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.repoConfigDir`
@@ -386,6 +386,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `setConfig`
     - `setConfigByPath`
     - `watchConfig`
+  - Register: `defineFileWatcher('config_v2.config-files')`
   - Resources:
     - `config-v2.conflict-locations` (push)
     - `config-v2.conflicts` (push)

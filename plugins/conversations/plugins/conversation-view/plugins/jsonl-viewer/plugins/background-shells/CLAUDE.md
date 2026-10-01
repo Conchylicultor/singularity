@@ -46,7 +46,8 @@ Each read is one `stat` and one bounded read of the last 64 KB, cut at the first
 line boundary inside the window (`truncated: true`). A missing file is `gone`; a
 shell the transcript does not record is `unknown-shell`.
 
-While subscribed, a `createFileWatcher` on the file's `tasks/` directory
+While subscribed, an instance of the `background-shells.output` file watcher
+(`defineFileWatcher`) on the file's `tasks/` directory
 (`writesWhileOpen: true`, 150 ms debounce) notifies on writes to that one file.
 `writesWhileOpen` is required: the shell holds its output file open, and macOS
 FSEvents reports only on close. A resolved path is kept for the room's lifetime
@@ -124,8 +125,9 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`).
   - Uses:
     - `conversations/transcript-watcher.readJsonlEventsFromChain`
     - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `network/live.serveValue`
+  - Register: `defineFileWatcher('background-shells.output')`
   - Resources: `background-shell-output` (push)
 - Core:
   - Uses:
