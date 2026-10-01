@@ -545,7 +545,6 @@ to reconcile them; they never needed reconciling.
     - `primitives/data-view/gallery`
     - `primitives/data-view/icons`
     - `primitives/data-view/list`
-    - `primitives/data-view/table`
     - `primitives/date-picker`
     - `primitives/diff-view`
     - `primitives/error-boundary`

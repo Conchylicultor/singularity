@@ -21,6 +21,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "code-explorer.file-tree", pluginId: "code-explorer" },
   { id: "config_v2.settings.nav", pluginId: "config_v2.settings" },
   { id: "conversations-sidebar", pluginId: "conversations.conversations-view.data-view" },
+  { id: "conversations.op-status.queue", pluginId: "conversations.conversation-view.op-status" },
   { id: "debug.boot-profiles", pluginId: "debug.boot-profile" },
   { id: "debug.config-orphans", pluginId: "debug.config-orphans" },
   { id: "debug.profiling.runtime", pluginId: "debug.profiling.runtime" },

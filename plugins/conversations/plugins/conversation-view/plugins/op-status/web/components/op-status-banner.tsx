@@ -1,16 +1,37 @@
-import { useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import {
+  Fill,
+  fillClasses,
+} from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  DataView,
+  defineDataView,
+  defineItemActions,
+  type FieldDef,
+  type ItemActionProps,
+} from "@plugins/primitives/plugins/data-view/web";
+import type {
+  HostedToolbar,
+  HostedToolbarParts,
+} from "@plugins/primitives/plugins/data-view/core";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversationTitleBySlug } from "@plugins/conversations/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { opDetailPane } from "@plugins/debug/plugins/profiling/plugins/ops/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { WAIT_KINDS } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import type { OpRow } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
+import { OP_KINDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 import {
   formatElapsed,
   useNow,
@@ -33,6 +54,18 @@ const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 const hourglassEmptyIcon = symbol("hourglass-empty");
 const queuedIcon = symbol("radio-button-unchecked");
+const openInNewIcon = symbol("open-in-new");
+
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const QUEUE_VIEW = defineDataView("conversations.op-status.queue");
+
+/** A row of the expanded list, tagged with the section (op kind) it sits in. */
+export interface QueueTableRow extends QueueRow {
+  section: OpKind;
+}
+
+/** Per-consumer trailing-action slot for the expanded list's rows. */
+export const OpQueueItemActions = defineItemActions<QueueTableRow>();
 
 // Parked in a wait → hourglass (warning tone); working → spinner.
 function StateIcon({
@@ -69,22 +102,23 @@ function PhaseIcon({ phase }: { phase: RowPhase }) {
   );
 }
 
-const TIME_COL = "w-12 text-right font-mono tabular-nums";
+const PHASE_LABEL: Record<RowPhase, string> = {
+  working: "Working",
+  queued: "Queued",
+  held: "Held",
+};
+
+const TIME_CELL = "font-mono tabular-nums";
 
 /** A waited / worked cell: a faint dash under a second, dimmed when `dim`. */
 function TimeCell({ ms, dim }: { ms: number; dim: boolean }) {
   if (ms < 1000)
-    return (
-      <span className={cn(TIME_COL, "text-muted-foreground/30", rigidClass())}>
-        —
-      </span>
-    );
+    return <span className={cn(TIME_CELL, "text-muted-foreground/30")}>—</span>;
   return (
     <span
       className={cn(
-        TIME_COL,
+        TIME_CELL,
         dim ? "text-muted-foreground/70" : "text-foreground",
-        rigidClass(),
       )}
     >
       {formatElapsed(ms)}
@@ -105,7 +139,8 @@ function RowTooltip({ item, now }: { item: QueueRow; now: number }) {
   );
 }
 
-function QueueRowView({
+/** The title cell: the conversation's title (else its slug), tagged on the self row. */
+function TitleCell({
   item,
   title,
   now,
@@ -114,141 +149,92 @@ function QueueRowView({
   title: string | undefined;
   now: number;
 }) {
-  const { row, slug, queuePos, isSelf } = item;
-  const times = timesOf(row, now);
-  const phase = phaseOf(row);
   return (
     <WithTooltip content={<RowTooltip item={item} now={now} />} side="left">
-      <div className={isSelf ? "bg-primary/5" : undefined}>
-        <Stack direction="row" gap="sm" align="center" className="px-md py-2xs">
-          <PhaseIcon phase={phase} />
-          <span
-            className={cn(
-              "w-4 text-right font-mono tabular-nums text-muted-foreground",
-              rigidClass(),
-            )}
-          >
-            {queuePos}
+      <span
+        className={cn(
+          "block truncate",
+          item.isSelf ? "font-medium text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {title ?? <span className="font-mono">{item.slug}</span>}
+        {item.isSelf && (
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating cell; not a sibling gap the parent can own
+          <span className="ml-1.5 font-normal text-primary">
+            this conversation
           </span>
-          <Fill
-            as="span"
-            className={cn(
-              "truncate",
-              isSelf ? "font-medium text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {title ? (
-              <span className="truncate">{title}</span>
-            ) : (
-              <span className="font-mono">{slug}</span>
-            )}
-            {isSelf && (
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own
-              <span className="ml-1.5 font-normal text-primary">
-                this conversation
-              </span>
-            )}
-          </Fill>
-          {phase === "held" && row.openWait && (
-            <span className={cn("truncate text-warning", rigidClass())}>
-              {WAIT_KINDS[row.openWait.kind].sentence(null)}
-            </span>
-          )}
-          <TimeCell ms={times.waitingMs} dim />
-          <TimeCell ms={times.workingMs} dim={phase === "queued"} />
-        </Stack>
-      </div>
+        )}
+      </span>
     </WithTooltip>
   );
 }
 
-/** A section's small caps header; the first carries the time columns' labels. */
-function SectionHeader({
-  title,
-  withColumns,
-}: {
-  title: string;
-  withColumns: boolean;
-}) {
+/** Open another row's conversation; absent for the current one and for an op no conversation launched. */
+export function OpenConversationAction({
+  row,
+}: ItemActionProps<QueueTableRow>) {
+  const openPane = useOpenPane();
+  const convId = row.row.conversationId;
+  if (convId === null || row.isSelf) return null;
   return (
-    <Stack
-      direction="row"
-      gap="sm"
-      align="baseline"
-      className="px-md pt-xs text-muted-foreground"
-    >
-      <Fill
-        as="span"
-        className="truncate text-2xs font-semibold uppercase tracking-wide"
-      >
-        {title}
-      </Fill>
-      {withColumns && (
-        <>
-          <span className={cn(TIME_COL, "font-sans", rigidClass())}>
-            waited
-          </span>
-          <span className={cn(TIME_COL, "font-sans", rigidClass())}>
-            worked
-          </span>
-        </>
-      )}
-    </Stack>
+    <IconButton
+      icon={openInNewIcon}
+      label="Open conversation"
+      onClick={(e) => {
+        e.stopPropagation();
+        openPane(conversationPane, { convId }, { mode: "push" });
+      }}
+    />
   );
 }
 
 /**
- * The worktree's in-flight op above the prompt input, off the one host-wide
- * `opsInFlight` read. The state line is the reducer's: the wait the op is
- * parked in (with its reason, requeue cycle and own clock) or the work it is
- * doing; the right side is the total elapsed and the waited / worked split. The
- * warning tone means "parked in a wait" — before the grant or after it.
+ * What the card's header shows and how it folds — the half of the banner that
+ * is NOT the DataView's. Travels by context because the frame is declared at
+ * module scope (a fresh identity each render would remount the card) and
+ * renders inside the DataView, below where the banner holds this state.
  */
-export function OpStatusBanner({
-  conversation,
-}: {
-  conversation: ConversationRecord;
-}) {
-  const result = useOpsInFlight();
-  const titleBySlug = useConversationTitleBySlug();
-  // A presentational 1 s ticker for the clocks; the op state itself is pushed.
-  const now = useNow(1000);
-  const [expanded, setExpanded] = useState(false);
+interface BannerChrome {
+  op: OpRow;
+  now: number;
+  others: number;
+  expanded: boolean;
+  toggle: () => void;
+}
 
-  const selfSlug = slugOf(conversation.worktreePath);
+const BannerChromeContext = createContext<BannerChrome | null>(null);
 
-  if (result.status === "loading") return null;
-  if (result.status === "error")
-    return (
-      <ResourceErrorInline
-        variant="inline"
-        subject="the in-flight ops"
-        error={result.error}
-        refetch={result.refetch}
-      />
-    );
-  const mine = opsOfSlug(result.data, selfSlug);
-  const op = mine[0];
-  if (!op) return null;
+function useBannerChrome(): BannerChrome {
+  const chrome = useContext(BannerChromeContext);
+  if (chrome === null)
+    throw new Error("OpStatusCard renders only inside OpStatusBanner");
+  return chrome;
+}
 
-  const sections = buildSections(result.data, selfSlug);
+/**
+ * The banner's card — the DataView's hosted frame. The header line folds the
+ * list; while expanded it also carries the list's one options trigger
+ * (search, filter, sort), so the controls cost no line of their own. The rows
+ * come back as `body`, drawn only while expanded.
+ */
+function OpStatusCard({ options, body }: HostedToolbarParts) {
+  const { op, now, others, expanded, toggle } = useBannerChrome();
   const waiting = op.openWait !== null;
   const times = timesOf(op, now);
-  const others = result.data.length - 1;
-
   return (
-    <Text as="div" variant="caption">
-      <Clip
-        className={`rounded-md border ${
-          waiting
-            ? "border-warning/40 bg-warning/10 text-warning"
-            : "border-border bg-muted/30 text-foreground"
-        }`}
-      >
+    <Clip
+      className={`rounded-md border ${
+        waiting
+          ? "border-warning/40 bg-warning/10 text-warning"
+          : "border-border bg-muted/30 text-foreground"
+      }`}
+    >
+      <Line className="hover:bg-foreground/[0.03]">
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="w-full text-left hover:bg-foreground/[0.03]"
+          onClick={toggle}
+          aria-expanded={expanded}
+          className={cn(fillClasses("x"), "text-left")}
         >
           <Stack
             direction="row"
@@ -279,24 +265,240 @@ export function OpStatusBanner({
             />
           </Stack>
         </button>
-        {expanded && (
-          <div className="border-t border-border/60 bg-background/40 py-xs text-foreground">
-            {sections.map((section, i) => (
-              <div key={section.kind}>
-                <SectionHeader title={section.title} withColumns={i === 0} />
-                {section.rows.map((item) => (
-                  <QueueRowView
-                    key={item.row.opId}
-                    item={item}
-                    title={titleBySlug[item.slug]}
-                    now={now}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
+        {expanded && options !== null && (
+          <span className={cn("pr-sm text-foreground", rigidClass())}>
+            {options}
+          </span>
         )}
-      </Clip>
+      </Line>
+      {expanded && (
+        // The list sits on the surface's own background (`bg-chrome-mask`),
+        // not a translucent wash of the card's tone: the table's group headers
+        // pin with `bg-chrome-mask`, so any other fill here would paint them as
+        // bands of a different colour.
+        <div className="border-t border-border/60 bg-chrome-mask py-2xs text-foreground">
+          {body}
+        </div>
+      )}
+    </Clip>
+  );
+}
+
+const CARD_TOOLBAR: HostedToolbar = { kind: "hosted", frame: OpStatusCard };
+
+/**
+ * The expanded list's schema: one table row per in-flight op, grouped by
+ * section (op kind). Only the two clocks are labelled — once, on the first
+ * section header (`columnHeader: "first-group"`); the glyph, position, title
+ * and held columns read from their cells.
+ */
+function queueFields(
+  sectionOptions: { value: OpKind; label: string }[],
+  titleBySlug: Readonly<Record<string, string>>,
+  now: number,
+): FieldDef<QueueTableRow>[] {
+  return [
+    {
+      id: "section",
+      label: "Section",
+      type: "enum",
+      value: (r) => r.section,
+      options: sectionOptions,
+      groupable: true,
+      visible: false,
+    },
+    {
+      id: "phase",
+      label: "Phase",
+      header: false,
+      type: "enum",
+      value: (r) => phaseOf(r.row),
+      options: (["working", "held", "queued"] as const).map((value) => ({
+        value,
+        label: PHASE_LABEL[value],
+      })),
+      filterable: true,
+      // `auto`, not a fixed size: the leading track of a subgrid row also
+      // carries the row's inline padding (`rail-follow`), which a fixed track
+      // would subtract from the glyph — an auto track grows to fit both.
+      width: "auto",
+      cell: (r) => <PhaseIcon phase={phaseOf(r.row)} />,
+    },
+    {
+      id: "pos",
+      label: "Queue position",
+      header: false,
+      type: "number",
+      value: (r) => r.queuePos,
+      width: "1rem",
+      align: "end",
+      cell: (r) => (
+        <span className="font-mono tabular-nums text-muted-foreground">
+          {r.queuePos}
+        </span>
+      ),
+    },
+    {
+      id: "title",
+      label: "Conversation",
+      header: false,
+      type: "text",
+      primary: true,
+      value: (r) => titleBySlug[r.slug] ?? r.slug,
+      width: "minmax(0,1fr)",
+      cell: (r) => <TitleCell item={r} title={titleBySlug[r.slug]} now={now} />,
+    },
+    {
+      id: "held",
+      label: "Held",
+      header: false,
+      type: "text",
+      value: (r) =>
+        phaseOf(r.row) === "held" && r.row.openWait
+          ? WAIT_KINDS[r.row.openWait.kind].sentence(null)
+          : null,
+      width: "auto",
+      cell: (r) =>
+        phaseOf(r.row) === "held" && r.row.openWait ? (
+          <span className="truncate text-warning">
+            {WAIT_KINDS[r.row.openWait.kind].sentence(null)}
+          </span>
+        ) : null,
+    },
+    {
+      id: "waited",
+      label: "Waited",
+      header: "waited",
+      type: "number",
+      value: (r) => timesOf(r.row, now).waitingMs,
+      // Content-sized: one grid, so every section's clock lines up with the
+      // widest cell or the label (+ its sort icon) on the first header.
+      width: "auto",
+      align: "end",
+      cell: (r) => <TimeCell ms={timesOf(r.row, now).waitingMs} dim />,
+    },
+    {
+      id: "worked",
+      label: "Worked",
+      header: "worked",
+      type: "number",
+      value: (r) => timesOf(r.row, now).workingMs,
+      // Content-sized: one grid, so every section's clock lines up with the
+      // widest cell or the label (+ its sort icon) on the first header.
+      width: "auto",
+      align: "end",
+      cell: (r) => (
+        <TimeCell
+          ms={timesOf(r.row, now).workingMs}
+          dim={phaseOf(r.row) === "queued"}
+        />
+      ),
+    },
+  ];
+}
+
+/**
+ * The worktree's in-flight op above the prompt input, off the one host-wide
+ * `opsInFlight` read. The state line is the reducer's: the wait the op is
+ * parked in (with its reason, requeue cycle and own clock) or the work it is
+ * doing; the right side is the total elapsed. The warning tone means "parked
+ * in a wait" — before the grant or after it. Expanded, it lists every
+ * in-flight op on the host as a grouped compact table (a DataView).
+ */
+export function OpStatusBanner({
+  conversation,
+}: {
+  conversation: ConversationRecord;
+}) {
+  const result = useOpsInFlight();
+  const titleBySlug = useConversationTitleBySlug();
+  const openPane = useOpenPane();
+  // A presentational 1 s ticker for the clocks; the op state itself is pushed.
+  const now = useNow(1000);
+  const [expanded, setExpanded] = useState(false);
+
+  const selfSlug = slugOf(conversation.worktreePath);
+  const data = result.status === "ready" ? result.data : null;
+  const op = data ? opsOfSlug(data, selfSlug)[0] : undefined;
+
+  const chrome = useMemo<BannerChrome | null>(
+    () =>
+      op && data
+        ? {
+            op,
+            now,
+            others: data.length - 1,
+            expanded,
+            toggle: () => setExpanded((v) => !v),
+          }
+        : null,
+    [op, data, now, expanded],
+  );
+
+  // buildSections is the order authority (self section first, global push
+  // positions, working → held → queued); flattened in that order, with the
+  // section's options listed in it too, so the enum groups follow it.
+  const { rows, sectionOptions } = useMemo(() => {
+    const sections = data ? buildSections(data, selfSlug) : [];
+    return {
+      rows: sections.flatMap((s) =>
+        s.rows.map((r): QueueTableRow => ({ ...r, section: s.kind })),
+      ),
+      sectionOptions: sections.map((s) => ({
+        value: s.kind,
+        label: s.kind === "push" ? "Push queue" : OP_KINDS[s.kind].label,
+      })),
+    };
+  }, [data, selfSlug]);
+
+  const fields = useMemo(
+    () => queueFields(sectionOptions, titleBySlug, now),
+    [sectionOptions, titleBySlug, now],
+  );
+
+  if (result.status === "loading") return null;
+  if (result.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the in-flight ops"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  if (!op || !chrome) return null;
+
+  return (
+    // The caption wrapper is authored HERE, not in the frame, so the banner's
+    // own owner stamp (`OpStatusBanner@…`) sits on the element holding the
+    // whole card — what the e2e and the element picker name it by.
+    <Text as="div" variant="caption">
+      <BannerChromeContext.Provider value={chrome}>
+        <DataView<QueueTableRow>
+          rows={rows}
+          fields={fields}
+          rowKey={(r) => r.row.opId}
+          views={["table"]}
+          storageKey={QUEUE_VIEW}
+          readiness={result}
+          density="compact"
+          groupHeaders="quiet"
+          toolbar={CARD_TOOLBAR}
+          selectedRowId={op.opId}
+          searchPlaceholder="Search ops"
+          searchAccessor={(r) => `${titleBySlug[r.slug] ?? ""} ${r.slug}`}
+          itemActions={OpQueueItemActions}
+          // Every op has a detail pane — in flight included — with its wait
+          // timeline and step breakdown.
+          onRowActivate={(r) =>
+            openPane(opDetailPane, { opId: r.row.opId }, { mode: "push" })
+          }
+          viewOptions={{ table: { columnHeader: "first-group" } }}
+          emptyState={
+            <Text tone="muted">No op matches what you searched for.</Text>
+          }
+        />
+      </BannerChromeContext.Provider>
     </Text>
   );
 }

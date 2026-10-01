@@ -46,7 +46,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["rail-x-none", "rail-x-2xs", "rail-x-xs", "rail-x-sm", "rail-x-md", "rail-x-lg", "rail-x-xl", "rail-x-2xl", "rail-owe-none", "rail-owe-2xs", "rail-owe-xs", "rail-owe-sm", "rail-owe-md", "rail-owe-lg", "rail-owe-xl", "rail-owe-2xl"], group: "sg-rail-x", excludes: ["px", "pr", "pl"], under: [] },
   { classes: ["rail-y-none", "rail-y-2xs", "rail-y-xs", "rail-y-sm", "rail-y-md", "rail-y-lg", "rail-y-xl", "rail-y-2xl"], group: "sg-rail-y", excludes: ["py", "pt", "pb"], under: [] },
   { classes: ["rail-bleed", "rail-follow"], extend: "px" },
-  { classes: ["py-row"], extend: "py" },
+  { classes: ["py-row", "py-row-compact"], extend: "py" },
   { classes: ["pr-floating-bar"], extend: "pr" },
   { classes: ["anchor-floating-bar-band"], standalone: true, reason: "Names this box as an anchor; no built-in group sets anchor-name." },
   { classes: ["floating-bar-band"], standalone: true, reason: "Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor." },

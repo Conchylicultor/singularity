@@ -223,7 +223,6 @@ genuine transient-chrome list escapes with
     - `primitives/action-presentation`
     - `primitives/data-view`
     - `primitives/data-view/list`
-    - `primitives/data-view/table`
     - `primitives/data-view/view-core`
     - `primitives/folder-picker`
     - `primitives/log-channels`

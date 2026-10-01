@@ -115,6 +115,7 @@ icon+count button it stands in for — carries a per-site
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
     - `conversations/conversation-view/notes`
+    - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/push-profiling`
     - `conversations/conversation-view/resume`
     - `conversations/conversation-view/terminal-pane`

@@ -99,7 +99,9 @@ The orphan reconciler lives in `op-log/plugins/op-store` (`reconcile.ts`).
     - `opDetailPane`
     - `WorktreeOpGantt`
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view/push-profiling`
+  - Imported by:
+    - `conversations/conversation-view/op-status`
+    - `conversations/conversation-view/push-profiling`
 - Sub-plugins:
   - **`op-gantt`** — Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset.
 

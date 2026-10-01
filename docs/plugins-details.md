@@ -12115,30 +12115,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ConversationNoteSchema`
               - `deleteNote`
               - `upsertNote`
-        - **`op-status`** — Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own clock) or the work it is doing, total elapsed and the waited / worked split, expandable into the global push queue and every other in-flight op. Also a sidebar row chip flagging the same op (hourglass while parked in a wait).
+        - **`op-status`** — Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own clock) or the work it is doing, total elapsed and the waited / worked split, expandable into a grouped table (DataView) of the global push queue and every other in-flight op, each row opening its op detail pane. Also a sidebar row chip flagging the same op (hourglass while parked in a wait).
           - Web:
+            - Slots: `queue-actions` ← `conversations.conversation-view.op-status`
             - Contributes:
               - `Conversation.AbovePromptInput` → `OpStatusBanner`
               - `Item.Chips` → `OpStatusChip`
+              - `queue-actions` "open-conversation" → `OpenConversationAction`
             - Uses:
               - `conversations.useConversation`
               - `conversations.useConversationTitleBySlug`
               - `conversations/conversation-ui/item.Item`
               - `conversations/conversation-view.Conversation`
+              - `conversations/conversation-view.conversationPane`
+              - `debug/profiling/ops.opDetailPane`
               - `network/live.useLive`
               - `primitives/css/clip.Clip`
               - `primitives/css/fill.Fill`
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/inline.Inline`
+              - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/spinner.Spinner`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineItemActions`
+              - `primitives/data-view.FieldDef`
+              - `primitives/data-view.ItemActionProps`
+              - `primitives/icon-button.IconButton`
               - `primitives/live-state.combineResources`
               - `primitives/live-state.mapResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.ResourceResult`
               - `primitives/overlay/tooltip.WithTooltip`
+              - `primitives/pane.useOpenPane`
               - `primitives/relative-time.formatElapsed`
               - `primitives/relative-time.useNow`
               - `ui/icons.Icon`
@@ -14988,7 +15001,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `opDetailPane`
               - `WorktreeOpGantt`
           - Cross-plugin:
-            - Imported by: `conversations/conversation-view/push-profiling`
+            - Imported by:
+              - `conversations/conversation-view/op-status`
+              - `conversations/conversation-view/push-profiling`
           - Plugins:
             - **`op-gantt`** — Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset.
               - Web:
@@ -27852,6 +27867,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+              - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/running-agents`
               - `conversations/conversations-view`
               - `conversations/conversations-view/data-view`
@@ -28318,7 +28334,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/action-presentation`
               - `primitives/data-view`
               - `primitives/data-view/list`
-              - `primitives/data-view/table`
               - `primitives/data-view/view-core`
               - `primitives/folder-picker`
               - `primitives/log-channels`
@@ -29300,7 +29315,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/gallery`
               - `primitives/data-view/icons`
               - `primitives/data-view/list`
-              - `primitives/data-view/table`
               - `primitives/date-picker`
               - `primitives/diff-view`
               - `primitives/error-boundary`
@@ -30122,7 +30136,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
-          - `ConfigV2.WebRegister` ×42: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+          - `ConfigV2.WebRegister` ×43: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
           - `DataViewSlots.Setting` "data-view.fold" → `FoldControl`
@@ -30280,6 +30294,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ChipSelectFilterInput`
           - `DATA_VIEW_HEADER_OFFSET_VAR`
           - `DataView`
+          - `DataViewGroupHeader`
           - `DataViewSlots`
           - `defineDataView`
           - `defineDataViewSources`
@@ -30330,7 +30345,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useServerDataSource`
           - `useSortController`
       - Server:
-        - Contributes: `ConfigV2.Register` ×42: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+        - Contributes: `ConfigV2.Register` ×43: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
         - Uses:
           - `config_v2.getConfig`
           - `config_v2.watchConfig`
@@ -30362,6 +30377,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/settings`
           - `conversations/agents`
           - `conversations/all-conversations`
+          - `conversations/conversation-view/op-status`
           - `conversations/conversation-view/running-agents`
           - `conversations/conversations-view/data-view`
           - `conversations/conversations-view/data-view/history`
@@ -30774,8 +30790,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/badge.Badge`
               - `primitives/css/inline.Inline`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/text.Text`
               - `primitives/data-table.ColumnDef`
               - `primitives/data-table.DATA_TABLE_VIRTUALIZE_THRESHOLD`
               - `primitives/data-table.DataTable`
@@ -30784,6 +30798,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-table.SortState`
               - `primitives/data-view.DATA_VIEW_HEADER_OFFSET_VAR`
               - `primitives/data-view.DataViewAggregateConfig`
+              - `primitives/data-view.DataViewGroupHeader`
               - `primitives/data-view.DataViewRenderProps`
               - `primitives/data-view.DataViewSection`
               - `primitives/data-view.DataViewSlots`
@@ -31590,6 +31605,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
           - `conversations/conversation-view/notes`
+          - `conversations/conversation-view/op-status`
           - `conversations/conversation-view/push-profiling`
           - `conversations/conversation-view/resume`
           - `conversations/conversation-view/terminal-pane`
@@ -33330,6 +33346,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/markdown-extensions`
+          - `conversations/conversation-view/op-status`
           - `conversations/conversation-view/open-app`
           - `conversations/conversation-view/push-profiling`
           - `conversations/conversation-view/running-agents`
@@ -34917,7 +34934,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×219: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.WebRegister` ×220: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -34947,7 +34964,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×218: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.Register` ×219: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`

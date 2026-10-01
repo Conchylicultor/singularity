@@ -310,6 +310,14 @@ export type RowTone = "default" | "muted";
 export interface FieldDef<TRow> {
   id: string;
   label: string;
+  /**
+   * The table column's header text. Default: `label`. `false` ⇒ the column is
+   * UNLABELLED — its header cell renders empty (a glyph or position column whose
+   * meaning is obvious from its cells) — while the field keeps `label` in every
+   * "choose a field" surface (sort, filter, group-by, Properties). A string
+   * replaces `label` in the header only. Read by the table view alone.
+   */
+  header?: string | false;
   /** Field type id (open registry id). Default "text". */
   type?: string;
   /** Comparable projection used for sort/search/filter. */
@@ -706,10 +714,10 @@ export type DataViewDensity = "comfortable" | "compact";
  * {@link DataViewDensity}: a narrow list that wants its headers to read as
  * captions over the rows asks for `"quiet"`.
  *
- * Honoured by every view that draws its headers through `GroupedSections`
- * (list, gallery, tree, icons). The table composes its own `col-span-full`
- * header rows inside `data-table` and ignores it — a deliberate no-op, like
- * its handling of `rowTone`.
+ * Honoured by every grouped view: the ones that draw their headers through
+ * `GroupedSections` (list, gallery, tree, icons), and the table, which composes
+ * its own `col-span-full` header rows inside `data-table` but renders the same
+ * `DataViewGroupHeader` node in them.
  */
 export type DataViewGroupHeaders = "standard" | "quiet";
 
@@ -851,18 +859,20 @@ export interface DataViewRenderProps<TRow> {
   creators?: CreateOption[];
   /**
    * The surface's declared density, threaded from `DataViewProps.density` so a
-   * view child can tighten itself. Absent ⇒ `"comfortable"`. Only the list child
-   * honours it today (its default row `size`); table and gallery ignore it,
-   * which is a deliberate no-op rather than an omission — their row shapes are
-   * already governed by `data-table`'s own density and the card grid's cell
-   * width, so there is nothing a compact surface would want them to drop.
+   * view child can tighten itself. Absent ⇒ `"comfortable"`. The list child
+   * reads it as its default row `size`; the table hands it to `DataTable` as
+   * `density`, which pads its rows with the compact row token
+   * (`py-row-compact`). The gallery ignores it — a deliberate no-op: its shape
+   * is governed by the card grid's cell width, so there is nothing a compact
+   * surface would want it to drop.
    */
   density?: DataViewDensity;
   /**
    * The surface's group-header treatment, threaded from
    * `DataViewProps.groupHeaders` exactly like `density`. Absent ⇒
    * `"standard"`. A view hands it to `GroupedSections` as `headerStyle`; the
-   * table ignores it (see {@link DataViewGroupHeaders}).
+   * table renders it through `DataViewGroupHeader` (see
+   * {@link DataViewGroupHeaders}).
    */
   groupHeaders?: DataViewGroupHeaders;
 }

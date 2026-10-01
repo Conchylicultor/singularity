@@ -858,6 +858,11 @@
  * rail but its block padding from the row density token. */
 @utility py-row { padding-top: var(--pad-row-y); padding-bottom: var(--pad-row-y); } /* twmerge: extend py */
 
+/* `py-row`'s compact rung — the row block padding of a surface that declared
+ * itself compact (a `DataTable` with `density="compact"`). Reads its own density
+ * token, whose default is a fraction of `--pad-row-y`, so it follows the preset. */
+@utility py-row-compact { padding-top: var(--pad-row-compact-y); padding-bottom: var(--pad-row-compact-y); } /* twmerge: extend py */
+
 /* Floating-bar safe area — right inset that clears the global floating action
  * bar (a fixed top-right overlay). Width is owned + published by the
  * global-action-bar plugin (while it floats, i.e. in solo) as

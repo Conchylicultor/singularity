@@ -82,6 +82,7 @@ export {
 } from "./internal/identity-grouping";
 export { useGroupingClock } from "./internal/use-grouping-clock";
 export { GroupedSections } from "./internal/grouped-sections";
+export { DataViewGroupHeader } from "./internal/group-header";
 export { SectionBody } from "./components/section-body";
 export type { SectionBodyProps } from "./components/section-body";
 export type { GroupedSectionsProps } from "./internal/grouped-sections";

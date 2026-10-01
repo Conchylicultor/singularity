@@ -6,6 +6,14 @@ export const densityGroup = defineTokenGroup("density", {
   padRowX: { default: "0.5rem", label: "Row padding X" },
   padRowY: { default: "0.375rem", label: "Row padding Y" },
   padCard: { default: "0.75rem", label: "Card padding" },
+  // The compact row rung — a table on a surface that declared itself compact
+  // (`DataTable density="compact"`, `py-row-compact`). Default = a third of the
+  // row pad, so it scales with the preset (Comfortable's 0.375rem → 0.125rem,
+  // Compact's own row pad); a theme sets it to give dense rows their own rhythm.
+  padRowCompactY: {
+    default: "calc(var(--pad-row-y) / 3)",
+    label: "Compact row padding Y",
+  },
   // The compact (`xs`) chip rung — a count chip in a dense list row. Defaults
   // read the chip pad and the `rounded-md` radius, so a theme that leaves them
   // out paints the compact chip exactly like every other chip; a theme sets

@@ -29,6 +29,11 @@ import { useDataTable } from "./use-data-table";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
+/** The column-label text style — on the header row as a whole in `"row"` mode,
+ *  on each label cell when the labels ride the first group's header. */
+const HEADER_TEXT_CLASS =
+  "text-3xs font-medium uppercase tracking-wider text-muted-foreground";
+
 const arrowDownwardIcon = symbol("arrow-downward");
 const arrowUpwardIcon = symbol("arrow-upward");
 const unfoldMoreIcon = symbol("unfold-more");
@@ -84,6 +89,8 @@ export function DataTable<TRow>({
   keepMountedRowKeys,
   controlSize = "xs",
   stickyHeaderOffset = "0px",
+  columnHeader = "row",
+  density = "comfortable",
 }: DataTableProps<TRow>) {
   const { rows, sortState, toggleSort } = useDataTable(
     data,
@@ -126,6 +133,63 @@ export function DataTable<TRow>({
   // A trailing `auto` track holds the per-row actions column — the ONE track
   // both clusters share, so it is reserved whenever either is present.
   const hasActionsTrack = !!rowActions || !!rowPersistentActions;
+  // Every subgrid row (column header, data row) takes the SAME block padding,
+  // picked once here from the table's density.
+  const rowPad = density === "compact" ? "py-row-compact" : "py-row";
+
+  // `first-group`: the column labels ride the first group's header instead of a
+  // header row. Its label spans the leading tracks up to the first labelled
+  // column — so it needs at least one unlabelled leading track, and a group to
+  // ride. Otherwise it falls back to the header row (see DataTableColumnHeader).
+  const firstLabelled = columns.findIndex((col) => !!col.header);
+  const leadSpan = firstLabelled === -1 ? columns.length : firstLabelled;
+  const labelsOnFirstGroup =
+    columnHeader === "first-group" &&
+    !!groups &&
+    groups.length > 0 &&
+    leadSpan > 0;
+
+  const headerCells = (cellClassName?: string) =>
+    columns.map((col) => {
+      const sortable = col.sortable ?? !!col.value;
+      const active = sortState?.columnId === col.id;
+      return (
+        <Text
+          as="span"
+          key={col.id}
+          className={cn(
+            cellClassName,
+            alignClass(col.align),
+            sortable && "cursor-pointer select-none",
+          )}
+          onClick={sortable ? () => toggleSort(col.id) : undefined}
+        >
+          {col.header}
+          {sortable && (
+            <SortIcon
+              active={active}
+              direction={active ? sortState!.direction : null}
+            />
+          )}
+        </Text>
+      );
+    });
+
+  // The first group's header in `first-group` mode: the caller's header node in
+  // a cell across the leading tracks, then the remaining columns' label cells in
+  // their own tracks (and the actions track's empty span). renderGroupedBody
+  // makes that group's sticky band the subgrid row these cells sit in.
+  const firstGroupLabels: FirstGroupLabels | undefined = labelsOnFirstGroup
+    ? {
+        leadSpan,
+        cells: (
+          <>
+            {headerCells(HEADER_TEXT_CLASS).slice(leadSpan)}
+            {hasActionsTrack && <span aria-hidden />}
+          </>
+        ),
+      }
+    : undefined;
   const template = [
     ...columns.map((col) => col.width ?? "auto"),
     ...(hasActionsTrack ? ["auto"] : []),
@@ -153,12 +217,16 @@ export function DataTable<TRow>({
       rowPersistentActions={rowPersistentActions}
       useRowDecoration={useDecorate}
       measure={measure}
+      rowPad={rowPad}
     />
   );
 
   // Group headers pin flush beneath the sticky column header (which itself pins
   // at `stickyHeaderOffset`, below any consumer chrome such as a DataView toolbar).
-  const groupHeaderTop = `calc(${stickyHeaderOffset} + ${Math.round(headerHeight)}px)`;
+  // Without a header row (labels on the first group) they pin at the offset.
+  const groupHeaderTop = labelsOnFirstGroup
+    ? stickyHeaderOffset
+    : `calc(${stickyHeaderOffset} + ${Math.round(headerHeight)}px)`;
 
   return (
     <ControlSizeProvider size={controlSize}>
@@ -168,50 +236,32 @@ export function DataTable<TRow>({
           (0 by default; a DataView passes its toolbar height so the header stacks
           BELOW the toolbar instead of hiding behind it). `mask` follows the
           embedding surface so rows never show through the pinned bar. */}
-        <Sticky
-          as="div"
-          ref={headerRef}
-          edge="top"
-          mask
-          layer="raised"
-          // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
-          className={cn(
-            "col-span-full grid grid-cols-subgrid border-b text-3xs font-medium uppercase tracking-wider text-muted-foreground",
-            // Every subgrid row — this header, each data row, each group header —
-            // takes its inline padding from the ambient rail and its block padding
-            // from the row density token. Column alignment holds because they all
-            // read the SAME rail, which is what made the old fixed padding work.
-            "py-row rail-follow",
-          )}
-          style={{ top: stickyHeaderOffset }}
-        >
-          {columns.map((col) => {
-            const sortable = col.sortable ?? !!col.value;
-            const active = sortState?.columnId === col.id;
-            return (
-              <Text
-                as="span"
-                key={col.id}
-                className={cn(
-                  alignClass(col.align),
-                  sortable && "cursor-pointer select-none",
-                )}
-                onClick={sortable ? () => toggleSort(col.id) : undefined}
-              >
-                {col.header}
-                {sortable && (
-                  <SortIcon
-                    active={active}
-                    direction={active ? sortState!.direction : null}
-                  />
-                )}
-              </Text>
-            );
-          })}
-          {hasActionsTrack && <span aria-hidden />}
-        </Sticky>
+        {labelsOnFirstGroup ? null : (
+          <Sticky
+            as="div"
+            ref={headerRef}
+            edge="top"
+            mask
+            layer="raised"
+            // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
+            className={cn(
+              "col-span-full grid grid-cols-subgrid border-b",
+              HEADER_TEXT_CLASS,
+              // Every subgrid row — this header, each data row, each group header —
+              // takes its inline padding from the ambient rail and its block padding
+              // from the row density token. Column alignment holds because they all
+              // read the SAME rail, which is what made the old fixed padding work.
+              rowPad,
+              "rail-follow",
+            )}
+            style={{ top: stickyHeaderOffset }}
+          >
+            {headerCells()}
+            {hasActionsTrack && <span aria-hidden />}
+          </Sticky>
+        )}
         {groups ? (
-          renderGroupedBody(groups, renderRow, groupHeaderTop)
+          renderGroupedBody(groups, renderRow, groupHeaderTop, firstGroupLabels)
         ) : rows.length > VIRTUALIZE_THRESHOLD ? (
           <VirtualTableBody
             rows={rows}
@@ -250,6 +300,7 @@ function DataTableRow<TRow>({
   rowPersistentActions,
   useRowDecoration,
   measure,
+  rowPad,
 }: {
   row: TRow;
   index: number;
@@ -263,6 +314,8 @@ function DataTableRow<TRow>({
     (row: TRow, index: number) => DataTableRowDecoration | undefined
   >;
   measure?: { ref: (el: Element | null) => void; index: number };
+  /** The row block-padding class, from the table's density. */
+  rowPad: "py-row" | "py-row-compact";
 }): ReactNode {
   const decoration = useRowDecoration(row, index);
   const key = rowKey(row, index);
@@ -286,7 +339,8 @@ function DataTableRow<TRow>({
       className={cn(
         "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",
         // Same rail as the column header and the group headers — see there.
-        "py-row rail-follow",
+        rowPad,
+        "rail-follow",
         // Reveals the trailing RowActions cluster; its bundled `relative` also
         // hosts the decoration overlay (a positioned row with `z-index: auto`
         // lays out and stacks identically, so it is inert on plain rows).
@@ -342,23 +396,46 @@ function DataTableRow<TRow>({
           first, hover-revealed at the trailing edge). They cannot be two direct
           children: a subgrid row has no implicit tracks, so the second would be
           clamped into the last track and paint on top of the first. */}
-      {rowPersistentActions ? (
-        <Stack direction="row" gap="none" align="center" justify="end">
-          <RowActions pin={null} alwaysVisible>
-            {rowPersistentActions(row, index)}
+      <CompactActionsCell compact={rowPad === "py-row-compact"}>
+        {rowPersistentActions ? (
+          <Stack direction="row" gap="none" align="center" justify="end">
+            <RowActions pin={null} alwaysVisible>
+              {rowPersistentActions(row, index)}
+            </RowActions>
+            {rowActions ? (
+              <RowActions pin={null}>{rowActions(row, index)}</RowActions>
+            ) : null}
+          </Stack>
+        ) : rowActions ? (
+          // eslint-disable-next-line layout/no-adhoc-layout -- placement class for the reserved actions track; RowActions owns everything else about the cluster
+          <RowActions pin={null} className="justify-end">
+            {rowActions(row, index)}
           </RowActions>
-          {rowActions ? (
-            <RowActions pin={null}>{rowActions(row, index)}</RowActions>
-          ) : null}
-        </Stack>
-      ) : rowActions ? (
-        // eslint-disable-next-line layout/no-adhoc-layout -- placement class for the reserved actions track; RowActions owns everything else about the cluster
-        <RowActions pin={null} className="justify-end">
-          {rowActions(row, index)}
-        </RowActions>
-      ) : null}
+        ) : null}
+      </CompactActionsCell>
       {decorationOverlay}
     </div>
+  );
+}
+
+/**
+ * The trailing actions track's cell. In a compact table the cluster must not
+ * set the row's height: an icon button is taller than a compact row's text
+ * line, so a row that carries an action would stand taller than one that does
+ * not. The compact cell is zero-height and centres its content, so the buttons
+ * overflow the row symmetrically instead of growing it.
+ */
+function CompactActionsCell({
+  compact,
+  children,
+}: {
+  compact: boolean;
+  children: ReactNode;
+}): ReactNode {
+  if (!compact || children == null) return children;
+  return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- zero-height centring box so the actions cluster overflows a compact row instead of growing it
+    <div className="flex h-0 items-center justify-end">{children}</div>
   );
 }
 
@@ -481,6 +558,14 @@ function VirtualTableBody<TRow>({
   );
 }
 
+/** The column labels the first group's header carries in `first-group` mode. */
+interface FirstGroupLabels {
+  /** How many leading tracks the group's own header node spans. */
+  leadSpan: number;
+  /** The label cells for the remaining tracks (actions track included). */
+  cells: ReactNode;
+}
+
 /**
  * Grouped (non-virtualized) body: a caller-built full-span header per group,
  * then the group's rows when not collapsed — all inside the single subgrid so
@@ -491,6 +576,9 @@ function renderGroupedBody<TRow>(
   groups: DataTableGroup<TRow>[],
   renderRow: (row: TRow, i: number) => ReactNode,
   groupHeaderTop: string,
+  /** `first-group` mode: the FIRST group's band becomes a subgrid row carrying
+   *  the column labels. Absent ⇒ every header is a full-span band. */
+  firstGroupLabels?: FirstGroupLabels,
 ): ReactNode {
   let i = 0;
   // Group headers accumulate: with few enough groups every header stays pinned,
@@ -506,27 +594,53 @@ function renderGroupedBody<TRow>(
   // and the tracks still line up. `mask` keeps rows from showing through.
   return (
     <StickyStack keys={groups.map((group) => group.key)} base={groupHeaderTop}>
-      {groups.map((group) => (
-        <Fragment key={group.key}>
-          <StickyStackItem
-            itemKey={group.key}
-            as="div"
-            mask
-            layer="raised"
-            // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
-            className="col-span-full rail-follow"
-          >
-            {group.header}
-          </StickyStackItem>
-          {group.collapsed
-            ? null
-            : group.rows.map((row) => renderRow(row, i++))}
-          {!group.collapsed && group.footer != null ? (
-            // eslint-disable-next-line layout/no-adhoc-layout -- full-span group-footer row spanning the subgrid table's column tracks
-            <div className="col-span-full">{group.footer}</div>
-          ) : null}
-        </Fragment>
-      ))}
+      {groups.map((group, groupIndex) => {
+        const labels = groupIndex === 0 ? firstGroupLabels : undefined;
+        return (
+          <Fragment key={group.key}>
+            {labels ? (
+              <StickyStackItem
+                itemKey={group.key}
+                as="div"
+                mask
+                layer="raised"
+                data-slot="data-table-first-group-header"
+                // The band IS a subgrid row here (like a data row, same rail), so
+                // the label cells below land in the body's own column tracks.
+                // eslint-disable-next-line layout/no-adhoc-layout -- first group header is a full-span subgrid row inheriting the host's column tracks
+                className="col-span-full grid grid-cols-subgrid items-center rail-follow"
+              >
+                <div
+                  // eslint-disable-next-line layout/no-adhoc-layout -- the group label's cell spans the unlabelled leading tracks of the subgrid
+                  className="min-w-0"
+                  style={{ gridColumn: `span ${labels.leadSpan}` }}
+                >
+                  {group.header}
+                </div>
+                {labels.cells}
+              </StickyStackItem>
+            ) : (
+              <StickyStackItem
+                itemKey={group.key}
+                as="div"
+                mask
+                layer="raised"
+                // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
+                className="col-span-full rail-follow"
+              >
+                {group.header}
+              </StickyStackItem>
+            )}
+            {group.collapsed
+              ? null
+              : group.rows.map((row) => renderRow(row, i++))}
+            {!group.collapsed && group.footer != null ? (
+              // eslint-disable-next-line layout/no-adhoc-layout -- full-span group-footer row spanning the subgrid table's column tracks
+              <div className="col-span-full">{group.footer}</div>
+            ) : null}
+          </Fragment>
+        );
+      })}
     </StickyStack>
   );
 }

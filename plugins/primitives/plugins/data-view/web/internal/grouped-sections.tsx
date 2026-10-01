@@ -1,7 +1,4 @@
 import { type ReactNode } from "react";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   StickyStack,
@@ -13,10 +10,10 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
-  formatSectionCount,
   type DataViewGroupHeaders,
   type DataViewSection,
 } from "@plugins/primitives/plugins/data-view/core";
+import { DataViewGroupHeader } from "./group-header";
 
 export interface GroupedSectionsProps {
   /** The grouped sections — every `key` non-null. The ungrouped single implicit
@@ -108,7 +105,9 @@ export interface GroupedSectionsProps {
  * **The `table` view is the documented exception** and composes `StickyStack`
  * itself (inside `data-table`) under this same policy: its headers are
  * `col-span-full` rows of the subgrid, so the chrome cannot own a `<Stack>` without
- * displacing them out of the grid and breaking column alignment.
+ * displacing them out of the grid and breaking column alignment. The header NODE
+ * is still the same one: both render `DataViewGroupHeader`, so a table's group
+ * header honours `headerStyle` exactly like a list's.
  */
 export function GroupedSections({
   sections,
@@ -129,18 +128,6 @@ export function GroupedSections({
           const key = section.key!;
           const collapsed = collapsedSections?.has(key) ?? false;
           const action = headerActions?.(section);
-          // A quiet header's count is a faint, semibold tally right after its
-          // label ("Queue 6"); the standard header's is a muted caption in the
-          // trailing cluster.
-          const count = quiet ? (
-            <Text variant="caption" tone="faint" className="font-semibold">
-              {formatSectionCount(section.count)}
-            </Text>
-          ) : (
-            <Text variant="caption" tone="muted">
-              {formatSectionCount(section.count)}
-            </Text>
-          );
           return (
             <CollapsibleProvider
               key={key}
@@ -158,55 +145,12 @@ export function GroupedSections({
                 // row's inline pad, so its label sits on the row pills' edge.
                 className={quiet ? "rail-follow" : undefined}
               >
-                {quiet ? (
-                  <SectionHeaderRow
-                    // The `group` role: the heading of a group of rows (its
-                    // semibold comes with the role), sized by the theme apart
-                    // from the rows it heads.
-                    variant="group"
-                    disclosure="trailing"
-                    // The count is part of the label's run here, so the
-                    // trailing cluster holds only an action — and, like the
-                    // standard header, nothing at all when there is none.
-                    actions={
-                      action == null ? undefined : (
-                        <RowActions pin={null}>{action}</RowActions>
-                      )
-                    }
-                  >
-                    {section.label}
-                    {count}
-                  </SectionHeaderRow>
-                ) : (
-                  <SectionHeaderRow
-                    // The label is the grouped column's VALUE, not a name this
-                    // chrome chose — so it is spelled the way the data spells it.
-                    variant="value"
-                    className="rail-follow"
-                    // This `null` test is the ONLY thing between a section and an
-                    // empty `RowActions` — which is not nothing: the cluster is a
-                    // flex item, so an empty one still spends the `gap` below and
-                    // pulls that section's count off the edge its neighbours line
-                    // up on. Hence the contract that `headerActions` returns
-                    // `null`, not a component that renders nothing: a component
-                    // is an element, and an element is never `null`.
-                    actions={
-                      action == null ? (
-                        count
-                      ) : (
-                        // `gap="xs"` is load-bearing rather than decorative: the
-                        // header has only ever carried the count, so nothing has
-                        // ever sat beside it, and the two would otherwise touch.
-                        <Stack direction="row" gap="xs" align="center">
-                          {count}
-                          <RowActions pin={null}>{action}</RowActions>
-                        </Stack>
-                      )
-                    }
-                  >
-                    {section.label}
-                  </SectionHeaderRow>
-                )}
+                <DataViewGroupHeader
+                  section={section}
+                  headerStyle={headerStyle}
+                  action={action}
+                  className={quiet ? undefined : "rail-follow"}
+                />
               </StickyStackItem>
               <CollapsibleContent>{children(section)}</CollapsibleContent>
             </CollapsibleProvider>

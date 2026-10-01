@@ -7,11 +7,10 @@ import {
   type DataTableRowDecoration,
   type SortState as TableSortState,
 } from "@plugins/primitives/plugins/data-table/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
+  DataViewGroupHeader,
   FieldCell,
   pickPrimaryField,
   resolveBodyFields,
@@ -34,7 +33,7 @@ import {
   RankReorderProvider,
   useRankSortableItem,
 } from "@plugins/primitives/plugins/rank-reorder/web";
-import { formatSectionCount } from "@plugins/primitives/plugins/data-view/core";
+import type { TableViewOptions } from "../../core";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
 function coerce(value: FieldValue): string | number | undefined {
@@ -55,6 +54,8 @@ function mapPrimary(rules: readonly SortRule[]): TableSortState | null {
 }
 
 export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
+  // Documented cast boundary: `options` is `viewOptions.table`, opaque to the host.
+  const options = (props.options ?? {}) as TableViewOptions;
   // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
   const resolveCell = useResolveCell();
   const resolveEditor = useResolveCellEditor();
@@ -164,7 +165,9 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
 
   const columns: ColumnDef<unknown>[] = vis.map((f) => ({
     id: f.id,
-    header: f.label,
+    // `header: false` ⇒ an unlabelled column (empty header cell); the field
+    // keeps its `label` everywhere a field is picked.
+    header: f.header === false ? "" : (f.header ?? f.label),
     width: f.width,
     align: f.align,
     value: f.value ? (row: unknown) => coerce(f.value!(row)) : undefined,
@@ -233,6 +236,8 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // Manual order: per-row drag affordances. Composes with DataTable's
     // windowing. Sort is already hidden by the host while manual order is on.
     useRowDecoration: manualOrder ? useRowDecoration : undefined,
+    columnHeader: options.columnHeader,
+    density: props.density,
   };
 
   // Ungrouped renders as one flat body (the only body DataTable windows);
@@ -277,21 +282,15 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
                 {null}
               </SectionBody>
             ) : undefined,
+            // The same header node the flat views render (GroupedSections),
+            // so `groupHeaders` reads identically here.
             header: (
-              <SectionHeaderRow
-                // The grouped column's VALUE — spelled as the data spells it,
-                // never as chrome. Same call the flat views make.
-                variant="value"
+              <DataViewGroupHeader
+                section={section}
+                headerStyle={props.groupHeaders}
                 open={!collapsed}
                 onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
-                actions={
-                  <Text variant="caption" tone="muted">
-                    {formatSectionCount(section.count)}
-                  </Text>
-                }
-              >
-                {section.label}
-              </SectionHeaderRow>
+              />
             ),
           };
         })}

@@ -5,6 +5,12 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export interface ColumnDef<TRow> {
   id: string;
+  /**
+   * The column's header text. Absent or `""` ⇒ an UNLABELLED column: its header
+   * cell renders empty (still sortable on click when the column has a `value`).
+   * Under `columnHeader="first-group"`, the first labelled column is where the
+   * first group's label stops spanning — see {@link DataTableColumnHeader}.
+   */
   header?: string;
   /**
    * CSS grid track size for this column. Default `"auto"` (content-sized to the
@@ -50,6 +56,32 @@ export interface DataTableGroup<TRow> {
    */
   footer?: ReactNode;
 }
+
+/**
+ * Where the column labels sit.
+ *
+ * - **`"row"`** (default) — one sticky column-header row above the body.
+ * - **`"first-group"`** — no header row: in grouped mode the FIRST group's header
+ *   becomes a subgrid row of its own. The group's label spans the leading tracks
+ *   up to the first labelled column, and each labelled column's header sits in
+ *   its own track (same subgrid, so it aligns with the cells by construction;
+ *   sort-on-click is kept). Every other group header stays full-span. The labels
+ *   are shown ONCE, as a caption over the first section, for a short sectioned
+ *   list where a separate header row would cost a line per surface.
+ *
+ *   Falls back to `"row"` when there is nothing to put the labels on: ungrouped,
+ *   or when the first column is itself labelled (the label would have no
+ *   leading track to span).
+ */
+export type DataTableColumnHeader = "row" | "first-group";
+
+/**
+ * Row rhythm. `"comfortable"` (default) pads each row's block axis with the row
+ * density token (`py-row`); `"compact"` reads the compact rung (`py-row-compact`,
+ * the `padRowCompactY` density token) — for a dense surface such as a popover
+ * list. The control density is a separate axis ({@link DataTableProps.controlSize}).
+ */
+export type DataTableDensity = "comfortable" | "compact";
 
 export interface DataTableProps<TRow> {
   data: readonly TRow[];
@@ -123,6 +155,10 @@ export interface DataTableProps<TRow> {
   keepMountedRowKeys?: readonly string[];
   /** Control density for the table's controls/badges; defaults to compact (`xs`). */
   controlSize?: ControlSize;
+  /** Where the column labels sit — see {@link DataTableColumnHeader}. Default `"row"`. */
+  columnHeader?: DataTableColumnHeader;
+  /** Row rhythm — see {@link DataTableDensity}. Default `"comfortable"`. */
+  density?: DataTableDensity;
 }
 
 /**

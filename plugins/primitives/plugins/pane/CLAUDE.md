@@ -1081,6 +1081,7 @@ See "Open questions" in the design doc.
     - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/markdown-extensions`
+    - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/open-app`
     - `conversations/conversation-view/push-profiling`
     - `conversations/conversation-view/running-agents`

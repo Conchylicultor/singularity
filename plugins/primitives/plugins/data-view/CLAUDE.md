@@ -618,8 +618,12 @@ rides `DataViewShellChrome`, and the body threads it into
   section body's top padding under a quiet header, so the rows start right
   under their caption.
 
-list, gallery, tree and icons honour it; the **table ignores it** — it composes
-its own `col-span-full` header rows inside `data-table` (see below).
+list, gallery, tree and icons honour it through `GroupedSections`, and so does
+the **table**: it composes its own `col-span-full` header rows inside
+`data-table`, but the node in them is the same `DataViewGroupHeader` (exported
+from the web barrel) that `GroupedSections` renders — one rendering of either
+treatment, so the table cannot drift from the flat views. See "Table view
+options" below.
 
 ### `headerActions` — one affordance, scoped to one section
 
@@ -650,7 +654,8 @@ unrepresentable. See
 of `data-table`'s subgrid — chrome that owned a `<Stack>` would displace them out of
 the grid and break column alignment — so it composes `StickyStack` directly inside
 `data-table`, under the same policy and with `base` offset by its own sticky column
-header. The tree renders through the shared chrome too, with one `TreeList` per
+header (or by nothing, under `columnHeader: "first-group"`, which has no header
+row). The tree renders through the shared chrome too, with one `TreeList` per
 section: its ROOTS partition by the group-by field and every descendant follows
 its root's section (see the tree child's CLAUDE.md "Group-by"). It is the one
 view that calls `partitionIntoSections` directly rather than through
@@ -1233,7 +1238,7 @@ view composes it on top of whatever colour its own title already carries.
 | tree | folded into `labelClass`, ahead of `options.labelClassName` so the consumer's own per-row class still wins |
 | table | **deliberate no-op** |
 
-The table is a no-op the way gallery/table are no-ops for `density` — stated, not
+The table is a no-op the way the gallery is a no-op for `density` — stated, not
 forgotten. Its only per-row seam is `DataTableProps.useRowDecoration`, a single
 slot already held by manual-order drag decoration; merging two decorations onto
 one hook is its own change, not a side effect of this one.
@@ -1261,11 +1266,37 @@ DataViewProps.density  (and MergedDataViewProps.density)
 describes the surface, not the data, so a source contribution cannot spell a
 value the body would then ignore.
 
-Only the **list** child honours it today — `size = options.size ?? (density ===
-"compact" ? "sm" : "md")`. Table and gallery ignoring it is a deliberate no-op,
-not an omission: their row shapes are governed by `data-table`'s own density and
-the card grid's cell width, so there is nothing a compact surface would ask them
+The **list** child reads it as its default row size — `size = options.size ??
+(density === "compact" ? "sm" : "md")`. The **table** hands it to `DataTable` as
+`density`, whose compact rows pad with `py-row-compact` (the `padRowCompactY`
+density token, by default a third of `--pad-row-y`) instead of `py-row`. The
+gallery ignoring it is a deliberate no-op, not an omission: its shape is governed
+by the card grid's cell width, so there is nothing a compact surface would ask it
 to drop.
+
+## Table view options
+
+`viewOptions={{ table: { … } }}` is a `TableViewOptions` (the table child's
+`core`):
+
+- **`columnHeader?: "row" | "first-group"`** — where the column labels sit.
+  `"row"` (default) is the sticky header row, unchanged. `"first-group"` drops
+  that row and puts the labels on the **first group header**: that header's
+  sticky band becomes a subgrid row in which the group label (standard or quiet,
+  still collapsible, with its count) spans the leading tracks up to the first
+  labelled column, and each labelled column's header sits in its own track — so
+  it aligns with the cells by construction and keeps sort-on-click. Every other
+  group header is unchanged, and the group headers pin at the toolbar offset (no
+  header row to stack under). Ungrouped, or when the first column is itself
+  labelled, it falls back to `"row"`. For a short sectioned list that wants its
+  labels shown once, as a caption over the first section.
+- **`FieldDef.header?: string | false`** (on the field, read by the table only)
+  — the column's header text, default `label`. `false` leaves the header cell
+  empty (a glyph or position column) while the field keeps `label` in every
+  picker (sort, filter, group-by, Properties); it is still sortable from its
+  empty header. Under `"first-group"`, "has a header" is what decides where the
+  first group's label stops spanning.
+- The surface's `density` and `groupHeaders` (above) are honoured too.
 
 ### The fold rule
 
@@ -2021,7 +2052,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
     - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
   - Contributes:
-    - `ConfigV2.WebRegister` ×42: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+    - `ConfigV2.WebRegister` ×43: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
     - `DataViewSlots.Setting` "data-view.fold" → `FoldControl`
@@ -2179,6 +2210,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ChipSelectFilterInput`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `DataView`
+    - `DataViewGroupHeader`
     - `DataViewSlots`
     - `defineDataView`
     - `defineDataViewSources`
@@ -2229,7 +2261,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useServerDataSource`
     - `useSortController`
 - Server:
-  - Contributes: `ConfigV2.Register` ×42: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+  - Contributes: `ConfigV2.Register` ×43: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
   - Uses:
     - `config_v2.getConfig`
     - `config_v2.watchConfig`
@@ -2261,6 +2293,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `config_v2/settings`
     - `conversations/agents`
     - `conversations/all-conversations`
+    - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/running-agents`
     - `conversations/conversations-view/data-view`
     - `conversations/conversations-view/data-view/history`

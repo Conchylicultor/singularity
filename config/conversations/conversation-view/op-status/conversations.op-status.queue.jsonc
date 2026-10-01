@@ -1,0 +1,20 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "queue",
+      "name": "Queue",
+      // One compact table grouped by op kind (the section holding this
+      // worktree's op first). Unsorted: rows keep the queue order buildSections
+      // makes — global push positions, then working → held → queued.
+      "view": {
+        "type": "table",
+        "sort": [],
+        "groupBy": { "fieldId": "section", "groupingId": "value" }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

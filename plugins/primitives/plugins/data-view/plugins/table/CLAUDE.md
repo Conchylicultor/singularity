@@ -34,6 +34,12 @@ throws for a field outside the set. Pinned by `web/__tests__/header-sort.test.ts
 The table has no leading slot: a field declaring `FieldDef.leading` is an
 ordinary column here (see `data-view/CLAUDE.md`, "Leading field").
 
+Surface options reach `DataTable` straight through: `viewOptions.table`
+(`TableViewOptions.columnHeader`), `FieldDef.header` (mapped as
+`header: f.header === false ? "" : (f.header ?? f.label)`), the surface's
+`density`, and its `groupHeaders` (each group header is data-view's shared
+`DataViewGroupHeader`). See `data-view/CLAUDE.md` ("Table view options").
+
 The view passes nothing for the row inset: `DataTable` rows follow the ambient
 rail unconditionally, which is the same rail the rest of a DataView's bands read —
 see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
@@ -48,8 +54,6 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/css/row.SectionHeaderRow`
-    - `primitives/css/text.Text`
     - `primitives/data-table.ColumnDef`
     - `primitives/data-table.DATA_TABLE_VIRTUALIZE_THRESHOLD`
     - `primitives/data-table.DataTable`
@@ -58,6 +62,7 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `primitives/data-table.SortState`
     - `primitives/data-view.DATA_VIEW_HEADER_OFFSET_VAR`
     - `primitives/data-view.DataViewAggregateConfig`
+    - `primitives/data-view.DataViewGroupHeader`
     - `primitives/data-view.DataViewRenderProps`
     - `primitives/data-view.DataViewSection`
     - `primitives/data-view.DataViewSlots`

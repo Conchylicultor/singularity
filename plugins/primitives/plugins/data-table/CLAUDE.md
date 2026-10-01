@@ -16,6 +16,23 @@ in a plain pane looks unchanged. A table inside a host that opened a rail region
 (any `detail-sections` card body, the app-shell sidebar) follows that host's rail
 instead — which is the point: the table stops being the one band that ignores it.
 
+`density="compact"` swaps `py-row` for `py-row-compact` (the `padRowCompactY`
+density token) on every subgrid row — still one value for all rows, so
+alignment holds.
+
+## Column labels: header row or first group
+
+`columnHeader` (default `"row"`) places the column labels. `"row"` is the sticky
+header row. `"first-group"` (grouped mode only) renders no header row: the first
+group's sticky band becomes a `grid-cols-subgrid` row (`data-slot=
+"data-table-first-group-header"`) whose first cell holds the caller's header node
+spanning the leading tracks up to the first column with a non-empty `header`,
+followed by the remaining columns' label cells (sortable, same text style as the
+header row) and the actions track's empty span. Group headers then pin at
+`stickyHeaderOffset` rather than below a header row. It falls back to `"row"`
+when ungrouped or when the first column is itself labelled. A column whose
+`header` is absent or `""` is unlabelled: its header cell is empty.
+
 ## Per-row actions
 
 `DataTableProps.rowActions?(row, index)` renders trailing per-row actions. The

@@ -34,19 +34,31 @@ A web-only plugin: it reads the op-store's `opsInFlight` live collection
   The right side is the op's total elapsed. The banner's **warning tone means
   "parked in a wait"**, before the grant or after it (a build waiting on the
   duress valve after its lock is as stuck as one waiting for the lock).
-- **The expanded list** (`buildSections`) is one small-caps section per kind —
-  the section holding this worktree's op first, then `OP_KINDS` order. The
+- **The expanded list** is a DataView (`conversations.op-status.queue`, one
+  compact table view grouped by `section`, authored in
+  `config/conversations/conversation-view/op-status/`). The banner card is the
+  DataView's **hosted toolbar frame** (`OpStatusCard`): the header line folds
+  the list and, while expanded, carries its one options trigger (search,
+  filter, sort); the op, clock and fold state reach the frame through
+  `BannerChromeContext`. `buildSections` stays the order authority — the
+  section holding this worktree's op first, then `OP_KINDS` order — and is
+  flattened into rows in that order (the config's sort is `[]`, and the
+  `section` enum lists its options in section order, so groups follow it). The
   **Push queue** section reconstructs the global queue with positions: `1` the
   push holding the mutex (`grantedAt` set), then the pushes parked on the mutex
   by `openWait.startedAt`, then any push not at the mutex yet. Every other
-  section reads working → held → queued, then by `requestedAt`. Each row is a
+  section reads working → held → queued, then by `requestedAt`. Columns: a
   phase glyph (`phaseOf`: spinner = working, hollow dot = **queued** in an
   ordinary line, warning hourglass = **held** by the duress valve — the one
-  phase that also says so in words), the title, and two columns, **waited** and
-  **worked** (`liveTimes`), labelled once on the first header. The full state
-  line and split are the row's tooltip. The current worktree's row is
-  highlighted; rows are labelled with a conversation title via
-  `useConversationTitleBySlug()` (`conversations/web`), falling back to the slug.
+  phase that also says so in words, in its own column), the push position, the
+  title, and **waited** / **worked** (`liveTimes`). Only the clocks have column
+  headers (`FieldDef.header: false` on the rest), placed once on the first
+  section header (`columnHeader: "first-group"`). The title cell's tooltip is
+  the full state line and split. The current worktree's op is the selected
+  (highlighted) row; titles come from `useConversationTitleBySlug()`
+  (`conversations/web`), falling back to the slug. Activating a row opens the
+  op detail pane (`debug/profiling/ops`); the hover action opens another row's
+  conversation.
 - **The chip** (`Item.Chips`) reads the same subscription through
   `useWorktreeOp(conversationId)`, a `ResourceResult<OpRow | null>`: loading or
   failed never reads as "idle". It shows the hourglass whenever the op is
@@ -77,30 +89,43 @@ mode (the reconciler's own terminal event) so no dead row lingers.
 
 ## Plugin reference
 
-- Description: Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own clock) or the work it is doing, total elapsed and the waited / worked split, expandable into the global push queue and every other in-flight op. Also a sidebar row chip flagging the same op (hourglass while parked in a wait).
+- Description: Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own clock) or the work it is doing, total elapsed and the waited / worked split, expandable into a grouped table (DataView) of the global push queue and every other in-flight op, each row opening its op detail pane. Also a sidebar row chip flagging the same op (hourglass while parked in a wait).
 - Web:
+  - Slots: `queue-actions` ← `conversations.conversation-view.op-status`
   - Contributes:
     - `Conversation.AbovePromptInput` → `OpStatusBanner`
     - `Item.Chips` → `OpStatusChip`
+    - `queue-actions` "open-conversation" → `OpenConversationAction`
   - Uses:
     - `conversations.useConversation`
     - `conversations.useConversationTitleBySlug`
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.Conversation`
+    - `conversations/conversation-view.conversationPane`
+    - `debug/profiling/ops.opDetailPane`
     - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/data-view.defineItemActions`
+    - `primitives/data-view.FieldDef`
+    - `primitives/data-view.ItemActionProps`
+    - `primitives/icon-button.IconButton`
     - `primitives/live-state.combineResources`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
     - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.formatElapsed`
     - `primitives/relative-time.useNow`
     - `ui/icons.Icon`
