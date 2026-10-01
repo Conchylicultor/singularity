@@ -19,7 +19,10 @@ the `jsonl-events` value the conversation view already subscribes to — no new
 server read. A launch is a background `Bash` call whose result parses as the
 acknowledgement; a result that does not is a failed launch, never a shell. The
 end joins the `task-notification` by `taskId === shellId` (fallback: the
-notification's `toolUseId`). With no notification, the conversation's own
+notification's `toolUseId`). A shell the agent stopped itself with a
+successful `TaskStop` (`{ task_id }`) is `killed` at that call's result time —
+Claude Code writes no notification for it, so without this it would read
+`running` for the conversation's whole life. With neither, the conversation's own
 liveness (`hasLiveProcess`, the same evidence `subagentRunState` uses) decides
 `running` vs `ended-without-reporting` — Claude Code kills its shells on exit.
 There is deliberately no staleness timeout. A notification with a status this
@@ -65,7 +68,7 @@ so the chain is read once per subscription, not once per push.
 - `lastOutputLine(tail)` — the latest non-blank line (splitting on `\r` too),
   `null` before any output, for a one-line "what is it doing" summary.
 
-v1 is view-only: there is no Stop (only the agent can call `TaskStop`).
+v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the fold reads as `killed`).
 
 ## Design
 

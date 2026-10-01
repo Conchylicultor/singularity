@@ -51,6 +51,28 @@ function notification(
   };
 }
 
+function taskStop(
+  taskId: string,
+  opts: { isError?: boolean; pending?: boolean } = {},
+): ToolCallEvent {
+  return {
+    kind: "tool-call",
+    at: "2026-09-30T10:00:30.000Z",
+    toolUseId: "toolu_stop",
+    name: "TaskStop",
+    input: { task_id: taskId },
+    ...(opts.pending === true
+      ? {}
+      : {
+          result: {
+            at: "2026-09-30T10:00:31.000Z",
+            content: `{"message":"Successfully stopped task: ${taskId}"}`,
+            ...(opts.isError === true ? { isError: true } : {}),
+          },
+        }),
+  };
+}
+
 describe("parseShellAck", () => {
   test("reads the id and the path out of the launch acknowledgement", () => {
     expect(parseShellAck(ACK)).toEqual({
@@ -130,6 +152,41 @@ describe("backgroundShellsOf", () => {
       conversationStatus: "working",
     });
     expect(shell!.state).toEqual({ kind: "killed" });
+  });
+
+  test("stopped by the agent's own TaskStop, which Claude Code does not notify: killed", () => {
+    const [shell] = backgroundShellsOf({
+      events: [bashCall(), taskStop(SHELL_ID)],
+      conversationStatus: "working",
+    });
+    expect(shell!.state).toEqual({ kind: "killed" });
+    expect(shell!.endedAt).toEqual(new Date("2026-09-30T10:00:31.000Z"));
+  });
+
+  test("a notification wins over a TaskStop of the same shell", () => {
+    const [shell] = backgroundShellsOf({
+      events: [
+        bashCall(),
+        taskStop(SHELL_ID),
+        notification("completed", "done (exit code 0)"),
+      ],
+      conversationStatus: "working",
+    });
+    expect(shell!.state).toEqual({ kind: "completed", exitCode: 0 });
+  });
+
+  test("a TaskStop that failed, is pending, or names another task does not end the shell", () => {
+    for (const stop of [
+      taskStop(SHELL_ID, { isError: true }),
+      taskStop(SHELL_ID, { pending: true }),
+      taskStop("other"),
+    ]) {
+      const [shell] = backgroundShellsOf({
+        events: [bashCall(), stop],
+        conversationStatus: "working",
+      });
+      expect(shell!.state).toEqual({ kind: "running" });
+    }
   });
 
   test("an unknown status still ends the shell, and says which status", () => {

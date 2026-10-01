@@ -8,12 +8,19 @@ type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
 /** The tool name Claude Code gives a shell command in a transcript. */
 export const BASH_TOOL_NAME = "Bash";
 
+/** The tool an agent stops a background task with (`{ task_id }`). */
+const TASK_STOP_TOOL_NAME = "TaskStop";
+
 /**
  * Where a background shell stands, as far as the transcript can honestly say.
  *
  * - `completed` / `failed` / `killed` — Claude Code's own `<task-notification>`
  *   said so. `exitCode` is read from its summary's `(exit code N)` and is
  *   `null` when the summary does not state one.
+ * - `killed` is also what a successful `TaskStop` of the shell says: Claude
+ *   Code writes NO notification for a shell the agent stopped itself, so
+ *   without it the shell would read `running` for as long as the conversation
+ *   lives.
  * - `ended-unrecognized` — a notification arrived, so the shell is over, but
  *   with a `status` this build has never seen. Named rather than folded into
  *   `failed`: the transcript says it ended, and nothing says how.
@@ -168,6 +175,26 @@ function stateOfNotification(
 }
 
 /**
+ * When each shell id was stopped by a successful `TaskStop` call — the time of
+ * its result. First wins: a shell stops once.
+ */
+function taskStopsIn(events: readonly JsonlEvent[]): Map<string, Date> {
+  const stops = new Map<string, Date>();
+  for (const event of events) {
+    if (event.kind !== "tool-call" || event.name !== TASK_STOP_TOOL_NAME) {
+      continue;
+    }
+    if (event.result === undefined || event.result.isError === true) continue;
+    const input = event.input;
+    if (typeof input !== "object" || input === null) continue;
+    const taskId = (input as Record<string, unknown>).task_id;
+    if (typeof taskId !== "string" || stops.has(taskId)) continue;
+    stops.set(taskId, new Date(event.result.at));
+  }
+  return stops;
+}
+
+/**
  * Every background shell of a conversation, in start order, with its state —
  * the ONE fold every surface (band row, `Bash` card, output pane) reads, so
  * they cannot disagree.
@@ -175,8 +202,10 @@ function stateOfNotification(
  * A launch is a `Bash` call with `run_in_background: true` whose result is the
  * launch acknowledgement. Its end is the `task-notification` whose `taskId` is
  * the shell id (falling back to the notification's `toolUseId`, for a harness
- * that names the task differently). With no notification, the conversation's
- * own liveness decides between `running` and `ended-without-reporting`.
+ * that names the task differently), else a successful `TaskStop` of the shell
+ * (`killed`, which Claude Code does not notify). With neither, the
+ * conversation's own liveness decides between `running` and
+ * `ended-without-reporting`.
  */
 export function backgroundShellsOf({
   events,
@@ -192,6 +221,7 @@ export function backgroundShellsOf({
       byToolUseId.set(event.toolUseId, event);
     }
   }
+  const stops = taskStopsIn(events);
   const live = hasLiveProcess(conversationStatus);
 
   return shellLaunchesIn(events).map((launch): BackgroundShell => {
@@ -203,6 +233,10 @@ export function backgroundShellsOf({
         state: stateOfNotification(notification),
         endedAt: new Date(notification.at),
       };
+    }
+    const stoppedAt = stops.get(launch.shellId);
+    if (stoppedAt !== undefined) {
+      return { ...launch, state: { kind: "killed" }, endedAt: stoppedAt };
     }
     return {
       ...launch,
