@@ -100,10 +100,13 @@ function renderedIds(filterScope: FilterScope | undefined): string[] {
       filterScope,
     },
     setSort: () => {},
+    sortHeader: { active: [], sortable: new Set<string>() },
     setFilter: () => {},
     setExpanded: () => {},
     now: 0,
     groupOrder: "asc",
+    rowsComplete: true,
+    sectionOrder: "bucket",
     hierarchy: {
       getParentId: (r) => r.parent,
       getRank: () => Rank.from("a0"),

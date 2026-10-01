@@ -7,7 +7,8 @@ import {
   renderHook,
   screen,
 } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
 import {
   PluginProvider,
   type LoadedPlugin,
@@ -219,7 +220,9 @@ function renderSections(opts: {
 }) {
   const m = model(opts.specs, { setViewCollapsed: opts.setViewCollapsed });
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    // The app root always mounts the live-state provider; the body reads
+    // through it (its live-source hook) even for in-memory rows.
+    <NotificationsProvider queryClient={new QueryClient()}>
       <PluginProvider plugins={[plugin]}>
         <DataViewSectionsBody<Row>
           storageKey={STORAGE_KEY}
@@ -237,7 +240,7 @@ function renderSections(opts: {
           chrome={CHROME}
         />
       </PluginProvider>
-    </QueryClientProvider>,
+    </NotificationsProvider>,
   );
 }
 

@@ -59,7 +59,10 @@ import {
   makeFoldKeep,
 } from "../internal/fold-sections";
 import { summarizeFilter } from "../internal/summarize-filter";
-import type { DataViewBodyProps } from "../internal/body-types";
+import type {
+  DataViewBodyProps,
+  DistributiveOmit,
+} from "../internal/body-types";
 import { DataViewToolbar } from "./toolbar/data-view-toolbar";
 import { HostedOptions } from "./toolbar/hosted-options";
 import { hostedCreators } from "./creators-control";
@@ -113,18 +116,18 @@ export function DataViewBody<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
  * fields (custom columns) subscribe once per surface, not once per section.
  */
 export function DataViewSectionsBody<TRow>(
-  props: Omit<DataViewBodyProps<TRow>, "activeInstance"> & {
+  props: DistributiveOmit<DataViewBodyProps<TRow>, "activeInstance"> & {
     instances: readonly ResolvedViewInstance<DataViewContribution>[];
   },
 ): ReactNode {
-  const { instances, ...rest } = props;
+  const { instances } = props;
   return (
-    <CollectBodyFields source={rest}>
+    <CollectBodyFields source={props}>
       {(fields, globalExtensionIds, rowKeyOf) =>
         instances.map((instance) => (
           <DataViewBodyInner
             key={instance.instance.id}
-            {...rest}
+            {...props}
             activeInstance={instance}
             fields={fields as FieldDef<TRow>[]}
             rowKeyOf={rowKeyOf}
@@ -476,21 +479,24 @@ function DataViewBodyInner<TRow>(
     holdPaging,
   });
   // The one server-ordered origin in effect, as the body renders it.
-  const origin: SourceView<TRow> | null =
-    live ??
-    (server
-      ? {
-          rows: server.rows,
-          loading: server.loading,
-          error: server.error,
-          readError: null,
-          scroll: server.scroll,
-          rowsComplete: server.rowsComplete,
-          sectionOrder: "bucket",
-          truncated: false,
-          notices: NO_NOTICES,
-        }
-      : null);
+  const origin: SourceView<TRow> | null = useMemo(
+    () =>
+      live ??
+      (server
+        ? {
+            rows: server.rows,
+            loading: server.loading,
+            error: server.error,
+            readError: null,
+            scroll: server.scroll,
+            rowsComplete: server.rowsComplete,
+            sectionOrder: "bucket",
+            truncated: false,
+            notices: NO_NOTICES,
+          }
+        : null),
+    [live, server],
+  );
 
   // Filter controller — the popover builder consumes the full surface (filter,
   // setFilter, filterableFields, resolveOperatorSet, ruleCount).
