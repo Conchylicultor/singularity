@@ -94,10 +94,14 @@ function renderTable(
         : undefined,
     },
     setSort,
+    // Every field is header-sortable here (a client-side array source).
+    sortHeader: { active: [], sortable: new Set(FIELDS.map((f) => f.id)) },
     setFilter: () => {},
     setExpanded: () => {},
     now: 0,
     groupOrder: "asc",
+    rowsComplete: true,
+    sectionOrder: "bucket",
     options: undefined,
     ...rest,
   };
