@@ -11,7 +11,7 @@ import { reportForeignSession } from "./foreign-session-report";
  * glob (`findTranscriptPath`, which knows nothing about conversations).
  *
  * An **empty array is a legitimate value**: no session recorded yet, or Claude
- * has not written the transcript for a just-observed session id (the poller
+ * has not written the transcript for a just-observed session id (the status reconciler
  * records the id before the file lands). A chain entry whose file is missing is
  * dropped, preserving the order of the rest. Every other failure — a DB error,
  * a glob/permission error — THROWS.
@@ -21,7 +21,7 @@ import { reportForeignSession } from "./foreign-session-report";
  * dead database and an empty conversation produced the same rendered answer.
  *
  * The chain ENRICHES a guaranteed floor, it is not the sole source of truth.
- * `conversations.claude_session_id` is always the live tail, and the poller only
+ * `conversations.claude_session_id` is always the live tail, and the status reconciler only
  * appends to the chain when it observes a change on a live pane — so a row it
  * never revisits (already `done`, pane reaped, or simply never changing again)
  * can hold a valid session id with no chain row. Falling back to that column

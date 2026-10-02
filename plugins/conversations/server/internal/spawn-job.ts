@@ -95,8 +95,8 @@ export const spawnConversationJob = defineJob({
     } catch (err) {
       // Claude Code went missing between the launch's check and this spawn.
       // Retrying cannot help until the user installs it, so say that — with
-      // the fix — and stop. The row stays `starting`, and the poller's
-      // starting timeout moves it to `gone`, from where Resume works once
+      // the fix — and stop. The row stays `starting`, and the status
+      // sweep's starting timeout moves it to `gone`, from where Resume works once
       // Claude Code is back.
       if (err instanceof ClaudeCodeUnavailableError) {
         await recordReport({
@@ -125,7 +125,7 @@ export const spawnConversationJob = defineJob({
       });
       // Rethrow so graphile retries (and dead-letters after maxAttempts —
       // observable at /api/jobs + queue-health). On exhaustion the row is left
-      // `starting`; the poller is the single writer of `starting → gone` and
+      // `starting`; the status reconciler is the single writer of `starting → gone` and
       // resurrects the row if a late retry finally spawns the session.
       throw err;
     }

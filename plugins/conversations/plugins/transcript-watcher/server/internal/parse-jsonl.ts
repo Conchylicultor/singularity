@@ -284,7 +284,7 @@ export function mergeChainLines(
 
 /**
  * Read every file of a session chain and merge them. A chain entry whose
- * transcript has not landed on disk yet is skipped (the poller records the
+ * transcript has not landed on disk yet is skipped (the status reconciler records the
  * session id before Claude writes the file); any other read failure propagates.
  */
 export async function readChainLines(

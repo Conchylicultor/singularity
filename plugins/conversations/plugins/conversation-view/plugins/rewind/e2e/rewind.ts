@@ -215,7 +215,7 @@ try {
     !/banana/i.test(rewoundAnswer),
   );
 } finally {
-  // Close first (so the poller files them as done, not as hibernated work to
+  // Close first (so the status reconciler files them as done, not as hibernated work to
   // come back to), then kill the panes.
   for (const id of created) {
     await agentFetch(`/api/conversations/${id}/close`, { method: "POST" });

@@ -8,6 +8,15 @@ export const apiRuntime: ConversationRuntime = {
   async list(): Promise<Map<string, RuntimeInfo>> {
     return new Map();
   },
+  // Hosts nothing yet, so every id is "no live session" and there is nothing
+  // to signal. A real implementation signals in-process from its own send and
+  // exit paths.
+  async inspect(): Promise<Map<string, RuntimeInfo>> {
+    return new Map();
+  },
+  async subscribe(): Promise<() => void> {
+    return () => {};
+  },
   async isRunning(): Promise<boolean> {
     return false;
   },

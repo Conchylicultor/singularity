@@ -19,7 +19,14 @@ import {
   listConversationTurns,
   closeConversation,
 } from "../core/endpoints";
-import { conversationsPollerTimer, startPoller } from "./internal/poller";
+import {
+  conversationsStatusSweepJob,
+  startStatusReconciler,
+} from "./internal/status-reconciler";
+import {
+  startStatusShadowAudit,
+  statusShadowAuditTimer,
+} from "./internal/status-shadow-audit";
 import { registerOrphanedAttemptReport } from "./internal/orphaned-attempt-report";
 import {
   startTurnEmitter,
@@ -75,7 +82,11 @@ export {
   readConversationTurns,
   sendTurn,
 } from "./internal/runtime";
-export type { RuntimeInfo, ConversationRuntime } from "./internal/runtime";
+export type {
+  RuntimeInfo,
+  RuntimeSignal,
+  ConversationRuntime,
+} from "./internal/runtime";
 export { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-completed-event";
 export { afterTurn } from "./internal/after-turn";
@@ -142,11 +153,13 @@ export default {
     conversationCreated,
     conversationTurnCompleted,
     userTurnSent,
-    conversationsPollerTimer,
+    conversationsStatusSweepJob,
+    statusShadowAuditTimer,
   ],
   onReady: async () => {
     registerOrphanedAttemptReport();
-    startPoller();
+    await startStatusReconciler();
+    startStatusShadowAudit();
     await startTurnEmitter();
   },
 } satisfies ServerPluginDefinition;

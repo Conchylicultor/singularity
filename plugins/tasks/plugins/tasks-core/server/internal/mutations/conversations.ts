@@ -218,7 +218,7 @@ export async function deleteConversationRow(id: string): Promise<void> {
 
 // Atomically transition to "gone" only if the current status is still active.
 // Returns true if the row was updated, false if it was already gone/done.
-// Prevents the poller from overwriting a "done" set by the exit_clean flow.
+// Prevents the status reconciler from overwriting a "done" set by the exit_clean flow.
 export async function markConversationGone(id: string): Promise<boolean> {
   const { taskId, status: prevStatus } = await conversationContext(id);
   const now = new Date();
@@ -242,7 +242,7 @@ export async function markConversationGone(id: string): Promise<boolean> {
 
 // Hibernation flag (orthogonal to status): set a Date to mark the process
 // intentionally absent, null to clear it on resume. Status is untouched —
-// a hibernated conversation stays `waiting`. Only the poller (suspend branch)
+// a hibernated conversation stays `waiting`. Only the status reconciler (suspend branch)
 // and the idle-kill job set it; only `ensureResumed` clears it.
 export async function setConversationHibernated(
   id: string,

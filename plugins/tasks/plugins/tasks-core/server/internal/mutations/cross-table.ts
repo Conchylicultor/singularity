@@ -77,10 +77,10 @@ type AdoptedRow = NonNullable<
 >;
 
 // Synthesises a task + attempt + conversation row in a single transaction for
-// a live tmux session that has no corresponding DB rows. Called by the poller
+// a live tmux session that has no corresponding DB rows. Called by the status reconciler
 // when it discovers an orphan session.
 //
-// `input.id` is forced to be the conversation id because the poller matches
+// `input.id` is forced to be the conversation id because the status reconciler matches
 // live tmux sessions to DB rows by id (the tmux session name is fixed once
 // spawned). The attempt id is derived from the worktree basename so that
 // `basename(attempt.worktreePath) === attempt.id` — the invariant the rest of
@@ -99,7 +99,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
   // repo root are not Singularity attempts; adopting them would synthesize a
   // phantom attempt row with a non-canonical worktree_path that the
   // worktree-cleanup reaper can never act on. Returning null = not adopted; the
-  // poller treats this exactly like any other un-adopted orphan and moves on.
+  // status reconciler treats this exactly like any other un-adopted orphan and moves on.
   const repoRoot = await ensureMainWorktreeRoot();
   if (!isCanonicalWorktreePath(input.worktreePath, repoRoot)) return null;
 

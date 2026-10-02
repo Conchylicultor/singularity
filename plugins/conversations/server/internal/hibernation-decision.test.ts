@@ -15,7 +15,7 @@ describe("decideMissingProcessAction", () => {
   });
 
   // An already-hibernated row's process is intentionally absent forever. It must
-  // be left alone, never flipped to gone on the next ~1s tick.
+  // be left alone, never flipped to gone on the next reconcile.
   test("already hibernated → leave-hibernated (NOT gone)", () => {
     expect(
       decideMissingProcessAction(

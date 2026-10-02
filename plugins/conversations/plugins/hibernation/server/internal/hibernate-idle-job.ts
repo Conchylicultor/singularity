@@ -17,7 +17,7 @@ const HOUR_MS = 60 * 60 * 1000;
 // global host resource and only main owns the canonical conversation rows.
 //
 // Kill-first ordering is deliberate: if the job dies between deleteConversation
-// and setConversationHibernated, the poller's suspend branch self-heals the row
+// and setConversationHibernated, the status reconciler's suspend branch self-heals the row
 // (it finds a waiting+resumable row with a missing session and hibernates it).
 export const hibernateIdleJob = defineJob({
   name: "conversations.hibernate-idle",

@@ -57,7 +57,7 @@ async function psLister(): Promise<Array<{ pid: number; ppid: number }>> {
 /**
  * One `ps` snapshot of the whole process table, indexed by parent.
  *
- * A single spawn per poller tick, rather than N recursive `pgrep -P` calls:
+ * A single spawn per reconcile batch, rather than N recursive `pgrep -P` calls:
  * Claude Code can host a pane's live session several levels below `pane_pid`,
  * so resolution needs the full subtree, not one level of children.
  */

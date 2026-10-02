@@ -1,6 +1,12 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Runtime } from "@plugins/conversations/server";
 import { tmuxRuntime } from "./internal/tmux-runtime";
+import {
+  opMarkersWatcher,
+  sessionFilesWatcher,
+  tmuxSignalsWatcher,
+} from "./internal/signals";
+import { pruneTmuxSignalsJob } from "./internal/prune-signals-job";
 
 // The pane→process primitives, shared with the session-divergence monitor so a
 // detector checking this runtime's session resolution can never walk the process
@@ -16,5 +22,12 @@ export type { PaneRef } from "./internal/claude-session";
 
 export default {
   description: "Runs Claude CLI sessions inside tmux panes.",
-  register: [Runtime.define(tmuxRuntime)],
+  register: [
+    Runtime.define(tmuxRuntime),
+    // The runtime's push signals (opened by `tmuxRuntime.subscribe`).
+    sessionFilesWatcher,
+    tmuxSignalsWatcher,
+    opMarkersWatcher,
+    pruneTmuxSignalsJob,
+  ],
 } satisfies ServerPluginDefinition;

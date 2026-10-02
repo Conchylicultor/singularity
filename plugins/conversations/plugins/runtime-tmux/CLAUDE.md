@@ -1,8 +1,9 @@
 # runtime-tmux
 
 Runs Claude CLI sessions inside tmux panes. The load-bearing part is not the
-spawning — it is answering, once per poller tick, **which Claude session is this
-pane running?** (`server/internal/claude-session.ts`).
+spawning — it is answering, on every status reconcile, **which Claude session is
+this pane running?** (`server/internal/claude-session.ts`), and saying the
+moment that answer may have changed (see *When does a pane's state change?*).
 
 ## A pane's session is the one that claims it
 
@@ -54,7 +55,7 @@ visible-wrong for silent-empty here.**
 
 For the same reason, deleting the subtree walk is not on the table: it is the
 only channel that ever found a relocated session, the `ps` snapshot is already
-taken once per tick, and it is what makes the `foreign-session-outranked`
+taken once per reconcile batch, and it is what makes the `foreign-session-outranked`
 evidence possible at all.
 
 ### Why tier 2 can exclude `kind: "bg"`
@@ -77,8 +78,8 @@ blanked whichever pane happened to host the daemon.
   silently demoting the fleet to tier 2.
 - Unrecognised `kind` → reported, never thrown. `kind` only ever *excludes* a
   candidate, so a throw there is a self-inflicted blackout.
-- Nothing claims the pane → `NULL_STATE`, never a throw. The poller then keeps
-  the stored id, which is the recoverable state.
+- Nothing claims the pane → `NULL_STATE`, never a throw. The reconciler then
+  keeps the stored id, which is the recoverable state.
 
 `findJobHost` filters job claimants to pids present in the `ps` snapshot
 (`ProcessTree.pids`) and throws only on **two live** claimants of one job id.
@@ -148,6 +149,55 @@ while `isWorktreeOpActive` is true. Design:
 Mid-turn is always `busy`, background tasks or not (verified on 2.1.237), so this
 branch only ever concerns an agent already back at its prompt.
 
+## When does a pane's state change? (push signals, no poll)
+
+The conversations status reconciler (`conversations/server/internal/status-reconciler.ts`)
+reconciles a conversation when its runtime signals it
+(`ConversationRuntime.subscribe`), one batch at a time: `inspect(ids)` is one
+`list-panes`, one `ps` snapshot, and per asked-for pane the session resolution
+above, the working/waiting verdict below and one fresh menu capture
+(`pane-menu.ts`). This runtime's signals (`server/internal/signals.ts`) are three
+declared file watchers, listed under File watchers in Background activity:
+
+| Watcher | Directory | Fires on | Signal |
+|---|---|---|---|
+| `runtime-tmux.session-files` | `~/.claude/sessions/*.json` | the CLI rewriting its file on every working/waiting transition, a new session id, a normal exit (unlink) | the conversation named by the file's `tmux` stamp (`session_name`); an unstamped record → every conversation in its `cwd`'s worktree. A pid → route map makes an unlink still name its conversation. |
+| `runtime-tmux.tmux-signals` | `~/.singularity/state/tmux-signals/` (`data-dirs`) | a touched file named after a tmux session | that conversation, plus ONE re-check 1 s later (`PreToolUse` fires ~400 ms before the menu is drawn) |
+| `runtime-tmux.op-markers` | every worktree's `ops/*.json` | a build / push starting or ending | every conversation in that worktree (flips `shell` between working and waiting) |
+
+The signal directory is touched by two kinds of hook:
+
+- **Global tmux hooks** (`tmux-hooks.ts`): `session-created`, `session-closed`
+  (`#{hook_session_name}`) and `pane-exited` (`#{session_name}` — tmux 3.6a
+  leaves the hook name empty there) at array index `[73]`, so re-installing is
+  idempotent and nobody else's hooks are touched. `session-closed` was verified
+  to fire for a normal exit, `kill-session` and a SIGKILL of the pane process.
+  Installed at boot, and chained onto every `create()`'s `new-session`: the tmux
+  server exits with its last session and forgets its hooks.
+- **The agent's own Claude Code hooks** (`launch-settings.ts`), merged into the
+  launch's one `--settings` object beside the thinking mode: `PreToolUse`,
+  `PostToolUse` and `PostToolUseFailure` on `AskUserQuestion`, and
+  `UserPromptSubmit`, each touching `$SINGULARITY_CONVERSATION_ID`'s file. The
+  question has no other signal — the CLI writes its `tool_use` only once the
+  tool resolves, and the sessions file reads as an ordinary wait — so the hook
+  wakes the reconcile and the pane capture decides. Sessions launched before the
+  hooks existed get their questions noticed on their next transition or sweep.
+  Measured on 2.1.287: Escape typed on the menu fires NEITHER `PostToolUse` nor
+  `PostToolUseFailure`; the clearance arrives through the sessions file instead.
+
+Because a question can now be known before its menu is painted,
+`flushInteractivePrompt` / `answerPrompt` first wait (up to 3 s) for a menu to
+appear before the Escape loop treats `idle` as "already cleared".
+
+Missed signals are caught by the reconciler's boot `reconcileAll()` and its
+every-minute `conversations.status-sweep` job (also the only path for a pane
+title change and a "starting" row that never came up). `runtime-tmux.prune-signals`
+deletes signal files untouched for a day. Until the push path has proved itself,
+a temporary 1 s shadow of the retired poller on main
+(`conversations.status-shadow-audit`) writes nothing and reports any state change
+no signal delivered within 2 s. Design:
+[`research/2026-10-02-conversations-poller-push-status.md`](../../../../research/2026-10-02-conversations-poller-push-status.md).
+
 ## The pane starts from an allowlisted environment
 
 There is one tmux server per machine, it keeps the environment of whichever
@@ -204,9 +254,14 @@ may be a real command (`/compact`).
   - Uses:
     - `conversations.Runtime`
     - `infra/claude-cli/availability.requireClaudeBin`
+    - `infra/file-watcher.defineFileWatcher`
+    - `infra/file-watcher.FileChangeEvent`
+    - `infra/file-watcher.FileWatcher`
+    - `infra/jobs.defineJob`
     - `infra/paths.CLAUDE_SESSIONS_DIR`
     - `infra/paths.PS`
     - `infra/paths.TMUX`
+    - `infra/paths.worktreesDir`
     - `infra/worktree.isWorktreeOpActive`
     - `packages/spawn-priority.backgroundPrefix`
     - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
@@ -221,6 +276,11 @@ may be a real command (`/compact`).
     - `captureProcessTree`
     - `listPanes`
     - `subtreePids`
+  - Register:
+    - `defineFileWatcher('runtime-tmux.session-files')`
+    - `defineFileWatcher('runtime-tmux.tmux-signals')`
+    - `defineFileWatcher('runtime-tmux.op-markers')`
+    - `defineJob('runtime-tmux.prune-signals')`
 - Cross-plugin:
   - Imported by: `debug/session-divergence`
 

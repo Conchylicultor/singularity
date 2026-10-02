@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+  parseTmuxStamp,
   resolveSessionState,
+  routeSessionFile,
   type PaneRef,
   type SessionAnomaly,
   type SessionFileDeps,
@@ -718,7 +720,7 @@ describe("resolveSessionState — parked background jobs", () => {
   });
 
   test("14. a leaked file from an exited host is skipped, not a contradiction", async () => {
-    // Without the liveness filter this pane would throw on every tick forever.
+    // Without the liveness filter this pane would throw on every reconcile forever.
     const anomalies: AnomalyLog = [];
     const deps = depsOf(
       {
@@ -805,5 +807,49 @@ describe("resolveSessionState — parked background jobs", () => {
     };
     await resolveSessionState(paneOf(1), chain(1), deps);
     expect(listed).toBe(0);
+  });
+});
+
+describe("parseTmuxStamp", () => {
+  test("splits session, window and pane", () => {
+    expect(
+      parseTmuxStamp("conv-1787129489-vnbm:@3466.%3466", "f.json"),
+    ).toEqual({
+      sessionName: "conv-1787129489-vnbm",
+      windowId: "@3466",
+      paneId: "%3466",
+    });
+  });
+
+  test("a session name containing ':' keeps everything before the last window", () => {
+    expect(parseTmuxStamp("a:b:@1.%2", "f.json").sessionName).toBe("a:b");
+  });
+
+  test("throws on format drift, naming the file", () => {
+    expect(() => parseTmuxStamp("pane-7", "/s/42.json")).toThrow(
+      /Unrecognised tmux stamp "pane-7" in \/s\/42.json/,
+    );
+  });
+});
+
+describe("routeSessionFile", () => {
+  test("a stamped record routes to its tmux session", () => {
+    expect(
+      routeSessionFile(
+        JSON.stringify({ tmux: "conv-1-a:@1.%1", cwd: "/wt" }),
+        "f.json",
+      ),
+    ).toEqual({ kind: "session", sessionName: "conv-1-a" });
+  });
+
+  test("an unstamped record routes to its cwd", () => {
+    expect(routeSessionFile(JSON.stringify({ cwd: "/wt" }), "f.json")).toEqual({
+      kind: "cwd",
+      cwd: "/wt",
+    });
+  });
+
+  test("a record naming neither routes nowhere", () => {
+    expect(routeSessionFile("{}", "f.json")).toEqual({ kind: "none" });
   });
 });

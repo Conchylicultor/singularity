@@ -123,7 +123,7 @@ export const attempts = pgView("attempts_v").as((qb) => {
       // THIS is the guard every destructive consumer must read (worktree-cleanup's
       // reaper does). Gating deletion on `active` instead is what deleted the
       // checkouts of 22 live conversations: hibernation kills an idle pane to
-      // reclaim resources, the poller wrote `gone`, and the worktrees became
+      // reclaim resources, the status poller wrote `gone`, and the worktrees became
       // collectable while the conversations were still resumable.
       retained:
         sql`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasOpenConv})`

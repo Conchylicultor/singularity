@@ -36,7 +36,7 @@
  * Eligibility is deliberately SEPARATE from the re-stamp guard (`hibernatedAt`).
  * An already-hibernated row stays eligible and must be left untouched — its
  * process is intentionally absent forever, so folding `!hibernatedAt` into
- * eligibility would flip every hibernated conversation on the next ~1s tick.
+ * eligibility would flip every hibernated conversation on the next reconcile.
  */
 export type MissingProcessAction =
   "hibernate" | "leave-hibernated" | "leave-unowned" | "gone";
@@ -46,8 +46,8 @@ export function decideMissingProcessAction(
   opts: { onMain: boolean },
 ): MissingProcessAction {
   // Conversation rows are owned by main. tmux is host-global, so every
-  // worktree's poller sees every other worktree's sessions, and each worktree's
-  // forked DB holds stale copies of rows it did not spawn. A non-main poller
+  // worktree's status reconciler sees every other worktree's sessions, and each worktree's
+  // forked DB holds stale copies of rows it did not spawn. A non-main reconciler
   // classifying those would write `gone` into its fork for conversations that
   // are alive elsewhere — the same mislabelling, just scoped to one fork.
   if (!opts.onMain) return "leave-unowned";

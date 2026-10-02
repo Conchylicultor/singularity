@@ -41,6 +41,58 @@ const KNOWN_KINDS = new Set<string>(["bg", "interactive"]);
 // `move-window`) while `#{pane_id}` is fixed for the pane's whole life.
 const TMUX_STAMP_RE = /^(.+):(@\d+)\.(%\d+)$/;
 
+/** A sessions file's `tmux` stamp, split into its three tmux identities. */
+export interface TmuxStamp {
+  /** `#{session_name}` — the conversation id for a pane this runtime made. Mutable. */
+  sessionName: string;
+  /** `#{window_id}`, e.g. "@3466". Mutable. */
+  windowId: string;
+  /** `#{pane_id}`, e.g. "%3466" — fixed for the pane's whole life. */
+  paneId: string;
+}
+
+/**
+ * Parse a sessions file's `tmux` stamp. **Throws** on a value that does not
+ * have the `#{session_name}:#{window_id}.#{pane_id}` shape: the stamp is the
+ * whole basis of tier-1 ownership, so a format change must be loud on the first
+ * file that hits it rather than silently demoting the fleet to tier 2.
+ */
+export function parseTmuxStamp(stamp: string, file: string): TmuxStamp {
+  const match = TMUX_STAMP_RE.exec(stamp);
+  if (match == null) {
+    throw new Error(
+      `Unrecognised tmux stamp "${stamp}" in ${file} — ` +
+        `expected #{session_name}:#{window_id}.#{pane_id}`,
+    );
+  }
+  return { sessionName: match[1]!, windowId: match[2]!, paneId: match[3]! };
+}
+
+/**
+ * Whose state a changed sessions file is about, for routing a push signal —
+ * never for deciding that state (ownership stays `resolveSessionState`'s, over
+ * the process tree). The stamp's `session_name` names the conversation directly;
+ * a record with no stamp (a legacy CLI, a relocated child) names only the
+ * directory it runs in, the same fallback tier 2 uses.
+ */
+export type SessionFileRoute =
+  | { kind: "session"; sessionName: string }
+  | { kind: "cwd"; cwd: string }
+  | { kind: "none" };
+
+export function routeSessionFile(raw: string, file: string): SessionFileRoute {
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const stamp = readString(parsed.tmux);
+  if (stamp != null) {
+    return {
+      kind: "session",
+      sessionName: parseTmuxStamp(stamp, file).sessionName,
+    };
+  }
+  const cwd = readString(parsed.cwd);
+  return cwd != null ? { kind: "cwd", cwd } : { kind: "none" };
+}
+
 export interface SessionState {
   sessionId: string | null;
   status: CliSessionStatus | null;
@@ -119,8 +171,8 @@ interface SessionIdentity {
 type ClaimTier = "self" | "local" | "rejected";
 
 // Not an absorbed failure: the sessions file legitimately does not exist yet
-// when the poller fires before Claude has written ~/.claude/sessions/<pid>.json.
-// Every caller re-resolves on the next tick, so this must stay a value, not a throw.
+// when a reconcile runs before Claude has written ~/.claude/sessions/<pid>.json.
+// Every caller re-resolves on the next reconcile, so this must stay a value, not a throw.
 const NULL_STATE: SessionState = {
   sessionId: null,
   status: null,
@@ -179,12 +231,13 @@ const defaultDeps: SessionFileDeps = {
     // Same channel tmux-runtime already uses for a failed resolution: one
     // deduped row per (pane, anomaly), counted rather than re-filed.
     //
-    // Debounced because this runs on the conversations poller — once a second
-    // per live pane — while the conditions it reports are PERSISTENT, not
-    // transient: a machine-wide daemon lending a spare into this pane's subtree
-    // stays true for as long as that spare lives. Undebounced, one such spare
-    // upserts a report row every second indefinitely and the row's `count`
-    // measures poller ticks. The key is (anomaly kind, pane, message), and the
+    // Debounced because this runs on every reconcile of the pane — each
+    // working/waiting transition, the minute sweep, and (while it lives) the
+    // 1 s status shadow audit on main — while the conditions it reports are
+    // PERSISTENT, not transient: a machine-wide daemon lending a spare into this
+    // pane's subtree stays true for as long as that spare lives. Undebounced, one
+    // such spare upserts a report row on every reconcile indefinitely and the
+    // row's `count` measures reconciles. The key is (anomaly kind, pane, message), and the
     // message is what carries the identity of the specific problem — which
     // foreign session outranked which claimant, which pid claims a dead job —
     // so two different strangers on one pane stay two signals.
@@ -234,14 +287,7 @@ function parseIdentity(
   const stamp = readString(parsed.tmux);
   let stampedPaneId: string | null = null;
   if (stamp != null) {
-    const match = TMUX_STAMP_RE.exec(stamp);
-    if (match == null) {
-      throw new Error(
-        `Unrecognised tmux stamp "${stamp}" in ${SESSIONS_DIR}/${pid}.json — ` +
-          `expected #{session_name}:#{window_id}.#{pane_id}`,
-      );
-    }
-    stampedPaneId = match[3]!;
+    stampedPaneId = parseTmuxStamp(stamp, `${SESSIONS_DIR}/${pid}.json`).paneId;
   }
 
   const kind = readString(parsed.kind);
@@ -340,7 +386,7 @@ function classify(identity: SessionIdentity, pane: PaneRef): ClaimTier {
  * none does.
  *
  * The subtree walk itself is kept — it is the only channel that ever found a
- * relocated session, the `ps` snapshot is already taken once per poller tick,
+ * relocated session, the `ps` snapshot is already taken once per reconcile batch,
  * and it is what makes the `foreign-session-outranked` evidence possible at
  * all. What changed is what we do with what it finds: the subtree is where we
  * *look*, the claim is what we *accept*.

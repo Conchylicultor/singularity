@@ -89,29 +89,57 @@ function queryConversations(
   return q;
 }
 
-// Infra paths only: poller; turn-emitter boot reconcile. Returns active
-// (non-`done`) rows including system kinds so tmux death is detected and turn
-// events are emitted for system conversations.
+// Infra paths only: the conversations status reconciler; turn-emitter boot
+// reconcile. Returns active (non-`done`) rows including system kinds so tmux
+// death is detected and turn events are emitted for system conversations.
 //
 // Scoped to `active` (status <> 'done') because both callers only ever act on
-// non-terminal rows: the poller already skips done/gone, and the turn-emitter
-// filters `isActiveStatus` (= status !== 'done'). `gone` rows are retained so
-// the poller's resurrection path still sees them. Without this filter the query
-// scans every conversation ever created (unbounded history growth) once per
-// poller tick. UI must never call this.
-export function listConversationsForInfra(): Promise<Conversation[]> {
+// non-terminal rows: the reconciler already skips done/gone, and the
+// turn-emitter filters `isActiveStatus` (= status !== 'done'). `gone` rows are
+// retained so the reconciler's resurrection path still sees them. Without this
+// filter the query scans every conversation ever created (unbounded history
+// growth) on every reconcile. UI must never call this.
+//
+// `scope` narrows the read to what one push signal names: a set of conversation
+// ids (a PK read), or every conversation running in a worktree, matched on the
+// worktree path's last segment — the namespace an op marker is keyed on.
+export function listConversationsForInfra(
+  scope?: { ids: readonly string[] } | { worktreeName: string },
+): Promise<Conversation[]> {
+  if (scope && "ids" in scope && scope.ids.length === 0)
+    return Promise.resolve([]);
+  const order = { col: conversations.createdAt, dir: "desc" } as const;
+  if (scope && "worktreeName" in scope) {
+    return db
+      .select()
+      .from(conversations)
+      .where(
+        and(
+          buildWhere({ includeSystem: true, active: true }),
+          eq(
+            sql`regexp_replace(${conversations.worktreePath}, '^.*/', '')`,
+            scope.worktreeName,
+          ),
+        ),
+      )
+      .orderBy(desc(order.col));
+  }
   return queryConversations(
-    { includeSystem: true, active: true },
-    { col: conversations.createdAt, dir: "desc" },
+    {
+      includeSystem: true,
+      active: true,
+      ...(scope ? { convIds: scope.ids } : {}),
+    },
+    order,
   );
 }
 
 // Which of the given conversation ids already exist in the table, in ANY status
-// (including terminal `done`). The poller's orphan-adoption path needs this:
+// (including terminal `done`). The status reconciler's orphan-adoption path needs this:
 // `listConversationsForInfra` is scoped to active rows, so a `done` conversation
 // whose tmux session lingers host-wide is absent from that list and would be
 // re-classified as an orphan — and re-adopted via INSERT … ON CONFLICT DO
-// NOTHING — every single tick. Checking existence against the full table (cheap:
+// NOTHING — on every reconcile. Checking existence against the full table (cheap:
 // bounded by the candidate id count, hits the PK) keeps terminal conversations
 // terminal. Returns a Set for O(1) membership.
 export async function listExistingConversationIds(
@@ -233,13 +261,13 @@ export async function listConversationIdsForAttempt(
 }
 
 // Transient conversation columns the aggregate resources (attempts / tasks /
-// agent-launches) never read. The poller rewrites these at up to ~1/s on active
-// conversations: `waitingFor` (interactive-prompt hint), `updatedAt` (derived
+// agent-launches) never read. The status reconciler rewrites these on every
+// status transition of an active conversation: `waitingFor` (interactive-prompt hint), `updatedAt` (derived
 // per `touchedBy` in `tables.ts`, it moves only alongside a counted column), and `lastViewedAt` (selection / turn-sent). The aggregates
 // derive only coarse facts — liveness (status), title, kind, ownership, ended/
 // created timestamps — so a write touching ONLY these columns would otherwise
 // cascade into attempts → tasks → agent-launches and recompute-then-diff-to-
-// empty on every tick. See the `signature` cascade gate below.
+// empty on every transition. See the `signature` cascade gate below.
 const TRANSIENT_CONVERSATION_FIELDS = [
   "waitingFor",
   "updatedAt",

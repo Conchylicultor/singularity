@@ -21,6 +21,22 @@ export interface RuntimeInfo {
   waitingFor: string | null;
 }
 
+/**
+ * A runtime's push signal: "the live state of these conversations may have
+ * moved". Only a wake-up — the reconciler re-reads the truth through
+ * {@link ConversationRuntime.inspect} and the DB, so a duplicate, late or
+ * spurious signal lands on the same answer.
+ *
+ * - `conversationIds` — the runtime knows exactly whose state moved.
+ * - `worktreeName` — something moved for every conversation running in this
+ *   worktree (named by its directory's last path segment, the namespace an op
+ *   marker is keyed on), and the runtime cannot tell which one.
+ * - `all` — the runtime lost track (its watcher dropped events); reconcile
+ *   everything.
+ */
+export type RuntimeSignal =
+  { conversationIds: string[] } | { worktreeName: string } | { all: true };
+
 export interface ConversationRuntime {
   readonly id: string;
   create(
@@ -42,7 +58,21 @@ export interface ConversationRuntime {
    * the duplicate session — `create` probes this first and no-ops when true.
    */
   isRunning(conversationId: string): Promise<boolean>;
+  /** Every live session this runtime hosts. Throws when the state is unknown. */
   list(): Promise<Map<string, RuntimeInfo>>;
+  /**
+   * The batched form of {@link list} for a known set: the live state of each of
+   * `ids`. A missing id means no live session; a throw means the state is
+   * unknown (the same contract as `list()` failing) — never an empty map.
+   */
+  inspect(ids: readonly string[]): Promise<Map<string, RuntimeInfo>>;
+  /**
+   * Start delivering push signals (see {@link RuntimeSignal}). Resolves once the
+   * runtime's signal sources are open — a source that cannot open rejects, so a
+   * runtime that would leave its conversations' status frozen fails loudly at
+   * boot. Resolves to the unsubscribe.
+   */
+  subscribe(onSignal: (signal: RuntimeSignal) => void): Promise<() => void>;
   send(conversationId: string, text: string): Promise<void>;
   interrupt(conversationId: string): Promise<void>;
   /**

@@ -14,7 +14,7 @@ export interface SessionChainEntry {
 
 /**
  * Append `claudeSessionId` to the conversation's chain, unless it is already the
- * tail. Called from the poller's 1s tick, so the steady state — the tail is
+ * tail. Called from the status reconciler on every reconcile that adopts an id, so the steady state — the tail is
  * already this id — must cost one indexed row read and no write.
  *
  * Append-only: never UPDATEs, never DELETEs.

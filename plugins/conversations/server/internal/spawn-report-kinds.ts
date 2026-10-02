@@ -30,8 +30,8 @@ type SpawnFailedPayload = z.infer<typeof SpawnFailedPayloadSchema>;
  * The `conversation-spawn-failed` report kind: **a launched conversation's
  * session could not be started** — its worktree checkout or its runtime session
  * threw. The job retries (graphile), so one row per conversation collects every
- * attempt as its count; the row stays `starting` until the poller moves it to
- * `gone`.
+ * attempt as its count; the row stays `starting` until the status sweep moves
+ * it to `gone`.
  */
 export const conversationSpawnFailedKind = ReportKind({
   kind: "conversation-spawn-failed",
@@ -65,8 +65,8 @@ function renderSpawnFailed(row: ReportRow, d: SpawnFailedPayload): string {
   lines.push("");
   lines.push(
     "The job retries up to its max attempts; each failure bumps this report's " +
-      "count. On exhaustion the conversation stays `starting` until the poller " +
-      "moves it to `gone`, from where Resume can retry it.",
+      "count. On exhaustion the conversation stays `starting` until the status " +
+      "sweep moves it to `gone`, from where Resume can retry it.",
   );
   lines.push("");
   if (d.deadlineAborted) {

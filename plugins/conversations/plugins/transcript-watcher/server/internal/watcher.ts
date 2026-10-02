@@ -131,7 +131,7 @@ export async function startTranscriptWatcher(): Promise<void> {
     onReconcile: () => {
       // Belt-and-suspenders for a missed parcel event AND for a missed
       // `refreshConversationChain` call: re-resolving here bounds the staleness of
-      // a session switch to one reconcile period even if the poller never notified.
+      // a session switch to one reconcile period even if the status reconciler never notified.
       for (const room of rooms.values())
         void runTracked("transcript-watcher:reconcile", () =>
           reconcileRoom(room),
@@ -445,7 +445,7 @@ export function watchTranscriptFile(
  * Re-resolve a conversation's session chain into every live room derived from it,
  * then re-process.
  *
- * The poller calls this the moment it records a new session id, so a subscriber
+ * The status reconciler calls this the moment it records a new session id, so a subscriber
  * already watching the conversation follows the switch immediately instead of
  * staying pinned to the file the room resolved at subscribe time.
  *

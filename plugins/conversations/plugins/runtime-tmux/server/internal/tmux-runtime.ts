@@ -1,6 +1,7 @@
 import type {
   ConversationRuntime,
   RuntimeInfo,
+  RuntimeSignal,
 } from "@plugins/conversations/server";
 import {
   cliFlagFor,
@@ -18,6 +19,7 @@ import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
+import { tmuxSignalsDir } from "../../data-dirs";
 import { AGENT_SESSION_WRAPPER } from "./agent-session-env";
 import {
   resolveSessionState,
@@ -26,9 +28,16 @@ import {
 } from "./claude-session";
 import { parseInputDraft } from "./input-draft";
 import { asLaunchMessage } from "./launch-message";
+import {
+  mergeLaunchSettings,
+  settingsFlag,
+  signalHookSettings,
+} from "./launch-settings";
 import { classifyPaneText, type PaneMenu } from "./pane-menu";
 import { resolvePaneStatus } from "./pane-status";
 import { captureProcessTree } from "./process-tree";
+import { subscribeTmuxSignals } from "./signals";
+import { chainedTmuxHookArgs } from "./tmux-hooks";
 import { typedChunks } from "./typed-keys";
 
 // AskUserQuestion menus must be detected regardless of how the pane otherwise
@@ -44,13 +53,12 @@ import { typedChunks } from "./typed-keys";
 // menu's own footer can — pane-menu.ts owns that reading, including the rule
 // that separates a live menu from one already answered.
 //
-// We therefore probe EVERY non-dead pane (not just working ones) and, on a
-// match, override the verdict to {working:false, waitingFor:"question"} — the
-// signal the AskUserQuestion web form gates on. Throttled to one capture-pane
-// per pane every PROBE_INTERVAL_MS to keep the cost bounded.
-const PROBE_INTERVAL_MS = 5_000;
-
-const probeCache = new Map<string, { at: number; waiting: boolean }>();
+// We therefore probe EVERY non-dead pane we describe (not just working ones)
+// and, on a match, override the verdict to {working:false,
+// waitingFor:"question"} — the signal the AskUserQuestion web form gates on.
+// Each probe is a FRESH capture: describing a pane happens once per reconcile,
+// i.e. per push signal (a sessions-file write, a Claude Code question hook, a
+// tmux hook) or per sweep — never on a timer, so there is no rate to throttle.
 
 // Single fresh capture-pane → which interactive menu (if any) is on screen.
 // `-S -15` reaches a little into scrollback, which always covers the whole
@@ -66,24 +74,10 @@ async function classifyPaneMenu(id: string): Promise<PaneMenu> {
   return classifyPaneText(stdout);
 }
 
-async function probeWaiting(id: string): Promise<boolean> {
-  return (await classifyPaneMenu(id)) === "question";
-}
-
-async function isProbeWaiting(id: string): Promise<boolean> {
-  const now = Date.now();
-  const cached = probeCache.get(id);
-  if (cached && now - cached.at < PROBE_INTERVAL_MS) return cached.waiting;
-  const waiting = await probeWaiting(id);
-  probeCache.set(id, { at: now, waiting });
-  return waiting;
-}
-
 // escapeUntilPromptCleared() form-dismissal poll. After an Escape the TUI takes
 // ~210ms to re-render from the prompt menu back to the idle input; under heavy
 // concurrent load capture-pane can lag further behind the real CLI state. We
-// poll a FRESH capture each iteration (never the throttled isProbeWaiting
-// cache) until no menu remains.
+// poll a FRESH capture each iteration until no menu remains.
 //
 // The cadence is the whole ballgame. A single Escape DOES reliably dismiss the
 // AskUserQuestion menu (verified, CLI v2.1.161) — the danger is sending a SECOND
@@ -106,6 +100,14 @@ async function isProbeWaiting(id: string): Promise<boolean> {
 const FORM_CLEAR_POLL_INTERVAL_MS = 100;
 const ESCAPE_MIN_GAP_MS = 1_500;
 const FORM_CLEAR_TIMEOUT_MS = 6_000;
+
+// awaitPromptMenu() — the phase BEFORE the Escape loop. A question can now be
+// known before it is drawn: the PreToolUse hook fires ahead of the menu's
+// paint, so a dismissal started on that knowledge can find the pane still
+// reading `idle`. Seen first, `idle` is render lag, not clearance — so wait (a
+// fresh capture each 100 ms, at most MENU_APPEAR_TIMEOUT_MS) for a menu to
+// appear before deciding there is nothing to dismiss.
+const MENU_APPEAR_TIMEOUT_MS = 3_000;
 
 // Field separator: tab (not present in pane paths or titles) keeps splits
 // unambiguous even though pane titles can contain arbitrary characters.
@@ -271,12 +273,25 @@ async function typeTurn(conversationId: string, text: string): Promise<void> {
 }
 
 /**
+ * Wait until a prompt menu is on screen, at most MENU_APPEAR_TIMEOUT_MS (see the
+ * constant). Returns whether one appeared; on `false` the menu was never drawn
+ * or is already gone (answered in the terminal), and there is nothing to
+ * dismiss.
+ */
+async function awaitPromptMenu(conversationId: string): Promise<boolean> {
+  const deadline = Date.now() + MENU_APPEAR_TIMEOUT_MS;
+  for (;;) {
+    if ((await classifyPaneMenu(conversationId)) !== "idle") return true;
+    if (Date.now() + FORM_CLEAR_POLL_INTERVAL_MS >= deadline) return false;
+    await Bun.sleep(FORM_CLEAR_POLL_INTERVAL_MS);
+  }
+}
+
+/**
  * Dismiss the active prompt menu (AskUserQuestion), pressing Escape until the
  * pane returns to the idle input — but spacing Escapes by ESCAPE_MIN_GAP_MS so
  * we never stack two into an Esc-Esc that opens Claude's rewind menu. Each
- * iteration re-classifies the pane from a FRESH capture (never the throttled
- * isProbeWaiting cache, whose 5s window would not reflect clearance within this
- * budget):
+ * iteration re-classifies the pane from a FRESH capture:
  *   - idle     → cleared, return.
  *   - question → press Escape, but at most once per ESCAPE_MIN_GAP_MS. The
  *                common case clears on the first press and reaches idle before
@@ -356,6 +371,7 @@ export async function listPanes(): Promise<Map<string, TmuxPane>> {
       "-F",
       `#{session_name}${SEP}#{pane_pid}${SEP}#{pane_id}${SEP}#{pane_dead}${SEP}#{pane_start_path}${SEP}#{pane_title}`,
       "-f",
+      // Mirrors AGENT_SESSION_RE (signals.ts): the sessions this runtime owns.
       `#{r:^(conv|claude)-,#{session_name}}`,
     ],
     { stdout: "pipe", stderr: "pipe" },
@@ -370,7 +386,7 @@ export async function listPanes(): Promise<Map<string, TmuxPane>> {
     // "no server running" is a legitimate empty state — tmux had no sessions
     // so it could not start a server to query. Any other non-zero exit
     // (FD exhaustion, hung server, killed mid-call) means we cannot trust
-    // emptiness as truth; throw so the poller treats this runtime's state
+    // emptiness as truth; throw so the reconciler treats this runtime's state
     // as unknown rather than declaring every conversation gone.
     if (/no server running/i.test(stderr)) return map;
     throw new Error(
@@ -394,96 +410,109 @@ export async function listPanes(): Promise<Map<string, TmuxPane>> {
   return map;
 }
 
+const NULL_SESSION: SessionState = {
+  sessionId: null,
+  status: null,
+  waitingFor: null,
+};
+
+/**
+ * The live state of each of `panes`: one process snapshot for all of them, each
+ * pane's claimed session, its working/waiting verdict, and a fresh menu probe.
+ * Shared by `list()` and `inspect()` so the two can never describe a pane
+ * differently.
+ */
+async function describePanes(
+  panes: Map<string, TmuxPane>,
+): Promise<Map<string, RuntimeInfo>> {
+  const out = new Map<string, RuntimeInfo>();
+  if (panes.size === 0) return out;
+  const ids = Array.from(panes.keys());
+  // One process snapshot for every pane. A failure here throws, which the
+  // reconciler reads as "runtime state unknown" — same contract as a failed
+  // `tmux list-panes`, and far safer than resolving against an empty tree.
+  const tree = await captureProcessTree();
+  const states = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        return await resolveSessionState(panes.get(id)!, tree);
+      } catch (err) {
+        void recordReport({
+          kind: "crash",
+          source: "server-caught",
+          message: `resolveSessionState failed for pane "${id}": ${err instanceof Error ? err.message : String(err)}`,
+          data: {
+            errorType: "SessionStateError",
+            label: "tmux-runtime.resolveSessionState",
+          },
+        });
+        return NULL_SESSION;
+      }
+    }),
+  );
+  // Only the ambiguous "shell" state needs the build/push-in-flight signal,
+  // so we skip the filesystem scan for every other pane. isWorktreeOpActive is
+  // async (off-event-loop), so resolve every pane's op state in parallel up
+  // front, then consume it synchronously when assembling the map.
+  const opActives = await Promise.all(
+    ids.map((id, i) => {
+      const { worktreePath } = panes.get(id)!;
+      const state = states[i]!;
+      return state.status === "shell" && worktreePath
+        ? isWorktreeOpActive(basename(worktreePath))
+        : Promise.resolve(false);
+    }),
+  );
+  // Probe every non-dead pane for the AskUserQuestion menu's footer. The menu
+  // can present as either working (old CLI spinner bug) or idle (CLI v2.1.159,
+  // see the comment at classifyPaneMenu), so we cannot pre-filter on
+  // `working`. A match overrides whatever the title / session file said
+  // (including waitingFor:"permission prompt") to {working:false,
+  // waitingFor:"question"}.
+  const menus = await Promise.all(
+    ids.map((id) =>
+      panes.get(id)!.dead ? Promise.resolve(null) : classifyPaneMenu(id),
+    ),
+  );
+
+  ids.forEach((id, i) => {
+    const { rawTitle, dead, worktreePath } = panes.get(id)!;
+    const state = states[i]!;
+    const resolved = resolvePaneStatus(rawTitle, state, opActives[i]!);
+    const question = menus[i] === "question";
+    out.set(id, {
+      title: resolved.title,
+      working: resolved.working && !dead && !question,
+      dead,
+      claudeSessionId: state.sessionId ?? null,
+      worktreePath,
+      waitingFor: dead ? null : question ? "question" : resolved.waitingFor,
+    });
+  });
+  return out;
+}
+
 export const tmuxRuntime: ConversationRuntime = {
   id: "tmux",
 
   async list(): Promise<Map<string, RuntimeInfo>> {
+    return describePanes(await listPanes());
+  },
+
+  async inspect(ids: readonly string[]): Promise<Map<string, RuntimeInfo>> {
+    // One `list-panes` for the whole batch (tmux has no cheaper per-session
+    // query), then only the asked-for panes are resolved and probed.
     const panes = await listPanes();
-    const ids = Array.from(panes.keys());
-    const NULL_SESSION: SessionState = {
-      sessionId: null,
-      status: null,
-      waitingFor: null,
-    };
-    // One process snapshot for every pane. A failure here throws out of list(),
-    // which the poller reads as "runtime state unknown" — same contract as a
-    // failed `tmux list-panes`, and far safer than resolving against an empty tree.
-    const tree = await captureProcessTree();
-    const states = await Promise.all(
-      ids.map(async (id) => {
-        try {
-          return await resolveSessionState(panes.get(id)!, tree);
-        } catch (err) {
-          void recordReport({
-            kind: "crash",
-            source: "server-caught",
-            message: `resolveSessionState failed for pane "${id}": ${err instanceof Error ? err.message : String(err)}`,
-            data: {
-              errorType: "SessionStateError",
-              label: "tmux-runtime.resolveSessionState",
-            },
-          });
-          return NULL_SESSION;
-        }
-      }),
-    );
-    // Only the ambiguous "shell" state needs the build/push-in-flight signal,
-    // so we skip the filesystem scan for every other pane. isWorktreeOpActive is
-    // async (off-event-loop), so resolve every pane's op state in parallel up
-    // front, then consume it synchronously when assembling the map.
-    const opActives = await Promise.all(
-      ids.map((id, i) => {
-        const { worktreePath } = panes.get(id)!;
-        const state = states[i]!;
-        return state.status === "shell" && worktreePath
-          ? isWorktreeOpActive(basename(worktreePath))
-          : Promise.resolve(false);
-      }),
-    );
-
-    const out = new Map<string, RuntimeInfo>();
-    ids.forEach((id, i) => {
-      const { rawTitle, dead, worktreePath } = panes.get(id)!;
-      const state = states[i]!;
-      const opActive = opActives[i]!;
-      const resolved = resolvePaneStatus(rawTitle, state, opActive);
-      out.set(id, {
-        title: resolved.title,
-        working: resolved.working && !dead,
-        dead,
-        claudeSessionId: state.sessionId ?? null,
-        worktreePath,
-        waitingFor: dead ? null : resolved.waitingFor,
-      });
-    });
-
-    // Probe every non-dead pane for the AskUserQuestion menu's "Enter to
-    // select" footer. The menu can present as either working (old CLI spinner
-    // bug) or idle (CLI v2.1.159, see PROBE_INTERVAL_MS comment), so we cannot
-    // pre-filter on `working` — that workaround skipped idle menus and left the
-    // interactive answer form dormant. A match overrides whatever the title /
-    // session file said (including waitingFor:"permission prompt") to
-    // {working:false, waitingFor:"question"}. Each capture-pane stays throttled
-    // per pane via isProbeWaiting's PROBE_INTERVAL_MS cache.
-    const probeIds = ids.filter((id) => !out.get(id)!.dead);
-    if (probeIds.length > 0) {
-      const probeResults = await Promise.all(
-        probeIds.map((id) => isProbeWaiting(id)),
-      );
-      probeIds.forEach((id, i) => {
-        if (probeResults[i]) {
-          const info = out.get(id)!;
-          out.set(id, { ...info, working: false, waitingFor: "question" });
-        }
-      });
+    const wanted = new Map<string, TmuxPane>();
+    for (const id of ids) {
+      const pane = panes.get(id);
+      if (pane) wanted.set(id, pane);
     }
+    return describePanes(wanted);
+  },
 
-    // Evict stale probe cache entries.
-    for (const key of probeCache.keys()) {
-      if (!panes.has(key)) probeCache.delete(key);
-    }
-
-    return out;
+  subscribe(onSignal: (signal: RuntimeSignal) => void) {
+    return subscribeTmuxSignals(onSignal);
   },
 
   async isRunning(conversationId: string): Promise<boolean> {
@@ -549,16 +578,21 @@ export const tmuxRuntime: ConversationRuntime = {
     const effortFlag = opts?.effort
       ? resolveEffortFlag(opts.effort)
       : undefined;
-    const effortSettings = opts?.effort
-      ? resolveEffortSettings(opts.effort)
-      : undefined;
+    // One `--settings` object for the whole launch: the thinking mode (if any)
+    // and the question hooks that touch this conversation's signal file (see
+    // launch-settings.ts). Resume launches through here too, so a resumed
+    // session gets the hooks as well.
+    const settings = mergeLaunchSettings(
+      opts?.effort ? resolveEffortSettings(opts.effort) : undefined,
+      signalHookSettings(tmuxSignalsDir.ensure()),
+    );
     const claudeBase = [
       // Single-quoted: the path is spliced into the pane's shell command.
       `'${claudeBin.replaceAll("'", `'\\''`)}'`,
       cliFlag && `--model ${cliFlag}`,
       effortFlag && `--effort ${effortFlag}`,
-      // JSON contains no single quotes, so single-quote wrapping is shell-safe.
-      effortSettings && `--settings '${JSON.stringify(effortSettings)}'`,
+      // Single-quoted JSON; settingsFlag throws on a value carrying a quote.
+      settingsFlag(settings),
     ]
       .filter(Boolean)
       .join(" ");
@@ -621,6 +655,9 @@ export const tmuxRuntime: ConversationRuntime = {
         "zsh",
         claudeCmd,
         ...(launchMessage !== undefined && !useTempFile ? [launchMessage] : []),
+        // Re-arm the global session hooks in the same invocation: a tmux server
+        // this `new-session` just started has none (see tmux-hooks.ts).
+        ...chainedTmuxHookArgs(),
       ],
       { stdout: "pipe", stderr: "pipe" },
     );
@@ -695,10 +732,15 @@ export const tmuxRuntime: ConversationRuntime = {
     // fabricate an answer — losing the user's text. See ConversationRuntime
     // interface docs.
 
+    // 0. The question may be known before its menu is drawn (see
+    //    awaitPromptMenu). If no menu ever appears there is nothing to dismiss
+    //    and the pane is already at its idle input.
     // 1+2. Dismiss the form, RE-SENDING Escape until it actually clears (throws
     //    if it never does). See escapeUntilPromptCleared() for the full
     //    self-healing rationale.
-    await escapeUntilPromptCleared(conversationId);
+    if (await awaitPromptMenu(conversationId)) {
+      await escapeUntilPromptCleared(conversationId);
+    }
 
     // 3. Type + Enter. We deliberately do NOT C-c first: the answer text comes
     //    from the web form, so the terminal input line is empty (no draft to
@@ -714,7 +756,10 @@ export const tmuxRuntime: ConversationRuntime = {
     // answer. Cancelling the menu forces the CLI to flush the buffered
     // assistant tool_use to the JSONL transcript so the web UI can render it.
     // This is exactly answerPrompt()'s self-healing Escape loop minus the
-    // C-c + type step — no answer text is ever sent.
-    await escapeUntilPromptCleared(conversationId);
+    // C-c + type step — no answer text is ever sent. A menu that never appears
+    // (already answered in the terminal) leaves nothing to flush.
+    if (await awaitPromptMenu(conversationId)) {
+      await escapeUntilPromptCleared(conversationId);
+    }
   },
 };

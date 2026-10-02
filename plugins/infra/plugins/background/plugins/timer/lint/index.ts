@@ -26,10 +26,12 @@ export default {
       // wedged backend, below cron's 1-minute floor.
       "plugins/debug/plugins/health-monitor/server/internal/process-sampler.ts",
       "plugins/debug/plugins/health-monitor/server/internal/host-sampler.ts",
-      // REAL polling, visible here until replaced by a push signal: tmux
-      // sessions (the poller) have no change signal this backend subscribes
-      // to yet.
-      "plugins/conversations/server/internal/poller.ts",
+      // TEMPORARY shadow audit, pending deletion: the retired 1 s status
+      // poller, now writing nothing and only reporting a state change no push
+      // signal delivered within 2 s. Delete it (and this line) once its
+      // reports are empty or explained
+      // (research/2026-10-02-conversations-poller-push-status.md).
+      "plugins/conversations/server/internal/status-shadow-audit.ts",
     ],
   },
 };

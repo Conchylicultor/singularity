@@ -402,7 +402,7 @@ export async function commitConversation(
     // `runtime.create` in a durable graphile job so the interactive Launch
     // response returns immediately with a `starting` row. It has no ordering
     // dependency on the DB fork. On failure the job records a deduped
-    // notification and retries; the poller owns the eventual
+    // notification and retries; the status reconciler owns the eventual
     // `starting → gone` transition.
     await spawnConversationJob.enqueue(
       {
@@ -448,8 +448,8 @@ export async function finishConversation(
       p.create,
     );
   } catch (err) {
-    // Without this, the row stays at "starting" forever — the poller skips
-    // starting rows, and the UI just shows "Starting…" with a terminal pane
+    // Without this, the row stays at "starting" forever — the status reconciler
+    // leaves starting rows alone while they have no pane, and the UI just shows "Starting…" with a terminal pane
     // that prints "can't find session" because tmux never created one.
     // eslint-disable-next-line promise-safety/no-bare-catch
     await updateConversation(p.conversationId, {
@@ -543,8 +543,9 @@ async function preflightResume(
 }
 
 // Shared resume mechanics: clear the stale (dead) pane, reset the row to
-// "starting" so the poller tracks the new session (and the 30s STARTING_TIMEOUT
-// safety net catches a failed resume → gone), and spawn a fresh `claude --resume`
+// "starting" so the status reconciler tracks the new session (and the
+// STARTING_TIMEOUT safety net, applied by the status sweep, catches a failed
+// resume → gone), and spawn a fresh `claude --resume`
 // pane. Does NOT touch task hold/drop or the hibernation flag — callers own those.
 //
 // Re-runs `preflightResume` as the invariant guard rather than trusting callers:
@@ -561,7 +562,7 @@ async function respawnResume(row: Conversation): Promise<void> {
   // still exists. Clear any stale pane before re-spawning.
   await runtime.delete(row.id);
 
-  // Reset status so the poller can track the new session. Without this,
+  // Reset status so the status reconciler can track the new session. Without this,
   // "done" rows are skipped and the conversation stays stuck as done.
   await updateConversation(row.id, { status: "starting", endedAt: null });
 

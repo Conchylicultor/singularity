@@ -3,7 +3,7 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 
 // Global idle-hibernation policy. Lives in `conversations/core` (a leaf) so both
-// the parent poller (`conversations/server`) and the child `hibernation`
+// the parent status reconciler (`conversations/server`) and the child `hibernation`
 // sub-plugin can read it via `getConfig` without forming an import cycle.
 export const hibernationConfig = defineConfig({
   name: "conversation-hibernation",

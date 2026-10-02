@@ -120,6 +120,7 @@
     - `IfAlreadyStarted`
     - `LaunchTaskNowResult`
     - `RuntimeInfo`
+    - `RuntimeSignal`
     - `Turn`
     - `UserTurnSentPayload`
   - Exports (values):
@@ -153,7 +154,8 @@
     - `defineTriggerEvent('conversation.created')`
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineTriggerEvent('conversation.userTurnSent')`
-    - `defineTimer('conversations.poller')`
+    - `defineJob('conversations.status-sweep')`
+    - `defineTimer('conversations.status-shadow-audit')`
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/gone`

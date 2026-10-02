@@ -66,7 +66,7 @@ export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {
     // `signature` (relevance gate): skip the cascade when a conversation write
     // touched only transient fields (waitingFor/updatedAt/lastViewedAt) —
     // agent-launches displays just the latest conversation's title/status, so
-    // those writes produced empty deltas on every poller tick. Real status/title
+    // those writes produced empty deltas on every status transition. Real status/title
     // changes still flow through (they're in the signature).
     rel(
       conversationsActiveResource,

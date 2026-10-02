@@ -87,9 +87,9 @@ export const conversationsActiveResource = queryResource(
     ),
     orderBy: desc(conversations.createdAt),
     scopedMembership: true,
-    // Highest fan-out source: one notify cascades to attempts → tasks. The poller
-    // can notify multiple times per tick; a fixed-window trailing debounce
-    // collapses a tick's status changes into one flush. Source-only — never on the
+    // Highest fan-out source: one notify cascades to attempts → tasks. A status
+    // reconcile batch can notify multiple times; a fixed-window trailing
+    // debounce collapses a batch's status changes into one flush. Source-only — never on the
     // keyed attempts/tasks resources.
     // See research/2026-06-15-global-live-state-cascade-contention.md.
     debounceMs: 250,

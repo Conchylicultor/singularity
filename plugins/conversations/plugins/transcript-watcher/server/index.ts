@@ -35,7 +35,7 @@ export {
 export { findTranscriptPath } from "./internal/find-transcript-path";
 export { resolveConversationTranscriptPaths } from "./internal/resolve-chain";
 // The ownership partition itself, for consumers that need the rejected half —
-// a monitor auditing chains, or the poller's adoption gate — rather than just
+// a monitor auditing chains, or the status reconciler's adoption gate — rather than just
 // the files to read.
 export { resolveAnchoredChain } from "./internal/anchor";
 export type { AnchoredChain, AnchoredEntry } from "./internal/anchor";

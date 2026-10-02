@@ -21,7 +21,7 @@ const READY_RE = /^✳\s*/;
 const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈◐◑◒◓✳]\s*/;
 
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
-// legacy prefix kept so zombie sessions still get picked up by the poller.
+// legacy prefix kept so zombie sessions still get picked up by the status reconciler.
 const SESSION_NAME_RE = /^(conv|claude)-\d+(-[a-z0-9]+)?$/;
 
 export interface ResolvedPaneStatus {
