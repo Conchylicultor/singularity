@@ -4,7 +4,7 @@ import { WebsiteHero } from "@plugins/apps/plugins/website/plugins/shell/web";
  * The applications page's heading: the vision this page argues, and the one
  * paragraph that says why now.
  */
-export function AppsOpening() {
+export function VisionOpening() {
   return (
     <WebsiteHero
       kind="page"

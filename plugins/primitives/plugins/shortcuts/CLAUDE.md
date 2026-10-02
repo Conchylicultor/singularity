@@ -34,6 +34,7 @@
     - `apps/prototypes/present`
     - `apps/sonata/controls`
     - `apps/sonata/progress/loop`
+    - `apps/website/pages/apps`
     - `primitives/action-presentation`
     - `primitives/css/ui-kit`
     - `primitives/data-view/capsule-toolbar`

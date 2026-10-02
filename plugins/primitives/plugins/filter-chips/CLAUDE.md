@@ -21,6 +21,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/studio/contributions`
+    - `apps/website/pages/apps`
     - `debug/claude-cli-calls`
     - `debug/queue`
 

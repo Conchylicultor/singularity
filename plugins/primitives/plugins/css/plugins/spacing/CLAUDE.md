@@ -176,6 +176,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/website/landing/hero`
     - `apps/website/landing/layers`
     - `apps/website/landing/screenshot`
+    - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/shell`
     - `auth`

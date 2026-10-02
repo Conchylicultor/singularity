@@ -1,9 +1,9 @@
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
-export const WebsiteApps = {
+export const WebsiteVision = {
   /**
-   * Sections of the applications page at `/website/apps`, rendered
+   * Sections of the vision page at `/website/vision`, rendered
    * top-to-bottom below the page's heading. Each section owns its full-width
    * band.
    *

@@ -24,6 +24,7 @@ a collection plugins contribute to.
   - Uses:
     - `apps/website/pages/apps.appsPane`
     - `apps/website/pages/foundations.foundationsPane`
+    - `apps/website/pages/vision.visionPane`
     - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteBand`
     - `primitives/css/badge.Badge`

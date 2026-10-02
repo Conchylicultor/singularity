@@ -79,6 +79,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `apps/sonata/sources/midi`
     - `apps/sonata/track-mixer`
     - `apps/website/landing/layers`
+    - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `auth`
     - `backup`

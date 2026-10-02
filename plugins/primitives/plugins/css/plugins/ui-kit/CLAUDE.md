@@ -557,6 +557,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/website/landing/contact`
     - `apps/website/landing/layers`
     - `apps/website/landing/story-link`
+    - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/shell`
     - `auth`

@@ -2,21 +2,18 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { WebsiteHeader } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { appsPane } from "./panes";
-import { WebsiteApps } from "./slots";
 import { AppsNavItem } from "./components/apps-nav-item";
 
 export { appsPane } from "./panes";
-export { WebsiteApps } from "./slots";
 
 export default {
   description:
-    "The applications page of the equin website: the /website/apps pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteApps.Section slot the page is written into.",
+    "The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link.",
   contributions: [
     // This pane BORROWS the shared site header (`actions: WebsiteHeader`), so it
-    // mints no slot of its own and is deliberately absent from `slots:` — the
-    // header is declared once, by `apps.website.shell`.
+    // mints no slot of its own — the header is declared once, by
+    // `apps.website.shell`.
     Pane.Register({ pane: appsPane }),
     WebsiteHeader({ id: "apps", component: AppsNavItem }),
   ],
-  slots: { ...WebsiteApps },
 } satisfies PluginDefinition;

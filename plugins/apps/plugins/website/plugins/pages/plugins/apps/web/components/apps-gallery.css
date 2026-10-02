@@ -1,0 +1,134 @@
+/* The apps gallery's paint.
+ *
+ * The cards lift like the homepage's layer cards (3px up, a long soft shadow
+ * beneath) — a motion, not a resting elevation, so it is not a rung of the
+ * shadow scale. The picture on each card is the app's screenshot, or a
+ * drawing of an app (a side list and a tile grid) where it has none. The
+ * drawing's every colour is mixed from the theme's tokens, its accent from the
+ * app's own categorical slot (`--app-tint`, set on the card; the brand primary
+ * where none is), so it re-tints with the site and inverts with it in light
+ * mode. */
+
+.website-app-card,
+.website-app-next {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.website-app-card:hover,
+.website-app-next:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--foreground) 22%, transparent);
+  box-shadow: 0 24px 48px -28px oklch(0 0 0 / 90%);
+}
+
+/* A read-next card's link line: underlined in the quiet grey, coming up to the
+ * foreground while its card is hovered or keyboard-focused. */
+.website-app-next-go {
+  border-bottom: 1px solid var(--muted-foreground);
+  transition: border-color 0.2s ease;
+}
+
+.website-app-next:hover .website-app-next-go,
+.website-app-next:focus-visible .website-app-next-go {
+  border-color: var(--foreground);
+}
+
+/* A card for an app not built yet: dashed, unfilled, its picture and tile
+ * faded — present enough to read, clearly not something to install. */
+.website-app-card.is-soon {
+  background: transparent;
+  border-style: dashed;
+}
+
+.website-app-card.is-soon .website-app-thumb,
+.website-app-card.is-soon .website-app-tile {
+  opacity: 0.45;
+  filter: saturate(0.3);
+}
+
+/* ---- the drawn picture ---- */
+.website-app-thumb {
+  position: relative;
+  display: flex;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--primary) 6%, var(--background));
+}
+
+/* A screenshot fills the frame from its top-left corner — where an app's
+ * sidebar and heading are — and crops the rest. */
+.website-app-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.website-app-thumb i {
+  display: block;
+}
+
+.website-app-thumb-side {
+  width: 28%;
+  padding: 0.6rem;
+  border-right: 1px solid var(--border);
+}
+
+.website-app-thumb-main {
+  flex: 1;
+  padding: 0.85rem;
+}
+
+.website-app-thumb-line {
+  height: 7px;
+  margin: 7px 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--foreground) 13%, transparent);
+}
+
+.website-app-thumb-line.is-heading {
+  height: 11px;
+  width: 45%;
+  background: color-mix(in srgb, var(--foreground) 30%, transparent);
+}
+
+.website-app-thumb-line.is-accent {
+  background: color-mix(in srgb, var(--app-tint, var(--primary)) 70%, transparent);
+}
+
+.website-app-thumb-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.website-app-thumb-tiles i {
+  aspect-ratio: 4 / 3;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.website-app-thumb-tiles i:first-child {
+  background: color-mix(in srgb, var(--app-tint, var(--primary)) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .website-app-card,
+  .website-app-next {
+    transition: border-color 0.2s ease;
+  }
+
+  .website-app-card:hover,
+  .website-app-next:hover {
+    transform: none;
+  }
+}

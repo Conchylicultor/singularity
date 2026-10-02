@@ -40,6 +40,7 @@
     - `apps/studio/compositions/entry-points`
     - `apps/studio/contributions`
     - `apps/studio/graph`
+    - `apps/website/pages/apps`
     - `conversations/conversation-view/dependencies`
     - `debug/read-set`
     - `page/page-link`

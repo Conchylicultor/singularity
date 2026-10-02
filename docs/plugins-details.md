@@ -6710,7 +6710,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions`
               - `apps/studio/explorer`
               - `apps/studio/graph`
-    - **`website`** — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, placeholder pages for the apps vision, the foundations and the story, and how to get in touch.
+    - **`website`** — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
       - Plugins:
         - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
           - Web:
@@ -6781,6 +6781,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/website/pages/apps.appsPane`
                   - `apps/website/pages/foundations.foundationsPane`
+                  - `apps/website/pages/vision.visionPane`
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteBand`
                   - `primitives/css/badge.Badge`
@@ -6814,27 +6815,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/pane.useOpenPane`
-        - **`pages`** — The inner pages of the public website: the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
+        - **`pages`** — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
           - Plugins:
-            - **`apps`** — The applications page of the equin website: the /website/apps pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteApps.Section slot the page is written into.
+            - **`apps`** — The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link.
               - Web:
-                - Slots: `WebsiteApps.Section`
                 - Contributes:
                   - `Pane.Register` "website-apps"
                   - `WebsiteHeader` "apps" → `AppsNavItem`
                 - Uses:
+                  - `apps/website/pages/download.downloadPane`
+                  - `apps/website/pages/foundations.foundationsPane`
+                  - `apps/website/pages/vision.visionPane`
+                  - `apps/website/shell.WebsiteBand`
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteHero`
                   - `apps/website/shell.WebsiteNavLink`
-                  - `apps/website/shell.WebsiteSoon`
+                  - `primitives/avatar.Avatar`
+                  - `primitives/avatar.AvatarPresentationProvider`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/card.Card`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/grid.Grid`
+                  - `primitives/css/rigid.rigidClass`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/surface.Surface`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/css/ui-kit.Input`
+                  - `primitives/filter-chips.FilterChip`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
+                  - `primitives/pane.PaneObject`
                   - `primitives/pane.useOpenPane`
-                  - `primitives/slot-render.defineRenderSlot`
-                - Exports (values):
-                  - `appsPane`
-                  - `WebsiteApps`
+                  - `primitives/search.SearchInput`
+                  - `primitives/shortcuts.useSurfaceShortcuts`
+                - Exports (values): `appsPane`
               - Cross-plugin:
                 - Imported by: `apps/website/landing/layers`
             - **`download`** — The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link.
@@ -6874,6 +6891,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/pane.useOpenPane`
                   - `ui/icons.Icon`
                 - Exports (values): `downloadPane`
+              - Cross-plugin:
+                - Imported by: `apps/website/pages/apps`
             - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane on how equin is built — framework, harness, plugin system (a placeholder heading for now) — its Foundations nav link, and the WebsiteFoundations.Section slot the page is written into.
               - Web:
                 - Slots: `WebsiteFoundations.Section`
@@ -6894,7 +6913,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `foundationsPane`
                   - `WebsiteFoundations`
               - Cross-plugin:
-                - Imported by: `apps/website/landing/layers`
+                - Imported by:
+                  - `apps/website/landing/layers`
+                  - `apps/website/pages/apps`
             - **`guide`** — The getting-started guide of the equin website: the /website/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into.
               - Web:
                 - Slots: `WebsiteGuide.Section`
@@ -6937,11 +6958,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `WebsiteStory`
               - Cross-plugin:
                 - Imported by: `apps/website/landing/story-link`
+            - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteVision.Section slot the page is written into.
+              - Web:
+                - Slots: `WebsiteVision.Section`
+                - Contributes:
+                  - `Pane.Register` "website-vision"
+                  - `WebsiteHeader` "vision" → `VisionNavItem`
+                - Uses:
+                  - `apps/website/shell.WebsiteChrome`
+                  - `apps/website/shell.WebsiteHeader`
+                  - `apps/website/shell.WebsiteHero`
+                  - `apps/website/shell.WebsiteNavLink`
+                  - `apps/website/shell.WebsiteSoon`
+                  - `primitives/pane.defineRoute`
+                  - `primitives/pane.Pane`
+                  - `primitives/pane.useOpenPane`
+                  - `primitives/slot-render.defineRenderSlot`
+                - Exports (values):
+                  - `visionPane`
+                  - `WebsiteVision`
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/website/landing/layers`
+                  - `apps/website/pages/apps`
         - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears.
           - Web:
             - Slots:
               - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.hero`, `apps.website.landing.layers`, `apps.website.landing.screenshot`, `apps.website.landing.story-link`
-              - `WebsiteHeader` ← `apps.website.improve`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.shell`, `primitives.pane`
+              - `WebsiteHeader` ← `apps.website.improve`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.pages.vision`, `apps.website.shell`, `primitives.pane`
             - Contributes:
               - `Apps.App` "equin" → `WebsiteLayout`
               - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
@@ -7011,6 +7055,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/pages/foundations`
               - `apps/website/pages/guide`
               - `apps/website/pages/story`
+              - `apps/website/pages/vision`
 
 - **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Web:
@@ -26911,6 +26956,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/mail/reading-pane`
+          - `apps/website/pages/apps`
           - `conversations/agents`
           - `conversations/conversation-category`
           - `conversations/conversation-ui/item`
@@ -27229,6 +27275,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions`
               - `apps/website/improve`
               - `apps/website/landing/layers`
+              - `apps/website/pages/apps`
               - `auth`
               - `auth/apple-signing/setup-wizard`
               - `backup/runs-arm`
@@ -27385,6 +27432,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/landing/contact`
               - `apps/website/landing/hero`
               - `apps/website/landing/layers`
+              - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -27873,6 +27921,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release/release-logs`
               - `apps/website/improve`
               - `apps/website/landing/layers`
+              - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `apps/website/shell`
               - `auth`
@@ -27998,6 +28047,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/landing/contact`
               - `apps/website/landing/hero`
               - `apps/website/landing/layers`
+              - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `conversations/conversation-view/artifacts/screenshot`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -28592,6 +28642,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
               - `apps/website/landing/layers`
+              - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `auth`
               - `backup`
@@ -29009,6 +29060,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/landing/hero`
               - `apps/website/landing/layers`
               - `apps/website/landing/screenshot`
+              - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `apps/website/shell`
               - `auth`
@@ -29412,6 +29464,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/mail/reading-pane`
               - `apps/studio/graph`
+              - `apps/website/pages/apps`
               - `conversations/agents`
               - `fields/json/config`
               - `infra/events-test`
@@ -29555,6 +29608,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/landing/layers`
               - `apps/website/landing/screenshot`
               - `apps/website/landing/story-link`
+              - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `apps/website/shell`
               - `auth`
@@ -30113,6 +30167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/landing/contact`
               - `apps/website/landing/layers`
               - `apps/website/landing/story-link`
+              - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `apps/website/shell`
               - `auth`
@@ -32016,6 +32071,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/studio/contributions`
+          - `apps/website/pages/apps`
           - `debug/claude-cli-calls`
           - `debug/queue`
     - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory.
@@ -33917,7 +33973,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.file-explorer.browser`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.file-explorer.browser`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.pages.vision`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Contributes:
           - `plugin-conv-side.actions` "title" → `PaneTitleItem`
           - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -34208,6 +34264,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/website/pages/foundations`
           - `apps/website/pages/guide`
           - `apps/website/pages/story`
+          - `apps/website/pages/vision`
           - `apps/website/shell`
           - `auth`
           - `auth/apple-signing/setup-wizard`
@@ -34743,6 +34800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions/entry-points`
           - `apps/studio/contributions`
           - `apps/studio/graph`
+          - `apps/website/pages/apps`
           - `conversations/conversation-view/dependencies`
           - `debug/read-set`
           - `page/page-link`
@@ -34843,6 +34901,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/present`
           - `apps/sonata/controls`
           - `apps/sonata/progress/loop`
+          - `apps/website/pages/apps`
           - `primitives/action-presentation`
           - `primitives/css/ui-kit`
           - `primitives/data-view/capsule-toolbar`
@@ -34915,10 +34974,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/shell`
           - `apps/studio/explorer`
           - `apps/studio/shell`
-          - `apps/website/pages/apps`
           - `apps/website/pages/foundations`
           - `apps/website/pages/guide`
           - `apps/website/pages/story`
+          - `apps/website/pages/vision`
           - `apps/website/shell`
           - `config_v2/fields`
           - `config_v2/settings`

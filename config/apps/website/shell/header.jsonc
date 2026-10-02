@@ -1,4 +1,4 @@
-// @hash 4595f664dcb3
+// @hash 0957f0c8ea5f
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -31,8 +31,8 @@
   // title item (these panes set no title, so it paints nothing and simply holds
   // the slack).
   //
-  // After the spacer, the site's pages — Vision, Foundations, Story, then the
-  // Guide and Download for a reader ready to run it — then the source on
+  // After the spacer, the site's pages — Vision, Apps, Foundations, Story, then
+  // the Guide and Download for a reader ready to run it — then the source on
   // GitHub, the one destination that leaves the site, and last the header's one
   // call to action: Improve, which lets the reader try the gesture the site is
   // about.
@@ -40,6 +40,7 @@
     "apps.website.shell:wordmark",
     "primitives.pane:title",
     { "type": "spacer", "id": "spacer-1" },
+    "apps.website.pages.vision:vision",
     "apps.website.pages.apps:apps",
     "apps.website.pages.foundations:foundations",
     "apps.website.pages.story:story",

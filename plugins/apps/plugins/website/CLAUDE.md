@@ -10,9 +10,10 @@ the claim, show what it looks like, and then get out of the way:
 
 - [`landing`](plugins/landing/CLAUDE.md) — the homepage's bands: the hero, the
   screenshot, the layers, the story link, the contact block.
-- [`pages`](plugins/pages/CLAUDE.md) — the inner pages (`/website/apps`,
-  `/website/foundations`, `/website/story`), each with its own section slot the
-  page gets written into. Placeholders for now.
+- [`pages`](plugins/pages/CLAUDE.md) — the inner pages: the apps gallery
+  (`/website/apps`), the download page, and the vision, foundations, story and
+  guide pages (`/website/vision`, …), each with its own section slot the page
+  gets written into — placeholders for now.
 - [`improve`](plugins/improve/CLAUDE.md) — the header's Improve button: the
   visitor describes a change, watches a scripted replay of what an agent would
   do with it, and can file it as a prefilled GitHub issue. No agent runs here.
@@ -58,7 +59,7 @@ everywhere a reader can see it; `Singularity` is only the repository's name.
 
 ## Plugin reference
 
-- Description: Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, placeholder pages for the apps vision, the foundations and the story, and how to get in touch.
+- Description: Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
 - Sub-plugins:
   - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
   - **`landing`** — Landing-page bands of the public website: the hero, the desktop screenshot, the three layers of equin, the story link, and the contact block.
@@ -68,13 +69,14 @@ everywhere a reader can see it; `Singularity` is only the repository's name.
       - **`layers`** — Landing layers band: 'What is equin?' as three stacked, clickable layers — the technical foundations, the applications built on them (by category, future ones dimmed), and the vision of one OS-like surface — each opening its own page.
       - **`screenshot`** — Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata breaking a song down into chords as three windows side by side on one surface — with its caption.
       - **`story-link`** — Landing story-link band: the one quiet line between the layers and the contact block, offering the story page to a reader who wants the context behind the project.
-  - **`pages`** — The inner pages of the public website: the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
+  - **`pages`** — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
     - Plugins:
-      - **`apps`** — The applications page of the equin website: the /website/apps pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteApps.Section slot the page is written into.
+      - **`apps`** — The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link.
       - **`download`** — The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link.
       - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane on how equin is built — framework, harness, plugin system (a placeholder heading for now) — its Foundations nav link, and the WebsiteFoundations.Section slot the page is written into.
       - **`guide`** — The getting-started guide of the equin website: the /website/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into.
       - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
+      - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteVision.Section slot the page is written into.
   - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears.
 
 <!-- AUTOGENERATED:END -->

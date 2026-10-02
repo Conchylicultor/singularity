@@ -112,6 +112,7 @@ primitive exists to name.
     - `apps/studio/compositions/release/release-logs`
     - `apps/website/improve`
     - `apps/website/landing/layers`
+    - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/shell`
     - `auth`

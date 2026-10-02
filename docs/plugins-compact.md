@@ -22,7 +22,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [63 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
-    - **`website`** [14 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, placeholder pages for the apps vision, the foundations and the story, and how to get in touch.
+    - **`website`** [15 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:

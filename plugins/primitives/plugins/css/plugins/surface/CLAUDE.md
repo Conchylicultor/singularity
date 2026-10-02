@@ -129,6 +129,7 @@ never be clobbered.
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/mail/reading-pane`
     - `apps/studio/graph`
+    - `apps/website/pages/apps`
     - `conversations/agents`
     - `fields/json/config`
     - `infra/events-test`

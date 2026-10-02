@@ -274,10 +274,10 @@ the outcome too, with no separate code path.
     - `apps/sonata/shell`
     - `apps/studio/explorer`
     - `apps/studio/shell`
-    - `apps/website/pages/apps`
     - `apps/website/pages/foundations`
     - `apps/website/pages/guide`
     - `apps/website/pages/story`
+    - `apps/website/pages/vision`
     - `apps/website/shell`
     - `config_v2/fields`
     - `config_v2/settings`

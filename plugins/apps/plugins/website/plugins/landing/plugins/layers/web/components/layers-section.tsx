@@ -4,6 +4,7 @@ import {
   type PaneObject,
 } from "@plugins/primitives/plugins/pane/web";
 import { appsPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/apps/web";
+import { visionPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/vision/web";
 import { foundationsPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/foundations/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
@@ -129,7 +130,7 @@ export function LayersSection() {
           <Layer
             title="The vision: An OS-like surface"
             body="A single app to replace all others, customized for every user."
-            pane={appsPane}
+            pane={visionPane}
           />
         </Stack>
       </Stack>

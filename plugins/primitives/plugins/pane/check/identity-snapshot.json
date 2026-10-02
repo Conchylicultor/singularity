@@ -643,6 +643,12 @@
       "parent": null
     },
     {
+      "paneId": "website-vision",
+      "segment": "vision",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "welcome",
       "segment": "",
       "appIndex": true,

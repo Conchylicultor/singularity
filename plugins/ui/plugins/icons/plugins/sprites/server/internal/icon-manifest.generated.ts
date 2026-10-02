@@ -12,6 +12,7 @@ export const ICON_MANIFEST: {
   readonly seti: readonly string[];
 } = {
   symbols: [
+    "account-balance",
     "account-circle",
     "account-tree",
     "add",
