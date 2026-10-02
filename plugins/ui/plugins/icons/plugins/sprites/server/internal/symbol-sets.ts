@@ -9,7 +9,9 @@ import { ICON_SETS, type IconSetSource } from "./icon-sets";
 export const PACKAGE = ICON_SETS;
 
 /** `<package>@<version>`: what a sprite built from `pkg` is a function of. */
-export function setIdentity(pkg: IconSetSource): string {
+export function setIdentity(
+  pkg: Pick<IconSetSource, "name" | "version">,
+): string {
   return `${pkg.name}@${pkg.version}`;
 }
 

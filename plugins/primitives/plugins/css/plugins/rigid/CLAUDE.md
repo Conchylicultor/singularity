@@ -135,9 +135,11 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `primitives/commit-list`
     - `primitives/data-view`
     - `primitives/data-view/list`
+    - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
     - `primitives/graph-canvas`
     - `primitives/loading`
+    - `primitives/path-bar`
     - `primitives/search`
     - `primitives/text-editor/composer`
     - `primitives/ui-context/element-picker`

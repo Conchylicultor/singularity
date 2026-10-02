@@ -12,8 +12,9 @@ import {
 } from "@dnd-kit/core";
 import { useRankReorderItem } from "@plugins/primitives/plugins/rank-reorder/web";
 import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
-import type { ExpandChange, TreeNode } from "../../core";
+import type { ExpandChange, LazyChildren, TreeNode } from "../../core";
 import type { TreeItem } from "./types";
+import type { ChildPlaceholder } from "./tree-child-placeholder";
 
 export type TreeListContextValue<T extends TreeItem> = {
   rows: readonly T[];
@@ -51,6 +52,14 @@ export type TreeListContextValue<T extends TreeItem> = {
    *  selecting it (see `TreeListProps.expandOnActivate`). Absent → every row
    *  selects, today's behavior. */
   expandOnActivate?: (row: T) => boolean;
+  /** Lazily-listed children (see `TreeListProps.lazyChildren`). */
+  lazyChildren?: LazyChildren<T>;
+  /** The placeholder child row an open node shows in place of children it does
+   *  not have yet, or `null` (see `childPlaceholder`). Bound by `TreeList` to its
+   *  lazy source and search state, so every row asks the same question. */
+  childPlaceholder: (node: TreeNode<T>) => ChildPlaceholder | null;
+  /** The open gesture (double-click / Enter); see `TreeListProps.onOpen`. */
+  onOpen?: (id: string) => void;
   /** True when the tree is in multi-select mode → RowChrome renders a checkbox. */
   multiSelect: boolean;
   /** True when `onCreate` is wired → RowChrome renders root + per-node Add. */
@@ -125,6 +134,8 @@ export type RowControls = {
   isSelected: boolean;
   isDragging: boolean;
   isOpen: boolean;
+  /** The row offers a chevron: it has children loaded, or a lazy source says it
+   *  may have some (`LazyChildren.hasChildren`). */
   hasChildren: boolean;
   isOverChild: boolean;
   isOverBefore: boolean;
@@ -132,6 +143,9 @@ export type RowControls = {
   shouldAutoFocus: boolean;
   consumeAutoFocus: () => void;
   select: () => void;
+  /** The open gesture for this row (double-click / Enter), or `undefined` when
+   *  the tree has none — so the row can tell whether to listen at all. */
+  open: (() => void) | undefined;
   toggleExpanded: () => void;
   /** Is this row's whole subtree open? Drives the fold/unfold icon's direction. */
   subtreeAllExpanded: boolean;
@@ -188,7 +202,8 @@ export function useOptionalRowControls(): RowControls | null {
 export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
   const ctx = useTreeListContext<T>();
   const isOpen = node.expanded;
-  const hasChildren = node.children.length > 0;
+  const hasChildren =
+    node.children.length > 0 || (ctx.lazyChildren?.hasChildren(node) ?? false);
   const isSelected = ctx.selectedId === node.id;
   const shouldAutoFocus = ctx.pendingFocusId === node.id;
 
@@ -242,6 +257,13 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
     ctx.onSelect(node.id);
   }, [ctx, node, toggleExpanded]);
   const consumeAutoFocus = useCallback(() => ctx.clearPendingFocus(), [ctx]);
+  // Distinct from `select`: no `expandOnActivate` diversion. Opening a folder IS
+  // what a double-click on it asks for, whatever a single click does there.
+  const onOpen = ctx.onOpen;
+  const open = useMemo(
+    () => (onOpen ? () => onOpen(node.id) : undefined),
+    [onOpen, node.id],
+  );
 
   // Resolved for THIS node, so a row's fold affordance needs nothing but its own
   // controls. The read is a map lookup into the index `TreeList` built for the
@@ -298,6 +320,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
       shouldAutoFocus,
       consumeAutoFocus,
       select,
+      open,
       toggleExpanded,
       subtreeAllExpanded,
       toggleSubtreeExpanded,
@@ -319,6 +342,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
       shouldAutoFocus,
       consumeAutoFocus,
       select,
+      open,
       toggleExpanded,
       subtreeAllExpanded,
       toggleSubtreeExpanded,

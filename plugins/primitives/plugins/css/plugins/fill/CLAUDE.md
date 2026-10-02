@@ -97,6 +97,7 @@ primitive exists to name.
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/status`
+    - `apps/file-explorer/browser`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/mail/sync-status`
@@ -122,7 +123,6 @@ primitive exists to name.
     - `conversations/conversation-ui/item`
     - `conversations/conversation-ui/row`
     - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer`
@@ -181,9 +181,11 @@ primitive exists to name.
     - `primitives/commit-list`
     - `primitives/data-view/capsule-toolbar`
     - `primitives/data-view/list`
+    - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
     - `primitives/date-picker`
     - `primitives/error-boundary`
+    - `primitives/file-viewer`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
     - `primitives/launch`
@@ -197,6 +199,7 @@ primitive exists to name.
     - `primitives/setup-steps`
     - `primitives/text-editor/composer`
     - `primitives/text-editor/composer/picker-pill`
+    - `primitives/tree`
     - `primitives/ui-context/element-picker`
     - `review/code-review`
     - `review/plugin-changes`

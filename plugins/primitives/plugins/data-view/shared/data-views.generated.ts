@@ -37,6 +37,8 @@ export const dataViews: DataViewEntry[] = [
   { id: "events.run-events", pluginId: "apps.events.sources.source-detail.runs.extracted-events" },
   { id: "events.source-runs", pluginId: "apps.events.sources.source-detail.runs" },
   { id: "events.sources", pluginId: "apps.events.sources" },
+  { id: "file-explorer.places", pluginId: "apps.file-explorer.places" },
+  { id: "file-explorer.tree", pluginId: "apps.file-explorer.browser" },
   { id: "home.apps", pluginId: "apps.home.app-cards" },
   { id: "infra.background.catalog", pluginId: "infra.background.catalog" },
   { id: "infra.background.recent-runs", pluginId: "infra.background.catalog" },

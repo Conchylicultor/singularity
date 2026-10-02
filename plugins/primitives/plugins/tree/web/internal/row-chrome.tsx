@@ -20,6 +20,7 @@ import {
   type RowControls,
 } from "./use-tree-row";
 import { TreeRowChrome } from "./tree-row-chrome";
+import { TreeChildPlaceholder } from "./tree-child-placeholder";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -82,6 +83,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     isOverAfter,
     subtreeAllExpanded,
     toggleSubtreeExpanded,
+    open,
   } = controls;
   const {
     ref: dragRef,
@@ -89,6 +91,10 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     listeners: dragListeners,
   } = dragSource;
   const ctx = useTreeListContext<T>();
+  // What this open node shows in place of children it does not have yet (a lazy
+  // listing in flight, failed, or empty). The windowed list paints the same row
+  // from the same rule, as an item of its own.
+  const placeholder = isOpen ? ctx.childPlaceholder(node) : null;
 
   const menuItems =
     typeof menu === "function"
@@ -161,14 +167,19 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
   // toolbar and would stand a size apart from the `⋯` and `+` beside it. No
   // `stopPropagation` either — `RowActions`' button `Stack` already stops both
   // `onClick` and `onPointerDown`, so the row's select and drag never fire.
-  const subtreeToggle = hasChildren ? (
-    <IconButton
-      icon={subtreeAllExpanded ? unfoldLessIcon : unfoldMoreIcon}
-      label={subtreeAllExpanded ? "Collapse subtree" : "Expand subtree"}
-      variant="ghost"
-      onClick={toggleSubtreeExpanded}
-    />
-  ) : null;
+  //
+  // Gated on LOADED children, not `hasChildren`: a lazy row may have a chevron
+  // before its listing arrives, and "unfold everything below" over a subtree
+  // the tree has never seen is not a gesture it can keep.
+  const subtreeToggle =
+    node.children.length > 0 ? (
+      <IconButton
+        icon={subtreeAllExpanded ? unfoldLessIcon : unfoldMoreIcon}
+        label={subtreeAllExpanded ? "Collapse subtree" : "Expand subtree"}
+        variant="ghost"
+        onClick={toggleSubtreeExpanded}
+      />
+    ) : null;
 
   // Consumer `actions` first, then the tree's own chrome. Within that chrome the
   // fold goes ahead of `⋯` and `+`, which keeps those two exactly where they sit
@@ -192,12 +203,14 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
       <RowControlsProvider value={controls}>
         <div className="relative">
           <TreeRowChrome
+            rowId={node.id}
             depth={depth}
             hasChildren={hasChildren}
             isOpen={isOpen}
             selected={isSelected}
             onToggle={toggleExpanded}
             onSelect={select}
+            onOpen={open}
             rowRef={rowRef}
             dragAttributes={canReorder ? dragAttributes : undefined}
             dragListeners={canReorder ? dragListeners : undefined}
@@ -273,6 +286,9 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
               depth={depth + 1}
             />
           ))}
+          {placeholder && (
+            <TreeChildPlaceholder placeholder={placeholder} depth={depth + 1} />
+          )}
         </div>
       )}
     </div>

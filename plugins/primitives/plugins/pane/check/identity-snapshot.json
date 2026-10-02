@@ -355,6 +355,18 @@
       "parent": null
     },
     {
+      "paneId": "files-at",
+      "segment": "at/:dir/:open?",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "files-home",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
       "paneId": "global-file-tree",
       "segment": "code/:worktree",
       "appIndex": false,

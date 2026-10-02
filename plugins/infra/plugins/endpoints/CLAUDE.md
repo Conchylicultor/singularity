@@ -240,6 +240,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
+    - `apps/file-explorer/browser`
+    - `apps/file-explorer/places`
     - `apps/mail/attachments`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
@@ -302,7 +304,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `conversations/all-conversations`
     - `conversations/conversation-category`
     - `conversations/conversation-view`
-    - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/drop-and-exit`
     - `conversations/conversation-view/drop-dependents`
@@ -364,6 +365,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `infra/events`
     - `infra/events-test`
     - `infra/health`
+    - `infra/host-fs`
     - `infra/jobs`
     - `infra/ndjson-stream`
     - `infra/request-origin/agent-write-ledger`
@@ -392,6 +394,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `primitives/data-view/server-query`
     - `primitives/data-view/view-order`
     - `primitives/diff-view`
+    - `primitives/file-viewer`
     - `primitives/folder-picker`
     - `primitives/launch`
     - `primitives/live-state`

@@ -46,6 +46,8 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
     - `apps/chord/trainer`
+    - `apps/file-explorer/browser`
+    - `apps/file-explorer/places`
     - `apps/mail/reading-pane`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
@@ -67,7 +69,6 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `code-explorer/file-resolve`
     - `config_v2/settings`
     - `conversations/conversation-preprompt`
-    - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
@@ -79,7 +80,6 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
     - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
-    - `conversations/conversation-view/jsonl-viewer/code-listing`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -117,6 +117,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `primitives/css/layout-harness`
     - `primitives/data-view`
     - `primitives/diff-view`
+    - `primitives/file-viewer`
     - `primitives/folder-picker`
     - `primitives/icon-picker`
     - `primitives/log-channels`

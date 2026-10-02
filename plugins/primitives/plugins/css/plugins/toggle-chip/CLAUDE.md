@@ -58,7 +58,6 @@ anonymous index signature. See
     - `config_v2/fields`
     - `config_v2/settings`
     - `conversations/conversation-ui/chip`
-    - `conversations/conversation-view/code/file-pane`
     - `debug/broadcasts`
     - `debug/queue`
     - `debug/timeline`
@@ -69,6 +68,7 @@ anonymous index signature. See
     - `page/place`
     - `primitives/data-view`
     - `primitives/data-view/view-core`
+    - `primitives/file-viewer`
     - `primitives/filter-chips`
     - `primitives/metrics`
     - `primitives/text-editor/composer`

@@ -1,4 +1,4 @@
-// @hash 143fda7662dc
+// @hash 72b8533de71b
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -21,6 +21,7 @@
     "ui.tokens.shadow:shadow",
     "ui.tokens.chart:chart",
     "ui.tokens.categorical:categorical",
+    "ui.tokens.file-type-palette:file-type-palette",
     "ui.tweakcn.community-browser:import-by-url"
   ]
 }

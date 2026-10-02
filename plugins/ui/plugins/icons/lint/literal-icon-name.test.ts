@@ -9,7 +9,7 @@ const ruleTester = new RuleTester({
   },
 });
 
-const IMPORT = `import { symbol, brand } from "@plugins/ui/plugins/icons/core";`;
+const IMPORT = `import { symbol, brand, seti } from "@plugins/ui/plugins/icons/core";`;
 
 ruleTester.run(
   "literal-icon-name",
@@ -17,7 +17,7 @@ ruleTester.run(
   {
     valid: [
       {
-        code: `${IMPORT}\nconst a = symbol("forum");\nconst b = brand("github");`,
+        code: `${IMPORT}\nconst a = symbol("forum");\nconst b = brand("github");\nconst c = seti("typescript");`,
       },
       // Type-only imports and other names from the barrel are untouched.
       {
@@ -33,6 +33,10 @@ ruleTester.run(
       },
       {
         code: `${IMPORT}\nconst a = brand(\`git\${hub}\`);`,
+        errors: [{ messageId: "notLiteral" }],
+      },
+      {
+        code: `${IMPORT}\nconst a = seti(name);`,
         errors: [{ messageId: "notLiteral" }],
       },
       {

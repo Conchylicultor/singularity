@@ -60,6 +60,7 @@ Only present slots render — an absent slot produces no region and no phantom g
 - Cross-plugin:
   - Imported by:
     - `apps/chord/shell`
+    - `apps/file-explorer/browser`
     - `apps/home/shell`
     - `apps/mail/shell`
     - `apps/prototypes/canvas`
@@ -68,13 +69,13 @@ Only present slots render — an absent slot produces no region and no phantom g
     - `apps/studio/graph`
     - `code-explorer/commit-detail`
     - `config_v2/settings`
-    - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `debug/boot-profile`
     - `debug/profiling`
     - `debug/timeline`
     - `history/dialog`
     - `primitives/diff-view`
+    - `primitives/file-viewer`
     - `primitives/outline/rail`
     - `primitives/pane`
     - `primitives/tabbed-view`

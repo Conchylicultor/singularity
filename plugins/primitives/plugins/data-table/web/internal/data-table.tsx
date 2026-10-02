@@ -82,6 +82,7 @@ export function DataTable<TRow>({
   sortState: controlledSort,
   onToggleSort,
   onRowClick,
+  onRowOpen,
   rowActions,
   rowPersistentActions,
   selectedRowId,
@@ -213,6 +214,7 @@ export function DataTable<TRow>({
       rowKey={rowKey}
       selectedRowId={selectedRowId}
       onRowClick={onRowClick}
+      onRowOpen={onRowOpen}
       rowActions={rowActions}
       rowPersistentActions={rowPersistentActions}
       useRowDecoration={useDecorate}
@@ -296,6 +298,7 @@ function DataTableRow<TRow>({
   rowKey,
   selectedRowId,
   onRowClick,
+  onRowOpen,
   rowActions,
   rowPersistentActions,
   useRowDecoration,
@@ -308,6 +311,7 @@ function DataTableRow<TRow>({
   rowKey: (row: TRow, index: number) => string;
   selectedRowId: string | undefined;
   onRowClick: ((row: TRow) => void) | undefined;
+  onRowOpen: ((row: TRow) => void) | undefined;
   rowActions: ((row: TRow, index: number) => ReactNode) | undefined;
   rowPersistentActions: ((row: TRow, index: number) => ReactNode) | undefined;
   useRowDecoration: Hook<
@@ -346,17 +350,35 @@ function DataTableRow<TRow>({
         // lays out and stacks identically, so it is inert on plain rows).
         rowActionsAnchor,
         key === selectedRowId && "bg-accent",
-        onRowClick && "cursor-pointer",
+        (onRowClick || onRowOpen) && "cursor-pointer",
         decorationClassName,
       )}
       style={decorationStyle}
-      onClick={onRowClick ? () => onRowClick(row) : undefined}
-      role={onRowClick ? "button" : undefined}
-      tabIndex={onRowClick ? 0 : undefined}
-      onKeyDown={
+      onClick={
         onRowClick
           ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
+              // The second click of a double-click belongs to `onRowOpen`.
+              if (onRowOpen && e.detail > 1) return;
+              onRowClick(row);
+            }
+          : undefined
+      }
+      onDoubleClick={onRowOpen ? () => onRowOpen(row) : undefined}
+      role={onRowClick || onRowOpen ? "button" : undefined}
+      tabIndex={onRowClick || onRowOpen ? 0 : undefined}
+      onKeyDown={
+        onRowClick || onRowOpen
+          ? (e) => {
+              // Only the row's own Enter opens — never one bubbling out of a
+              // control inside a cell.
+              if (
+                e.key === "Enter" &&
+                onRowOpen &&
+                e.target === e.currentTarget
+              ) {
+                e.preventDefault();
+                onRowOpen(row);
+              } else if ((e.key === "Enter" || e.key === " ") && onRowClick) {
                 e.preventDefault();
                 onRowClick(row);
               }

@@ -1,5 +1,5 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
-import { CodeListing } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing/web";
+import { CodeListing } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
 import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
@@ -137,7 +137,8 @@ export function AttachedFileView({ event }: AttachmentRendererProps) {
       <CodeListing
         code={text}
         startLine={startLine ?? 1}
-        filePath={path ?? ""}
+        path={path ?? ""}
+        emptyText="(empty result)"
       />
     </CollapsibleCard>
   );

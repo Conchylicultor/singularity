@@ -26,6 +26,7 @@
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`
+    - `apps/file-explorer/browser`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/pages/history`
@@ -46,8 +47,6 @@
     - `config_v2/fields`
     - `config_v2/settings`
     - `conversations/agents`
-    - `conversations/conversation-view/code/file-pane/markdown`
-    - `conversations/conversation-view/code/file-pane/raw`
     - `conversations/conversation-view/commits-graph`
     - `conversations/recover`
     - `debug/boot-profile`
@@ -82,6 +81,9 @@
     - `primitives/cursor-pagination`
     - `primitives/data-view`
     - `primitives/diff-view`
+    - `primitives/file-viewer`
+    - `primitives/file-viewer/code`
+    - `primitives/file-viewer/markdown`
     - `primitives/folder-picker`
     - `primitives/live-state`
     - `primitives/loading`

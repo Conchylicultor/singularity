@@ -1,3 +1,4 @@
+import type { SetiName } from "./seti-names.generated";
 import type { BrandName, SymbolName } from "./symbol-names.generated";
 
 /** A Material Symbols icon. Its style (shape, fill, weight) is the theme's, not the call site's. */
@@ -10,6 +11,18 @@ export interface SymbolRef {
 export interface BrandRef {
   readonly kind: "brand";
   readonly name: BrandName;
+}
+
+/**
+ * A Seti file-type glyph (VS Code's file icons: `typescript`, `json`, `docker`).
+ * One colour (`currentColor`) and one style: like a brand it ignores the
+ * theme's shape and fill axes. Its sprite is not resident — it is fetched the
+ * first time a Seti icon mounts, so a surface that never shows a file pays
+ * nothing.
+ */
+export interface SetiRef {
+  readonly kind: "seti";
+  readonly name: SetiName;
 }
 
 /**
@@ -38,7 +51,7 @@ export interface RuntimeSymbolRef {
  * in the style the surrounding theme scope picks, so a slot takes an `IconRef`
  * rather than a component.
  */
-export type IconRef = SymbolRef | BrandRef | RuntimeSymbolRef;
+export type IconRef = SymbolRef | BrandRef | SetiRef | RuntimeSymbolRef;
 
 /**
  * A Material Symbols icon by its base name (`"forum"`, `"open-in-new"`). The
@@ -53,6 +66,15 @@ export function symbol(name: SymbolName): SymbolRef {
 /** A brand mark by its Simple Icons slug (`"github"`, `"notion"`). String literal only, like {@link symbol}. */
 export function brand(name: BrandName): BrandRef {
   return { kind: "brand", name };
+}
+
+/**
+ * A Seti file-type glyph by its name in the vendored set (`"typescript"`,
+ * `"docker"`). String literal only, like {@link symbol}: the build ships exactly
+ * the names some code writes.
+ */
+export function seti(name: SetiName): SetiRef {
+  return { kind: "seti", name };
 }
 
 /**

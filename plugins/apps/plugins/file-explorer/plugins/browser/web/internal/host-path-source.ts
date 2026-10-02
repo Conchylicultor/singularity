@@ -1,0 +1,113 @@
+import {
+  fetchEndpoint,
+  getEndpointErrorMessage,
+  useEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
+import {
+  hostFsComplete,
+  hostFsStat,
+  hostFsVolume,
+} from "@plugins/infra/plugins/host-fs/core";
+import type {
+  PathBarSource,
+  PathResolution,
+} from "@plugins/primitives/plugins/path-bar/web";
+import { baseName, displayPath, HOME, pathChain } from "../../core";
+
+/**
+ * The user's home directory, absolute — what `~` stands for. Every comparison
+ * between a typed path and a listed one goes through it. Asked once per
+ * session; pending until the server answers.
+ */
+export type HomeDir =
+  | { kind: "pending" }
+  | { kind: "ready"; home: string }
+  | { kind: "failed"; message: string };
+
+export function useHomeDir(): HomeDir {
+  const query = useEndpoint(
+    hostFsStat,
+    {},
+    { query: { path: HOME }, staleTime: Number.POSITIVE_INFINITY },
+  );
+  if (query.isError) {
+    return { kind: "failed", message: getEndpointErrorMessage(query.error) };
+  }
+  if (!query.data) return { kind: "pending" };
+  if (query.data.kind !== "ok") {
+    return {
+      kind: "failed",
+      message: `The home directory is ${query.data.kind}.`,
+    };
+  }
+  return { kind: "ready", home: query.data.path };
+}
+
+/** The name of the volume mounted at `/` ("Macintosh HD"), once known. */
+export function useRootVolumeName(): string | undefined {
+  const query = useEndpoint(
+    hostFsVolume,
+    {},
+    { query: { path: "/" }, staleTime: Number.POSITIVE_INFINITY },
+  );
+  return query.data?.kind === "ok" ? query.data.name : undefined;
+}
+
+/** A crumb's label: "Home" for `~`, the volume's name for `/`. */
+export function crumbLabel(path: string, rootName: string | undefined): string {
+  if (path === HOME) return "Home";
+  if (path === "/") return rootName ?? "/";
+  return baseName(path);
+}
+
+/**
+ * The host filesystem as a path-bar source: crumbs from the path itself,
+ * folder completions from host-fs `complete`, and validation from `stat` (a
+ * file resolves to itself, so the explorer opens its folder and previews it).
+ * Paths come back in display form (`~/…` under home).
+ */
+export function hostPathSource(
+  home: string,
+  rootName: string | undefined,
+): PathBarSource {
+  return {
+    segments: (path) =>
+      pathChain(path).map((p) => ({
+        key: p,
+        label: crumbLabel(p, rootName),
+        path: p,
+      })),
+    complete: async (prefix) => {
+      const result = await fetchEndpoint(
+        hostFsComplete,
+        {},
+        { query: { prefix } },
+      );
+      switch (result.kind) {
+        case "ok":
+          return result.matches.map((m) => displayPath(m.path, home));
+        // Typed into a folder that is not there (or into a file): no folder
+        // completes it, which is the answer, not a failure.
+        case "missing":
+        case "not-a-dir":
+          return [];
+        case "denied":
+          throw new Error(`Permission denied: ${result.path}`);
+      }
+    },
+    validate: async (path): Promise<PathResolution> => {
+      const result = await fetchEndpoint(hostFsStat, {}, { query: { path } });
+      switch (result.kind) {
+        case "ok":
+          return {
+            kind: result.entry.kind === "dir" ? "dir" : "file",
+            path: displayPath(result.path, home),
+          };
+        case "missing":
+          return { kind: "invalid", path, reason: "No such file or folder" };
+        case "denied":
+          return { kind: "invalid", path, reason: "Permission denied" };
+      }
+    },
+  };
+}

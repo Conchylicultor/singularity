@@ -8,10 +8,14 @@ is in the parent's [`CLAUDE.md`](../../CLAUDE.md) (section "Sprites").
 - `server/`: `buildSprite` / `resolveIcon` (Iconify JSON → `<symbol>`s; an alias
   with transforms throws), the per-weight memoized build, the resident value
   and the sprite route — a raw handler for its immutable cache header; a stale
-  hash → 409.
+  hash → 409. The `seti` sprite is built from the icons plugin's vendored set
+  (`SETI_SET`, its identity folded into `manifestHash`) and served only by the
+  route, never in the resident value.
 - `web/`: `IconSpriteHost` (`Core.Root`) provides the resident sprites in a
   layout effect (so they are on screen at first paint), fetches every other
-  style key a scope wants, and renders the icons plugin's `IconSpriteSheet`.
+  style key a scope wants and every sprite a mounted icon asked for
+  (`useWantedSprites` — the never-resident `seti` sprite), and renders the
+  icons plugin's `IconSpriteSheet`.
   It also provides the resident saved-icon symbols and installs the runtime
   symbol loader (`createRuntimeSymbolLoader`: one fetch per style key per
   frame, deduped, a failed batch released for retry and thrown).
@@ -44,6 +48,7 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `ui/icons.installRuntimeSymbolLoader`
     - `ui/icons.provideRuntimeSymbols`
     - `ui/icons.provideSprite`
+    - `ui/icons.useWantedSprites`
     - `ui/icons.useWantedStyleKeys`
 - Server:
   - Contributes:
@@ -52,8 +57,10 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `resource.declare` "icons.saved-sprites"
   - Uses:
     - `network/live.serveValue`
+    - `ui/icons.readSetiSet`
     - `ui/icons.resolveIcon`
     - `ui/icons.resolveSymbol`
+    - `ui/icons.SETI_SET`
     - `ui/icons.SymbolSets`
   - Exports (types): `SavedIconSource`
   - Exports (values): `defineSavedIconSource`

@@ -3,11 +3,15 @@ import type { IconifyJSON } from "@iconify/types";
 import {
   ALL_STYLE_KEYS,
   BRANDS_SPRITE,
+  SETI_SPRITE,
   brandId,
+  setiId,
   symbolId,
   type SpriteKey,
 } from "@plugins/ui/plugins/icons/core";
 import {
+  SETI_SET,
+  readSetiSet,
   resolveSymbol,
   type SymbolSets,
 } from "@plugins/ui/plugins/icons/server";
@@ -18,12 +22,12 @@ import { PACKAGE, setIdentity, readSet, withSymbolSets } from "./symbol-sets";
 /**
  * Where each sprite's glyphs come from. Every symbol sprite is built from BOTH
  * Material Symbols sets: a style that lacks a name draws the nearest style that
- * has it, which may be the other weight.
+ * has it, which may be the other weight. Brands and Seti are one sprite each.
  */
-type SetKey = "symbols" | typeof BRANDS_SPRITE;
+type SetKey = "symbols" | typeof BRANDS_SPRITE | typeof SETI_SPRITE;
 
 function setOf(key: SpriteKey): SetKey {
-  return key === BRANDS_SPRITE ? BRANDS_SPRITE : "symbols";
+  return key === BRANDS_SPRITE || key === SETI_SPRITE ? key : "symbols";
 }
 
 /**
@@ -32,7 +36,7 @@ function setOf(key: SpriteKey): SetKey {
  */
 export const manifestHash: string = createHash("sha256")
   .update(JSON.stringify(ICON_MANIFEST))
-  .update(Object.values(PACKAGE).map(setIdentity).join("\n"))
+  .update([...Object.values(PACKAGE), SETI_SET].map(setIdentity).join("\n"))
   .digest("hex")
   .slice(0, 16);
 function brandSprite(brands: IconifyJSON): Map<SpriteKey, string> {
@@ -43,6 +47,29 @@ function brandSprite(brands: IconifyJSON): Map<SpriteKey, string> {
         ICON_MANIFEST.brands.map((name) => ({
           id: brandId(name),
           set: brands,
+          iconifyName: name,
+        })),
+      ),
+    ],
+  ]);
+}
+
+/**
+ * The Seti file-type sprite. Never resident (see `resident.ts`): fetched the
+ * first time a Seti icon mounts, so it costs nothing until a file is shown.
+ */
+async function setiSprite(): Promise<Map<SpriteKey, string>> {
+  const set =
+    ICON_MANIFEST.seti.length === 0
+      ? { prefix: "seti", icons: {} }
+      : await readSetiSet();
+  return new Map([
+    [
+      SETI_SPRITE,
+      buildSprite(
+        ICON_MANIFEST.seti.map((name) => ({
+          id: setiId(name),
+          set,
           iconifyName: name,
         })),
       ),
@@ -85,6 +112,7 @@ async function loadSet(key: SetKey): Promise<Map<SpriteKey, string>> {
     }
     return brandSprite(await readSet(PACKAGE.brands));
   }
+  if (key === SETI_SPRITE) return await setiSprite();
   return await withSymbolSets(symbolSprites);
 }
 

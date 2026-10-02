@@ -27,3 +27,44 @@ export interface TreeDisclosureProps {
   /** Toggle expand/collapse. Undefined on rows that cannot toggle. */
   onToggle?: () => void;
 }
+
+/**
+ * Where a lazily-listed node's children stand. A tree whose children are
+ * fetched on demand (a host directory, a remote listing) cannot pretend an
+ * unfetched node is a leaf, nor that a failed fetch is an empty one — so the
+ * listing's state is a value the tree renders, never a stand-in.
+ *
+ * - `unloaded` — never requested. An EXPANDED, visible node in this state is
+ *   asked for its children (`LazyChildren.load`) and paints as loading meanwhile.
+ * - `loading` — a request is in flight; the node shows a loading placeholder row.
+ * - `loaded` — the children present in `rows` are all of them (zero included).
+ * - `failed` — the listing failed; the node shows the message and a Retry.
+ */
+export type TreeChildrenState =
+  | { kind: "unloaded" }
+  | { kind: "loading" }
+  | { kind: "loaded" }
+  | { kind: "failed"; message: string; retry: () => void };
+
+/**
+ * Lazily-listed children: the node's child rows arrive only after the tree asks
+ * for them. Present on a tree whose consumer fetches per node; absent → every
+ * node's children are already in `rows` (today's behaviour).
+ *
+ * The tree — not the consumer — decides WHEN to ask: `load(row)` fires once for
+ * every expanded, visible node whose state is `unloaded`. That covers every way
+ * a node comes to be open — a chevron click, expand-all, reveal-on-select, and
+ * an expand map restored from storage on reload — which a "you were expanded"
+ * change notification could not (a restored expansion is not a change).
+ */
+export interface LazyChildren<TRow> {
+  /** This node may have children even though none are loaded yet — it gets a
+   *  chevron. Rows with loaded children have one regardless. */
+  hasChildren: (row: TRow) => boolean;
+  /** Where this node's child listing stands. Only consulted for rows whose
+   *  `hasChildren` is true. */
+  state: (row: TRow) => TreeChildrenState;
+  /** Request this node's children. Called at most once per `unloaded` spell —
+   *  the tree re-asks only after the state has left `unloaded` and returned. */
+  load: (row: TRow) => void;
+}

@@ -29,7 +29,8 @@ export const residentSprites = liveValue("icons.sprites", {
 
 /**
  * One sprite (`image/svg+xml`), content-addressed by the manifest hash in its
- * path, so it is served immutable. `key` is a style key or `brands`.
+ * path, so it is served immutable. `key` is a style key, `brands` or `seti`
+ * (the Seti file-type glyphs, never resident: fetched when the first one mounts).
  */
 export const spriteEndpoint = defineEndpoint({
   route: "GET /api/icons/sprite/:hash/:key",

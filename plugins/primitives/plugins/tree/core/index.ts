@@ -8,4 +8,8 @@ export {
 } from "./internal/tree";
 export type { DropZone, TreeNode } from "./internal/tree";
 export type { ExpandChange } from "./internal/expand";
-export type { TreeDisclosureProps } from "./types";
+export type {
+  LazyChildren,
+  TreeChildrenState,
+  TreeDisclosureProps,
+} from "./types";

@@ -313,6 +313,9 @@ to reconcile them; they never needed reconciling.
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`
+    - `apps/file-explorer/browser`
+    - `apps/file-explorer/places`
+    - `apps/file-explorer/shell`
     - `apps/home/shell`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
@@ -393,7 +396,6 @@ to reconcile them; they never needed reconciling.
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/code/file-pane`
-    - `conversations/conversation-view/code/file-pane/markdown`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer`
@@ -417,7 +419,6 @@ to reconcile them; they never needed reconciling.
     - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
-    - `conversations/conversation-view/jsonl-viewer/code-listing`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/event-counter`
     - `conversations/conversation-view/jsonl-viewer/fields-card`
@@ -548,6 +549,8 @@ to reconcile them; they never needed reconciling.
     - `primitives/date-picker`
     - `primitives/diff-view`
     - `primitives/error-boundary`
+    - `primitives/file-viewer`
+    - `primitives/file-viewer/markdown`
     - `primitives/filter-chips`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
@@ -562,9 +565,12 @@ to reconcile them; they never needed reconciling.
     - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/overlay/tooltip`
     - `primitives/pane`
+    - `primitives/path-bar`
     - `primitives/rank-reorder`
     - `primitives/setup-steps`
+    - `primitives/syntax-highlight`
     - `primitives/text-editor/composer/picker-pill`
+    - `primitives/tree`
     - `primitives/ui-context/element-picker`
     - `reorder/editor`
     - `reorder/node-types/header`

@@ -26,6 +26,7 @@ import {
 import { scopeFilterRows } from "@plugins/primitives/plugins/data-view/core";
 import type {
   ExpandChange,
+  LazyChildren,
   TreeNode,
 } from "@plugins/primitives/plugins/tree/core";
 import {
@@ -57,6 +58,7 @@ import {
   type Projected,
 } from "../internal/project-rows";
 import { EditableTreeLabel } from "./editable-tree-label";
+import { AlignedCells, AlignedHeader } from "./aligned-columns";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -177,6 +179,16 @@ function DefaultRow<TRow>(props: {
   });
   const trailing = options.trailing?.(row);
   const accent = options.rowAccent?.(row);
+  const aligned = options.columns === "aligned";
+  const trailingNode = isAlias ? (
+    <Center as="span" axis="both">
+      <Icon icon={linkIcon} className="size-3.5 text-muted-foreground" />
+    </Center>
+  ) : trailing != null ? (
+    <Center as="span" axis="both">
+      {trailing}
+    </Center>
+  ) : null;
 
   return (
     <RowChrome
@@ -194,7 +206,15 @@ function DefaultRow<TRow>(props: {
       icon={leadingIcon ?? undefined}
     >
       {label}
-      {secondaryFields.length > 0 ? (
+      {aligned ? (
+        // Aligned columns: the persistent trailing content stays beside the
+        // label, and the cells come LAST so they share one right edge with
+        // every other row and with the header.
+        <>
+          {trailingNode}
+          <AlignedCells row={row} fields={secondaryFields} />
+        </>
+      ) : secondaryFields.length > 0 ? (
         // Secondary-field chips (the tree's body fields, in Properties order),
         // sitting between the label and any persistent `options.trailing`, each
         // rendered through the shared `FieldCell` — so a field declaring
@@ -216,15 +236,7 @@ function DefaultRow<TRow>(props: {
           ))}
         </Inline>
       ) : null}
-      {isAlias ? (
-        <Center as="span" axis="both">
-          <Icon icon={linkIcon} className="size-3.5 text-muted-foreground" />
-        </Center>
-      ) : trailing != null ? (
-        <Center as="span" axis="both">
-          {trailing}
-        </Center>
-      ) : null}
+      {aligned ? null : trailingNode}
     </RowChrome>
   );
 }
@@ -594,8 +606,48 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     [optExpandOnActivate],
   );
 
+  // Lazy children, over the projection: an ALIAS node is a reference leaf, so it
+  // is never lazy (its row's listing belongs to its canonical node).
+  const hierLazy = hierarchy?.lazyChildren;
+  const lazyChildren = useMemo<LazyChildren<Projected<unknown>> | undefined>(
+    () =>
+      hierLazy
+        ? {
+            hasChildren: (p) => !p.alias && hierLazy.hasChildren(p.__row),
+            state: (p) => hierLazy.state(p.__row),
+            load: (p) => hierLazy.load(p.__row),
+          }
+        : undefined,
+    [hierLazy],
+  );
+
+  // The open gesture (double-click / Enter) resolves the REAL row — an alias
+  // opens the row it references, as its activation does.
+  const propsOnRowOpen = props.onRowOpen;
+  const onOpen = useMemo(
+    () =>
+      propsOnRowOpen
+        ? (id: string) => {
+            const original = originalById.get(realNodeId(id));
+            if (original !== undefined) propsOnRowOpen(original);
+          }
+        : undefined,
+    [propsOnRowOpen, originalById],
+  );
+
+  const aligned = options.columns === "aligned";
+
   if (!hierarchy) return null;
   if (sortedProjected.length === 0) return <>{props.emptyState}</>;
+
+  const columnHeader = aligned ? (
+    <AlignedHeader
+      primaryField={primaryField}
+      fields={secondaryFields}
+      sortHeader={props.sortHeader}
+      setSort={props.setSort}
+    />
+  ) : null;
 
   // A field sort overrides the manual (rank) order, so drag-to-reorder would
   // move a row with no visible effect — disable DnD while sorted (drop back to
@@ -662,6 +714,8 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       expandOnActivate={
         optExpandOnActivate ? wrappedExpandOnActivate : undefined
       }
+      lazyChildren={lazyChildren}
+      onOpen={onOpen}
       multiSelect={
         props.selection ? { actions: props.selection.bulkActions } : undefined
       }
@@ -707,6 +761,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
             </Sticky>
           </div>
         )}
+        {columnHeader && <div className="rail-follow">{columnHeader}</div>}
         <GroupedSections
           sections={grouped.sections}
           collapsedSections={props.collapsedSections}
@@ -743,6 +798,9 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   }
 
   return (
-    <div className="rail-follow">{renderTreeList(sortedProjected, false)}</div>
+    <div className="rail-follow">
+      {columnHeader}
+      {renderTreeList(sortedProjected, false)}
+    </div>
   );
 }

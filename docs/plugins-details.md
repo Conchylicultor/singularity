@@ -2842,21 +2842,144 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `urlSourceConfigFields`
     - **`file-explorer`** — File explorer app.
       - Plugins:
-        - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
+        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history.
           - Web:
             - Slots:
-              - `FileExplorer.Sidebar`
+              - `filesHomePane.Actions` ← `primitives.pane`
+              - `filesAtPane.Actions` ← `primitives.pane`
+            - Contributes:
+              - `Pane.Register` "files-home"
+              - `Pane.Register` "files-at"
+            - Uses:
+              - `infra/endpoints.endpointQueryKey`
+              - `infra/endpoints.fetchEndpoint`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `infra/endpoints.useEndpoint`
+              - `primitives/bar.Bar`
+              - `primitives/css/center.Center`
+              - `primitives/css/column.Column`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ResizableHandle`
+              - `primitives/css/ui-kit.ResizablePanel`
+              - `primitives/css/ui-kit.ResizablePanelGroup`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.FieldDef`
+              - `primitives/data-view.HierarchyConfig`
+              - `primitives/file-type.FileTypeIcon`
+              - `primitives/file-viewer.FileContent`
+              - `primitives/file-viewer.FileTabs`
+              - `primitives/file-viewer.useFileRenderers`
+              - `primitives/file-viewer.useOpenHostFile`
+              - `primitives/icon-button.IconButton`
+              - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
+              - `primitives/pane.Pane`
+              - `primitives/pane.SurfaceChromeContext`
+              - `primitives/pane.useOpenPane`
+              - `primitives/path-bar.PathBar`
+              - `primitives/path-bar.PathTarget`
+              - `primitives/persistent-draft.useDraft`
+              - `primitives/scope/surface-id.useSurfaceTabId`
+              - `primitives/search.SearchInput`
+              - `primitives/shortcuts.useSurfaceShortcuts`
+            - Exports (types):
+              - `ExplorerNavigator`
+              - `FileBrowserProps`
+              - `HomeDir`
+            - Exports (values):
+              - `FileBrowser`
+              - `filesAtPane`
+              - `filesHomePane`
+              - `useExplorerLocation`
+              - `useHomeDir`
+              - `useOpenExplorerFolder`
+          - Cross-plugin:
+            - Imported by: `apps/file-explorer/places`
+          - Core:
+            - Exports (types): `ExplorerLocation`
+            - Exports (values):
+              - `absolutePath`
+              - `baseName`
+              - `decodeOpenParam`
+              - `displayPath`
+              - `encodeOpenParam`
+              - `formatCount`
+              - `formatModified`
+              - `formatModifiedFull`
+              - `formatSize`
+              - `HOME`
+              - `isWithin`
+              - `joinPath`
+              - `locationKey`
+              - `parentPath`
+              - `pathChain`
+        - **`places`** — The file explorer's Places sidebar: every FileExplorer.Place (Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: the main checkout's path (GET /api/file-explorer/checkout).
+          - Web:
+            - Contributes:
+              - `FileExplorer.Sidebar` "Places" → `PlacesSidebar`
+              - `FileExplorer.Sidebar` "Storage" → `StorageMeter`
+              - `FileExplorer.Place` "home"
+              - `FileExplorer.Place` "downloads"
+              - `FileExplorer.Place` "singularity"
+              - `FileExplorer.Place` "startup-volume"
+              - `FileExplorer.Place` "trash"
+            - Uses:
+              - `apps/file-explorer/browser.useExplorerLocation`
+              - `apps/file-explorer/browser.useHomeDir`
+              - `apps/file-explorer/browser.useOpenExplorerFolder`
+              - `apps/file-explorer/shell.FileExplorer`
+              - `apps/file-explorer/shell.PlaceGroup`
+              - `apps/file-explorer/shell.PlaceItem`
+              - `apps/file-explorer/shell.PlaceState`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `infra/endpoints.useEndpoint`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.FieldDef`
+              - `ui/icons.Icon`
+          - Server:
+            - Uses: `infra/endpoints.implement`
+            - Routes: `GET /api/file-explorer/checkout`
+          - Core:
+            - Uses: `infra/endpoints.defineEndpoint`
+            - Exports (values): `fileExplorerCheckout`
+        - **`shell`** — App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Place slots.
+          - Web:
+            - Slots:
+              - `FileExplorer.Sidebar` ← `apps.file-explorer.places`
               - `FileExplorer.Toolbar`
+              - `FileExplorer.Place` ← `apps.file-explorer.places`
             - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
             - Uses:
               - `apps-core.Apps`
-              - `layouts/miller.MillerColumns`
+              - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/text.Text`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/icons.Icon`
+            - Exports (types):
+              - `PlaceGroup`
+              - `PlaceItem`
+              - `PlaceState`
             - Exports (values): `FileExplorer`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `fileExplorerApp`
+          - Cross-plugin:
+            - Imported by: `apps/file-explorer/places`
     - **`home`** — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
       - Server:
         - Contributes: `taskCategory` "apps"
@@ -8637,6 +8760,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
+      - `infra/host-fs.decodeTextBytes`
       - `infra/host/host-read-pool.withHeavyReadSlot`
       - `infra/paths.GIT`
       - `infra/paths.HOME_DIR`
@@ -8674,6 +8798,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getFileDiff`
           - `getImageContent`
           - `getPushFiles`
+      - Cross-plugin:
+        - Imported by: `primitives/file-viewer`
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.
       - Web:
         - Slots: `commitDetailPane.Actions` ← `primitives.pane`
@@ -10357,11 +10483,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `review/plugin-changes/file-changes`
           - Plugins:
-            - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.
+            - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
               - Web:
-                - Slots:
-                  - `FilePane.Renderer` ← `conversations.conversation-view.code.file-pane.diff`, `conversations.conversation-view.code.file-pane.image`, `conversations.conversation-view.code.file-pane.markdown`, `conversations.conversation-view.code.file-pane.raw`
-                  - `filePeekPane.Actions` ← `conversations.conversation-view.code.file-pane`, `primitives.pane`
+                - Slots: `filePeekPane.Actions` ← `conversations.conversation-view.code.file-pane`, `primitives.pane`
                 - Contributes:
                   - `Pane.Register` "file-peek"
                   - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
@@ -10370,89 +10494,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `code-explorer/file-resolve.useResolvedFile`
                   - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/code.useEditedFiles`
-                  - `infra/endpoints.EndpointError`
-                  - `infra/endpoints.useEndpoint`
-                  - `primitives/css/column.Column`
-                  - `primitives/css/fill.Fill`
-                  - `primitives/css/line.Line`
-                  - `primitives/css/scroll.Scroll`
-                  - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/file-viewer.FileContent`
+                  - `primitives/file-viewer.FileRenderersHandle`
+                  - `primitives/file-viewer.FileTabs`
+                  - `primitives/file-viewer.FileView`
+                  - `primitives/file-viewer.useFileRenderers`
                   - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
                   - `primitives/live-state.foldResource`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
                   - `primitives/pane.useOpenPane`
-                  - `primitives/select-scope.ContentScope`
-                  - `primitives/slot-render.renderIsolated`
-                - Exports (types):
-                  - `FileContentState`
-                  - `FileRendererContribution`
-                  - `FileRenderersHandle`
-                  - `FileRendererTarget`
-                  - `RendererMatch`
                 - Exports (values):
-                  - `FileContent`
-                  - `FilePane`
                   - `FilePaneView`
                   - `filePeekPane`
-                  - `FileTabs`
-                  - `resolveRenderers`
-                  - `useFileContent`
-                  - `useFileRenderers`
               - Cross-plugin:
                 - Imported by:
                   - `code-explorer`
                   - `conversations/conversation-view/artifacts/research`
                   - `conversations/conversation-view/artifacts/skill`
-                  - `conversations/conversation-view/code/file-pane/diff`
-                  - `conversations/conversation-view/code/file-pane/image`
-                  - `conversations/conversation-view/code/file-pane/markdown`
-                  - `conversations/conversation-view/code/file-pane/raw`
                   - `conversations/conversation-view/jsonl-viewer/file-path`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
                   - `conversations/conversation-view/markdown-extensions`
                   - `plugin-meta/plugin-view/file-tree`
-              - Plugins:
-                - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
-                  - Web:
-                    - Contributes: `FilePane.Renderer` "Diff" → `DiffOrImageView`
-                    - Uses:
-                      - `conversations/conversation-view/code/file-pane.FilePane`
-                      - `primitives/diff-view.DiffOrImageView`
-                - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
-                  - Web:
-                    - Contributes: `FilePane.Renderer` "Image" → `ImageView`
-                    - Uses:
-                      - `conversations/conversation-view/code/file-pane.FilePane`
-                      - `primitives/css/center.Center`
-                - **`markdown`** — Rendered markdown preview for .md and .mdx files.
-                  - Web:
-                    - Contributes: `FilePane.Renderer` "Markdown" → `MarkdownView`
-                    - Uses:
-                      - `conversations/conversation-view/code/file-pane.FilePane`
-                      - `conversations/conversation-view/code/file-pane.useFileContent`
-                      - `primitives/css/card.Card`
-                      - `primitives/css/placeholder.Placeholder`
-                      - `primitives/css/text.SectionLabel`
-                      - `primitives/css/text.Text`
-                      - `primitives/loading.Loading`
-                      - `primitives/markdown.Markdown`
-                - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
-                  - Web:
-                    - Contributes: `FilePane.Renderer` "Raw" → `RawView`
-                    - Uses:
-                      - `conversations/conversation-view/code/file-pane.FilePane`
-                      - `conversations/conversation-view/code/file-pane.useFileContent`
-                      - `primitives/css/placeholder.Placeholder`
-                      - `primitives/dom/scroll-reveal.revealElement`
-                      - `primitives/loading.Loading`
-                      - `primitives/syntax-highlight.languageForPath`
-                      - `primitives/syntax-highlight.SHIKI_LANGS`
-                      - `primitives/syntax-highlight.useDarkMode`
-                      - `primitives/syntax-highlight.useHighlightedHtml`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Web:
             - Slots: `conv-commits-graph.actions` ← `primitives.pane`
@@ -10884,10 +10949,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Contributes: `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
-                      - `conversations/conversation-view/jsonl-viewer/code-listing.CodeListing`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `primitives/overlay/image-viewer.ViewerThumbnail`
+                      - `primitives/syntax-highlight.CodeListing`
                 - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "command_permissions" → `CommandPermissionsView`
@@ -11198,22 +11263,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
                   - `conversations/conversation-view/running-agents`
-            - **`code-listing`** — Renders code with syntax highlighting and a line-number gutter. `CodeListing` takes actual code; `CatNListing` is the `cat -n` entry point, for callers whose content is literally `cat -n` tool output.
+            - **`code-listing`** — Renders `cat -n` tool output (`CatNListing`) as a syntax-highlighted, line-numbered listing: parses the gutter off and hands the code to syntax-highlight's `CodeListing`.
               - Web:
-                - Uses:
-                  - `primitives/css/scroll.Scroll`
-                  - `primitives/css/text.Text`
-                  - `primitives/select-scope.ContentScope`
-                  - `primitives/syntax-highlight.languageForPath`
-                  - `primitives/syntax-highlight.SHIKI_LANGS`
-                  - `primitives/syntax-highlight.useDarkMode`
-                  - `primitives/syntax-highlight.useHighlightedHtml`
-                - Exports (values):
-                  - `CatNListing`
-                  - `CodeListing`
+                - Uses: `primitives/syntax-highlight.CodeListing`
+                - Exports (values): `CatNListing`
               - Cross-plugin:
                 - Imported by:
-                  - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
                   - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
             - **`collapsible-card`** — Disclosure-card primitive: the whole header row is the toggle (no chevron; aria-expanded + an Expand/Collapse label carry the state), optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
@@ -18715,6 +18770,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
+              - `apps/file-explorer`
               - `apps/home`
               - `apps/mail/threads`
               - `apps/pages/auto-icon`
@@ -19998,6 +20054,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
+          - `apps/file-explorer/browser`
+          - `apps/file-explorer/places`
           - `apps/mail/attachments`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
@@ -20060,7 +20118,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/all-conversations`
           - `conversations/conversation-category`
           - `conversations/conversation-view`
-          - `conversations/conversation-view/code/file-pane`
           - `conversations/conversation-view/dependencies`
           - `conversations/conversation-view/drop-and-exit`
           - `conversations/conversation-view/drop-dependents`
@@ -20122,6 +20179,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/events`
           - `infra/events-test`
           - `infra/health`
+          - `infra/host-fs`
           - `infra/jobs`
           - `infra/ndjson-stream`
           - `infra/request-origin/agent-write-ledger`
@@ -20150,6 +20208,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/server-query`
           - `primitives/data-view/view-order`
           - `primitives/diff-view`
+          - `primitives/file-viewer`
           - `primitives/folder-picker`
           - `primitives/launch`
           - `primitives/live-state`
@@ -20877,6 +20936,50 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
+    - **`host-fs`** — The one host-filesystem API: list / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
+      - Server:
+        - Uses:
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `infra/paths.HOME_DIR`
+        - Exports (types): `TextBytesResult`
+        - Exports (values): `decodeTextBytes`
+        - Routes:
+          - `GET /api/host-fs/list`
+          - `GET /api/host-fs/stat`
+          - `GET /api/host-fs/complete`
+          - `GET /api/host-fs/text`
+          - `GET /api/host-fs/raw`
+          - `GET /api/host-fs/volume`
+          - `POST /api/host-fs/open`
+      - Core:
+        - Uses:
+          - `infra/endpoints.blob`
+          - `infra/endpoints.defineEndpoint`
+        - Exports (types):
+          - `HostFsCompleteResult`
+          - `HostFsEntry`
+          - `HostFsEntryKind`
+          - `HostFsListResult`
+          - `HostFsOpenResult`
+          - `HostFsStatResult`
+          - `HostFsTextResult`
+          - `HostFsVolumeResult`
+        - Exports (values):
+          - `HOST_FS_COMPLETE_LIMIT`
+          - `HOST_FS_TEXT_MAX_BYTES`
+          - `hostFileUrl`
+          - `hostFsComplete`
+          - `hostFsList`
+          - `hostFsOpen`
+          - `hostFsRaw`
+          - `hostFsStat`
+          - `hostFsText`
+          - `hostFsVolume`
+      - Cross-plugin:
+        - Imported by:
+          - `code-explorer`
+          - `primitives/file-viewer`
     - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
       - Cross-plugin:
         - Imported by: `apps/prototypes/files`
@@ -21498,6 +21601,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/guards`
           - `infra/claude-cli/availability`
           - `infra/git/git-watcher`
+          - `infra/host-fs`
           - `infra/jobs/supervised-job`
           - `infra/launcher`
           - `infra/worktree`
@@ -22525,6 +22629,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/chord/shell`
+          - `apps/file-explorer/shell`
           - `apps/sonata/shell`
           - `apps/website/shell`
           - `layouts/host`
@@ -22574,7 +22679,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/debug/shell`
           - `apps/deploy/shell`
           - `apps/events/shell`
-          - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/mail/shell`
           - `apps/pages/shell`
@@ -26788,6 +26892,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/shell`
           - `apps/browser/tabs`
           - `apps/chord/shell`
+          - `apps/file-explorer/browser`
           - `conversations/conversation-view`
           - `primitives/app-shell`
           - `primitives/pane`
@@ -26821,6 +26926,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `plugin-meta/plugin-view`
           - `primitives/filepath-breadcrumb`
+          - `primitives/path-bar`
           - `ui/breadcrumb-separator`
       - Core:
         - Exports (types): `BreadcrumbSeparatorProps`
@@ -27226,7 +27332,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/landing/hero`
               - `apps/website/landing/layers`
               - `apps/website/pages/download`
-              - `conversations/conversation-view/code/file-pane/markdown`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `debug/trace/contention`
@@ -27235,6 +27340,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/place`
               - `primitives/css/layout-harness`
               - `primitives/data-view/gallery`
+              - `primitives/file-viewer/markdown`
               - `primitives/metrics`
               - `primitives/metrics/chart-kit`
               - `primitives/section-card`
@@ -27259,6 +27365,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/events/shell`
+              - `apps/file-explorer/browser`
               - `apps/home/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
@@ -27281,7 +27388,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/agents`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view`
-              - `conversations/conversation-view/code/file-pane/image`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
@@ -27328,6 +27434,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/tree`
               - `primitives/date-picker`
               - `primitives/diff-view`
+              - `primitives/file-viewer`
+              - `primitives/file-viewer/image`
               - `primitives/folder-picker`
               - `primitives/icon-picker`
               - `primitives/live-state`
@@ -27367,6 +27475,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/shell`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
+              - `apps/file-explorer/places`
               - `apps/pages/page-tree`
               - `apps/pages/welcome/recent-pages`
               - `apps/sonata/library`
@@ -27519,6 +27628,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/chord/shell`
+              - `apps/file-explorer/browser`
               - `apps/home/shell`
               - `apps/mail/shell`
               - `apps/prototypes/canvas`
@@ -27527,13 +27637,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/graph`
               - `code-explorer/commit-detail`
               - `config_v2/settings`
-              - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/commits-graph`
               - `debug/boot-profile`
               - `debug/profiling`
               - `debug/timeline`
               - `history/dialog`
               - `primitives/diff-view`
+              - `primitives/file-viewer`
               - `primitives/outline/rail`
               - `primitives/pane`
               - `primitives/tabbed-view`
@@ -27691,6 +27801,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/status`
+              - `apps/file-explorer/browser`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/mail/sync-status`
@@ -27716,7 +27827,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-ui/item`
               - `conversations/conversation-ui/row`
               - `conversations/conversation-view/artifacts`
-              - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/commits-graph`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer`
@@ -27775,9 +27885,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/commit-list`
               - `primitives/data-view/capsule-toolbar`
               - `primitives/data-view/list`
+              - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
               - `primitives/date-picker`
               - `primitives/error-boundary`
+              - `primitives/file-viewer`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/launch`
@@ -27791,6 +27903,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/setup-steps`
               - `primitives/text-editor/composer`
               - `primitives/text-editor/composer/picker-pill`
+              - `primitives/tree`
               - `primitives/ui-context/element-picker`
               - `review/code-review`
               - `review/plugin-changes`
@@ -27885,6 +27998,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/ssh-setup`
               - `apps/events/shell`
+              - `apps/file-explorer/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/mail/sync-status`
@@ -28068,6 +28182,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/status`
+              - `apps/file-explorer/browser`
               - `apps/mail/search`
               - `apps/mail/threads`
               - `apps/pages/history`
@@ -28081,7 +28196,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer/commit-detail`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view/artifacts`
-              - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/subagents`
@@ -28120,6 +28234,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/capsule-toolbar`
               - `primitives/date-picker`
               - `primitives/error-boundary`
+              - `primitives/file-viewer`
               - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/outline/rail`
@@ -28297,6 +28412,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
+              - `apps/file-explorer/browser`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/pages/history`
@@ -28317,8 +28433,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/fields`
               - `config_v2/settings`
               - `conversations/agents`
-              - `conversations/conversation-view/code/file-pane/markdown`
-              - `conversations/conversation-view/code/file-pane/raw`
               - `conversations/conversation-view/commits-graph`
               - `conversations/recover`
               - `debug/boot-profile`
@@ -28353,6 +28467,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/cursor-pagination`
               - `primitives/data-view`
               - `primitives/diff-view`
+              - `primitives/file-viewer`
+              - `primitives/file-viewer/code`
+              - `primitives/file-viewer/markdown`
               - `primitives/folder-picker`
               - `primitives/live-state`
               - `primitives/loading`
@@ -28470,9 +28587,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/commit-list`
               - `primitives/data-view`
               - `primitives/data-view/list`
+              - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
               - `primitives/graph-canvas`
               - `primitives/loading`
+              - `primitives/path-bar`
               - `primitives/search`
               - `primitives/text-editor/composer`
               - `primitives/ui-context/element-picker`
@@ -28593,6 +28712,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
               - `apps/chord/trainer`
+              - `apps/file-explorer/browser`
+              - `apps/file-explorer/places`
               - `apps/mail/reading-pane`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
@@ -28614,7 +28735,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer/file-resolve`
               - `config_v2/settings`
               - `conversations/conversation-preprompt`
-              - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
@@ -28626,7 +28746,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
               - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
-              - `conversations/conversation-view/jsonl-viewer/code-listing`
               - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -28664,6 +28783,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/layout-harness`
               - `primitives/data-view`
               - `primitives/diff-view`
+              - `primitives/file-viewer`
               - `primitives/folder-picker`
               - `primitives/icon-picker`
               - `primitives/log-channels`
@@ -28772,6 +28892,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
+              - `apps/file-explorer/browser`
+              - `apps/file-explorer/places`
               - `apps/home/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
@@ -28850,7 +28972,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/artifacts/prototype`
               - `conversations/conversation-view/artifacts/research`
               - `conversations/conversation-view/branch`
-              - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/commits-graph`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/fork-conversation`
@@ -29008,6 +29129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/detail-sections`
               - `primitives/diff-view`
               - `primitives/expandable`
+              - `primitives/file-viewer`
               - `primitives/filter-chips`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
@@ -29025,6 +29147,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/overlay/tooltip`
               - `primitives/pane`
+              - `primitives/path-bar`
               - `primitives/prompt-editor`
               - `primitives/row-actions`
               - `primitives/setup-steps`
@@ -29075,6 +29198,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/color-adjust`
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
+              - `ui/tokens/file-type-palette`
               - `ui/tokens/font-family`
               - `ui/tokens/icons`
               - `ui/tokens/scrollbar`
@@ -29312,6 +29436,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
+              - `apps/file-explorer/browser`
+              - `apps/file-explorer/places`
+              - `apps/file-explorer/shell`
               - `apps/home/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
@@ -29392,7 +29519,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/branch`
               - `conversations/conversation-view/code/file-pane`
-              - `conversations/conversation-view/code/file-pane/markdown`
               - `conversations/conversation-view/commits-graph`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer`
@@ -29416,7 +29542,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
-              - `conversations/conversation-view/jsonl-viewer/code-listing`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/event-counter`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
@@ -29547,6 +29672,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/date-picker`
               - `primitives/diff-view`
               - `primitives/error-boundary`
+              - `primitives/file-viewer`
+              - `primitives/file-viewer/markdown`
               - `primitives/filter-chips`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
@@ -29561,9 +29688,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/overlay/tooltip`
               - `primitives/pane`
+              - `primitives/path-bar`
               - `primitives/rank-reorder`
               - `primitives/setup-steps`
+              - `primitives/syntax-highlight`
               - `primitives/text-editor/composer/picker-pill`
+              - `primitives/tree`
               - `primitives/ui-context/element-picker`
               - `reorder/editor`
               - `reorder/node-types/header`
@@ -29686,7 +29816,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/fields`
               - `config_v2/settings`
               - `conversations/conversation-ui/chip`
-              - `conversations/conversation-view/code/file-pane`
               - `debug/broadcasts`
               - `debug/queue`
               - `debug/timeline`
@@ -29697,6 +29826,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/place`
               - `primitives/data-view`
               - `primitives/data-view/view-core`
+              - `primitives/file-viewer`
               - `primitives/filter-chips`
               - `primitives/metrics`
               - `primitives/text-editor/composer`
@@ -29877,6 +30007,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/ssh-setup`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/schedule`
+              - `apps/file-explorer/browser`
               - `apps/home/app-cards`
               - `apps/mail/reading-pane`
               - `apps/mail/sync-status`
@@ -30114,6 +30245,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/view-core`
               - `primitives/date-picker`
               - `primitives/dom/auto-scroll`
+              - `primitives/file-viewer`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/hover-reveal`
@@ -30137,6 +30269,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/surface-overlay`
               - `primitives/overlay/tooltip`
               - `primitives/pane`
+              - `primitives/path-bar`
               - `primitives/prompt-editor`
               - `primitives/prompt-editor/voice-input`
               - `primitives/row-actions`
@@ -30372,7 +30505,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
-          - `ConfigV2.WebRegister` ×43: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+          - `ConfigV2.WebRegister` ×45: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
           - `DataViewSlots.Setting` "data-view.fold" → `FoldControl`
@@ -30581,7 +30714,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useServerDataSource`
           - `useSortController`
       - Server:
-        - Contributes: `ConfigV2.Register` ×43: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+        - Contributes: `ConfigV2.Register` ×45: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
         - Uses:
           - `config_v2.getConfig`
           - `config_v2.watchConfig`
@@ -30599,6 +30732,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/events/sources/source-detail/runs/extracted-events`
+          - `apps/file-explorer/browser`
+          - `apps/file-explorer/places`
           - `apps/home/app-cards`
           - `apps/mail/threads`
           - `apps/pages/page-tree`
@@ -30690,6 +30825,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewProps`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
+          - `DataViewSearch`
           - `DataViewSection`
           - `DataViewSurfaceChrome`
           - `DataViewToolbarSpec`
@@ -31062,11 +31198,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/collapsible.ExpandAllButton`
               - `primitives/css/center.Center`
+              - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/data-view.DATA_VIEW_HEADER_OFFSET_VAR`
               - `primitives/data-view.DataViewRenderProps`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FieldCell`
@@ -31084,6 +31223,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.RowTone`
               - `primitives/data-view.rowToneClass`
+              - `primitives/data-view.SortRule`
               - `primitives/data-view.useGroupingRegistry`
               - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
@@ -31379,9 +31519,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `code-explorer/commit-detail`
           - `config_v2/settings`
-          - `conversations/conversation-view/code/file-pane/diff`
           - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
+          - `primitives/file-viewer/diff`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
@@ -31524,12 +31664,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/ultimate-guitar`
-              - `conversations/conversation-view/code/file-pane/raw`
               - `conversations/conversation-view/jsonl-viewer`
               - `page/editor`
               - `page/map`
               - `primitives/command-palette`
               - `primitives/outline/rail`
+              - `primitives/syntax-highlight`
               - `primitives/tree`
               - `search/quick-find`
     - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
@@ -31644,6 +31784,139 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `URL_RE`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/markdown-extensions`
+    - **`file-type`** — <FileTypeIcon name isDir? open?/>: a directory as the Material folder in the --folder colour, a file as its Seti glyph tinted by its file-type tone.
+      - Web:
+        - Uses: `ui/icons.Icon`
+        - Exports (types): `FileTypeIconProps`
+        - Exports (values): `FileTypeIcon`
+      - Core:
+        - Uses:
+          - `ui/icons.seti`
+          - `ui/icons.SetiRef`
+        - Exports (types):
+          - `FilePreview`
+          - `FileTone`
+          - `FileToneTokenKey`
+          - `FileType`
+        - Exports (values):
+          - `FILE_TONES`
+          - `fileToneColor`
+          - `fileTypeOf`
+          - `FOLDER_COLOR`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/file-explorer/browser`
+          - `primitives/file-viewer`
+    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText reading a FileRef from the host (infra/host-fs) or a git checkout (code-api).
+      - Web:
+        - Slots: `FileViewer.Renderer` ← `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`
+        - Uses:
+          - `infra/endpoints.EndpointError`
+          - `infra/endpoints.useEndpoint`
+          - `infra/endpoints.useEndpointMutation`
+          - `primitives/css/center.Center`
+          - `primitives/css/column.Column`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/toggle-chip.ToggleChip`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/file-type.FileTypeIcon`
+          - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+          - `primitives/select-scope.ContentScope`
+          - `primitives/slot-render.renderIsolated`
+          - `shell/toast.showToast`
+          - `ui/icons.Icon`
+        - Exports (types):
+          - `FileRendererContribution`
+          - `FileRendererProps`
+          - `FileRenderersHandle`
+          - `FileRendererTarget`
+          - `FileTextState`
+          - `FileTextUnavailable`
+          - `RendererMatch`
+          - `ResolvedRenderer`
+        - Exports (values):
+          - `FileContent`
+          - `FileTabs`
+          - `fileTextUnavailableMessage`
+          - `FileView`
+          - `FileViewer`
+          - `NoPreview`
+          - `resolveRenderers`
+          - `useFileRenderers`
+          - `useFileText`
+          - `useOpenHostFile`
+      - Core:
+        - Uses:
+          - `code-explorer/code-api.codeImageUrl`
+          - `infra/host-fs.hostFileUrl`
+        - Exports (types):
+          - `FileGitStatus`
+          - `FileRef`
+        - Exports (values):
+          - `fileExtension`
+          - `fileRefKey`
+          - `fileRefName`
+          - `fileUrl`
+          - `isBinaryPath`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/file-explorer/browser`
+          - `conversations/conversation-view/code/file-pane`
+          - `primitives/file-viewer/code`
+          - `primitives/file-viewer/diff`
+          - `primitives/file-viewer/fallback`
+          - `primitives/file-viewer/image`
+          - `primitives/file-viewer/markdown`
+      - Plugins:
+        - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
+          - Web:
+            - Contributes: `FileViewer.Renderer` "Code" → `CodeView`
+            - Uses:
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/file-viewer.FileRendererProps`
+              - `primitives/file-viewer.fileTextUnavailableMessage`
+              - `primitives/file-viewer.FileViewer`
+              - `primitives/file-viewer.NoPreview`
+              - `primitives/file-viewer.useFileText`
+              - `primitives/loading.Loading`
+              - `primitives/syntax-highlight.CodeListing`
+        - **`diff`** — Side-by-side diff of a changed checkout file vs HEAD — a contextual tab, offered only when the host reports a non-clean git status.
+          - Web:
+            - Contributes: `FileViewer.Renderer` "Diff" → `FileDiffView`
+            - Uses:
+              - `primitives/diff-view.DiffOrImageView`
+              - `primitives/file-viewer.FileViewer`
+        - **`fallback`** — Last-resort renderer for a file no other renderer offers to show (binary formats): a large file icon, "No preview for <kind> files", and Open with default app for a host file.
+          - Web:
+            - Contributes: `FileViewer.Renderer` "Info" → `NoPreview`
+            - Uses:
+              - `primitives/file-viewer.FileViewer`
+              - `primitives/file-viewer.NoPreview`
+        - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
+          - Web:
+            - Contributes: `FileViewer.Renderer` "Image" → `ImageView`
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/file-viewer.FileViewer`
+        - **`markdown`** — Rendered markdown preview for .md and .mdx files.
+          - Web:
+            - Contributes: `FileViewer.Renderer` "Markdown" → `MarkdownView`
+            - Uses:
+              - `primitives/css/card.Card`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/text.SectionLabel`
+              - `primitives/css/text.Text`
+              - `primitives/file-viewer.FileRendererProps`
+              - `primitives/file-viewer.fileTextUnavailableMessage`
+              - `primitives/file-viewer.FileViewer`
+              - `primitives/file-viewer.useFileText`
+              - `primitives/loading.Loading`
+              - `primitives/markdown.Markdown`
     - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
       - Web:
         - Uses:
@@ -31655,6 +31928,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `conversations/conversation-view/code/file-pane`
+          - `primitives/file-viewer`
           - `primitives/folder-picker`
     - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
       - Web:
@@ -31675,7 +31949,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/contributions`
           - `debug/claude-cli-calls`
           - `debug/queue`
-    - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
+    - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory.
       - Web:
         - Uses:
           - `infra/endpoints.getEndpointErrorMessage`
@@ -31703,14 +31977,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FolderPicker`
           - `FolderPickerPopover`
           - `useHostDir`
-      - Server:
-        - Uses:
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-        - Routes: `GET /api/primitives/folder-picker/browse`
-      - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
-        - Exports (values): `browseHostDir`
       - Cross-plugin:
         - Imported by: `fields/directory-path/config`
     - **`graph-canvas`** — Generic dagre+xyflow graph canvas primitive: a pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API. Read-only by default, with opt-in editor affordances (hover connect handles + onConnect, node/edge action overlays, group-background layers, smoothstep edges).
@@ -31769,6 +32035,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view`
           - `primitives/data-view/view-core`
           - `primitives/overlay/image-viewer`
+          - `primitives/path-bar`
           - `primitives/text-editor/inline-chip`
           - `primitives/text-editor/paste-images`
           - `tasks/task-description`
@@ -31807,6 +32074,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/servers`
           - `apps/events/sources`
           - `apps/events/sources/refresh-all`
+          - `apps/file-explorer/browser`
           - `apps/mail/reading-pane`
           - `apps/pages/copy-id`
           - `apps/pages/history`
@@ -31880,6 +32148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/metrics`
           - `primitives/overlay/image-viewer`
           - `primitives/pane`
+          - `primitives/path-bar`
           - `primitives/prompt-editor/voice-input`
           - `primitives/sync-status`
           - `primitives/tree`
@@ -32021,6 +32290,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/outline/scroll-spy`
           - `primitives/overlay/image-viewer`
           - `primitives/pane`
+          - `primitives/path-bar`
           - `primitives/prompt-editor/voice-input`
           - `primitives/scope/scoped-store`
           - `primitives/shortcuts`
@@ -32424,6 +32694,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/color-adjust`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
+          - `ui/tokens/file-type-palette`
           - `ui/tokens/font-family`
           - `ui/tokens/icons`
           - `ui/tokens/scrollbar`
@@ -32501,6 +32772,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
           - `apps/events/sources/source-detail/status`
+          - `apps/file-explorer/browser`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
           - `apps/mail/shell`
@@ -32552,8 +32824,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/artifacts/page`
           - `conversations/conversation-view/artifacts/prototype`
           - `conversations/conversation-view/artifacts/screenshot`
-          - `conversations/conversation-view/code/file-pane/markdown`
-          - `conversations/conversation-view/code/file-pane/raw`
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
@@ -32598,6 +32868,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/cursor-pagination`
           - `primitives/data-view`
           - `primitives/diff-view`
+          - `primitives/file-viewer/code`
+          - `primitives/file-viewer/markdown`
           - `primitives/folder-picker`
           - `primitives/icon-picker`
           - `primitives/lazy-component`
@@ -32606,6 +32878,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/metrics/chart-kit`
           - `primitives/overlay/image-viewer`
           - `primitives/pane`
+          - `primitives/tree`
           - `review`
           - `review/code-review`
           - `review/plugin-changes`
@@ -32630,6 +32903,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/color-adjust`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
+          - `ui/tokens/file-type-palette`
           - `ui/tokens/font-family`
           - `ui/tokens/icons`
           - `ui/tokens/scrollbar`
@@ -32775,7 +33049,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `active-data`
-          - `conversations/conversation-view/code/file-pane/markdown`
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
@@ -32783,6 +33056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/markdown-extensions`
           - `debug/memory`
+          - `primitives/file-viewer/markdown`
     - **`metrics`** — Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails (ResourceResult reads — the details one paged — keyed by the source's metricRevision, so a source change refetches without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the catalog / query / details endpoints evaluating any of them through the one tz-aware bucketing engine, the sqlFlow / sqlLevel helpers joining a table against the engine's intervals, and the metricRevision live value each source's `changes` moves.
       - Server:
         - Contributes: `resource.declare` "metrics.revision"
@@ -33272,6 +33546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `page/formatting/link`
+              - `primitives/path-bar`
               - `primitives/text-editor/caret-trigger`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
@@ -33569,7 +33844,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.file-explorer.browser`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Contributes:
           - `plugin-conv-side.actions` "title" → `PaneTitleItem`
           - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -33582,6 +33857,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `eventSourcesPane.Actions` "title" → `PaneTitleItem`
           - `eventSourceDetailPane.Actions` "title" → `PaneTitleItem`
           - `eventSourceRunPane.Actions` "title" → `PaneTitleItem`
+          - `filesHomePane.Actions` "title" → `PaneTitleItem`
+          - `filesAtPane.Actions` "title" → `PaneTitleItem`
           - `threadPane.Actions` "title" → `PaneTitleItem`
           - `mail-search.actions` "title" → `PaneTitleItem`
           - `mail-message.actions` "title" → `PaneTitleItem`
@@ -33816,6 +34093,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/shell`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
+          - `apps/file-explorer/browser`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/mail/reading-pane`
@@ -33973,6 +34251,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types): `Passthrough`
         - Exports (values): `splitPassthrough`
+    - **`path-bar`** — Dolphin-style editable path bar: a breadcrumb (primitives/breadcrumb) that flips to a mono text field on a press of its empty space, the pencil or ⌘L, with a folder-completion combobox (↑/↓, Tab completes, Enter commits, Esc/blur revert, an invalid path stays in the field marked bad). Generic over a PathBarSource (segments / complete / validate), so it imports no filesystem.
+      - Web:
+        - Uses:
+          - `primitives/breadcrumb.Breadcrumb`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.ControlSize`
+          - `primitives/css/ui-kit.Input`
+          - `primitives/css/ui-kit.useControlSize`
+          - `primitives/hover-reveal.hoverRevealGroup`
+          - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/icon-button.IconButton`
+          - `primitives/latest-ref.useEventCallback`
+          - `primitives/overlay/floating-surface.FloatingSurface`
+          - `primitives/shortcuts.useSurfaceShortcuts`
+        - Exports (types):
+          - `PathBarProps`
+          - `PathBarSource`
+          - `PathResolution`
+          - `PathSegment`
+          - `PathTarget`
+        - Exports (values): `PathBar`
+      - Cross-plugin:
+        - Imported by: `apps/file-explorer/browser`
     - **`perfs`** — Umbrella for client-side performance primitives.
       - Plugins:
         - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace.
@@ -34015,6 +34319,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
         - Imported by:
+          - `apps/file-explorer/browser`
           - `apps/prototypes/canvas`
           - `apps/sonata/library`
           - `apps/sonata/rich/chord-readout`
@@ -34306,6 +34611,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/tabs`
+              - `apps/file-explorer/browser`
               - `apps/home/app-cards`
               - `apps/sonata/controls`
               - `conversations/conversation-view`
@@ -34356,6 +34662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper`
           - `apps/browser/omnibox`
           - `apps/browser/start-page`
+          - `apps/file-explorer/browser`
           - `apps/mail/search`
           - `apps/sonata/sources/ultimate-guitar`
           - `apps/sonata/track-mixer`
@@ -34386,14 +34693,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
       - Cross-plugin:
         - Imported by:
-          - `conversations/conversation-view/code/file-pane`
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
-          - `conversations/conversation-view/jsonl-viewer/code-listing`
           - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
           - `conversations/conversation-view/jsonl-viewer/user-text`
           - `page/editor`
           - `primitives/css/surface`
           - `primitives/css/ui-kit`
+          - `primitives/file-viewer`
           - `primitives/pane`
           - `primitives/syntax-highlight`
           - `shell/toast`
@@ -34459,6 +34765,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/solo`
           - `apps-core/tabs`
           - `apps/chord/trainer`
+          - `apps/file-explorer/browser`
           - `apps/prototypes/canvas`
           - `apps/prototypes/present`
           - `apps/sonata/controls`
@@ -34470,6 +34777,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/launch`
           - `primitives/overlay/image-viewer`
           - `primitives/overlay/imperative-dialog/confirm`
+          - `primitives/path-bar`
           - `primitives/undo-redo`
           - `reorder/edit-mode`
           - `tasks/task-draft-form`
@@ -34546,7 +34854,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view`
           - `conversations/conversation-view/action-bar`
           - `conversations/conversation-view/artifacts`
-          - `conversations/conversation-view/code/file-pane`
           - `conversations/conversation-view/exit-menu`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/attachment`
@@ -34567,6 +34874,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view`
           - `primitives/detail-sections`
           - `primitives/error-boundary`
+          - `primitives/file-viewer`
           - `primitives/pane`
           - `primitives/prompt-editor`
           - `primitives/tabbed-view`
@@ -34637,15 +34945,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `primitives/editable-field`
           - `primitives/optimistic-mutation`
-    - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
+    - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, a <HighlightedCode> component for plugins rendering code, and <CodeListing> — the line-numbered listing (block or full-pane, optional highlighted line) behind transcript Read results and the file viewer's Code tab.
       - Web:
         - Uses:
           - `primitives/css/scroll.Scroll`
+          - `primitives/css/text.Text`
+          - `primitives/dom/scroll-reveal.revealElement`
           - `primitives/select-scope.ContentScope`
         - Exports (types):
+          - `CodeListingProps`
+          - `CodeListingVariant`
           - `HighlightedHtmlResult`
           - `UseHighlightedHtmlOptions`
         - Exports (values):
+          - `CodeListing`
           - `getHighlighter`
           - `HighlightedCode`
           - `languageForPath`
@@ -34657,7 +34970,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `config_v2/settings`
-          - `conversations/conversation-view/code/file-pane/raw`
+          - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
           - `conversations/conversation-view/jsonl-viewer/code-listing`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -34666,6 +34979,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/code-block`
           - `page/read-only-view`
           - `primitives/diff-view`
+          - `primitives/file-viewer/code`
           - `primitives/markdown`
           - `ui/theme-engine/theme-gallery`
     - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
@@ -34993,10 +35307,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/collapsible.ExpandAllButton`
           - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
           - `primitives/css/layer.layerClasses`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
+          - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.DropdownMenu`
@@ -35005,6 +35321,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DropdownMenuTrigger`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
+          - `primitives/loading.Loading`
           - `primitives/multi-select.MultiSelectProvider`
           - `primitives/multi-select.SelectionBar`
           - `primitives/multi-select.SelectionCheckbox`
@@ -35051,6 +35368,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `DropZone`
           - `ExpandChange`
+          - `LazyChildren`
+          - `TreeChildrenState`
           - `TreeDisclosureProps`
           - `TreeNode`
         - Exports (values):
@@ -35478,7 +35797,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×221: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.WebRegister` ×223: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -35508,7 +35827,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×220: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.Register` ×222: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -36826,6 +37145,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `page/url-paste`
           - `primitives/data-view`
+          - `primitives/file-viewer`
           - `shell/notifications`
       - Core:
         - Exports (types):
@@ -38540,7 +38860,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/ui-kit.cn`
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
-    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon).
+    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
         - Imported by:
           - `active-data/commit-link`
@@ -38565,6 +38885,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/shell`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
+          - `apps/file-explorer/places`
+          - `apps/file-explorer/shell`
           - `apps/home/app-cards`
           - `apps/mail/attachments`
           - `apps/mail/reading-pane`
@@ -38788,6 +39110,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/detail-sections`
           - `primitives/dom/auto-scroll`
           - `primitives/expandable`
+          - `primitives/file-type`
+          - `primitives/file-viewer`
           - `primitives/folder-picker`
           - `primitives/icon-button`
           - `primitives/icon-picker`
@@ -38847,14 +39171,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `provideSprite`
           - `useIconStyle`
           - `usePublishIconStyle`
+          - `useWantedSprites`
           - `useWantedStyleKeys`
       - Server:
         - Exports (types):
           - `IconBody`
           - `SymbolSets`
         - Exports (values):
+          - `readSetiSet`
           - `resolveIcon`
           - `resolveSymbol`
+          - `SETI_SET`
           - `symbolBody`
       - Core:
         - Exports (types):
@@ -38867,6 +39194,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `IconWeight`
           - `RuntimeSymbolRef`
           - `SavedSymbolName`
+          - `SetiName`
+          - `SetiRef`
           - `SpriteKey`
           - `StyleKey`
           - `SymbolName`
@@ -38883,11 +39212,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ICON_SHAPES`
           - `ICON_WEIGHTS`
           - `iconifyName`
+          - `isSpriteKey`
           - `isStyleKey`
           - `parseStyleKey`
           - `resolveSymbolStyle`
           - `runtimeSymbol`
           - `runtimeSymbolId`
+          - `seti`
+          - `SETI_SPRITE`
+          - `setiId`
           - `styleKeyOf`
           - `symbol`
           - `symbolId`
@@ -38895,13 +39228,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types): `SymbolNameList`
         - Exports (values):
           - `brandNames`
+          - `buildSetiSet`
           - `ICON_SET_PACKAGES`
           - `installedSetVersions`
+          - `normalizeSetiSvg`
           - `readIconSet`
           - `readInputsHash`
           - `readListInputsHash`
+          - `readSetiIdentity`
+          - `renderSetiNames`
           - `renderSymbolNameList`
           - `renderSymbolNames`
+          - `SETI_JSON_REL_PATH`
+          - `SETI_LICENSE_REL_PATH`
+          - `SETI_NAMES_REL_PATH`
+          - `SETI_NORMALIZER_VERSION`
+          - `SETI_SOURCE`
+          - `setiIdentity`
           - `SYMBOL_NAME_LIST_REL_PATH`
           - `SYMBOL_NAMES_REL_PATH`
           - `symbolBaseNames`
@@ -38957,6 +39300,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/icons.installRuntimeSymbolLoader`
               - `ui/icons.provideRuntimeSymbols`
               - `ui/icons.provideSprite`
+              - `ui/icons.useWantedSprites`
               - `ui/icons.useWantedStyleKeys`
           - Server:
             - Contributes:
@@ -38965,8 +39309,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `resource.declare` "icons.saved-sprites"
             - Uses:
               - `network/live.serveValue`
+              - `ui/icons.readSetiSet`
               - `ui/icons.resolveIcon`
               - `ui/icons.resolveSymbol`
+              - `ui/icons.SETI_SET`
               - `ui/icons.SymbolSets`
             - Exports (types): `SavedIconSource`
             - Exports (values): `defineSavedIconSource`
@@ -39235,7 +39581,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
-          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
@@ -39354,6 +39700,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/chart`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
+          - `ui/tokens/file-type-palette`
           - `ui/tokens/font-family`
           - `ui/tokens/font-family/google-fonts`
           - `ui/tokens/icons`
@@ -39478,7 +39825,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
-              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
               - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
             - Uses:
@@ -39539,6 +39886,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/color-adjust`
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
+              - `ui/tokens/file-type-palette`
               - `ui/tokens/font-family`
               - `ui/tokens/icons`
               - `ui/tokens/scrollbar`
@@ -39697,6 +40045,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `DensityTokenValues`
             - Exports (values): `densityGroup`
+        - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint, with their customizer section.
+          - Web:
+            - Contributes:
+              - `ThemeEngine.TokenGroup` "File types"
+              - `ThemeCustomizer.Section` "File types" → `FileTypePaletteSection`
+            - Uses:
+              - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
+              - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses:
+              - `ui/theme-engine.defineTokenGroup`
+              - `ui/theme-engine.TokenGroupSchema`
+            - Exports (types): `FileTypePaletteValues`
+            - Exports (values): `fileTypePaletteGroup`
         - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing) with its customizer section.
           - Web:
             - Contributes:

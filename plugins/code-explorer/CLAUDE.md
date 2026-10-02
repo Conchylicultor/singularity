@@ -61,6 +61,7 @@ worktrees, which is deliberate: repo paths coincide.
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/host-fs.decodeTextBytes`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.GIT`
     - `infra/paths.HOME_DIR`

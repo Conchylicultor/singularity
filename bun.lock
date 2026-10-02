@@ -458,6 +458,14 @@
       "name": "@singularity/plugin-apps-file-explorer",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/file-explorer/plugins/browser": {
+      "name": "@singularity/plugin-apps-file-explorer-browser",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/file-explorer/plugins/places": {
+      "name": "@singularity/plugin-apps-file-explorer-places",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/file-explorer/plugins/shell": {
       "name": "@singularity/plugin-apps-file-explorer-shell",
       "version": "0.0.1",
@@ -1395,22 +1403,6 @@
     },
     "plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane": {
       "name": "@singularity/plugin-conversations-conversation-view-code-file-pane",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff": {
-      "name": "@singularity/plugin-conversations-conversation-view-code-file-pane-diff",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/image": {
-      "name": "@singularity/plugin-conversations-conversation-view-code-file-pane-image",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/markdown": {
-      "name": "@singularity/plugin-conversations-conversation-view-code-file-pane-markdown",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/raw": {
-      "name": "@singularity/plugin-conversations-conversation-view-code-file-pane-raw",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/commits-graph": {
@@ -3331,6 +3323,10 @@
       "name": "@singularity/plugin-infra-host",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/host-fs": {
+      "name": "@singularity/plugin-infra-host-fs",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/host/plugins/contention": {
       "name": "@singularity/plugin-infra-host-contention",
       "version": "0.0.1",
@@ -4561,6 +4557,34 @@
       "name": "@singularity/plugin-primitives-file-links",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/file-type": {
+      "name": "@singularity/plugin-primitives-file-type",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/file-viewer": {
+      "name": "@singularity/plugin-primitives-file-viewer",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/file-viewer/plugins/code": {
+      "name": "@singularity/plugin-primitives-file-viewer-code",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/file-viewer/plugins/diff": {
+      "name": "@singularity/plugin-primitives-file-viewer-diff",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/file-viewer/plugins/fallback": {
+      "name": "@singularity/plugin-primitives-file-viewer-fallback",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/file-viewer/plugins/image": {
+      "name": "@singularity/plugin-primitives-file-viewer-image",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/file-viewer/plugins/markdown": {
+      "name": "@singularity/plugin-primitives-file-viewer-markdown",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/filepath-breadcrumb": {
       "name": "@singularity/plugin-primitives-filepath-breadcrumb",
       "version": "0.0.1",
@@ -4726,6 +4750,10 @@
     },
     "plugins/primitives/plugins/passthrough": {
       "name": "@singularity/plugin-primitives-passthrough",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/path-bar": {
+      "name": "@singularity/plugin-primitives-path-bar",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/perfs": {
@@ -5445,6 +5473,10 @@
     },
     "plugins/ui/plugins/tokens/plugins/density": {
       "name": "@singularity/plugin-ui-tokens-density",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/file-type-palette": {
+      "name": "@singularity/plugin-ui-tokens-file-type-palette",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/font-family": {
@@ -6314,6 +6346,10 @@
 
     "@singularity/plugin-apps-file-explorer": ["@singularity/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
 
+    "@singularity/plugin-apps-file-explorer-browser": ["@singularity/plugin-apps-file-explorer-browser@workspace:plugins/apps/plugins/file-explorer/plugins/browser"],
+
+    "@singularity/plugin-apps-file-explorer-places": ["@singularity/plugin-apps-file-explorer-places@workspace:plugins/apps/plugins/file-explorer/plugins/places"],
+
     "@singularity/plugin-apps-file-explorer-shell": ["@singularity/plugin-apps-file-explorer-shell@workspace:plugins/apps/plugins/file-explorer/plugins/shell"],
 
     "@singularity/plugin-apps-home": ["@singularity/plugin-apps-home@workspace:plugins/apps/plugins/home"],
@@ -6767,14 +6803,6 @@
     "@singularity/plugin-conversations-conversation-view-code": ["@singularity/plugin-conversations-conversation-view-code@workspace:plugins/conversations/plugins/conversation-view/plugins/code"],
 
     "@singularity/plugin-conversations-conversation-view-code-file-pane": ["@singularity/plugin-conversations-conversation-view-code-file-pane@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane"],
-
-    "@singularity/plugin-conversations-conversation-view-code-file-pane-diff": ["@singularity/plugin-conversations-conversation-view-code-file-pane-diff@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff"],
-
-    "@singularity/plugin-conversations-conversation-view-code-file-pane-image": ["@singularity/plugin-conversations-conversation-view-code-file-pane-image@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/image"],
-
-    "@singularity/plugin-conversations-conversation-view-code-file-pane-markdown": ["@singularity/plugin-conversations-conversation-view-code-file-pane-markdown@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/markdown"],
-
-    "@singularity/plugin-conversations-conversation-view-code-file-pane-raw": ["@singularity/plugin-conversations-conversation-view-code-file-pane-raw@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/raw"],
 
     "@singularity/plugin-conversations-conversation-view-commits-graph": ["@singularity/plugin-conversations-conversation-view-commits-graph@workspace:plugins/conversations/plugins/conversation-view/plugins/commits-graph"],
 
@@ -7702,6 +7730,8 @@
 
     "@singularity/plugin-infra-host-duress-latch": ["@singularity/plugin-infra-host-duress-latch@workspace:plugins/infra/plugins/host/plugins/duress/plugins/latch"],
 
+    "@singularity/plugin-infra-host-fs": ["@singularity/plugin-infra-host-fs@workspace:plugins/infra/plugins/host-fs"],
+
     "@singularity/plugin-infra-host-host-admission": ["@singularity/plugin-infra-host-host-admission@workspace:plugins/infra/plugins/host/plugins/host-admission"],
 
     "@singularity/plugin-infra-host-host-read-pool": ["@singularity/plugin-infra-host-host-read-pool@workspace:plugins/infra/plugins/host/plugins/host-read-pool"],
@@ -8264,6 +8294,20 @@
 
     "@singularity/plugin-primitives-file-links": ["@singularity/plugin-primitives-file-links@workspace:plugins/primitives/plugins/file-links"],
 
+    "@singularity/plugin-primitives-file-type": ["@singularity/plugin-primitives-file-type@workspace:plugins/primitives/plugins/file-type"],
+
+    "@singularity/plugin-primitives-file-viewer": ["@singularity/plugin-primitives-file-viewer@workspace:plugins/primitives/plugins/file-viewer"],
+
+    "@singularity/plugin-primitives-file-viewer-code": ["@singularity/plugin-primitives-file-viewer-code@workspace:plugins/primitives/plugins/file-viewer/plugins/code"],
+
+    "@singularity/plugin-primitives-file-viewer-diff": ["@singularity/plugin-primitives-file-viewer-diff@workspace:plugins/primitives/plugins/file-viewer/plugins/diff"],
+
+    "@singularity/plugin-primitives-file-viewer-fallback": ["@singularity/plugin-primitives-file-viewer-fallback@workspace:plugins/primitives/plugins/file-viewer/plugins/fallback"],
+
+    "@singularity/plugin-primitives-file-viewer-image": ["@singularity/plugin-primitives-file-viewer-image@workspace:plugins/primitives/plugins/file-viewer/plugins/image"],
+
+    "@singularity/plugin-primitives-file-viewer-markdown": ["@singularity/plugin-primitives-file-viewer-markdown@workspace:plugins/primitives/plugins/file-viewer/plugins/markdown"],
+
     "@singularity/plugin-primitives-filepath-breadcrumb": ["@singularity/plugin-primitives-filepath-breadcrumb@workspace:plugins/primitives/plugins/filepath-breadcrumb"],
 
     "@singularity/plugin-primitives-filter-chips": ["@singularity/plugin-primitives-filter-chips@workspace:plugins/primitives/plugins/filter-chips"],
@@ -8343,6 +8387,8 @@
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
 
     "@singularity/plugin-primitives-passthrough": ["@singularity/plugin-primitives-passthrough@workspace:plugins/primitives/plugins/passthrough"],
+
+    "@singularity/plugin-primitives-path-bar": ["@singularity/plugin-primitives-path-bar@workspace:plugins/primitives/plugins/path-bar"],
 
     "@singularity/plugin-primitives-perfs": ["@singularity/plugin-primitives-perfs@workspace:plugins/primitives/plugins/perfs"],
 
@@ -8671,6 +8717,8 @@
     "@singularity/plugin-ui-tokens-color-palette": ["@singularity/plugin-ui-tokens-color-palette@workspace:plugins/ui/plugins/tokens/plugins/color-palette"],
 
     "@singularity/plugin-ui-tokens-density": ["@singularity/plugin-ui-tokens-density@workspace:plugins/ui/plugins/tokens/plugins/density"],
+
+    "@singularity/plugin-ui-tokens-file-type-palette": ["@singularity/plugin-ui-tokens-file-type-palette@workspace:plugins/ui/plugins/tokens/plugins/file-type-palette"],
 
     "@singularity/plugin-ui-tokens-font-family": ["@singularity/plugin-ui-tokens-font-family@workspace:plugins/ui/plugins/tokens/plugins/font-family"],
 

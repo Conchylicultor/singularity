@@ -78,6 +78,42 @@ because `onSelect` is also called *programmatically*: by `createAtRoot`, by
 row the user just created, or one the tree just revealed, silently
 un-navigated-to.
 
+## Lazy children: the tree asks, the consumer lists
+
+`TreeListProps.lazyChildren` (`LazyChildren<T>`, core) is for trees whose
+children are fetched per node — a host directory, a remote listing:
+
+- `hasChildren(row)` gives a row a chevron with nothing loaded under it.
+  `RowControls.hasChildren` includes it; the per-row subtree fold stays gated on
+  LOADED children (unfolding a subtree the tree has never seen is not a gesture
+  it can keep).
+- `state(row)` is a `TreeChildrenState` — `unloaded` / `loading` / `loaded` /
+  `failed {message, retry}`. An open row with no children yet renders ONE
+  placeholder child row from it (`TreeChildPlaceholder`): loading, the failure
+  with Retry (children or not — a stale listing must not read as current), or
+  "Empty" for a loaded row with none. The rule is `childPlaceholder`, shared by
+  `RowChrome`'s recursion and the windowed flat list (where the placeholder is
+  an item of its own), so both paint the same rows. Under a search, an
+  `unloaded` row shows nothing and "Empty" is suppressed.
+- `load(row)` is called by `useLazyLoadRequests` for every OPEN, VISIBLE
+  (`expanded` all the way up, on the UNSEARCHED forest) `unloaded` row, at most
+  once per `unloaded` spell. Declarative on purpose: a chevron click,
+  expand-all, reveal-on-select and an expand map restored on reload all lead to
+  the same request — a change callback would miss the reload, where nothing
+  changed. A consumer that wants to drop a listing (invalidation) moves it back
+  to `unloaded` and is asked again.
+
+A custom `Row` that does not render through `RowChrome` gets no placeholder in
+the non-windowed render; it reads `useTreeListContext().childPlaceholder(node)`.
+
+## Open is a second gesture
+
+`TreeListProps.onOpen(id)` — double-click, or Enter on the focused row — is
+separate from the click (`onSelect` / `expandOnActivate`). With it, rows are
+focusable, and the second click of a double-click (`event.detail > 1`) does not
+select again, so a click-to-toggle folder is not toggled back by the gesture
+that opens it. `RowControls.open` is `undefined` when the tree has no open.
+
 ## Reveal: a row must never land somewhere invisible
 
 `TreeList` owns three reveal behaviors, so no consumer has to (and so none is
@@ -135,10 +171,12 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.ExpandAllButton`
     - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
     - `primitives/css/layer.layerClasses`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
+    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.DropdownMenu`
@@ -147,6 +185,7 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
+    - `primitives/loading.Loading`
     - `primitives/multi-select.MultiSelectProvider`
     - `primitives/multi-select.SelectionBar`
     - `primitives/multi-select.SelectionCheckbox`
@@ -193,6 +232,8 @@ return is `useMemo`'d because it is now a context value.
   - Exports (types):
     - `DropZone`
     - `ExpandChange`
+    - `LazyChildren`
+    - `TreeChildrenState`
     - `TreeDisclosureProps`
     - `TreeNode`
   - Exports (values):

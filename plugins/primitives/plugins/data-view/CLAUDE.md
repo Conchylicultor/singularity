@@ -1177,6 +1177,15 @@ is a table-wide prop with consumers outside data-view, so a non-activating row
 there is a live-looking row that does nothing rather than a plain container.
 Lifting that means changing `DataTable`.
 
+### Open is a separate gesture (`onRowOpen`)
+
+`DataViewProps.onRowOpen?: (row) => void` — double-click, or Enter on a focused
+row — is threaded to `DataViewRenderProps.onRowOpen` beside activation, never
+folded into it: a file browser's click selects and its double-click descends.
+The **tree** maps it to `TreeList.onOpen`; the **table** to
+`DataTable.onRowOpen` (Enter opens, Space still activates, and the second click
+of a double-click does not activate again). list / gallery / icons ignore it.
+
 ### The click belongs to the row; the pencil belongs to the field
 
 An editable cell does **not** open its editor when you click its value. The
@@ -2052,7 +2061,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
     - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
   - Contributes:
-    - `ConfigV2.WebRegister` ×43: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+    - `ConfigV2.WebRegister` ×45: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
     - `DataViewSlots.Setting` "data-view.fold" → `FoldControl`
@@ -2261,7 +2270,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useServerDataSource`
     - `useSortController`
 - Server:
-  - Contributes: `ConfigV2.Register` ×43: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+  - Contributes: `ConfigV2.Register` ×45: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
   - Uses:
     - `config_v2.getConfig`
     - `config_v2.watchConfig`
@@ -2279,6 +2288,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/runs/extracted-events`
+    - `apps/file-explorer/browser`
+    - `apps/file-explorer/places`
     - `apps/home/app-cards`
     - `apps/mail/threads`
     - `apps/pages/page-tree`
@@ -2370,6 +2381,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewRowEntry`
+    - `DataViewSearch`
     - `DataViewSection`
     - `DataViewSurfaceChrome`
     - `DataViewToolbarSpec`

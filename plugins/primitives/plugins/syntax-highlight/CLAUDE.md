@@ -4,15 +4,20 @@
 
 ## Plugin reference
 
-- Description: Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
+- Description: Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, a <HighlightedCode> component for plugins rendering code, and <CodeListing> — the line-numbered listing (block or full-pane, optional highlighted line) behind transcript Read results and the file viewer's Code tab.
 - Web:
   - Uses:
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/text.Text`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/select-scope.ContentScope`
   - Exports (types):
+    - `CodeListingProps`
+    - `CodeListingVariant`
     - `HighlightedHtmlResult`
     - `UseHighlightedHtmlOptions`
   - Exports (values):
+    - `CodeListing`
     - `getHighlighter`
     - `HighlightedCode`
     - `languageForPath`
@@ -24,7 +29,7 @@
 - Cross-plugin:
   - Imported by:
     - `config_v2/settings`
-    - `conversations/conversation-view/code/file-pane/raw`
+    - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
     - `conversations/conversation-view/jsonl-viewer/code-listing`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -33,6 +38,7 @@
     - `page/code-block`
     - `page/read-only-view`
     - `primitives/diff-view`
+    - `primitives/file-viewer/code`
     - `primitives/markdown`
     - `ui/theme-engine/theme-gallery`
 

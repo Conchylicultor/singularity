@@ -1,14 +1,11 @@
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
-import { FileContent } from "./file-content";
-import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { FileTabs } from "./file-tabs";
-import { useFileRenderers } from "./use-file-renderers";
+import { FileView } from "@plugins/primitives/plugins/file-viewer/web";
 
+/**
+ * A checkout file with its renderer tabs — `primitives/file-viewer`'s
+ * `FileView` over a `git` file ref, with the edited-file status as the context
+ * that offers the Diff tab.
+ */
 export function FilePaneView({
   worktree,
   path,
@@ -20,30 +17,11 @@ export function FilePaneView({
   status: EditedFileStatus;
   line?: number;
 }) {
-  const renderers = useFileRenderers({ path, status });
   return (
-    <Column
-      fill
-      className="h-full"
-      header={
-        <Text as={Line} variant="body" className="gap-sm border-b px-sm py-xs">
-          <Fill>
-            <FilepathBreadcrumb path={path} />
-          </Fill>
-          <FileTabs {...renderers} />
-        </Text>
-      }
-      body={
-        <Scroll axis="both" className="h-full">
-          <FileContent
-            worktree={worktree}
-            path={path}
-            line={line}
-            active={renderers.active}
-          />
-        </Scroll>
-      }
-      scrollBody={false}
+    <FileView
+      file={{ source: "git", worktree, path }}
+      gitStatus={status}
+      line={line}
     />
   );
 }

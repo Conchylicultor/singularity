@@ -45,6 +45,7 @@ attribute type carries.
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/status`
+    - `apps/file-explorer/browser`
     - `apps/mail/search`
     - `apps/mail/threads`
     - `apps/pages/history`
@@ -58,7 +59,6 @@ attribute type carries.
     - `code-explorer/commit-detail`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/subagents`
@@ -97,6 +97,7 @@ attribute type carries.
     - `primitives/data-view/capsule-toolbar`
     - `primitives/date-picker`
     - `primitives/error-boundary`
+    - `primitives/file-viewer`
     - `primitives/launch`
     - `primitives/log-channels`
     - `primitives/outline/rail`

@@ -62,7 +62,6 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `apps/website/landing/hero`
     - `apps/website/landing/layers`
     - `apps/website/pages/download`
-    - `conversations/conversation-view/code/file-pane/markdown`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `debug/trace/contention`
@@ -71,6 +70,7 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `page/place`
     - `primitives/css/layout-harness`
     - `primitives/data-view/gallery`
+    - `primitives/file-viewer/markdown`
     - `primitives/metrics`
     - `primitives/metrics/chart-kit`
     - `primitives/section-card`

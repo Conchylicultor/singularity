@@ -284,6 +284,8 @@ function DataViewBodyInner<TRow>(
     rowTone,
     onRowActivate,
     rowActivation,
+    onRowOpen,
+    search,
     selectedRowId,
     emptyState,
     loadingState,
@@ -361,7 +363,13 @@ function DataViewBodyInner<TRow>(
 
   // Computed here (not in the shell): `stateFor` mints a fresh object per call,
   // so the body reads it off the model itself and stays live on state writes.
-  const activeState = viewModel.stateFor(activeViewId);
+  // A controlled `search` replaces this tab's stored query: the surface's own
+  // field owns it, and every part that shows or applies a query reads this one.
+  const storedState = viewModel.stateFor(activeViewId);
+  const activeState =
+    search === undefined
+      ? storedState
+      : { ...storedState, query: search.query };
 
   // The fold in effect: suspended while a search is typed (a match must never
   // hide behind "…"). Computed from `activeState` BEFORE the server branch below
@@ -755,6 +763,7 @@ function DataViewBodyInner<TRow>(
           setFilter: (filter) => viewModel.setFilter(activeViewId, filter),
           rowActivation:
             resolveRowActivation as DataViewRenderProps<unknown>["rowActivation"],
+          onRowOpen: onRowOpen as DataViewRenderProps<unknown>["onRowOpen"],
           selectedRowId,
           options: mergedOptions,
           searchAccessor:
@@ -820,8 +829,9 @@ function DataViewBodyInner<TRow>(
           sort: sortController as SortController<unknown>,
         };
 
-        const onQueryChange = (next: string) =>
-          viewModel.setQuery(activeViewId, next);
+        const onQueryChange =
+          search?.onQueryChange ??
+          ((next: string) => viewModel.setQuery(activeViewId, next));
         const body = (
           <>
             {/* One density for every view type, so a row's controls and decorations

@@ -122,6 +122,8 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`
+    - `apps/file-explorer/browser`
+    - `apps/file-explorer/places`
     - `apps/home/shell`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
@@ -200,7 +202,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/artifacts/research`
     - `conversations/conversation-view/branch`
-    - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/fork-conversation`
@@ -358,6 +359,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/detail-sections`
     - `primitives/diff-view`
     - `primitives/expandable`
+    - `primitives/file-viewer`
     - `primitives/filter-chips`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
@@ -375,6 +377,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/overlay/tooltip`
     - `primitives/pane`
+    - `primitives/path-bar`
     - `primitives/prompt-editor`
     - `primitives/row-actions`
     - `primitives/setup-steps`
@@ -425,6 +428,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `ui/tokens/color-adjust`
     - `ui/tokens/color-palette`
     - `ui/tokens/density`
+    - `ui/tokens/file-type-palette`
     - `ui/tokens/font-family`
     - `ui/tokens/icons`
     - `ui/tokens/scrollbar`

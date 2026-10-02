@@ -1,12 +1,14 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
-import { FileTabs } from "./file-tabs";
-import type { FileRenderersHandle } from "./use-file-renderers";
+import {
+  FileTabs,
+  type FileRenderersHandle,
+} from "@plugins/primitives/plugins/file-viewer/web";
 
 /**
  * What the file-peek body hands its own header: the path it is showing (the
  * resolved one once resolution settles) and the renderer tabs' state, which is
- * body-local (`useState` in `useFileRenderers`) and shared with the content
+ * body-local (`useState` in file-viewer's `useFileRenderers`) and shared with the content
  * below. `renderers` is `null` while the path is still resolving or ambiguous —
  * there are no tabs to offer yet.
  */

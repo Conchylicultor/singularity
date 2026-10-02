@@ -29,6 +29,7 @@
     - `apps-core/surface/solo`
     - `apps-core/tabs`
     - `apps/chord/trainer`
+    - `apps/file-explorer/browser`
     - `apps/prototypes/canvas`
     - `apps/prototypes/present`
     - `apps/sonata/controls`
@@ -40,6 +41,7 @@
     - `primitives/launch`
     - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog/confirm`
+    - `primitives/path-bar`
     - `primitives/undo-redo`
     - `reorder/edit-mode`
     - `tasks/task-draft-form`

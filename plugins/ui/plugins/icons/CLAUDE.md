@@ -10,6 +10,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const forumIcon = symbol("forum");         // { kind: "symbol", name: "forum" }
 const githubIcon = brand("github");        // { kind: "brand",  name: "github" }
+const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescript" }
 
 <Icon icon={forumIcon} className="size-4" />
 <Icon icon={pinIcon} active={pinned} />    // the theme's active fill (filled by default)
@@ -35,7 +36,7 @@ const githubIcon = brand("github");        // { kind: "brand",  name: "github" }
   release CLI's app icon) applies the same rule. `BrandName` is a Simple Icons slug. Both are generated into
   `core/symbol-names.generated.ts` by `scripts/gen-symbol-names.ts`; rerun it
   after upgrading an `@iconify-json/*` package (`icons:symbol-names-in-sync`).
-- **Literal names only.** `symbol("…")` / `brand("…")` take a string literal,
+- **Literal names only.** `symbol("…")` / `brand("…")` / `seti("…")` take a string literal,
   imported under their own name and only ever called
   (lint `icons/literal-icon-name`). The build scans those literals into the
   icon manifest (`codegen/core/icon-manifest-gen.ts`, a pre-barrel manifest;
@@ -101,6 +102,33 @@ default sprites are resident from first paint.
   never answered with bytes the URL does not name. A failed fetch is
   thrown into the host's error boundary.
 
+## Seti file-type glyphs
+
+`seti("…")` names a glyph of the Seti file-icon set (jesseweed/seti-ui, MIT —
+the icons VS Code's Seti theme draws). Use it through
+`primitives/file-type` (`fileTypeOf` / `<FileTypeIcon>`), which owns which
+glyph a file gets and its colour; a direct `seti()` elsewhere is rare.
+
+- **Vendored, pinned.** `scripts/vendor-seti.ts` fetches the commit pinned in
+  `shared/seti.ts` (`SETI_SOURCE`), refuses if the license is no longer MIT,
+  reduces every `icons/*.svg` to ONE colour (`normalizeSetiSvg`: every paint
+  `currentColor`, gradients and `<style>` dropped, ids namespaced, viewBox
+  origin moved to 0,0; an unknown element or attribute throws) and writes
+  `server/internal/seti/seti.json` (Iconify JSON), the upstream
+  `LICENSE.txt` beside it, and `core/seti-names.generated.ts` (`SetiName`).
+  To upgrade: bump the commit, rerun; `icons:seti-in-sync` fails until you do.
+- **One style.** Like a brand, a Seti glyph ignores the theme's shape and
+  fill axes and `active`; it is drawn in `currentColor`, so the caller tints it.
+  Its sprite id is `seti-<name>`.
+- **Manifest-scanned** like `symbol` / `brand`: the `seti` sprite holds exactly
+  the names some code writes (in practice, the file-type table).
+- **Never resident.** The `seti` sprite is not in `icons.sprites` (the boot
+  snapshot). The first `<Icon icon={seti(…)}>` to mount calls `wantSprite("seti")`
+  (`web/internal/sprite-store.ts`); the sprite host fetches every wanted sprite
+  from `GET /api/icons/sprite/:hash/seti` (the same immutable, hash-checked
+  route as a non-default style). Until it lands a Seti icon is an empty box at
+  its final size. So a surface that never shows a file pays nothing.
+
 ## Runtime symbols (saved icons)
 
 An icon a USER picked and something stored (an agent avatar, a callout
@@ -162,7 +190,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 
 ## Plugin reference
 
-- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon).
+- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
 - Cross-plugin:
   - Imported by:
     - `active-data/commit-link`
@@ -187,6 +215,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `apps/events/shell`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
+    - `apps/file-explorer/places`
+    - `apps/file-explorer/shell`
     - `apps/home/app-cards`
     - `apps/mail/attachments`
     - `apps/mail/reading-pane`
@@ -410,6 +440,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `primitives/detail-sections`
     - `primitives/dom/auto-scroll`
     - `primitives/expandable`
+    - `primitives/file-type`
+    - `primitives/file-viewer`
     - `primitives/folder-picker`
     - `primitives/icon-button`
     - `primitives/icon-picker`
@@ -469,14 +501,17 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `provideSprite`
     - `useIconStyle`
     - `usePublishIconStyle`
+    - `useWantedSprites`
     - `useWantedStyleKeys`
 - Server:
   - Exports (types):
     - `IconBody`
     - `SymbolSets`
   - Exports (values):
+    - `readSetiSet`
     - `resolveIcon`
     - `resolveSymbol`
+    - `SETI_SET`
     - `symbolBody`
 - Core:
   - Exports (types):
@@ -489,6 +524,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `IconWeight`
     - `RuntimeSymbolRef`
     - `SavedSymbolName`
+    - `SetiName`
+    - `SetiRef`
     - `SpriteKey`
     - `StyleKey`
     - `SymbolName`
@@ -505,11 +542,15 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `ICON_SHAPES`
     - `ICON_WEIGHTS`
     - `iconifyName`
+    - `isSpriteKey`
     - `isStyleKey`
     - `parseStyleKey`
     - `resolveSymbolStyle`
     - `runtimeSymbol`
     - `runtimeSymbolId`
+    - `seti`
+    - `SETI_SPRITE`
+    - `setiId`
     - `styleKeyOf`
     - `symbol`
     - `symbolId`
@@ -517,13 +558,23 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Exports (types): `SymbolNameList`
   - Exports (values):
     - `brandNames`
+    - `buildSetiSet`
     - `ICON_SET_PACKAGES`
     - `installedSetVersions`
+    - `normalizeSetiSvg`
     - `readIconSet`
     - `readInputsHash`
     - `readListInputsHash`
+    - `readSetiIdentity`
+    - `renderSetiNames`
     - `renderSymbolNameList`
     - `renderSymbolNames`
+    - `SETI_JSON_REL_PATH`
+    - `SETI_LICENSE_REL_PATH`
+    - `SETI_NAMES_REL_PATH`
+    - `SETI_NORMALIZER_VERSION`
+    - `SETI_SOURCE`
+    - `setiIdentity`
     - `SYMBOL_NAME_LIST_REL_PATH`
     - `SYMBOL_NAMES_REL_PATH`
     - `symbolBaseNames`

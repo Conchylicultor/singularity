@@ -289,6 +289,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
+    - `apps/file-explorer`
     - `apps/home`
     - `apps/mail/threads`
     - `apps/pages/auto-icon`

@@ -7,6 +7,8 @@ import {
 import { residentSprites } from "../../core";
 import { manifestHash, spriteFor } from "./sprites";
 
+// Not the Seti sprite: file-type glyphs are fetched on demand, the first time
+// one mounts, so surfaces that never show a file pay nothing at boot.
 const RESIDENT: readonly SpriteKey[] = [...DEFAULT_STYLE_KEYS, BRANDS_SPRITE];
 
 /**

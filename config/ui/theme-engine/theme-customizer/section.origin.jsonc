@@ -1,4 +1,4 @@
-// @hash 143fda7662dc
+// @hash 72b8533de71b
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -12,6 +12,7 @@
     "ui.tokens.color-adjust:color-adjust",
     "ui.tokens.color-palette:color-palette",
     "ui.tokens.density:density",
+    "ui.tokens.file-type-palette:file-type-palette",
     "ui.tokens.font-family:font-family",
     "ui.tokens.icons:icons",
     "ui.tokens.scrollbar:scrollbar",

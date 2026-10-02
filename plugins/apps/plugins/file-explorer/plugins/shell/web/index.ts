@@ -7,11 +7,16 @@ import { FileExplorerLayout } from "./components/file-explorer-layout";
 import { FileExplorer } from "./slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-export { FileExplorer } from "./slots";
+export {
+  FileExplorer,
+  type PlaceGroup,
+  type PlaceItem,
+  type PlaceState,
+} from "./slots";
 
 export default {
   description:
-    "App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.",
+    "App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Place slots.",
   contributions: [
     Apps.App({
       app: fileExplorerApp,

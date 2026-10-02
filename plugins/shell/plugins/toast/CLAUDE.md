@@ -35,6 +35,7 @@
     - `page/editor`
     - `page/url-paste`
     - `primitives/data-view`
+    - `primitives/file-viewer`
     - `shell/notifications`
 - Core:
   - Exports (types):

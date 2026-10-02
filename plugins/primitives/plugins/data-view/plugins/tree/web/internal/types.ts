@@ -61,4 +61,16 @@ export interface TreeViewOptions<TRow> {
   toolbarStart?: ReactNode;
   /** Per-row label className (e.g. done/dropped strikethrough styling). */
   labelClassName?: (row: TRow) => ClassName | undefined;
+  /**
+   * How the visible secondary fields render beside the label.
+   *
+   * - `"chips"` (default) — trailing chips right after the label, each as wide
+   *   as its content (a status badge, a count).
+   * - `"aligned"` — fixed-width, edge-aligned cells at the end of every row
+   *   (width from `FieldDef.width` when it is a definite length, else 6rem;
+   *   `FieldDef.align` defaults to `"end"`), under a sticky header row of field
+   *   titles whose sortable ones toggle the view's sort. A file browser's
+   *   Name / Modified / Size.
+   */
+  columns?: "chips" | "aligned";
 }

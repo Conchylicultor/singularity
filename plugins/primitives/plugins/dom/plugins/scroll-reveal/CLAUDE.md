@@ -34,12 +34,12 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
     - `apps-core/tab-bar`
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/ultimate-guitar`
-    - `conversations/conversation-view/code/file-pane/raw`
     - `conversations/conversation-view/jsonl-viewer`
     - `page/editor`
     - `page/map`
     - `primitives/command-palette`
     - `primitives/outline/rail`
+    - `primitives/syntax-highlight`
     - `primitives/tree`
     - `search/quick-find`
 

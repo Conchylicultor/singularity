@@ -14,12 +14,15 @@ import {
   useResolvedFile,
   FileDisambiguation,
 } from "@plugins/code-explorer/plugins/file-resolve/web";
-import { FileContent } from "./components/file-content";
+import {
+  FileContent,
+  useFileRenderers,
+} from "@plugins/primitives/plugins/file-viewer/web";
+import type { FileRef } from "@plugins/primitives/plugins/file-viewer/core";
 import {
   FilePeekHeaderProvider,
   FilePeekTitle,
 } from "./components/file-peek-header";
-import { useFileRenderers } from "./components/use-file-renderers";
 
 /** The file's basename, minus any trailing `:line` suffix. */
 function fileTitle(filePath: string): string {
@@ -80,7 +83,8 @@ function FilePeekPaneBody() {
         ? (files.value.find((f) => f.path === effectivePath)?.status ?? "clean")
         : "clean",
   });
-  const renderers = useFileRenderers({ path: effectivePath, status });
+  const file: FileRef = { source: "git", worktree, path: effectivePath };
+  const renderers = useFileRenderers({ file, gitStatus: status });
 
   // The header's title and renderer tabs read this (see file-peek-header): the
   // requested path and no tabs until the path resolves to one file.
@@ -136,12 +140,7 @@ function FilePeekPaneBody() {
   return (
     <FilePeekHeaderProvider value={header}>
       <PaneChrome pane={filePeekPane}>
-        <FileContent
-          worktree={worktree}
-          path={effectivePath}
-          line={line}
-          active={renderers.active}
-        />
+        <FileContent file={file} line={line} active={renderers.active} />
       </PaneChrome>
     </FilePeekHeaderProvider>
   );

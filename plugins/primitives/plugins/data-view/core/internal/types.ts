@@ -10,7 +10,10 @@ import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge
 import type { LiveColumnRef } from "@plugins/network/plugins/live/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
-import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
+import type {
+  ExpandChange,
+  LazyChildren,
+} from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
 import type { FilterScope } from "./filter-scope";
@@ -138,6 +141,18 @@ export interface HierarchyConfig<TRow> {
     parentId: string | null;
     afterId?: string;
   }) => Promise<string | null | undefined>;
+  /**
+   * Children listed on demand (a host directory, a remote listing): the rows
+   * under a node arrive only after the tree asks for them. `hasChildren` gives a
+   * row a chevron before any child is loaded; `state` says where its listing
+   * stands (`unloaded` / `loading` / `loaded` / `failed` with a retry), which the
+   * tree renders as a placeholder child row; `load` is called by the tree for
+   * every OPEN, visible, `unloaded` row — after a chevron click, expand-all,
+   * reveal, or an expand map restored on reload alike — so the consumer fetches
+   * on first expand without watching the expand map itself. Absent → every
+   * row's children are already in `rows`.
+   */
+  lazyChildren?: LazyChildren<TRow>;
 }
 
 /**
@@ -758,6 +773,12 @@ export interface DataViewRenderProps<TRow> {
    * list where nothing activates announce every row as a button.
    */
   rowActivation?: (row: TRow) => (() => void) | undefined;
+  /**
+   * The OPEN gesture — double-click a row, or Enter on a focused row — threaded
+   * from `DataViewProps.onRowOpen`. Distinct from `rowActivation` (a single
+   * click). Honoured by the tree and the table; absent ⇒ no open gesture.
+   */
+  onRowOpen?: (row: TRow) => void;
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
   selectedRowId?: string;
   /** viewOptions[activeViewId] — opaque to the host, typed by each view. */
@@ -1232,6 +1253,12 @@ export type DataViewDataOrigin<TRow> =
  * Every `DataViewProps` key except the data origin ({@link DataViewDataOrigin})
  * and the surface chrome ({@link DataViewSurfaceChrome}).
  */
+/** A controlled search query — see {@link DataViewBaseProps.search}. */
+export interface DataViewSearch {
+  query: string;
+  onQueryChange: (query: string) => void;
+}
+
 export interface DataViewBaseProps<TRow> {
   fields: FieldDef<TRow>[];
   /** Restrict + order by view id; omitted → all contributions by order/title. */
@@ -1295,6 +1322,22 @@ export interface DataViewBaseProps<TRow> {
    * where builds open a detail pane and backups offer a Grant-access button.
    */
   rowActivation?: (row: TRow) => (() => void) | undefined;
+  /**
+   * The OPEN gesture: double-click a row, or press Enter on a focused one —
+   * distinct from activation (a single click). A file browser's "click selects,
+   * double-click descends / opens". Honoured by the tree and the table (where a
+   * focused row's Enter then opens, and Space still activates); the list,
+   * gallery and icons views ignore it.
+   */
+  onRowOpen?: (row: TRow) => void;
+  /**
+   * A CONTROLLED search query, for a surface whose search field lives in its
+   * own chrome (a file browser's toolbar filter). Present → this query is the
+   * one every view applies and every built-in search field shows, and edits go
+   * to `onQueryChange`; the per-tab stored query is neither read nor written.
+   * Absent → the host owns the query (per browser tab), the default.
+   */
+  search?: DataViewSearch;
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
   selectedRowId?: string;
   emptyState?: ReactNode;

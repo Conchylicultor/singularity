@@ -1,5 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type ReactNode, type Ref } from "react";
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+  type Ref,
+} from "react";
 import type {
   DraggableAttributes,
   DraggableSyntheticListeners,
@@ -19,6 +24,11 @@ import { Tree } from "../slots";
 import { TreeDisclosureToggle } from "./tree-disclosure-toggle";
 
 export type TreeRowChromeProps = {
+  /**
+   * The node's id, stamped as `data-tree-id` on the row element so the tree's
+   * keyboard navigation can find (and focus) the row a key moves to.
+   */
+  rowId?: string;
   depth: number;
   hasChildren: boolean;
   isOpen: boolean;
@@ -27,6 +37,13 @@ export type TreeRowChromeProps = {
   onToggle?: () => void;
   /** Row click. */
   onSelect?: () => void;
+  /**
+   * The open gesture: double-click, or Enter while the row has focus. Present →
+   * the row is focusable, and the second click of a double-click does not fire
+   * `onSelect` again (so a click-to-toggle row is not toggled back by the very
+   * gesture that opens it).
+   */
+  onOpen?: () => void;
   children: ReactNode;
   actions?: ReactNode;
   /**
@@ -125,12 +142,14 @@ function DefaultMergedDisclosure({
  * showing every row's actions at once. Hence the row/no-adhoc-row exception.
  */
 export function TreeRowChrome({
+  rowId,
   depth,
   hasChildren,
   isOpen,
   selected,
   onToggle,
   onSelect,
+  onOpen,
   children,
   actions,
   leading,
@@ -162,7 +181,31 @@ export function TreeRowChrome({
       align="center"
       gap="xs"
       ref={rowRef as Ref<HTMLElement>}
-      onClick={onSelect}
+      data-tree-row
+      data-tree-id={rowId}
+      onClick={
+        onOpen && onSelect
+          ? (e: MouseEvent) => {
+              // `detail` counts the clicks of one gesture; the second click of
+              // a double-click belongs to `onOpen`, not to another select.
+              if (e.detail > 1) return;
+              onSelect();
+            }
+          : onSelect
+      }
+      onDoubleClick={onOpen}
+      tabIndex={onOpen ? 0 : undefined}
+      onKeyDown={
+        onOpen
+          ? (e: KeyboardEvent) => {
+              // Only the row's own key press — never one bubbling from a
+              // control inside it (a rename input, an action button).
+              if (e.key !== "Enter" || e.target !== e.currentTarget) return;
+              e.preventDefault();
+              onOpen();
+            }
+          : undefined
+      }
       {...dragAttributes}
       {...dragListeners}
       // Bespoke named-group (group/tree-row) hover scoping: Row's bare-group
@@ -173,6 +216,9 @@ export function TreeRowChrome({
       // reveal keeps reading `group/tree-row`.
       className={cn(
         "group/tree-row min-h-7 rounded-md px-xs py-xs text-body",
+        // A focusable row (one with an open gesture) is walked with the arrow
+        // keys, so the row the keys are on must show it.
+        onOpen && "focus-ring",
         rowActionsAnchor,
         // Each tint co-publishes itself as `--scrim` — the colour the pinned
         // cluster's mask paints so the label it covers dissolves instead of

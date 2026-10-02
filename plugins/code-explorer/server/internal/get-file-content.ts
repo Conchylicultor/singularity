@@ -2,6 +2,8 @@ import { resolve, sep } from "node:path";
 
 import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { HOST_FS_TEXT_MAX_BYTES } from "@plugins/infra/plugins/host-fs/core";
+import { decodeTextBytes } from "@plugins/infra/plugins/host-fs/server";
 
 // Every git read in this file serves an open HTTP request from the code
 // explorer: a local, metadata-or-blob read that finishes in milliseconds. The
@@ -10,7 +12,6 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 // reaches it, and it fails as a named error instead of holding the request open
 // forever.
 const GIT_TIMEOUT_MS = 30_000;
-const MAX_BYTES = 2 * 1024 * 1024;
 
 function expandTilde(path: string): string {
   if (path === "~") return HOME_DIR;
@@ -30,14 +31,6 @@ function isPathInside(root: string, target: string): boolean {
   return target === root || target.startsWith(rootNorm);
 }
 
-function looksBinary(bytes: Uint8Array): boolean {
-  const sample = bytes.subarray(0, Math.min(bytes.length, 8000));
-  for (const b of sample) {
-    if (b === 0) return true;
-  }
-  return false;
-}
-
 export async function getFileContentAtRef(
   worktreePath: string,
   relPath: string,
@@ -54,13 +47,9 @@ export async function getFileContentAtRef(
     { timeoutMs: GIT_TIMEOUT_MS },
   );
   if (result.exitCode !== 0) return { kind: "not-found" };
-  // Raw bytes, not the utf8 decode: the size gate and the binary sniff below
-  // are both statements about the file's bytes.
-  const bytes = result.stdoutBytes;
-  if (bytes.length > MAX_BYTES)
-    return { kind: "too-large", size: bytes.length };
-  if (looksBinary(bytes)) return { kind: "binary" };
-  return { kind: "ok", content: new TextDecoder().decode(bytes) };
+  // Raw bytes, not the utf8 decode: the size gate and the binary sniff are
+  // both statements about the file's bytes.
+  return decodeTextBytes(result.stdoutBytes);
 }
 
 export async function getFileContent(
@@ -79,9 +68,7 @@ export async function getFileContent(
 
   const file = Bun.file(absTarget);
   if (!(await file.exists())) return { kind: "not-found" };
-  if (file.size > MAX_BYTES) return { kind: "too-large", size: file.size };
-
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  if (looksBinary(bytes)) return { kind: "binary" };
-  return { kind: "ok", content: new TextDecoder().decode(bytes) };
+  if (file.size > HOST_FS_TEXT_MAX_BYTES)
+    return { kind: "too-large", size: file.size };
+  return decodeTextBytes(new Uint8Array(await file.arrayBuffer()));
 }

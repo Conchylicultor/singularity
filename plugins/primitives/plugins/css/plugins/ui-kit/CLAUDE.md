@@ -515,6 +515,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/deploy/ssh-setup`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/schedule`
+    - `apps/file-explorer/browser`
     - `apps/home/app-cards`
     - `apps/mail/reading-pane`
     - `apps/mail/sync-status`
@@ -752,6 +753,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/data-view/view-core`
     - `primitives/date-picker`
     - `primitives/dom/auto-scroll`
+    - `primitives/file-viewer`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
     - `primitives/hover-reveal`
@@ -775,6 +777,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/overlay/surface-overlay`
     - `primitives/overlay/tooltip`
     - `primitives/pane`
+    - `primitives/path-bar`
     - `primitives/prompt-editor`
     - `primitives/prompt-editor/voice-input`
     - `primitives/row-actions`

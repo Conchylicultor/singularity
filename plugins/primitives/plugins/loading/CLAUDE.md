@@ -82,6 +82,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`
+    - `apps/file-explorer/browser`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/mail/shell`
@@ -133,8 +134,6 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/artifacts/screenshot`
-    - `conversations/conversation-view/code/file-pane/markdown`
-    - `conversations/conversation-view/code/file-pane/raw`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
@@ -179,6 +178,8 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `primitives/cursor-pagination`
     - `primitives/data-view`
     - `primitives/diff-view`
+    - `primitives/file-viewer/code`
+    - `primitives/file-viewer/markdown`
     - `primitives/folder-picker`
     - `primitives/icon-picker`
     - `primitives/lazy-component`
@@ -187,6 +188,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `primitives/metrics/chart-kit`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
+    - `primitives/tree`
     - `review`
     - `review/code-review`
     - `review/plugin-changes`
@@ -211,6 +213,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `ui/tokens/color-adjust`
     - `ui/tokens/color-palette`
     - `ui/tokens/density`
+    - `ui/tokens/file-type-palette`
     - `ui/tokens/font-family`
     - `ui/tokens/icons`
     - `ui/tokens/scrollbar`

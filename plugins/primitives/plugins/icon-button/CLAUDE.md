@@ -78,6 +78,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/deploy/servers`
     - `apps/events/sources`
     - `apps/events/sources/refresh-all`
+    - `apps/file-explorer/browser`
     - `apps/mail/reading-pane`
     - `apps/pages/copy-id`
     - `apps/pages/history`
@@ -151,6 +152,7 @@ icon+count button it stands in for — carries a per-site
     - `primitives/metrics`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
+    - `primitives/path-bar`
     - `primitives/prompt-editor/voice-input`
     - `primitives/sync-status`
     - `primitives/tree`

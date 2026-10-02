@@ -36,3 +36,29 @@ export function useSpriteLoaded(key: SpriteKey): boolean {
 export function useSprites(): readonly (readonly [SpriteKey, string])[] {
   return useSyncExternalStore(subscribe, () => snapshot);
 }
+
+// Sprites no theme scope asks for but some mounted icon needs: a sprite that is
+// never resident (the Seti file-type glyphs) is wanted the first time an icon
+// drawing from it mounts, and stays wanted — the sheet keeps it once loaded.
+const wanted = new Set<SpriteKey>();
+const wantListeners = new Set<() => void>();
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global like the sprite map above: one sheet serves every surface
+let wantedSnapshot: readonly SpriteKey[] = [];
+
+function subscribeWanted(listener: () => void): () => void {
+  wantListeners.add(listener);
+  return () => wantListeners.delete(listener);
+}
+
+/** Ask the sprite host to load sprite `key` (a no-op once asked). */
+export function wantSprite(key: SpriteKey): void {
+  if (wanted.has(key)) return;
+  wanted.add(key);
+  wantedSnapshot = [...wanted].sort();
+  for (const l of wantListeners) l();
+}
+
+/** Every sprite some mounted icon has asked for (beyond the theme scopes' styles). */
+export function useWantedSprites(): readonly SpriteKey[] {
+  return useSyncExternalStore(subscribeWanted, () => wantedSnapshot);
+}

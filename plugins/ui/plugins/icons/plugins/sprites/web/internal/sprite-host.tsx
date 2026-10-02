@@ -3,7 +3,8 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   BRANDS_SPRITE,
-  isStyleKey,
+  SETI_SPRITE,
+  isSpriteKey,
   type SpriteKey,
   type StyleKey,
 } from "@plugins/ui/plugins/icons/core";
@@ -13,6 +14,7 @@ import {
   installRuntimeSymbolLoader,
   provideRuntimeSymbols,
   provideSprite,
+  useWantedSprites,
   useWantedStyleKeys,
 } from "@plugins/ui/plugins/icons/web";
 import {
@@ -26,15 +28,15 @@ import {
 import { createRuntimeSymbolLoader } from "./runtime-symbol-loader";
 
 function spriteKey(key: string): SpriteKey {
-  if (key === BRANDS_SPRITE || isStyleKey(key)) return key;
+  if (isSpriteKey(key)) return key;
   throw new Error(`[icons] the server sent an unknown sprite key "${key}"`);
 }
 
 // Sprites being fetched, page-wide: a re-render never starts a second request
 // for the same key.
-const inflight = new Set<StyleKey>();
+const inflight = new Set<SpriteKey>();
 
-async function fetchSprite(key: StyleKey, hash: string): Promise<string> {
+async function fetchSprite(key: SpriteKey, hash: string): Promise<string> {
   const svg = await fetchEndpoint(
     spriteEndpoint,
     { hash, key },
@@ -90,8 +92,10 @@ function useSavedSymbols(saved: SavedIconSprites, fail: (err: Error) => void) {
   useLayoutEffect(() => {
     for (const [key, markup] of Object.entries(saved.sprites)) {
       const styleKey = spriteKey(key);
-      if (styleKey === BRANDS_SPRITE) {
-        throw new Error("[icons] the saved-icon sprites hold no brands");
+      if (styleKey === BRANDS_SPRITE || styleKey === SETI_SPRITE) {
+        throw new Error(
+          `[icons] the saved-icon sprites hold no "${styleKey}" sprite`,
+        );
       }
       provideRuntimeSymbols(
         `saved-${styleKey}`,
@@ -116,7 +120,8 @@ function useSavedSymbols(saved: SavedIconSprites, fail: (err: Error) => void) {
 
 /**
  * Provides the resident sprites and fetches, on demand, the sprite of every
- * style some theme scope wants that is not resident.
+ * style some theme scope wants that is not resident — and every sprite some
+ * mounted icon asked for (the Seti file-type glyphs, never resident).
  *
  * A failed fetch is thrown from render, into this contribution's error
  * boundary, rather than leaving that style's icons on the default glyphs with
@@ -129,7 +134,8 @@ function LoadedSprites({
   resident: IconSprites;
   saved: SavedIconSprites;
 }) {
-  const wanted = useWantedStyleKeys();
+  const wantedStyles = useWantedStyleKeys();
+  const wantedSprites = useWantedSprites();
   const [failure, setFailure] = useState<Error | null>(null);
   useSavedSymbols(saved, setFailure);
   if (failure) throw failure;
@@ -144,7 +150,7 @@ function LoadedSprites({
 
   const { manifestHash } = resident;
   useEffect(() => {
-    for (const key of wanted) {
+    for (const key of [...wantedStyles, ...wantedSprites]) {
       if (hasSprite(key) || inflight.has(key)) continue;
       inflight.add(key);
       void fetchSprite(key, manifestHash).then(
@@ -158,7 +164,7 @@ function LoadedSprites({
         },
       );
     }
-  }, [wanted, manifestHash]);
+  }, [wantedStyles, wantedSprites, manifestHash]);
 
   return <IconSpriteSheet />;
 }

@@ -16,6 +16,13 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const folderIcon = symbol("folder");
 
+/** Why a path cannot be browsed, keyed by host-fs's failure kind. */
+export const UNAVAILABLE_MESSAGE = {
+  missing: "This folder does not exist.",
+  denied: "Permission denied.",
+  "not-a-dir": "Not a folder.",
+} as const;
+
 export interface FolderPickerProps {
   /** Folder to open the browser at. Falls back to the user's home directory. */
   value?: string;
@@ -33,7 +40,9 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
     value && value.trim().length > 0 ? value : undefined,
   );
   const { data, isLoading, isError, error } = useHostDir(browsePath);
-  const subdirs = data?.entries.filter((e) => e.isDirectory) ?? [];
+  const listing = data?.kind === "ok" ? data : undefined;
+  // Folders only (a symlink to a folder counts), dotfolders included.
+  const subdirs = listing?.entries.filter((e) => e.kind === "dir") ?? [];
 
   return (
     <Stack gap="none">
@@ -58,8 +67,10 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
           <Placeholder tone="error">
             {getEndpointErrorMessage(error)}
           </Placeholder>
-        ) : data && !data.isDirectory ? (
-          <Placeholder tone="error">Not a directory.</Placeholder>
+        ) : data && data.kind !== "ok" ? (
+          <Placeholder tone="error">
+            {UNAVAILABLE_MESSAGE[data.kind]}
+          </Placeholder>
         ) : subdirs.length === 0 ? (
           <Placeholder>No subfolders.</Placeholder>
         ) : (
@@ -72,7 +83,7 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
                 <Icon icon={folderIcon} className="text-muted-foreground" />
               }
               onClick={() =>
-                data && setBrowsePath(`${data.path}/${entry.name}`)
+                listing && setBrowsePath(`${listing.path}/${entry.name}`)
               }
             >
               <Text>{entry.name}</Text>
@@ -83,8 +94,8 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
 
       <Stack direction="row" gap="none" justify="end" className="border-t p-sm">
         <Button
-          disabled={!data || !data.isDirectory}
-          onClick={() => data && onSelect(data.path)}
+          disabled={!listing}
+          onClick={() => listing && onSelect(listing.path)}
         >
           Select this folder
         </Button>

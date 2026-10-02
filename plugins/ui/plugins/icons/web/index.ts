@@ -7,7 +7,11 @@ export {
   usePublishIconStyle,
   useWantedStyleKeys,
 } from "./internal/style-store";
-export { hasSprite, provideSprite } from "./internal/sprite-store";
+export {
+  hasSprite,
+  provideSprite,
+  useWantedSprites,
+} from "./internal/sprite-store";
 export { IconSpriteSheet } from "./internal/sprite-sheet";
 export {
   hasRuntimeSymbol,

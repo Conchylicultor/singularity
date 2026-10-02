@@ -111,6 +111,12 @@ export interface DataTableProps<TRow> {
   /** When provided, rows become clickable and fire this on click/Enter/Space. */
   onRowClick?: (row: TRow) => void;
   /**
+   * The open gesture: double-click a row, or Enter on a focused row (Space then
+   * still fires `onRowClick`). Distinct from the click — a file browser's
+   * "click selects, double-click opens". Present → rows are focusable.
+   */
+  onRowOpen?: (row: TRow) => void;
+  /**
    * Row key of the active/selected row. The matching row gets a persistent
    * `bg-accent` highlight. Compared against `rowKey(row, index)`.
    */

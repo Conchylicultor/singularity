@@ -89,6 +89,7 @@ export type {
   DataViewRenderProps,
   DataViewProps,
   DataViewBaseProps,
+  DataViewSearch,
   DataViewDataOrigin,
   DataViewInMemoryOrigin,
   DataViewFetchPageOrigin,

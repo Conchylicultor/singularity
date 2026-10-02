@@ -17,22 +17,12 @@ parses/renders its own format only.
 
 ## Plugin reference
 
-- Description: Renders code with syntax highlighting and a line-number gutter. `CodeListing` takes actual code; `CatNListing` is the `cat -n` entry point, for callers whose content is literally `cat -n` tool output.
+- Description: Renders `cat -n` tool output (`CatNListing`) as a syntax-highlighted, line-numbered listing: parses the gutter off and hands the code to syntax-highlight's `CodeListing`.
 - Web:
-  - Uses:
-    - `primitives/css/scroll.Scroll`
-    - `primitives/css/text.Text`
-    - `primitives/select-scope.ContentScope`
-    - `primitives/syntax-highlight.languageForPath`
-    - `primitives/syntax-highlight.SHIKI_LANGS`
-    - `primitives/syntax-highlight.useDarkMode`
-    - `primitives/syntax-highlight.useHighlightedHtml`
-  - Exports (values):
-    - `CatNListing`
-    - `CodeListing`
+  - Uses: `primitives/syntax-highlight.CodeListing`
+  - Exports (values): `CatNListing`
 - Cross-plugin:
   - Imported by:
-    - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
     - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
     - `conversations/conversation-view/jsonl-viewer/tool-call/read`
 

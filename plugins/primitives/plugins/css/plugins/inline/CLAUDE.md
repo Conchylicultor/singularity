@@ -56,6 +56,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/ssh-setup`
     - `apps/events/shell`
+    - `apps/file-explorer/shell`
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
     - `apps/mail/sync-status`

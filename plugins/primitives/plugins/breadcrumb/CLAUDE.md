@@ -34,6 +34,7 @@
     - `apps/pages/page-tree`
     - `plugin-meta/plugin-view`
     - `primitives/filepath-breadcrumb`
+    - `primitives/path-bar`
     - `ui/breadcrumb-separator`
 - Core:
   - Exports (types): `BreadcrumbSeparatorProps`

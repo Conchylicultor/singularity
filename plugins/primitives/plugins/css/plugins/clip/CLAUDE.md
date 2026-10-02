@@ -40,6 +40,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `apps/browser/shell`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
+    - `apps/file-explorer/places`
     - `apps/pages/page-tree`
     - `apps/pages/welcome/recent-pages`
     - `apps/sonata/library`

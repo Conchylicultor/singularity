@@ -348,6 +348,7 @@ run everywhere.
     - `framework/tooling/guards`
     - `infra/claude-cli/availability`
     - `infra/git/git-watcher`
+    - `infra/host-fs`
     - `infra/jobs/supervised-job`
     - `infra/launcher`
     - `infra/worktree`

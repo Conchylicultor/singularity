@@ -223,6 +223,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     onRowClick: props.rowActivation
       ? (row: unknown) => props.rowActivation?.(row)?.()
       : undefined,
+    onRowOpen: props.onRowOpen,
     selectedRowId: props.selectedRowId,
     filter: undefined,
     emptyLabel: "No results found",

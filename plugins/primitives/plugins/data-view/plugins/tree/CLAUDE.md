@@ -201,6 +201,28 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   Alias rows never toggle — an alias is a reference leaf whose subtree lives at
   its canonical place.
 
+- `columns?: "chips" | "aligned"` — `"chips"` (default) is the trailing-chip
+  body above. `"aligned"` renders the visible secondary fields as fixed-width
+  cells at the END of every row (after `trailing`), so every depth lines up on
+  one right edge, under a sticky header row (`AlignedHeader`, pinned at the
+  DataView's `--dv-header-offset`) of the field titles. Widths come from
+  `FieldDef.width` when it is a definite length (a grid track like `auto` /
+  `1fr` / `minmax(…)` means nothing to a flex row and falls back to 6rem);
+  `FieldDef.align` defaults to `"end"`. A title whose field is in
+  `sortHeader.sortable` is a button calling the view's `setSort` (the table
+  headers' path), with the active direction's arrow. The header mirrors
+  `TreeRowChrome`'s depth-0 geometry (indent + chevron slot) rather than
+  measuring rows; a row with a multi-select checkbox or a wider leading slot
+  shifts its label, not its cells.
+
+Two more inputs come from outside `options`:
+
+- **Lazy children** — `HierarchyConfig.lazyChildren` is the tree primitive's
+  `LazyChildren` over `TRow`, adapted onto the projection (an alias node is
+  never lazy). See the tree primitive's CLAUDE.md "Lazy children".
+- **Open** — `DataViewProps.onRowOpen(row)` (→ `DataViewRenderProps.onRowOpen`)
+  becomes `TreeList.onOpen`; an alias opens the row it references.
+
 Every row also renders a Notion-style hover-revealed "+" in its trailing actions
 cluster (add-child), shown whenever the source supplies `hierarchy.onCreate`.
 This replaces the old persistent "Add" line under expanded nodes — keeping the
@@ -225,11 +247,14 @@ CLAUDE.md ("Row tone").
   - Uses:
     - `primitives/collapsible.ExpandAllButton`
     - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/data-view.DATA_VIEW_HEADER_OFFSET_VAR`
     - `primitives/data-view.DataViewRenderProps`
     - `primitives/data-view.DataViewSlots`
     - `primitives/data-view.FieldCell`
@@ -247,6 +272,7 @@ CLAUDE.md ("Row tone").
     - `primitives/data-view.resolveBodyFields`
     - `primitives/data-view.RowTone`
     - `primitives/data-view.rowToneClass`
+    - `primitives/data-view.SortRule`
     - `primitives/data-view.useGroupingRegistry`
     - `primitives/data-view.useItemActionZones`
     - `primitives/data-view.useResolveCell`

@@ -286,7 +286,6 @@ the outcome too, with no separate code path.
     - `conversations/conversation-view`
     - `conversations/conversation-view/action-bar`
     - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/exit-menu`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment`
@@ -307,6 +306,7 @@ the outcome too, with no separate code path.
     - `primitives/data-view`
     - `primitives/detail-sections`
     - `primitives/error-boundary`
+    - `primitives/file-viewer`
     - `primitives/pane`
     - `primitives/prompt-editor`
     - `primitives/tabbed-view`

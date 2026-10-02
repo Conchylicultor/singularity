@@ -53,6 +53,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/chord/song-index`
     - `apps/chord/trainer`
     - `apps/events/shell`
+    - `apps/file-explorer/browser`
     - `apps/home/shell`
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
@@ -75,7 +76,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `conversations/agents`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view`
-    - `conversations/conversation-view/code/file-pane/image`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
@@ -122,6 +122,8 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `primitives/data-view/tree`
     - `primitives/date-picker`
     - `primitives/diff-view`
+    - `primitives/file-viewer`
+    - `primitives/file-viewer/image`
     - `primitives/folder-picker`
     - `primitives/icon-picker`
     - `primitives/live-state`

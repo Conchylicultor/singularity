@@ -6,7 +6,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
-import { FolderPicker } from "./folder-picker";
+import { FolderPicker, UNAVAILABLE_MESSAGE } from "./folder-picker";
 import { useHostDir } from "./use-host-dir";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -14,6 +14,8 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const cancelIcon = symbol("cancel");
 const checkCircleIcon = symbol("check-circle");
 const folderOpenIcon = symbol("folder-open");
+
+type Verdict = { valid: true } | { valid: false; reason: string };
 
 export interface FolderPickerPopoverProps {
   value: string;
@@ -43,8 +45,21 @@ export function FolderPickerPopover({
   };
 
   const hasValue = value.trim().length > 0;
-  const { data: validity } = useHostDir(value, { enabled: hasValue });
-  const valid = validity?.exists === true && validity.isDirectory;
+  // The field holds an ABSOLUTE path: host-fs would also accept `~/…`, but
+  // whoever reads the value need not expand it, so it is not offered as valid.
+  const absolute = value.startsWith("/");
+  const { data: validity } = useHostDir(value, {
+    enabled: hasValue && absolute,
+  });
+  const verdict: Verdict | undefined = !hasValue
+    ? undefined
+    : !absolute
+      ? { valid: false, reason: "Use an absolute path (starting with /)." }
+      : validity === undefined
+        ? undefined
+        : validity.kind === "ok"
+          ? { valid: true }
+          : { valid: false, reason: UNAVAILABLE_MESSAGE[validity.kind] };
 
   return (
     <Stack direction="row" gap="xs" align="center">
@@ -56,10 +71,10 @@ export function FolderPickerPopover({
           onBlur={() => commit(local)}
           className="pr-2xl"
         />
-        {hasValue && validity ? (
+        {verdict ? (
           <Pin to="right" offset="sm" stretch decorative>
             <Center axis="vertical">
-              {valid ? (
+              {verdict.valid ? (
                 <Icon
                   icon={checkCircleIcon}
                   className="size-4 text-success"
@@ -69,7 +84,7 @@ export function FolderPickerPopover({
                 <Icon
                   icon={cancelIcon}
                   className="size-4 text-destructive"
-                  title="Not an existing folder"
+                  title={verdict.reason}
                 />
               )}
             </Center>

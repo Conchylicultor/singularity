@@ -23,6 +23,7 @@ once per surface by `TabSurface`.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tabs`
+    - `apps/file-explorer/browser`
     - `apps/home/app-cards`
     - `apps/sonata/controls`
     - `conversations/conversation-view`

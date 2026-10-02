@@ -1,0 +1,7 @@
+// @hash a7e652ae7b58
+{
+  // The file explorer's tree (proto-1790864772-0r54) draws the expand chevron
+  // in a column of its own ahead of the file icon, Finder / VS Code style, so
+  // a folder's glyph is never swapped for a chevron on hover.
+  "variant": "column"
+}

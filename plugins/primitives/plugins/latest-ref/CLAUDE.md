@@ -71,6 +71,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `primitives/outline/scroll-spy`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
+    - `primitives/path-bar`
     - `primitives/prompt-editor/voice-input`
     - `primitives/scope/scoped-store`
     - `primitives/shortcuts`

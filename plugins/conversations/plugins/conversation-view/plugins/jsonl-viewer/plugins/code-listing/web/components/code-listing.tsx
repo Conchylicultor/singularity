@@ -1,14 +1,4 @@
-import { useMemo } from "react";
-import type { ShikiTransformer } from "shiki";
-import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import {
-  languageForPath,
-  SHIKI_LANGS,
-  useDarkMode,
-  useHighlightedHtml,
-} from "@plugins/primitives/plugins/syntax-highlight/web";
+import { CodeListing } from "@plugins/primitives/plugins/syntax-highlight/web";
 
 function parseCatN(content: string): { startLine: number; lines: string[] } {
   if (!content) return { startLine: 1, lines: [] };
@@ -36,91 +26,11 @@ function parseCatN(content: string): { startLine: number; lines: string[] } {
   return { startLine, lines };
 }
 
-function makeLineNumberTransformer(startLine: number): ShikiTransformer {
-  return {
-    line(node, lineIdx) {
-      const displayNum = startLine + lineIdx - 1;
-      node.children.unshift({
-        type: "element",
-        tagName: "span",
-        properties: { class: "ln" },
-        children: [{ type: "text", value: String(displayNum) }],
-      });
-    },
-  };
-}
-
-/**
- * Renders actual code (not `cat -n` output) with syntax highlighting and a
- * line-number gutter. `startLine` is the line number of `code`'s first line.
- */
-export function CodeListing({
-  code,
-  startLine = 1,
-  filePath,
-}: {
-  code: string;
-  startLine?: number;
-  filePath: string;
-}) {
-  const dark = useDarkMode();
-
-  const lang = languageForPath(filePath);
-  const resolvedLang = SHIKI_LANGS.includes(lang) ? lang : "text";
-
-  // Stable across renders for a given startLine so the shared highlight effect
-  // doesn't re-run on unrelated parent re-renders.
-  const transformers = useMemo<ShikiTransformer[]>(
-    () => [makeLineNumberTransformer(startLine)],
-    [startLine],
-  );
-  const { html } = useHighlightedHtml(code, resolvedLang, {
-    dark,
-    transformers,
-  });
-
-  if (!code) {
-    return (
-      <Text
-        as="p"
-        variant="caption"
-        className="py-xs italic text-muted-foreground"
-      >
-        (empty result)
-      </Text>
-    );
-  }
-
-  if (html === null) {
-    return (
-      <ContentScope>
-        <Scroll
-          as="pre"
-          axis="both"
-          className="max-h-[280px] rounded-md bg-muted p-md font-mono text-caption"
-        >
-          <code>{code}</code>
-        </Scroll>
-      </ContentScope>
-    );
-  }
-
-  return (
-    <ContentScope>
-      <Scroll
-        axis="both"
-        // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- `[&_.ln]:mr-4` is a Shiki-injected line-number gutter margin and `[&>pre]:overflow-auto` a child-pre clip, both targeted via arbitrary variant on dangerouslySetInnerHTML output; not expressible through Stack/Inset/Scroll on the child
-        className="max-h-[280px] [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    </ContentScope>
-  );
-}
-
 /**
  * Renders `cat -n`-formatted tool output (`<number>\t<text>` per line) with
  * syntax highlighting and a line-number gutter. The only place that parses the
- * `cat -n` format — everything else is `CodeListing`.
+ * `cat -n` format — actual code goes straight to syntax-highlight's
+ * `CodeListing`.
  */
 export function CatNListing({
   content,
@@ -134,7 +44,8 @@ export function CatNListing({
     <CodeListing
       code={lines.join("\n")}
       startLine={startLine}
-      filePath={filePath}
+      path={filePath}
+      emptyText="(empty result)"
     />
   );
 }

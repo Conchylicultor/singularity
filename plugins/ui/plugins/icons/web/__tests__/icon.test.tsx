@@ -3,6 +3,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import {
   brand,
   runtimeSymbol,
+  seti,
   symbol,
   type SavedSymbolName,
 } from "../../core/icon-ref";
@@ -10,7 +11,7 @@ import type { IconStyle } from "../../core/style";
 import { Icon } from "../internal/icon";
 import { IconScopeProvider } from "../internal/icon-scope";
 import { usePublishIconStyle } from "../internal/style-store";
-import { provideSprite } from "../internal/sprite-store";
+import { provideSprite, useWantedSprites } from "../internal/sprite-store";
 import { provideRuntimeSymbols } from "../internal/runtime-symbol-store";
 
 /**
@@ -112,6 +113,31 @@ describe("<Icon>", () => {
         </>,
       ),
     ).toThrow(/two publishers/);
+  });
+});
+
+describe("<Icon> on a Seti file-type glyph", () => {
+  function Wanted() {
+    return <span data-testid="wanted">{useWantedSprites().join(",")}</span>;
+  }
+
+  it("asks for the Seti sprite on mount and draws an empty box until it lands, whatever the style", () => {
+    const { container, getByTestId } = render(
+      <>
+        <Wanted />
+        <Publish scope="app:files" style={rounded} />
+        <IconScopeProvider scope="app:files">
+          <Icon icon={seti("typescript")} active className="size-4" />
+        </IconScopeProvider>
+      </>,
+    );
+    expect(getByTestId("wanted").textContent).toBe("seti");
+    expect(container.querySelector("svg")?.getAttribute("class")).toBe(
+      "size-4",
+    );
+    expect(hrefOf(container)).toBeNull();
+    act(() => provideSprite("seti", "<svg></svg>"));
+    expect(hrefOf(container)).toBe("#seti-typescript");
   });
 });
 

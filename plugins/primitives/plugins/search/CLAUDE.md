@@ -32,6 +32,7 @@
     - `apps-core/surface/floating/wallpaper`
     - `apps/browser/omnibox`
     - `apps/browser/start-page`
+    - `apps/file-explorer/browser`
     - `apps/mail/search`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`

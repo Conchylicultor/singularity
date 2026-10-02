@@ -104,6 +104,22 @@ export function brandId(name: string): string {
   return `si-${name}`;
 }
 
+/** The sprite `<symbol>` id of a Seti file-type glyph. */
+export function setiId(name: string): string {
+  return `seti-${name}`;
+}
+
 /** The sprite that holds every brand mark (brands have no style). */
 export const BRANDS_SPRITE = "brands";
-export type SpriteKey = StyleKey | typeof BRANDS_SPRITE;
+
+/**
+ * The sprite that holds every Seti file-type glyph (one style, like brands).
+ * Never resident: fetched the first time a Seti icon mounts.
+ */
+export const SETI_SPRITE = "seti";
+
+export type SpriteKey = StyleKey | typeof BRANDS_SPRITE | typeof SETI_SPRITE;
+
+export function isSpriteKey(key: string): key is SpriteKey {
+  return key === BRANDS_SPRITE || key === SETI_SPRITE || isStyleKey(key);
+}

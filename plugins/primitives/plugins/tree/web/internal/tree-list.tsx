@@ -16,6 +16,7 @@ import {
   resolveDropParent,
   type DropZone,
   type ExpandChange,
+  type LazyChildren,
   type TreeNode,
 } from "../../core";
 import {
@@ -32,6 +33,13 @@ import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { TreeListProvider, TreeRowSlot } from "./use-tree-row";
 import { useSubtreeExpandIndex } from "./use-subtree-expand-index";
 import { useFlatExpandAll } from "./use-flat-expand-all";
+import {
+  childPlaceholder,
+  TreeChildPlaceholder,
+  type ChildPlaceholder,
+} from "./tree-child-placeholder";
+import { useLazyLoadRequests } from "./use-lazy-load-requests";
+import { useTreeKeyboard } from "./use-tree-keyboard";
 import type { TreeItem } from "./types";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -121,7 +129,33 @@ export type TreeListProps<T extends TreeItem> = {
    * subtrees) so shift-range selection matches exactly what is painted.
    */
   multiSelect?: { actions?: ReactNode };
+  /**
+   * Lazily-listed children (see `LazyChildren`, core). Present → a row whose
+   * `hasChildren` answers true gets a chevron with no children loaded, every
+   * expanded visible `unloaded` row is asked to `load`, and an open row without
+   * its children yet shows a loading / failed / empty placeholder child row.
+   * Absent → every row's children are already in `rows`.
+   */
+  lazyChildren?: LazyChildren<T>;
+  /**
+   * The OPEN gesture — double-click a row, or Enter on a focused row — distinct
+   * from the single-click activation (`onSelect` / `expandOnActivate`). For a
+   * file browser: click selects, double-click descends into the folder or opens
+   * the file. Absent → double-click and Enter do nothing beyond the click.
+   */
+  onOpen?: (id: string) => void;
 };
+
+/** One painted line of the flattened tree: a node, or the placeholder child row
+ *  an open lazy node shows in place of children it does not have yet. */
+type FlatItem<T extends TreeItem> =
+  | { kind: "node"; node: TreeNode<T>; depth: number }
+  | {
+      kind: "placeholder";
+      parent: TreeNode<T>;
+      placeholder: ChildPlaceholder;
+      depth: number;
+    };
 
 export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   const {
@@ -139,6 +173,8 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     canCreate = true,
     expandOnActivate,
     multiSelect,
+    lazyChildren,
+    onOpen,
   } = props;
 
   // The row whose name input should take focus once it appears: set by a create
@@ -198,31 +234,68 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   }, [tree, effectiveQuery, searchAccessor]);
 
   const visibleTree = afterSearch;
+  const searching = afterSearch !== tree;
+
+  // The placeholder rule, bound to this render's lazy source + search state and
+  // handed to every row through the context, so the recursive render and the
+  // windowed flat list below ask the same question.
+  const placeholderOf = useCallback(
+    (node: TreeNode<T>) => childPlaceholder(node, lazyChildren, searching),
+    [lazyChildren, searching],
+  );
+
+  // Ask for the children of every open, visible, never-listed lazy node — on the
+  // UNSEARCHED forest, so a search (which force-opens what it keeps) never
+  // fans out listings of its own.
+  useLazyLoadRequests(tree, lazyChildren);
 
   // Flattened DFS of the painted tree: each visible row in paint order with its
   // depth, descending into a node's children only when expanded. Drives both the
   // windowed render (VirtualRows items) and — via orderedIds — MultiSelect
   // shift-range ordering, so the two never diverge.
   const flatVisible = useMemo(() => {
-    const out: { node: TreeNode<T>; depth: number }[] = [];
+    const out: FlatItem<T>[] = [];
     const walk = (nodes: TreeNode<T>[], depth: number) => {
       for (const node of nodes) {
-        out.push({ node, depth });
-        if (node.expanded) walk(node.children, depth + 1);
+        out.push({ kind: "node", node, depth });
+        if (!node.expanded) continue;
+        walk(node.children, depth + 1);
+        const placeholder = placeholderOf(node);
+        if (placeholder) {
+          out.push({
+            kind: "placeholder",
+            parent: node,
+            placeholder,
+            depth: depth + 1,
+          });
+        }
       }
     };
     walk(visibleTree, 0);
     return out;
-  }, [visibleTree]);
+  }, [visibleTree, placeholderOf]);
   const orderedIds = useMemo(
-    () => flatVisible.map((f) => f.node.id),
+    () => flatVisible.flatMap((f) => (f.kind === "node" ? [f.node.id] : [])),
     [flatVisible],
   );
+
+  // Arrow-key navigation over the painted rows. Rows are focusable exactly when
+  // the tree has an open gesture, so that is what turns the keys on.
+  const keyboard = useTreeKeyboard({
+    flatNodes: flatVisible,
+    enabled: !!onOpen,
+    selectedId,
+    onSelect,
+    setExpanded,
+    lazyChildren,
+  });
 
   const windowed = flatVisible.length > VIRTUALIZE_THRESHOLD;
   const selectedIndex = useMemo(() => {
     if (!windowed || !selectedId) return undefined;
-    const i = flatVisible.findIndex((f) => f.node.id === selectedId);
+    const i = flatVisible.findIndex(
+      (f) => f.kind === "node" && f.node.id === selectedId,
+    );
     return i >= 0 ? i : undefined;
   }, [windowed, selectedId, flatVisible]);
 
@@ -353,6 +426,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       Row,
       takeInitialReveal,
       expandOnActivate,
+      lazyChildren,
+      childPlaceholder: placeholderOf,
+      onOpen,
       multiSelect: !!multiSelect,
       canCreate: canCreate && !!onCreate,
       canReorder: !!onMove,
@@ -371,6 +447,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       Row,
       takeInitialReveal,
       expandOnActivate,
+      lazyChildren,
+      placeholderOf,
+      onOpen,
       multiSelect,
       canCreate,
       onMove,
@@ -390,7 +469,11 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       {(activeId) => (
         <TreeListProvider value={ctxValue}>
           <MaybeMultiSelect multiSelect={multiSelect} orderedIds={orderedIds}>
-            <Stack gap="2xs">
+            <Stack
+              gap="2xs"
+              ref={keyboard.containerRef}
+              onKeyDown={keyboard.onKeyDown}
+            >
               {hasToolbar && (
                 // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
                 <Sticky mask className="mb-1">
@@ -433,16 +516,27 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                 <VirtualRows
                   items={flatVisible}
                   estimateSize={ROW_ESTIMATE_PX}
-                  getKey={(item) => item.node.id}
+                  getKey={(item) =>
+                    item.kind === "node"
+                      ? item.node.id
+                      : `\u0000placeholder:${item.parent.id}`
+                  }
                   scrollToIndex={selectedIndex}
                   // Pin the drag source so it stays mounted when scrolled out of
                   // the window — otherwise its draggable unregisters mid-gesture
                   // and dnd-kit cancels the drop.
                   keepMounted={activeId ? [activeId] : undefined}
                 >
-                  {(item) => (
-                    <TreeRowSlot node={item.node} depth={item.depth} />
-                  )}
+                  {(item) =>
+                    item.kind === "node" ? (
+                      <TreeRowSlot node={item.node} depth={item.depth} />
+                    ) : (
+                      <TreeChildPlaceholder
+                        placeholder={item.placeholder}
+                        depth={item.depth}
+                      />
+                    )
+                  }
                 </VirtualRows>
               ) : (
                 visibleTree.map((node) => (

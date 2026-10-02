@@ -1,0 +1,6 @@
+// @hash 3b71fc14a37d
+{
+  // The file explorer (proto-1790864772-0r54, "sidebar-tonal") draws the
+  // Places sidebar edge to edge on its own tone, with no card around it.
+  "variant": "flush"
+}

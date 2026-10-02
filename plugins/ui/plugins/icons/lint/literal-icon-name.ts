@@ -4,12 +4,12 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-/** The barrel `symbol` / `brand` are imported from. */
+/** The barrel `symbol` / `brand` / `seti` are imported from. */
 const ICONS_CORE = "@plugins/ui/plugins/icons/core";
-const MARKERS = new Set(["symbol", "brand"]);
+const MARKERS = new Set(["symbol", "brand", "seti"]);
 
 /**
- * `symbol(…)` / `brand(…)` take a string literal, called by their own name.
+ * `symbol(…)` / `brand(…)` / `seti(…)` take a string literal, called by their own name.
  *
  * The icon manifest — the names the sprites ship — is collected from source
  * text at build time. A name the scan cannot read (`symbol(name)`, an aliased
@@ -24,7 +24,7 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Require a string-literal argument to symbol() / brand() from the icons core, imported under its own name and only ever called.",
+        "Require a string-literal argument to symbol() / brand() / seti() from the icons core, imported under its own name and only ever called.",
     },
     schema: [],
     messages: {
@@ -33,7 +33,7 @@ export default createRule({
       aliased:
         'Import `{{name}}` under its own name — the icon manifest scan looks for `{{name}}("…")` calls.',
       namespace:
-        "Import `symbol` / `brand` by name, not through a namespace — the icon manifest scan cannot see `ns.symbol(…)`.",
+        "Import `symbol` / `brand` / `seti` by name, not through a namespace — the icon manifest scan cannot see `ns.symbol(…)`.",
       notCalled:
         "`{{name}}` may only be called directly with a string literal; passing it around hides the icon name from the manifest scan.",
     },
