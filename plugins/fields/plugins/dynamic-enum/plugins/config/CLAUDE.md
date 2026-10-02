@@ -20,8 +20,11 @@ text input when no contribution matches.
 
 - Description: Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
 - Web:
-  - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.model-provider`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
-  - Contributes: `Fields.Renderer` "dynamic-enum" → `Rendered`
+  - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.model-provider`, `fields.dynamic-enum.config`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+  - Contributes:
+    - `Fields.Renderer` "dynamic-enum" → `Rendered`
+    - `Fields.Sample` "dynamic-enum"
+    - `DynamicEnum.Options` "Default model"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
@@ -37,11 +40,15 @@ text input when no contribution matches.
   - Exports (values): `DynamicEnum`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields/dynamic-enum.dynamicEnumFieldType`
   - Exports (types): `DynamicEnumFieldDef`
-  - Exports (values): `dynamicEnumField`
+  - Exports (values):
+    - `dynamicEnumField`
+    - `dynamicEnumSample`
+    - `useDynamicEnumSampleOptions`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-category`

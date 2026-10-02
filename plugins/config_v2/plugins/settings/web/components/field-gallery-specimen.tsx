@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
-import { useConfigRegistrations } from "@plugins/config_v2/web";
+import { useState } from "react";
 import {
   ConfigFieldAdornmentsProvider,
   FieldRenderer,
+  useFieldSamples,
   type ConfigFieldAdornments,
+  type FieldSampleEntry,
 } from "@plugins/config_v2/plugins/fields/web";
 import type { FieldDef } from "@plugins/fields/core";
 import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { SpecimenProps } from "@plugins/plugin-meta/plugins/specimens/web";
 
@@ -15,70 +17,29 @@ import type { SpecimenProps } from "@plugins/plugin-meta/plugins/specimens/web";
 // supplies one too, empty, to render each field exactly as an unmodified row.
 const NO_ADORNMENTS: ConfigFieldAdornments = {};
 
-interface Sample {
-  key: string;
-  field: FieldDef;
-  value: unknown;
-}
-
-function isEmptyValue(value: unknown): boolean {
-  if (value === undefined || value === null || value === "") return true;
-  if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === "object") return Object.keys(value).length === 0;
-  return false;
-}
-
 /**
  * Every config field type, as the settings pane renders it (a specimen): one
- * row per field type, each a REAL field of a registered config — the first one
- * whose default is not empty, so a list shows items and a text shows text —
- * relabelled `<type> · <label>` so a mock beside it can be read row by row.
+ * row per field type, sorted by type id, each the type's own fixed sample
+ * (`Fields.Sample` — a field built with that type's factory, with a fixed
+ * label, description and value). Fixed rather than sampled from registered
+ * configs, so the rows are the same on every machine and a hand-written mock
+ * can mirror them one for one.
  *
- * Generic over the open set of field types: it samples whatever the registered
- * configs declare and names no field type, so adding a type adds a row.
+ * Generic over the open set of field types: it reads `useFieldSamples` and
+ * names no field type, so adding a type (with its sample) adds a row. A type
+ * with a renderer but no sample shows as a placeholder row.
  *
  * An exhibit, not a working copy: edits land in local state only, and no
  * ConfigFieldContext is supplied, so no renderer reaches a stored value.
  */
 export function FieldGallerySpecimen(_props: SpecimenProps) {
-  const registrations = useConfigRegistrations();
-  const samples = useMemo(() => {
-    const byType = new Map<string, Sample>();
-    const sorted = [...registrations].sort((a, b) =>
-      a.storePath.localeCompare(b.storePath),
-    );
-    for (const reg of sorted) {
-      for (const [key, field] of Object.entries(reg.descriptor.fields)) {
-        const value: unknown = field.defaultValue;
-        const typeId = field.type.id;
-        const prev = byType.get(typeId);
-        if (prev && !(isEmptyValue(prev.value) && !isEmptyValue(value))) {
-          continue;
-        }
-        byType.set(typeId, {
-          key: `${reg.storePath}:${key}`,
-          field: {
-            ...field,
-            meta: {
-              ...field.meta,
-              label: `${typeId} · ${field.meta.label ?? key}`,
-            },
-          },
-          value,
-        });
-      }
-    }
-    return [...byType.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([, sample]) => sample);
-  }, [registrations]);
-
+  const entries = useFieldSamples();
   return (
     <Stack gap="xs" className="p-md">
       <ConfigFieldAdornmentsProvider value={NO_ADORNMENTS}>
         <ControlPanelPane>
-          {samples.map((sample) => (
-            <SampleField key={sample.key} sample={sample} />
+          {entries.map((entry) => (
+            <SampleField key={entry.typeId} entry={entry} />
           ))}
         </ControlPanelPane>
       </ConfigFieldAdornmentsProvider>
@@ -86,9 +47,16 @@ export function FieldGallerySpecimen(_props: SpecimenProps) {
   );
 }
 
-function SampleField({ sample }: { sample: Sample }) {
-  const [value, setValue] = useState<unknown>(sample.value);
-  return (
-    <FieldRenderer field={sample.field} value={value} onChange={setValue} />
-  );
+function SampleField({ entry }: { entry: FieldSampleEntry }) {
+  if (entry.kind === "missing") {
+    return (
+      <Placeholder>No Fields.Sample for field type: {entry.typeId}</Placeholder>
+    );
+  }
+  return <SampleRow field={entry.sample.field} initial={entry.sample.value} />;
+}
+
+function SampleRow({ field, initial }: { field: FieldDef; initial: unknown }) {
+  const [value, setValue] = useState<unknown>(initial);
+  return <FieldRenderer field={field} value={value} onChange={setValue} />;
 }

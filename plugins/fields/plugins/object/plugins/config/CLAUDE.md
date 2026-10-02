@@ -20,23 +20,28 @@ via `FieldRenderer` — nested `objectField` instances recurse automatically.
 
 - Description: Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "object" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "object" → `Rendered`
+    - `Fields.Sample` "object"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.fieldSchemaWithDefault`
     - `fields.FieldsRecord`
     - `fields.FieldType`
     - `fields.InferFieldsObject`
+    - `fields/int/config.intField`
     - `fields/object.objectFieldType`
   - Exports (types): `ObjectFieldDef`
   - Exports (values):
     - `isObjectFieldDef`
     - `objectField`
+    - `objectSample`
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating/wallpaper`

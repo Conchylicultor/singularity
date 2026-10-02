@@ -37,12 +37,15 @@ property of the thing being filtered. Say it in the field's `description`.
 
 - Description: Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
 - Web:
-  - Contributes: `Fields.Renderer` "tags" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "tags" → `Rendered`
+    - `Fields.Sample` "tags"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields/tags.tagsFieldType`
@@ -50,7 +53,9 @@ property of the thing being filtered. Say it in the field's `description`.
     - `TagsFieldDef`
     - `TagsOption`
     - `TagsOptionInput`
-  - Exports (values): `tagsField`
+  - Exports (values):
+    - `tagsField`
+    - `tagsSample`
 - Cross-plugin:
   - Imported by:
     - `apps/events/sources/coworkmeet`

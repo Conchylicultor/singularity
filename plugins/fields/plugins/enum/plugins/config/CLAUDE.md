@@ -19,12 +19,15 @@ string. `FieldHeader` comes from the slot owner
 
 - Description: Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
 - Web:
-  - Contributes: `Fields.Renderer` "enum" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "enum" → `Rendered`
+    - `Fields.Sample` "enum"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields/enum.enumFieldType`
@@ -32,7 +35,9 @@ string. `FieldHeader` comes from the slot owner
     - `EnumFieldDef`
     - `EnumOption`
     - `EnumOptionInput`
-  - Exports (values): `enumField`
+  - Exports (values):
+    - `enumField`
+    - `enumSample`
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating/wallpaper`

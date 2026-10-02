@@ -1,9 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Fields } from "@plugins/config_v2/plugins/fields/web";
+import { intSample } from "../core";
 import { IntRenderer } from "./components/int-renderer";
 
 export default {
   description:
     "Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.",
-  contributions: [Fields.Renderer(IntRenderer)],
+  contributions: [Fields.Renderer(IntRenderer), Fields.Sample(intSample)],
 } satisfies PluginDefinition;

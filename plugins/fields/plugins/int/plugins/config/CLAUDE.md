@@ -16,7 +16,9 @@ its table/filter capabilities from `number` via the identity `extends` chain.
 
 - Description: Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "int" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "int" → `Rendered`
+    - `Fields.Sample` "int"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
@@ -24,12 +26,15 @@ its table/filter capabilities from `number` via the identity `extends` chain.
     - `primitives/css/ui-kit.Input`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `fields/int.intFieldType`
   - Exports (types): `IntFieldDef`
-  - Exports (values): `intField`
+  - Exports (values):
+    - `intField`
+    - `intSample`
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
@@ -48,6 +53,7 @@ its table/filter capabilities from `number` via the identity `extends` chain.
     - `debug/session-divergence`
     - `debug/slow-ops`
     - `debug/trace/engine`
+    - `fields/object/config`
     - `infra/claude-cli`
     - `infra/events`
     - `infra/host/duress`

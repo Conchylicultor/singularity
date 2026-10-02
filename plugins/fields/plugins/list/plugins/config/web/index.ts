@@ -1,9 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Fields } from "@plugins/config_v2/plugins/fields/web";
+import { listSample } from "../core";
 import { ListRenderer } from "./components/list-renderer";
 
 export default {
   description:
     "List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.",
-  contributions: [Fields.Renderer(ListRenderer)],
+  contributions: [Fields.Renderer(ListRenderer), Fields.Sample(listSample)],
 } satisfies PluginDefinition;

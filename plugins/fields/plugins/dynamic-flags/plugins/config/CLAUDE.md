@@ -22,8 +22,11 @@ their raw names.
 
 - Description: Dynamic flags field type: config-render capability (options and their defaults resolved at render time from slot contributions, drawn as toggle chips, for config-v2.fields.renderer) plus the dynamicFlagsField factory.
 - Web:
-  - Slots: `DynamicFlags.Options` ← `conversations.model-provider`
-  - Contributes: `Fields.Renderer` "dynamic-flags" → `Rendered`
+  - Slots: `DynamicFlags.Options` ← `conversations.model-provider`, `fields.dynamic-flags.config`
+  - Contributes:
+    - `Fields.Renderer` "dynamic-flags" → `Rendered`
+    - `Fields.Sample` "dynamic-flags"
+    - `DynamicFlags.Options` "Visible models"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
@@ -35,6 +38,7 @@ their raw names.
   - Exports (values): `DynamicFlags`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.pickMeta`
@@ -42,7 +46,9 @@ their raw names.
   - Exports (types): `DynamicFlagsFieldDef`
   - Exports (values):
     - `dynamicFlagsField`
+    - `dynamicFlagsSample`
     - `flagValue`
+    - `useDynamicFlagsSampleOptions`
 - Cross-plugin:
   - Imported by: `conversations/model-provider`
 

@@ -6,7 +6,9 @@
 
 - Description: JSON field type: config-render capability (read-only formatted JSON for config-v2.fields.renderer) plus the jsonField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "json" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "json" → `Rendered`
+    - `Fields.Sample` "json"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
@@ -15,12 +17,15 @@
     - `primitives/css/text.Text`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `fields/json.jsonFieldType`
   - Exports (types): `JsonFieldDef`
-  - Exports (values): `jsonField`
+  - Exports (values):
+    - `jsonField`
+    - `jsonSample`
 - Cross-plugin:
   - Imported by:
     - `apps/events/events-core`

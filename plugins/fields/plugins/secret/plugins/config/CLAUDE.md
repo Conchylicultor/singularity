@@ -28,7 +28,9 @@ The **secret** type's config capability, spanning all four runtimes:
 
 - Description: Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
 - Web:
-  - Contributes: `Fields.Renderer` "secret" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "secret" → `Rendered`
+    - `Fields.Sample` "secret"
   - Uses:
     - `config_v2/fields.ConfigFieldContext`
     - `config_v2/fields.defineFieldShape`
@@ -60,6 +62,7 @@ The **secret** type's config capability, spanning all four runtimes:
   - Exports (values): `readSecretConfig`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields/secret.secretFieldType`
     - `network/live.liveValue`
   - Exports (types):
@@ -68,6 +71,7 @@ The **secret** type's config capability, spanning all four runtimes:
   - Exports (values):
     - `configSecretMeta`
     - `secretField`
+    - `secretSample`
 - Cross-plugin:
   - Imported by:
     - `auth/google`

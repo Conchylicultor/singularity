@@ -9216,7 +9216,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
-        - Slots: `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
+        - Slots:
+          - `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
+          - `Fields.Sample` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
         - Uses:
           - `primitives/css/cluster.Cluster`
           - `primitives/css/control-panel.ControlPanel`
@@ -9231,12 +9233,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `ConfigFieldAdornments`
           - `FieldRendererProps`
+          - `FieldSampleEntry`
         - Exports (values):
           - `ConfigFieldAdornmentsProvider`
           - `ConfigFieldContext`
           - `defineFieldShape`
           - `FieldRenderer`
           - `Fields`
+          - `useFieldSamples`
           - `useLocalValue`
       - Cross-plugin:
         - Imported by:
@@ -9267,9 +9271,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types):
           - `ChoiceOption`
+          - `FieldSample`
           - `FieldShape`
           - `FieldShapeProps`
           - `FieldShapeRenderer`
+        - Exports (values): `fieldSample`
     - **`ledger`** — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the @hash chain.
       - Core:
         - Uses:
@@ -9311,6 +9317,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/fields.ConfigFieldAdornmentsProvider`
           - `config_v2/fields.ConfigFieldContext`
           - `config_v2/fields.FieldRenderer`
+          - `config_v2/fields.FieldSampleEntry`
+          - `config_v2/fields.useFieldSamples`
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
@@ -16597,7 +16605,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Avatar field type: config-render capability (icon + color picker for config-v2.fields.renderer) plus the avatarField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "avatar" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "avatar" → `Rendered`
+              - `Fields.Sample` "avatar"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
@@ -16607,6 +16617,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/icons.Icon`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
@@ -16614,10 +16625,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/avatar.AvatarSpec`
               - `primitives/icon-picker.symbolNameForClassic`
               - `ui/icons/saved-names.isSavedSymbolName`
+              - `ui/icons/saved-names.parseSavedSymbolName`
               - `ui/icons/saved-names.SavedSymbolNameSchema`
             - Exports (types): `AvatarFieldDef`
             - Exports (values):
               - `avatarField`
+              - `avatarSample`
               - `migrateClassicAvatar`
         - **`table`** — Avatar field type: data-view table cell (icon + color disc) plus the avatarFieldDef authoring helper.
           - Web:
@@ -16650,18 +16663,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "bool" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "bool" → `Rendered`
+              - `Fields.Sample` "bool"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/bool.boolFieldType`
             - Exports (types): `BoolFieldDef`
-            - Exports (values): `boolField`
+            - Exports (values):
+              - `boolField`
+              - `boolSample`
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
@@ -16744,19 +16762,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Color field type: config-render capability (hex/oklch popover picker for config-v2.fields.renderer) plus the colorField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "color" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "color" → `Rendered`
+              - `Fields.Sample` "color"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `primitives/css/color-picker.ColorPickerPopover`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/color.colorFieldType`
             - Exports (types): `ColorFieldDef`
-            - Exports (values): `colorField`
+            - Exports (values):
+              - `colorField`
+              - `colorSample`
         - **`table`** — Color field type: data-view table cell (read-only color swatch).
           - Web:
             - Contributes: `DataViewSlots.Cell` "color" → `ColorCell`
@@ -16890,19 +16913,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Directory-path field type: config-render capability (folder picker for config-v2.fields.renderer) plus the dirPathField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "directory-path" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "directory-path" → `Rendered`
+              - `Fields.Sample` "directory-path"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `primitives/folder-picker.FolderPickerPopover`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/directory-path.directoryPathFieldType`
             - Exports (types): `DirPathFieldDef`
-            - Exports (values): `dirPathField`
+            - Exports (values):
+              - `dirPathField`
+              - `dirPathSample`
     - **`dynamic-enum`** — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
       - Web:
         - Contributes: `Fields.Identity` "dynamic-enum"
@@ -16920,8 +16948,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
           - Web:
-            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.model-provider`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
-            - Contributes: `Fields.Renderer` "dynamic-enum" → `Rendered`
+            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.model-provider`, `fields.dynamic-enum.config`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+            - Contributes:
+              - `Fields.Renderer` "dynamic-enum" → `Rendered`
+              - `Fields.Sample` "dynamic-enum"
+              - `DynamicEnum.Options` "Default model"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
@@ -16937,11 +16968,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `DynamicEnum`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields/dynamic-enum.dynamicEnumFieldType`
             - Exports (types): `DynamicEnumFieldDef`
-            - Exports (values): `dynamicEnumField`
+            - Exports (values):
+              - `dynamicEnumField`
+              - `dynamicEnumSample`
+              - `useDynamicEnumSampleOptions`
           - Cross-plugin:
             - Imported by:
               - `conversations/conversation-category`
@@ -16968,8 +17003,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Dynamic flags field type: config-render capability (options and their defaults resolved at render time from slot contributions, drawn as toggle chips, for config-v2.fields.renderer) plus the dynamicFlagsField factory.
           - Web:
-            - Slots: `DynamicFlags.Options` ← `conversations.model-provider`
-            - Contributes: `Fields.Renderer` "dynamic-flags" → `Rendered`
+            - Slots: `DynamicFlags.Options` ← `conversations.model-provider`, `fields.dynamic-flags.config`
+            - Contributes:
+              - `Fields.Renderer` "dynamic-flags" → `Rendered`
+              - `Fields.Sample` "dynamic-flags"
+              - `DynamicFlags.Options` "Visible models"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
@@ -16981,6 +17019,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `DynamicFlags`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
@@ -16988,7 +17027,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `DynamicFlagsFieldDef`
             - Exports (values):
               - `dynamicFlagsField`
+              - `dynamicFlagsSample`
               - `flagValue`
+              - `useDynamicFlagsSampleOptions`
           - Cross-plugin:
             - Imported by: `conversations/model-provider`
     - **`enum`** — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
@@ -17019,12 +17060,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/icons.Icon`
         - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
           - Web:
-            - Contributes: `Fields.Renderer` "enum" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "enum" → `Rendered`
+              - `Fields.Sample` "enum"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields/enum.enumFieldType`
@@ -17032,7 +17076,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EnumFieldDef`
               - `EnumOption`
               - `EnumOptionInput`
-            - Exports (values): `enumField`
+            - Exports (values):
+              - `enumField`
+              - `enumSample`
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
@@ -17093,7 +17139,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "float" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "float" → `Rendered`
+              - `Fields.Sample` "float"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
@@ -17101,12 +17149,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Input`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/float.floatFieldType`
             - Exports (types): `FloatFieldDef`
-            - Exports (values): `floatField`
+            - Exports (values):
+              - `floatField`
+              - `floatSample`
           - Cross-plugin:
             - Imported by:
               - `apps/sonata/library`
@@ -17158,7 +17209,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "int" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "int" → `Rendered`
+              - `Fields.Sample` "int"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
@@ -17166,12 +17219,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Input`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/int.intFieldType`
             - Exports (types): `IntFieldDef`
-            - Exports (values): `intField`
+            - Exports (values):
+              - `intField`
+              - `intSample`
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
@@ -17190,6 +17246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/session-divergence`
               - `debug/slow-ops`
               - `debug/trace/engine`
+              - `fields/object/config`
               - `infra/claude-cli`
               - `infra/events`
               - `infra/host/duress`
@@ -17217,7 +17274,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — JSON field type: config-render capability (read-only formatted JSON for config-v2.fields.renderer) plus the jsonField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "json" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "json" → `Rendered`
+              - `Fields.Sample` "json"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
@@ -17226,12 +17285,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/json.jsonFieldType`
             - Exports (types): `JsonFieldDef`
-            - Exports (values): `jsonField`
+            - Exports (values):
+              - `jsonField`
+              - `jsonSample`
           - Cross-plugin:
             - Imported by:
               - `apps/events/events-core`
@@ -17269,13 +17331,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "list" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "list" → `Rendered`
+              - `Fields.Sample` "list"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `primitives/sortable-list.arrayMove`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.fieldSchemaWithDefault`
@@ -17284,10 +17349,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields.InferFieldsObject`
               - `fields/list.listFieldType`
               - `fields/list.ListItem`
+              - `fields/multiline-text/config.multilineTextField`
+              - `fields/text/config.textField`
             - Exports (types): `ListFieldDef`
             - Exports (values):
               - `isListFieldDef`
               - `listField`
+              - `listSample`
           - Cross-plugin:
             - Imported by:
               - `config_v2`
@@ -17310,19 +17378,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Long-text field type: config-render capability (textarea for config-v2.fields.renderer) plus the multilineTextField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "multiline-text" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "multiline-text" → `Rendered`
+              - `Fields.Sample` "multiline-text"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `config_v2/fields.useLocalValue`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/multiline-text.multilineTextFieldType`
             - Exports (types): `MultilineTextFieldDef`
-            - Exports (values): `multilineTextField`
+            - Exports (values):
+              - `multilineTextField`
+              - `multilineTextSample`
+          - Cross-plugin:
+            - Imported by: `fields/list/config`
     - **`number`** — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "number"
@@ -17384,23 +17459,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "object" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "object" → `Rendered`
+              - `Fields.Sample` "object"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.fieldSchemaWithDefault`
               - `fields.FieldsRecord`
               - `fields.FieldType`
               - `fields.InferFieldsObject`
+              - `fields/int/config.intField`
               - `fields/object.objectFieldType`
             - Exports (types): `ObjectFieldDef`
             - Exports (values):
               - `isObjectFieldDef`
               - `objectField`
+              - `objectSample`
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
@@ -17463,7 +17543,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "reorder-tree" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "reorder-tree" → `Rendered`
+              - `Fields.Sample` "reorder-tree"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
@@ -17474,6 +17556,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder/node-types.useReorderNodeTypes`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
@@ -17486,6 +17569,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `normalizeNode`
               - `reorderTreeField`
+              - `reorderTreeSample`
     - **`secret`** — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view cell/filter, so a secret can never become a readable table cell.
       - Web:
         - Contributes: `Fields.Identity` "secret"
@@ -17503,7 +17587,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
           - Web:
-            - Contributes: `Fields.Renderer` "secret" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "secret" → `Rendered`
+              - `Fields.Sample` "secret"
             - Uses:
               - `config_v2/fields.ConfigFieldContext`
               - `config_v2/fields.defineFieldShape`
@@ -17535,6 +17621,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `readSecretConfig`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields/secret.secretFieldType`
               - `network/live.liveValue`
             - Exports (types):
@@ -17543,6 +17630,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `configSecretMeta`
               - `secretField`
+              - `secretSample`
           - Cross-plugin:
             - Imported by:
               - `auth/google`
@@ -17607,19 +17695,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — String-list field type: config-render capability (drag-and-drop string list for config-v2.fields.renderer) plus the stringListField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "string-list" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "string-list" → `Rendered`
+              - `Fields.Sample` "string-list"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `primitives/css/ui-kit.Input`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/string-list.stringListFieldType`
             - Exports (types): `StringListFieldDef`
-            - Exports (values): `stringListField`
+            - Exports (values):
+              - `stringListField`
+              - `stringListSample`
           - Cross-plugin:
             - Imported by: `plugin-meta/composition`
     - **`tags`** — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
@@ -17639,12 +17732,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
           - Web:
-            - Contributes: `Fields.Renderer` "tags" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "tags" → `Rendered`
+              - `Fields.Sample` "tags"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields/tags.tagsFieldType`
@@ -17652,7 +17748,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `TagsFieldDef`
               - `TagsOption`
               - `TagsOptionInput`
-            - Exports (values): `tagsField`
+            - Exports (values):
+              - `tagsField`
+              - `tagsSample`
           - Cross-plugin:
             - Imported by:
               - `apps/events/sources/coworkmeet`
@@ -17716,7 +17814,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "text" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "text" → `Rendered`
+              - `Fields.Sample` "text"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
@@ -17724,6 +17824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Input`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.FieldType`
@@ -17734,6 +17835,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `enumTextField`
               - `parsedTextField`
               - `textField`
+              - `textSample`
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
@@ -17747,6 +17849,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/boot-profile`
               - `debug/slow-ops`
               - `debug/trace/engine`
+              - `fields/list/config`
+              - `fields/variant/config`
               - `infra/claude-cli`
               - `infra/entity-extensions`
               - `infra/events`
@@ -17835,18 +17939,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Variant field type: config-render capability (type-dispatched renderer for config-v2.fields.renderer) plus the variantField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "variant" → `Rendered`
+            - Contributes:
+              - `Fields.Renderer` "variant" → `Rendered`
+              - `Fields.Sample` "variant"
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `primitives/css/text.Text`
           - Core:
             - Uses:
+              - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
               - `fields.FieldsRecord`
               - `fields.fieldsToZodObject`
               - `fields.pickMeta`
+              - `fields/text/config.textField`
               - `fields/variant.variantFieldType`
               - `fields/variant.VariantValue`
             - Exports (types):
@@ -17856,6 +17964,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `isVariantFieldDef`
               - `validateVariant`
               - `variantField`
+              - `variantSample`
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:

@@ -33,13 +33,16 @@ external keys** (the DataView `views` list is the example — its ids key
 
 - Description: List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "list" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "list" → `Rendered`
+    - `Fields.Sample` "list"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
     - `primitives/sortable-list.arrayMove`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.fieldSchemaWithDefault`
@@ -48,10 +51,13 @@ external keys** (the DataView `views` list is the example — its ids key
     - `fields.InferFieldsObject`
     - `fields/list.listFieldType`
     - `fields/list.ListItem`
+    - `fields/multiline-text/config.multilineTextField`
+    - `fields/text/config.textField`
   - Exports (types): `ListFieldDef`
   - Exports (values):
     - `isListFieldDef`
     - `listField`
+    - `listSample`
 - Cross-plugin:
   - Imported by:
     - `config_v2`

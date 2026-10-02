@@ -1,8 +1,10 @@
-import { fieldRendererSlot } from "./internal/slots";
+import { fieldRendererSlot, fieldSampleSlot } from "./internal/slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Fields } from "./internal/slots";
 export { FieldRenderer } from "./internal/field-renderer";
+export { useFieldSamples } from "./internal/field-samples";
+export type { FieldSampleEntry } from "./internal/field-samples";
 export { ConfigFieldContext } from "./internal/config-field-context";
 export { ConfigFieldAdornmentsProvider } from "./internal/field-adornments";
 export type { ConfigFieldAdornments } from "./internal/field-adornments";
@@ -14,5 +16,5 @@ export default {
   description:
     "Field type registry. Sub-plugins contribute field types with core factories and web renderers.",
   contributions: [],
-  slots: { fieldRendererSlot: fieldRendererSlot },
+  slots: { fieldRendererSlot: fieldRendererSlot, fieldSampleSlot },
 } satisfies PluginDefinition;

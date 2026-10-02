@@ -4,3 +4,4 @@ export {
   type EnumOption,
   type EnumOptionInput,
 } from "./internal/enum";
+export { enumSample } from "./internal/sample";

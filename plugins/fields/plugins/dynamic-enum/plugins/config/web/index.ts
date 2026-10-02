@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Fields } from "@plugins/config_v2/plugins/fields/web";
+import { dynamicEnumSample, useDynamicEnumSampleOptions } from "../core";
 import { DynamicEnumRenderer } from "./components/dynamic-enum-renderer";
 import { DynamicEnum } from "./internal/slots";
 
@@ -12,6 +13,13 @@ export type {
 export default {
   description:
     "Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.",
-  contributions: [Fields.Renderer(DynamicEnumRenderer)],
+  contributions: [
+    Fields.Renderer(DynamicEnumRenderer),
+    Fields.Sample(dynamicEnumSample),
+    DynamicEnum.Options({
+      field: dynamicEnumSample.field,
+      useOptions: useDynamicEnumSampleOptions,
+    }),
+  ],
   slots: DynamicEnum,
 } satisfies PluginDefinition;

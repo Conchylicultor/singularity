@@ -15,18 +15,23 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
 
 - Description: Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "bool" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "bool" → `Rendered`
+    - `Fields.Sample` "bool"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `fields/bool.boolFieldType`
   - Exports (types): `BoolFieldDef`
-  - Exports (values): `boolField`
+  - Exports (values):
+    - `boolField`
+    - `boolSample`
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`

@@ -15,7 +15,9 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
 
 - Description: Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "text" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "text" → `Rendered`
+    - `Fields.Sample` "text"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
@@ -23,6 +25,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `primitives/css/ui-kit.Input`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.FieldType`
@@ -33,6 +36,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `enumTextField`
     - `parsedTextField`
     - `textField`
+    - `textSample`
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
@@ -46,6 +50,8 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `debug/boot-profile`
     - `debug/slow-ops`
     - `debug/trace/engine`
+    - `fields/list/config`
+    - `fields/variant/config`
     - `infra/claude-cli`
     - `infra/entity-extensions`
     - `infra/events`

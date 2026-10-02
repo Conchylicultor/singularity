@@ -16,7 +16,12 @@ a new field type.
 `web/index.ts` exports the slot machinery and the shared helpers a renderer
 imports:
 
-- `Fields` — the contribution factory; renderers call `Fields.Renderer(<R>)`.
+- `Fields` — the contribution factory; renderers call `Fields.Renderer(<R>)`,
+  and each type also contributes its fixed gallery sample with
+  `Fields.Sample(<sample>)` (see below).
+- `useFieldSamples` — every type's sample, sorted by type id (a renderer type
+  with no sample comes back as a `missing` entry; two samples for one type
+  throw). The `config/field-gallery` specimen renders exactly these.
 - `defineFieldShape` — the ONE way to write a renderer: it declares a
   `FieldShape` (from `core/`) and gets the component back. There is no
   label, no padding and no selection indicator anywhere in that type, so a
@@ -31,8 +36,14 @@ imports:
 - `useLocalValue` — focus-aware local edit state for text-like inputs.
 - `FieldRendererProps` — the renderer component props.
 
+`core/index.ts` exports `fieldSample(field, value)` / `FieldSample` — a field
+built with its type's own factory (fixed label and description) plus a fixed
+value, checked against that field's value type.
+
 The slot id is `"config-v2.fields.renderer"` (`web/internal/slots.tsx`); dispatch
-is by `field.type.id`. The slot is **frozen** — a `plugins/config` renderer
+is by `field.type.id`. Beside it, the sample collection slot (`Fields.Sample`)
+holds one fixed `FieldSample` per type — an open set read only through
+`useFieldSamples`, so the gallery names no type. Both slots are **frozen** — a `plugins/config` renderer
 sub-plugin contributes into it without this barrel changing.
 
 ## Adding a field type
@@ -41,7 +52,11 @@ Field types are added under the `fields/` matrix, not here. See
 [fields/CLAUDE.md](../../../fields/CLAUDE.md): create
 `plugins/fields/plugins/<type>/` (token + identity in `core`, `Fields.Identity`
 in `web`) plus a `plugins/config` sub-plugin whose `web/index.ts` contributes
-`Fields.Renderer(<R>)` into the `config-v2.fields.renderer` slot owned here. The
+`Fields.Renderer(<R>)` into the `config-v2.fields.renderer` slot owned here,
+and `Fields.Sample(<sample>)` beside it — the sample built with
+`fieldSample(...)` in that sub-plugin's `core/internal/sample.ts` (pure data,
+exported through its `core/` barrel — the browser loads `core/` only as its
+barrel, so `web/` cannot reach the file directly). The
 renderer imports `FieldRendererComponent` (and any helper above) from
 `@plugins/config_v2/plugins/fields/web`. `avatar`, `list`, and `reorder-tree` are
 the config-only templates to mirror.
@@ -52,7 +67,9 @@ the config-only templates to mirror.
 
 - Description: Field type registry. Sub-plugins contribute field types with core factories and web renderers.
 - Web:
-  - Slots: `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
+  - Slots:
+    - `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
+    - `Fields.Sample` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
   - Uses:
     - `primitives/css/cluster.Cluster`
     - `primitives/css/control-panel.ControlPanel`
@@ -67,12 +84,14 @@ the config-only templates to mirror.
   - Exports (types):
     - `ConfigFieldAdornments`
     - `FieldRendererProps`
+    - `FieldSampleEntry`
   - Exports (values):
     - `ConfigFieldAdornmentsProvider`
     - `ConfigFieldContext`
     - `defineFieldShape`
     - `FieldRenderer`
     - `Fields`
+    - `useFieldSamples`
     - `useLocalValue`
 - Cross-plugin:
   - Imported by:
@@ -103,8 +122,10 @@ the config-only templates to mirror.
 - Core:
   - Exports (types):
     - `ChoiceOption`
+    - `FieldSample`
     - `FieldShape`
     - `FieldShapeProps`
     - `FieldShapeRenderer`
+  - Exports (values): `fieldSample`
 
 <!-- AUTOGENERATED:END -->

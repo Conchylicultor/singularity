@@ -18,7 +18,9 @@ capabilities from `number` via the identity `extends` chain.
 
 - Description: Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "float" → `Rendered`
+  - Contributes:
+    - `Fields.Renderer` "float" → `Rendered`
+    - `Fields.Sample` "float"
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
@@ -26,12 +28,15 @@ capabilities from `number` via the identity `extends` chain.
     - `primitives/css/ui-kit.Input`
 - Core:
   - Uses:
+    - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `fields/float.floatFieldType`
   - Exports (types): `FloatFieldDef`
-  - Exports (values): `floatField`
+  - Exports (values):
+    - `floatField`
+    - `floatSample`
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/library`

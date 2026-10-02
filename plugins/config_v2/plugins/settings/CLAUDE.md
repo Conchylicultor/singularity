@@ -86,6 +86,8 @@ contributor that hands a conflict to an agent.
     - `config_v2/fields.ConfigFieldAdornmentsProvider`
     - `config_v2/fields.ConfigFieldContext`
     - `config_v2/fields.FieldRenderer`
+    - `config_v2/fields.FieldSampleEntry`
+    - `config_v2/fields.useFieldSamples`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
