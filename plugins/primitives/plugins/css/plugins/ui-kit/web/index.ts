@@ -136,6 +136,8 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  type SidebarToggleGlyph,
+  type SidebarToggleIcons,
 } from "./components/ui/sidebar";
 export {
   Tooltip,

@@ -8,6 +8,7 @@ import {
 } from "@floating-ui/react-dom";
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
+import type { PortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export interface OverflowPanelProps {
@@ -18,6 +19,13 @@ export interface OverflowPanelProps {
   label: string;
   /** Receives the dock: the one element relocated containers are moved into. */
   dockRef: (el: HTMLElement | null) => void;
+  /**
+   * The bar's REGION attributes (theme scope, sub-theme included), stamped on
+   * the dock. The panel is body-portaled and its overlay carries only the popup
+   * bag, but a parked occupant is still part of the bar's region — and it
+   * stamps only what differs from these, so the dock must carry the rest.
+   */
+  dockAttrs: PortalForwardedAttrs;
   onDismiss: () => void;
 }
 
@@ -54,6 +62,7 @@ export function OverflowPanel({
   anchor,
   label,
   dockRef,
+  dockAttrs,
   onDismiss,
 }: OverflowPanelProps): ReactElement {
   const [floatingEl, setFloatingEl] = useState<HTMLElement | null>(null);
@@ -117,7 +126,7 @@ export function OverflowPanel({
         padding="xs"
         className="pointer-events-auto"
       >
-        <Stack ref={dockRef} gap="2xs" align="stretch" />
+        <Stack ref={dockRef} gap="2xs" align="stretch" {...dockAttrs} />
       </OverlayPanel>
     </ViewportOverlay>
   );

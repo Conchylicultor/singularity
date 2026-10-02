@@ -57,8 +57,8 @@ export type TreeRowChromeProps = {
    * Optional row icon (e.g. a page icon) merged into the chevron slot, Notion
    * style: the icon shows at rest and the expand/collapse chevron reveals on
    * row hover in the *same* box. When omitted, the chevron slot renders on its
-   * own as before. The chevron only appears for expandable rows (`hasChildren`
-   * or `leafChevron`); a non-expandable row with an icon shows only the icon.
+   * own as before. Which rows get a chevron is the disclosure variant's call
+   * (the default merged one: rows with children only).
    */
   icon?: ReactNode;
   /** Editable wrappers inject DnD state classes (dragging, drop-target ring). */
@@ -87,13 +87,14 @@ export type TreeRowChromeProps = {
  * variant of tree-disclosure mirrors this byte-for-byte.
  *
  * Notion-style merged slot: icon at rest, chevron on row hover, both sharing
- * one size-5 box. The icon is purely visual (the row click navigates); the
- * overlaid chevron button owns the toggle.
+ * one size-5 box — only on a row with children; a leaf keeps its icon. The
+ * icon is purely visual (the row click navigates); the overlaid chevron button
+ * owns the toggle.
  */
 function DefaultMergedDisclosure({
   icon,
+  hasChildren,
   isOpen,
-  expandable,
   onToggle,
 }: TreeDisclosureProps) {
   return (
@@ -102,13 +103,13 @@ function DefaultMergedDisclosure({
         as="span"
         axis="both"
         className={cn(
-          expandable &&
+          hasChildren &&
             "group-hover/tree-row:opacity-0 group-hover/tree-row:pointer-events-none",
         )}
       >
         {icon}
       </Center>
-      {expandable && (
+      {hasChildren && (
         <TreeDisclosureToggle
           isOpen={isOpen}
           onToggle={onToggle}

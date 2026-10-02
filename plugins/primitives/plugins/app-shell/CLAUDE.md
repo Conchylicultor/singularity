@@ -41,6 +41,7 @@ panel width are the `ui/tokens/sidebar-metrics` theme tokens; the icon wears
     - `primitives/css/ui-kit.SidebarMenuButton`
     - `primitives/css/ui-kit.SidebarMenuItem`
     - `primitives/css/ui-kit.SidebarProvider`
+    - `primitives/css/ui-kit.SidebarToggleIcons`
     - `primitives/css/ui-kit.SidebarTrigger`
     - `primitives/css/yield.yieldClass`
     - `primitives/pane.openPane`

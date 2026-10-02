@@ -48,6 +48,8 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["gap-tree-root"], extend: "gap" },
   { classes: ["pt-section-head"], extend: "pt" },
   { classes: ["pb-section-head"], extend: "pb" },
+  { classes: ["pt-section-head-band"], extend: "pt" },
+  { classes: ["pb-section-head-band"], extend: "pb" },
   { classes: ["min-h-tree-row"], extend: "min-h" },
   { classes: ["rail-none", "rail-2xs", "rail-xs", "rail-sm", "rail-md", "rail-lg", "rail-xl", "rail-2xl"], group: "sg-rail", excludes: ["p", "px", "py", "pt", "pr", "pb", "pl"], under: [] },
   { classes: ["rail-x-none", "rail-x-2xs", "rail-x-xs", "rail-x-sm", "rail-x-md", "rail-x-lg", "rail-x-xl", "rail-x-2xl", "rail-owe-none", "rail-owe-2xs", "rail-owe-xs", "rail-owe-sm", "rail-owe-md", "rail-owe-lg", "rail-owe-xl", "rail-owe-2xl"], group: "sg-rail-x", excludes: ["px", "pr", "pl"], under: [] },

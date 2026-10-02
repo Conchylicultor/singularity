@@ -119,14 +119,17 @@ export function ViewSection(props: {
           ref={headerRef}
           // The band pays the rail and the row keeps its own `p-row`, so the
           // label lands on the rows' text column — a caption over the rows, as
-          // a quiet group header does.
-          className="rail-follow"
+          // a quiet group header does. It also takes any section spacing the
+          // theme adds beyond the row's own padding, so the row's hover fill
+          // covers the label row and not the gap above it.
+          className="rail-follow pt-section-head-band pb-section-head-band"
         >
           <SectionHeaderRow
             variant={header}
             disclosure="trailing"
             // The header's block padding is the theme's (density
-            // `sectionHeadPad*`, default the row's own `p-row` padding).
+            // `sectionHeadPad*`, default the row's own `p-row` padding), capped
+            // at the row's own here; the excess is the band's (above).
             className="pt-section-head pb-section-head"
             actions={
               <RowActions pin={null} alwaysVisible={optionsOpen || searching}>

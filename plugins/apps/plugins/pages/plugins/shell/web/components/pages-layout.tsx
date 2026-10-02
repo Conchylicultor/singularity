@@ -3,8 +3,14 @@ import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Pages } from "../slots";
 
-/** Pages' one sidebar-toggle glyph, for both states (the mockup's). */
-const sidebarToggleIcon = symbol("dock-to-left");
+/**
+ * Pages' sidebar toggle: the mockup's `dock-to-left`, filled while the sidebar
+ * is open and in outline while it is closed, so it still shows the state.
+ */
+const sidebarToggleIcons = {
+  open: { icon: symbol("dock-to-left"), active: true },
+  closed: { icon: symbol("dock-to-left") },
+};
 
 export function PagesLayout() {
   // Sidebar-only, no app toolbar (mirrors the Settings app shell): with no
@@ -14,7 +20,7 @@ export function PagesLayout() {
   return (
     <AppShellLayout
       sidebarSlot={Pages.Sidebar}
-      sidebarToggleIcon={sidebarToggleIcon}
+      sidebarToggleIcons={sidebarToggleIcons}
     >
       <MillerColumns />
     </AppShellLayout>

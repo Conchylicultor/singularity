@@ -1,4 +1,5 @@
 import { createContext } from "react";
+import type { PortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type {
   ActionForm,
   ShrinkLadder,
@@ -115,3 +116,17 @@ const NO_FORMS: ReadonlyMap<string, ActionForm> = new Map();
  */
 export const BarFormsContext =
   createContext<ReadonlyMap<string, ActionForm>>(NO_FORMS);
+
+const NO_ATTRS: PortalForwardedAttrs = {};
+
+/**
+ * The region attributes (theme scope, pane id, lineage, …) of the BAR itself —
+ * what its row inherits from the DOM, and what the bar stamps on its panel's
+ * dock. An occupant stamps only the attributes where its own bag differs from
+ * these: re-stamping the same `data-theme-scope` on its container would make
+ * that container a fresh theme-scope root, which re-declares the inherited
+ * defaults (`color: var(--foreground)`, `--hover-fill`, …) and so throws away
+ * whatever the row set (a bar's muted `toolbar-foreground`).
+ */
+export const BarRegionAttrsContext =
+  createContext<PortalForwardedAttrs>(NO_ATTRS);

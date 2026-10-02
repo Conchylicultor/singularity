@@ -648,9 +648,14 @@
 @utility gap-tree-root { gap: var(--tree-root-gap); } /* twmerge: extend gap */
 /* A DataView section header's block padding (`ViewSection`) — density
  * `sectionHeadPadTop` / `sectionHeadPadBottom`, default `--pad-row-y` (the
- * `p-row` block padding it always had). */
-@utility pt-section-head { padding-top: var(--section-head-pad-top); } /* twmerge: extend pt */
-@utility pb-section-head { padding-bottom: var(--section-head-pad-bottom); } /* twmerge: extend pb */
+ * `p-row` block padding it always had). Split in two so the header's hover fill
+ * stays row-sized: the ROW keeps at most a row's own padding (`*-section-head`),
+ * and whatever a theme adds beyond it goes on the BAND around the row
+ * (`*-section-head-band`), outside the fill. The two always sum to the token. */
+@utility pt-section-head { padding-top: min(var(--section-head-pad-top), var(--pad-row-y)); } /* twmerge: extend pt */
+@utility pb-section-head { padding-bottom: min(var(--section-head-pad-bottom), var(--pad-row-y)); } /* twmerge: extend pb */
+@utility pt-section-head-band { padding-top: max(0px, calc(var(--section-head-pad-top) - var(--pad-row-y))); } /* twmerge: extend pt */
+@utility pb-section-head-band { padding-bottom: max(0px, calc(var(--section-head-pad-bottom) - var(--pad-row-y))); } /* twmerge: extend pb */
 /* A tree row's minimum height (`TreeRowChrome`) — density `treeRowH`, default
  * `1.75rem` (the `min-h-7` it always had). */
 @utility min-h-tree-row { min-height: var(--tree-row-h); } /* twmerge: extend min-h */

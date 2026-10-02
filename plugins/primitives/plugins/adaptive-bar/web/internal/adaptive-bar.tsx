@@ -55,6 +55,7 @@ import type {
 import {
   cn,
   SingleLineProvider,
+  useRegionForwardedAttrs,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -82,6 +83,7 @@ import { readRowMetrics, useLayoutMeasured, useMeasureBundle } from "./measure";
 import { OverflowPanel } from "./overflow-panel";
 import {
   BarFormsContext,
+  BarRegionAttrsContext,
   BarRegistryContext,
   type BarItemEntry,
   type BarRegistry,
@@ -553,6 +555,9 @@ function AdaptiveBarShell({
   const [trigger, setTrigger] = useState<HTMLElement | null>(null);
   const [panelDock, setPanelDock] = useState<HTMLElement | null>(null);
   const [parkingDock, setParkingDock] = useState<HTMLElement | null>(null);
+  // This bar's own region attributes: stamped on the panel's dock, and the
+  // baseline each occupant stamps only its differences from.
+  const regionAttrs = useRegionForwardedAttrs();
 
   const [placement, setPlacement] = useState<Placement>(EMPTY_PLACEMENT);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -1731,23 +1736,24 @@ function AdaptiveBarShell({
 
   return (
     <BarRegistryContext.Provider value={registry}>
-      <BarFormsContext.Provider value={forms}>
-        {/*
+      <BarRegionAttrsContext.Provider value={regionAttrs}>
+        <BarFormsContext.Provider value={forms}>
+          {/*
           A bar is a single-line strip by contract: a raw string or chip inside
           it must not wrap the row into two lines, and a `<Text>` leaf inside a
           widget must ellipsize rather than grow the row it is being measured
           against.
         */}
-        <SingleLineProvider value={true}>
-          <Stack
-            ref={setRoot}
-            direction="row"
-            align="center"
-            gap={gap}
-            className={rootClass}
-            onPointerDownCapture={onPointerDownCapture}
-          >
-            {/*
+          <SingleLineProvider value={true}>
+            <Stack
+              ref={setRoot}
+              direction="row"
+              align="center"
+              gap={gap}
+              className={rootClass}
+              onPointerDownCapture={onPointerDownCapture}
+            >
+              {/*
               The bar mints one stable container per occupant and re-parents it
               to place it, so THAT container is each item's box. A slot rendering
               its contributions in here must not draw a second one — it would be
@@ -1756,42 +1762,46 @@ function AdaptiveBarShell({
               row. Declared here so `.Render` composes inside an `AdaptiveBar`
               the way this primitive's own docstring has always shown it.
             */}
-            <SlotItemLayout orientation="host-owned">{children}</SlotItemLayout>
-            <span
-              ref={setTrigger}
-              data-adaptive-bar-trigger=""
-              hidden={!showTrigger}
-              // The trigger is a flex item of this row whose width
-              // `measureTrigger` CACHES, so one squeezed reading would
-              // under-reserve it forever. It says so itself now that the row no
-              // longer declares rigidity for its children — see `BAR_ROOT`.
-              className={rigidClass()}
-            >
-              <IconButton
-                icon={moreHorizIcon}
-                label={label}
-                aria-haspopup="dialog"
-                aria-expanded={panelOpen}
-                onClick={() => setPanelOpen((open) => !open)}
-              />
-            </span>
-            {/*
+              <SlotItemLayout orientation="host-owned">
+                {children}
+              </SlotItemLayout>
+              <span
+                ref={setTrigger}
+                data-adaptive-bar-trigger=""
+                hidden={!showTrigger}
+                // The trigger is a flex item of this row whose width
+                // `measureTrigger` CACHES, so one squeezed reading would
+                // under-reserve it forever. It says so itself now that the row no
+                // longer declares rigidity for its children — see `BAR_ROOT`.
+                className={rigidClass()}
+              >
+                <IconButton
+                  icon={moreHorizIcon}
+                  label={label}
+                  aria-haspopup="dialog"
+                  aria-expanded={panelOpen}
+                  onClick={() => setPanelOpen((open) => !open)}
+                />
+              </span>
+              {/*
               The parking dock: a live, hidden parent that always exists inside
               the bar. `overflow="clip"` drops occupants here rather than
               detaching them, so a container is never orphaned and a clipped
               widget comes back as the same instance the moment the row is wider.
             */}
-            <div hidden ref={setParkingDock} />
-          </Stack>
-        </SingleLineProvider>
-        <OverflowPanel
-          open={panelOpen}
-          anchor={trigger}
-          label={label}
-          dockRef={setPanelDock}
-          onDismiss={() => setPanelOpen(false)}
-        />
-      </BarFormsContext.Provider>
+              <div hidden ref={setParkingDock} />
+            </Stack>
+          </SingleLineProvider>
+          <OverflowPanel
+            open={panelOpen}
+            anchor={trigger}
+            label={label}
+            dockRef={setPanelDock}
+            dockAttrs={regionAttrs}
+            onDismiss={() => setPanelOpen(false)}
+          />
+        </BarFormsContext.Provider>
+      </BarRegionAttrsContext.Provider>
     </BarRegistryContext.Provider>
   );
 }

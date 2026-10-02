@@ -27024,6 +27024,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.SidebarMenuButton`
           - `primitives/css/ui-kit.SidebarMenuItem`
           - `primitives/css/ui-kit.SidebarProvider`
+          - `primitives/css/ui-kit.SidebarToggleIcons`
           - `primitives/css/ui-kit.SidebarTrigger`
           - `primitives/css/yield.yieldClass`
           - `primitives/pane.openPane`
@@ -30123,6 +30124,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PopoverPadding`
               - `PopoverWidth`
               - `PortalForwardedAttrs`
+              - `SidebarToggleGlyph`
+              - `SidebarToggleIcons`
               - `SurfaceLevel`
             - Exports (values):
               - `appThemeScope`

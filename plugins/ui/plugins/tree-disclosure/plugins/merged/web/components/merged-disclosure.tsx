@@ -9,15 +9,14 @@ import type { TreeDisclosureProps } from "@plugins/primitives/plugins/tree/core"
  * `DefaultMergedDisclosure` byte-for-byte, so loading this plugin changes
  * nothing until another variant is picked.
  *
- * Trade-off this variant accepts: structure is invisible at rest, and the
- * hover chevron appears on childless rows too. Notion gets away with it
- * because every page there can contain pages; a tree with real leaves cannot
- * distinguish parents from leaves under this variant.
+ * Only a row with children swaps its icon for the chevron: a leaf keeps its
+ * icon under the cursor, so hovering is how you tell parents from leaves. The
+ * trade-off this variant accepts is that structure is invisible at rest.
  */
 export function MergedDisclosure({
   icon,
+  hasChildren,
   isOpen,
-  expandable,
   onToggle,
 }: TreeDisclosureProps) {
   return (
@@ -26,13 +25,13 @@ export function MergedDisclosure({
         as="span"
         axis="both"
         className={cn(
-          expandable &&
+          hasChildren &&
             "group-hover/tree-row:opacity-0 group-hover/tree-row:pointer-events-none",
         )}
       >
         {icon}
       </Center>
-      {expandable && (
+      {hasChildren && (
         <TreeDisclosureToggle
           isOpen={isOpen}
           onToggle={onToggle}

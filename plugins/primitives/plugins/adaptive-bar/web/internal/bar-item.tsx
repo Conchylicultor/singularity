@@ -22,6 +22,7 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import {
   BarFormsContext,
+  BarRegionAttrsContext,
   BarRegistryContext,
   type BarRegistry,
 } from "./registry";
@@ -151,7 +152,21 @@ function PortaledBarItem({
   // The REGION bag, not the popup one: this container is still part of the
   // region it was rendered in, whether docked in the row or parked in the
   // panel, so it keeps a region-only value (a theme sub-theme) a popup drops.
-  const forwarded = useRegionForwardedAttrs();
+  // Only what differs from the bar's own region: the row (docked) and the
+  // panel's dock (parked) already carry the rest, and re-stamping an equal
+  // `data-theme-scope` would make this container a new scope root that resets
+  // the inherited text colour the row set (see `BarRegionAttrsContext`).
+  const region = useRegionForwardedAttrs();
+  const barAttrs = useContext(BarRegionAttrsContext);
+  const forwarded = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(region).filter(
+          ([key, value]) => barAttrs[key] !== value,
+        ),
+      ),
+    [region, barAttrs],
+  );
   const forms = useContext(BarFormsContext);
   const form = forms.get(id) ?? "full";
 

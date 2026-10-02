@@ -347,38 +347,51 @@ describe("the two contracts core imposes on the driver", () => {
 });
 
 describe("the portal container", () => {
-  it("carries the forwarded attribute bag, and updates it", () => {
-    function WithScope({ scope }: { scope: string }): ReactElement {
-      return (
+  function ScopedItem({ scope }: { scope: string | undefined }): ReactElement {
+    // The scope is the ITEM's own (a provider between the bar and the item),
+    // so it differs from the bar's region and must travel on the container.
+    return (
+      <Bar>
         <PortalForwardProvider name="data-theme-scope" value={scope}>
-          <ThreeProbes />
+          <AdaptiveBar.Item id="alpha">
+            <Probe id="alpha" />
+          </AdaptiveBar.Item>
         </PortalForwardProvider>
-      );
-    }
-    const { rerender } = render(<WithScope scope="alpha-scope" />);
+      </Bar>
+    );
+  }
+
+  it("carries the attributes that differ from the bar's, and updates them", () => {
+    const { rerender } = render(<ScopedItem scope="alpha-scope" />);
     expect(containerOf("alpha").getAttribute("data-theme-scope")).toBe(
       "alpha-scope",
     );
 
-    rerender(<WithScope scope="beta-scope" />);
+    rerender(<ScopedItem scope="beta-scope" />);
     expect(containerOf("alpha").getAttribute("data-theme-scope")).toBe(
       "beta-scope",
     );
   });
 
   it("removes a forwarded key that disappears from the bag", () => {
-    function Maybe({ scope }: { scope: string | undefined }): ReactElement {
-      return (
-        <PortalForwardProvider name="data-theme-scope" value={scope}>
-          <ThreeProbes />
-        </PortalForwardProvider>
-      );
-    }
-    const { rerender } = render(<Maybe scope="alpha-scope" />);
+    const { rerender } = render(<ScopedItem scope="alpha-scope" />);
     expect(containerOf("alpha").hasAttribute("data-theme-scope")).toBe(true);
 
-    rerender(<Maybe scope={undefined} />);
+    rerender(<ScopedItem scope={undefined} />);
     expect(containerOf("alpha").hasAttribute("data-theme-scope")).toBe(false);
+  });
+
+  it("leaves the bar's own attributes to the row and the panel's dock", () => {
+    // Re-stamping the bar's scope on the container would make it a fresh
+    // theme-scope root, resetting the text colour the row sets.
+    render(
+      <PortalForwardProvider name="data-theme-scope" value="bar-scope">
+        <ThreeProbes />
+      </PortalForwardProvider>,
+    );
+    expect(containerOf("alpha").hasAttribute("data-theme-scope")).toBe(false);
+    const dock = document.querySelector("[role='dialog'] [data-theme-scope]");
+    expect(dock?.getAttribute("data-theme-scope")).toBe("bar-scope");
   });
 });
 

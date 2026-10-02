@@ -7,6 +7,7 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  type SidebarToggleIcons,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -205,7 +206,7 @@ export function AppShellLayout({
   sidebarSlot,
   toolbarSlot,
   header,
-  sidebarToggleIcon,
+  sidebarToggleIcons,
   children,
 }: {
   /**
@@ -224,10 +225,10 @@ export function AppShellLayout({
   /** Brand/header content for the top of the sidebar. Only shown with a sidebar. */
   header?: ReactNode;
   /**
-   * The sidebar toggle's glyph, for both states. Omitted, the toggle keeps the
-   * default open/close pair (`left-panel-close` / `left-panel-open`).
+   * The sidebar toggle's glyphs, one per state. Omitted, the toggle keeps the
+   * default pair (`left-panel-close` while open / `left-panel-open` while closed).
    */
-  sidebarToggleIcon?: IconRef;
+  sidebarToggleIcons?: SidebarToggleIcons;
   /**
    * The main-area content — the app's chosen layout renderer
    * (e.g. `<MillerColumns/>`, `<FullPane/>`, or `<PaneLayoutHost/>`). Chrome
@@ -246,7 +247,7 @@ export function AppShellLayout({
 
   const toolbar = hasToolbar && toolbarSlot && (
     <Bar tier="chrome">
-      {sidebarSlot && <SidebarTrigger icon={sidebarToggleIcon} />}
+      {sidebarSlot && <SidebarTrigger icons={sidebarToggleIcons} />}
       <toolbarSlot.Render>
         {(item) => <ToolbarItem {...item} />}
       </toolbarSlot.Render>
@@ -261,10 +262,10 @@ export function AppShellLayout({
     () => ({
       contentOwnsTopChrome: !hasToolbar,
       leadingControl: sidebarSlot ? (
-        <SidebarTrigger icon={sidebarToggleIcon} />
+        <SidebarTrigger icons={sidebarToggleIcons} />
       ) : undefined,
     }),
-    [hasToolbar, sidebarSlot, sidebarToggleIcon],
+    [hasToolbar, sidebarSlot, sidebarToggleIcons],
   );
   const body = (
     <>

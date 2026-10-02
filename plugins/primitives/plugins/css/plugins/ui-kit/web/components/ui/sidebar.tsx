@@ -288,23 +288,62 @@ function Sidebar({
   );
 }
 
+/**
+ * One state's glyph: an icon, drawn in its active form (the theme's active
+ * fill) when `active` is set.
+ */
+export interface SidebarToggleGlyph {
+  readonly icon: IconRef;
+  readonly active?: boolean;
+}
+
+/**
+ * The sidebar toggle's two glyphs, one per state. A pair, never one glyph: the
+ * toggle's icon is how the user reads whether a click will open or close the
+ * sidebar, so a design that draws one glyph must still name the other state's —
+ * another icon, or the same icon in its other fill.
+ */
+export interface SidebarToggleIcons {
+  /** Shown while the sidebar is open (the click closes it). */
+  readonly open: SidebarToggleGlyph;
+  /** Shown while the sidebar is closed (the click opens it). */
+  readonly closed: SidebarToggleGlyph;
+}
+
+const defaultToggleIcons: SidebarToggleIcons = {
+  open: { icon: leftPanelCloseIcon },
+  closed: { icon: leftPanelOpenIcon },
+};
+
+function sameGlyph(a: SidebarToggleGlyph, b: SidebarToggleGlyph): boolean {
+  return (
+    a.icon.kind === b.icon.kind &&
+    a.icon.name === b.icon.name &&
+    (a.active ?? false) === (b.active ?? false)
+  );
+}
+
 function SidebarTrigger({
   className,
   onClick,
-  icon,
+  icons = defaultToggleIcons,
   ...props
 }: React.ComponentProps<typeof Button> & {
   /**
-   * One glyph for both states, in place of the default open/close pair
-   * (`left-panel-close` while open, `left-panel-open` while closed). An app
-   * whose design names a single toggle glyph (Pages: `dock-to-left`) passes it;
-   * omitted, the trigger keeps the state-naming pair.
+   * The open/closed glyph pair, in place of the default
+   * (`left-panel-close` while open, `left-panel-open` while closed).
    */
-  icon?: IconRef;
+  icons?: SidebarToggleIcons;
 }) {
   const { toggleSidebar, isMobile, open, openMobile } = useSidebar();
   // The icon names what a click will do, from the same state toggleSidebar flips.
   const isOpen = isMobile ? openMobile : open;
+  if (sameGlyph(icons.open, icons.closed)) {
+    throw new Error(
+      `SidebarTrigger: the open and closed glyphs are both "${icons.open.icon.name}" in the same fill — the toggle must show which state the sidebar is in.`,
+    );
+  }
+  const glyph = isOpen ? icons.open : icons.closed;
 
   return (
     <Button
@@ -319,7 +358,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <Icon icon={icon ?? (isOpen ? leftPanelCloseIcon : leftPanelOpenIcon)} />
+      <Icon icon={glyph.icon} active={glyph.active} />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );

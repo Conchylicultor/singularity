@@ -371,6 +371,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `PopoverPadding`
     - `PopoverWidth`
     - `PortalForwardedAttrs`
+    - `SidebarToggleGlyph`
+    - `SidebarToggleIcons`
     - `SurfaceLevel`
   - Exports (values):
     - `appThemeScope`
