@@ -34,6 +34,8 @@
     - `ConfigV2.Register` "auto-answer"
     - `trigger` "tasks.maybe-launch-on-status"
     - `trigger` "conversations.notify-created"
+    - `trigger` "conversations.turn-emitter.reconcile"
+    - `trigger` "conversations.turn-emitter.reconcile"
     - `taskCategory` "conversations"
     - `taskCategory` "system"
     - `report-kind` "conversation-spawn-failed"
@@ -79,6 +81,7 @@
     - `tasks/task-preprompt.getTaskPreprompt`
     - `tasks/tasks-core.adoptOrphanConversation`
     - `tasks/tasks-core.conversationAttachments`
+    - `tasks/tasks-core.conversationStatusChanged`
     - `tasks/tasks-core.createAttempt`
     - `tasks/tasks-core.createTask`
     - `tasks/tasks-core.DbExecutor`
@@ -143,12 +146,12 @@
     - `defineJob('tasks.maybe-launch')`
     - `defineJob('tasks.maybe-launch-on-status')`
     - `defineJob('conversations.notify-created')`
+    - `defineJob('conversations.turn-emitter.reconcile')`
     - `defineJob('conversations.spawn')`
     - `defineTriggerEvent('conversation.created')`
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineTriggerEvent('conversation.userTurnSent')`
     - `defineTimer('conversations.poller')`
-    - `defineTimer('conversations.turn-emitter')`
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/gone`

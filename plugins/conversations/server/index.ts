@@ -21,7 +21,10 @@ import {
 } from "../core/endpoints";
 import { conversationsPollerTimer, startPoller } from "./internal/poller";
 import { registerOrphanedAttemptReport } from "./internal/orphaned-attempt-report";
-import { startTurnEmitter, turnEmitterTimer } from "./internal/turn-emitter";
+import {
+  startTurnEmitter,
+  turnEmitterReconcileJob,
+} from "./internal/turn-emitter";
 import {
   maybeLaunchTaskJob,
   maybeLaunchOnStatusJob,
@@ -35,7 +38,10 @@ import {
 import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
-import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  conversationStatusChanged,
+  taskStatusChanged,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { ConfigV2 } from "@plugins/config_v2/server";
@@ -108,6 +114,18 @@ export default {
       with: {},
       oneShot: false,
     }),
+    Trigger({
+      on: conversationCreated,
+      do: turnEmitterReconcileJob,
+      with: {},
+      oneShot: false,
+    }),
+    Trigger({
+      on: conversationStatusChanged,
+      do: turnEmitterReconcileJob,
+      with: {},
+      oneShot: false,
+    }),
     TaskCategory({ id: "conversations", label: "Conversations", order: 0 }),
     TaskCategory({ id: "system", label: "System", order: 1 }),
     conversationSpawnFailedKind,
@@ -117,16 +135,16 @@ export default {
     maybeLaunchTaskJob,
     maybeLaunchOnStatusJob,
     notifyConversationCreatedJob,
+    turnEmitterReconcileJob,
     spawnConversationJob,
     conversationCreated,
     conversationTurnCompleted,
     userTurnSent,
     conversationsPollerTimer,
-    turnEmitterTimer,
   ],
-  onReady: () => {
+  onReady: async () => {
     registerOrphanedAttemptReport();
     startPoller();
-    startTurnEmitter();
+    await startTurnEmitter();
   },
 } satisfies ServerPluginDefinition;

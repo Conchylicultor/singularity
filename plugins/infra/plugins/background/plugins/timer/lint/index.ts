@@ -27,10 +27,9 @@ export default {
       "plugins/debug/plugins/health-monitor/server/internal/process-sampler.ts",
       "plugins/debug/plugins/health-monitor/server/internal/host-sampler.ts",
       // REAL polling, visible here until replaced by a push signal: tmux
-      // sessions (the poller) and the active-conversation set (the
-      // turn-emitter) have no change signal this backend subscribes to yet.
+      // sessions (the poller) have no change signal this backend subscribes
+      // to yet.
       "plugins/conversations/server/internal/poller.ts",
-      "plugins/conversations/server/internal/turn-emitter.ts",
     ],
   },
 };

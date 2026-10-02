@@ -89,9 +89,9 @@ function queryConversations(
   return q;
 }
 
-// Infra paths only: poller, turn-emitter. Returns active (non-`done`) rows
-// including system kinds so tmux death is detected and turn events are emitted
-// for system conversations.
+// Infra paths only: poller; turn-emitter boot reconcile. Returns active
+// (non-`done`) rows including system kinds so tmux death is detected and turn
+// events are emitted for system conversations.
 //
 // Scoped to `active` (status <> 'done') because both callers only ever act on
 // non-terminal rows: the poller already skips done/gone, and the turn-emitter
@@ -306,7 +306,7 @@ export async function getConversation(
 
 // Reads only the columns needed by the runtime (no join, no derived fields).
 export async function getConversationRuntime(id: string): Promise<{
-  status: string;
+  status: Conversation["status"];
   runtime: string;
   claudeSessionId: string | null;
 } | null> {

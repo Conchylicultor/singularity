@@ -1,11 +1,15 @@
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { isActiveStatus } from "../../core";
-import { listConversationsForInfra } from "@plugins/tasks/plugins/tasks-core/server";
-import { db, isTransientDbError } from "@plugins/database/server";
+import {
+  getConversationRuntime,
+  listConversationsForInfra,
+} from "@plugins/tasks/plugins/tasks-core/server";
+import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
+import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
@@ -13,69 +17,64 @@ import {
   conversationTurnCompleted,
 } from "./tables-turn-completed-event";
 
-// Poll cadence for active-conversation discovery. File reads are now
-// event-driven (transcript-watcher); this loop only manages subscriptions.
-const POLL_MS = 5_000;
-
 // conversationId → unsubscribe
 const subscriptions = new Map<string, () => void>();
 
-// Real polling for which conversations are active: a timer so it is visible
-// in Background activity while it waits for a push replacement.
-export const turnEmitterTimer = defineTimer({
-  name: "conversations.turn-emitter",
-  description:
-    "Follows the transcript of every active conversation so a finished agent turn is announced to whatever waits on it.",
-  everyMs: POLL_MS,
-  immediate: true,
-  run: tick,
-});
+// Every reconcile — the boot one and each per-conversation one — runs through
+// this one-at-a-time gate and reads the DB inside its turn. Otherwise the boot
+// read could see X active, X→done's reconcile unsubscribe it, and boot then
+// resubscribe X from its stale read. Serialized, the last writer is always the
+// freshest read. A failing turn rejects its own caller and frees the gate.
+const reconcileGate = createSemaphore(1);
 
-export function startTurnEmitter(): void {
-  turnEmitterTimer.start();
-}
-
-export function stopTurnEmitter(): void {
-  turnEmitterTimer.stop();
-  for (const unsub of subscriptions.values()) unsub();
-  subscriptions.clear();
-}
-
-async function tick(): Promise<void> {
-  let convs: Awaited<ReturnType<typeof listConversationsForInfra>>;
-  try {
-    convs = await listConversationsForInfra();
-  } catch (err) {
-    if (!isTransientDbError(err)) {
-      console.error(
-        "[conversations.turn-emitter] listConversationsForInfra failed",
-        err,
+// Converges one conversation's subscription on its current DB status. The
+// event that woke it is only a wake-up: out-of-order, duplicate or replayed
+// events all land on the same truth.
+function reconcile(conversationId: string): Promise<void> {
+  return reconcileGate.run(async () => {
+    const row = await getConversationRuntime(conversationId);
+    const active = row !== null && isActiveStatus(row.status);
+    const unsub = subscriptions.get(conversationId);
+    if (active && !unsub) {
+      subscriptions.set(
+        conversationId,
+        subscribeToConversation(conversationId),
       );
+    } else if (!active && unsub) {
+      unsub();
+      subscriptions.delete(conversationId);
     }
-    return;
-  }
-
-  const activeIds = new Set<string>();
-  for (const c of convs) {
-    if (!isActiveStatus(c.status)) continue;
-    activeIds.add(c.id);
-  }
-
-  // Unsubscribe from conversations that are no longer active.
-  for (const id of subscriptions.keys()) {
-    if (!activeIds.has(id)) {
-      subscriptions.get(id)?.();
-      subscriptions.delete(id);
-    }
-  }
-
-  // Subscribe to newly active conversations.
-  for (const id of activeIds) {
-    if (!subscriptions.has(id)) {
-      subscriptions.set(id, subscribeToConversation(id));
-    }
-  }
+  });
 }
+
+// Boot reconcile: subscriptions live in memory, so every restart rebuilds them
+// from one read. A transition missed while the process was down is caught here
+// too. Fails loudly — there is no later tick to retry.
+export function startTurnEmitter(): Promise<void> {
+  return reconcileGate.run(async () => {
+    const convs = await listConversationsForInfra();
+    for (const c of convs) {
+      if (!isActiveStatus(c.status) || subscriptions.has(c.id)) continue;
+      subscriptions.set(c.id, subscribeToConversation(c.id));
+    }
+  });
+}
+
+// Woken by conversation.created and conversation.statusChanged (see the
+// Trigger contributions in the plugin barrel).
+export const turnEmitterReconcileJob = defineJob({
+  name: "conversations.turn-emitter.reconcile",
+  description:
+    "Starts or stops following a conversation's transcript as it becomes active or ends, so a finished agent turn is announced to whatever waits on it.",
+  hold: "instant",
+  input: z.object({}),
+  dedup: "none",
+  event: z.object({ conversationId: z.string() }).passthrough(),
+  run: async ({ event }) => {
+    if (!event) return;
+    await reconcile(event.conversationId);
+  },
+});
 
 type EndTurnEvent = Extract<JsonlEvent, { kind: "assistant-text" }> & {
   messageId: string;

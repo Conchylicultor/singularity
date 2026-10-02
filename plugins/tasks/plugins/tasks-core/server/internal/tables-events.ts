@@ -71,7 +71,8 @@ export interface ConversationStatusChangedPayload {
 // conversation's `status` column actually changes (working↔waiting, →gone,
 // →done, insert). Finer-grained than `tasks.statusChanged`, which only fires
 // when the parent task's *derived* status flips. No filter columns: the sole
-// consumer (queue pin revalidation) is global and idempotent.
+// consumer (the conversations turn-emitter reconcile) re-reads the row and is
+// idempotent.
 export const {
   event: conversationStatusChanged,
   table: _conversationStatusChangedTriggers,
