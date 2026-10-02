@@ -49,6 +49,9 @@ export function buildShadowTiers(p: ShadowParams): ShadowTokenValues {
     "shadow-lg": `${p.offsetX} ${p.offsetY} ${p.blur} ${p.spread} ${c(1.0)}, ${p.offsetX} 4px 6px ${spread2} ${c(1.0)}`,
     "shadow-xl": `${p.offsetX} ${p.offsetY} ${p.blur} ${p.spread} ${c(1.0)}, ${p.offsetX} 8px 10px ${spread2} ${c(1.0)}`,
     "shadow-2xl": `${p.offsetX} ${p.offsetY} ${p.blur} ${p.spread} ${c(2.5)}`,
+    // Not a tier of its own: a floating panel wears the `md` tier unless a
+    // theme sets it apart.
+    "shadow-popover": "var(--shadow-md)",
   };
 }
 

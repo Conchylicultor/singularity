@@ -37,6 +37,7 @@ import {
 import { PAGES_TRASH_SOURCE } from "@plugins/page/plugins/editor/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { PagesSidebarRow } from "@plugins/apps/plugins/pages/plugins/shell/web";
 
 const deleteIcon = symbol("delete");
 const descriptionIcon = symbol("description");
@@ -108,11 +109,12 @@ export function PagesTrash() {
 
   return (
     <>
-      <div className="px-xs pt-xs">
-        <Row icon={<Icon icon={deleteIcon} />} onClick={() => setOpen(true)}>
-          Trash
-        </Row>
-      </div>
+      <PagesSidebarRow
+        icon={deleteIcon}
+        label="Trash"
+        tone="default"
+        onClick={() => setOpen(true)}
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="md">

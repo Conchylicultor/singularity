@@ -27,7 +27,7 @@ import {
   useSurfaceShortcuts,
   type ShortcutDescriptor,
 } from "@plugins/primitives/plugins/shortcuts/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const leftPanelOpenIcon = symbol("left-panel-open");
@@ -291,8 +291,17 @@ function Sidebar({
 function SidebarTrigger({
   className,
   onClick,
+  icon,
   ...props
-}: React.ComponentProps<typeof Button>) {
+}: React.ComponentProps<typeof Button> & {
+  /**
+   * One glyph for both states, in place of the default open/close pair
+   * (`left-panel-close` while open, `left-panel-open` while closed). An app
+   * whose design names a single toggle glyph (Pages: `dock-to-left`) passes it;
+   * omitted, the trigger keeps the state-naming pair.
+   */
+  icon?: IconRef;
+}) {
   const { toggleSidebar, isMobile, open, openMobile } = useSidebar();
   // The icon names what a click will do, from the same state toggleSidebar flips.
   const isOpen = isMobile ? openMobile : open;
@@ -310,7 +319,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <Icon icon={isOpen ? leftPanelCloseIcon : leftPanelOpenIcon} />
+      <Icon icon={icon ?? (isOpen ? leftPanelCloseIcon : leftPanelOpenIcon)} />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );

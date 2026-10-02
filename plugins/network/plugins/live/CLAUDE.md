@@ -856,6 +856,7 @@ grouped under the wave or item that removes it
     - `infra/deps`
     - `infra/events`
     - `infra/git/git-watcher`
+    - `infra/host-account`
     - `infra/jobs`
     - `infra/trash`
     - `integrations/google-maps`

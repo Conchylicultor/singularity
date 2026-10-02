@@ -1,8 +1,9 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { ControlPanel } from "../internal/namespace";
 import { ControlPanelPane } from "../internal/control-panel-pane";
+import { ControlPanelPopover } from "../internal/control-panel-popover";
 
 afterEach(cleanup);
 
@@ -874,5 +875,182 @@ describe("ControlPanel.Group — the host owns the presentation", () => {
     // than collapsing into nothing.
     expect(container.querySelectorAll(".cp-group[data-inline]").length).toBe(1);
     expect(screen.getByRole("button", { name: /Retries/ })).toBeTruthy();
+  });
+});
+
+// `indicator="trailing"`: the kind menu's shape — a real glyph leads the row
+// and the tick moves to its end. The selection semantics must not move with it.
+describe('ControlPanel.Row — indicator="trailing"', () => {
+  it("keeps role and aria-checked, and draws the tick in the trailing cell", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row
+          select="radio"
+          checked
+          indicator="trailing"
+          icon={<span data-testid="kind-glyph" />}
+          onSelect={vi.fn()}
+        >
+          Agent page
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    const row = screen.getByRole("radio", { name: "Agent page" });
+    expect(row.getAttribute("aria-checked")).toBe("true");
+    // The leading cell holds the row's own icon…
+    const iconCell = container.querySelector('[data-cp-cell="icon"]')!;
+    expect(iconCell.contains(screen.getByTestId("kind-glyph"))).toBe(true);
+    expect(iconCell.hasAttribute("data-cp-icon")).toBe(true);
+    // …and the tick is in the trailing cell.
+    const trailing = container.querySelector('[data-cp-cell="trailing"]')!;
+    expect(trailing.querySelector("svg")).not.toBeNull();
+    expect(iconCell.querySelector("svg")).toBeNull();
+  });
+
+  it("keeps an unticked row's mark box, invisible, so ticking moves nothing", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row
+          select="radio"
+          checked={false}
+          indicator="trailing"
+          onSelect={vi.fn()}
+        >
+          Page
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    const mark = container.querySelector('[data-cp-cell="trailing"] svg')!;
+    expect(mark.getAttribute("class")).toContain("invisible");
+    // No icon, and the mark is not in the leading cell: nothing occupies it.
+    expect(container.querySelector("[data-cp-icon]")).toBeNull();
+  });
+
+  it("leaves the default indicator in the leading cell", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row select="radio" checked onSelect={vi.fn()}>
+          Status
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    const iconCell = container.querySelector('[data-cp-cell="icon"]')!;
+    expect(iconCell.querySelector("svg")).not.toBeNull();
+    expect(container.querySelector('[data-cp-cell="trailing"] svg')).toBeNull();
+  });
+});
+
+// `push`: a drill row pushes a page AND says so — the chevron cannot be
+// forgotten because there is no other way to push from a row.
+describe("ControlPanel.Row — push", () => {
+  it("draws a trailing chevron after the value and pushes the page", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Stack
+          root={
+            <ControlPanel.Section>
+              <ControlPanel.Row
+                trailing="Manual"
+                push={{
+                  key: "sort",
+                  title: "Sort",
+                  render: () => <div>Sort page</div>,
+                }}
+              >
+                Sort
+              </ControlPanel.Row>
+            </ControlPanel.Section>
+          }
+        />
+      </ControlPanel>,
+    );
+    const trailing = container.querySelector('[data-cp-cell="trailing"]')!;
+    expect(trailing.textContent).toBe("Manual");
+    const chevron = trailing.querySelector("svg")!;
+    expect(chevron.getAttribute("data-icon")).toBe("chevron-right");
+
+    fireEvent.click(screen.getByRole("button", { name: /Sort/ }));
+    expect(screen.getByText("Sort page")).toBeTruthy();
+  });
+
+  it("throws when there is no stack to push onto", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    expect(() =>
+      render(
+        <ControlPanel>
+          <ControlPanel.Row
+            push={{ key: "x", title: "Nowhere", render: () => null }}
+          >
+            Nowhere
+          </ControlPanel.Row>
+        </ControlPanel>,
+      ),
+    ).toThrow(/requires a <ControlPanel.Stack>/);
+    consoleError.mockRestore();
+  });
+});
+
+describe('ControlPanel.Section — heading="group"', () => {
+  it("draws the label on the group role, not as the eyebrow", () => {
+    render(
+      <ControlPanel>
+        <ControlPanel.Section label="Agents on this page" heading="group">
+          <ControlPanel.Row>Page</ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>,
+    );
+    const label = screen.getByText("Agents on this page");
+    expect(label.className).toContain("text-group");
+    expect(label.className).toContain("text-group-foreground");
+    expect(label.className).not.toContain("uppercase");
+  });
+
+  it("keeps the eyebrow by default", () => {
+    render(
+      <ControlPanel>
+        <ControlPanel.Section label="Page kind">
+          <ControlPanel.Row>Page</ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>,
+    );
+    expect(screen.getByText("Page kind").className).not.toContain("text-group");
+  });
+});
+
+// The surface takes the width of the page that is SHOWING: a menu-wide root
+// widens to the builder role only while a builder page is pushed.
+describe("ControlPanelPopover — the showing page's width role", () => {
+  it("widens for a pushed page that declares its own size", async () => {
+    render(
+      <ControlPanelPopover
+        open
+        onOpenChange={vi.fn()}
+        size="menu"
+        label="Section options"
+        trigger={<button type="button">More</button>}
+      >
+        <ControlPanel.Section>
+          <ControlPanel.Row
+            push={{
+              key: "filter",
+              title: "Filter",
+              size: "builder",
+              render: () => <div>Filter builder</div>,
+            }}
+          >
+            Filter
+          </ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanelPopover>,
+    );
+    const row = await screen.findByRole("button", { name: /Filter/ });
+    const panel = row.closest('[data-slot="popover-content"]')!;
+    expect(panel.className).toContain("w-(--popover-width-menu)");
+
+    fireEvent.click(row);
+    await screen.findByText("Filter builder");
+    expect(panel.className).toContain("w-(--popover-width-builder)");
   });
 });

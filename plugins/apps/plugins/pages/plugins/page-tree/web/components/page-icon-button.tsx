@@ -5,13 +5,27 @@ import {
   ControlPanelPopover,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { EmojiPicker } from "@plugins/ui/plugins/icons/plugins/emoji/web";
-import type { Emoji } from "@plugins/ui/plugins/icons/plugins/emoji/core";
+import {
+  EmojiSchema,
+  type Emoji,
+} from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
+  recordUsage,
+  useRecentUsage,
+} from "@plugins/primitives/plugins/usage-rank/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const closeIcon = symbol("close");
+
+/** The usage-rank namespace a picked page icon is recorded under. */
+const PAGE_ICON_USAGE = "page-icon";
+/** How many recent icons lead the grid: two rows of nine. */
+const RECENT_COUNT = 18;
 
 export interface PageIconValue {
   icon: Emoji | null;
@@ -32,9 +46,11 @@ export type PageIconFooterActions = (ctx: { close: () => void }) => ReactNode;
  * page icon or a small "Add icon" affordance — so both entry points share one
  * picker.
  *
- * It is a `ControlPanelPopover size="picker"`, so the emoji block's label,
- * search field and grid inherit the panel's one content inset, and the rule
- * above the footer is drawn by the container rather than placed here.
+ * It is a `ControlPanelPopover size="picker"`, so the emoji block's search
+ * field and grid inherit the panel's one content inset, and the rule above the
+ * footer is drawn by the container rather than placed here. The grid is the
+ * emoji picker's `panel` variant, led by a "Recent" row (see
+ * `PageEmojiPicker`); every pick is recorded for that row's ranking.
  */
 export function PageIconPicker({
   value,
@@ -60,11 +76,12 @@ export function PageIconPicker({
       label="Page icon"
       trigger={trigger}
     >
-      {/* No section label: the emoji block renders its own header. */}
+      {/* No section label: the picker's search field leads the panel. */}
       <ControlPanel.Section>
-        <EmojiPicker
+        <PageEmojiPicker
           value={value.icon}
-          onSelect={(icon) => {
+          onPick={(icon) => {
+            recordUsage(PAGE_ICON_USAGE, icon);
             void onChange({ icon });
             close();
           }}
@@ -125,10 +142,45 @@ export function PageIconButton({
           )}
         >
           <Center className="size-full">
-            <PageIcon icon={value.icon} className="size-[4.5rem]" />
+            {/* A 72px glyph: the emoji box is the size over the 85% an
+                `EmojiGlyph` draws its character at. */}
+            <PageIcon icon={value.icon} className="size-[calc(72px/0.85)]" />
           </Center>
         </button>
       }
     />
+  );
+}
+
+/**
+ * The picker body: the emoji grid drawn as a panel, led by a "Recent" row —
+ * the icons last picked here, newest first (`usage-rank`, fed by every pick).
+ * It waits for that row before mounting the grid, because the grid reads its
+ * leading category once, at mount.
+ */
+function PageEmojiPicker({
+  value,
+  onPick,
+}: {
+  value: Emoji | null;
+  onPick: (icon: Emoji) => void;
+}) {
+  const recent = useRecentUsage(PAGE_ICON_USAGE, RECENT_COUNT);
+  return (
+    <ResourceView resource={recent} fallback={<Loading variant="rows" />}>
+      {(keys) => (
+        <EmojiPicker
+          variant="panel"
+          value={value}
+          // Every key was recorded from an `Emoji`; one that no longer parses
+          // is corrupt data, and throws here rather than being drawn.
+          leadingCategory={{
+            label: "Recent",
+            emojis: keys.map((key) => EmojiSchema.parse(key)),
+          }}
+          onSelect={onPick}
+        />
+      )}
+    </ResourceView>
   );
 }

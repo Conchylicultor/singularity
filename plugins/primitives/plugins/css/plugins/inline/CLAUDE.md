@@ -108,6 +108,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `plugin-meta/facets/routes/render-detail`
     - `plugin-meta/plugin-view/runtimes`
     - `primitives/data-view`
+    - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/data-view/tree`
     - `primitives/detail-sections`

@@ -7,7 +7,9 @@ import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { TreeRowChrome } from "@plugins/primitives/plugins/tree/web";
 import {
   FieldCell,
   GroupedSections,
@@ -15,6 +17,7 @@ import {
   leadingSlot,
   pickLeadingField,
   pickPrimaryField,
+  readFallback,
   resolveBodyFields,
   rowToneClass,
   useDataViewSections,
@@ -245,6 +248,83 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     </Stack>
   );
 
+  // The `rowChrome: "tree"` row: the tree primitive's own row chrome at depth
+  // 0, so the row matches a tree row of the same records by construction. One
+  // label line — the title truncates; every other body field is a rigid inline
+  // cell after it, the way the tree view draws its secondary fields.
+  // The title's READ rendering, on the precedence `FieldCell` and the tree
+  // view's primary label both apply (field `cell` → contributed cell →
+  // `readFallback`). Never the click-to-edit `EditableCell`: a tree row's
+  // label is a navigation target (its click activates the row) and one label
+  // line tall, and the inline editor's hover affordance would make the row
+  // taller than the tree row it must match.
+  const titleRead = (row: unknown): ReactNode => {
+    if (!titleField) return null;
+    if (titleField.cell) return titleField.cell(row);
+    const value = titleField.value?.(row);
+    return (
+      resolveCell(titleField, value, row, titleField.values?.(row)) ??
+      readFallback(titleField, value)
+    );
+  };
+
+  const renderTreeChromeRow = (
+    row: unknown,
+    key: string,
+    labelClass: string,
+    aggregateCount: number | undefined,
+  ): ReactNode => {
+    const cellFields = [...subtitleFields, ...trailingFields];
+    const hasCells =
+      cellFields.length > 0 || (aggregateCount != null && aggregateCount > 1);
+    return (
+      <TreeRowChrome
+        key={key}
+        depth={0}
+        hasChildren={false}
+        isOpen={false}
+        leafChevron={false}
+        selected={key === props.selectedRowId}
+        onSelect={props.rowActivation?.(row)}
+        icon={leadingSlot({
+          field: leadingField,
+          row,
+          resolveCell,
+          resolveEditor,
+          own: options.leading?.(row),
+        })}
+        actions={revealed?.({
+          row,
+          hasChildren: props.hasChildren?.(key) ?? false,
+        })}
+      >
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating label, a row-level flex child of TreeRowChrome's flex row (it owns the row layout), as in the tree view */}
+        <span className={cn("min-w-0 flex-1 truncate", labelClass)}>
+          {titleField ? titleRead(row) : key}
+        </span>
+        {hasCells ? (
+          // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 rigid trailing cluster beside the flexible label, the tree row owns its flex row
+          <Inline gap="xs" className="shrink-0">
+            {cellFields.map((field) => (
+              <span key={field.id}>
+                <FieldCell
+                  field={field}
+                  row={row}
+                  resolveCell={resolveCell}
+                  resolveEditor={resolveEditor}
+                  display="inline"
+                />
+              </span>
+            ))}
+            {aggregateCount && aggregateCount > 1 ? (
+              <Badge variant="muted">{`×${aggregateCount}`}</Badge>
+            ) : null}
+          </Inline>
+        ) : null}
+      </TreeRowChrome>
+    );
+  };
+
   // Single source of row markup — shared verbatim by the plain and virtualized
   // branches so the two render identically.
   const renderRow = (
@@ -256,7 +336,14 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     // Per-row emphasis: composed ON TOP of the title's own `text-foreground`, so
     // a switched-off / archived / finished row reads inactive. The subtitle and
     // the trailing cell are already muted, so the title is the whole difference.
-    const toneClass = rowToneClass(props.rowTone?.(row));
+    // The consumer's own per-row class comes last: it is the escape hatch.
+    const toneClass = cn(
+      rowToneClass(props.rowTone?.(row)),
+      options.labelClassName?.(row),
+    );
+    if (options.rowChrome === "tree") {
+      return renderTreeChromeRow(row, key, toneClass, aggregateCount);
+    }
     return (
       <Row
         key={key}
@@ -443,7 +530,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       <SectionBody
         section={section}
         foldLines={props.foldLines}
-        className={windowed ? undefined : cn("py-sm", quietGroup && "pt-none")}
+        // Tree-chrome rows keep the tree view's rhythm: no band padding, the
+        // rows sit flush under the header like a tree's do.
+        className={
+          windowed || options.rowChrome === "tree"
+            ? undefined
+            : cn("py-sm", quietGroup && "pt-none")
+        }
       >
         {/* A section whose rows are all folded draws no rows — its header and
             fold line say everything. */}

@@ -12,6 +12,7 @@ export const ICON_MANIFEST: {
   readonly seti: readonly string[];
 } = {
   symbols: [
+    "account-circle",
     "account-tree",
     "add",
     "add-circle",
@@ -90,6 +91,7 @@ export const ICON_MANIFEST: {
     "desktop-windows",
     "difference",
     "do-not-disturb-on",
+    "dock-to-left",
     "donut-large",
     "download",
     "downloading",
@@ -103,7 +105,6 @@ export const ICON_MANIFEST: {
     "event",
     "event-note",
     "exit-to-app",
-    "expand-more",
     "extension",
     "face",
     "fast-forward",
@@ -194,7 +195,6 @@ export const ICON_MANIFEST: {
     "mic",
     "monitor-heart",
     "monitoring",
-    "mood",
     "more-horiz",
     "movie",
     "museum",
@@ -251,6 +251,7 @@ export const ICON_MANIFEST: {
     "science",
     "search",
     "send",
+    "sentiment-satisfied",
     "settings",
     "share",
     "shield",
@@ -272,6 +273,7 @@ export const ICON_MANIFEST: {
     "surround-sound",
     "swap-horiz",
     "swap-vert",
+    "sync",
     "sync-problem",
     "tab",
     "table",

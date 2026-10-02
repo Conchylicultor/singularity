@@ -38,6 +38,12 @@ export const shadowGroup = defineTokenGroup("shadow", {
     default: "0 1px 3px 0px oklch(0 0 0 / 0.25)",
     label: "Shadow 2XL",
   },
+  // A floating panel's shadow (`Surface level="overlay"`). Default = the `md`
+  // step it always wore.
+  "shadow-popover": {
+    default: "var(--shadow-md)",
+    label: "Shadow popover",
+  },
 });
 
 export type ShadowTokenValues = {

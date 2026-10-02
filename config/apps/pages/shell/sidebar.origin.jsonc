@@ -1,14 +1,16 @@
-// @hash 8554a7157dd5
+// @hash 54b7e9b02375
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+  // Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items stacked above and below it (a sidebar's footer rows).
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.pages.content-search:search",
     "apps.pages.page-tree:pages",
     "apps.pages.page-tree:new-page",
+    "apps.pages.shell:workspace",
     "apps.pages.trash:trash"
   ]
 }

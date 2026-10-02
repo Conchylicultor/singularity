@@ -1,61 +1,18 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type React from "react";
 
 import { ControlPanelSection } from "./control-panel";
 import { ControlPanelRow } from "./control-panel-row";
+import {
+  PanelStackContext,
+  usePanelStackState,
+  type PanelStackApi,
+  type PanelStackState,
+} from "./stack-context";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const arrowBackIcon = symbol("arrow-back");
-
-export interface PanelStackEntry {
-  /** Identity of this level — a re-push with the same key replaces it. */
-  key: string;
-  /** Shown in the back header, so the user knows what popping returns to. */
-  title: string;
-  render: () => React.ReactNode;
-}
-
-export interface PanelStackApi {
-  /** 0 while the root panel is showing. */
-  depth: number;
-  push: (entry: PanelStackEntry) => void;
-  pop: () => void;
-  /** Back to the root in one step — for a host closing and reopening the panel. */
-  reset: () => void;
-}
-
-const PanelStackContext = createContext<PanelStackApi | null>(null);
-
-/**
- * The panel stack a contribution pushes onto.
- *
- * It is published through CONTEXT rather than passed down because the third
- * consumer needs it that way: custom-columns' per-field editor is a nested
- * contribution rendered inside someone else's section, and has no prop path back
- * to whichever chrome is hosting the panel. Throws when there is no stack, which
- * is the honest answer — a component that pushes a sub-panel cannot render
- * correctly in a host that has nowhere to push it, and a silent no-op would show
- * as a dead click.
- */
-export function usePanelStack(): PanelStackApi {
-  const api = useContext(PanelStackContext);
-  if (!api) {
-    throw new Error(
-      "usePanelStack() requires a <ControlPanel.Stack> ancestor. Panels rendered " +
-        "through ControlPanelPopover already have one.",
-    );
-  }
-  return api;
-}
 
 export interface ControlPanelStackProps {
   /** The depth-0 panel. */
@@ -66,6 +23,11 @@ export interface ControlPanelStackProps {
    * this is for a host that needs to know as well.
    */
   onExhausted?: () => void;
+  /**
+   * State owned by the host, for a host that reads the showing page from
+   * outside (see `PanelStackState`). Omitted: the stack owns its own.
+   */
+  state?: PanelStackState;
   // No `className`: the stack's element is `display: contents` (below), a box the
   // layout does not generate, so a class here could not size, space or paint
   // anything a caller would expect it to.
@@ -88,17 +50,11 @@ export interface ControlPanelStackProps {
 export function ControlPanelStack({
   root,
   onExhausted,
+  state,
 }: ControlPanelStackProps) {
-  const [stack, setStack] = useState<PanelStackEntry[]>([]);
+  const own = usePanelStackState();
+  const { entries: stack, push, pop, reset } = state ?? own;
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const push = useCallback((entry: PanelStackEntry) => {
-    setStack((prev) =>
-      prev.at(-1)?.key === entry.key ? prev : [...prev, entry],
-    );
-  }, []);
-  const pop = useCallback(() => setStack((prev) => prev.slice(0, -1)), []);
-  const reset = useCallback(() => setStack([]), []);
 
   const depth = stack.length;
   const api = useMemo<PanelStackApi>(

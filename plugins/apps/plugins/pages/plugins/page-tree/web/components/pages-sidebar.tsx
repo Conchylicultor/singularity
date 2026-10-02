@@ -37,8 +37,18 @@ const PAGES_SIDEBAR_VIEW = defineDataView("pages-sidebar");
  * Every authored view instance at once — Favorites, Private, Scratch — each
  * under its own collapsible header, instead of a switcher showing one. Module
  * scope: a toolbar spec is data the host reads, one value for the surface.
+ *
+ * Headers in the `group` form: sentence case in the `group` type role and
+ * `groupForeground`, the mockup's quiet "Favorites" / "Private" heads rather
+ * than the small-caps eyebrow.
  */
-const SECTIONS: SectionsToolbar = { kind: "sections" };
+const SECTIONS: SectionsToolbar = {
+  kind: "sections",
+  forms: { header: "group" },
+};
+
+/** The open page's row reads in the title tier: strong text, medium weight. */
+const ACTIVE_LABEL = cn("font-medium text-strong-foreground");
 
 const NO_LINK_PARENTS: readonly string[] = [];
 
@@ -104,12 +114,15 @@ export function PagesSidebar() {
   // Plain literals (not the view children's options helpers) to respect
   // data-view's collection-consumer separation — consumers never import a view
   // child.
-  const viewOptions = useMemo(
-    () => ({
+  const viewOptions = useMemo(() => {
+    const activeLabel = (b: PageRow) =>
+      b.id === selectedId ? ACTIVE_LABEL : undefined;
+    return {
       tree: {
         leadingIcon: (b: PageRow) => (
           <PageIcon icon={pageData(b).icon} className="size-4" />
         ),
+        labelClassName: activeLabel,
         // No `rowMenu`: "Add page below" is an ordinary item action
         // (`AddPageBelowAction`) contributed to `PageTree.RowActions`, so the row
         // carries ONE action registry with one authored overflow bucket instead
@@ -133,15 +146,18 @@ export function PagesSidebar() {
           );
         },
       },
-      // Favorites (a filtered `list` view) gets the same page icon and the tree's row size.
+      // Favorites (a filtered `list` view) draws its rows through the tree's
+      // own row chrome, so a favourite and the same page in the tree below are
+      // one row by construction — height, indent, icon box, hover, selection.
       list: {
+        rowChrome: "tree" as const,
         leading: (b: PageRow) => (
           <PageIcon icon={pageData(b).icon} className="size-4" />
         ),
+        labelClassName: activeLabel,
       },
-    }),
-    [tintOf],
-  );
+    };
+  }, [tintOf, selectedId]);
 
   const creators = useMemo<CreateOption[]>(() => {
     const createRootPage = async () => {
@@ -168,7 +184,10 @@ export function PagesSidebar() {
   // `Trash` rows after it sit at the bottom; the DataView never owns a scroll —
   // each section's `Sticky` header pins against it.
   return (
-    <Scroll fill className="py-xs">
+    // `pt-2xs`: with the section heads' own top padding (the theme's
+    // `sectionHeadPadTop`), the first head sits where the mockup's does under
+    // the search field.
+    <Scroll fill className="pt-2xs pb-xs">
       <DataView<PageRow>
         rows={rows}
         readiness={result}
@@ -198,6 +217,7 @@ export function PagesSidebar() {
         views={["tree", "list"]}
         storageKey={PAGES_SIDEBAR_VIEW}
         toolbar={SECTIONS}
+        searchPlaceholder="Search pages…"
         fieldExtensions={PageTree.Fields}
         creators={creators}
         selectedRowId={selectedId}

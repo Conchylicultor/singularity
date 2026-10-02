@@ -21,6 +21,9 @@ export function CopyIdAction() {
     <IconButton
       icon={copied ? checkIcon : contentCopyIcon}
       label="Copy block ID"
+      // A secondary action riding beside the title: the same box as the bar's
+      // other icon buttons, a smaller glyph.
+      glyph="small"
       tooltip={copied ? "Copied" : "Copy block ID"}
       onClick={copy}
     />

@@ -412,14 +412,14 @@ declared on the same box or the rail freezes on the root's value.
 
 | Token | Value | What it is |
 | --- | --- | --- |
-| `--cp-panel-pad` | `var(--space-xs)` | the chrome pad — the gap a row's fill keeps from the panel's edge |
+| `--cp-panel-pad` | `var(--panel-pad)` (density token, default `var(--space-xs)`) | the chrome pad — the gap a row's fill keeps from the panel's edge |
 | `--cp-row-pad-x` | `var(--pad-row-x)` | inline padding inside a row or rule row |
 | `--cp-gutter` | `var(--space-lg)` | leading track that hangs the drag handle — present only in a panel where some row has one |
 | `--cp-icon-gap` | `var(--space-sm)` | **the** column gap — shared by `cp-row` and `cp-rule`, which is what puts a rule's prefix cell on the same rail as a row's icon cell |
 | `--cp-icon-col` | `1.125rem` | the icon / selection-indicator track — present only in a panel where some row has one |
 | `--cp-prefix-col` | `4rem` | the builder's prefix track ("Where", "And", "then by") |
 | `--cp-remove-col` | `1.5rem` | minimum of the builder's trailing track |
-| `--cp-row-h` | `var(--control-height-md)` | one row height (invariant #2) |
+| `--cp-row-h` | `var(--panel-row-h)` (density token, default `var(--control-height-md)`) | one row height (invariant #2) |
 | `--cp-rule-h` | `var(--control-height-lg)` | one builder-row height |
 | `--cp-rail-icon` | `calc(row-pad-x + gutter + icon-gap)`, or `var(--cp-row-pad-x)` in a panel with no handle | THE rail — the left edge of a row's leading cell, and the panel's own content inset |
 
@@ -481,8 +481,18 @@ and `actions` uniform, or the value column steps between rows.**
 That absence is the feature — those are exactly the props that let three panels
 in one toolbar end up 481, 384 and 256px wide, each set by whatever was widest
 inside it. `size` maps to a width **role** (`menu` = a list of choices,
-`builder` = a six-track rule row, `picker` = a panel whose body is a grid), the
-padding is the body's, and there is nowhere to smuggle a measurement through.
+`described` = choices that each carry a visible description line, `builder` = a
+six-track rule row, `picker` = a panel whose body is a grid — each a density
+token, `popoverWidth*`, so a theme sizes them), the padding is the body's, and
+there is nowhere to smuggle a measurement through.
+
+**The width is the SHOWING page's role.** A page pushed onto the stack may
+declare its own `size` (`PanelStackEntry.size`): a menu whose Filter row opens
+the filter builder is drawn menu-wide, and widens to `builder` only while that
+page shows. The popover owns the stack's state (`usePanelStackState`) for
+exactly this — the width is the surface's, so the showing page's role has to
+reach `PopoverContent` in the same render that shows the page — and returns to
+the root once the panel has finished closing. A pane ignores the field.
 
 `maxHeight` **is** here, and is not that escape reopened: it is a passthrough of
 `OverlayPanel`'s closed `PopoverMaxHeight` scale, invariant #5 is about *width*,
@@ -498,6 +508,21 @@ escape is absent from the type, not defaulted in it.
 
 No `tooltip` prop either: the caller's trigger (typically an `IconButton`)
 already owns its tooltip.
+
+A row pushes a page with `ControlPanel.Row push={entry}` — never `onSelect` +
+`usePanelStack().push` — and draws the trailing `chevron-right` that says it
+drills, after its value. One spelling, so a drill row without its chevron is
+unspellable. (The filter builder's own sub-pages still push through
+`useFilterPanelStack`, which re-enters a filter scope around the page; they do
+not have the chevron yet.)
+
+Two more opt-in shapes, defaults unchanged: `Section heading="group"` draws the
+label as a sentence-case group head (`group` role, `--group-foreground`)
+instead of the eyebrow, and `Row indicator="trailing"` on a check / radio row
+draws the mark after the value so the leading cell holds a real `icon` — role
+and `aria-checked` unchanged. A row with a visible `description` reads as a
+title (medium, strong) over its prose, and its leading and trailing cells sit on
+the title line.
 
 Children are wrapped in a `ControlPanel.Stack`, so `usePanelStack()` works inside
 any panel opened this way — a sub-panel is a push, never a popover opened from
@@ -604,11 +629,13 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `ControlPanelPaneProps`
     - `ControlPanelPopoverProps`
     - `ControlPanelProps`
+    - `ControlPanelRowIndicator`
     - `ControlPanelRowProps`
     - `ControlPanelRowSelect`
     - `ControlPanelRowTone`
     - `ControlPanelRuleListProps`
     - `ControlPanelRuleRowProps`
+    - `ControlPanelSectionHeading`
     - `ControlPanelSectionProps`
     - `ControlPanelSettingProps`
     - `ControlPanelSize`

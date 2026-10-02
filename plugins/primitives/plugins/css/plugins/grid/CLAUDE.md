@@ -78,6 +78,7 @@ Shared (both paths):
     - `apps/chord/curriculum`
     - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
+    - `apps/pages/page-tree`
     - `apps/sonata/library`
     - `apps/website/landing/contact`
     - `apps/website/landing/hero`

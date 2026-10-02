@@ -28,7 +28,45 @@ export interface BreadcrumbProps {
   segments: BreadcrumbSegment[];
   onNavigate?: (index: number, segment: BreadcrumbSegment) => void;
   actions?: ReactNode;
+  /**
+   * The weight the current page's name is set in. `medium` (the default) lets
+   * weight alone single the leaf out; `normal` leaves that to its colour — the
+   * strong tier against muted ancestors — for a trail drawn in one weight.
+   */
+  leafWeight?: "medium" | "normal";
+  /**
+   * The current page's name's colour. `inherit` (the default) takes the colour
+   * of whatever hosts the trail; `strong` sets it in the strong text tier, so a
+   * theme that keeps body text a step below titles still reads the leaf as the
+   * title it is.
+   */
+  leafTone?: "inherit" | "strong";
+  /**
+   * The trail's type role. `inherit` (the default) keeps the host's text and
+   * each ancestor's control text; `body` sets the whole trail — ancestors,
+   * leaf and separators' line — in the body role, for a trail that reads as
+   * the page's address rather than as a row of controls.
+   */
+  text?: "inherit" | "body";
 }
+
+const TRAIL_TEXT: Record<NonNullable<BreadcrumbProps["text"]>, string> = {
+  inherit: "",
+  body: "text-body",
+};
+
+const LEAF_WEIGHT: Record<
+  NonNullable<BreadcrumbProps["leafWeight"]>,
+  string
+> = {
+  medium: "font-medium",
+  normal: "font-normal",
+};
+
+const LEAF_TONE: Record<NonNullable<BreadcrumbProps["leafTone"]>, string> = {
+  inherit: "",
+  strong: "text-strong-foreground",
+};
 
 /**
  * One ancestor: quiet at rest, a soft filled box under the pointer.
@@ -44,9 +82,11 @@ export interface BreadcrumbProps {
 function Crumb({
   label,
   onSelect,
+  textClass,
 }: {
   label: ReactNode;
   onSelect?: () => void;
+  textClass: string;
 }) {
   if (!onSelect) {
     return <span className="font-normal text-muted-foreground">{label}</span>;
@@ -56,7 +96,10 @@ function Crumb({
       variant="ghost"
       aspect="inline"
       onClick={onSelect}
-      className="px-2xs font-normal text-muted-foreground hover:text-foreground"
+      className={cn(
+        "px-2xs font-normal text-muted-foreground hover:text-strong-foreground",
+        textClass,
+      )}
     >
       {label}
     </Button>
@@ -84,7 +127,7 @@ function FoldedCrumbs({
             variant="ghost"
             aspect="inline"
             aria-label={`Show the ${segments.length} levels above this one`}
-            className="px-2xs text-muted-foreground hover:text-foreground"
+            className="px-2xs text-muted-foreground hover:text-strong-foreground"
           >
             <Icon icon={moreHorizIcon} />
           </Button>
@@ -116,7 +159,8 @@ function FoldedCrumbs({
  * Three decisions make it that, and they hold together:
  *
  * - **The ancestors are secondary and look it** — muted, normal weight, each
- *   its own hover target; the leaf carries the weight.
+ *   its own hover target; the leaf carries the weight (or, with `leafWeight`
+ *   `normal` and `leafTone` `strong`, only the brighter colour).
  * - **The separator has air on both sides** and comes from the theme
  *   (`BreadcrumbSlots.Separator`: chevron or slash), so it is a mark between
  *   crumbs rather than punctuation glued to the words.
@@ -130,7 +174,15 @@ function FoldedCrumbs({
  * its own content cannot see the space around it. Its content stays left-packed,
  * so the slack lands after the trailing actions and nothing moves.
  */
-export function Breadcrumb({ segments, onNavigate, actions }: BreadcrumbProps) {
+export function Breadcrumb({
+  segments,
+  onNavigate,
+  actions,
+  leafWeight = "medium",
+  leafTone = "inherit",
+  text = "inherit",
+}: BreadcrumbProps) {
+  const textClass = TRAIL_TEXT[text];
   const rootRef = useRef<HTMLDivElement>(null);
   const prefixRef = useRef<HTMLDivElement>(null);
   const leafRef = useRef<HTMLSpanElement>(null);
@@ -159,6 +211,7 @@ export function Breadcrumb({ segments, onNavigate, actions }: BreadcrumbProps) {
       className={cn(
         fillClasses("x"),
         "[&_svg:not([class*='size-'])]:icon-auto",
+        textClass,
       )}
     >
       {prefix.length > 0 && (
@@ -184,6 +237,7 @@ export function Breadcrumb({ segments, onNavigate, actions }: BreadcrumbProps) {
                 <Crumb
                   label={seg.label}
                   onSelect={onNavigate ? () => onNavigate(i, seg) : undefined}
+                  textClass={textClass}
                 />
                 <TrailSeparator />
               </Fragment>
@@ -191,7 +245,10 @@ export function Breadcrumb({ segments, onNavigate, actions }: BreadcrumbProps) {
           )}
         </Stack>
       )}
-      <span ref={leafRef} className="truncate font-medium">
+      <span
+        ref={leafRef}
+        className={cn("truncate", LEAF_WEIGHT[leafWeight], LEAF_TONE[leafTone])}
+      >
         {active.label}
       </span>
       {actions && (

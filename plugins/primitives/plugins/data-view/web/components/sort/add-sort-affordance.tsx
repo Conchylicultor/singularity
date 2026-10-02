@@ -26,7 +26,6 @@ function useAddableFields() {
  * Renders nothing once every sortable field is already a level.
  */
 export function AddSortRow(): ReactNode {
-  const { push } = usePanelStack();
   const { addable } = useAddableFields();
   if (addable.length === 0) return null;
 
@@ -34,13 +33,11 @@ export function AddSortRow(): ReactNode {
     <ControlPanel.Row
       icon={<Icon icon={addIcon} />}
       muted
-      onSelect={() =>
-        push({
-          key: "add-sort",
-          title: "Add sort",
-          render: () => <AddSortPanel />,
-        })
-      }
+      push={{
+        key: "add-sort",
+        title: "Add sort",
+        render: () => <AddSortPanel />,
+      }}
     >
       Add sort
     </ControlPanel.Row>

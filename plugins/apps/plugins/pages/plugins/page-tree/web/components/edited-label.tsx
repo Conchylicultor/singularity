@@ -41,7 +41,13 @@ export function EditedLabel() {
       // pane itself renders the missing page.
       if (result.data === null) return null;
       return (
-        <Text variant="caption" tone="faint">
+        // 8px more air after it than between the bar's actions: the time is
+        // a statement about the page, set apart from the controls after it.
+        <Text
+          variant="caption"
+          tone="faint"
+          style={{ marginRight: "var(--space-sm)" }}
+        >
           Edited <RelativeTime date={result.data.editedAt} />
         </Text>
       );

@@ -28,6 +28,7 @@ import {
 import type { SidebarFramingProps } from "../../core";
 import { AppShell } from "../slots";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { SidebarItem } from "./sidebar-nav-item";
 
 /**
@@ -204,6 +205,7 @@ export function AppShellLayout({
   sidebarSlot,
   toolbarSlot,
   header,
+  sidebarToggleIcon,
   children,
 }: {
   /**
@@ -222,6 +224,11 @@ export function AppShellLayout({
   /** Brand/header content for the top of the sidebar. Only shown with a sidebar. */
   header?: ReactNode;
   /**
+   * The sidebar toggle's glyph, for both states. Omitted, the toggle keeps the
+   * default open/close pair (`left-panel-close` / `left-panel-open`).
+   */
+  sidebarToggleIcon?: IconRef;
+  /**
    * The main-area content — the app's chosen layout renderer
    * (e.g. `<MillerColumns/>`, `<FullPane/>`, or `<PaneLayoutHost/>`). Chrome
    * (sidebar + toolbar) and renderer are orthogonal and each opt-in: an app
@@ -239,7 +246,7 @@ export function AppShellLayout({
 
   const toolbar = hasToolbar && toolbarSlot && (
     <Bar tier="chrome">
-      {sidebarSlot && <SidebarTrigger />}
+      {sidebarSlot && <SidebarTrigger icon={sidebarToggleIcon} />}
       <toolbarSlot.Render>
         {(item) => <ToolbarItem {...item} />}
       </toolbarSlot.Render>
@@ -253,9 +260,11 @@ export function AppShellLayout({
   const surfaceChrome = useMemo(
     () => ({
       contentOwnsTopChrome: !hasToolbar,
-      leadingControl: sidebarSlot ? <SidebarTrigger /> : undefined,
+      leadingControl: sidebarSlot ? (
+        <SidebarTrigger icon={sidebarToggleIcon} />
+      ) : undefined,
     }),
-    [hasToolbar, sidebarSlot],
+    [hasToolbar, sidebarSlot, sidebarToggleIcon],
   );
   const body = (
     <>
@@ -331,6 +340,10 @@ export function AppShellLayout({
       <sidebarSlot.Render>
         {(item) => <SidebarItem {...item} />}
       </sidebarSlot.Render>
+      {/* The sidebar's bottom inset under its last item — sidebar-metrics
+          `sidebarEndPad`, default 0 (nothing). A box rather than padding: this
+          wrapper is `display: contents` and the framing owns the column. */}
+      <div aria-hidden className={`${rigidClass()} h-sidebar-end`} />
     </div>
   );
 

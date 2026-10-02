@@ -72,8 +72,6 @@ export type TreeRowChromeProps = {
    */
   dragAttributes?: DraggableAttributes;
   dragListeners?: DraggableSyntheticListeners;
-  /** Pixels of indentation per depth level. Defaults to the shared tree value. */
-  indentStep?: number;
   /**
    * Whether a childless row still renders a (hover-revealed) chevron. Editable
    * trees keep it as an expand affordance (default true); read-only trees where
@@ -158,7 +156,6 @@ export function TreeRowChrome({
   rowRef,
   dragAttributes,
   dragListeners,
-  indentStep = 16,
   leafChevron = true,
 }: TreeRowChromeProps) {
   const expandable = hasChildren || leafChevron;
@@ -215,7 +212,9 @@ export function TreeRowChrome({
       // context the pinned action cluster anchors to — the chevron/disclosure
       // reveal keeps reading `group/tree-row`.
       className={cn(
-        "group/tree-row min-h-7 rounded-md px-xs py-xs text-body",
+        // Row height and per-depth indent are density tokens (`treeRowH`,
+        // `treeIndent`), so a theme owns a tree's rhythm.
+        "group/tree-row min-h-tree-row rounded-md px-xs py-xs text-body",
         // A focusable row (one with an open gesture) is walked with the arrow
         // keys, so the row the keys are on must show it.
         onOpen && "focus-ring",
@@ -225,11 +224,14 @@ export function TreeRowChrome({
         // showing through the icons. Without it the mask paints the surface's
         // ambient `--chrome-mask`, i.e. the untinted background, and a hovered
         // row reads as a hole. Same contract as the `Row` primitive.
-        "hover:bg-accent hover:[--scrim:var(--accent)]",
-        selected && "bg-accent [--scrim:var(--accent)]",
+        // Selected is its own tier (`--selected`, default = the accent hover
+        // fill), so a selected row does not hover to a different tone.
+        selected
+          ? "bg-selected [--scrim:var(--selected)]"
+          : "hover:bg-accent hover:[--scrim:var(--accent)]",
         className,
       )}
-      style={{ paddingLeft: depth * indentStep + 4 }}
+      style={{ paddingLeft: `calc(${depth} * var(--tree-indent) + 4px)` }}
     >
       {icon != null ? (
         // useContributions() seals the `component` field, so the disclosure

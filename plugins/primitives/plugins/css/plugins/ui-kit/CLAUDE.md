@@ -521,6 +521,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/mail/sync-status`
     - `apps/pages/page-author`
     - `apps/pages/page-tree`
+    - `apps/pages/shell`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/canvas`
@@ -680,6 +681,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `page/formatting/link`
     - `page/image`
     - `page/inline-date`
+    - `page/links`
     - `page/map`
     - `page/math/equation`
     - `page/math/inline`

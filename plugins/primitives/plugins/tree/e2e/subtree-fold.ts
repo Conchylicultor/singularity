@@ -46,16 +46,15 @@ import {
 
 const OUT = arg("out") ?? "/tmp/subtree-fold";
 
-/** One indent level, in px — `TreeRowChrome`'s default `indentStep`. */
-const INDENT = 16;
-
 const EXPAND = "Expand subtree";
 const COLLAPSE = "Collapse subtree";
 
 interface RowInfo {
   label: string;
-  /** `paddingLeft` in px — depth × indentStep + 4. */
+  /** `paddingLeft` in px — depth × `--tree-indent` + 4. */
   pad: number;
+  /** One indent level in px — the row's resolved `--tree-indent` (a theme's). */
+  indent: number;
   /** The fold button's label, or null when the row renders none (a leaf). */
   fold: string | null;
 }
@@ -67,6 +66,9 @@ const snapshot = (page: Page): Promise<RowInfo[]> =>
       (el) => ({
         label: (el.textContent ?? "").split("\n")[0]!.trim(),
         pad: parseFloat(getComputedStyle(el).paddingLeft) || 0,
+        indent: parseFloat(
+          getComputedStyle(el).getPropertyValue("--tree-indent"),
+        ),
         fold:
           el
             .querySelector('button[aria-label$="subtree"]')
@@ -93,7 +95,7 @@ const depthBelow = (rows: RowInfo[], i: number): number => {
   const kids = descendants(rows, i);
   if (kids.length === 0) return 0;
   return Math.round(
-    (Math.max(...kids.map((k) => k.pad)) - rows[i]!.pad) / INDENT,
+    (Math.max(...kids.map((k) => k.pad)) - rows[i]!.pad) / rows[i]!.indent,
   );
 };
 

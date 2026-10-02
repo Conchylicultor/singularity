@@ -31,6 +31,14 @@ export const shapeGroup = defineTokenGroup("shape", {
   // side of a split pill's first and last segment. A shape property, not a
   // density one: at the same size a pill and a rectangle share one padding and
   // differ only by this. 0 = pills pad exactly like rectangles.
+  // A floating panel's corners (`Surface level="overlay"`: every popover, menu
+  // and dialog) and a control-panel row's. Defaults = the `rounded-lg` /
+  // `rounded-md` steps they always wore.
+  radiusPopover: { default: "var(--radius)", label: "Popover radius" },
+  radiusPanelRow: {
+    default: "calc(var(--radius) * 0.8)",
+    label: "Panel row radius",
+  },
   pillPadExtra: { default: "0rem", label: "Pill extra padding" },
 });
 

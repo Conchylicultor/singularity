@@ -53,6 +53,7 @@ icon+count button it stands in for — carries a per-site
     - `primitives/action-presentation.PanelActionRow`
     - `primitives/action-presentation.useActionForm`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.DensityControlled`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/overlay/tooltip.WithTooltip`

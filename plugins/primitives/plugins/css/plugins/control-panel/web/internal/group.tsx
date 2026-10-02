@@ -5,7 +5,6 @@ import { useId } from "react";
 import { ControlPanelSection } from "./control-panel";
 import { ControlPanelRow } from "./control-panel-row";
 import { GroupDepthProvider, useControlPanelHost, useGroupDepth } from "./host";
-import { usePanelStack } from "./panel-stack";
 import {
   SettingDescription,
   SettingNote,
@@ -83,10 +82,6 @@ export function ControlPanelGroup({
 }: ControlPanelGroupProps) {
   const host = useControlPanelHost();
   const depth = useGroupDepth();
-  // Unconditional, because both hosts publish a stack and the `inline` arm still
-  // needs one the moment the depth budget runs out. It throws when there is no
-  // stack, which is the honest answer rather than a dead click.
-  const stack = usePanelStack();
   const key = useId();
 
   const inline = host.nesting === "inline" && depth < host.inlineDepth;
@@ -100,14 +95,15 @@ export function ControlPanelGroup({
       );
     }
     return (
+      // The drill row pushes through `Row push`, which throws when there is no
+      // stack — the honest answer rather than a dead click — and draws the
+      // chevron that says it drills.
       <ControlPanelRow
-        onSelect={() =>
-          stack.push({
-            key,
-            title: typeof label === "string" ? label : "",
-            render: () => <ControlPanelSection>{children}</ControlPanelSection>,
-          })
-        }
+        push={{
+          key,
+          title: typeof label === "string" ? label : "",
+          render: () => <ControlPanelSection>{children}</ControlPanelSection>,
+        }}
         trailing={
           <>
             {status}

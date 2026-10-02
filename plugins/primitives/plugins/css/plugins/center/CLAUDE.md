@@ -58,6 +58,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
     - `apps/pages/page-tree`
+    - `apps/pages/shell`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/library`
     - `apps/sonata/notation`

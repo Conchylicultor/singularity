@@ -74,7 +74,6 @@ export function CustomColumnsFields({
 }: {
   defs: CustomColumnDef[];
 }): ReactNode {
-  const { push } = usePanelStack();
   const typeOptions = useCustomColumnTypeOptions();
 
   const typeOf = (id: string) => typeOptions.find((o) => o.id === id);
@@ -88,13 +87,11 @@ export function CustomColumnsFields({
             key={def.id}
             icon={typeIcon(option)}
             trailing={option?.label ?? def.type}
-            onSelect={() =>
-              push({
-                key: `custom-column:${def.id}`,
-                title: def.label,
-                render: () => <CustomColumnPanel columnId={def.id} />,
-              })
-            }
+            push={{
+              key: `custom-column:${def.id}`,
+              title: def.label,
+              render: () => <CustomColumnPanel columnId={def.id} />,
+            }}
           >
             {def.label}
           </ControlPanel.Row>
@@ -103,13 +100,11 @@ export function CustomColumnsFields({
       <ControlPanel.Row
         icon={<Icon icon={addIcon} />}
         muted
-        onSelect={() =>
-          push({
-            key: "custom-column:new",
-            title: "New field",
-            render: () => <CustomColumnPanel columnId={null} />,
-          })
-        }
+        push={{
+          key: "custom-column:new",
+          title: "New field",
+          render: () => <CustomColumnPanel columnId={null} />,
+        }}
       >
         New field
       </ControlPanel.Row>

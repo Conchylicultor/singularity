@@ -5,7 +5,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { regeneratePageIcon } from "../../shared/endpoints";
 
-const autoAwesomeIcon = symbol("auto-awesome");
+const syncIcon = symbol("sync");
 
 /**
  * The page icon picker's "Regenerate" footer row: asks the server to re-pick the
@@ -18,10 +18,11 @@ export function RegenerateIconAction({ pageId }: { pageId: string }) {
   const pending = mutation.isPending;
 
   return (
+    // Not muted: it is the picker's action. `Remove` beside it is the muted
+    // one, the way out.
     <ControlPanel.Row
-      muted
       disabled={pending}
-      icon={<Icon icon={autoAwesomeIcon} />}
+      icon={<Icon icon={syncIcon} />}
       trailing={pending ? <Loading variant="spinner" /> : undefined}
       onSelect={() => {
         mutation.mutate({ params: { pageId } });

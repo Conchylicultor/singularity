@@ -53,7 +53,11 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
 /** Per-tier chrome: height token, horizontal inset, and (chrome only) the mask. */
 const TIER_CLASS: Record<BarTier, string> = {
   chrome: "h-chrome-bar pl-chrome bg-chrome-mask",
-  pane: "h-chrome-pane px-chrome-pane min-w-0",
+  // The pane tier's rule width is a density token (`chromePaneRule`, default
+  // the 1px `border-b`), so a theme can run a pane header into its pane.
+  // Its glyphs take the `toolbarForeground` colour (default `currentColor`,
+  // the colour they always inherited).
+  pane: "h-chrome-pane px-chrome-pane min-w-0 border-b-chrome-pane text-toolbar-foreground",
   subpane: "py-xs px-subpane min-w-0",
 };
 

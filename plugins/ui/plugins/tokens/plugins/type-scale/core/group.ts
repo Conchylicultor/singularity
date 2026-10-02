@@ -37,6 +37,12 @@ export const typeScaleGroup = defineTokenGroup("type-scale", {
   // `title`. It exists so a hero headline is a ROLE like every other size and
   // not an arbitrary `text-[3rem]` beside the closed scale.
   fontSizeDisplay: { default: "3rem", label: "Font size display" },
+  // The display weight is a token (default = the bold it always wore), so a
+  // theme sets a lighter headline without re-weighting every bold run.
+  fontWeightDisplay: {
+    default: "var(--font-weight-bold)",
+    label: "Font weight display",
+  },
   fontSizeTitle: { default: "1.25rem", label: "Font size title" },
   fontSizeHeading: { default: "1.125rem", label: "Font size heading" },
   fontSizeSubheading: { default: "1rem", label: "Font size subheading" },
@@ -55,6 +61,12 @@ export const typeScaleGroup = defineTokenGroup("type-scale", {
   // = the caption metrics such headers wore before they had a role.
   fontSizeGroup: { default: "0.75rem", label: "Font size group" },
   lineHeightGroup: { default: "1rem", label: "Line height group" },
+  // The group weight: a token (default = the semibold it always wore), so a
+  // theme sets quieter group heads.
+  fontWeightGroup: {
+    default: "var(--font-weight-semibold)",
+    label: "Font weight group",
+  },
   // The control role: the words ON a control — a button's label, a tab's
   // title. Its own role, not `body`/`label`, so a region can set its controls'
   // type without resizing the prose around them (the app chrome sets smaller,

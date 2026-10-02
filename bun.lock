@@ -3323,6 +3323,10 @@
       "name": "@singularity/plugin-infra-host",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/host-account": {
+      "name": "@singularity/plugin-infra-host-account",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/host-fs": {
       "name": "@singularity/plugin-infra-host-fs",
       "version": "0.0.1",
@@ -5012,6 +5016,10 @@
     },
     "plugins/reorder/plugins/node-types": {
       "name": "@singularity/plugin-reorder-node-types",
+      "version": "0.0.1",
+    },
+    "plugins/reorder/plugins/node-types/plugins/divider": {
+      "name": "@singularity/plugin-reorder-node-types-divider",
       "version": "0.0.1",
     },
     "plugins/reorder/plugins/node-types/plugins/header": {
@@ -7724,6 +7732,8 @@
 
     "@singularity/plugin-infra-host": ["@singularity/plugin-infra-host@workspace:plugins/infra/plugins/host"],
 
+    "@singularity/plugin-infra-host-account": ["@singularity/plugin-infra-host-account@workspace:plugins/infra/plugins/host-account"],
+
     "@singularity/plugin-infra-host-contention": ["@singularity/plugin-infra-host-contention@workspace:plugins/infra/plugins/host/plugins/contention"],
 
     "@singularity/plugin-infra-host-duress": ["@singularity/plugin-infra-host-duress@workspace:plugins/infra/plugins/host/plugins/duress"],
@@ -8497,6 +8507,8 @@
     "@singularity/plugin-reorder-editor": ["@singularity/plugin-reorder-editor@workspace:plugins/reorder/plugins/editor"],
 
     "@singularity/plugin-reorder-node-types": ["@singularity/plugin-reorder-node-types@workspace:plugins/reorder/plugins/node-types"],
+
+    "@singularity/plugin-reorder-node-types-divider": ["@singularity/plugin-reorder-node-types-divider@workspace:plugins/reorder/plugins/node-types/plugins/divider"],
 
     "@singularity/plugin-reorder-node-types-header": ["@singularity/plugin-reorder-node-types-header@workspace:plugins/reorder/plugins/node-types/plugins/header"],
 

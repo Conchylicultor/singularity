@@ -42,7 +42,8 @@ const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
     "text-caption font-medium uppercase tracking-wider text-muted-foreground",
   title: "text-body font-semibold",
   value: "text-caption font-medium text-muted-foreground",
-  group: "text-group text-muted-foreground",
+  // `--group-foreground` (default = muted text) so a theme sets quieter heads.
+  group: "text-group text-group-foreground",
 };
 
 /**

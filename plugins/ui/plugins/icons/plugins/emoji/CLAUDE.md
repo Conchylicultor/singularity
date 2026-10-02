@@ -36,13 +36,17 @@ An emoji as a stored value, and the picker that picks one — the sibling of
 - Web:
   - Uses:
     - `primitives/css/center.Center`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
-  - Exports (types): `EmojiPickerProps`
+  - Exports (types):
+    - `EmojiPickerLeadingCategory`
+    - `EmojiPickerProps`
+    - `EmojiPickerVariant`
   - Exports (values):
     - `EmojiGlyph`
     - `EmojiPicker`

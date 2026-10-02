@@ -1,8 +1,5 @@
 import { useCallback, type ReactNode } from "react";
-import {
-  ControlPanel,
-  usePanelStack,
-} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import type { FilterGroup } from "../../../core";
 import { useFilterController } from "../../internal/use-filter-controller";
 import { summarizeFilter } from "../../internal/summarize-filter";
@@ -35,7 +32,6 @@ const unfoldLessIcon = symbol("unfold-less");
 export function FoldControl(): ReactNode {
   const { fields, activeState, activeViewId, viewModel, filter } =
     useDataViewControls();
-  const { push } = usePanelStack();
   const fold = activeState.fold;
   const summary = fold
     ? summarizeFilter(fold.keep, fields, filter.resolveOperatorSet)
@@ -47,17 +43,15 @@ export function FoldControl(): ReactNode {
         icon={<Icon icon={unfoldLessIcon} />}
         hint="Rows that don't match fold behind “… N more” at the end of their group. Searching shows every match."
         trailing={summary?.more ? `+${summary.more}` : undefined}
-        onSelect={() =>
-          push({
-            key: "fold-rows",
-            title: "Fold rows",
-            render: () => (
-              <FoldFilterScope>
-                <FilterEditorPanel presets={false} clearLabel="Clear fold" />
-              </FoldFilterScope>
-            ),
-          })
-        }
+        push={{
+          key: "fold-rows",
+          title: "Fold rows",
+          render: () => (
+            <FoldFilterScope>
+              <FilterEditorPanel presets={false} clearLabel="Clear fold" />
+            </FoldFilterScope>
+          ),
+        }}
       >
         {summary ? `Keep ${summary.label}` : "Off"}
       </ControlPanel.Row>

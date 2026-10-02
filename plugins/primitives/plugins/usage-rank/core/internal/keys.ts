@@ -34,4 +34,19 @@ export function usageKey(namespace: string, key: string): string {
  * Without the second decay, two rows with the same stored score but different
  * `lastUsedAt` would compare as equal even though one is a year stale.
  */
+/**
+ * The inverse of `usageKey`: the caller's key out of a usage key minted for
+ * `namespace`. A usage key from another namespace is a broken assumption about
+ * the read that returned it, and throws.
+ */
+export function keyOfUsage(namespace: string, usage: string): string {
+  const prefix = `${namespace}:`;
+  if (!usage.startsWith(prefix) || usage.length === prefix.length) {
+    throw new Error(
+      `keyOfUsage: ${JSON.stringify(usage)} is not a usage key of namespace ${JSON.stringify(namespace)}`,
+    );
+  }
+  return usage.slice(prefix.length);
+}
+
 export const HALF_LIFE_MS = 30 * 24 * 60 * 60 * 1000;

@@ -19,7 +19,7 @@ re-themes all surfaces of a role at once.
 | `sunken`  | `bg-muted`                                               | recessed well / band *below* the base plane     |
 | `base`    | `bg-background`                                           | page / pane canvas, toolbar bands, sticky headers |
 | `raised`  | `rounded-card border border-border bg-card shadow-sm`    | a card lifted one step above base               |
-| `overlay` | `rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10` | floats above all: popovers, menus, floating panels |
+| `overlay` | `rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-popover-border` (+ `--hover-fill: var(--selected)`) | floats above all: popovers, menus, floating panels |
 
 `raised`'s corners are the shape group's `radiusCard` token (`rounded-card`),
 which defaults to the `rounded-md` step, so a theme can round its cards without

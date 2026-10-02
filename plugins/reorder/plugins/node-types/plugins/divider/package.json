@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-reorder-node-types-divider",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Divider reorder node type: a hairline rule between stacked slot items (leaf), with an 'Add Divider' insert affordance.",
+  "singularity": {
+    "collapsed": true
+  }
+}

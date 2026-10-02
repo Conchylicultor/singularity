@@ -25,10 +25,10 @@ import {
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 
-const autoAwesomeIcon = symbol("auto-awesome");
+const flareIcon = symbol("flare");
 const descriptionIcon = symbol("description");
 const menuBookIcon = symbol("menu-book");
-const expandIcon = symbol("expand-more");
+const arrowDownIcon = symbol("keyboard-arrow-down");
 
 /**
  * The box the labelled pill occupies at each density — the control's height and
@@ -57,22 +57,22 @@ const KIND_LOOK: Record<
   page: {
     icon: descriptionIcon,
     label: "Page",
-    hint: "An ordinary page: agents may read it and never write it.",
+    hint: "Agents can read it and add notes in their own cards. Your text stays yours.",
     tint: null,
   },
   "agent-page": {
-    icon: autoAwesomeIcon,
+    icon: flareIcon,
     label: "Agent page",
-    hint: "Agents can write all of it.",
+    hint: "Agents may write anywhere on it.",
     // The `info` wash agent notes wear.
-    tint: "bg-info/10 text-info hover:bg-info/20 hover:text-info",
+    tint: "border-info/20 bg-info/10 text-info hover:bg-info/20 hover:text-info",
   },
   instructions: {
     icon: menuBookIcon,
     label: "Instructions",
-    hint: "Your standing instructions to every agent working under the parent page.",
+    hint: "Standing instructions for every agent working under the parent page.",
     // The `primary` wash the inline `<instructions>` card wears.
-    tint: "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary",
+    tint: "border-primary/35 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary",
   },
 };
 
@@ -81,6 +81,17 @@ const KIND_ORDER: readonly PageKind["kind"][] = [
   "agent-page",
   "instructions",
 ];
+
+/**
+ * Each kind's glyph in the menu wears the tone its pill does: muted for an
+ * ordinary page, the `info` blue for an agent page, `primary` for
+ * instructions.
+ */
+const MENU_ICON_TONE: Record<PageKind["kind"], string> = {
+  page: "text-muted-foreground",
+  "agent-page": "text-info",
+  instructions: "text-primary",
+};
 
 /** The kind a radio row selects — a fresh instructions page starts non-global. */
 function kindFor(k: PageKind["kind"]): PageKind {
@@ -97,10 +108,11 @@ function kindFor(k: PageKind["kind"]): PageKind {
  * the parent page), with a Global switch that hands those instructions to every
  * conversation at its start.
  *
- * One labelled ghost pill — the kind's icon, its name, a chevron — tinted when
- * it is not an ordinary page, opening a small panel of three radio rows (each
- * with its meaning as a visible line: the kind IS a policy, so it is read
- * before it is picked) plus the switch. A
+ * One labelled outlined pill — the kind's icon, its name, a chevron — tinted when
+ * it is not an ordinary page, opening a small panel headed "Agents on this
+ * page" of three radio rows — the kind's glyph, its name, its meaning as a
+ * visible line (the kind IS a policy, so it is read before it is picked) and a
+ * trailing tick — plus the switch. A
  * choice asks the server to change the page's kind (`setPageKind`, the one way a
  * kind changes after a page is born). It is deliberately not optimistic: the
  * trigger changes when the live `pagesResource` push lands — the same push that
@@ -140,30 +152,50 @@ export function PageKindControl() {
 
   return (
     <ControlPanelPopover
-      size="menu"
+      // `described`: every row carries its meaning as a visible line, and the
+      // role's width decides how many lines that wraps to.
+      size="described"
       align="end"
       label="Page kind"
       trigger={
         // No tooltip: the label names the kind, and the panel it opens reads
         // out what each kind means.
+        // An outlined pill (`frame`: the hairline and no fill of its own) at
+        // the bar's height, its label in the caption role: the kind is a
+        // setting of the page, quieter than the title beside it. Both glyphs
+        // are 14px; the chevron sits a tier fainter than the label.
         <Button
-          variant="ghost"
+          variant="frame"
           aria-label={`Page kind: ${look.label}`}
           aria-pressed={kind.kind !== "page"}
-          className={cn("text-muted-foreground", look.tint)}
+          // `px-sm`: the pill's own inset, tighter than a frame button's;
+          // the margin sets it 4px further off the icon actions after it.
+          className={cn(
+            "px-sm text-caption font-medium text-muted-foreground hover:text-strong-foreground aria-expanded:text-strong-foreground",
+            look.tint,
+          )}
+          style={{ marginRight: "var(--space-xs)" }}
         >
-          <Icon icon={look.icon} />
+          <Icon icon={look.icon} className="size-3.5" />
           {look.label}
-          <Icon icon={expandIcon} />
+          <Icon
+            icon={arrowDownIcon}
+            className="size-3.5 text-faint-foreground"
+          />
         </Button>
       }
     >
-      <ControlPanel.Section label="Page kind">
+      <ControlPanel.Section label="Agents on this page" heading="group">
         {KIND_ORDER.map((k) => (
           <ControlPanel.Row
             key={k}
             select="radio"
             checked={kind.kind === k}
+            // The kind's own glyph leads the row, so the tick moves to its end.
+            indicator="trailing"
+            icon={
+              <Icon icon={KIND_LOOK[k].icon} className={MENU_ICON_TONE[k]} />
+            }
             description={KIND_LOOK[k].hint}
             onSelect={() => {
               if (kind.kind !== k) void choose(kindFor(k));
@@ -178,7 +210,7 @@ export function PageKindControl() {
           <ControlPanel.Row
             select="switch"
             checked={kind.global}
-            description="Hand these instructions to every agent conversation at its start, wherever it works."
+            description="Point every conversation at this page"
             onSelect={() => {
               void choose({ kind: "instructions", global: !kind.global });
             }}

@@ -210,6 +210,7 @@ primitive exists to name.
     - `tasks/task-draft-form`
     - `tasks/task-events`
     - `tasks/task-header`
+    - `ui/icons/emoji`
     - `ui/sidebar-framing/floating`
     - `ui/sidebar-framing/flush`
     - `ui/sidebar-framing/inset`

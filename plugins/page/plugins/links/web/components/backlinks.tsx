@@ -5,6 +5,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -117,15 +118,6 @@ export function Backlinks({ documentId }: BacklinksProps) {
       onRowActivate={(row) => nav?.open(row.id)}
       viewOptions={{
         list: {
-          leading: (row: BacklinkRow) => (
-            <Center as="span" className="size-4 text-muted-foreground">
-              <PageIcon
-                icon={row.icon}
-                fallback={linkIcon}
-                className="size-4"
-              />
-            </Center>
-          ),
           renderRow: (row: BacklinkRow) => <BacklinkBody row={row} />,
         },
       }}
@@ -139,40 +131,53 @@ function snippetText(s: BacklinkSnippet): string {
 }
 
 /**
- * A backlink row's body: the title line (title, then the source page's place
- * in the tree, muted, truncating from its lead so the nearest parent stays
- * readable) and — when the link sits inside text — the excerpt around it, the
- * link itself marked. A block that IS the link has no excerpt (`snippet: null`)
- * and the row is its title line alone.
+ * A backlink row's body: the title line (the source page's icon and title, then
+ * its place in the tree, faint, pushed to the end and truncating from its lead
+ * so the nearest parent stays readable) and — when the link sits inside text —
+ * the excerpt around it, the link itself marked, indented under the title (the
+ * icon's 16px plus the line's `sm` gap: the `xl` step). A block that IS the link
+ * has no excerpt (`snippet: null`) and the row is its title line alone.
+ *
+ * The icon is part of the title line rather than the row's leading slot, so it
+ * sits on the title rather than centred against both lines.
+ *
+ * Read at the comfortable type size: the list's body declares `xs` density for
+ * its controls, which would drop every rung here by one; these are lines to
+ * read, not a dense table, so the body declares `sm` back.
  */
 function BacklinkBody({ row }: { row: BacklinkRow }) {
   return (
-    // Clipping floors this flex item's automatic minimum size at 0, so the
-    // lines inside can truncate against the row's width.
-    <Stack gap="none" className={clipClasses({ axis: "both", fill: true })}>
-      <Line className="gap-sm">
-        <Fill>
-          <Text variant="label" tone="strong">
-            {row.title || "Untitled"}
-          </Text>
-        </Fill>
-        {row.path.length > 0 && (
-          <Text variant="caption" tone="faint" side="start">
-            {row.path.join(PATH_SEPARATOR)}
-          </Text>
-        )}
-      </Line>
-      {row.snippet !== null && (
-        <Line>
-          <Text variant="caption" tone="muted">
-            {row.snippet.before}
-            <mark className="bg-transparent font-medium text-foreground">
-              {row.snippet.match}
-            </mark>
-            {row.snippet.after}
-          </Text>
+    <ControlSizeProvider size="sm">
+      {/* Clipping floors this flex item's automatic minimum size at 0, so the
+        lines inside can truncate against the row's width. */}
+      <Stack gap="none" className={clipClasses({ axis: "both", fill: true })}>
+        <Line className="gap-sm">
+          <Center as="span" className="size-4 text-muted-foreground">
+            <PageIcon icon={row.icon} fallback={linkIcon} className="size-4" />
+          </Center>
+          <Fill>
+            <Text variant="body" tone="strong" className="font-medium">
+              {row.title || "Untitled"}
+            </Text>
+          </Fill>
+          {row.path.length > 0 && (
+            <Text variant="caption" tone="faint" side="start">
+              {row.path.join(PATH_SEPARATOR)}
+            </Text>
+          )}
         </Line>
-      )}
-    </Stack>
+        {row.snippet !== null && (
+          <Line className="pl-xl">
+            <Text variant="caption" tone="muted">
+              {row.snippet.before}
+              <mark className="bg-transparent font-medium text-foreground">
+                {row.snippet.match}
+              </mark>
+              {row.snippet.after}
+            </Text>
+          </Line>
+        )}
+      </Stack>
+    </ControlSizeProvider>
   );
 }

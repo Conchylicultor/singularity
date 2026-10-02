@@ -96,7 +96,11 @@ function PageHeaderInner({
     // icon rises to overlap its bottom edge (a one-off visual overlap the spacing
     // ramp doesn't model — applied via inline negative margin, never a margin
     // utility).
-    <Stack gap="xs" className={cn(hoverRevealGroup, "group/header pt-lg")}>
+    <Stack
+      gap="xs"
+      className={cn(hoverRevealGroup, "group/header", hasCover && "pt-lg")}
+      style={hasCover ? undefined : HEADER_TOP_STYLE}
+    >
       {page && data?.icon != null && (
         <HeaderIcon page={page} raised={hasCover} />
       )}
@@ -105,7 +109,13 @@ function PageHeaderInner({
           page already has (Add icon / Change icon / Add cover). A page the list
           does not hold has nothing to add to. */}
       {page && (
-        <Stack direction="row" gap="2xs" className={hoverRevealTarget}>
+        // See TOOLS_STYLE.
+        <Stack
+          direction="row"
+          gap="xs"
+          className={hoverRevealTarget}
+          style={TOOLS_STYLE}
+        >
           <PageDetail.HeaderTool.Render>
             {(part) => <HeaderPart part={part} entity={{ pageId, page }} />}
           </PageDetail.HeaderTool.Render>
@@ -115,13 +125,40 @@ function PageHeaderInner({
       <PageTitle field={title} body={body} ref={titleRef} />
 
       {page && (
-        <PageDetail.UnderTitle.Render>
-          {(part) => <HeaderPart part={part} entity={{ pageId, page }} />}
-        </PageDetail.UnderTitle.Render>
+        // The under-title band opens 10px under the title (this pad plus the
+        // stack's gap) whether or not a part renders in it, so the rule below
+        // keeps its distance from the title either way.
+        <div style={UNDER_TITLE_STYLE}>
+          <PageDetail.UnderTitle.Render>
+            {(part) => <HeaderPart part={part} entity={{ pageId, page }} />}
+          </PageDetail.UnderTitle.Render>
+        </div>
       )}
     </Stack>
   );
 }
+
+/*
+ * The header's vertical rhythm (the mockup's), each spelled as a sum of
+ * density-ramp steps so it scales with the density preset:
+ * - 56px above the icon on a page with no cover (with a cover, the icon
+ *   rises onto it and the header keeps the `lg` step);
+ * - the tool row hangs out by its own inline padding (a negative margin of
+ *   the `xs` control pad), so each label — not its hover box — sits on the
+ *   column's left edge with the title, and leaves 6px under itself (+ the
+ *   stack's gap = 10px to the title);
+ * - the under-title band starts 6px (+ the gap) under the title.
+ */
+const HEADER_TOP_STYLE = {
+  paddingTop: "calc(var(--space-2xl) + var(--space-xl))",
+};
+const TOOLS_STYLE = {
+  marginLeft: "calc(-1 * var(--control-pad-xs))",
+  paddingBottom: "calc(var(--space-xs) + var(--space-2xs))",
+};
+const UNDER_TITLE_STYLE = {
+  paddingTop: "calc(var(--space-xs) + var(--space-2xs))",
+};
 
 /** The large page icon over the title, opening the icon picker. */
 function HeaderIcon({ page, raised }: { page: Block; raised: boolean }) {
@@ -132,7 +169,12 @@ function HeaderIcon({ page, raised }: { page: Block; raised: boolean }) {
       onChange={(next) => save({ icon: next.icon })}
       footerActions={() => <RegenerateIconAction pageId={page.id} />}
       className="relative z-raised"
-      style={raised ? { marginTop: "-3.5rem" } : undefined}
+      // The glyph's box hangs 4px out of the column (the `xs` step), so the
+      // drawn glyph — not its hover box — lines up with the title.
+      style={{
+        marginLeft: "calc(-1 * var(--space-xs))",
+        ...(raised ? { marginTop: "-3.5rem" } : {}),
+      }}
     />
   );
 }

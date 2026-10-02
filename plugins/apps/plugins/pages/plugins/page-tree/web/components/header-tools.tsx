@@ -1,4 +1,7 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { RegenerateIconAction } from "@plugins/apps/plugins/pages/plugins/auto-icon/web";
 import type { ComponentProps } from "react";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
@@ -10,7 +13,7 @@ import { ChangeCoverPopover } from "./change-cover-popover";
 import { PageIconPicker, type PageIconFooterActions } from "./page-icon-button";
 
 const imageIcon = symbol("image");
-const moodIcon = symbol("mood");
+const smileIcon = symbol("sentiment-satisfied");
 
 // The page-tree's own `PageDetail.HeaderTool` contributions: the quiet ghost
 // buttons in the hover row above the title. Each is handed the open page by the
@@ -22,6 +25,13 @@ function iconFooter(pageId: string): PageIconFooterActions {
   return () => <RegenerateIconAction pageId={pageId} />;
 }
 
+/**
+ * One quiet tool: a ghost button at `xs` density, its label in the caption
+ * role at regular weight and in the faint tier until hovered, with a 14px
+ * glyph. The density wraps the button alone — never the picker it opens, which
+ * reads the density through React context across its portal and must keep its
+ * own.
+ */
 function HeaderToolButton({
   icon,
   label,
@@ -31,10 +41,16 @@ function HeaderToolButton({
   label: string;
 } & ComponentProps<typeof Button>) {
   return (
-    <Button variant="ghost" className="text-muted-foreground" {...rest}>
-      <Icon icon={icon} />
-      {label}
-    </Button>
+    <ControlSizeProvider size="xs">
+      <Button
+        variant="ghost"
+        className="text-caption font-normal text-faint-foreground"
+        {...rest}
+      >
+        <Icon icon={icon} className="size-3.5" />
+        {label}
+      </Button>
+    </ControlSizeProvider>
   );
 }
 
@@ -46,7 +62,7 @@ export function AddIconTool({ pageId, page }: PartProps) {
       value={{ icon: null }}
       onChange={(next) => save({ icon: next.icon })}
       footerActions={iconFooter(pageId)}
-      trigger={<HeaderToolButton icon={moodIcon} label="Add icon" />}
+      trigger={<HeaderToolButton icon={smileIcon} label="Add icon" />}
     />
   );
 }
@@ -63,7 +79,7 @@ export function ChangeIconTool({ pageId, page }: PartProps) {
       value={{ icon: pageData(page).icon ?? null }}
       onChange={(next) => save({ icon: next.icon })}
       footerActions={iconFooter(pageId)}
-      trigger={<HeaderToolButton icon={moodIcon} label="Change icon" />}
+      trigger={<HeaderToolButton icon={smileIcon} label="Change icon" />}
     />
   );
 }

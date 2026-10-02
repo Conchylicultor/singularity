@@ -1,0 +1,7 @@
+// @hash 3b71fc14a37d
+{
+  // Pages (proto-1790691924-p8nh) draws the sidebar and the main area edge to
+  // edge, the seam being the sidebar's own 1px border. Committed per app so it
+  // holds even if the base default changes.
+  "variant": "flush"
+}

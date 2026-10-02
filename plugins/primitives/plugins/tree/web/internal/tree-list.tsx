@@ -50,7 +50,7 @@ const addIcon = symbol("add");
  * VirtualRows. Below it the recursive render runs unchanged. Mirrors the list
  * view's threshold. */
 const VIRTUALIZE_THRESHOLD = 100;
-/** Initial per-row height estimate (min-h-7 row + py-xs). Dynamic measurement
+/** Initial per-row height estimate (the default `treeRowH` 28px row + py-xs). Dynamic measurement
  * refines it after mount. */
 const ROW_ESTIMATE_PX = 32;
 
@@ -470,7 +470,8 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
         <TreeListProvider value={ctxValue}>
           <MaybeMultiSelect multiSelect={multiSelect} orderedIds={orderedIds}>
             <Stack
-              gap="2xs"
+              gap="none"
+              className="gap-tree-root"
               ref={keyboard.containerRef}
               onKeyDown={keyboard.onKeyDown}
             >

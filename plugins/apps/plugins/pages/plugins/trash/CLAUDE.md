@@ -9,6 +9,7 @@
   - Contributes: `Pages.Sidebar` "Trash" → `PagesTrash`
   - Uses:
     - `apps/pages/shell.Pages`
+    - `apps/pages/shell.PagesSidebarRow`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveListResult`
     - `network/live.useLive`

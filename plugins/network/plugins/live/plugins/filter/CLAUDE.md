@@ -100,6 +100,7 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
     - `infra/trash`
     - `network/live`
     - `primitives/data-view/server-query`
+    - `primitives/usage-rank`
     - `release`
     - `reports`
     - `shell/notifications`

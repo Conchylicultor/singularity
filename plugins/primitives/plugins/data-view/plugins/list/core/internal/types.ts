@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
 /**
  * Per-view options for the list view, threaded through
@@ -31,4 +32,24 @@ export interface ListViewOptions<TRow> {
    * to pin a density regardless of what the surface asked for.
    */
   size?: "sm" | "md";
+  /**
+   * The chrome each row is drawn with. `"row"` (default) is the `Row`
+   * primitive. `"tree"` draws every row through the tree primitive's
+   * `TreeRowChrome` at depth 0 — its height (`treeRowH`), indent, icon box,
+   * hover, selected tier and action cluster — so a flat list shown beside a
+   * tree of the same records (Pages' Favorites over its page tree) is the
+   * same row by construction, not a second hand-tuned look. In this chrome a
+   * row is one label line: the title (its read rendering — never the
+   * click-to-edit cell, since the label is the row's navigation target)
+   * truncates and every other body field
+   * renders as a rigid inline cell after it, exactly as the tree view draws
+   * its secondary fields; `lines` does not apply.
+   */
+  rowChrome?: "row" | "tree";
+  /**
+   * Per-row title className, composed after the row tone — the list twin of
+   * the tree view's `labelClassName` (e.g. the open record's row in a heavier
+   * weight).
+   */
+  labelClassName?: (row: TRow) => ClassName | undefined;
 }

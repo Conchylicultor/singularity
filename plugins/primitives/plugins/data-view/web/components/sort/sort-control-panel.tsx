@@ -1,8 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  ControlPanel,
-  usePanelStack,
-} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import { useDataViewControls } from "../controls/controls-context";
 import { FieldSearchList } from "../filter/field-search-list";
@@ -31,7 +28,6 @@ const closeIcon = symbol("close");
  */
 export function SortControlPanel(): ReactNode {
   const { sort, manualOrderOverridden } = useDataViewControls();
-  const { push } = usePanelStack();
 
   const usedIds = new Set(sort.rules.map((r) => r.fieldId));
   const availableToAdd = sort.sortableFields.filter((f) => !usedIds.has(f.id));
@@ -101,13 +97,11 @@ export function SortControlPanel(): ReactNode {
         <ControlPanel.Footer>
           <ControlPanel.Row
             icon={<Icon icon={bookmarkAddIcon} />}
-            onSelect={() =>
-              push({
-                key: "save-sort-preset",
-                title: "Save as preset",
-                render: () => <SortSavePresetPanel />,
-              })
-            }
+            push={{
+              key: "save-sort-preset",
+              title: "Save as preset",
+              render: () => <SortSavePresetPanel />,
+            }}
           >
             Save as preset
           </ControlPanel.Row>

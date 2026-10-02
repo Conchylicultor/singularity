@@ -1,0 +1,14 @@
+// @hash 229102bb7c88
+{
+  // Pages paints its own designed theme, `pages-ink` (prototype
+  // proto-1790691924-p8nh), contributed by the Pages shell
+  // (`plugins/apps/plugins/pages/plugins/shell/web/internal/theme.ts`) — never
+  // the desktop's runtime choice. Its colours are dark-only; its metrics apply
+  // in both modes. A group `pages-ink` does not mention paints its schema
+  // defaults.
+  //
+  // `colorMode` is deliberately absent: light/dark is a single global setting
+  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts`), so a
+  // value here would claim something that is not true.
+  "theme": "pages-ink"
+}

@@ -10,9 +10,8 @@ import type { ComponentProps } from "react";
 import { ControlPanel } from "./control-panel";
 import { ControlPanelHostProvider, type ControlPanelHost } from "./host";
 import { ControlPanelStack } from "./panel-stack";
-
-/** The only width dial in the vocabulary. */
-export type ControlPanelSize = "menu" | "builder" | "picker";
+import { usePanelStackState } from "./stack-context";
+import type { ControlPanelSize } from "./size";
 
 type Positioning = Pick<
   ComponentProps<typeof PopoverContent>,
@@ -47,9 +46,13 @@ export type ControlPanelPopoverProps = Positioning &
 
 interface ControlPanelPopoverOwnProps {
   /**
-   * `menu` for a list of choices, `builder` for a rule row, `picker` for a panel
-   * whose body is a grid (swatches, icons, covers). There is no width, padding
-   * or content-class prop — see below.
+   * The ROOT page's width role: `menu` for a list of choices, `described` for
+   * choices with visible description lines, `builder` for a rule row, `picker`
+   * for a panel whose body is a grid (swatches, icons, covers). A page pushed
+   * onto the panel's stack may declare its own (`PanelStackEntry.size`) — a
+   * 248px menu whose Filter row opens the 524px builder — and the panel takes
+   * the width of whichever page is showing. There is no width, padding or
+   * content-class prop — see below.
    */
   size?: ControlPanelSize;
   /**
@@ -111,21 +114,34 @@ export function ControlPanelPopover({
   onOpenChange,
   children,
 }: ControlPanelPopoverProps) {
+  // The stack's state lives HERE rather than inside the stack, because the
+  // width is the SURFACE's and the surface is this component's: the showing
+  // page's role has to reach `PopoverContent` in the same render that shows
+  // the page. It returns to the root once the panel has finished closing —
+  // the same fresh start `resetOnClose` gave the stack when it owned its state.
+  const stack = usePanelStackState();
+  const width = stack.entries.at(-1)?.size ?? size;
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover
+      open={open}
+      onOpenChange={onOpenChange}
+      onOpenChangeComplete={(isOpen) => {
+        if (!isOpen) stack.reset();
+      }}
+    >
       {trigger ? <PopoverTrigger render={trigger} /> : null}
       <PopoverContent
         resetOnClose
         anchor={anchor}
         align={align}
         side={side}
-        width={size}
+        width={width}
         maxHeight={maxHeight}
         padding="none"
       >
         <ControlPanel aria-label={label}>
           <ControlPanelHostProvider host={POPOVER_HOST}>
-            <ControlPanelStack root={children} />
+            <ControlPanelStack root={children} state={stack} />
           </ControlPanelHostProvider>
         </ControlPanel>
       </PopoverContent>

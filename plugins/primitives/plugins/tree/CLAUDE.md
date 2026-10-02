@@ -247,6 +247,7 @@ return is `useMemo`'d because it is now a context value.
   - Imported by:
     - `apps/pages/page-tree`
     - `page/editor`
+    - `primitives/data-view/list`
     - `primitives/data-view/tree`
     - `ui/tree-disclosure`
     - `ui/tree-disclosure/column`

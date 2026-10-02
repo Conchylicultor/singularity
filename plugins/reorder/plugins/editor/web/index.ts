@@ -5,6 +5,7 @@ export {
   ReorderAreaContext,
   SortableReorderItem,
   SpacerReorderItem,
+  DividerReorderItem,
   RestoreButton,
   type ReorderAreaCtxValue,
 } from "./internal/items";
@@ -17,6 +18,6 @@ export type {
 
 export default {
   description:
-    "Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.",
+    "Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers and dividers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.",
   contributions: [],
 } satisfies PluginDefinition;

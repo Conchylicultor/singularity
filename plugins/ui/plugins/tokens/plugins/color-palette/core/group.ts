@@ -147,6 +147,25 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "var(--muted-foreground)",
     label: "Subtle text",
   },
+  // A selected row's fill (a tree row, a list view's active row). Default =
+  // the hover fill it always shared, so a theme that leaves it out paints
+  // hover and selection alike; a theme sets it to separate the two tiers.
+  selected: {
+    default: "var(--accent)",
+    label: "Selected row",
+  },
+  // A quiet group head's text (`SectionHeaderRow`'s `group` form, a control
+  // panel's group heading). Default = the muted text it always wore.
+  groupForeground: {
+    default: "var(--muted-foreground)",
+    label: "Group heading text",
+  },
+  // A floating panel's outline (popover / dropdown / select content, drawn as
+  // a 1px ring). Default = the 10% foreground ring it always drew.
+  popoverBorder: {
+    default: "color-mix(in oklab, var(--foreground) 10%, transparent)",
+    label: "Popover border",
+  },
   // A neutral header chip's fill (a conversation's model chip).
   chip: {
     default: "var(--muted)",

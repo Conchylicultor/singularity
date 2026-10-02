@@ -94,6 +94,9 @@ export function HintedLabelCell({
  * (the host points at `descriptionId`) and is `aria-hidden` inside the cell, so
  * the row's NAME stays its label alone — the same split `hint` makes.
  *
+ * The label is a TITLE over its prose — medium weight in the strong text tier —
+ * so the choice reads first and its meaning second.
+ *
  * The cell pads itself vertically so two lines sit inside the row's box with
  * the breathing room a one-line row gets from `--cp-row-h`; the row's
  * `min-height` then grows to fit rather than clipping.
@@ -112,12 +115,14 @@ function DescribedLabelCell({
   return (
     <Stack
       as="span"
-      gap="none"
+      gap="2xs"
       data-cp-cell="label"
       data-cp-described=""
       className={cn("min-w-0 py-xs", className)}
     >
-      <span className="truncate">{children}</span>
+      <span className="truncate font-medium text-strong-foreground">
+        {children}
+      </span>
       <span
         aria-hidden
         id={descriptionId}

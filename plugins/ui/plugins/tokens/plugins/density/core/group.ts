@@ -64,6 +64,52 @@ export const densityGroup = defineTokenGroup("density", {
   chromeBarH: { default: "3rem", label: "Chrome bar height" },
   chromePaneH: { default: "2.5rem", label: "Chrome pane header height" },
   chromePadX: { default: "0.75rem", label: "Chrome padding X" },
+  // A pane header's bottom rule width (`Bar tier="pane"`). Default = the 1px
+  // `border-b` every bar draws; `0` runs the header into its pane.
+  chromePaneRule: { default: "1px", label: "Pane header rule" },
+  // A tree row (`TreeRowChrome`): its minimum height and the indent per depth
+  // level. Defaults = the old `min-h-7` and 16px step. The indent stays in px:
+  // e2e reads it back as a number.
+  treeRowH: { default: "1.75rem", label: "Tree row height" },
+  treeIndent: { default: "16px", label: "Tree indent" },
+  // The gap between a tree's top-level rows (`TreeList`'s root stack).
+  // Default = the `2xs` step it always had; `0px` packs root rows like
+  // nested ones.
+  treeRootGap: { default: "var(--space-2xs)", label: "Tree root row gap" },
+  // The three popover width ROLES (`PopoverContent width`) — a list of
+  // choices, a six-track rule row, a panel whose body is a grid. Defaults =
+  // the widths they always had (262px / 524px / 320px).
+  popoverWidthMenu: { default: "16.375rem", label: "Menu popover width" },
+  popoverWidthBuilder: {
+    default: "32.75rem",
+    label: "Builder popover width",
+  },
+  popoverWidthPicker: { default: "20rem", label: "Picker popover width" },
+  // A fourth role: a list of choices that each carry a visible description
+  // line (the page-kind menu), whose width decides how many lines each
+  // description wraps to. Default = the menu width.
+  popoverWidthDescribed: {
+    default: "16.375rem",
+    label: "Described-menu popover width",
+  },
+  // A control panel's geometry (`ControlPanel`): the panel's own inset — which
+  // also spaces its bands — and its row height. Defaults = the `xs` step and
+  // the `md` control height it always used, so a panel row is as tall as a
+  // Button unless a theme says otherwise.
+  panelPad: { default: "var(--space-xs)", label: "Panel padding" },
+  panelRowH: { default: "var(--control-height-md)", label: "Panel row height" },
+  // A DataView section header's block padding (the `sections` chrome's
+  // `ViewSection`): above and below its label row. Defaults = the row padding
+  // (`padRowY`) every `Row` has. A theme that spaces its sections apart puts
+  // that space ABOVE each header (so a section's rows sit right under it).
+  sectionHeadPadTop: {
+    default: "var(--pad-row-y)",
+    label: "Section header padding top",
+  },
+  sectionHeadPadBottom: {
+    default: "var(--pad-row-y)",
+    label: "Section header padding bottom",
+  },
   // A pane header's own inline insets (`Bar tier="pane"`): before its leading
   // control and after its last one. Default = the shared `chromePadX`.
   chromePanePadStart: {

@@ -73,6 +73,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `apps/chord/piano`
     - `apps/chord/shell`
     - `apps/chord/trainer`
+    - `apps/pages/shell`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/canvas`
     - `apps/sonata/sources/midi`
@@ -130,6 +131,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `plugin-meta/facets/resources/render-detail`
     - `plugin-meta/facets/routes/render-detail`
     - `primitives/adaptive-bar`
+    - `primitives/app-shell`
     - `primitives/breadcrumb`
     - `primitives/command-palette`
     - `primitives/commit-list`

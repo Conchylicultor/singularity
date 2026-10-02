@@ -4,17 +4,18 @@ export { ControlPanel } from "./internal/namespace";
 export {
   ControlPanelPopover,
   type ControlPanelPopoverProps,
-  type ControlPanelSize,
 } from "./internal/control-panel-popover";
+export { type ControlPanelSize } from "./internal/size";
 export {
   usePanelStack,
   type PanelStackApi,
   type PanelStackEntry,
-  type ControlPanelStackProps,
-} from "./internal/panel-stack";
+} from "./internal/stack-context";
+export { type ControlPanelStackProps } from "./internal/panel-stack";
 export {
   type ControlPanelProps,
   type ControlPanelSectionProps,
+  type ControlPanelSectionHeading,
   type ControlPanelFooterProps,
   type ControlPanelEmptyProps,
   type ControlPanelRuleListProps,
@@ -22,6 +23,7 @@ export {
 export {
   type ControlPanelRowProps,
   type ControlPanelRowSelect,
+  type ControlPanelRowIndicator,
   type ControlPanelRowTone,
 } from "./internal/control-panel-row";
 export { type ControlPanelRuleRowProps } from "./internal/rule-row";

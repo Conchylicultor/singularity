@@ -21,7 +21,9 @@
  * half-step below the 2xs sub-scale).
  */
 export const TYPE_ROLES = {
-  display: { weight: "bold", compact: "title" },
+  // The display rung's weight is a token (default: bold) so a theme can set a
+  // lighter headline (a document title) without re-weighting anything else.
+  display: { weight: "token", compact: "title" },
   title: { weight: "semibold", compact: "heading" },
   heading: { weight: "semibold", compact: "subheading" },
   subheading: { weight: "semibold", compact: "body" },
@@ -30,7 +32,8 @@ export const TYPE_ROLES = {
   // The heading of a group of rows in a list or sidebar (a quiet group header:
   // "Queue 14"). Its own role, not `label`, so a theme sizes its group heads
   // apart from the rows they head. Steps down to caption metrics at its weight.
-  group: { weight: "semibold", compact: "caption" },
+  // Its weight is a token (default: semibold), so a theme sets quieter heads.
+  group: { weight: "token", compact: "caption" },
   caption: { weight: "normal", compact: "2xs" },
   control: { weight: "token", strong: true, compact: "caption" },
   tag: { weight: "token", strong: true, compact: "own" },

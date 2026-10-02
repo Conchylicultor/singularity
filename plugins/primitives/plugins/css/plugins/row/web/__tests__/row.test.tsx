@@ -260,7 +260,8 @@ describe("Row — focusRef is a capability, not a node", () => {
 });
 
 // A selected row reads brighter than its neighbours: the accent's own text
-// colour rides the accent fill, on both paths (the box carries the chrome).
+// colour rides the selected fill (`--selected`, default = the accent), on both
+// paths (the box carries the chrome).
 describe("Row — selected text", () => {
   it("paints the accent text colour on a selected accent row", () => {
     const { container } = render(
@@ -269,7 +270,7 @@ describe("Row — selected text", () => {
       </Row>,
     );
     const box = container.firstElementChild!;
-    expect(box.classList.contains("bg-accent")).toBe(true);
+    expect(box.classList.contains("bg-selected")).toBe(true);
     expect(box.classList.contains("text-accent-foreground")).toBe(true);
   });
 

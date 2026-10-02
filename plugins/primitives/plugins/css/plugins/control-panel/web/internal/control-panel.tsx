@@ -100,9 +100,19 @@ export function ControlPanel({
   );
 }
 
+/**
+ * How a section's label reads: `eyebrow` (default) is the small-caps label;
+ * `group` is a sentence-case group head on the `group` type role in
+ * `--group-foreground` — the quiet head a menu of choices wears ("Agents on
+ * this page"), sized by the theme's group role rather than by the eyebrow's.
+ */
+export type ControlPanelSectionHeading = "eyebrow" | "group";
+
 export interface ControlPanelSectionProps {
-  /** Small-caps label on the panel's own content rail — the icon rail. */
+  /** The section's label on the panel's own content rail — the icon rail. */
   label?: React.ReactNode;
+  /** How the label reads; default `eyebrow`. See `ControlPanelSectionHeading`. */
+  heading?: ControlPanelSectionHeading;
   /**
    * A muted line under the eyebrow, INSIDE the band. It is prose about the
    * band, not a row — so it reserves no track, takes no row height, and
@@ -135,6 +145,7 @@ export interface ControlPanelSectionProps {
  */
 export function ControlPanelSection({
   label,
+  heading = "eyebrow",
   description,
   className,
   children,
@@ -142,9 +153,19 @@ export function ControlPanelSection({
   return (
     <div className={cn("cp-band", className)}>
       {label != null ? (
-        <SectionLabel className="flex control-min-xs items-center">
-          {label}
-        </SectionLabel>
+        heading === "group" ? (
+          <Text
+            as="div"
+            variant="group"
+            className="flex control-min-xs items-center text-group-foreground"
+          >
+            {label}
+          </Text>
+        ) : (
+          <SectionLabel className="flex control-min-xs items-center">
+            {label}
+          </SectionLabel>
+        )
       ) : null}
       {description != null ? (
         <Text as="div" variant="caption" tone="muted" className="pb-2xs">

@@ -55,6 +55,8 @@ const BUILTIN_GROUP_IDS = new Set([
   "gap-x",
   "gap-y",
   "rounded",
+  "shadow",
+  "border-w-b",
 ]);
 
 const MANIFEST_HEADER = [

@@ -49,6 +49,7 @@ attribute type carries.
     - `apps/mail/search`
     - `apps/mail/threads`
     - `apps/pages/history`
+    - `apps/pages/shell`
     - `apps/prototypes/canvas`
     - `apps/sonata/library`
     - `apps/sonata/sources/midi`

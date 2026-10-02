@@ -28,6 +28,7 @@ panel width are the `ui/tokens/sidebar-metrics` theme tokens; the icon wears
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/clip.Clip`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Sidebar`

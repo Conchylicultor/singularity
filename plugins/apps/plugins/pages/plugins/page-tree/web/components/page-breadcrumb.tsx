@@ -18,11 +18,18 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { pageAncestors } from "../ancestors";
 import { pageDetailPane } from "../panes";
 
+/**
+ * One crumb: the page's icon, then its name. The pair sits a control's
+ * icon-to-label gap apart (`gap-control-sm`: the trail lives in the `sm` pane
+ * bar, and each crumb is a control in it), and the glyph is drawn at 13px — the
+ * emoji box is the font size over the 85% an `EmojiGlyph` draws its character
+ * at.
+ */
 function SegmentLabel({ page }: { page: Block }): ReactElement {
   const data = pageData(page);
   return (
-    <Inline gap="2xs">
-      <PageIcon icon={data.icon} className="size-3.5" />
+    <Inline gap="none" className="gap-control-sm">
+      <PageIcon icon={data.icon} className="size-[calc(13px/0.85)]" />
       {data.title || "Untitled"}
     </Inline>
   );
@@ -77,6 +84,13 @@ export function PageBreadcrumb({
   return (
     <Breadcrumb
       segments={segments}
+      // One weight for the whole trail: the page's own name is singled out by
+      // its colour (the strong tier) against the muted ancestors.
+      leafWeight="normal"
+      leafTone="strong"
+      // The trail is the page's address, set in the body role like the
+      // sidebar rows that name the same pages.
+      text="body"
       onNavigate={(_i, seg) =>
         openPane(pageDetailPane, { pageId: seg.key }, { mode: "swap" })
       }

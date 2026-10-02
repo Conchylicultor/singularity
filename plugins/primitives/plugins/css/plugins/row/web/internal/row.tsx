@@ -313,7 +313,9 @@ export function Row({
     // subtitle, a finished row's dimmed title) keep it.
     hover === "accent" &&
       (selected
-        ? "bg-accent text-accent-foreground [--scrim:var(--accent)]"
+        ? // The selected tier (`--selected`, default = the accent hover
+          // fill), so a theme can set hover and selection apart.
+          "bg-selected text-accent-foreground [--scrim:var(--selected)]"
         : "hover:bg-accent hover:[--scrim:var(--accent)]"),
     hover === "muted" &&
       (selected

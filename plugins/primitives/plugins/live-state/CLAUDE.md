@@ -963,6 +963,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`
+    - `apps/pages/shell`
     - `apps/pages/starred`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
@@ -1074,6 +1075,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `primitives/metrics`
     - `primitives/optimistic-mutation`
     - `primitives/pane`
+    - `primitives/usage-rank`
     - `release`
     - `reports`
     - `reports/live-state-stale-drop`

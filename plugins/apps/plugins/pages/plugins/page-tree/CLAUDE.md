@@ -166,6 +166,7 @@ it, so an id means the same thing wherever it is clicked.
   - Uses:
     - `apps/pages/auto-icon.RegenerateIconAction`
     - `apps/pages/shell.Pages`
+    - `apps/pages/shell.PagesSidebarRow`
     - `infra/attachments.uploadAttachment`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpoint`
@@ -191,16 +192,18 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/css/clip.Clip`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/grid.Grid`
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/css/ui-kit.Separator`
     - `primitives/css/yield.yieldClass`
     - `primitives/data-view.CreateOption`
     - `primitives/data-view.DataView`
@@ -231,6 +234,8 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `primitives/tree.useOptionalRowControls`
     - `primitives/undo-redo.useUndoRedo`
+    - `primitives/usage-rank.recordUsage`
+    - `primitives/usage-rank.useRecentUsage`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
     - `ui/icons/emoji.EmojiPicker`

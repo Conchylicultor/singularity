@@ -324,6 +324,7 @@ to reconcile them; they never needed reconciling.
     - `apps/mail/threads`
     - `apps/pages/history`
     - `apps/pages/page-tree`
+    - `apps/pages/shell`
     - `apps/pages/trash`
     - `apps/pages/welcome`
     - `apps/pages/welcome/quick-create`

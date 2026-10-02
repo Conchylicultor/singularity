@@ -3693,6 +3693,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/pages/auto-icon.RegenerateIconAction`
               - `apps/pages/shell.Pages`
+              - `apps/pages/shell.PagesSidebarRow`
               - `infra/attachments.uploadAttachment`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.useEndpoint`
@@ -3718,16 +3719,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/clip.Clip`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/css/grid.Grid`
               - `primitives/css/inline.Inline`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/spinner.Spinner`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/css/ui-kit.Separator`
               - `primitives/css/yield.yieldClass`
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
@@ -3758,6 +3761,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/text-editor/paste-images.attachmentUrl`
               - `primitives/tree.useOptionalRowControls`
               - `primitives/undo-redo.useUndoRedo`
+              - `primitives/usage-rank.recordUsage`
+              - `primitives/usage-rank.useRecentUsage`
               - `shell/toast.showToast`
               - `ui/icons.Icon`
               - `ui/icons/emoji.EmojiPicker`
@@ -3809,16 +3814,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `tasks/task-detail.TaskDetailSlots`
               - `ui/icons.Icon`
-        - **`shell`** — App shell for Pages. Registers the /pages app entry and defines the Pages.Sidebar slot.
+        - **`shell`** — App shell for Pages. Registers the /pages app entry, defines the Pages.Sidebar slot and heads it with the workspace row (the user's initial tile and "<first name>'s pages", from the OS account), and contributes the app's own theme (Ink), which Pages selects.
           - Web:
-            - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.trash`
-            - Contributes: `Apps.App` "Pages" → `PagesLayout`
+            - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.shell`, `apps.pages.trash`
+            - Contributes:
+              - `Apps.App` "Pages" → `PagesLayout`
+              - `Pages.Sidebar` "Workspace" → `PagesWorkspace`
+              - `ThemeEngine.Theme` "Ink"
             - Uses:
               - `apps-core.Apps`
+              - `infra/host-account.useHostAccount`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
+              - `primitives/css/center.Center`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/row.Row`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
               - `primitives/slot-render.defineRenderSlot`
-            - Exports (values): `Pages`
+              - `ui/icons.Icon`
+              - `ui/theme-engine.ThemeEngine`
+            - Exports (values):
+              - `Pages`
+              - `PagesSidebarRow`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `pagesApp`
@@ -3870,6 +3891,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Pages.Sidebar` "Trash" → `PagesTrash`
             - Uses:
               - `apps/pages/shell.Pages`
+              - `apps/pages/shell.PagesSidebarRow`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.LiveListResult`
               - `network/live.useLive`
@@ -20938,6 +20960,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
+    - **`host-account`** — Host account, read: useHostAccount() — the OS account this backend runs as (login name and full name), loading until the value arrives. Host account: serves the host-account value — the OS account this backend runs as (login name, and its full name read once through spawnCaptured: macOS `id -F`, the passwd GECOS field elsewhere).
+      - Server:
+        - Contributes: `resource.declare` "host-account"
+        - Uses: `network/live.serveValue`
+        - Resources: `host-account` (push)
+      - Web:
+        - Uses: `network/live.useLive`
+        - Exports (values): `useHostAccount`
+      - Core:
+        - Uses: `network/live.liveValue`
+        - Exports (types): `HostAccount`
+        - Exports (values):
+          - `accountFirstName`
+          - `accountInitial`
+          - `hostAccount`
+          - `HostAccountSchema`
+      - Cross-plugin:
+        - Imported by: `apps/pages/shell`
     - **`host-fs`** — The one host-filesystem API: list / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
       - Server:
         - Uses:
@@ -23002,6 +23042,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/deps`
           - `infra/events`
           - `infra/git/git-watcher`
+          - `infra/host-account`
           - `infra/jobs`
           - `infra/trash`
           - `integrations/google-maps`
@@ -23056,6 +23097,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/trash`
               - `network/live`
               - `primitives/data-view/server-query`
+              - `primitives/usage-rank`
               - `release`
               - `reports`
               - `shell/notifications`
@@ -24871,6 +24913,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/data-view.FieldDef`
@@ -26774,6 +26817,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.useCollapsible`
           - `primitives/css/clip.Clip`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.Sidebar`
@@ -27373,6 +27417,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/pages/page-tree`
+              - `apps/pages/shell`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
               - `apps/sonata/notation`
@@ -27682,11 +27727,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ControlPanelPaneProps`
               - `ControlPanelPopoverProps`
               - `ControlPanelProps`
+              - `ControlPanelRowIndicator`
               - `ControlPanelRowProps`
               - `ControlPanelRowSelect`
               - `ControlPanelRowTone`
               - `ControlPanelRuleListProps`
               - `ControlPanelRuleRowProps`
+              - `ControlPanelSectionHeading`
               - `ControlPanelSectionProps`
               - `ControlPanelSettingProps`
               - `ControlPanelSize`
@@ -27917,6 +27964,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-draft-form`
               - `tasks/task-events`
               - `tasks/task-header`
+              - `ui/icons/emoji`
               - `ui/sidebar-framing/floating`
               - `ui/sidebar-framing/flush`
               - `ui/sidebar-framing/inset`
@@ -27938,6 +27986,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/curriculum`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
+              - `apps/pages/page-tree`
               - `apps/sonata/library`
               - `apps/website/landing/contact`
               - `apps/website/landing/hero`
@@ -28053,6 +28102,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/routes/render-detail`
               - `plugin-meta/plugin-view/runtimes`
               - `primitives/data-view`
+              - `primitives/data-view/list`
               - `primitives/data-view/table`
               - `primitives/data-view/tree`
               - `primitives/detail-sections`
@@ -28189,6 +28239,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/search`
               - `apps/mail/threads`
               - `apps/pages/history`
+              - `apps/pages/shell`
               - `apps/prototypes/canvas`
               - `apps/sonata/library`
               - `apps/sonata/sources/midi`
@@ -28528,6 +28579,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/piano`
               - `apps/chord/shell`
               - `apps/chord/trainer`
+              - `apps/pages/shell`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/canvas`
               - `apps/sonata/sources/midi`
@@ -28585,6 +28637,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/resources/render-detail`
               - `plugin-meta/facets/routes/render-detail`
               - `primitives/adaptive-bar`
+              - `primitives/app-shell`
               - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
@@ -28648,7 +28701,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/pages/content-search`
-              - `apps/pages/page-tree`
+              - `apps/pages/shell`
               - `apps/pages/trash`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
@@ -29450,6 +29503,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/pages/page-tree`
+              - `apps/pages/shell`
               - `apps/pages/trash`
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
@@ -30016,6 +30070,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/sync-status`
               - `apps/pages/page-author`
               - `apps/pages/page-tree`
+              - `apps/pages/shell`
               - `apps/pages/trash`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/canvas`
@@ -30175,6 +30230,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/link`
               - `page/image`
               - `page/inline-date`
+              - `page/links`
               - `page/map`
               - `page/math/equation`
               - `page/math/inline`
@@ -31099,6 +31155,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/center.Center`
               - `primitives/css/clip.clipClasses`
               - `primitives/css/fill.Fill`
+              - `primitives/css/inline.Inline`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
@@ -31116,6 +31173,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.ManualOrderConfig`
               - `primitives/data-view.pickLeadingField`
               - `primitives/data-view.pickPrimaryField`
+              - `primitives/data-view.readFallback`
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.rowToneClass`
               - `primitives/data-view.SectionBody`
@@ -31127,6 +31185,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/rank-reorder.RankReorderProvider`
               - `primitives/rank-reorder.useRankSortableItem`
+              - `primitives/tree.TreeRowChrome`
               - `primitives/virtual-rows.VirtualRows`
             - Exports (types): `ListViewOptions`
           - Core:
@@ -32052,6 +32111,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/action-presentation.PanelActionRow`
           - `primitives/action-presentation.useActionForm`
           - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.DensityControlled`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/overlay/tooltip.WithTooltip`
@@ -32549,6 +32609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-outline`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`
+          - `apps/pages/shell`
           - `apps/pages/starred`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
@@ -32660,6 +32721,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/metrics`
           - `primitives/optimistic-mutation`
           - `primitives/pane`
+          - `primitives/usage-rank`
           - `release`
           - `reports`
           - `reports/live-state-stale-drop`
@@ -32783,6 +32845,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/history`
           - `apps/pages/page-author`
           - `apps/pages/page-tree`
+          - `apps/pages/shell`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
           - `apps/prototypes/canvas`
@@ -35386,6 +35449,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/pages/page-tree`
           - `page/editor`
+          - `primitives/data-view/list`
           - `primitives/data-view/tree`
           - `ui/tree-disclosure`
           - `ui/tree-disclosure/column`
@@ -35532,9 +35596,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/place`
           - `page/table`
           - `primitives/text-editor`
-    - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, and useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and swept by a nightly 1-year retention job.
+    - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and swept by a nightly 1-year retention job.
       - Server:
-        - Contributes: `resource.declare` "usage-stats:rows"
+        - Contributes:
+          - `resource.declare` "usage-stats"
+          - `resource.declare` "usage-stats:rows"
+          - `resource.declare` "usage-stats:groups"
         - Uses:
           - `database.db`
           - `infra/endpoints.implement`
@@ -35543,21 +35610,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/primitives/plugins/usage-rank/server/internal/tables.ts`
         - Exports (values): `_usageStats`
         - Register: `defineJob('retention.usage_stats')`
-        - Resources: `usage-stats:rows` (keyed, point)
+        - Resources:
+          - `usage-stats` (keyed, window)
+          - `usage-stats:groups` (push)
+          - `usage-stats:rows` (keyed, point)
         - Routes: `POST /api/usage-rank/record`
       - Web:
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `network/live.useLive`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceResult`
           - `primitives/persistent-draft.readDraft`
           - `primitives/persistent-draft.writeDraft`
         - Exports (values):
           - `recordUsage`
+          - `useRecentUsage`
           - `useUsageOrder`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
+          - `network/live/filter.liveText`
         - Exports (types):
           - `RecordUsageBody`
           - `ScorableStat`
@@ -35565,6 +35639,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `decayedScore`
           - `HALF_LIFE_MS`
+          - `keyOfUsage`
           - `RecordUsageBodySchema`
           - `recordUsageEndpoint`
           - `sortByUsage`
@@ -35572,7 +35647,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `usageStats`
           - `UsageStatSchema`
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/prompt-templates`
+        - Imported by:
+          - `apps/pages/page-tree`
+          - `conversations/conversation-view/prompt-templates`
     - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
       - Web:
         - Uses:
@@ -35859,7 +35936,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/shortcuts.defineShortcut`
           - `shell/action-bar.ActionBar`
           - `ui/icons.Icon`
-    - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
+    - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers and dividers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
       - Web:
         - Uses:
           - `primitives/css/grow-relay.GrowRelay`
@@ -35883,6 +35960,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReorderItemEntry`
           - `ReorderNodeEntry`
         - Exports (values):
+          - `DividerReorderItem`
           - `ReorderAreaContext`
           - `ReorderEditor`
           - `RestoreButton`
@@ -35892,10 +35970,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `fields/reorder-tree/config`
           - `reorder`
+          - `reorder/node-types/divider`
           - `reorder/node-types/spacer`
     - **`node-types`** — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
       - Web:
-        - Slots: `ReorderNodes.NodeType` ← `reorder.node-types.header`, `reorder.node-types.overflow`, `reorder.node-types.spacer`
+        - Slots: `ReorderNodes.NodeType` ← `reorder.node-types.divider`, `reorder.node-types.header`, `reorder.node-types.overflow`, `reorder.node-types.spacer`
         - Exports (values):
           - `ReorderNodes`
           - `useReorderNodeTypes`
@@ -35903,6 +35982,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `fields/reorder-tree/config`
           - `reorder`
+          - `reorder/node-types/divider`
           - `reorder/node-types/header`
           - `reorder/node-types/overflow`
           - `reorder/node-types/spacer`
@@ -35911,6 +35991,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReorderNodeRenderProps`
           - `ReorderNodeType`
       - Plugins:
+        - **`divider`** — Divider reorder node type: a hairline rule between stacked slot items (leaf), with an 'Add Divider' insert affordance.
+          - Web:
+            - Contributes: `ReorderNodes.NodeType` "divider"
+            - Uses:
+              - `reorder/editor.DividerReorderItem`
+              - `reorder/node-types.ReorderNodes`
         - **`header`** — Header reorder node type: the one container type — a labeled, collapsible box rendering its pre-rendered members. Owns the label/collapsed payload schema; collapse toggles via onPatch.
           - Web:
             - Contributes: `ReorderNodes.NodeType` "header"
@@ -38902,6 +38988,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-author`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`
+          - `apps/pages/shell`
           - `apps/pages/trash`
           - `apps/pages/welcome/quick-create`
           - `apps/pages/welcome/recent-pages`
@@ -39257,13 +39344,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses:
               - `primitives/css/center.Center`
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/ui-kit.cn`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
-            - Exports (types): `EmojiPickerProps`
+            - Exports (types):
+              - `EmojiPickerLeadingCategory`
+              - `EmojiPickerProps`
+              - `EmojiPickerVariant`
             - Exports (values):
               - `EmojiGlyph`
               - `EmojiPicker`
@@ -39585,7 +39676,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
-          - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.website.shell`, `ui.theme-engine`
+          - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.pages.shell`, `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
           - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
@@ -39690,6 +39781,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/agent-manager/shell`
           - `apps/chord/shell`
           - `apps/home/shell`
+          - `apps/pages/shell`
           - `apps/website/shell`
           - `reports/theme-resolution`
           - `ui/segmented-progress-bar`

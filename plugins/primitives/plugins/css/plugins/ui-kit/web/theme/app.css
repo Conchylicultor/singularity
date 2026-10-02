@@ -88,6 +88,9 @@
     --color-outline-fill: var(--outline-fill);
     --color-code-border: var(--code-border);
     --color-toolbar-foreground: var(--toolbar-foreground);
+    --color-selected: var(--selected);
+    --color-group-foreground: var(--group-foreground);
+    --color-popover-border: var(--popover-border);
     /* The sticky-chrome mask color — the background a pinned bar paints to hide
        content scrolling under it. `bg-chrome-mask` resolves to `--chrome-mask`,
        which every surface co-publishes with its own background (see `:root`
@@ -261,6 +264,16 @@
  * without moving the rest of the scale. */
 @utility rounded-card { border-radius: var(--radius-card); } /* twmerge: extend rounded */
 @utility rounded-control { border-radius: var(--radius-control); } /* twmerge: extend rounded */
+/* A floating panel's corners (`--radius-popover`, default `rounded-lg` =
+ * `--radius`) — `SURFACE_LEVELS.overlay` wears it, so every popover, menu and
+ * dialog rounds together. */
+@utility rounded-popover { border-radius: var(--radius-popover); } /* twmerge: extend rounded */
+/* …and its shadow (`--shadow-popover`, default the `md` tier). Spelled out
+ * rather than mapped through `@theme`: a theme-derived `shadow-popover` is a word
+ * tailwind-merge files under shadow COLOUR, so a caller's `shadow-lg` would not
+ * replace it. The declaration is Tailwind's own `shadow-*` composition, so the
+ * overlay's `ring-1` still draws beside it. */
+@utility shadow-popover { --tw-shadow: var(--shadow-popover); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
 
 /* Single-line region invariant — the shared base for horizontal chrome strips
  * (the Bar primitive), interactive rows (Row), and chips. Bakes the two-class
@@ -534,6 +547,7 @@
 @utility px-sidebar-row { padding-inline: var(--sidebar-row-pad-x); } /* twmerge: extend px */
 @utility size-sidebar-icon { width: var(--sidebar-icon-size); height: var(--sidebar-icon-size); } /* twmerge: extend size */
 @utility gap-sidebar-icon { gap: var(--sidebar-icon-gap); } /* twmerge: extend gap */
+@utility h-sidebar-end { height: var(--sidebar-end-pad); } /* twmerge: extend h */
 
 /* Control height utilities — the single source of truth for interactive-control
  * heights (Button, ToggleChip, ButtonGroup, …). Values come from the density
@@ -625,6 +639,21 @@
 @utility px-chrome-pane { padding-left: var(--chrome-pane-pad-start); padding-right: var(--chrome-pane-pad-end); } /* twmerge: extend px */
 @utility pr-floating-bar-pane { padding-right: var(--floating-bar-safe-area, var(--chrome-pane-pad-end)); } /* twmerge: extend pr */
 @utility px-subpane { padding-inline: var(--subpane-pad-x); } /* twmerge: extend px */
+/* A pane header's bottom rule width (`Bar tier="pane"`) — density
+ * `chromePaneRule`, default `1px` (the `border-b` it always drew); a theme sets
+ * `0` for a header that runs into its pane with no rule. */
+@utility border-b-chrome-pane { border-bottom-width: var(--chrome-pane-rule); } /* twmerge: extend border-w-b */
+/* The gap between a tree's top-level rows (`TreeList`) — density
+ * `treeRootGap`, default the `2xs` step. */
+@utility gap-tree-root { gap: var(--tree-root-gap); } /* twmerge: extend gap */
+/* A DataView section header's block padding (`ViewSection`) — density
+ * `sectionHeadPadTop` / `sectionHeadPadBottom`, default `--pad-row-y` (the
+ * `p-row` block padding it always had). */
+@utility pt-section-head { padding-top: var(--section-head-pad-top); } /* twmerge: extend pt */
+@utility pb-section-head { padding-bottom: var(--section-head-pad-bottom); } /* twmerge: extend pb */
+/* A tree row's minimum height (`TreeRowChrome`) — density `treeRowH`, default
+ * `1.75rem` (the `min-h-7` it always had). */
+@utility min-h-tree-row { min-height: var(--tree-row-h); } /* twmerge: extend min-h */
 
 /* ── THE RAIL ─────────────────────────────────────────────────────────────
  * Applying padding is the act of OPENING A REGION, not decorating a box. A box
@@ -1144,7 +1173,7 @@
      is that a row nested one region deeper lands its leading cell on the
      NESTED region's rail without this grid ever naming the group. */
   padding-inline: var(--cp-row-pad-start) var(--cp-row-pad-x);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel-row);
   text-align: left;
 
   /* THE DERIVED LEADING TRACKS. A track is reserved only when something in the
@@ -1222,7 +1251,7 @@
   min-height: var(--cp-rule-h);
   /* Region-relative leading pad, exactly as `cp-row` — see it there. */
   padding-inline: var(--cp-row-pad-start) var(--cp-row-pad-x);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel-row);
   /* A builder with no operator (sort) is a DIFFERENT GRID, not the same grid
      with one cell spanning two tracks. Spanning was the obvious move and it is
      wrong: it hands the whole freed track to the field, so two flexible cells
@@ -1308,7 +1337,7 @@
   margin-inline: var(--cp-bleed-start) var(--cp-bleed-end);
   width: calc(100% - var(--cp-bleed-start) - var(--cp-bleed-end));
   min-height: var(--cp-row-h);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel-row);
   text-align: left;
   /* The positioning context the `mark` stripe hangs in. It paints in the chrome
      gutter the cancellation above already creates — the `--cp-panel-pad` strip
@@ -1557,7 +1586,10 @@
  * (that would auto-generate a colliding `text-<role>` font-size utility). */
 /* The display rung — a landing/marketing headline, the one role above `title`.
  * Bold and tightly tracked: at this size the default tracking reads loose. */
-@utility text-display    { font-size: calc(var(--font-size-display) * var(--font-scale));    line-height: calc(var(--line-height-display) * var(--font-scale));    font-weight: var(--font-weight-bold);     letter-spacing: -0.035em; } /* twmerge: extend font-size */
+@utility text-display    { font-size: calc(var(--font-size-display) * var(--font-scale));    line-height: calc(var(--line-height-display) * var(--font-scale));    font-weight: var(--font-weight-display);  letter-spacing: -0.035em; } /* twmerge: extend font-size */
+/* The display weight alone (a token, default bold), for a headline that swaps
+ * its size rung but keeps the display weight. */
+@utility font-display    { font-weight: var(--font-weight-display); } /* twmerge: extend font-weight */
 @utility text-title      { font-size: calc(var(--font-size-title) * var(--font-scale));      line-height: calc(var(--line-height-title) * var(--font-scale));      font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
 @utility text-heading    { font-size: calc(var(--font-size-heading) * var(--font-scale));    line-height: calc(var(--line-height-heading) * var(--font-scale));    font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
 @utility text-subheading { font-size: calc(var(--font-size-subheading) * var(--font-scale)); line-height: calc(var(--line-height-subheading) * var(--font-scale)); font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
@@ -1567,7 +1599,9 @@
 /* The group role: the heading of a group of rows in a list or sidebar (a quiet
  * group header, "Queue 14"). Its own tokens so a theme sizes group heads apart
  * from the rows (`label`) they head. */
-@utility text-group      { font-size: calc(var(--font-size-group) * var(--font-scale));      line-height: calc(var(--line-height-group) * var(--font-scale));      font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
+@utility text-group      { font-size: calc(var(--font-size-group) * var(--font-scale));      line-height: calc(var(--line-height-group) * var(--font-scale));      font-weight: var(--font-weight-group); }                          /* twmerge: extend font-size */
+/* The group weight alone (a token, default semibold). */
+@utility font-group      { font-weight: var(--font-weight-group); } /* twmerge: extend font-weight */
 /* The control role: the words on a control (a button's label, a tab's title).
  * Unlike every role above, its weight is a token (`--font-weight-control`), so a
  * region that wears its own theme — the app chrome — can set lighter controls
@@ -1600,7 +1634,7 @@
  * swaps in the `-compact` map when the ambient `ControlSize` is `xs`
  * (textStepFor === 1); `Badge` reads `text-tag-compact` the same way. One
  * density→text-step policy, three consumers (Button/Badge/Text). */
-@utility text-display-compact    { font-size: calc(var(--font-size-title) * var(--font-scale));      line-height: calc(var(--line-height-title) * var(--font-scale));      font-weight: var(--font-weight-bold);     letter-spacing: -0.035em; } /* twmerge: extend font-size */
+@utility text-display-compact    { font-size: calc(var(--font-size-title) * var(--font-scale));      line-height: calc(var(--line-height-title) * var(--font-scale));      font-weight: var(--font-weight-display);     letter-spacing: -0.035em; } /* twmerge: extend font-size */
 @utility text-title-compact      { font-size: calc(var(--font-size-heading) * var(--font-scale));    line-height: calc(var(--line-height-heading) * var(--font-scale));    font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
 @utility text-heading-compact    { font-size: calc(var(--font-size-subheading) * var(--font-scale)); line-height: calc(var(--line-height-subheading) * var(--font-scale)); font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
 @utility text-subheading-compact { font-size: calc(var(--font-size-body) * var(--font-scale));       line-height: calc(var(--line-height-body) * var(--font-scale));       font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
@@ -1608,7 +1642,7 @@
 @utility text-label-compact      { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption-compact    { font-size: calc(var(--font-size-2xs) * var(--font-scale));        line-height: calc(var(--line-height-2xs) * var(--font-scale));        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 /* The group role's compact rung: caption metrics at the group's semibold. */
-@utility text-group-compact      { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
+@utility text-group-compact      { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-group); }                          /* twmerge: extend font-size */
 /* The control role's compact rung: caption metrics at the control weight. */
 @utility text-control-compact    { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-control); }                           /* twmerge: extend font-size */
 /* The tag role's compact rung — a `Badge` at `xs` density (a count chip in a
@@ -1763,10 +1797,14 @@
        tighten with the Compact preset instead of freezing at one screenshot.
        Binding the row height to `--control-height-md` is the load-bearing one: a
        panel row is then exactly as tall as every Button / Input / ToggleChip in
-       the app, so the rail invariant extends past the panel's own edge. Only the
+       the app, so the rail invariant extends past the panel's own edge. It binds
+       THROUGH the density token `panelRowH` (default that height), as the inset
+       binds through `panelPad` (default the `xs` step), so a theme that draws
+       its menus apart from its buttons sets two tokens rather than editing
+       these. Only the
        three COLUMN WIDTHS are literals — the spacing ramp models gaps and
        insets, not column widths, so there is nothing honest to bind them to. */
-    --cp-panel-pad: var(--space-xs);
+    --cp-panel-pad: var(--panel-pad);
     /* 4px at Comfortable. The design study used 6px, which is not on the ramp;
        if this reads cramped on screen, declare a named 0.375rem density token
        and bind to that rather than hardcoding a literal here. */
@@ -1808,7 +1846,7 @@
        which is what keeps a nested row's leading cell on the NESTED region's
        rail without either grid naming the group. */
     --cp-row-pad-start: var(--cp-row-pad-x);
-    --cp-row-h: var(--control-height-md);
+    --cp-row-h: var(--panel-row-h);
     --cp-rule-h: var(--control-height-lg);
     /* THE rail, measured from the panel's padding box: the LEFT EDGE OF THE ICON
        CELL, so it includes the gap that follows the gutter track. It is the

@@ -5,7 +5,11 @@ import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ControlSizeProvider,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Backlinks } from "@plugins/page/plugins/links/web";
 import {
   pageBacklinks,
@@ -56,22 +60,43 @@ export function BacklinksUnderTitle({ pageId }: PageHeaderPartProps) {
   const n = rows?.length ?? 0;
 
   return (
-    <Stack gap="2xs">
-      <Inline gap="none">
-        <Button
-          variant="ghost"
-          className="text-muted-foreground"
-          {...triggerControlProps}
-        >
-          {rows !== null && n > 0 && <Faces rows={rows.slice(0, FACES)} />}
-          {n > 0
-            ? `Linked from ${n} ${n === 1 ? "page" : "pages"}`
-            : "Linked from"}
-          <Icon icon={chevronIcon} className={chevronClassName} />
-        </Button>
+    <Stack gap="none">
+      {/* The toggle is a header tool like the ones above the title: an `xs`
+          ghost button, caption-sized and faint, hanging out by its own inline
+          padding so its faces sit on the column's left edge. */}
+      <Inline
+        gap="none"
+        style={{ marginLeft: "calc(-1 * var(--control-pad-xs))" }}
+      >
+        <ControlSizeProvider size="xs">
+          <Button
+            variant="ghost"
+            className="text-caption font-normal text-faint-foreground"
+            {...triggerControlProps}
+          >
+            {rows !== null && n > 0 && <Faces rows={rows.slice(0, FACES)} />}
+            {n > 0
+              ? `Linked from ${n} ${n === 1 ? "page" : "pages"}`
+              : "Linked from"}
+            <Icon
+              icon={chevronIcon}
+              className={cn("size-3.5", chevronClassName)}
+            />
+          </Button>
+        </ControlSizeProvider>
       </Inline>
       {open && (
-        <div id={contentId} role="region" aria-label="Pages linking here">
+        // The list unfolds as a card on the page's own ground, widened past the
+        // column on both sides by the rows' own inline padding, so the rows'
+        // text sits just inside the column rather than a whole row inset in.
+        // A bleed the spacing ramp does not model, so it is an inline margin.
+        <div
+          id={contentId}
+          role="region"
+          aria-label="Pages linking here"
+          className="rounded-card border border-border bg-background p-xs"
+          style={{ margin: "0.375rem calc(-1 * var(--pad-row-x)) 0.25rem" }}
+        >
           <Backlinks documentId={pageId} />
         </div>
       )}
@@ -87,12 +112,18 @@ function Faces({ rows }: { rows: BacklinkRow[] }) {
         <Center
           key={row.id}
           as="span"
-          className="size-5 rounded-sm border border-background bg-muted"
+          className="size-5 rounded-md border border-background bg-muted"
           // One overlap the spacing ramp does not model (a negative step): each
           // face tucks under the one before it.
           style={i > 0 ? { marginLeft: "-0.25rem" } : undefined}
         >
-          <PageIcon icon={row.icon} fallback={linkIcon} className="size-3.5" />
+          {/* A 12px glyph: the emoji box is the size over the 85% an
+            `EmojiGlyph` draws its character at. */}
+          <PageIcon
+            icon={row.icon}
+            fallback={linkIcon}
+            className="size-[calc(12px/0.85)]"
+          />
         </Center>
       ))}
     </Inline>

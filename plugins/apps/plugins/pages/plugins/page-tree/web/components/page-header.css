@@ -1,16 +1,21 @@
 /*
- * The page-header title. Notion-style document H1: large (40px), heavy (bold),
- * tight line-height and tracking — distinct from the app's UI `text-title`
- * role (20px/semibold), which reads as chrome rather than a document heading.
- * Plugin-local CSS (like the editor's block-document-scale.css); the font weight
- * references the token var so it tracks the active typography preset.
+ * The page-header title: the document's H1, set in the type scale's `display`
+ * role — its size, line height and weight tokens (each scaled by `--font-scale`,
+ * as every role utility is), so the app's theme sets the title (Ink: 38px on a
+ * 1.15 line at weight 650). Distinct from the UI `text-title` role, which reads
+ * as chrome rather than a document heading. The colour is the strong text tier
+ * (titles a step above body text), and the tracking is the document title's
+ * own, tighter than the 0.035em the `text-display` utility carries.
+ * Plugin-local CSS (like the editor's block-document-scale.css) because the
+ * title is a bare `<input>`.
  */
 .page-doc-title {
-  font-size: 2.5rem; /* 40px */
-  line-height: 1.2;
-  font-weight: var(--font-weight-bold);
-  letter-spacing: -0.021em;
+  font-size: calc(var(--font-size-display) * var(--font-scale));
+  line-height: calc(var(--line-height-display) * var(--font-scale));
+  font-weight: var(--font-weight-display);
+  letter-spacing: -0.025em;
+  color: var(--strong-foreground);
 }
 .page-doc-title::placeholder {
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-display);
 }

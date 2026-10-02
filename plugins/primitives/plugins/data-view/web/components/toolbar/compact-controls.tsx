@@ -3,7 +3,6 @@ import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   ControlPanel,
   ControlPanelPopover,
-  usePanelStack,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
@@ -156,8 +155,8 @@ export function CompactControls({
 }
 
 /**
- * The fold's first page. A component of its own because it calls
- * `usePanelStack()`, which only exists inside the stack the popover mounts.
+ * The fold's first page. Its rows push their control's page (`Row push`), which
+ * needs the stack the popover mounts.
  * Also the head of a sections surface's per-section `⋯` panel
  * (`view-section.tsx`), so a section's controls read exactly like the fold's.
  */
@@ -169,7 +168,6 @@ export function CompactRootPanel({
   search?: ReactNode;
 }): ReactNode {
   const ctx = useDataViewControls();
-  const { push } = usePanelStack();
 
   return (
     <>
@@ -190,13 +188,15 @@ export function CompactRootPanel({
                     : summary.label
                   : undefined
               }
-              onSelect={() =>
-                push({
-                  key: control.id,
-                  title: control.label,
-                  render: () => <DataViewControlPanel control={control} />,
-                })
-              }
+              push={{
+                key: control.id,
+                title: control.label,
+                render: () => <DataViewControlPanel control={control} />,
+                // The page takes the control's own width role — a builder
+                // opened from a menu-wide panel widens it — and a control
+                // with none keeps the panel's.
+                size: control.size,
+              }}
             >
               {control.label}
             </ControlPanel.Row>

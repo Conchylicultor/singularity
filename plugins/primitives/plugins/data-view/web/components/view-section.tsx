@@ -12,7 +12,6 @@ import {
 import {
   ControlPanel,
   ControlPanelPopover,
-  usePanelStack,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
@@ -68,7 +67,7 @@ const addIcon = symbol("add");
  * narrowed to this view (`CreateOption.views`), and `⋯` is the view's controls
  * (search + the same per-control rows as the compact fold) plus its instance
  * actions — settings (rename, type/options, duplicate, delete) and "Add
- * section". The cluster stays visible while that panel is open (the panel is
+ * section". The cluster reads `⋯` then `+`. The cluster stays visible while that panel is open (the panel is
  * portaled, so the pointer leaves the row) or a search query narrows the view
  * (the `⋯` is how the user finds the query again).
  */
@@ -126,11 +125,14 @@ export function ViewSection(props: {
           <SectionHeaderRow
             variant={header}
             disclosure="trailing"
+            // The header's block padding is the theme's (density
+            // `sectionHeadPad*`, default the row's own `p-row` padding).
+            className="pt-section-head pb-section-head"
             actions={
               <RowActions pin={null} alwaysVisible={optionsOpen || searching}>
-                {creators && creators.length > 0 ? (
-                  <CreatorsControl creators={creators} compact />
-                ) : null}
+                {/* `⋯` first, `+` last: the add sits at the row's very end,
+                    where a reader's eye leaves the header for the rows it
+                    adds to. */}
                 <SectionOptions
                   open={optionsOpen}
                   onOpenChange={setOptionsOpen}
@@ -142,6 +144,9 @@ export function ViewSection(props: {
                   actions={actions}
                   description={description}
                 />
+                {creators && creators.length > 0 ? (
+                  <CreatorsControl creators={creators} compact />
+                ) : null}
               </RowActions>
             }
           >
@@ -187,8 +192,11 @@ function SectionOptions(props: {
         open={open}
         onOpenChange={onOpenChange}
         align="end"
-        // `builder`: the filter and sort builders open INSIDE this panel.
-        size="builder"
+        // `menu`: the root page is a menu of rows. The filter and sort
+        // builders open INSIDE this panel as pages that declare their own
+        // `builder` width (`CompactRootPanel`), so the panel widens only while
+        // one of them is showing.
+        size="menu"
         label="Section options"
         trigger={
           <IconButton icon={moreIcon} label="Section options" variant="ghost" />
@@ -223,7 +231,6 @@ function SectionRootPanel(props: {
     description,
   } = props;
   const { controls } = useToolbarControls();
-  const { push } = usePanelStack();
   const close = () => onOpenChange(false);
   return (
     <>
@@ -248,33 +255,27 @@ function SectionRootPanel(props: {
       <ControlPanel.Footer>
         <ControlPanel.Row
           icon={<Icon icon={settingsIcon} />}
-          onSelect={() =>
-            push({
-              key: "section-settings",
-              title: "Section settings",
-              render: () => (
-                <ViewSettingsPopover
-                  instance={instance}
-                  actions={actions}
-                  onClose={close}
-                />
-              ),
-            })
-          }
+          push={{
+            key: "section-settings",
+            title: "Section settings",
+            render: () => (
+              <ViewSettingsPopover
+                instance={instance}
+                actions={actions}
+                onClose={close}
+              />
+            ),
+          }}
         >
           Section settings
         </ControlPanel.Row>
         <ControlPanel.Row
           icon={<Icon icon={addIcon} />}
-          onSelect={() =>
-            push({
-              key: "add-section",
-              title: "Add section",
-              render: () => (
-                <AddSectionPanel actions={actions} onDone={close} />
-              ),
-            })
-          }
+          push={{
+            key: "add-section",
+            title: "Add section",
+            render: () => <AddSectionPanel actions={actions} onDone={close} />,
+          }}
         >
           Add section
         </ControlPanel.Row>

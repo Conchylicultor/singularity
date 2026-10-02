@@ -229,6 +229,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `apps/pages/page-author`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`
+    - `apps/pages/shell`
     - `apps/pages/trash`
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`

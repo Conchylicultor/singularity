@@ -1,6 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { EmojiPicker, type EmojiPickerProps } from "./components/emoji-picker";
+export {
+  EmojiPicker,
+  type EmojiPickerProps,
+  type EmojiPickerVariant,
+  type EmojiPickerLeadingCategory,
+} from "./components/emoji-picker";
 export { EmojiGlyph } from "./components/emoji-glyph";
 
 export default {

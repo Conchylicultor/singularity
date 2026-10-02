@@ -56,6 +56,13 @@
 // button, the change-cover popover). One panel at a width is a measurement; three
 // unrelated ones is a role. Forcing them onto `menu` = 262px is what wraps the
 // avatar picker's ten colour swatches onto a second row.
+//
+// `described` is the fourth: a list of choices whose rows each carry a VISIBLE
+// description line (the page-kind menu, where each kind is a policy read before
+// it is picked). Its width decides how many lines each description wraps to, so
+// a theme sizes it apart from a plain menu of one-word rows — the Pages theme
+// draws its section menu at 248px and its kind menu at 300px. Default = the
+// menu width, so nothing moves until a theme says otherwise.
 export type PopoverWidth =
   | "content"
   | "fit"
@@ -63,6 +70,7 @@ export type PopoverWidth =
   | "anchor"
   | "anchor-min"
   | "menu"
+  | "described"
   | "builder"
   | "picker"
   | "xs"
@@ -82,9 +90,12 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   anchor: "w-[var(--anchor-width,0px)] min-w-36",
   "anchor-min":
     "w-max min-w-[max(8rem,var(--anchor-width,0px))] max-w-(--available-width)",
-  menu: "w-[16.375rem] max-w-(--available-width)", // 262px — a list of choices
-  builder: "w-[32.75rem] max-w-(--available-width)", // 524px — a six-track rule row
-  picker: "w-80 max-w-(--available-width)", // 320px — a panel whose body is a grid
+  // The four role widths are density tokens (`popoverWidth*`, defaults
+  // 262px / 262px / 524px / 320px), so a theme sizes its menus and pickers.
+  menu: "w-(--popover-width-menu) max-w-(--available-width)", // a list of choices
+  described: "w-(--popover-width-described) max-w-(--available-width)", // choices with description lines
+  builder: "w-(--popover-width-builder) max-w-(--available-width)", // a six-track rule row
+  picker: "w-(--popover-width-picker) max-w-(--available-width)", // a panel whose body is a grid
   xs: "w-48 max-w-(--available-width)",
   sm: "w-56 max-w-(--available-width)",
   md: "w-64 max-w-(--available-width)",

@@ -31,6 +31,9 @@ export const sidebarMetricsGroup = defineTokenGroup("sidebar-metrics", {
   },
   sidebarIconSize: { default: "1rem", label: "Sidebar icon size" },
   sidebarIconGap: { default: "var(--space-sm)", label: "Sidebar icon gap" },
+  // The inset under the sidebar's last item (`h-sidebar-end`). Default 0:
+  // the last item sits on the sidebar's bottom edge, as it always did.
+  sidebarEndPad: { default: "0px", label: "Sidebar bottom inset" },
 });
 
 export type SidebarMetricsTokenValues = {

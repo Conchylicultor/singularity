@@ -308,11 +308,6 @@ export function SpacerReorderItem({
     return <div data-slack-claim="" className="flex-1" />;
   }
 
-  function handleDelete(e: React.MouseEvent) {
-    e.stopPropagation();
-    ctx?.onRemoveNode(itemKey);
-  }
-
   return (
     // The SortableItem wrapper inherits the spacer's flex-grow role so the
     // draggable placeholder still absorbs slack like the live gap it replaces.
@@ -331,18 +326,89 @@ export function SpacerReorderItem({
           <span className="text-3xs text-muted-foreground/60 select-none">
             ⇔
           </span>
-          <button
-            // eslint-disable-next-line layout/no-adhoc-layout -- hover-revealed × badge overhanging the spacer corner (off-ramp pixel overhang)
-            className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs opacity-0 pointer-events-none group-hover:opacity-80 group-hover:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={handleDelete}
-            aria-label="Remove spacer"
-          >
-            <Icon icon={closeIcon} className="size-2.5" />
-          </button>
+          <RemoveNodeButton
+            label="Remove spacer"
+            onRemove={() => ctx?.onRemoveNode(itemKey)}
+          />
         </div>
       )}
     </SortableItem>
+  );
+}
+
+// --- Divider reorder item ----------------------------------------------------
+
+// A divider renders as a hairline rule between the items stacked above and
+// below it, on the region's rail (`rail-follow`), with a 6px gap on each side
+// (`xs` + `2xs` of the density ramp, so it scales with the density preset). In
+// edit mode it becomes a draggable dashed placeholder carrying the rule, with
+// the same delete button as a spacer; the node is removed from the `items`
+// tree via `ctx.onRemoveNode`.
+const DIVIDER_GAP = "calc(var(--space-xs) + var(--space-2xs))";
+
+export function DividerReorderItem({
+  itemKey,
+  editMode,
+}: {
+  itemKey: string;
+  editMode: boolean;
+}) {
+  const ctx = useContext(ReorderAreaContext);
+
+  if (!editMode) {
+    return (
+      <div
+        role="separator"
+        className="rail-follow"
+        style={{ paddingBlock: DIVIDER_GAP }}
+      >
+        <div className="border-t border-border" />
+      </div>
+    );
+  }
+
+  return (
+    <SortableItem id={itemKey}>
+      {({ isDragging }) => (
+        <div
+          className={cn(
+            "group relative cursor-grab rounded-md border border-dashed border-muted-foreground/40 px-sm",
+            isDragging && "opacity-40",
+          )}
+          style={{ paddingBlock: DIVIDER_GAP }}
+        >
+          <div className="border-t border-border" />
+          <RemoveNodeButton
+            label="Remove divider"
+            onRemove={() => ctx?.onRemoveNode(itemKey)}
+          />
+        </div>
+      )}
+    </SortableItem>
+  );
+}
+
+/** The hover-revealed × badge overhanging a leaf node's edit-mode placeholder. */
+function RemoveNodeButton({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <button
+      // eslint-disable-next-line layout/no-adhoc-layout -- hover-revealed × badge overhanging the placeholder corner (off-ramp pixel overhang)
+      className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs opacity-0 pointer-events-none group-hover:opacity-80 group-hover:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onRemove();
+      }}
+      aria-label={label}
+    >
+      <Icon icon={closeIcon} className="size-2.5" />
+    </button>
   );
 }
 

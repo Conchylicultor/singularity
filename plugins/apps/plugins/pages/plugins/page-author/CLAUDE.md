@@ -4,8 +4,8 @@ The page-kind control in the page-detail header, between version history and
 "Copy block ID". Its icon says what the open page is to agents, and clicking it
 opens a small panel to change that.
 
-- **Page** (`MdDescription`, plain ghost icon) — an ordinary page: agents may
-  read it and never write it.
+- **Page** (`MdDescription`, plain ghost icon) — an ordinary page: agents can
+  read it and add notes in their own cards; your text stays yours.
 - **Agent page** (`MdAutoAwesome`, blue) — agents may write all of it. Its row
   carries `author: "agent"` (the `<agent-page>` of
   `page/annotations/agent-notes/agent-page`).
@@ -14,6 +14,10 @@ opens a small panel to change that.
   `<instructions-page>` of `page/annotations/instructions/instructions-page`).
   A **Global** switch appears under the three choices on such a page: a global
   instructions page is pointed at in every conversation's opening instructions.
+
+The panel is a `described` menu headed "Agents on this page": each row is the
+kind's glyph, its name, its meaning as a visible line and a trailing tick
+(`ControlPanel.Row indicator="trailing"`).
 
 A choice calls `setPageKind` with the new kind. That is the one way a page's kind
 changes after the page is created — an ordinary data write cannot change it. The

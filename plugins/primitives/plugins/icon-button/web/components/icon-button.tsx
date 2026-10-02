@@ -2,6 +2,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   Button,
+  cn,
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps, ReactNode } from "react";
@@ -27,6 +28,13 @@ export interface IconButtonProps
    * mode is live (listening). Full-form only — INERT in row form.
    */
   motion?: "spin" | "pulse";
+  /**
+   * The glyph's size inside the (density-sized) box. `control` (the default)
+   * is the density's own icon size; `small` draws a 14px glyph in the same box
+   * — a secondary action beside full-size ones, at the same height. Full-form
+   * only — INERT in row form.
+   */
+  glyph?: "control" | "small";
   /** The action's name: the aria-label + tooltip at full size, the visible row text in row form. */
   label: string;
   /** Full-form only — INERT in row form (the label is already visible text there). */
@@ -60,6 +68,7 @@ export function IconButton({
   icon,
   active,
   motion,
+  glyph = "control",
   label,
   tooltip,
   shortcut,
@@ -104,13 +113,11 @@ export function IconButton({
         <Icon
           icon={icon}
           active={active}
-          className={
-            motion === "spin"
-              ? "animate-spin"
-              : motion === "pulse"
-                ? "animate-pulse"
-                : undefined
-          }
+          className={cn(
+            motion === "spin" && "animate-spin",
+            motion === "pulse" && "animate-pulse",
+            glyph === "small" && "size-3.5",
+          )}
         />
       </Button>
     </WithTooltip>

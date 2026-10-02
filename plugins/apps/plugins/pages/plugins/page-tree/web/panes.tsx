@@ -1,4 +1,7 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Separator,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useRef, type ReactElement, type ReactNode } from "react";
 import {
   foldResource,
@@ -64,7 +67,14 @@ import {
 // its content wrapper), so drag-to-select works from the whitespace beside the
 // column — the header and sections, which carry no such surface, apply the
 // measure to themselves directly.
-const READING_MEASURE = cn("mx-auto w-full max-w-4xl");
+//
+// The width is the type-scale group's reading measure (`max-w-reading`, the
+// `measureReading` token), so the app's theme sets the column: Ink sizes it so
+// the header's content box — inside the editor's rail and inset — is 648px.
+const READING_MEASURE = cn("mx-auto w-full max-w-reading");
+
+/** The space above the header's closing rule (see `PageBody`). */
+const RULE_STYLE = { paddingTop: "calc(var(--space-xl) + var(--space-xs))" };
 
 // Panes are declared first so their types are known before the component
 // bodies reference them. The component identifiers below are hoisted function
@@ -368,6 +378,13 @@ function PageBody({
                   body={bodyRef}
                   titleRef={titleRef}
                 />
+                {/* The hairline closing the header off from the page's
+                  content, 28px under the header's under-title band (the
+                  `xl` + `xs` steps). The space under it is the editor's own
+                  (click-to-edit) top padding. */}
+                <div style={RULE_STYLE}>
+                  <Separator />
+                </div>
               </PageContentColumn>
             </div>
             <BlockEditor

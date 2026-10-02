@@ -91,6 +91,7 @@ a steady-state reboot writes nothing).
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`

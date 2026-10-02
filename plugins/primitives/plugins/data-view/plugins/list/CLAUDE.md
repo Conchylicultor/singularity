@@ -20,6 +20,21 @@ hover-revealed trailing actions, and leading icon slot all come for free:
 - **item actions** — `<itemActions.Row row hasChildren />` in `Row`'s
   hover-revealed `actions` slot (matches gallery / tree).
 
+### Tree row chrome (`rowChrome: "tree"`)
+
+`ListViewOptions.rowChrome: "tree"` draws every row through the tree
+primitive's `TreeRowChrome` at depth 0 instead of `Row` — its height
+(`treeRowH`), indent, icon box, hover, selected tier and action cluster. It is
+for a flat list shown beside a tree of the same records (Pages' Favorites over
+its page tree), so the two rows match by construction rather than by two
+hand-tuned looks. A row in this chrome is one label line: the title — its
+read rendering, never the click-to-edit cell, since the label is the row's
+navigation target and the editor's affordance is taller than a tree row —
+truncates and every other body field is a rigid inline cell after it (as the tree view
+draws its secondary fields); `lines` does not apply. Manual order, windowing
+and item actions work as in the default chrome. `labelClassName` (both
+chromes) is the per-row title class, the tree view's option of the same name.
+
 ### Field-driven body
 
 The row body maps the `FieldDef` schema (shared `pickPrimaryField` heuristic):
@@ -164,6 +179,7 @@ conditional hook.
     - `primitives/css/center.Center`
     - `primitives/css/clip.clipClasses`
     - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
@@ -181,6 +197,7 @@ conditional hook.
     - `primitives/data-view.ManualOrderConfig`
     - `primitives/data-view.pickLeadingField`
     - `primitives/data-view.pickPrimaryField`
+    - `primitives/data-view.readFallback`
     - `primitives/data-view.resolveBodyFields`
     - `primitives/data-view.rowToneClass`
     - `primitives/data-view.SectionBody`
@@ -192,6 +209,7 @@ conditional hook.
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/rank-reorder.RankReorderProvider`
     - `primitives/rank-reorder.useRankSortableItem`
+    - `primitives/tree.TreeRowChrome`
     - `primitives/virtual-rows.VirtualRows`
   - Exports (types): `ListViewOptions`
 - Core:

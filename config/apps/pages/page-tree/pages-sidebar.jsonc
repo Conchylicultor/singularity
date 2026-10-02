@@ -86,7 +86,7 @@
         "visibleFields": ["title"],
         "filterScope": "roots",
         "hideWhenEmpty": true,
-        "description": "Pages created by agent runs — moved to trash after 24h",
+        "description": "Pages created by agent runs — moved to trash after 24h.",
         "filter": {
           "kind": "group",
           "id": "scratch",

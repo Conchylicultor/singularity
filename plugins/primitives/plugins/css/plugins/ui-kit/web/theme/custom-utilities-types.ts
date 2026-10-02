@@ -59,7 +59,9 @@ export type BuiltinGroupId =
   | "gap"
   | "gap-x"
   | "gap-y"
-  | "rounded";
+  | "rounded"
+  | "shadow"
+  | "border-w-b";
 
 /** A `under:` relation: one built-in group, and why it is one-directional. */
 export interface UnderRelation {

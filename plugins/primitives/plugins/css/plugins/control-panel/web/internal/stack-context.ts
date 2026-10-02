@@ -1,0 +1,91 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
+import type React from "react";
+
+import type { ControlPanelSize } from "./size";
+
+// The stack's contract — entry, state, the context and its reader — apart from
+// the stack COMPONENT, because a row reads it too (`ControlPanel.Row push`) and
+// the stack component renders a row (its back header): one file each way would
+// be an import cycle.
+
+export interface PanelStackEntry {
+  /** Identity of this level — a re-push with the same key replaces it. */
+  key: string;
+  /** Shown in the back header, so the user knows what popping returns to. */
+  title: string;
+  render: () => React.ReactNode;
+  /**
+   * The width role this page needs, when it is not the panel's own — a filter
+   * builder pushed from a 248px menu needs the 524px builder. The surface takes
+   * the showing page's role (`ControlPanelPopover`), so a menu is no longer
+   * drawn builder-wide just because one of its rows opens a builder. Omitted:
+   * the panel's own size. A host with no width of its own to change (a pane)
+   * ignores it.
+   */
+  size?: ControlPanelSize;
+}
+
+/**
+ * The stack's state, for the one host that has to read it from OUTSIDE the
+ * stack: `ControlPanelPopover`, whose surface width follows the showing page.
+ */
+export interface PanelStackState {
+  entries: readonly PanelStackEntry[];
+  push: (entry: PanelStackEntry) => void;
+  pop: () => void;
+  reset: () => void;
+}
+
+export function usePanelStackState(): PanelStackState {
+  const [entries, setEntries] = useState<readonly PanelStackEntry[]>([]);
+  const push = useCallback((entry: PanelStackEntry) => {
+    setEntries((prev) =>
+      prev.at(-1)?.key === entry.key ? prev : [...prev, entry],
+    );
+  }, []);
+  const pop = useCallback(() => setEntries((prev) => prev.slice(0, -1)), []);
+  const reset = useCallback(() => setEntries([]), []);
+  return useMemo(
+    () => ({ entries, push, pop, reset }),
+    [entries, push, pop, reset],
+  );
+}
+
+export interface PanelStackApi {
+  /** 0 while the root panel is showing. */
+  depth: number;
+  push: (entry: PanelStackEntry) => void;
+  pop: () => void;
+  /** Back to the root in one step — for a host closing and reopening the panel. */
+  reset: () => void;
+}
+
+export const PanelStackContext = createContext<PanelStackApi | null>(null);
+
+/**
+ * The panel stack a contribution pushes onto.
+ *
+ * It is published through CONTEXT rather than passed down because the third
+ * consumer needs it that way: custom-columns' per-field editor is a nested
+ * contribution rendered inside someone else's section, and has no prop path back
+ * to whichever chrome is hosting the panel. Throws when there is no stack, which
+ * is the honest answer — a component that pushes a sub-panel cannot render
+ * correctly in a host that has nowhere to push it, and a silent no-op would show
+ * as a dead click.
+ */
+export function usePanelStack(): PanelStackApi {
+  const api = useContext(PanelStackContext);
+  if (!api) {
+    throw new Error(
+      "usePanelStack() requires a <ControlPanel.Stack> ancestor. Panels rendered " +
+        "through ControlPanelPopover already have one.",
+    );
+  }
+  return api;
+}

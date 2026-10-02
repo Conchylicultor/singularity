@@ -6,13 +6,15 @@ import {
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
 import type React from "react";
-import { useCallback, useId } from "react";
+import { useCallback, useContext, useId } from "react";
 
 import { HintedLabelCell } from "./hint";
+import { PanelStackContext, type PanelStackEntry } from "./stack-context";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const checkIcon = symbol("check");
+const chevronRightIcon = symbol("chevron-right");
 const dragIndicatorIcon = symbol("drag-indicator");
 
 /** The three selection languages, one per meaning. There is no fourth. */
@@ -88,10 +90,6 @@ interface ControlPanelRowCommon {
    * schema cannot be applied, but it is exactly the preset you want to delete.
    */
   disabled?: boolean;
-  /** Makes the row a `<button>`. */
-  onSelect?: () => void;
-  /** Makes the row an `<a>`. */
-  href?: string;
   className?: string;
   /**
    * Forwarded to the row BOX — the outermost node — in both constructions, for
@@ -102,6 +100,42 @@ interface ControlPanelRowCommon {
   ref?: React.Ref<HTMLElement>;
   children: React.ReactNode;
 }
+
+/**
+ * What activating the row does — at most one of three, so a row cannot both
+ * navigate and push. `push` is the panel-stack arm: the row opens a page of
+ * the panel it sits in, and says so with a trailing `chevron-right` after its
+ * value. Pushing through `push` rather than calling `usePanelStack().push` from
+ * `onSelect` is what makes a drill row without its chevron unspellable.
+ */
+type ControlPanelRowTarget =
+  | {
+      /** Makes the row a `<button>`. */
+      onSelect?: () => void;
+      /** Makes the row an `<a>`. */
+      href?: string;
+      push?: never;
+    }
+  | {
+      /**
+       * Makes the row a `<button>` that pushes this page onto the enclosing
+       * panel stack (`ControlPanel.Stack`, which every `ControlPanelPopover`
+       * and `ControlPanelPane` mounts), with a trailing chevron. Throws when
+       * there is no stack — a drill row with nowhere to drill is a dead click.
+       */
+      push: PanelStackEntry;
+      onSelect?: never;
+      href?: never;
+    };
+
+/**
+ * Where a check / radio row draws its mark. `leading` (default) puts it in the
+ * icon cell, where it IS the row's icon. `trailing` moves it after the row's
+ * value, so the leading cell is free for a real `icon` — a menu of kinds, each
+ * with its own glyph, ticked at the end. Role and `aria-checked` are the same
+ * either way; only the drawing moves.
+ */
+export type ControlPanelRowIndicator = "leading" | "trailing";
 
 /**
  * `checked` is required the moment `select` is set, and `icon` is excluded from
@@ -124,24 +158,43 @@ interface ControlPanelRowCommon {
  * type level rather than dropped at render, the same way `icon` is.
  */
 export type ControlPanelRowProps = ControlPanelRowExplanation &
+  ControlPanelRowTarget &
   (
     | (ControlPanelRowCommon & {
         icon?: React.ReactNode;
         select?: never;
         checked?: never;
+        indicator?: never;
       })
     | (ControlPanelRowCommon & {
         select: "check" | "radio";
         checked: boolean;
+        indicator?: "leading";
         icon?: never;
+      })
+    | (ControlPanelRowCommon & {
+        select: "check" | "radio";
+        checked: boolean;
+        /** The mark moves to the trailing cell; the leading cell holds `icon`. */
+        indicator: "trailing";
+        icon?: React.ReactNode;
       })
     | (ControlPanelRowCommon & {
         select: "switch";
         checked: boolean;
         icon?: React.ReactNode;
         actions?: never;
+        indicator?: never;
       })
   );
+
+/**
+ * A leading / trailing cell of a described (two-line) row: pinned to the top
+ * and exactly one TITLE line tall (`h-lh` in the body type, the title's own —
+ * restated on the trailing cell, whose value text is otherwise a caption), below the same `py-xs` the described label cell pads by — so the icon
+ * and the mark centre on the title, not on the title and its description.
+ */
+const TITLE_LINE_CELL = "self-start box-content h-lh py-xs text-body";
 
 /**
  * The hover-reveal recipe for the drag handle. Opacity and pointer-events are
@@ -208,6 +261,7 @@ export function ControlPanelRow({
   description,
   select,
   checked,
+  indicator = "leading",
   handle,
   handleProps,
   trailing,
@@ -215,13 +269,24 @@ export function ControlPanelRow({
   tone = "default",
   muted,
   disabled,
-  onSelect,
+  onSelect: onSelectProp,
   href,
+  push,
   className,
   ref,
   children,
 }: ControlPanelRowProps) {
   const hintId = useId();
+  // Read unconditionally (a hook), required only by a row that pushes.
+  const stack = useContext(PanelStackContext);
+  if (push !== undefined && stack === null) {
+    throw new Error(
+      `ControlPanel.Row "${push.title}": \`push\` requires a <ControlPanel.Stack> ` +
+        "ancestor. Panels rendered through ControlPanelPopover or ControlPanelPane " +
+        "already have one.",
+    );
+  }
+  const onSelect = push !== undefined ? () => stack?.push(push) : onSelectProp;
   const isLink = href != null;
   const isButton = !isLink && (onSelect != null || disabled != null);
   const interactive = isLink || isButton;
@@ -248,16 +313,18 @@ export function ControlPanelRow({
   // A SWITCH FALLS THROUGH TO `icon`: it owns the TRAILING cell, so its leading
   // cell holds whatever the row itself carries — nothing, usually, or a real
   // glyph for a row that has one.
-  const leading =
+  // A TRAILING indicator leaves this cell to `icon`, like a switch does.
+  const markLeads = indicator === "leading";
+  const mark =
     select === "check" ? (
       <CheckboxIndicator checked={checked ?? false} />
     ) : select === "radio" ? (
       checked ? (
         <Icon icon={checkIcon} className="text-primary" />
       ) : null
-    ) : (
-      icon
-    );
+    ) : null;
+  const leading =
+    (select === "check" || select === "radio") && markLeads ? mark : icon;
 
   // …and the occupancy mark follows the CELL, not the row's props. A switch
   // reserves nothing here (it is drawn in the trailing cell), so a panel whose
@@ -269,14 +336,39 @@ export function ControlPanelRow({
   // the marker from the rendered node would make the whole panel re-flow the
   // first time someone ticked a row.
   const occupiesLeadingCell =
-    icon != null || select === "check" || select === "radio";
+    icon != null || ((select === "check" || select === "radio") && markLeads);
 
+  // Trailing, in reading order: the value, then — on a row that ticks at the
+  // end — the mark, then — on a row that pushes — the chevron, last because it
+  // says where the whole row goes. An unticked trailing mark keeps its box
+  // (`invisible`, the radio drawing nothing is STATE, not layout), so ticking
+  // a row never moves its value.
+  const trailingMark =
+    (select === "check" || select === "radio") && !markLeads ? (
+      select === "radio" ? (
+        <Icon
+          icon={checkIcon}
+          className={cn("size-3.5 text-foreground", !checked && "invisible")}
+        />
+      ) : (
+        mark
+      )
+    ) : null;
   const trailingContent =
     select === "switch" ? (
       <SwitchIndicator checked={checked ?? false} disabled={disabled} />
     ) : (
-      trailing
+      <>
+        {trailing}
+        {trailingMark}
+        {push !== undefined ? (
+          <Icon icon={chevronRightIcon} className="size-3.5" />
+        ) : null}
+      </>
     );
+  // A row with a visible description is two lines tall: its leading and
+  // trailing cells sit on the TITLE line rather than centring on the pair.
+  const described = description !== undefined;
 
   const rowClass = cn(
     "group/cp-row cp-row text-body transition-colors",
@@ -317,7 +409,7 @@ export function ControlPanelRow({
   // The description hangs off the HOST, so assistive tech reads the row's name
   // and then its hint. The node it points at is a zero-box `sr-only` sibling
   // inside the label cell, which is why the hint opens no track.
-  const described =
+  const describedBy =
     hint !== undefined || description !== undefined
       ? { "aria-describedby": hintId }
       : undefined;
@@ -352,7 +444,10 @@ export function ControlPanelRow({
         aria-hidden
         data-cp-cell="icon"
         data-cp-icon={occupiesLeadingCell ? "" : undefined}
-        className="flex items-center justify-center"
+        className={cn(
+          "flex items-center justify-center",
+          described && TITLE_LINE_CELL,
+        )}
       >
         {leading}
       </span>
@@ -369,7 +464,10 @@ export function ControlPanelRow({
   const trailingCell = (
     <span
       data-cp-cell="trailing"
-      className="flex items-center gap-2xs text-caption text-muted-foreground"
+      className={cn(
+        "flex items-center gap-2xs text-caption text-muted-foreground",
+        described && TITLE_LINE_CELL,
+      )}
     >
       {trailingContent}
     </span>
@@ -392,7 +490,7 @@ export function ControlPanelRow({
           isLink={isLink}
           isButton={isButton}
           selection={selection}
-          described={described}
+          described={describedBy}
         >
           {leadingCells}
         </SelectRegion>
@@ -435,7 +533,7 @@ export function ControlPanelRow({
         onClick={onSelect}
         className={rowClass}
         {...selection}
-        {...described}
+        {...describedBy}
       >
         {leadingCells}
         {trailingCell}
@@ -451,7 +549,7 @@ export function ControlPanelRow({
         onClick={onSelect}
         className={rowClass}
         {...selection}
-        {...described}
+        {...describedBy}
       >
         {leadingCells}
         {trailingCell}
@@ -459,7 +557,7 @@ export function ControlPanelRow({
     );
   }
   return (
-    <div ref={hostRef} className={rowClass} {...described}>
+    <div ref={hostRef} className={rowClass} {...describedBy}>
       {leadingCells}
       {trailingCell}
     </div>

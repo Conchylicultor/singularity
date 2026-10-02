@@ -21,6 +21,8 @@ fields.
   sortable primitives:
   - `plugins/spacer` — leaf node type (blank draggable gap), with an "Add Spacer"
     insert.
+  - `plugins/divider` — leaf node type (a hairline rule between stacked items,
+    on the region's rail), with an "Add Divider" insert.
   - `plugins/header` — a container node type (labeled, collapsible box that
     renders its pre-rendered members as children). Container creation is
     config-only — no `insert`.
@@ -45,7 +47,7 @@ fields.
 
 - Description: Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
 - Web:
-  - Slots: `ReorderNodes.NodeType` ← `reorder.node-types.header`, `reorder.node-types.overflow`, `reorder.node-types.spacer`
+  - Slots: `ReorderNodes.NodeType` ← `reorder.node-types.divider`, `reorder.node-types.header`, `reorder.node-types.overflow`, `reorder.node-types.spacer`
   - Exports (values):
     - `ReorderNodes`
     - `useReorderNodeTypes`
@@ -53,6 +55,7 @@ fields.
   - Imported by:
     - `fields/reorder-tree/config`
     - `reorder`
+    - `reorder/node-types/divider`
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`
     - `reorder/node-types/spacer`
@@ -61,6 +64,7 @@ fields.
     - `ReorderNodeRenderProps`
     - `ReorderNodeType`
 - Sub-plugins:
+  - **`divider`** — Divider reorder node type: a hairline rule between stacked slot items (leaf), with an 'Add Divider' insert affordance.
   - **`header`** — Header reorder node type: the one container type — a labeled, collapsible box rendering its pre-rendered members. Owns the label/collapsed payload schema; collapse toggles via onPatch.
   - **`overflow`** — Overflow reorder node type: a container whose authored members all relocate behind one ⋯ panel, via AdaptiveBar.Collapsed — each rendering the form it declared, so a plain action becomes a labelled row and a richer widget stays itself, one live instance either way. In edit mode it is a labelled inline box so the bucket stays draggable. Owns the label payload schema.
   - **`spacer`** — Spacer reorder node type: a blank draggable gap (leaf), with an 'Add Spacer' insert affordance.

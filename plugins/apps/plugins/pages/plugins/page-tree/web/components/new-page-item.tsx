@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { PagesSidebarRow } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import { pageDetailPane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 
@@ -31,14 +30,12 @@ export function NewPageItem() {
     }
   };
   return (
-    <div className="px-xs pt-xs">
-      <Row
-        icon={<Icon icon={addIcon} />}
-        disabled={busy}
-        onClick={() => void create()}
-      >
-        New page
-      </Row>
-    </div>
+    <PagesSidebarRow
+      icon={addIcon}
+      label="New page"
+      tone="muted"
+      disabled={busy}
+      onClick={() => void create()}
+    />
   );
 }
