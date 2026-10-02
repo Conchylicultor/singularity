@@ -63,6 +63,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/deps/plugins/python", id: "infra.deps.python", loader: () => import("@plugins/infra/plugins/deps/plugins/python/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/spawn", id: "infra.spawn", loader: () => import("@plugins/infra/plugins/spawn/lint"), dependsOn: [] },
+  { pluginPath: "infra/plugins/spawn/plugins/daemon", id: "infra.spawn.daemon", loader: () => import("@plugins/infra/plugins/spawn/plugins/daemon/lint"), dependsOn: [] },
   { pluginPath: "network/plugins/live", id: "network.live", loader: () => import("@plugins/network/plugins/live/lint"), dependsOn: [] },
   { pluginPath: "packages/plugins/zod-parser", id: "packages.zod-parser", loader: () => import("@plugins/packages/plugins/zod-parser/lint"), dependsOn: [] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/lint"), dependsOn: [] },

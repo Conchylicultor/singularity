@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import type { SentinelStatus } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type { DetectorThresholds } from "./detector";
 import { readSentinelWatch } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
+import { defineDaemon } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { createStatusSink, type DownStatus } from "./status-sink";
 import {
   MAX_RAPID_FAILURES,
@@ -38,6 +39,16 @@ const SETTINGS: SentinelWorkerSettings = {
   thresholds: THRESHOLDS,
   maxEpisodeHoldMs: 600_000,
 };
+
+// The real declaration is host-singleton; this suite runs as a worktree.
+const testDaemon = defineDaemon({
+  name: "sentinel.worker.test",
+  description: "The sentinel worker, under test.",
+  startedBy: "on-demand",
+  where: "every-worktree",
+  restart: { kind: "backoff", healthy: "ready" },
+});
+testDaemon.register();
 
 const tmpDirs: string[] = [];
 function newTmpDir(prefix: string): string {
@@ -132,6 +143,7 @@ describe("sentinel worker host", () => {
       settings: SETTINGS,
       worker: { url: pathToFileURL(badWorker) },
       backoff: { minMs: 10, maxMs: 20 },
+      daemon: testDaemon,
     });
     await r.waitForState("down");
 
@@ -184,6 +196,7 @@ describe("sentinel worker host", () => {
           SINGULARITY_DIR: newTmpDir("sentinel-root-"),
         },
       },
+      daemon: testDaemon,
     });
     await r.waitForState("running");
     expect(r.statuses.map((s) => s.state)).toEqual(["starting", "running"]);

@@ -1,5 +1,12 @@
 import { namespaceArgv } from "@plugins/infra/plugins/runtime-identity/core";
 import { pathToFileURL } from "node:url";
+import {
+  DEFAULT_BACKOFF,
+  defineDaemon,
+  type DaemonDecl,
+  type DaemonTransition,
+  type WorkerDaemonInstance,
+} from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import type { SentinelStatus } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type {
   MainToWorkerFrame,
@@ -8,27 +15,35 @@ import type {
   WorkerToMainFrame,
 } from "./worker/protocol";
 
-// Main-side host for the sentinel worker: spawns/supervises the Bun Worker,
-// pushes live settings, relays its frames to the re-emitters (sampler.ts /
-// onset.ts), and reports its supervision status. Main is deliberately NOT on
-// the latch's critical path — the worker owns sampler + detector + latch
-// lifecycle entirely (Stage 5,
+// Main-side host for the sentinel worker: starts the Bun Worker through the
+// daemon primitive (which supervises it — respawn with backoff, give-up after
+// repeated rapid deaths — and lists it in Background activity), pushes live
+// settings, relays its frames to the re-emitters (sampler.ts / onset.ts), and
+// maps the supervision transitions onto the sentinel's status. Main is
+// deliberately NOT on the latch's critical path — the worker owns sampler +
+// detector + latch lifecycle entirely (Stage 5,
 // research/2026-07-11-global-observability-freeze-blind-spots.md).
 //
 // Config-free on purpose: the caller reads config and pushes it in, so this
 // module can be driven by a test with a worker of its choosing.
 
-/** Respawn backoff after a worker death: start here, double up to the cap. */
-const RESPAWN_BACKOFF_MIN_MS = 1_000;
-const RESPAWN_BACKOFF_MAX_MS = 30_000;
 /**
- * A worker that dies this fast never got going (e.g. its module graph throws at
- * load). After MAX_RAPID_FAILURES such deaths in a row, give up — status `down`,
- * which the caller turns into a report and the health row — instead of
- * respawn-looping forever.
+ * The sentinel worker, declared once. A death within 2 s of spawn means it
+ * never got going (e.g. its module graph throws at load); after
+ * MAX_RAPID_FAILURES such deaths in a row the primitive gives up — status
+ * `down`, which the caller turns into a report and the health row — instead of
+ * respawn-looping forever. Healthy once the worker sends its `ready` frame.
  */
-const RAPID_EXIT_MS = 2_000;
-export const MAX_RAPID_FAILURES = 5;
+export const sentinelWorkerDaemon = defineDaemon({
+  name: "sentinel.worker",
+  description:
+    "The cluster congestion sentinel: a worker thread that samples host load, Postgres pressure and every backend's health every few seconds, detects congestion onset, and holds the host-wide duress latch even while the main event loop is wedged.",
+  startedBy: "boot",
+  where: "host-singleton",
+  restart: { kind: "backoff", healthy: "ready" },
+});
+
+export const MAX_RAPID_FAILURES = DEFAULT_BACKOFF.maxRapidFailures;
 /** How long stop() waits for the worker's `stopped` ack before terminating. */
 const STOP_ACK_TIMEOUT_MS = 2_000;
 
@@ -55,30 +70,28 @@ export interface SentinelWorkerOptions {
   worker?: { url: URL; env?: Record<string, string> };
   /** Respawn backoff bounds. Defaults to 1 s → 30 s; a test shortens them. */
   backoff?: { minMs: number; maxMs: number };
+  /**
+   * The declaration to start it under. Defaults to {@link sentinelWorkerDaemon}
+   * (host-singleton); a test, which runs as a worktree, brings one declared
+   * for every worktree.
+   */
+  daemon?: Pick<DaemonDecl, "spawnWorker">;
 }
 
 interface HostState {
   handlers: WorkerFrameHandlers;
   settings: SentinelWorkerSettings;
-  workerUrl: URL;
-  workerEnv: Record<string, string> | undefined;
-  backoffBounds: { minMs: number; maxMs: number };
-  worker: Worker | null;
-  stopping: boolean;
+  instance: WorkerDaemonInstance | null;
   stoppedAck: (() => void) | null;
-  respawnTimer: ReturnType<typeof setTimeout> | null;
-  backoffMs: number;
-  rapidFailures: number;
-  /** Deaths since the worker last reached `ready`. */
-  deaths: number;
-  /** The most recent `error` event's message since the last `ready`. */
-  lastError: string | null;
-  spawnedAt: number;
 }
 
 let state: HostState | null = null;
 
-function dispatch(s: HostState, frame: WorkerToMainFrame): void {
+function dispatch(
+  s: HostState,
+  frame: WorkerToMainFrame,
+  ready: () => void,
+): void {
   switch (frame.type) {
     case "sample":
       s.handlers.onSample(frame);
@@ -93,12 +106,9 @@ function dispatch(s: HostState, frame: WorkerToMainFrame): void {
       s.handlers.onLog(frame.line, frame.stream);
       break;
     case "ready":
-      // Healthy spawn: reset the give-up counters.
-      s.rapidFailures = 0;
-      s.deaths = 0;
-      s.lastError = null;
-      s.backoffMs = s.backoffBounds.minMs;
-      s.handlers.onStatus({ state: "running", since: Date.now() });
+      // Healthy spawn: the primitive resets its give-up counters and reports
+      // `running`.
+      ready();
       break;
     case "stopped":
       s.stoppedAck?.();
@@ -106,41 +116,31 @@ function dispatch(s: HostState, frame: WorkerToMainFrame): void {
   }
 }
 
-function scheduleRespawn(s: HostState): void {
-  if (s.stopping || s.respawnTimer) return;
-  const rapid = Date.now() - s.spawnedAt < RAPID_EXIT_MS;
-  s.rapidFailures = rapid ? s.rapidFailures + 1 : 0;
-  s.deaths += 1;
-  if (s.rapidFailures >= MAX_RAPID_FAILURES) {
-    // Loud give-up, not a silent absence: the sentinel (and the duress latch
-    // with it) is down until the underlying cause is fixed.
-    s.handlers.onLog(
-      `sentinel worker died ${String(MAX_RAPID_FAILURES)} times within ${String(RAPID_EXIT_MS)}ms of spawn — giving up. The cluster sentinel and duress latch are NOT running. Last error: ${s.lastError ?? "(none reported)"}`,
-      "stderr",
-    );
-    s.handlers.onStatus({
-      state: "down",
-      since: Date.now(),
-      deaths: s.deaths,
-      lastError: s.lastError,
-    });
-    return;
+/** The primitive's transitions, as the sentinel's status file spells them. */
+function toStatus(t: DaemonTransition): SentinelStatus {
+  switch (t.state) {
+    case "starting":
+      return { state: "starting", since: t.at };
+    case "running":
+      return { state: "running", since: t.at };
+    case "respawning":
+      return {
+        state: "respawning",
+        since: t.at,
+        deaths: t.deaths,
+        lastError: t.lastError,
+      };
+    case "gave-up":
+    case "exited":
+      return {
+        state: "down",
+        since: t.at,
+        deaths: t.state === "gave-up" ? t.deaths : 1,
+        lastError: t.lastError,
+      };
+    case "stopped":
+      return { state: "stopped", since: t.at };
   }
-  s.handlers.onLog(
-    `sentinel worker died — respawning in ${String(s.backoffMs)}ms`,
-    "stderr",
-  );
-  s.handlers.onStatus({
-    state: "respawning",
-    since: Date.now(),
-    deaths: s.deaths,
-    lastError: s.lastError,
-  });
-  s.respawnTimer = setTimeout(() => {
-    s.respawnTimer = null;
-    if (!s.stopping) spawn(s);
-  }, s.backoffMs);
-  s.backoffMs = Math.min(s.backoffMs * 2, s.backoffBounds.maxMs);
 }
 
 /**
@@ -162,61 +162,51 @@ function resolveWorkerUrl(): URL {
     : new URL("./worker/entry.ts", import.meta.url);
 }
 
-function spawn(s: HostState): void {
-  const worker = new Worker(s.workerUrl, {
-    // The worker declares its namespace from argv as its first import, before
-    // any module that resolves a path from it (worker/declare-namespace.ts).
-    argv: namespaceArgv(),
-    ...(s.workerEnv ? { env: s.workerEnv } : {}),
-  });
-  s.worker = worker;
-  s.spawnedAt = Date.now();
-
-  worker.onmessage = (event: MessageEvent) => {
-    dispatch(s, event.data as WorkerToMainFrame);
-  };
-  worker.addEventListener("error", (event: ErrorEvent) => {
-    s.lastError = event.message;
-    s.handlers.onLog(`sentinel worker error: ${event.message}`, "stderr");
-  });
-  // Bun fires `close` when the worker exits for any reason — the one
-  // supervision point. A respawned worker adopts a fresh existing latch at
-  // init (reads it, seeds tripped, keeps refreshing), so a mid-episode crash
-  // misses refreshes for ≪ the 60s lease.
-  worker.addEventListener("close", () => {
-    if (s.worker === worker) s.worker = null;
-    scheduleRespawn(s);
-  });
-
-  const init: WorkerInitFrame = { type: "init", ...s.settings };
-  worker.postMessage(init);
-}
-
 export function startSentinelWorker(opts: SentinelWorkerOptions): void {
   if (state) return;
-  const backoffBounds = opts.backoff ?? {
-    minMs: RESPAWN_BACKOFF_MIN_MS,
-    maxMs: RESPAWN_BACKOFF_MAX_MS,
-  };
   const s: HostState = {
     handlers: opts.handlers,
     settings: opts.settings,
-    workerUrl: opts.worker?.url ?? resolveWorkerUrl(),
-    workerEnv: opts.worker?.env,
-    backoffBounds,
-    worker: null,
-    stopping: false,
+    instance: null,
     stoppedAck: null,
-    respawnTimer: null,
-    backoffMs: backoffBounds.minMs,
-    rapidFailures: 0,
-    deaths: 0,
-    lastError: null,
-    spawnedAt: 0,
   };
   state = s;
-  s.handlers.onStatus({ state: "starting", since: Date.now() });
-  spawn(s);
+  s.instance = (opts.daemon ?? sentinelWorkerDaemon).spawnWorker({
+    url: opts.worker?.url ?? resolveWorkerUrl(),
+    // The worker declares its namespace from argv as its first import, before
+    // any module that resolves a path from it (worker/declare-namespace.ts).
+    argv: namespaceArgv(),
+    ...(opts.worker?.env ? { env: opts.worker.env } : {}),
+    ...(opts.backoff ? { backoff: opts.backoff } : {}),
+    // Each spawn (respawns included) inits with the latest settings. A
+    // respawned worker adopts a fresh existing latch at init (reads it, seeds
+    // tripped, keeps refreshing), so a mid-episode crash misses refreshes for
+    // ≪ the 60s lease.
+    onSpawn: (worker) => {
+      const init: WorkerInitFrame = { type: "init", ...s.settings };
+      worker.postMessage(init);
+    },
+    onMessage: (data, ctx) => {
+      dispatch(s, data as WorkerToMainFrame, ctx.ready);
+    },
+    onError: (message) => {
+      s.handlers.onLog(`sentinel worker error: ${message}`, "stderr");
+    },
+    // Graceful stop: the worker clears the latch if tripped (writing the clear
+    // episode line) and acks; the primitive terminates it either way.
+    stop: async (worker) => {
+      let ackTimer: ReturnType<typeof setTimeout> | null = null;
+      const acked = new Promise<void>((resolve) => {
+        s.stoppedAck = resolve;
+        ackTimer = setTimeout(resolve, STOP_ACK_TIMEOUT_MS);
+      });
+      worker.postMessage({ type: "stop" } satisfies MainToWorkerFrame);
+      await acked;
+      if (ackTimer) clearTimeout(ackTimer);
+    },
+    onState: (t) => s.handlers.onStatus(toStatus(t)),
+    onLog: (line) => s.handlers.onLog(line, "stderr"),
+  });
 }
 
 /**
@@ -230,7 +220,7 @@ export function pushSentinelThresholds(
   const s = state;
   if (!s) return;
   s.settings = { ...s.settings, ...frame };
-  s.worker?.postMessage({
+  s.instance?.postMessage({
     type: "config",
     ...frame,
   } satisfies MainToWorkerFrame);
@@ -240,24 +230,6 @@ export async function stopSentinelWorker(): Promise<void> {
   const s = state;
   if (!s) return;
   state = null;
-  s.stopping = true;
-  if (s.respawnTimer) {
-    clearTimeout(s.respawnTimer);
-    s.respawnTimer = null;
-  }
-  const worker = s.worker;
-  if (worker) {
-    // Graceful stop: the worker clears the latch if tripped (writing the clear
-    // episode line) and acks; then we terminate either way.
-    let ackTimer: ReturnType<typeof setTimeout> | null = null;
-    const acked = new Promise<void>((resolve) => {
-      s.stoppedAck = resolve;
-      ackTimer = setTimeout(resolve, STOP_ACK_TIMEOUT_MS);
-    });
-    worker.postMessage({ type: "stop" } satisfies MainToWorkerFrame);
-    await acked;
-    if (ackTimer) clearTimeout(ackTimer);
-    worker.terminate();
-  }
-  s.handlers.onStatus({ state: "stopped", since: Date.now() });
+  // Records `stopped` through onState.
+  await s.instance?.stop();
 }

@@ -340,6 +340,11 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `infra/host/duress/latch.refreshDuress`
     - `infra/host/duress/latch.setDuress`
     - `infra/paths.isHostSingleton`
+    - `infra/spawn/daemon.DaemonDecl`
+    - `infra/spawn/daemon.DaemonTransition`
+    - `infra/spawn/daemon.DEFAULT_BACKOFF`
+    - `infra/spawn/daemon.defineDaemon`
+    - `infra/spawn/daemon.WorkerDaemonInstance`
     - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
     - `primitives/log-channels.readChannelEntries`
@@ -347,7 +352,9 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `reports.recordReport`
     - `reports.ReportKind`
   - Exports (values): `readDuressEpisodes`
-  - Register: `defineFileWatcher('sentinel.status')`
+  - Register:
+    - `defineFileWatcher('sentinel.status')`
+    - `defineDaemon('sentinel.worker')`
   - Resources:
     - `sentinel.status` (push)
     - `sentinel.vitals` (push)

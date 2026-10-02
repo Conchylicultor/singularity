@@ -138,7 +138,9 @@ catalog imports only framework + `network/live`. No cycle.
    page shows "Contacted: download.db-ip.com". Background code using bare `fetch`
    is migrated to `safeFetch` (lint). Then long-lived children (sentinel,
    paging-probe) and file watchers as their own kinds (file watchers: done, see
-   `research/2026-09-30-infra-file-watchers-in-background-catalog.md`). Pause (config-backed set read
+   `research/2026-09-30-infra-file-watchers-in-background-catalog.md`; long-lived
+   children: done, see
+   `research/2026-10-01-infra-long-lived-processes-in-background-catalog.md`). Pause (config-backed set read
    at the `buildCronItems` seam, `worker.ts:158`) after that.
 
 ## Critical files

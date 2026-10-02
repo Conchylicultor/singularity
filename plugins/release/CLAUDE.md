@@ -417,10 +417,10 @@ remote is built here.
     - `infra/jobs/supervised-job.runEnded`
     - `infra/jobs/supervised-job.RunEndedPayload`
     - `infra/launcher.gatewayPidFile`
-    - `infra/launcher.isRunning`
     - `infra/launcher.teardownSelfContainedApp`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.worktreeArtifacts`
+    - `infra/spawn/daemon.defineDaemon`
     - `network/live.serveCollection`
     - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
@@ -438,7 +438,9 @@ remote is built here.
     - `collectReleaseEnv`
     - `enqueueRelease`
     - `Release`
-  - Register: `defineSupervisedJob('release.run.supervised')`
+  - Register:
+    - `defineSupervisedJob('release.run.supervised')`
+    - `defineDaemon('release.preview')`
   - Resources:
     - `release.history` (keyed, window)
     - `release.history-revision` (push)

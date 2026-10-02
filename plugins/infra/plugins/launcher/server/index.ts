@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { attachGateway, gatewayDaemon } from "./internal/gateway-daemon";
 
 export {
   assertSupportedHost,
@@ -42,4 +43,11 @@ export {
 } from "./internal/listen";
 export type { ListenAddress } from "./internal/listen";
 
-export default {} satisfies ServerPluginDefinition;
+export default {
+  description:
+    "Boots and tears down the self-contained stack (Go gateway, embedded Postgres, PgBouncer) for ./singularity start, serve-app and the release launcher, and keeps the gateway's launch spec in one place. In a running backend it attaches the gateway it runs behind as a long-lived process in Background activity.",
+  register: [gatewayDaemon],
+  onReady: () => {
+    attachGateway();
+  },
+} satisfies ServerPluginDefinition;

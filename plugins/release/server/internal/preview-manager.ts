@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { connect } from "node:net";
 import { eq } from "drizzle-orm";
@@ -6,8 +6,8 @@ import { db } from "@plugins/database/server";
 import {
   teardownSelfContainedApp,
   gatewayPidFile,
-  isRunning,
 } from "@plugins/infra/plugins/launcher/server";
+import { defineDaemon } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import {
   asNamespace,
   namespaceUrl,
@@ -15,6 +15,21 @@ import {
 import { _releaseRuns } from "./tables";
 import { releaseLog } from "./release-log";
 import { previews, releasePreviewsServed } from "./preview-state-resource";
+
+/**
+ * One release preview: a self-contained stack (gateway, backend, PgBouncer,
+ * embedded Postgres) started detached by the artifact's `launch` bootstrap,
+ * which exits right after boot — so the daemon follows the stack's gateway by
+ * its pid file. Never restarted: a dead preview is started again by hand.
+ */
+export const releasePreviewDaemon = defineDaemon({
+  name: "release.preview",
+  description:
+    "A local preview of a finished release: the artifact's whole self-contained stack (gateway, backend, PgBouncer, embedded Postgres) running isolated beside the dev environment on its own ports, until it is stopped.",
+  startedBy: "on-demand",
+  where: "every-worktree",
+  restart: { kind: "never" },
+});
 
 // Never collide with the dev gateway (9000) or the baked release port (9100).
 const PREVIEW_PORT_FLOOR = 9101;
@@ -81,10 +96,13 @@ export async function startPreview(runId: string): Promise<void> {
   const pgPort = await pickFreePort(PREVIEW_PG_PORT_FLOOR);
   const dataRoot = mkdtempSync(join(PREVIEW_TMP_DIR, PREVIEW_DIR_PREFIX));
 
-  const proc = Bun.spawn([join(run.artifactPath, "launch")], {
-    detached: true,
-    stdout: "pipe",
-    stderr: "pipe",
+  // The composition comes off a DB row, and a preview listens on its own port.
+  const url = namespaceUrl(asNamespace(run.composition), "", port);
+  // The launcher's output goes to the release log so the UI surfaces preview
+  // boot progress / socket errors.
+  const daemon = releasePreviewDaemon.launchDetached({
+    instance: runId,
+    argv: [join(run.artifactPath, "launch")],
     env: {
       ...process.env,
       SINGULARITY_DIR: dataRoot,
@@ -94,13 +112,15 @@ export async function startPreview(runId: string): Promise<void> {
       SINGULARITY_LISTEN: `:${port}`,
       SINGULARITY_PG_PORT: String(pgPort),
     },
+    pidFile: gatewayPidFile(dataRoot),
+    onOutputLine: (line, stream) => {
+      releaseLog.publish(`[preview ${runId}] ${line}`, stream);
+    },
   });
 
-  // The composition comes off a DB row, and a preview listens on its own port.
-  const url = namespaceUrl(asNamespace(run.composition), "", port);
   previews.set(runId, {
     runId,
-    pid: proc.pid,
+    daemon,
     port,
     pgPort,
     url,
@@ -111,46 +131,6 @@ export async function startPreview(runId: string): Promise<void> {
     `Preview ${runId} started on ${url} (pg :${pgPort}, data: ${dataRoot})`,
   );
   releasePreviewsServed.notify();
-
-  // Stream the launcher's output into the release log so the UI surfaces preview
-  // boot progress / socket errors. Fire-and-forget: the streams close when the
-  // detached process exits; failures here must not crash the start handler.
-  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- long-lived detached-process output pump: I/O-bound for the child's whole lifetime, not main-thread CPU; a bg span would stay open for the process lifetime
-  void streamPreviewOutput(runId, proc.stdout, "stdout");
-  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- long-lived detached-process output pump: I/O-bound for the child's whole lifetime, not main-thread CPU; a bg span would stay open for the process lifetime
-  void streamPreviewOutput(runId, proc.stderr, "stderr");
-}
-
-async function streamPreviewOutput(
-  runId: string,
-  stream: ReadableStream<Uint8Array> | null,
-  streamType: "stdout" | "stderr",
-): Promise<void> {
-  if (!stream) return;
-  const decoder = new TextDecoder();
-  for await (const chunk of stream as unknown as AsyncIterable<Uint8Array>) {
-    for (const line of decoder.decode(chunk).split("\n")) {
-      if (line) releaseLog.publish(`[preview ${runId}] ${line}`, streamType);
-    }
-  }
-}
-
-/**
- * Whether a preview's stack is still alive, keyed on its LONG-LIVED gateway (the
- * `launch` process exits right after boot, so its pid is useless here). The gateway
- * pidfile is written during boot under the data root; if it's absent the preview is
- * still starting, so treat that as alive (don't reap a booting stack).
- */
-function gatewayAlive(dataRoot: string): boolean {
-  let raw: string;
-  try {
-    raw = readFileSync(gatewayPidFile(dataRoot), "utf-8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return true;
-    throw err;
-  }
-  const pid = parseInt(raw.split("\n", 1)[0]?.trim() ?? "", 10);
-  return Number.isNaN(pid) ? true : isRunning(pid);
 }
 
 /**
@@ -169,6 +149,7 @@ export async function stopPreview(runId: string): Promise<void> {
     pgPort: entry.pgPort,
   });
   rmSync(entry.dataRoot, { recursive: true, force: true });
+  await entry.daemon.stop();
   previews.delete(runId);
   releaseLog.publish(`Preview ${runId} stopped`);
   releasePreviewsServed.notify();
@@ -186,11 +167,14 @@ export async function reconcileOrphanPreviews(): Promise<void> {
   let changed = false;
   const activeRoots = new Set<string>();
   for (const [runId, entry] of previews) {
-    if (gatewayAlive(entry.dataRoot)) {
+    // Keyed on the stack's LONG-LIVED gateway (the `launch` bootstrap exits
+    // right after boot); a stack still booting reads `starting`, not dead.
+    if (entry.daemon.state !== "exited") {
       activeRoots.add(entry.dataRoot);
       continue;
     }
     rmSync(entry.dataRoot, { recursive: true, force: true });
+    await entry.daemon.stop();
     previews.delete(runId);
     changed = true;
   }

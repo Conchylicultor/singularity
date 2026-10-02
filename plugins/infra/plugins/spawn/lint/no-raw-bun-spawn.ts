@@ -7,7 +7,8 @@ const createRule = ESLintUtils.RuleCreator(
 /**
  * The single sanctioned chokepoint for async child processes. `infra/spawn`
  * IS the implementation of wedge-proof (fd-redirected) spawning — it is not an
- * exception to the rule, it is what the rule points everyone at. Skipped whole.
+ * exception to the rule, it is what the rule points everyone at. Skipped whole,
+ * its `daemon` child (long-lived supervised children) included.
  */
 const SPAWN_PLUGIN_DIR = "plugins/infra/plugins/spawn/";
 
@@ -28,11 +29,14 @@ export default createRule({
         "a pending stream pull spins the native microtask queue at 100% CPU forever — " +
         "every field `./singularity build/check/push` wedge is this bug (see " +
         "research/2026-07-22-global-spawn-plugin-wedge-mitigation.md). Even an " +
-        "option-less Bun.spawn(argv) is exposed: stdout DEFAULTS to \"pipe\". Route " +
+        'option-less Bun.spawn(argv) is exposed: stdout DEFAULTS to "pipe". Route ' +
         "through @plugins/infra/plugins/spawn/core instead — spawnCaptured / " +
         "spawnExpectOk (capture via temp-file fds; stdin as a whole buffer), " +
         "spawnPassthrough (inherit, with onSpawn for signal forwarding), and " +
         "getWorktreeRoot / getMainRepoRoot (the memoized git-root helpers). " +
+        "A long-lived child or worker a backend keeps running is declared with " +
+        "defineDaemon (@plugins/infra/plugins/spawn/plugins/daemon/server) — " +
+        "supervised and listed in Debug → Background activity. " +
         "Bun.spawnSync buffers natively (no JS streams) and is not flagged. A " +
         "genuinely interactive/streaming child (rare — e.g. drizzle-kit's prompt " +
         "parser in migrations-interactive.ts) gets a file entry in spawn-safety's " +
@@ -49,7 +53,8 @@ export default createRule({
       // Every `Bun.spawn` member access — calls, aliasing (`const s = Bun.spawn`),
       // and the computed form `Bun["spawn"]`. `spawnSync` deliberately unmatched.
       MemberExpression(node) {
-        if (node.object.type !== "Identifier" || node.object.name !== "Bun") return;
+        if (node.object.type !== "Identifier" || node.object.name !== "Bun")
+          return;
         const prop =
           !node.computed && node.property.type === "Identifier"
             ? node.property.name

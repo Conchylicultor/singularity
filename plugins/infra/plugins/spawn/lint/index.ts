@@ -15,7 +15,7 @@ export default {
    *   production spawn code always lives outside tests, which the rule still
    *   guards. (Mirrors sink-safety's test exemption.)
    * - Plugin server trees: WAS one directory glob covering every plugin server
-   *   tree, then an explicit file list of 31, now down to the 11 permanent ones
+   *   tree, then an explicit file list of 31, later down to 11 permanent ones
    *   below. The glob made "31 files are exempt because of where they live"
    *   invisible; the list says which files and why, one line each. It shrank by
    *   deletion as sites migrated, and the migratable half is now gone — what is
@@ -40,6 +40,10 @@ export default {
       "plugins/framework/plugins/tooling/plugins/checks/plugins/bun-runtime/check/internal/fd-double-close-probe.ts",
       "research/**",
 
+      // A long-lived child a BACKEND keeps running is not an exception: it is
+      // declared with `defineDaemon` (infra/spawn/daemon), which lives under
+      // this plugin's directory and so is the chokepoint for it.
+      //
       // --- PERMANENT: genuinely streaming or long-lived children. After-exit
       // temp-file capture is structurally impossible for these — the output must
       // be read (or the input written) while the child is still alive, or the
@@ -64,12 +68,13 @@ export default {
       // deploy migrate onto it, their three entries below are deleted — the
       // exemption converges on this one line instead of spreading.
       "plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/run/supervisor.ts",
-      // Long-lived supervised child: the gateway process outlives the call.
+      // The gateway's launch, run by the CLI (`./singularity start`), serve-app
+      // and the release launcher — never by a backend. The gateway outlives the
+      // call by design (it is the parent of every backend), and its stdio is a
+      // caller-owned log fd. Not a daemon: no backend starts it, so there is no
+      // catalog to list it in from here — each backend `attach`es it instead
+      // (launcher/server/internal/gateway-daemon.ts).
       "plugins/infra/plugins/launcher/server/internal/boot.ts",
-      // Long-lived preview server, started and left running.
-      "plugins/release/server/internal/preview-manager.ts",
-      // Long-lived probe children, supervised for the lifetime of the experiment.
-      "plugins/debug/plugins/paging-probe/server/internal/probe-host.ts",
       // `tmux load-buffer -b … -` reads the buffer from stdin as a stream.
       "plugins/conversations/plugins/runtime-tmux/server/internal/tmux-runtime.ts",
 

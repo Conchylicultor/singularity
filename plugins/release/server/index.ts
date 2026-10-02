@@ -13,7 +13,10 @@ import { handleReleaseCandidate } from "./internal/handle-candidate";
 import { handleLatestRun } from "./internal/handle-latest-run";
 import { handlePreview, handleStopPreview } from "./internal/handle-preview";
 import { handleReleaseLogs } from "./internal/handle-logs";
-import { reconcileOrphanPreviews } from "./internal/preview-manager";
+import {
+  reconcileOrphanPreviews,
+  releasePreviewDaemon,
+} from "./internal/preview-manager";
 import { releaseJob } from "./internal/release-job";
 import {
   releaseHistoryServed,
@@ -38,7 +41,7 @@ export default {
   // supervised-run kind. The kind must be REGISTERED, not merely defined: the
   // primitive's own `onReady` reconciler loops the registered set, so a kind
   // that never lands here would start runs nothing ever closes.
-  register: [releaseJob],
+  register: [releaseJob, releasePreviewDaemon],
   contributions: [
     ...releaseRunsServed.declare,
     ...releaseHistoryServed.declare,

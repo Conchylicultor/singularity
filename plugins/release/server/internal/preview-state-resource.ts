@@ -1,4 +1,5 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
+import type { DaemonInstance } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { releasePreviews, type Preview } from "../../core/resources";
 
 // The in-memory preview registry, keyed by runId. The server projects this into
@@ -6,7 +7,9 @@ import { releasePreviews, type Preview } from "../../core/resources";
 // manager mutates it and calls `releasePreviewsServed.notify()`.
 export interface PreviewEntry {
   runId: string;
-  pid: number;
+  /** The preview's stack, as the daemon primitive follows it (by its gateway's
+   * pid file) — never projected onto the wire. */
+  daemon: DaemonInstance;
   port: number;
   // The per-instance Postgres TCP port handed to this preview's embedded cluster
   // (SINGULARITY_PG_PORT). Kept so teardown can backstop-kill the PG listener.

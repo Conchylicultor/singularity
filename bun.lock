@@ -3436,6 +3436,14 @@
       "name": "@singularity/plugin-infra-spawn",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/spawn/plugins/daemon": {
+      "name": "@singularity/plugin-infra-spawn-daemon",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/spawn/plugins/daemon/plugins/background-arm": {
+      "name": "@singularity/plugin-infra-spawn-daemon-background-arm",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/ssh": {
       "name": "@singularity/plugin-infra-ssh",
       "version": "0.0.1",
@@ -7713,6 +7721,10 @@
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
 
     "@singularity/plugin-infra-spawn": ["@singularity/plugin-infra-spawn@workspace:plugins/infra/plugins/spawn"],
+
+    "@singularity/plugin-infra-spawn-daemon": ["@singularity/plugin-infra-spawn-daemon@workspace:plugins/infra/plugins/spawn/plugins/daemon"],
+
+    "@singularity/plugin-infra-spawn-daemon-background-arm": ["@singularity/plugin-infra-spawn-daemon-background-arm@workspace:plugins/infra/plugins/spawn/plugins/daemon/plugins/background-arm"],
 
     "@singularity/plugin-infra-ssh": ["@singularity/plugin-infra-ssh@workspace:plugins/infra/plugins/ssh"],
 

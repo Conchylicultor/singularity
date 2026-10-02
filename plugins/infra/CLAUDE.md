@@ -33,7 +33,7 @@ relatives under an umbrella.
   - **`host`** — How much of the shared host machine may I take right now, and is the box still healthy? — the host-wide admission pools (host-admission), the heavy git/filesystem read budget declared through them (host-read-pool), the box's load snapshot (contention), and the 'the box is in trouble' latch plus the shed engine that rides it (duress).
   - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
   - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
-  - **`launcher`**
+  - **`launcher`** — Boots and tears down the self-contained stack (Go gateway, embedded Postgres, PgBouncer) for ./singularity start, serve-app and the release launcher, and keeps the gateway's launch spec in one place. In a running backend it attaches the gateway it runs behind as a long-lived process in Background activity.
   - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
   - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
   - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint, guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout and lets clients render rows progressively.

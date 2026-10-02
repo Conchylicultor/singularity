@@ -117,8 +117,10 @@ type and the read schema cannot drift.
     - `config_v2.getConfig`
     - `infra/paths.isRelease`
     - `infra/paths.worktreeDataDir`
+    - `infra/spawn/daemon.DaemonInstance`
+    - `infra/spawn/daemon.defineDaemon`
     - `primitives/log-channels.defineLogSink`
-    - `primitives/log-channels.LogChannel`
+  - Register: `defineDaemon('paging-probe.probe')`
 - Core:
   - Uses:
     - `config_v2.defineConfig`

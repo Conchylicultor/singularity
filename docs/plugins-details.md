@@ -14680,8 +14680,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.getConfig`
           - `infra/paths.isRelease`
           - `infra/paths.worktreeDataDir`
+          - `infra/spawn/daemon.DaemonInstance`
+          - `infra/spawn/daemon.defineDaemon`
           - `primitives/log-channels.defineLogSink`
-          - `primitives/log-channels.LogChannel`
+        - Register: `defineDaemon('paging-probe.probe')`
       - Core:
         - Uses:
           - `config_v2.defineConfig`
@@ -15472,6 +15474,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/host/duress/latch.refreshDuress`
           - `infra/host/duress/latch.setDuress`
           - `infra/paths.isHostSingleton`
+          - `infra/spawn/daemon.DaemonDecl`
+          - `infra/spawn/daemon.DaemonTransition`
+          - `infra/spawn/daemon.DEFAULT_BACKOFF`
+          - `infra/spawn/daemon.defineDaemon`
+          - `infra/spawn/daemon.WorkerDaemonInstance`
           - `network/live.serveValue`
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels.readChannelEntries`
@@ -15479,7 +15486,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports.recordReport`
           - `reports.ReportKind`
         - Exports (values): `readDuressEpisodes`
-        - Register: `defineFileWatcher('sentinel.status')`
+        - Register:
+          - `defineFileWatcher('sentinel.status')`
+          - `defineDaemon('sentinel.worker')`
         - Resources:
           - `sentinel.status` (push)
           - `sentinel.vitals` (push)
@@ -19350,6 +19359,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events`
               - `infra/file-watcher/background-arm`
               - `infra/jobs/background-arm`
+              - `infra/spawn/daemon/background-arm`
               - `infra/warmup/background-arm`
         - **`timer`** — defineTimer (server): the one sanctioned in-process interval for a worktree backend — each tick a timer:<name> span, recorded in memory (last run, failures, a recent ring), a failing tick rethrown for the reports plugin to file — and the `timer` background kind that lists every registered timer under Timers in Debug → Background activity. Allowed only at the call sites its lint rule lists, each with a reason: work on a schedule is a job. defineTimer (central): the in-process interval for the machine-wide central runtime, which has no job queue — each tick a timer:<name> span, recorded in memory, a failing tick logged — and the `central-timer` background kind listing them in the central half of Background activity.
           - Server:
@@ -21095,7 +21105,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Test helpers:
             - Core: `@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing`
               - `execContextForTests` — An `ExecContext` for tests: origin `cli`, admission that admits at once.
-    - **`launcher`**
+    - **`launcher`** — Boots and tears down the self-contained stack (Go gateway, embedded Postgres, PgBouncer) for ./singularity start, serve-app and the release launcher, and keeps the gateway's launch spec in one place. In a running backend it attaches the gateway it runs behind as a long-lived process in Background activity.
       - Server:
         - Uses:
           - `database/admin.ensureDatabase`
@@ -21111,6 +21121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.ReleaseIdentity`
           - `infra/paths.setReleaseIdentity`
           - `infra/paths.worktreesDir`
+          - `infra/spawn/daemon.defineDaemon`
           - `infra/worktree.writeWorktreeSpec`
         - Exports (types):
           - `GatewayLaunchOptions`
@@ -21149,6 +21160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `terminateProcess`
           - `writeGatewayServicePlist`
           - `writeReleaseDatabaseConfig`
+        - Register: `defineDaemon('launcher.gateway')`
       - Deps:
         - Uses:
           - `infra/deps.defineDep`
@@ -21800,6 +21812,56 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths`
           - `reports/outbox`
           - `upstream`
+      - Plugins:
+        - **`daemon`** — defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
+          - Cross-plugin:
+            - Imported by:
+              - `debug/paging-probe`
+              - `debug/sentinel`
+              - `infra/launcher`
+              - `infra/spawn/daemon/background-arm`
+              - `release`
+          - Server:
+            - Exports (types):
+              - `AttachOptions`
+              - `DaemonArm`
+              - `DaemonDecl`
+              - `DaemonDeclBase`
+              - `DaemonInstance`
+              - `DaemonInstanceInfo`
+              - `DaemonRestart`
+              - `DaemonSnapshot`
+              - `DaemonSpec`
+              - `DaemonStartedBy`
+              - `DaemonState`
+              - `DaemonTransition`
+              - `DaemonWhere`
+              - `DetachedLaunch`
+              - `ProcessLaunch`
+              - `UnsupervisedDeclExtras`
+              - `WorkerDaemonInstance`
+              - `WorkerLaunch`
+              - `WorkerLaunchContext`
+            - Exports (values):
+              - `backoffPolicy`
+              - `daemonRecentRuns`
+              - `DEFAULT_BACKOFF`
+              - `defineDaemon`
+              - `listDaemons`
+              - `onDaemonActivity`
+          - Plugins:
+            - **`background-arm`** — Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand, its scope from `where`, and its facts (each instance's state, pid, since when, restarts, memory and CPU from one `ps`, the last exit, the restart policy, how liveness is known) — plus each incarnation as a run in this process. Pushes the catalog on every instance transition (start, ready, death, respawn, give-up, stop).
+              - Server:
+                - Uses:
+                  - `infra/background/catalog.defineBackgroundKind`
+                  - `infra/spawn/daemon.backoffPolicy`
+                  - `infra/spawn/daemon.DaemonInstanceInfo`
+                  - `infra/spawn/daemon.daemonRecentRuns`
+                  - `infra/spawn/daemon.DaemonSnapshot`
+                  - `infra/spawn/daemon.DaemonState`
+                  - `infra/spawn/daemon.listDaemons`
+                  - `infra/spawn/daemon.onDaemonActivity`
+                - Register: `defineBackgroundKind('daemon')`
     - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally. An upload lands on a staging sibling and is renamed over its destination, so it can neither fail because the destination is being executed nor leave a truncated file where a working one was.
       - Cross-plugin:
         - Imported by:
@@ -34766,10 +34828,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/jobs/supervised-job.runEnded`
       - `infra/jobs/supervised-job.RunEndedPayload`
       - `infra/launcher.gatewayPidFile`
-      - `infra/launcher.isRunning`
       - `infra/launcher.teardownSelfContainedApp`
       - `infra/paths.REPO_ROOT`
       - `infra/paths.worktreeArtifacts`
+      - `infra/spawn/daemon.defineDaemon`
       - `network/live.serveCollection`
       - `network/live.serveValue`
       - `primitives/log-channels.defineLogSink`
@@ -34787,7 +34849,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `collectReleaseEnv`
       - `enqueueRelease`
       - `Release`
-    - Register: `defineSupervisedJob('release.run.supervised')`
+    - Register:
+      - `defineSupervisedJob('release.run.supervised')`
+      - `defineDaemon('release.preview')`
     - Resources:
       - `release.history` (keyed, window)
       - `release.history-revision` (push)

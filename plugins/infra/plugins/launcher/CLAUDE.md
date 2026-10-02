@@ -219,6 +219,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
 
 ## Plugin reference
 
+- Description: Boots and tears down the self-contained stack (Go gateway, embedded Postgres, PgBouncer) for ./singularity start, serve-app and the release launcher, and keeps the gateway's launch spec in one place. In a running backend it attaches the gateway it runs behind as a long-lived process in Background activity.
 - Server:
   - Uses:
     - `database/admin.ensureDatabase`
@@ -234,6 +235,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `infra/paths.ReleaseIdentity`
     - `infra/paths.setReleaseIdentity`
     - `infra/paths.worktreesDir`
+    - `infra/spawn/daemon.defineDaemon`
     - `infra/worktree.writeWorktreeSpec`
   - Exports (types):
     - `GatewayLaunchOptions`
@@ -272,6 +274,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `terminateProcess`
     - `writeGatewayServicePlist`
     - `writeReleaseDatabaseConfig`
+  - Register: `defineDaemon('launcher.gateway')`
 - Deps:
   - Uses:
     - `infra/deps.defineDep`

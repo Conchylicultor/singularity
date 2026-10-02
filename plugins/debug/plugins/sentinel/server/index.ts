@@ -14,6 +14,7 @@ import {
   stopStatusWatcher,
 } from "./internal/status-resource";
 import { startSentinelSampler, stopSentinelSampler } from "./internal/sampler";
+import { sentinelWorkerDaemon } from "./internal/worker-host";
 
 export { readDuressEpisodes } from "./internal/read-duress-episodes";
 
@@ -29,7 +30,7 @@ export default {
     ...sentinelVitalsServed.declare,
     ConfigV2.Register({ descriptor: sentinelConfig }),
   ],
-  register: [sentinelStatusWatcher],
+  register: [sentinelStatusWatcher, sentinelWorkerDaemon],
   // The status watcher runs on EVERY backend (each serves the Machine watcher
   // health row from the host-global status file); the sampler itself runs on
   // the host singleton only — the one backend that owns the cluster-wide
