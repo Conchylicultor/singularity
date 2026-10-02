@@ -13,6 +13,7 @@
   - Uses:
     - `conversations/conversation-ui/item.ConvStatusDot`
     - `conversations/conversation-view.conversationPane`
+    - `conversations/model-provider.useModelCatalog`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.opensPane`
     - `primitives/css/inline.Inline`
@@ -29,7 +30,7 @@
     - `shell.Shell`
   - Exports (values):
     - `allConversationsPane`
-    - `conversationFieldDefs`
+    - `useConversationFieldDefs`
 - Server:
   - Contributes: `resource.declare` "conversations-revision"
   - Uses:
@@ -52,9 +53,10 @@
   - Resources: `conversations-revision` (push)
 - Core:
   - Uses:
-    - `conversations/model-provider.isModelFamily`
-    - `conversations/model-provider.modelDisplayLabel`
-    - `conversations/model-provider.SELECTABLE_CHOICES`
+    - `conversations/model-provider.compareModelsNewestFirst`
+    - `conversations/model-provider.isPrintOnlyFamily`
+    - `conversations/model-provider.ModelCatalog`
+    - `conversations/model-provider.modelMeta`
     - `infra/endpoints.defineEndpoint`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveText`
@@ -71,6 +73,7 @@
     - `CONVERSATION_FIELDS`
     - `CONVERSATION_FILTERABLE`
     - `CONVERSATION_SEARCHABLE`
+    - `conversationModelOptions`
     - `conversationsRevisionResource`
     - `queryConversations`
     - `QueryConversationsBodySchema`

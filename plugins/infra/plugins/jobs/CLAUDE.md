@@ -690,6 +690,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/queue`
     - `conversations/hibernation`
+    - `conversations/model-provider/catalog`
     - `conversations/transcript-retention`
     - `database/db-test-fixture/sweep`
     - `database/fork`

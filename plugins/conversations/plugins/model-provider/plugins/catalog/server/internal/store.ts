@@ -1,5 +1,5 @@
 import {
-  createFileWatcher,
+  defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
@@ -44,23 +44,27 @@ function invalidate(): void {
   modelCatalogServed.notify();
 }
 
-let watcher: FileWatcher | null = null;
-
 /**
- * Watch the catalog's directory for as long as the backend serves.
- *
  * Always on, not `whileSubscribed`: `getModelCatalog()` is read by the launch
  * path with no tab subscribed, and must still see main's discovery the moment
  * it lands. One small directory, one watcher per backend.
  */
+export const modelCatalogWatcher = defineFileWatcher({
+  name: "model-provider.catalog",
+  description:
+    "Re-reads the model catalog the moment the host's discovery job rewrites it, so every launch and picker on this backend sees a newly discovered model at once.",
+  // The writer's tmp file appears and is renamed away; only the rename matters.
+  ignore: ["**/*.tmp"],
+});
+
+let watcher: FileWatcher | null = null;
+
+/** Watch the catalog's directory for as long as the backend serves. */
 export async function startCatalogWatcher(): Promise<void> {
   if (watcher) return;
-  watcher = await createFileWatcher({
+  watcher = await modelCatalogWatcher.start({
     // Subscribing to a missing directory fails; the dir is host-global and cheap.
     dirs: [modelCatalogDir.ensure()],
-    name: "model-catalog",
-    // The writer's tmp file appears and is renamed away; only the rename matters.
-    ignore: ["**/*.tmp"],
     onChange: invalidate,
   });
   // A rewrite between the first read and the subscription would be missed.

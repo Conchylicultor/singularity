@@ -322,6 +322,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `fields/date/filter`
     - `fields/directory-path`
     - `fields/dynamic-enum`
+    - `fields/dynamic-flags`
     - `fields/enum`
     - `fields/enum/column-config`
     - `fields/float`

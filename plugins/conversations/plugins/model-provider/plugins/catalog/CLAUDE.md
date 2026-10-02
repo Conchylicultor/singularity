@@ -25,7 +25,7 @@ The host-global model catalog — which model versions this machine knows, which
     - `infra/claude-cli/availability.checkClaudeCode`
     - `infra/claude-cli/availability.onClaudeCodeProbed`
     - `infra/claude-cli/availability.requireClaudeBin`
-    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/jobs.defineJob`
     - `network/live.serveValue`
@@ -35,7 +35,9 @@ The host-global model catalog — which model versions this machine knows, which
     - `reports.ReportRow`
     - `shell/notifications.recordNotification`
   - Exports (values): `getModelCatalog`
-  - Register: `defineJob('models.discover')`
+  - Register:
+    - `defineJob('models.discover')`
+    - `defineFileWatcher('model-provider.catalog')`
   - Resources: `model-provider.catalog` (push)
 - Cross-plugin:
   - Imported by:

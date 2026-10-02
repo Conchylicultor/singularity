@@ -76,6 +76,7 @@ defined in exactly one place. The distinct export buys two things:
     - `debug/trace/boot`
     - `debug/trace/contention`
     - `debug/trace/gates`
+    - `fields/dynamic-flags/config`
     - `fields/tags/inline`
     - `page/annotations/todo/task-link`
     - `page/prompt/block`

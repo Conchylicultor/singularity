@@ -839,6 +839,8 @@ grouped under the wave or item that removes it
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/queue`
+    - `conversations/model-provider`
+    - `conversations/model-provider/catalog`
     - `conversations/summary`
     - `database/query-deadline`
     - `debug/claude-cli-calls`

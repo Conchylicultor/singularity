@@ -87,6 +87,7 @@ moved (see `apps/prototypes/files`).
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
+    - `conversations/model-provider/catalog`
     - `conversations/transcript-watcher`
     - `debug/profiling/op-log/op-store`
     - `debug/sentinel`

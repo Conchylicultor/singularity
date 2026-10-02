@@ -208,6 +208,7 @@ count accumulates across drops.
     - `build`
     - `build/build-logs`
     - `conversations/conversation-view/rewind`
+    - `conversations/model-provider/catalog`
     - `conversations/transcript-retention`
     - `database`
     - `database/change-feed`

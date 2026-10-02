@@ -9022,7 +9022,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
-        - Slots: `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
+        - Slots: `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
         - Uses:
           - `primitives/css/cluster.Cluster`
           - `primitives/css/control-panel.ControlPanel`
@@ -9055,6 +9055,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/color/config`
           - `fields/directory-path/config`
           - `fields/dynamic-enum/config`
+          - `fields/dynamic-flags/config`
           - `fields/enum/config`
           - `fields/float/config`
           - `fields/int/config`
@@ -9246,11 +9247,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `taskCategory` "system"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "claude-code-unavailable-at-spawn"
+      - `report-kind` "auto-start-model-unavailable"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.forkConfig`
       - `config_v2.getConfig`
       - `conversations/all-conversations.handleQuery`
+      - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePreprompt`
       - `conversations/session-chain.listSessionChain`
       - `conversations/session-chain.recordSessionId`
@@ -9581,6 +9584,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `taskCategory` "agents"
         - Uses:
           - `conversations.createConversation`
+          - `conversations/model-provider/catalog.getModelCatalog`
           - `database.db`
           - `database/derived-tables.DerivedTable`
           - `database/derived-updated-at.deriveUpdatedAt`
@@ -9679,6 +9683,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations/conversation-ui/item.ConvStatusDot`
           - `conversations/conversation-view.conversationPane`
+          - `conversations/model-provider.useModelCatalog`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/app-shell.opensPane`
           - `primitives/css/inline.Inline`
@@ -9695,7 +9700,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell.Shell`
         - Exports (values):
           - `allConversationsPane`
-          - `conversationFieldDefs`
+          - `useConversationFieldDefs`
       - Server:
         - Contributes: `resource.declare` "conversations-revision"
         - Uses:
@@ -9718,9 +9723,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `conversations-revision` (push)
       - Core:
         - Uses:
-          - `conversations/model-provider.isModelFamily`
-          - `conversations/model-provider.modelDisplayLabel`
-          - `conversations/model-provider.SELECTABLE_CHOICES`
+          - `conversations/model-provider.compareModelsNewestFirst`
+          - `conversations/model-provider.isPrintOnlyFamily`
+          - `conversations/model-provider.ModelCatalog`
+          - `conversations/model-provider.modelMeta`
           - `infra/endpoints.defineEndpoint`
           - `network/live/filter.liveInstant`
           - `network/live/filter.liveText`
@@ -9737,6 +9743,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CONVERSATION_FIELDS`
           - `CONVERSATION_FILTERABLE`
           - `CONVERSATION_SEARCHABLE`
+          - `conversationModelOptions`
           - `conversationsRevisionResource`
           - `queryConversations`
           - `QueryConversationsBodySchema`
@@ -12024,12 +12031,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`
               - `ConfigV2.WebRegister` "config"
+              - `DynamicEnum.Options` "Model"
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
               - `config_v2/config-link.ConfigMenuContent`
               - `conversations/conversation-view.Conversation`
               - `conversations/model-provider.familyClass`
+              - `conversations/model-provider.useModelChoiceOptions`
+              - `fields/dynamic-enum/config.DynamicEnum`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `primitives/css/badge.Badge`
@@ -12617,7 +12627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `SidebarSources` "History" → `HistorySource`
                   - `history-actions` "close" → `CloseConvAction`
                 - Uses:
-                  - `conversations/all-conversations.conversationFieldDefs`
+                  - `conversations/all-conversations.useConversationFieldDefs`
                   - `conversations/conversations-view/data-view.ConversationSidebarProps`
                   - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
@@ -12638,7 +12648,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `queue-actions` "add-to-queue" → `AddToQueueAction`
                   - `queue-actions` "close" → `CloseAction`
                 - Uses:
-                  - `conversations/all-conversations.conversationFieldDefs`
+                  - `conversations/all-conversations.useConversationFieldDefs`
                   - `conversations/conversations-view/data-view.ConversationSidebarProps`
                   - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
@@ -12806,15 +12816,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/conversations/:id/viewed`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view`
-    - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
+    - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models. Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "config"
+          - `DynamicEnum.Options` "Default model"
+          - `DynamicFlags.Options` "Models shown in the launch dropdown"
           - `Core.Root` → `ModelCorruptionReporter`
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
+          - `fields/dynamic-enum/config.DynamicEnum`
+          - `fields/dynamic-flags/config.DynamicFlags`
+          - `network/live.useLive`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Select`
           - `primitives/css/ui-kit.SelectContent`
@@ -12830,41 +12845,68 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ModelChoiceLabel`
           - `ModelSelect`
           - `useDefaultModel`
+          - `useModelCatalog`
+          - `useModelChoiceOptions`
           - `useModelItems`
           - `useSetDefaultModel`
           - `useVisibleModels`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`
-        - Exports (values): `resolveCliFlag`
       - Core:
-        - Uses: `primitives/live-state.tolerantEnum`
+        - Uses:
+          - `infra/endpoints.HttpError`
+          - `network/live.liveValue`
+          - `primitives/live-state.tolerantEnum`
         - Exports (types):
           - `ConversationModel`
+          - `ModelCatalog`
           - `ModelChoice`
+          - `ModelIdParse`
           - `ModelMeta`
+          - `ModelResolution`
           - `ModelTier`
+          - `ModelVersion`
+          - `VisibleModelsSetting`
         - Exports (values):
+          - `assertChoiceLaunchable`
+          - `BASELINE_MODELS`
           - `choiceFamily`
           - `choiceHint`
           - `choiceIconSize`
           - `choiceLabel`
+          - `choiceOptionLabel`
           - `cliFlagFor`
+          - `compareModelsNewestFirst`
           - `ConversationModelSchema`
           - `DEFAULT_MODEL_CHOICE`
-          - `idForCliName`
+          - `FALLBACK_MODEL`
+          - `isChoiceVisible`
           - `isModelFamily`
-          - `MODEL_REGISTRY`
+          - `isPrintOnlyFamily`
+          - `isRetired`
+          - `isShownByDefault`
           - `MODEL_TIERS`
+          - `modelCatalog`
+          - `ModelCatalogSchema`
           - `ModelChoiceSchema`
           - `modelDisplayLabel`
+          - `modelIdFromCliName`
+          - `modelMeta`
+          - `ModelUnavailableError`
+          - `ModelVersionSchema`
           - `normalizeModel`
           - `normalizeModelChoice`
+          - `parseModelId`
           - `registerModelCorruptionReporter`
+          - `requireModel`
           - `resolveModel`
-          - `SELECTABLE_CHOICES`
+          - `SELECTABLE_FAMILIES`
+          - `selectableChoices`
           - `StoredModelChoiceSchema`
           - `StoredModelSchema`
+          - `unavailableMessage`
+          - `visibleChoices`
       - Cross-plugin:
         - Imported by:
           - `conversations`
@@ -12875,13 +12917,45 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversations-view`
-          - `conversations/runtime-tmux`
           - `debug/claude-cli-calls`
           - `infra/claude-cli`
           - `primitives/launch`
           - `tasks`
+          - `tasks/auto-start`
           - `tasks/auto-start/launch-option`
           - `tasks/tasks-core`
+      - Plugins:
+        - **`catalog`** — The host-global model catalog: getModelCatalog() (catalog.json in memory, re-read by a file watcher, the baseline until the first discovery), the model-provider.catalog live value, and the models.discover job — daily and on every new Claude CLI version, it reads the CLI's model menu (the Agent SDK `initialize` control request, answered locally: no model call), makes each family run what its alias resolves to (with a bell line when that moves), appends new versions, retires versions the menu no longer offers, and files model-unrecognized for an entry it cannot place.
+          - Server:
+            - Contributes:
+              - `resource.declare` "model-provider.catalog"
+              - `report-kind` "model-unrecognized"
+            - Uses:
+              - `infra/claude-cli/availability.checkClaudeCode`
+              - `infra/claude-cli/availability.onClaudeCodeProbed`
+              - `infra/claude-cli/availability.requireClaudeBin`
+              - `infra/file-watcher.defineFileWatcher`
+              - `infra/file-watcher.FileWatcher`
+              - `infra/jobs.defineJob`
+              - `network/live.serveValue`
+              - `primitives/log-channels.Log`
+              - `reports.recordReport`
+              - `reports.ReportKind`
+              - `reports.ReportRow`
+              - `shell/notifications.recordNotification`
+            - Exports (values): `getModelCatalog`
+            - Register:
+              - `defineJob('models.discover')`
+              - `defineFileWatcher('model-provider.catalog')`
+            - Resources: `model-provider.catalog` (push)
+          - Cross-plugin:
+            - Imported by:
+              - `conversations`
+              - `conversations/agents`
+              - `conversations/summary`
+              - `infra/claude-cli`
+              - `tasks`
+              - `tasks/auto-start/launch-option`
     - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
       - Web:
         - Uses:
@@ -12975,7 +13049,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `conversations.Runtime`
-          - `conversations/model-provider.resolveCliFlag`
           - `infra/claude-cli/availability.requireClaudeBin`
           - `infra/paths.CLAUDE_SESSIONS_DIR`
           - `infra/paths.PS`
@@ -13051,6 +13124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations.deleteConversation`
           - `conversations.readConversationTurns`
           - `conversations.Turn`
+          - `conversations/model-provider/catalog.getModelCatalog`
           - `database.db`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -14176,6 +14250,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `conversations/model-provider.familyClass`
+          - `conversations/model-provider.useModelCatalog`
           - `infra/claude-cli.ClaudeCliCallDetail`
           - `network/live.LiveListResult`
           - `network/live.useLive`
@@ -16268,7 +16343,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
   - Web:
-    - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.rank`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
+    - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.dynamic-flags`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.rank`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
     - Exports (values): `Fields`
   - Cross-plugin:
     - Imported by:
@@ -16295,6 +16370,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `fields/directory-path/config`
       - `fields/dynamic-enum`
       - `fields/dynamic-enum/config`
+      - `fields/dynamic-flags`
+      - `fields/dynamic-flags/config`
       - `fields/enum`
       - `fields/enum/config`
       - `fields/float`
@@ -16692,7 +16769,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
           - Web:
-            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.model-provider`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
             - Contributes: `Fields.Renderer` "dynamic-enum" → `Rendered`
             - Uses:
               - `config_v2/fields.defineFieldShape`
@@ -16717,10 +16794,52 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `conversations/conversation-category`
+              - `conversations/conversation-view/launch-prompts`
+              - `conversations/model-provider`
               - `ui/segmented-progress-bar`
               - `ui/tab-bar`
               - `ui/theme-engine`
               - `ui/variant-region`
+    - **`dynamic-flags`** — Dynamic flags (toggles) field type: identity only. Options and their defaults are resolved at config-render time via the plugins/config sub-plugin's slot.
+      - Web:
+        - Contributes: `Fields.Identity` "dynamic-flags"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `ui/icons.symbol`
+        - Exports (values):
+          - `dynamicFlagsFieldType`
+          - `dynamicFlagsIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/dynamic-flags/config`
+      - Plugins:
+        - **`config`** — Dynamic flags field type: config-render capability (options and their defaults resolved at render time from slot contributions, drawn as toggle chips, for config-v2.fields.renderer) plus the dynamicFlagsField factory.
+          - Web:
+            - Slots: `DynamicFlags.Options` ← `conversations.model-provider`
+            - Contributes: `Fields.Renderer` "dynamic-flags" → `Rendered`
+            - Uses:
+              - `config_v2/fields.defineFieldShape`
+              - `config_v2/fields.Fields`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/toggle-chip.ToggleChip`
+            - Exports (types):
+              - `DynamicFlagOption`
+              - `DynamicFlagsOptionsContribution`
+            - Exports (values): `DynamicFlags`
+          - Core:
+            - Uses:
+              - `fields.FieldDef`
+              - `fields.FieldMeta`
+              - `fields.pickMeta`
+              - `fields/dynamic-flags.dynamicFlagsFieldType`
+            - Exports (types): `DynamicFlagsFieldDef`
+            - Exports (values):
+              - `dynamicFlagsField`
+              - `flagValue`
+          - Cross-plugin:
+            - Imported by: `conversations/model-provider`
     - **`enum`** — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "enum"
@@ -19439,6 +19558,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resource.declare` "claude-cli-calls:groups"
           - `fork-data-exclusion` "claude_cli_calls"
         - Uses:
+          - `conversations/model-provider/catalog.getModelCatalog`
           - `database.db`
           - `database/admin.ExcludeFromFork`
           - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
@@ -19472,8 +19592,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `conversations/model-provider.ConversationModelSchema`
-          - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
-          - `conversations/model-provider.resolveModel`
+          - `conversations/model-provider.FALLBACK_MODEL`
           - `conversations/model-provider.StoredModelSchema`
           - `fields.FieldsRecord`
           - `fields.fieldsToZodObject`
@@ -19506,7 +19625,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/claude-cli-calls`
           - `tasks/task-title`
       - Plugins:
-        - **`availability`** — Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env), serves it as the claude-code-status push resource and POST /api/claude-code/recheck, and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`.
+        - **`availability`** — Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env), serves it as the claude-code-status push resource and POST /api/claude-code/recheck, and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
           - Web:
             - Contributes:
               - `Core.Root` → `RecheckOnReturn`
@@ -19536,6 +19655,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `checkClaudeCode`
               - `ClaudeCodeUnavailableError`
               - `noteClaudeCodeFailure`
+              - `onClaudeCodeProbed`
               - `onClaudeCodeReady`
               - `requireClaudeBin`
             - Resources: `claude-code-status` (push)
@@ -19559,6 +19679,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `conversations`
               - `conversations/agents`
+              - `conversations/model-provider/catalog`
               - `conversations/runtime-tmux`
               - `infra/claude-cli`
               - `primitives/launch`
@@ -19957,6 +20078,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/data-view/queue`
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
+          - `conversations/model-provider`
           - `conversations/recover`
           - `conversations/summary`
           - `conversations/transcript-api`
@@ -20443,6 +20565,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
+          - `conversations/model-provider/catalog`
           - `conversations/transcript-watcher`
           - `debug/profiling/op-log/op-store`
           - `debug/sentinel`
@@ -20955,6 +21078,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
+          - `conversations/model-provider/catalog`
           - `conversations/transcript-retention`
           - `database/db-test-fixture/sweep`
           - `database/fork`
@@ -22755,6 +22879,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/queue`
+          - `conversations/model-provider`
+          - `conversations/model-provider/catalog`
           - `conversations/summary`
           - `database/query-deadline`
           - `debug/claude-cli-calls`
@@ -27330,6 +27456,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/boot`
               - `debug/trace/contention`
               - `debug/trace/gates`
+              - `fields/dynamic-flags/config`
               - `fields/tags/inline`
               - `page/annotations/todo/task-link`
               - `page/prompt/block`
@@ -29563,6 +29690,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/broadcasts`
               - `debug/queue`
               - `debug/timeline`
+              - `fields/dynamic-flags/config`
               - `fields/enum/inline`
               - `fields/tags/inline`
               - `page/inline-date`
@@ -32590,6 +32718,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `build/build-logs`
           - `conversations/conversation-view/rewind`
+          - `conversations/model-provider/catalog`
           - `conversations/transcript-retention`
           - `database`
           - `database/change-feed`
@@ -35609,6 +35738,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations`
       - `conversations/conversation-view/pending-turn`
       - `conversations/model-provider`
+      - `conversations/model-provider/catalog`
       - `conversations/pane-restore`
       - `conversations/runtime-tmux`
       - `conversations/transcript-watcher`
@@ -36644,6 +36774,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/resume`
           - `conversations/conversation-view/rewind`
+          - `conversations/model-provider/catalog`
           - `conversations/summary`
           - `debug/boot-profile`
           - `debug/queue`
@@ -36981,6 +37112,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `conversations.launchTaskNow`
       - `conversations.maybeLaunchTaskJob`
+      - `conversations/model-provider/catalog.getModelCatalog`
       - `database.db`
       - `infra/attachments.getAttachment`
       - `infra/claude-cli/availability.assertClaudeCodeReady`
@@ -37217,6 +37349,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
         - Uses:
+          - `conversations/model-provider.useModelCatalog`
           - `network/live.LiveRowResult`
           - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
@@ -37271,6 +37404,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `taskLaunchServer` "auto-start"
             - Uses:
+              - `conversations/model-provider/catalog.getModelCatalog`
               - `tasks.armTaskAutoStart`
               - `tasks/auto-start.setTaskAutoStart`
               - `tasks/launch-options.TaskLaunchServer`
@@ -38181,8 +38315,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useTaskConversations`
       - Core:
         - Uses:
-          - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
-          - `conversations/model-provider.resolveModel`
+          - `conversations/model-provider.FALLBACK_MODEL`
           - `conversations/model-provider.StoredModelSchema`
           - `fields.fieldsToZodObject`
           - `fields.nullable`
@@ -38567,6 +38700,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/date/filter`
           - `fields/directory-path`
           - `fields/dynamic-enum`
+          - `fields/dynamic-flags`
           - `fields/enum`
           - `fields/enum/column-config`
           - `fields/float`

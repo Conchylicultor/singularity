@@ -40,11 +40,13 @@
     - `taskCategory` "system"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "claude-code-unavailable-at-spawn"
+    - `report-kind` "auto-start-model-unavailable"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.forkConfig`
     - `config_v2.getConfig`
     - `conversations/all-conversations.handleQuery`
+    - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePreprompt`
     - `conversations/session-chain.listSessionChain`
     - `conversations/session-chain.recordSessionId`
@@ -382,7 +384,9 @@
       - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into its own top section. Stable-rank global queue. Ranks seeded once on creation (newest first). A user-set pin lifts a conversation's task group into its own section at the top.
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
   - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and the global hibernation config.
-  - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
+  - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models. Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.
+    - Plugins:
+      - **`catalog`** — The host-global model catalog: getModelCatalog() (catalog.json in memory, re-read by a file watcher, the baseline until the first discovery), the model-provider.catalog live value, and the models.discover job — daily and on every new Claude CLI version, it reads the CLI's model menu (the Agent SDK `initialize` control request, answered locally: no model call), makes each family run what its alias resolves to (with a bell line when that moves), appends new versions, retires versions the menu no longer offers, and files model-unrecognized for an entry it cannot place.
   - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
   - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
   - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.

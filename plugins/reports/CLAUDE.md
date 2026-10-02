@@ -181,6 +181,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `conversations`
     - `conversations/conversation-view/pending-turn`
     - `conversations/model-provider`
+    - `conversations/model-provider/catalog`
     - `conversations/pane-restore`
     - `conversations/runtime-tmux`
     - `conversations/transcript-watcher`

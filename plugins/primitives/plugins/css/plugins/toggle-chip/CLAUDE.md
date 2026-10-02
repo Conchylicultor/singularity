@@ -62,6 +62,7 @@ anonymous index signature. See
     - `debug/broadcasts`
     - `debug/queue`
     - `debug/timeline`
+    - `fields/dynamic-flags/config`
     - `fields/enum/inline`
     - `fields/tags/inline`
     - `page/inline-date`
