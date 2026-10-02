@@ -228,6 +228,7 @@ totals equals the same report from raw rows — pinned by the parity test in
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/website/improve`
+    - `apps/website/pages/download`
     - `apps/website/shell`
   - Endpoint callers: `host-only`
 - Test helpers:

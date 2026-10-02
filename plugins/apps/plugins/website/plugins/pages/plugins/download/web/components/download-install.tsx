@@ -25,6 +25,7 @@ import {
   WebsiteArrow,
   WebsiteBand,
 } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { DownloadCode } from "./download-code";
 import { DownloadLink } from "./download-link";
 import { DownloadNextSteps } from "./download-next-steps";
@@ -141,11 +142,16 @@ function ForYourAgent() {
             variant="secondary"
             className="font-semibold"
             render={<a href={CLAUDE_CODE_LINK} />}
+            onClick={() => track("download_open_claude_code")}
           >
             Open in Claude Code
             <WebsiteArrow />
           </Button>
-          <Button variant="outline" render={<a href={CLAUDE_APP_LINK} />}>
+          <Button
+            variant="outline"
+            render={<a href={CLAUDE_APP_LINK} />}
+            onClick={() => track("download_open_claude_app")}
+          >
             Open in the Claude app
           </Button>
         </Stack>

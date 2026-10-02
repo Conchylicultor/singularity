@@ -25,6 +25,7 @@ installer beside another's source. The installer's steps are written out in
     - `Pane.Register` "website-download"
     - `WebsiteHeader` "download" → `DownloadNavItem`
   - Uses:
+    - `apps/deploy/analytics/collect.track`
     - `apps/website/pages/guide.guidePane`
     - `apps/website/shell.WebsiteArrow`
     - `apps/website/shell.WebsiteBand`

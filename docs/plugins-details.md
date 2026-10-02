@@ -1422,6 +1422,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `apps/deploy/analytics/dashboard`
                   - `apps/website/improve`
+                  - `apps/website/pages/download`
                   - `apps/website/shell`
                 - Endpoint callers: `host-only`
               - Test helpers:
@@ -6697,6 +6698,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `Pane.Register` "website-download"
                   - `WebsiteHeader` "download" → `DownloadNavItem`
                 - Uses:
+                  - `apps/deploy/analytics/collect.track`
                   - `apps/website/pages/guide.guidePane`
                   - `apps/website/shell.WebsiteArrow`
                   - `apps/website/shell.WebsiteBand`

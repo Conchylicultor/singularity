@@ -4,6 +4,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 
 /**
  * Something the reader copies whole — a shell command or a prompt — in a flat
@@ -12,6 +13,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
  * A `command` is monospaced, on one line that scrolls sideways rather than
  * wraps (a wrapped command reads as two), behind a `$` the copy leaves out. A
  * `prompt` is prose, so it wraps in the body face.
+ *
+ * Each copy is recorded as a `download_copy_<kind>` analytics event.
  */
 export function DownloadCode({
   kind,
@@ -44,7 +47,12 @@ export function DownloadCode({
             </Text>
           )}
         </Fill>
-        <CopyButton text={text} title="Copy" className="border-border border" />
+        <CopyButton
+          text={text}
+          title="Copy"
+          className="border-border border"
+          onClick={() => track(`download_copy_${kind}`)}
+        />
       </Stack>
     </Card>
   );
