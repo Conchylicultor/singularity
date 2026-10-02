@@ -12,9 +12,18 @@ import {
 import { withEmbedFlag } from "@plugins/primitives/plugins/embed/core";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { createContext, useCallback, useContext, useState } from "react";
 
 const openInNewIcon = symbol("open-in-new");
 const chromeIcon = symbol("web-asset");
+const reloadIcon = symbol("refresh");
+
+/**
+ * Reloads THIS pane's frame. Provided by the pane body around its chrome, so a
+ * header action reaches the frame of the pane it sits in — not every open
+ * preview. Null outside a preview pane, which the action treats as a bug.
+ */
+const ReloadFrameContext = createContext<(() => void) | null>(null);
 
 /**
  * Whether the framed app shows its own chrome (tab bar, app rail). One
@@ -56,6 +65,11 @@ function AppPreviewPaneBody() {
   const url = appPreviewUrl(attemptId, path);
   const origin = new URL(url).origin;
   const [showChrome] = useShowChrome();
+  // Bumped by the Reload action. The frame is cross-origin, so we cannot call
+  // its `location.reload()`; remounting it under a new key is a fresh load of
+  // the pane's route.
+  const [reloads, setReloads] = useState(0);
+  const reload = useCallback(() => setReloads((n) => n + 1), []);
   // Chromeless by default: the pane already sits in our own chrome, so the
   // framed app shows just the screen. The embed mode is read once at the
   // framed app's boot, so switching it is a new document (see `key`).
@@ -63,17 +77,27 @@ function AppPreviewPaneBody() {
     origin +
     withEmbedFlag(path ?? "/", origin, showChrome ? "chrome" : "chromeless");
   return (
-    <PaneChrome pane={appPreviewPane}>
-      <iframe
-        // A new route is a new document: remount rather than let the old
-        // frame's in-app navigation outlive the URL that named it.
-        key={src}
-        src={src}
-        title={`App preview — ${attemptId}`}
-        className="h-full w-full border-0"
-      />
-    </PaneChrome>
+    <ReloadFrameContext.Provider value={reload}>
+      <PaneChrome pane={appPreviewPane}>
+        <iframe
+          // A new route is a new document: remount rather than let the old
+          // frame's in-app navigation outlive the URL that named it.
+          key={`${src}#${reloads}`}
+          src={src}
+          title={`App preview — ${attemptId}`}
+          className="h-full w-full border-0"
+        />
+      </PaneChrome>
+    </ReloadFrameContext.Provider>
   );
+}
+
+/** Header action: load the framed app afresh (after a rebuild, or a bad state). */
+export function ReloadAction() {
+  const reload = useContext(ReloadFrameContext);
+  if (!reload)
+    throw new Error("ReloadAction rendered outside an app-preview pane");
+  return <PaneIconAction label="Reload" icon={reloadIcon} onClick={reload} />;
 }
 
 /** Header action: the same route, unframed, in a new browser tab. */

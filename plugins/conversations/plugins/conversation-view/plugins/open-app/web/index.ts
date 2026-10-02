@@ -5,15 +5,17 @@ import { OpenAppButton } from "./components/open-app-button";
 import {
   appPreviewPane,
   OpenInNewTabAction,
+  ReloadAction,
   ToggleChromeAction,
 } from "./app-preview-pane";
 
 export default {
   description:
-    "Opens the conversation's namespace (`http://<id>.localhost:9000`) framed in a pane beside the chat, on the page its task was filed from when one was attached (else `/`); a header toggle shows or hides the framed app's own chrome; ⌘/middle-click, or the pane's Open in new tab action, opens it in a browser tab instead. Disabled until the worktree has a successful build (op-store build history).",
+    "Opens the conversation's namespace (`http://<id>.localhost:9000`) framed in a pane beside the chat, on the page its task was filed from when one was attached (else `/`); header actions reload the frame and show or hide the framed app's own chrome; ⌘/middle-click, or the pane's Open in new tab action, opens it in a browser tab instead. Disabled until the worktree has a successful build (op-store build history).",
   contributions: [
     Conversation.ActionBar({ id: "open-app", component: OpenAppButton }),
     Pane.Register({ pane: appPreviewPane }),
+    appPreviewPane.Actions({ id: "reload", component: ReloadAction }),
     appPreviewPane.Actions({
       id: "toggle-chrome",
       component: ToggleChromeAction,

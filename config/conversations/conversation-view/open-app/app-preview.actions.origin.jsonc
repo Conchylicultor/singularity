@@ -1,4 +1,4 @@
-// @hash 54209e01ac18
+// @hash d67558349084
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "conversations.conversation-view.open-app:reload",
     "conversations.conversation-view.open-app:toggle-chrome",
     "conversations.conversation-view.open-app:open-in-new-tab",
     "primitives.pane:title"

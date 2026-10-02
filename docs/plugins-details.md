@@ -12157,12 +12157,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/relative-time.formatElapsed`
               - `primitives/relative-time.useNow`
               - `ui/icons.Icon`
-        - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:9000`) framed in a pane beside the chat, on the page its task was filed from when one was attached (else `/`); a header toggle shows or hides the framed app's own chrome; ⌘/middle-click, or the pane's Open in new tab action, opens it in a browser tab instead. Disabled until the worktree has a successful build (op-store build history).
+        - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:9000`) framed in a pane beside the chat, on the page its task was filed from when one was attached (else `/`); header actions reload the frame and show or hide the framed app's own chrome; ⌘/middle-click, or the pane's Open in new tab action, opens it in a browser tab instead. Disabled until the worktree has a successful build (op-store build history).
           - Web:
             - Slots: `app-preview.actions` ← `conversations.conversation-view.open-app`, `primitives.pane`
             - Contributes:
               - `Conversation.ActionBar` → `OpenAppButton`
               - `Pane.Register` "app-preview"
+              - `app-preview.actions` "reload" → `ReloadAction`
               - `app-preview.actions` "toggle-chrome" → `ToggleChromeAction`
               - `app-preview.actions` "open-in-new-tab" → `OpenInNewTabAction`
             - Uses:
