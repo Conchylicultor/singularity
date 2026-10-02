@@ -163,7 +163,7 @@ declared file watchers, listed under File watchers in Background activity:
 |---|---|---|---|
 | `runtime-tmux.session-files` | `~/.claude/sessions/*.json` | the CLI rewriting its file on every working/waiting transition, a new session id, a normal exit (unlink) | the conversation named by the file's `tmux` stamp (`session_name`); an unstamped record → every conversation in its `cwd`'s worktree. A pid → route map makes an unlink still name its conversation. |
 | `runtime-tmux.tmux-signals` | `~/.singularity/state/tmux-signals/` (`data-dirs`) | a touched file named after a tmux session | that conversation, plus ONE re-check 1 s later (`PreToolUse` fires ~400 ms before the menu is drawn) |
-| `runtime-tmux.op-markers` | every worktree's `ops/*.json` | a build / push starting or ending | every conversation in that worktree (flips `shell` between working and waiting) |
+| `runtime-tmux.op-signals` | `~/.singularity/state/worktree-op-signals/` (`infra/worktree`'s `data-dirs`) | a touched file named after a worktree slug — `worktree-op.ts` touches it after every op marker publish, release and reap | every conversation in that worktree (flips `shell` between working and waiting) |
 
 The signal directory is touched by two kinds of hook:
 
@@ -192,7 +192,11 @@ appear before the Escape loop treats `idle` as "already cleared".
 Missed signals are caught by the reconciler's boot `reconcileAll()` and its
 every-minute `conversations.status-sweep` job (also the only path for a pane
 title change and a "starting" row that never came up). `runtime-tmux.prune-signals`
-deletes signal files untouched for a day. Until the push path has proved itself,
+deletes signal files untouched for a day, in both the tmux and the op-signal
+directory (the latter is `infra/worktree`'s; this runtime is its only reader).
+The op-signal directory exists so no backend has to watch
+`~/.singularity/worktrees/` recursively: that tree also holds every build's
+output (thousands of files per build), which would stream to every backend. Until the push path has proved itself,
 a temporary 1 s shadow of the retired poller on main
 (`conversations.status-shadow-audit`) writes nothing and reports any state change
 no signal delivered within 2 s. Design:
@@ -261,7 +265,6 @@ may be a real command (`/compact`).
     - `infra/paths.CLAUDE_SESSIONS_DIR`
     - `infra/paths.PS`
     - `infra/paths.TMUX`
-    - `infra/paths.worktreesDir`
     - `infra/worktree.isWorktreeOpActive`
     - `packages/spawn-priority.backgroundPrefix`
     - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
@@ -279,7 +282,7 @@ may be a real command (`/compact`).
   - Register:
     - `defineFileWatcher('runtime-tmux.session-files')`
     - `defineFileWatcher('runtime-tmux.tmux-signals')`
-    - `defineFileWatcher('runtime-tmux.op-markers')`
+    - `defineFileWatcher('runtime-tmux.op-signals')`
     - `defineJob('runtime-tmux.prune-signals')`
 - Cross-plugin:
   - Imported by: `debug/session-divergence`

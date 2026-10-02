@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { Runtime } from "@plugins/conversations/server";
 import { tmuxRuntime } from "./internal/tmux-runtime";
 import {
-  opMarkersWatcher,
+  opSignalsWatcher,
   sessionFilesWatcher,
   tmuxSignalsWatcher,
 } from "./internal/signals";
@@ -27,7 +27,7 @@ export default {
     // The runtime's push signals (opened by `tmuxRuntime.subscribe`).
     sessionFilesWatcher,
     tmuxSignalsWatcher,
-    opMarkersWatcher,
+    opSignalsWatcher,
     pruneTmuxSignalsJob,
   ],
 } satisfies ServerPluginDefinition;

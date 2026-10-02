@@ -1,25 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import { opMarkerSlug } from "./signals";
+import { opSignalSlugs } from "./signals";
 
-describe("opMarkerSlug", () => {
-  const root = "/data/worktrees";
+describe("opSignalSlugs", () => {
+  const dir = "/data/state/worktree-op-signals";
 
-  test("a marker file names its worktree", () => {
-    expect(opMarkerSlug(root, "/data/worktrees/att-1-x/ops/op-9.json")).toBe(
-      "att-1-x",
-    );
+  test("a touched file names its worktree, once per batch", () => {
+    expect(
+      opSignalSlugs([
+        { type: "create", path: `${dir}/att-1-x` },
+        { type: "update", path: `${dir}/att-1-x` },
+        { type: "update", path: `${dir}/singularity` },
+      ]),
+    ).toEqual(["att-1-x", "singularity"]);
   });
 
-  test("anything else under the root is not a marker", () => {
-    expect(
-      opMarkerSlug(root, "/data/worktrees/att-1-x/build-status.json"),
-    ).toBe(null);
-    expect(
-      opMarkerSlug(root, "/data/worktrees/att-1-x/ops/op-9.json.123.tmp"),
-    ).toBe(null);
-    expect(opMarkerSlug(root, "/data/worktrees/att-1-x/ops/a/b.json")).toBe(
-      null,
+  test("a deletion (the prune job) is not a signal", () => {
+    expect(opSignalSlugs([{ type: "delete", path: `${dir}/att-1-x` }])).toEqual(
+      [],
     );
-    expect(opMarkerSlug(root, "/elsewhere/att-1-x/ops/op-9.json")).toBe(null);
   });
 });

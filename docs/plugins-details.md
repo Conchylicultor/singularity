@@ -9531,6 +9531,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `IfAlreadyStarted`
       - `LaunchTaskNowResult`
       - `RuntimeInfo`
+      - `RuntimeSignal`
       - `Turn`
       - `UserTurnSentPayload`
     - Exports (values):
@@ -9564,7 +9565,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `defineTriggerEvent('conversation.created')`
       - `defineTriggerEvent('conversation.turn-completed')`
       - `defineTriggerEvent('conversation.userTurnSent')`
-      - `defineTimer('conversations.poller')`
+      - `defineJob('conversations.status-sweep')`
+      - `defineTimer('conversations.status-shadow-audit')`
     - Routes:
       - `GET /api/conversations`
       - `GET /api/conversations/gone`
@@ -13189,6 +13191,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations.Runtime`
           - `infra/claude-cli/availability.requireClaudeBin`
+          - `infra/file-watcher.defineFileWatcher`
+          - `infra/file-watcher.FileChangeEvent`
+          - `infra/file-watcher.FileWatcher`
+          - `infra/jobs.defineJob`
           - `infra/paths.CLAUDE_SESSIONS_DIR`
           - `infra/paths.PS`
           - `infra/paths.TMUX`
@@ -13206,6 +13212,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `captureProcessTree`
           - `listPanes`
           - `subtreePids`
+        - Register:
+          - `defineFileWatcher('runtime-tmux.session-files')`
+          - `defineFileWatcher('runtime-tmux.tmux-signals')`
+          - `defineFileWatcher('runtime-tmux.op-signals')`
+          - `defineJob('runtime-tmux.prune-signals')`
       - Cross-plugin:
         - Imported by: `debug/session-divergence`
     - **`session-chain`** — Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
@@ -20834,6 +20845,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/model-provider/catalog`
+          - `conversations/runtime-tmux`
           - `conversations/transcript-watcher`
           - `debug/profiling/op-log/op-store`
           - `debug/sentinel`
@@ -21409,6 +21421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
           - `conversations/model-provider/catalog`
+          - `conversations/runtime-tmux`
           - `conversations/transcript-retention`
           - `database/db-test-fixture/sweep`
           - `database/fork`

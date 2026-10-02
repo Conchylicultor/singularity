@@ -1,16 +1,14 @@
 import { mkdirSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
-import { basename, join, sep } from "node:path";
+import { basename, join } from "node:path";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import {
   defineFileWatcher,
   type FileChangeEvent,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
-import {
-  CLAUDE_SESSIONS_DIR,
-  worktreesDir,
-} from "@plugins/infra/plugins/paths/server";
+import { CLAUDE_SESSIONS_DIR } from "@plugins/infra/plugins/paths/server";
+import { opSignalsDir } from "@plugins/infra/plugins/worktree/data-dirs";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { tmuxSignalsDir } from "../../data-dirs";
 import { routeSessionFile, type SessionFileRoute } from "./claude-session";
@@ -47,14 +45,10 @@ export const tmuxSignalsWatcher = defineFileWatcher({
   debounceMs: 50,
 });
 
-export const opMarkersWatcher = defineFileWatcher({
-  name: "runtime-tmux.op-markers",
+export const opSignalsWatcher = defineFileWatcher({
+  name: "runtime-tmux.op-signals",
   description:
-    "Watches every worktree's in-flight op markers so an agent idling at its prompt while a build or push runs reads as working, and flips back to waiting the moment the op ends.",
-  extensions: [".json"],
-  // The worktree data dirs also hold build outputs, logs and run transcripts;
-  // none of them is an op marker, and a build writes thousands of them.
-  ignore: ["**/web/**", "**/release-web/**", "**/logs/**", "**/runs/**"],
+    "Watches the worktree op-signal directory, where a file named after a worktree is touched whenever one of its build / push op markers is published, released or reaped, so an agent idling at its prompt while an op runs reads as working and flips back to waiting the moment the op ends.",
   debounceMs: 150,
 });
 
@@ -64,13 +58,16 @@ function pidOf(path: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
-/** `<worktreesDir>/<slug>/ops/<opId>.json` → slug, or null for any other path. */
-export function opMarkerSlug(root: string, path: string): string | null {
-  if (!path.startsWith(root + sep)) return null;
-  const parts = path.slice(root.length + 1).split(sep);
-  return parts.length === 3 && parts[1] === "ops" && parts[2]!.endsWith(".json")
-    ? parts[0]!
-    : null;
+/**
+ * The worktrees an op-signal batch names: one file per worktree slug, touched
+ * when its op markers change. Deletions are the prune job, not a signal.
+ */
+export function opSignalSlugs(events: readonly FileChangeEvent[]): string[] {
+  const slugs = new Set<string>();
+  for (const event of events) {
+    if (event.type !== "delete") slugs.add(basename(event.path));
+  }
+  return [...slugs];
 }
 
 function isEnoent(err: unknown): boolean {
@@ -184,17 +181,11 @@ export async function subscribeTmuxSignals(
     pendingRechecks.add(recheck);
   }
 
-  const opsRoot = worktreesDir();
-  function onOpMarkers(events: FileChangeEvent[]): void {
-    const slugs = new Set<string>();
-    for (const event of events) {
-      const slug = opMarkerSlug(opsRoot, event.path);
-      if (slug) slugs.add(slug);
-    }
-    for (const worktreeName of slugs) onSignal({ worktreeName });
+  function onOpSignals(events: FileChangeEvent[]): void {
+    for (const worktreeName of opSignalSlugs(events))
+      onSignal({ worktreeName });
   }
 
-  mkdirSync(opsRoot, { recursive: true });
   const watchers: FileWatcher[] = [];
   try {
     watchers.push(
@@ -210,7 +201,10 @@ export async function subscribeTmuxSignals(
         dirs: [tmuxSignalsDir.ensure()],
         onChange: onSignalFiles,
       }),
-      await opMarkersWatcher.start({ dirs: [opsRoot], onChange: onOpMarkers }),
+      await opSignalsWatcher.start({
+        dirs: [opSignalsDir.ensure()],
+        onChange: onOpSignals,
+      }),
     );
   } catch (err) {
     await Promise.all(watchers.map((w) => w.stop()));
