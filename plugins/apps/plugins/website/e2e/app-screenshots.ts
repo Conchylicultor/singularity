@@ -51,25 +51,34 @@ const GALLERY = [
 
 const outDir = requireArg("out", "--out <dir>").replace(/\/+$/, "");
 const only = arg("only")?.split(",");
-const [width = 1440, height = 900] = arg("viewport", "1440x900").split("x").map(Number);
+const [width = 1440, height = 900] = arg("viewport", "1440x900")
+  .split("x")
+  .map(Number);
 const colorScheme = arg("color-scheme", "dark") as ColorScheme;
 const waitMs = numArg("wait", 4000);
 
 const apps = only ? GALLERY.filter((a) => only.includes(a.id)) : GALLERY;
 const unknown = only?.filter((id) => !GALLERY.some((a) => a.id === id)) ?? [];
 if (unknown.length) {
-  throw new Error(`--only names apps the gallery does not show: ${unknown.join(", ")} (known: ${GALLERY.map((a) => a.id).join(", ")})`);
+  throw new Error(
+    `--only names apps the gallery does not show: ${unknown.join(", ")} (known: ${GALLERY.map((a) => a.id).join(", ")})`,
+  );
 }
 
 mkdirSync(outDir, { recursive: true });
 
 await withBrowser(async (h) => {
-  const { page } = await h.session({ viewport: { width, height }, colorScheme });
+  const { page } = await h.session({
+    viewport: { width, height },
+    colorScheme,
+  });
   const failed: string[] = [];
   for (const app of apps) {
     await page.goto(pathUrl(`${app.basePath}?embed=1`));
     await page.waitForTimeout(waitMs);
-    const shot = await snap(page, `${outDir}/app`, app.id, { hideToasts: true });
+    const shot = await snap(page, `${outDir}/app`, app.id, {
+      hideToasts: true,
+    });
     if (!shot.ok) failed.push(app.id);
   }
   if (failed.length) {

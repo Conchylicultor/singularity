@@ -15,8 +15,7 @@ import { TOAST } from "./toasts";
 export const DEFAULT_SNAP_TIMEOUT_MS = 10_000;
 
 export type SnapResult =
-  | { ok: true; path: string }
-  | { ok: false; path: string; error: string };
+  { ok: true; path: string } | { ok: false; path: string; error: string };
 
 /**
  * Write `${outPrefix}-${name}.png` and log the path (the transcript is how an
@@ -52,12 +51,15 @@ export async function snap(
     await page.screenshot({
       path,
       timeout: opts.timeoutMs ?? DEFAULT_SNAP_TIMEOUT_MS,
-      ...(opts.hideToasts && { style: `${TOAST} { visibility: hidden !important; }` }),
+      ...(opts.hideToasts && {
+        style: `${TOAST} { visibility: hidden !important; }`,
+      }),
     });
     console.log(`wrote ${path}`);
     return { ok: true, path };
   } catch (err) {
-    const error = err instanceof Error ? err.message.split("\n")[0]! : String(err);
+    const error =
+      err instanceof Error ? err.message.split("\n")[0]! : String(err);
     console.log(`SNAP-FAIL ${path} — ${error}`);
     pushDiagnostic(`screenshot ${path} — ${error}`);
     return { ok: false, path, error };
