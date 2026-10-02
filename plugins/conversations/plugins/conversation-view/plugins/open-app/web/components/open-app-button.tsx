@@ -9,7 +9,9 @@ import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { opsHistory } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
+import { useConfig } from "@plugins/config_v2/web";
 import { appPreviewPane, appPreviewUrl } from "../app-preview-pane";
+import { openAppConfig } from "../../shared/config";
 
 const rocketLaunchIcon = symbol("rocket-launch");
 
@@ -23,6 +25,7 @@ export function OpenAppButton() {
 function OpenAppAction({ attemptId }: { attemptId: string }) {
   const source = useAttemptSourceUrl(attemptId);
   const openPane = useOpenPane();
+  const { target } = useConfig(openAppConfig);
   if (source.isError) throw source.error;
   // Has this worktree ever deployed? Its latest successful build op — one row
   // is enough, and the op-store pushes the next one the moment it lands, so
@@ -46,11 +49,13 @@ function OpenAppAction({ attemptId }: { attemptId: string }) {
       loading={source.isPending || builds.status === "loading"}
       // Nothing is served at the namespace until its first build deploys it.
       disabled={!built}
-      // Plain click frames the app beside the chat; ⌘/middle-click opens it in
-      // a browser tab.
+      // Plain click opens the app where the setting says (a browser tab by
+      // default, or framed beside the chat); ⌘/middle-click takes the other way.
       {...linkGestureProps(({ newTab }) => {
         const path = sourcePath(source.data?.url);
-        if (newTab) window.open(appPreviewUrl(attemptId, path), "_blank");
+        // The gesture's "elsewhere" flips the configured default.
+        const inTab = (target === "new-tab") !== newTab;
+        if (inTab) window.open(appPreviewUrl(attemptId, path), "_blank");
         else openPane(appPreviewPane, { attemptId, path }, { mode: "push" });
       })}
     />

@@ -1,0 +1,6 @@
+// @hash 6570b670182c
+{
+  // Where a plain click on Open app opens the agent's app. ⌘/middle-click opens it the other way.
+  // Allowed values: "new-tab", "pane"
+  "target": "new-tab"
+}

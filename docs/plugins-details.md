@@ -8879,7 +8879,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.open-app`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -9080,6 +9080,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations`
       - `conversations/conversation-category`
       - `conversations/conversation-view/launch-prompts`
+      - `conversations/conversation-view/open-app`
       - `conversations/conversation-view/prompt-templates`
       - `conversations/conversation-view/push-and-exit`
       - `conversations/conversation-view/turn-summary`
@@ -12250,16 +12251,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/relative-time.formatElapsed`
               - `primitives/relative-time.useNow`
               - `ui/icons.Icon`
-        - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:9000`) framed in a pane beside the chat, on the page its task was filed from when one was attached (else `/`); header actions reload the frame and show or hide the framed app's own chrome; ⌘/middle-click, or the pane's Open in new tab action, opens it in a browser tab instead. Disabled until the worktree has a successful build (op-store build history).
+        - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:9000`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside the chat when the Open app in setting says so (⌘/middle-click takes the other way). The pane's header actions reload the frame, show or hide the framed app's own chrome, and open it in a browser tab. Disabled until the worktree has a successful build (op-store build history). Server registration of the Open app config (new tab or pane on plain click).
           - Web:
             - Slots: `app-preview.actions` ← `conversations.conversation-view.open-app`, `primitives.pane`
             - Contributes:
+              - `ConfigV2.WebRegister` "config"
               - `Conversation.ActionBar` → `OpenAppButton`
               - `Pane.Register` "app-preview"
               - `app-preview.actions` "reload" → `ReloadAction`
               - `app-preview.actions` "toggle-chrome" → `ToggleChromeAction`
               - `app-preview.actions` "open-in-new-tab" → `OpenInNewTabAction`
             - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.useConfig`
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
@@ -12272,6 +12276,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `primitives/persistent-draft.useDraft`
               - `tasks/task-source-url.useAttemptSourceUrl`
+          - Server:
+            - Contributes: `ConfigV2.Register` "config"
+            - Uses: `config_v2.ConfigV2`
         - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
           - Web:
             - Uses:

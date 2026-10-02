@@ -1,7 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { OpenAppButton } from "./components/open-app-button";
+import { openAppConfig } from "../shared/config";
 import {
   appPreviewPane,
   OpenInNewTabAction,
@@ -11,8 +13,9 @@ import {
 
 export default {
   description:
-    "Opens the conversation's namespace (`http://<id>.localhost:9000`) framed in a pane beside the chat, on the page its task was filed from when one was attached (else `/`); header actions reload the frame and show or hide the framed app's own chrome; ⌘/middle-click, or the pane's Open in new tab action, opens it in a browser tab instead. Disabled until the worktree has a successful build (op-store build history).",
+    "Opens the conversation's namespace (`http://<id>.localhost:9000`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside the chat when the Open app in setting says so (⌘/middle-click takes the other way). The pane's header actions reload the frame, show or hide the framed app's own chrome, and open it in a browser tab. Disabled until the worktree has a successful build (op-store build history).",
   contributions: [
+    ConfigV2.WebRegister({ descriptor: openAppConfig }),
     Conversation.ActionBar({ id: "open-app", component: OpenAppButton }),
     Pane.Register({ pane: appPreviewPane }),
     appPreviewPane.Actions({ id: "reload", component: ReloadAction }),
