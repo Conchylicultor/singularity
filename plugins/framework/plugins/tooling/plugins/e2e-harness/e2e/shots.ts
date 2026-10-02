@@ -4,6 +4,7 @@
  */
 import type { Page } from "playwright";
 import { pushDiagnostic } from "./diagnostics";
+import { TOAST } from "./toasts";
 
 /**
  * Cap on a single capture. Playwright's own default is 30s, and it awaits
@@ -26,16 +27,33 @@ export type SnapResult =
  * the run's verdict to the actual checks. The result is a discriminated union
  * rather than a nullable path so a caller that *does* care cannot mistake a
  * failure for a success.
+ *
+ * `hideToasts` is for a picture meant to be shown (a gallery shot, docs), not
+ * a diagnostic: the toasts are hidden by a style Playwright applies to this
+ * capture only, so one that lands mid-capture is hidden too. What each one
+ * said is still logged and recorded as a diagnostic — an error toast is a
+ * finding, and leaving it out of the image must not lose it.
  */
 export async function snap(
   page: Page,
   outPrefix: string,
   name: string,
-  opts: { timeoutMs?: number } = {},
+  opts: { timeoutMs?: number; hideToasts?: boolean } = {},
 ): Promise<SnapResult> {
   const path = `${outPrefix}-${name}.png`;
   try {
-    await page.screenshot({ path, timeout: opts.timeoutMs ?? DEFAULT_SNAP_TIMEOUT_MS });
+    if (opts.hideToasts) {
+      for (const text of await page.locator(TOAST).allInnerTexts()) {
+        const line = text.replace(/\s+/g, " ").trim();
+        console.log(`TOAST-HIDDEN ${path} — ${line}`);
+        pushDiagnostic(`toast hidden from ${path} — ${line}`);
+      }
+    }
+    await page.screenshot({
+      path,
+      timeout: opts.timeoutMs ?? DEFAULT_SNAP_TIMEOUT_MS,
+      ...(opts.hideToasts && { style: `${TOAST} { visibility: hidden !important; }` }),
+    });
     console.log(`wrote ${path}`);
     return { ok: true, path };
   } catch (err) {

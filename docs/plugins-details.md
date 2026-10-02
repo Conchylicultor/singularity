@@ -18615,6 +18615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/track-mixer`
               - `apps/sonata/view-options`
               - `apps/studio/compositions/release`
+              - `apps/website`
               - `apps/website/improve`
               - `apps/website/shell`
               - `build`

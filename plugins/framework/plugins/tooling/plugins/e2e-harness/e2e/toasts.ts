@@ -40,7 +40,7 @@ import { waitFor, type Settled } from "./wait";
  * toast host (`shell/toast`) renders — named here once rather than in each
  * script that trips over one.
  */
-const TOAST = "[data-sonner-toast]";
+export const TOAST = "[data-sonner-toast]";
 
 /**
  * Default budget. Generous against a toast's own few-second lifetime, because a

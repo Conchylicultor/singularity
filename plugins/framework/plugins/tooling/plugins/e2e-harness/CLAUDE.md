@@ -309,6 +309,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/sonata/track-mixer`
     - `apps/sonata/view-options`
     - `apps/studio/compositions/release`
+    - `apps/website`
     - `apps/website/improve`
     - `apps/website/shell`
     - `build`
