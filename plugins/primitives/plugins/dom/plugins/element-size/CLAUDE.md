@@ -72,6 +72,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `primitives/data-view/icons`
     - `primitives/expandable`
     - `primitives/graph-canvas`
+    - `primitives/metrics/chart-kit`
     - `primitives/outline/rail`
     - `primitives/overlay/floating-action`
     - `primitives/overlay/image-viewer`

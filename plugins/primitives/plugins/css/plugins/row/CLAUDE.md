@@ -226,6 +226,7 @@ genuine transient-chrome list escapes with
     - `primitives/data-view/view-core`
     - `primitives/folder-picker`
     - `primitives/log-channels`
+    - `primitives/metrics`
     - `primitives/outline/rail`
     - `primitives/section-card`
     - `reorder/editor`

@@ -761,6 +761,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/live-state`
     - `primitives/loading`
     - `primitives/log-channels`
+    - `primitives/metrics`
+    - `primitives/metrics/chart-kit`
     - `primitives/multi-select`
     - `primitives/outline/rail`
     - `primitives/overlay/cursor-menu`

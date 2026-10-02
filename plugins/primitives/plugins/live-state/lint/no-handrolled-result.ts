@@ -1,14 +1,16 @@
 /**
  * Bans hand-rolling a resource result outside the plugins that own the shape
- * (`primitives/live-state`, `network/live`, and `primitives/optimistic-mutation`
- * for `OptimisticResult`, live-state's named exemption).
+ * (derived from `./result-constructors.ts`: every plugin a sanctioned
+ * constructor is exported from).
  *
  * A domain hook that re-shapes a read by writing its own
  * `{ status: "loading" }` / `{ status: "error", … }` arms drops whatever it does
  * not copy — the typed error, `stale`, `refetch` — and forks the vocabulary a
  * surface renders from. The one way to derive a read is `mapResource` (one read)
  * or `combineResources` (several), which pass every arm through untouched; a
- * plain value comes out through `foldResource`.
+ * plain value comes out through `foldResource`. The full set of sanctioned
+ * constructors — and so the owners, and this rule's message — is the table in
+ * `./result-constructors.ts`.
  *
  * What counts as a hand-rolled result (all syntactic):
  *   - an object literal or type literal whose `status` is `"loading"` or
@@ -29,17 +31,15 @@ import {
   type TSESTree,
 } from "@typescript-eslint/utils";
 import { isTestFile } from "./result-binding";
+import {
+  RESULT_CONSTRUCTORS,
+  RESULT_OWNERS,
+  resultConstructorsMessage,
+} from "./result-constructors";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
-
-/** The plugins that own the result shape. */
-const OWNERS = [
-  "/plugins/primitives/plugins/live-state/",
-  "/plugins/network/plugins/live/",
-  "/plugins/primitives/plugins/optimistic-mutation/",
-];
 
 const RESULT_MEMBERS = new Set(["refetch", "stale", "pending"]);
 
@@ -128,21 +128,24 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        'Disallow hand-rolled `status: "loading" | "error" | "ready"` resource results outside live-state and network/live — derive with mapResource / combineResources.',
+        'Disallow hand-rolled `status: "loading" | "error" | "ready"` resource results outside the plugins that own the shape — obtain or derive one through a sanctioned constructor: ' +
+        RESULT_CONSTRUCTORS.map((c) => c.name).join(", ") +
+        ".",
     },
     schema: [],
     messages: {
       handrolled:
         "Hand-rolled resource result. Re-shaping a read by writing its own `status` arms drops what it does not copy (the typed error, `stale`, `refetch`). " +
-        "Derive it instead: `mapResource(r, fn)` for one read, `combineResources({ … })` for several, `foldResource(r, { loading, error, ready })` for a plain value — and type it `ResourceResult<U>`. " +
-        "See plugins/primitives/plugins/live-state/CLAUDE.md.",
+        "Obtain or derive it through a sanctioned constructor instead, and type it `ResourceResult<U>`: " +
+        resultConstructorsMessage() +
+        ". See plugins/primitives/plugins/live-state/CLAUDE.md.",
     },
   },
   defaultOptions: [],
   create(context) {
     const filename = context.filename;
     if (isTestFile(filename)) return {};
-    if (OWNERS.some((o) => filename.includes(o))) return {};
+    if (RESULT_OWNERS.some((o) => filename.includes(o))) return {};
     return {
       ObjectExpression(node) {
         if (isResultArm(objectShape(node))) {

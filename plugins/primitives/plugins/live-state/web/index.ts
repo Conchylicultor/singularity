@@ -16,6 +16,16 @@ export {
 } from "./use-resource";
 export { hydrateEndpoint } from "./hydrate-endpoint";
 export { useEndpointResource } from "./use-endpoint-resource";
+export {
+  useQueryResource,
+  useInfiniteQueryResource,
+} from "./use-query-resource";
+export type {
+  QueryResourceOptions,
+  InfiniteQueryResourceOptions,
+  PagedResourceResult,
+  ResourcePaging,
+} from "./use-query-resource";
 export { slowResourceReportSink } from "./slow-resource-reporter";
 export type { SlowResourceInfo } from "./slow-resource-reporter";
 export { updateDelayReportSink } from "./update-delay-reporter";
@@ -86,7 +96,7 @@ export type {
 
 export default {
   description:
-    "Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.",
+    "Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.",
   loadBearing: true,
   contributions: [],
 } satisfies PluginDefinition;

@@ -19,7 +19,7 @@ import {
   type NonUndefinedGuard,
   type QueryObserverResult,
 } from "@tanstack/react-query";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   NotificationsClient,
   isTerminalResourceError,
@@ -29,6 +29,7 @@ import { slowResourceReportSink } from "./slow-resource-reporter";
 import { notePendingMount } from "./pending-mount-tracker";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
 import { toResourceError } from "./resource-error";
+import { queryResult } from "./query-result";
 import type { ChannelStatuses } from "./notifications-client";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import type { FailingResource } from "./resource-error-reporter";
@@ -588,29 +589,19 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
       ? select(q.data as T)
       : q.data
   ) as T | S;
-  // Last-known-good for the error arm: the SELECTED slice (same expression as
-  // `data`) once a value has landed, else `undefined` — a first-load failure has
-  // no trustworthy value to expose.
-  const stale = hasValue ? data : undefined;
-  const refetchRef = useLatestRef(q.refetch);
+  const refetchQuery = useEventCallback(() => q.refetch());
 
-  // The result identity recomputes only on data/error/stale (which decide the
-  // status); the returned `refetch` reads the freshest `q.refetch` off the
-  // stable `refetchRef.current` at call time. A skipped read (`params ===
-  // null`, no subject yet) is `loading` with nothing to refetch.
+  // The result identity recomputes only on data/error (which decide the
+  // status); the returned `refetch` calls the freshest `q.refetch` through the
+  // stable `refetchQuery`. `hasValue` is the landed signal:
+  // the `initialData` placeholder is neither `ready` nor the error arm's
+  // `stale` (the SELECTED slice once a value has landed — a first-load failure
+  // has no trustworthy value to expose). A skipped read (`params === null`, no
+  // subject yet) is `loading` with nothing to refetch.
   return useMemo((): ResourceResult<T | S> => {
     if (skipped) return { status: "loading", refetch: SKIPPED_REFETCH };
-    const refetch = () => refetchRef.current().then(() => {});
-    if (error !== null) {
-      return stale === undefined
-        ? { status: "error", error, refetch }
-        : { status: "error", error, stale, refetch };
-    }
-    if (!hasValue) {
-      return { status: "loading", refetch };
-    }
-    return { status: "ready", data, refetch };
-  }, [skipped, hasValue, data, error, stale]);
+    return queryResult(data, error, refetchQuery, hasValue);
+  }, [skipped, hasValue, data, error, refetchQuery]);
 }
 
 /** One tuple's read state, as `useResources`' combine reads it off its query. */

@@ -148,6 +148,7 @@ icon+count button it stands in for — carries a per-site
     - `primitives/folder-picker`
     - `primitives/launch`
     - `primitives/live-state`
+    - `primitives/metrics`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `primitives/prompt-editor/voice-input`

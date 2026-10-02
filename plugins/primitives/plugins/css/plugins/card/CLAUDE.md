@@ -71,6 +71,8 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `page/place`
     - `primitives/css/layout-harness`
     - `primitives/data-view/gallery`
+    - `primitives/metrics`
+    - `primitives/metrics/chart-kit`
     - `primitives/section-card`
     - `review/plugin-changes`
 

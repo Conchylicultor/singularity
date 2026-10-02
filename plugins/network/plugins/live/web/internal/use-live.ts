@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   useResource,
+  type PagedResourceResult,
   type ResourceDescriptor,
   type ResourceError,
   type ResourceResult,
@@ -28,25 +29,13 @@ import { withoutWindowFields } from "./window-fields";
 // A `liveValue` is read by the same hook: its result is `ResourceResult<T>`,
 // the states every read already has, so it gets no hook of its own.
 
-/** What a window read adds to its ready arm. */
-export interface LivePaging {
-  /** The window is full and below `maxLimit` — `loadMore()` would add rows. */
-  canGrow: boolean;
-  /** A `loadMore()` is loading; the rows shown are the previous window's. */
-  growing: boolean;
-  /** Grow the window by one default page, clamped to `maxLimit`. */
-  loadMore: () => void;
-}
-
 /**
- * A window read: `ResourceResult<Row[]>` whose ready arm carries the paging
- * handles. A grow that FAILS is the error arm, with the window it grew from as
- * `stale` — the rows the user was looking at, never a spinner.
+ * A window read: the paged read every grow-able read returns. `canGrow` is
+ * "the window is full and below `maxLimit`", `loadMore()` grows it by one
+ * default page (clamped to `maxLimit`), and a grow that FAILS is the error arm
+ * with the window it grew from as `stale`.
  */
-export type LiveListResult<Row> =
-  | Extract<ResourceResult<Row[]>, { status: "loading" }>
-  | Extract<ResourceResult<Row[]>, { status: "error" }>
-  | (Extract<ResourceResult<Row[]>, { status: "ready" }> & LivePaging);
+export type LiveListResult<Row> = PagedResourceResult<Row>;
 
 /** An explicit id set. Rows come back for the ids that exist; no filter applies. */
 export interface LiveIdsQuery {

@@ -4621,6 +4621,14 @@
       "name": "@singularity/plugin-primitives-markdown",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/metrics": {
+      "name": "@singularity/plugin-primitives-metrics",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/metrics/plugins/chart-kit": {
+      "name": "@singularity/plugin-primitives-metrics-chart-kit",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/multi-select": {
       "name": "@singularity/plugin-primitives-multi-select",
       "version": "0.0.1",
@@ -8271,6 +8279,10 @@
     "@singularity/plugin-primitives-log-channels": ["@singularity/plugin-primitives-log-channels@workspace:plugins/primitives/plugins/log-channels"],
 
     "@singularity/plugin-primitives-markdown": ["@singularity/plugin-primitives-markdown@workspace:plugins/primitives/plugins/markdown"],
+
+    "@singularity/plugin-primitives-metrics": ["@singularity/plugin-primitives-metrics@workspace:plugins/primitives/plugins/metrics"],
+
+    "@singularity/plugin-primitives-metrics-chart-kit": ["@singularity/plugin-primitives-metrics-chart-kit@workspace:plugins/primitives/plugins/metrics/plugins/chart-kit"],
 
     "@singularity/plugin-primitives-multi-select": ["@singularity/plugin-primitives-multi-select@workspace:plugins/primitives/plugins/multi-select"],
 

@@ -188,6 +188,7 @@ primitive exists to name.
     - `primitives/graph-canvas`
     - `primitives/launch`
     - `primitives/log-channels`
+    - `primitives/metrics`
     - `primitives/outline/rail`
     - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog/confirm`

@@ -236,7 +236,9 @@ contributions each surface passes in, and per-entry plugin id
     - `buildViewConfigRegistrations`
     - `viewsDescriptor`
 - Cross-plugin:
-  - Imported by: `primitives/data-view`
+  - Imported by:
+    - `primitives/data-view`
+    - `primitives/metrics`
 - Core:
   - Exports (types):
     - `AddableSource`

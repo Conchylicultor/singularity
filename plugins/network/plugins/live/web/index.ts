@@ -11,7 +11,6 @@ export type { ScrollTruncation } from "../shared/scroll-plan";
 export type {
   LiveIdsQuery,
   LiveListResult,
-  LivePaging,
   LiveRowResult,
 } from "./internal/use-live";
 

@@ -555,6 +555,8 @@ to reconcile them; they never needed reconciling.
     - `primitives/launch`
     - `primitives/log-channels`
     - `primitives/markdown`
+    - `primitives/metrics`
+    - `primitives/metrics/chart-kit`
     - `primitives/outline/rail`
     - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog/confirm`

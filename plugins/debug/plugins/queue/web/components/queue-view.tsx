@@ -10,11 +10,11 @@ import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   ResourceErrorInline,
   ResourceView,
+  type ResourcePaging,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   useLive,
   type LiveListResult,
-  type LivePaging,
 } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -151,7 +151,7 @@ type SettledList<Row> = Extract<LiveListResult<Row>, { status: "ready" }>;
  * to the declaration's `maxLimit`. Called by the component that renders the
  * rows, so the observer mounts with the sentinel it watches.
  */
-function useGrowOnScroll(list: LivePaging) {
+function useGrowOnScroll(list: ResourcePaging) {
   return useInfiniteScroll({
     hasNextPage: list.canGrow,
     isFetchingNextPage: list.growing,

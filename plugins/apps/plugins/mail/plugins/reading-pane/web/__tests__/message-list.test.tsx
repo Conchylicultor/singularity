@@ -23,7 +23,7 @@ vi.mock("../components/message-card", () => ({
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import type { LivePaging } from "@plugins/network/plugins/live/web";
+import type { ResourcePaging } from "@plugins/primitives/plugins/live-state/web";
 import { MessageList } from "../components/message-list";
 
 afterEach(cleanup);
@@ -59,7 +59,7 @@ function message(id: string): MailMessage {
   };
 }
 
-function paging(over: Partial<LivePaging> = {}): LivePaging {
+function paging(over: Partial<ResourcePaging> = {}): ResourcePaging {
   return { canGrow: false, growing: false, loadMore: vi.fn(), ...over };
 }
 

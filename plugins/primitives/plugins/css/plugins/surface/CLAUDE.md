@@ -140,6 +140,7 @@ never be clobbered.
     - `primitives/collapsible-wrap`
     - `primitives/css/card`
     - `primitives/data-view/capsule-toolbar`
+    - `primitives/metrics/chart-kit`
     - `primitives/row-actions`
     - `stats`
 

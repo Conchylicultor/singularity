@@ -413,6 +413,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `primitives/icon-button`
     - `primitives/icon-picker`
     - `primitives/launch`
+    - `primitives/metrics`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `primitives/search`

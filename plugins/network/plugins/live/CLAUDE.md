@@ -159,9 +159,10 @@ useLiveRow(eventSources, sourceId);                                   // one row
 - **Read — `useLive(c, query?)`.** The query's SHAPE picks the resource; there is
   one hook for every list read, and a separate hook only where the result has
   different STATES (`useLiveRow`).
-  - A window query returns `LiveListResult<Row>` — `ResourceResult<Row[]>`
+  - A window query returns `LiveListResult<Row>` — live-state's
+    `PagedResourceResult<Row>`: `ResourceResult<Row[]>`
     (`status: "loading" | "error" | "ready"`, see `live-state/CLAUDE.md`) whose
-    `ready` arm adds `canGrow` (`rows.length === limit && limit < maxLimit`),
+    `ready` arm adds live-state's `ResourcePaging`: `canGrow` (`rows.length === limit && limit < maxLimit`),
     `growing` and `loadMore()` (grow by one default page, clamped to
     `maxLimit`). While a grown window loads the hook stays `ready` on the
     previous rows (`growing: true`) — the previous tuple stays subscribed only
@@ -621,6 +622,7 @@ grouped under the wave or item that removes it
 - Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means, and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Uses:
+    - `primitives/live-state.PagedResourceResult`
     - `primitives/live-state.ResourceDescriptor`
     - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceResult`
@@ -630,7 +632,6 @@ grouped under the wave or item that removes it
   - Exports (types):
     - `LiveIdsQuery`
     - `LiveListResult`
-    - `LivePaging`
     - `LiveRowResult`
     - `LiveScrollOptions`
     - `LiveSegmentError`
@@ -866,6 +867,7 @@ grouped under the wave or item that removes it
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-order`
+    - `primitives/metrics`
     - `primitives/usage-rank`
     - `release`
     - `review`

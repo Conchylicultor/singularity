@@ -92,6 +92,7 @@ Shared (both paths):
     - `primitives/date-picker`
     - `primitives/icon-picker`
     - `primitives/loading`
+    - `primitives/metrics`
     - `screenshot`
     - `stats/cost`
     - `stats/responsiveness`

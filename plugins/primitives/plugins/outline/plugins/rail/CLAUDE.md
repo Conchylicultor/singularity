@@ -152,6 +152,7 @@ closed panel `inert` and fades it out rather than unmounting it.
   - Imported by:
     - `apps/pages/page-outline`
     - `conversations/conversation-view/jsonl-viewer/outline`
+    - `primitives/metrics`
 - Core:
   - Exports (types): `OutlineEntry`
 

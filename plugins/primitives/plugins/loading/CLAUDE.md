@@ -183,6 +183,8 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `primitives/icon-picker`
     - `primitives/lazy-component`
     - `primitives/live-state`
+    - `primitives/metrics`
+    - `primitives/metrics/chart-kit`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `review`

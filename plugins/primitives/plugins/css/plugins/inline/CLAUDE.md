@@ -111,6 +111,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `primitives/data-view/tree`
     - `primitives/detail-sections`
     - `primitives/live-state`
+    - `primitives/metrics`
     - `primitives/overlay/tooltip`
     - `primitives/text-editor/inline-chip`
     - `reorder/editor`

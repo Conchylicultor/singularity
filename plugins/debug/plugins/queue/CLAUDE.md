@@ -14,7 +14,6 @@
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.LiveListResult`
-    - `network/live.LivePaging`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -37,6 +36,7 @@
     - `primitives/filter-chips.useChipFilter`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourcePaging`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`

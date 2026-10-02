@@ -69,6 +69,7 @@ anonymous index signature. See
     - `primitives/data-view`
     - `primitives/data-view/view-core`
     - `primitives/filter-chips`
+    - `primitives/metrics`
     - `primitives/text-editor/composer`
     - `primitives/view-switcher`
     - `review`

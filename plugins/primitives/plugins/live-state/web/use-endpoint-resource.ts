@@ -1,7 +1,11 @@
 import { useMemo } from "react";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { EndpointDef } from "@plugins/infra/plugins/endpoints/core";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { toResourceError } from "./resource-error";
+import {
+  useEndpoint,
+  type EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
+import { queryResult } from "./query-result";
 import type { ResourceResult } from "./use-resource";
 
 /**
@@ -19,7 +23,10 @@ import type { ResourceResult } from "./use-resource";
  *
  * The error is classified through the same `toResourceError` a live read's is,
  * so a surface renders both failures alike. The result is memoized on the
- * query's data / error identity, like `useResource`'s.
+ * query's data / error identity, like `useResource`'s. The mapping is
+ * `useQueryResource`'s (`queryResult`) — the read for a POST endpoint, whose
+ * body is the question. Query options (`staleTime`, …) pass through, except
+ * `enabled`: a disabled read would be `loading` forever.
  *
  * Lives here, not in endpoints, for the same reason `hydrateEndpoint` does:
  * live-state owns `ResourceResult` and already sits downstream of endpoints.
@@ -32,26 +39,15 @@ export function useEndpointResource<
 >(
   endpoint: EndpointDef<Route, TParams, void, TResponse, TQuery>,
   params: TParams,
-  opts?: { query?: TQuery },
+  opts?: { query?: TQuery } & Omit<
+    UseQueryOptions<TResponse, EndpointError, TResponse>,
+    "queryKey" | "queryFn" | "enabled"
+  >,
 ): ResourceResult<TResponse> {
   const q = useEndpoint(endpoint, params, opts);
   const { data, error, refetch: refetchQuery } = q;
-  return useMemo((): ResourceResult<TResponse> => {
-    const refetch = () => refetchQuery().then(() => {});
-    if (error !== null)
-      return data === undefined
-        ? {
-            status: "error",
-            error: toResourceError(error),
-            refetch,
-          }
-        : {
-            status: "error",
-            error: toResourceError(error),
-            stale: data,
-            refetch,
-          };
-    if (data === undefined) return { status: "loading", refetch };
-    return { status: "ready", data, refetch };
-  }, [data, error, refetchQuery]);
+  return useMemo(
+    () => queryResult(data, error, refetchQuery),
+    [data, error, refetchQuery],
+  );
 }

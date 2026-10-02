@@ -51,6 +51,13 @@ await mutateAsync({ id }, { body: { name: "new" } });
 
 Use `fetchEndpoint` for imperative fetches outside React. Non-2xx responses throw `EndpointError(status, body)`.
 
+**A read that a surface renders is a `ResourceResult`, not React Query's own result** (whose `isPending` / `isError` let a surface read `data ?? []` without asking which state it is in). From `@plugins/primitives/plugins/live-state/web` (live-state sits downstream of endpoints, so the adapters live there):
+
+- a GET — `useEndpointResource(endpoint, params, opts)` instead of `useEndpoint`;
+- a POST read (a structured body is the question, so `useEndpoint` cannot carry it) — `useQueryResource({ queryKey, queryFn: ({ signal }) => fetchEndpoint(ep, params, { body, signal }) })`, or `useInfiniteQueryResource` for a cursor-paged one. A query keyed by another read's value (a revision, an id) passes that read first: `useQueryResource(dep, (value) => options)`.
+
+An `EndpointError` maps to `not-found` on a 404 and `loader-failed` otherwise, with the server's message; a `fetch` that got no answer to `transport`; a response the schema rejects to `client-outdated`.
+
 To make a GET available on the **first render** (no loading flash), seed it from a `Core.Boot` task with `hydrateEndpoint(endpoint, params, opts, data)` — exported from `@plugins/primitives/plugins/live-state/web` (live-state owns the app's default QueryClient and sits downstream of endpoints, so the import can only point that way). It writes the exact query key `useEndpoint` reads via the shared `endpointQueryKey` helper this plugin exports, so the two cannot drift. Canonical use: tweakcn's preset list (`plugins/ui/plugins/tweakcn/web/boot.ts`).
 
 ## Non-JSON payloads (codecs)
@@ -388,6 +395,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `primitives/launch`
     - `primitives/live-state`
     - `primitives/log-channels`
+    - `primitives/metrics`
     - `primitives/optimistic-mutation`
     - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/usage-rank`

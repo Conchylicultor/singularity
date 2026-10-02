@@ -7444,6 +7444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops/pane`
           - `debug/stall-monitor`
           - `debug/stuck-spans`
+          - `primitives/metrics`
           - `shell/global-action-bar`
           - `shell/notifications`
           - `tasks/worktree-identity`
@@ -15103,7 +15104,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
           - `network/live.LiveListResult`
-          - `network/live.LivePaging`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
@@ -15126,6 +15126,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/filter-chips.useChipFilter`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.ResourceErrorInline`
+          - `primitives/live-state.ResourcePaging`
           - `primitives/live-state.ResourceView`
           - `primitives/loading.Loading`
           - `primitives/pane.openPane`
@@ -20031,6 +20032,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/launch`
           - `primitives/live-state`
           - `primitives/log-channels`
+          - `primitives/metrics`
           - `primitives/optimistic-mutation`
           - `primitives/overlay/imperative-dialog/confirm`
           - `primitives/usage-rank`
@@ -22536,6 +22538,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means, and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Uses:
+          - `primitives/live-state.PagedResourceResult`
           - `primitives/live-state.ResourceDescriptor`
           - `primitives/live-state.ResourceError`
           - `primitives/live-state.ResourceResult`
@@ -22545,7 +22548,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `LiveIdsQuery`
           - `LiveListResult`
-          - `LivePaging`
           - `LiveRowResult`
           - `LiveScrollOptions`
           - `LiveSegmentError`
@@ -22781,6 +22783,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-order`
+          - `primitives/metrics`
           - `primitives/usage-rank`
           - `release`
           - `review`
@@ -23031,6 +23034,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `backgroundArgv`
           - `backgroundPrefix`
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
+      - Cross-plugin:
+        - Imported by: `primitives/metrics`
       - Core:
         - Exports (types): `WallClock`
         - Exports (values):
@@ -26371,7 +26376,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readPluginMoves`
     - **`specimens`** — Specimen registry: a plugin exhibits one of its REAL components (Specimens.Specimen, a dispatch slot keyed on the id: label, optional widths, a self-contained component) so another surface can render it standalone inside the running app, with real slots, config and data. useSpecimen(id) answers found / missing / ambiguous; <Specimens.Specimen.Dispatch id/> renders it isolated. Owns the slot; knows no contributor.
       - Web:
-        - Slots: `Specimens.Specimen` ← `tasks.task-draft-form`
+        - Slots: `Specimens.Specimen` ← `primitives.metrics.chart-kit`, `tasks.task-draft-form`
         - Uses: `primitives/slot-render.defineDispatchSlot`
         - Exports (types):
           - `SpecimenInfo`
@@ -26385,6 +26390,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/prototypes/compare/component`
+          - `primitives/metrics/chart-kit`
           - `tasks/task-draft-form`
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
@@ -27103,6 +27109,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/place`
               - `primitives/css/layout-harness`
               - `primitives/data-view/gallery`
+              - `primitives/metrics`
+              - `primitives/metrics/chart-kit`
               - `primitives/section-card`
               - `review/plugin-changes`
         - **`center`** — Centering layout primitive: <Center axis> centers its content on one or both axes via a grid place-items box.
@@ -27197,6 +27205,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/icon-picker`
               - `primitives/live-state`
+              - `primitives/metrics`
+              - `primitives/metrics/chart-kit`
               - `primitives/overlay/image-viewer`
               - `primitives/pane`
               - `primitives/setup-steps`
@@ -27331,6 +27341,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/inclusion`
               - `primitives/avatar`
               - `primitives/date-picker`
+              - `primitives/metrics`
+              - `primitives/metrics/chart-kit`
               - `primitives/text-editor/composer`
               - `stats/commits`
               - `tasks/task-dependencies`
@@ -27516,6 +27528,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/timeline`
               - `page/editor`
               - `primitives/graph-canvas`
+              - `primitives/metrics/chart-kit`
               - `primitives/overlay/image-viewer`
               - `primitives/ui-context/element-picker`
               - `primitives/virtual-rows`
@@ -27642,6 +27655,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/graph-canvas`
               - `primitives/launch`
               - `primitives/log-channels`
+              - `primitives/metrics`
               - `primitives/outline/rail`
               - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
@@ -27695,6 +27709,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/date-picker`
               - `primitives/icon-picker`
               - `primitives/loading`
+              - `primitives/metrics`
               - `screenshot`
               - `stats/cost`
               - `stats/responsiveness`
@@ -27798,6 +27813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/tree`
               - `primitives/detail-sections`
               - `primitives/live-state`
+              - `primitives/metrics`
               - `primitives/overlay/tooltip`
               - `primitives/text-editor/inline-chip`
               - `reorder/editor`
@@ -28417,6 +28433,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/view-core`
               - `primitives/folder-picker`
               - `primitives/log-channels`
+              - `primitives/metrics`
               - `primitives/outline/rail`
               - `primitives/section-card`
               - `reorder/editor`
@@ -28523,6 +28540,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/icon-picker`
               - `primitives/log-channels`
+              - `primitives/metrics`
+              - `primitives/metrics/chart-kit`
               - `primitives/pane`
               - `primitives/syntax-highlight`
               - `review`
@@ -28870,6 +28889,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state`
               - `primitives/loading`
               - `primitives/log-channels`
+              - `primitives/metrics`
+              - `primitives/metrics/chart-kit`
               - `primitives/multi-select`
               - `primitives/outline/rail`
               - `primitives/overlay/floating-action`
@@ -29088,6 +29109,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible-wrap`
               - `primitives/css/card`
               - `primitives/data-view/capsule-toolbar`
+              - `primitives/metrics/chart-kit`
               - `primitives/row-actions`
               - `stats`
         - **`switch`** — On/off switch primitive: SwitchIndicator is the presentational track+knob (a span with no role or handler, safe inside something that is already the click target), and Switch wraps it in its own role=switch button for standalone use.
@@ -29405,6 +29427,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/markdown`
+              - `primitives/metrics`
+              - `primitives/metrics/chart-kit`
               - `primitives/outline/rail`
               - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
@@ -29546,6 +29570,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view`
               - `primitives/data-view/view-core`
               - `primitives/filter-chips`
+              - `primitives/metrics`
               - `primitives/text-editor/composer`
               - `primitives/view-switcher`
               - `review`
@@ -29970,6 +29995,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state`
               - `primitives/loading`
               - `primitives/log-channels`
+              - `primitives/metrics`
+              - `primitives/metrics/chart-kit`
               - `primitives/multi-select`
               - `primitives/outline/rail`
               - `primitives/overlay/cursor-menu`
@@ -30201,6 +30228,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/heap-snapshot`
           - `debug/profiling/boot`
           - `primitives/data-view/table`
+          - `primitives/metrics/chart-kit`
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Web:
         - Slots:
@@ -31034,7 +31062,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `buildViewConfigRegistrations`
               - `viewsDescriptor`
           - Cross-plugin:
-            - Imported by: `primitives/data-view`
+            - Imported by:
+              - `primitives/data-view`
+              - `primitives/metrics`
           - Core:
             - Exports (types):
               - `AddableSource`
@@ -31325,6 +31355,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/icons`
               - `primitives/expandable`
               - `primitives/graph-canvas`
+              - `primitives/metrics/chart-kit`
               - `primitives/outline/rail`
               - `primitives/overlay/floating-action`
               - `primitives/overlay/image-viewer`
@@ -31718,6 +31749,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/folder-picker`
           - `primitives/launch`
           - `primitives/live-state`
+          - `primitives/metrics`
           - `primitives/overlay/image-viewer`
           - `primitives/pane`
           - `primitives/prompt-editor/voice-input`
@@ -31979,10 +32011,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Exports (types): `LinkGestureProps`
         - Exports (values): `linkGestureProps`
-    - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
+    - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.
       - Web:
         - Uses:
+          - `infra/endpoints.EndpointError`
           - `infra/endpoints.endpointQueryKey`
+          - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpoint`
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
@@ -31992,7 +32026,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
-          - `primitives/latest-ref.useLatestRef`
+          - `primitives/latest-ref.useEventCallback`
           - `primitives/loading.Loading`
           - `primitives/log-channels.clientLog`
           - `primitives/networking.NetDiagEvent`
@@ -32011,13 +32045,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GateDataOf`
           - `GateInput`
           - `HttpStaleDropReport`
+          - `InfiniteQueryResourceOptions`
           - `LeaderInfo`
           - `LiveStateSocketKind`
           - `MatchResourceHandlers`
           - `MissedFrame`
+          - `PagedResourceResult`
           - `PendingMountSnapshot`
           - `PointParams`
           - `PointResourceDescriptor`
+          - `QueryResourceOptions`
           - `ResourceContractMismatch`
           - `ResourceDescriptor`
           - `ResourceErrorInfo`
@@ -32025,6 +32062,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ResourceErrorKind`
           - `ResourceKey`
           - `ResourceOrigin`
+          - `ResourcePaging`
           - `ResourceReadiness`
           - `ResourceResult`
           - `ResourceStatus`
@@ -32064,9 +32102,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useCombinedResources`
           - `useEndpointResource`
           - `useFailingResources`
+          - `useInfiniteQueryResource`
           - `useNotificationsChannelStatuses`
           - `useNotificationsClient`
           - `useNotificationsStatus`
+          - `useQueryResource`
           - `useResource`
           - `useResourceAcks`
           - `useResourceContractMismatches`
@@ -32216,6 +32256,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-core`
           - `primitives/data-view/view-order`
+          - `primitives/metrics`
           - `primitives/optimistic-mutation`
           - `primitives/pane`
           - `release`
@@ -32433,6 +32474,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-picker`
           - `primitives/lazy-component`
           - `primitives/live-state`
+          - `primitives/metrics`
+          - `primitives/metrics/chart-kit`
           - `primitives/overlay/image-viewer`
           - `primitives/pane`
           - `review`
@@ -32611,6 +32654,291 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/markdown-extensions`
           - `debug/memory`
+    - **`metrics`** — Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails (ResourceResult reads — the details one paged — keyed by the source's metricRevision, so a source change refetches without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the catalog / query / details endpoints evaluating any of them through the one tz-aware bucketing engine, the sqlFlow / sqlLevel helpers joining a table against the engine's intervals, and the metricRevision live value each source's `changes` moves.
+      - Server:
+        - Contributes: `resource.declare` "metrics.revision"
+        - Uses:
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `network/live.serveValue`
+          - `primitives/data-view/view-core.buildViewConfigRegistrations`
+        - Exports (types):
+          - `BreakdownImpl`
+          - `DetailsCtx`
+          - `MetricDetails`
+          - `MetricImpl`
+          - `SourceImpl`
+          - `SqlFlowSpec`
+          - `SqlLevelSpec`
+          - `SqlSplit`
+        - Exports (values):
+          - `boardConfigRegistrations`
+          - `MetricsServer`
+          - `serveBreakdown`
+          - `serveMetric`
+          - `sqlFlow`
+          - `sqlLevel`
+        - Resources: `metrics.revision` (push)
+        - Routes:
+          - `GET /api/metrics/catalog`
+          - `POST /api/metrics/query`
+          - `POST /api/metrics/details`
+      - Web:
+        - Uses:
+          - `apps-core/tabs.navigate`
+          - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLive`
+          - `primitives/css/card.Card`
+          - `primitives/css/center.Center`
+          - `primitives/css/cluster.Cluster`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/grid.Grid`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/row.Row`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/css/toggle-chip.ToggleChip`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.Sheet`
+          - `primitives/css/ui-kit.SheetContent`
+          - `primitives/css/ui-kit.SheetDescription`
+          - `primitives/css/ui-kit.SheetHeader`
+          - `primitives/css/ui-kit.SheetTitle`
+          - `primitives/data-view/view-core.buildViewConfigContributions`
+          - `primitives/data-view/view-core.buildViewDescriptors`
+          - `primitives/data-view/view-core.EditableViewSwitcher`
+          - `primitives/data-view/view-core.useViewModel`
+          - `primitives/icon-button.IconButton`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.matchResource`
+          - `primitives/live-state.PagedResourceResult`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/live-state.ResourceResult`
+          - `primitives/live-state.ResourceView`
+          - `primitives/live-state.useEndpointResource`
+          - `primitives/live-state.useInfiniteQueryResource`
+          - `primitives/live-state.useQueryResource`
+          - `primitives/loading.Loading`
+          - `primitives/metrics/chart-kit.ChartOrTable`
+          - `primitives/metrics/chart-kit.ChartState`
+          - `primitives/metrics/chart-kit.Sparkline`
+          - `primitives/outline/rail.OutlineRail`
+          - `primitives/persistent-draft.useDraft`
+          - `ui/icons.Icon`
+        - Exports (types):
+          - `BoardConfig`
+          - `BoardContext`
+          - `BoardProps`
+          - `BoardViewProps`
+          - `BreakdownCardProps`
+          - `DeltaProps`
+          - `DrillDrawerProps`
+          - `DrillSource`
+          - `DrillTarget`
+          - `MetricBucket`
+          - `MetricCardProps`
+          - `MetricErrorProps`
+          - `MetricPick`
+          - `MetricTileProps`
+          - `RangeBarProps`
+        - Exports (values):
+          - `Board`
+          - `BoardView`
+          - `BreakdownCard`
+          - `defineBoardConfig`
+          - `Delta`
+          - `DrillDrawer`
+          - `MetricCard`
+          - `MetricError`
+          - `MetricTile`
+          - `RangeBar`
+          - `useMetric`
+          - `useMetricCatalog`
+          - `useMetricDetails`
+      - Core:
+        - Uses:
+          - `network/live.liveValue`
+          - `packages/wall-clock.wallClockToInstant`
+          - `packages/wall-clock.zoneWallClock`
+        - Exports (types):
+          - `BoardSection`
+          - `BoardSpec`
+          - `BreakdownCtx`
+          - `BreakdownDecl`
+          - `BreakdownEvaluate`
+          - `BreakdownOrder`
+          - `BreakdownRef`
+          - `BreakdownResult`
+          - `BreakdownRow`
+          - `Bucket`
+          - `BucketUnit`
+          - `CardRef`
+          - `Catalog`
+          - `CatalogBreakdown`
+          - `CatalogMetric`
+          - `CatalogSource`
+          - `DeclParams`
+          - `Delta`
+          - `DetailsQuery`
+          - `DisplayChart`
+          - `DisplayError`
+          - `DrillItem`
+          - `DrillPage`
+          - `EngineQuery`
+          - `EntityLink`
+          - `EvaluateCtx`
+          - `EvaluatedRow`
+          - `Interval`
+          - `Measure`
+          - `MetricDecl`
+          - `MetricDisplay`
+          - `MetricEvaluate`
+          - `MetricQuery`
+          - `MetricRef`
+          - `MetricResult`
+          - `MetricRevision`
+          - `MetricSourceDecl`
+          - `ParamSpec`
+          - `ParamSpecs`
+          - `ParamSpecWire`
+          - `ParamValue`
+          - `ParamValues`
+          - `ParseParamsResult`
+          - `Polarity`
+          - `Preset`
+          - `RangeSpec`
+          - `ResolvedRange`
+          - `Series`
+          - `SeriesResult`
+          - `SplitDecl`
+          - `Unit`
+        - Exports (values):
+          - `boardParamsFor`
+          - `BoardSectionSchema`
+          - `BoardSpecSchema`
+          - `bool`
+          - `BREAKDOWN_ORDERS`
+          - `BreakdownRefSchema`
+          - `BreakdownResultSchema`
+          - `BreakdownRowSchema`
+          - `BUCKET_UNITS`
+          - `BucketSchema`
+          - `CardRefSchema`
+          - `CatalogBreakdownSchema`
+          - `CatalogMetricSchema`
+          - `CatalogSchema`
+          - `CatalogSourceSchema`
+          - `cumulative`
+          - `defineBreakdown`
+          - `defineMetric`
+          - `defineMetricSource`
+          - `delta`
+          - `DetailsQuerySchema`
+          - `DISPLAY_CHARTS`
+          - `displayError`
+          - `DrillItemSchema`
+          - `DrillPageSchema`
+          - `EntityLinkSchema`
+          - `enumOf`
+          - `evaluateBreakdown`
+          - `evaluateMetric`
+          - `IntervalSchema`
+          - `InvalidRangeError`
+          - `isTimeZone`
+          - `MAX_BUCKETS`
+          - `MEASURES`
+          - `MetricQuerySchema`
+          - `MetricRefSchema`
+          - `MetricResultSchema`
+          - `metricRevision`
+          - `MetricRevisionSchema`
+          - `paramSpecsToWire`
+          - `ParamSpecWireSchema`
+          - `parseParams`
+          - `POLARITIES`
+          - `PRESETS`
+          - `RangeSpecSchema`
+          - `resolveRange`
+          - `SeriesResultSchema`
+          - `SeriesSchema`
+          - `stringList`
+          - `tileValue`
+          - `UNITS`
+      - Plugins:
+        - **`chart-kit`** — Hand-rolled SVG chart kit, knowing nothing about metrics: TimeChart (area / line / stack / mirror / net, a dashed compare line, gaps for null, partial buckets drawn lighter / dashed, hover + keyboard tooltip, onPick), Sparkline, Histogram, the ChartTable twin, ChartOrTable and ChartState (loading / empty / error at chart height). Series take --categorical-1…10 in fixed order, the tail folding into Other; chrome is neutral tokens.
+          - Web:
+            - Contributes:
+              - `Specimens.Specimen` "chart-kit/time-chart" → `TimeChartSpecimen`
+              - `Specimens.Specimen` "chart-kit/histogram" → `HistogramSpecimen`
+              - `Specimens.Specimen` "chart-kit/sparkline" → `SparklineSpecimen`
+            - Uses:
+              - `plugin-meta/specimens.Specimens`
+              - `primitives/css/card.Card`
+              - `primitives/css/center.Center`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/coords.Placed`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Inset`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/surface.Surface`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/data-table.ColumnDef`
+              - `primitives/data-table.DataTable`
+              - `primitives/dom/element-size.useElementSize`
+              - `primitives/loading.Loading`
+            - Exports (types):
+              - `ChartOrTableProps`
+              - `ChartStateProps`
+              - `ChartTableProps`
+              - `HistogramBin`
+              - `HistogramProps`
+              - `LegendProps`
+              - `SparklineProps`
+              - `TimeChartProps`
+            - Exports (values):
+              - `ChartOrTable`
+              - `ChartState`
+              - `ChartTable`
+              - `Histogram`
+              - `Legend`
+              - `Sparkline`
+              - `TimeChart`
+          - Cross-plugin:
+            - Imported by: `primitives/metrics`
+          - Core:
+            - Exports (types):
+              - `ChartBucket`
+              - `ChartCompare`
+              - `ChartSeries`
+              - `ChartUnit`
+              - `ChartValue`
+              - `ColoredSeries`
+              - `LinePaths`
+              - `PlotPoint`
+              - `TimeChartKind`
+            - Exports (values):
+              - `areaPath`
+              - `assertChartShape`
+              - `CATEGORICAL_SLOTS`
+              - `categoricalColor`
+              - `colorSeries`
+              - `foldSeries`
+              - `formatAxis`
+              - `formatSigned`
+              - `formatValue`
+              - `linearScale`
+              - `linePaths`
+              - `niceTicks`
+              - `NO_VALUE`
+              - `offsetBarPath`
+              - `stackSegments`
+              - `stackTotal`
+              - `valueDomain`
     - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
       - Web:
         - Uses:
@@ -32746,6 +33074,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/pages/page-outline`
               - `conversations/conversation-view/jsonl-viewer/outline`
+              - `primitives/metrics`
           - Core:
             - Exports (types): `OutlineEntry`
         - **`scroll-spy`** — Where the reader is in a scrolling document: useActiveInView(ids, resolve, {position}) watches the resolved elements through ONE in-view watcher and answers with either the section being read (the first id in the top third of the scroller) or how far the reader has got (the last id anywhere on screen). Holds the last answer while nothing is on screen, and enrolls elements incrementally as they mount.
@@ -33569,6 +33898,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/detail-sections`
           - `primitives/dom/auto-scroll`
           - `primitives/launch`
+          - `primitives/metrics`
           - `primitives/usage-rank`
           - `tasks/task-draft-form`
       - Web:
@@ -38328,6 +38658,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button`
           - `primitives/icon-picker`
           - `primitives/launch`
+          - `primitives/metrics`
           - `primitives/overlay/image-viewer`
           - `primitives/pane`
           - `primitives/search`

@@ -366,6 +366,8 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/live-state`
     - `primitives/loading`
     - `primitives/log-channels`
+    - `primitives/metrics`
+    - `primitives/metrics/chart-kit`
     - `primitives/multi-select`
     - `primitives/outline/rail`
     - `primitives/overlay/floating-action`

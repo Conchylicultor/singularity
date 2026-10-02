@@ -6,7 +6,7 @@ import {
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { LivePaging } from "@plugins/network/plugins/live/web";
+import type { ResourcePaging } from "@plugins/primitives/plugins/live-state/web";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { MessageCard } from "./message-card";
 
@@ -14,7 +14,7 @@ export interface MessageListProps {
   /** The loaded messages, oldest→newest. */
   messages: MailMessage[];
   /** The window's paging handles: growing it loads OLDER messages. */
-  older: LivePaging;
+  older: ResourcePaging;
 }
 
 // The scrolling body of the reading pane: the thread's loaded messages, oldest→

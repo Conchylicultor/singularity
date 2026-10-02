@@ -28,6 +28,7 @@ tab's own — the prototype canvas, keyed by its pane instance.
     - `primitives/detail-sections`
     - `primitives/dom/auto-scroll`
     - `primitives/launch`
+    - `primitives/metrics`
     - `primitives/usage-rank`
     - `tasks/task-draft-form`
 - Web:

@@ -183,6 +183,7 @@ default is stated twice and can therefore drift.
     - `debug/timeline`
     - `page/editor`
     - `primitives/graph-canvas`
+    - `primitives/metrics/chart-kit`
     - `primitives/overlay/image-viewer`
     - `primitives/ui-context/element-picker`
     - `primitives/virtual-rows`

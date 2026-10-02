@@ -664,7 +664,12 @@ destructive default button modes). Three lint rules keep it out:
 - `live-state/no-handrolled-result` — outside live-state and `network/live`, no
   hand-written `status: "loading" | "error"` result arm or result union: derive
   with `mapResource` / `combineResources` so the typed error, `stale` and
-  `refetch` survive.
+  `refetch` survive; a TanStack query becomes a result through
+  `useQueryResource` / `useInfiniteQueryResource` (below). Its message lists
+  every sanctioned constructor from ONE table, `lint/result-constructors.ts`
+  (`{ name, from, use }`), which also derives the owning plugins; a new clean
+  form is one row there, and `result-constructors.test.ts` fails if a row names
+  something its barrel does not export.
 
 The rules cover **`useConfigResult`** (config_v2) too: a config's defaults are a
 *legitimate* value, so collapsing its loading arm produces a wrong state that
@@ -709,6 +714,35 @@ failed). It offers Retry, or "App updated — reload" for `client-outdated`.
 Data-dependent **action buttons** render disabled-neutral while loading — never a
 default mode, and especially never the destructive one — and the error variant
 when the read failed.
+
+**A TanStack query is read through an adapter, never returned raw.** A read
+that is not a live resource — a GET endpoint, a POST endpoint whose body is
+the question, any `queryFn` — still renders through the result vocabulary:
+
+```ts
+useEndpointResource(getCatalog, {}, { staleTime: Infinity }); // a GET endpoint
+useQueryResource({ queryKey, queryFn: ({ signal }) =>          // any query, e.g. a POST
+  fetchEndpoint(queryMetric, {}, { body, signal }) });
+useQueryResource(rev, (r) => ({ queryKey: [..., r], queryFn })); // keyed by another read
+useInfiniteQueryResource({ queryKey, queryFn, initialPageParam, getNextPageParam });
+```
+
+All three — and `useResource` itself — map (data, error) through one
+`queryResult` (`web/query-result.ts`; `useResource` passes its own "a value
+landed" flag so the `initialData` placeholder stays `loading`): `error` whenever the last
+fetch failed (the previous value as `stale`), `loading` while nothing landed,
+`ready` otherwise; the failure goes through `toResourceError` (an
+`EndpointError` 404 → `not-found`, other status → `loader-failed`). `enabled`
+is not an option — a disabled query is `loading` forever; the dependent form
+takes the dependency's result instead, standing on its loading arm, failing
+with it when it failed before ever landing, and keying by its `stale` value
+when it failed after. The paged form's data is the page list, and its ready arm
+carries the paging handles (`ResourcePaging`: `canGrow` / `growing` /
+`loadMore` — the same type `useLive`'s window result uses, whose
+`LiveListResult<Row>` is `PagedResourceResult<Row>`); a
+failed next page is the error arm with the pages already held as `stale`.
+Returning a raw `UseQueryResult` hands the caller `isPending` / `isError` and a
+`data` it can read without asking — the collapse this section exists to ban.
 
 **Domain hooks keep every arm.** A hook that narrows a read — one row of a
 collection, one key out of a record — never returns a bare `T | null`: "not
@@ -791,11 +825,13 @@ This narrows re-renders, not the WS subscription: N callers of the same
 
 ## Plugin reference
 
-- Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
+- Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.
 - Load-bearing: yes
 - Web:
   - Uses:
+    - `infra/endpoints.EndpointError`
     - `infra/endpoints.endpointQueryKey`
+    - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
@@ -805,7 +841,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useLatestRef`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/networking.NetDiagEvent`
@@ -824,13 +860,16 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `GateDataOf`
     - `GateInput`
     - `HttpStaleDropReport`
+    - `InfiniteQueryResourceOptions`
     - `LeaderInfo`
     - `LiveStateSocketKind`
     - `MatchResourceHandlers`
     - `MissedFrame`
+    - `PagedResourceResult`
     - `PendingMountSnapshot`
     - `PointParams`
     - `PointResourceDescriptor`
+    - `QueryResourceOptions`
     - `ResourceContractMismatch`
     - `ResourceDescriptor`
     - `ResourceErrorInfo`
@@ -838,6 +877,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `ResourceErrorKind`
     - `ResourceKey`
     - `ResourceOrigin`
+    - `ResourcePaging`
     - `ResourceReadiness`
     - `ResourceResult`
     - `ResourceStatus`
@@ -877,9 +917,11 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `useCombinedResources`
     - `useEndpointResource`
     - `useFailingResources`
+    - `useInfiniteQueryResource`
     - `useNotificationsChannelStatuses`
     - `useNotificationsClient`
     - `useNotificationsStatus`
+    - `useQueryResource`
     - `useResource`
     - `useResourceAcks`
     - `useResourceContractMismatches`
@@ -1029,6 +1071,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-core`
     - `primitives/data-view/view-order`
+    - `primitives/metrics`
     - `primitives/optimistic-mutation`
     - `primitives/pane`
     - `release`
