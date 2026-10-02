@@ -117,6 +117,8 @@ self-echo behavior that must keep holding.
     - `apps/sonata/library`
     - `conversations/agents`
     - `conversations/conversation-view/notes`
+    - `fields/multiline-text/config`
+    - `fields/text/config`
     - `tasks/task-description`
     - `tasks/task-header`
 

@@ -1,7 +1,5 @@
-import {
-  defineFieldShape,
-  useLocalValue,
-} from "@plugins/config_v2/plugins/fields/web";
+import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
+import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { multilineTextFieldType } from "@plugins/fields/plugins/multiline-text/core";
 import { type MultilineTextFieldDef } from "../../core";
 
@@ -10,21 +8,23 @@ import { type MultilineTextFieldDef } from "../../core";
 const MultilineTextRenderer = defineFieldShape({
   type: multilineTextFieldType,
   useShape: ({ field, value, onChange }) => {
-    const { local, setLocal, focus } = useLocalValue(value);
+    // Debounced autosave (flush on blur), like every other text field in the app.
+    const draft = useEditableField({
+      value,
+      onSave: onChange,
+      label: field.meta.label,
+    });
     const rows = (field as MultilineTextFieldDef).rows ?? 4;
     return {
       kind: "block",
       control: (
         <textarea
-          value={local}
+          value={draft.value}
           rows={rows}
           placeholder={field.meta.placeholder}
-          onFocus={focus.onFocus}
-          onBlur={() => {
-            focus.onBlur();
-            if (local !== value) onChange(local);
-          }}
-          onChange={(e) => setLocal(e.target.value)}
+          onFocus={draft.onFocus}
+          onBlur={draft.onBlur}
+          onChange={(e) => draft.onChange(e.target.value)}
           className="focus-ring w-full resize-y rounded-lg border border-input bg-transparent px-sm py-xs text-body placeholder:text-muted-foreground dark:bg-input/30"
         />
       ),

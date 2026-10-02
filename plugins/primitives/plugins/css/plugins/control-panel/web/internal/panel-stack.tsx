@@ -53,13 +53,13 @@ export function ControlPanelStack({
   state,
 }: ControlPanelStackProps) {
   const own = usePanelStackState();
-  const { entries: stack, push, pop, reset } = state ?? own;
+  const { entries: stack, push, pop, close, reset } = state ?? own;
   const containerRef = useRef<HTMLDivElement>(null);
 
   const depth = stack.length;
   const api = useMemo<PanelStackApi>(
-    () => ({ depth, push, pop, reset }),
-    [depth, push, pop, reset],
+    () => ({ depth, push, pop, close, reset }),
+    [depth, push, pop, close, reset],
   );
 
   // Escape pops one level and stops there; at depth 0 it falls through so the
@@ -85,7 +85,7 @@ export function ControlPanelStack({
   }, [depth, onExhausted, pop]);
 
   // On push, focus moves into the panel that just appeared — otherwise focus
-  // stays on the row that pushed it, which has just unmounted, and the keyboard
+  // stays on the row that pushed it, which has just been hidden, and the keyboard
   // user lands back at the document body. Only on the way DOWN: popping should
   // leave focus where the back button was.
   const prevDepth = useRef(depth);
@@ -93,13 +93,34 @@ export function ControlPanelStack({
     const grew = depth > prevDepth.current;
     prevDepth.current = depth;
     if (!grew) return;
+    // Scoped to the SHOWING level: the levels below it are still mounted (see
+    // the render), and their first button comes first in document order.
     const first = containerRef.current?.querySelector<HTMLElement>(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      `[data-cp-level="${depth}"] :is(` +
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])' +
+        ")",
     );
     first?.focus();
   }, [depth]);
 
   const top = stack.at(-1);
+
+  // EVERY LEVEL STAYS MOUNTED; only the top one is shown. A pushed page is
+  // usually a live view of something its pusher owns — a `Group`'s fields, which
+  // it portals into its level — and that only works while the pusher is still
+  // rendered. Unmounting the levels below (what this used to do) froze a pushed
+  // page at the props it was pushed with: an edit there wrote through a closure
+  // over the value as it was at push time, so the NEXT edit silently reverted
+  // the one before it, and removing the item it was about left its page on screen.
+  const level = (index: number, content: React.ReactNode, key: string) => (
+    <div
+      key={key}
+      data-cp-level={index}
+      style={{ display: index === depth ? "contents" : "none" }}
+    >
+      {content}
+    </div>
+  );
 
   return (
     <PanelStackContext value={api}>
@@ -118,19 +139,15 @@ export function ControlPanelStack({
           still on the event path. */}
       <div ref={containerRef} style={{ display: "contents" }}>
         {top ? (
-          <>
-            <ControlPanelSection>
-              <ControlPanelRow
-                icon={<Icon icon={arrowBackIcon} />}
-                onSelect={pop}
-              >
-                {top.title}
-              </ControlPanelRow>
-            </ControlPanelSection>
-            {top.render()}
-          </>
-        ) : (
-          root
+          <ControlPanelSection>
+            <ControlPanelRow icon={<Icon icon={arrowBackIcon} />} onSelect={pop}>
+              {top.title}
+            </ControlPanelRow>
+          </ControlPanelSection>
+        ) : null}
+        {level(0, root, "root")}
+        {stack.map((entry, index) =>
+          level(index + 1, entry.render(), entry.key),
         )}
       </div>
     </PanelStackContext>

@@ -21,8 +21,8 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
-    - `config_v2/fields.useLocalValue`
     - `primitives/css/ui-kit.Input`
+    - `primitives/editable-field.useEditableField`
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`

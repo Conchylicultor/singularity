@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { ControlPanel } from "../internal/namespace";
 import { ControlPanelPane } from "../internal/control-panel-pane";
@@ -1052,5 +1052,49 @@ describe("ControlPanelPopover — the showing page's width role", () => {
     fireEvent.click(row);
     await screen.findByText("Filter builder");
     expect(panel.className).toContain("w-(--popover-width-builder)");
+  });
+});
+
+// A pushed page is a LIVE view of the group that pushed it — not a snapshot of
+// its children at push time. A snapshot is what made a list item's page write
+// every edit through a closure over the item as it was when opened (the next
+// edit silently reverted the previous one), and kept its page on screen after
+// the item was removed.
+describe("ControlPanel.Group — a pushed page stays live", () => {
+  function Item({ name, show }: { name: string; show: boolean }) {
+    return (
+      <ControlPanelPane label="Settings">
+        <ControlPanel.Section label="Items">
+          <ControlPanel.Group label="List">
+            {show ? (
+              <ControlPanel.Group label="Item">
+                <ControlPanel.Row>{name}</ControlPanel.Row>
+              </ControlPanel.Group>
+            ) : null}
+          </ControlPanel.Group>
+        </ControlPanel.Section>
+      </ControlPanelPane>
+    );
+  }
+
+  it("re-renders the pushed page with the group's current children", () => {
+    const { rerender } = render(<Item name="first" show />);
+    fireEvent.click(screen.getByRole("button", { name: /Item/ }));
+    expect(screen.getByText("first")).toBeTruthy();
+    act(() => rerender(<Item name="second" show />));
+    expect(screen.queryByText("first")).toBeNull();
+    expect(screen.getByText("second")).toBeTruthy();
+  });
+
+  it("closes the pushed page when its group goes away", () => {
+    const { rerender, container } = render(<Item name="first" show />);
+    fireEvent.click(screen.getByRole("button", { name: /Item/ }));
+    expect(screen.getByText("first")).toBeTruthy();
+    act(() => rerender(<Item name="first" show={false} />));
+    expect(screen.queryByText("first")).toBeNull();
+    // Back on the root level, which is shown again.
+    const root = container.querySelector<HTMLElement>('[data-cp-level="0"]')!;
+    expect(root.style.display).toBe("contents");
+    expect(container.querySelector('[data-cp-level="1"]')).toBeNull();
   });
 });

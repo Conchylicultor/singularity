@@ -25,7 +25,7 @@ table/filter capabilities from `text` via the identity `extends` chain.
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
-    - `config_v2/fields.useLocalValue`
+    - `primitives/editable-field.useEditableField`
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`

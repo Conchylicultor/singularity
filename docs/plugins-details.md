@@ -17384,7 +17384,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `config_v2/fields.useLocalValue`
+              - `primitives/editable-field.useEditableField`
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
@@ -17820,8 +17820,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `config_v2/fields.useLocalValue`
               - `primitives/css/ui-kit.Input`
+              - `primitives/editable-field.useEditableField`
           - Core:
             - Uses:
               - `config_v2/fields.fieldSample`
@@ -31973,6 +31973,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/library`
           - `conversations/agents`
           - `conversations/conversation-view/notes`
+          - `fields/multiline-text/config`
+          - `fields/text/config`
           - `tasks/task-description`
           - `tasks/task-header`
     - **`embed`** — The declared embedded-document signal: embedMode() reads the `?embed=` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read) — `?embed=1` opens one route with no app chrome, `?embed=chrome` opens the whole app, chrome included — and embedUrl(path, mode) builds an in-app URL that opens that way. isChromelessDocument() is read by the apps layout (no tab bar, no rail) and the floating action bar (hidden); isEmbeddedDocument() by the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame in either mode never evicts the host tab's own state.

@@ -39,6 +39,7 @@ export interface PanelStackState {
   entries: readonly PanelStackEntry[];
   push: (entry: PanelStackEntry) => void;
   pop: () => void;
+  close: (key: string) => void;
   reset: () => void;
 }
 
@@ -50,10 +51,16 @@ export function usePanelStackState(): PanelStackState {
     );
   }, []);
   const pop = useCallback(() => setEntries((prev) => prev.slice(0, -1)), []);
+  const close = useCallback((key: string) => {
+    setEntries((prev) => {
+      const index = prev.findIndex((entry) => entry.key === key);
+      return index === -1 ? prev : prev.slice(0, index);
+    });
+  }, []);
   const reset = useCallback(() => setEntries([]), []);
   return useMemo(
-    () => ({ entries, push, pop, reset }),
-    [entries, push, pop, reset],
+    () => ({ entries, push, pop, close, reset }),
+    [entries, push, pop, close, reset],
   );
 }
 
@@ -62,6 +69,13 @@ export interface PanelStackApi {
   depth: number;
   push: (entry: PanelStackEntry) => void;
   pop: () => void;
+  /**
+   * Removes the level pushed under `key` and every level above it; a no-op when
+   * it is not on the stack. For a pusher whose subject just went away — a
+   * `Group` unmounting because its list item was removed — so the user is not
+   * left on a page about something that no longer exists.
+   */
+  close: (key: string) => void;
   /** Back to the root in one step — for a host closing and reopening the panel. */
   reset: () => void;
 }

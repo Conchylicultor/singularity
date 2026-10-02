@@ -1,10 +1,12 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { ControlPanelSection } from "./control-panel";
 import { ControlPanelRow } from "./control-panel-row";
 import { GroupDepthProvider, useControlPanelHost, useGroupDepth } from "./host";
+import { usePanelStack } from "./stack-context";
 import {
   SettingDescription,
   SettingNote,
@@ -83,6 +85,17 @@ export function ControlPanelGroup({
   const host = useControlPanelHost();
   const depth = useGroupDepth();
   const key = useId();
+  // The node of this group's pushed level, while it is on the stack. The page is
+  // PORTALED into it from here rather than rendered by the stack, so it is this
+  // render's children — never a snapshot of the ones the group had when it was
+  // pushed — and it keeps every context this group sits in.
+  const [page, setPage] = useState<HTMLElement | null>(null);
+  // A group that goes away takes its page with it: removing a list item from
+  // inside its own page returns the user to the list, instead of leaving them
+  // on a page about an item that no longer exists. Unconditional (both hosts
+  // publish a stack, and the inline arm still pushes past its depth budget).
+  const { close } = usePanelStack();
+  useEffect(() => () => close(key), [close, key]);
 
   const inline = host.nesting === "inline" && depth < host.inlineDepth;
   if (!inline) {
@@ -95,25 +108,38 @@ export function ControlPanelGroup({
       );
     }
     return (
-      // The drill row pushes through `Row push`, which throws when there is no
-      // stack — the honest answer rather than a dead click — and draws the
-      // chevron that says it drills.
-      <ControlPanelRow
-        push={{
-          key,
-          title: typeof label === "string" ? label : "",
-          render: () => <ControlPanelSection>{children}</ControlPanelSection>,
-        }}
-        trailing={
-          <>
-            {status}
-            {summary}
-          </>
-        }
-        className={className}
-      >
-        {label}
-      </ControlPanelRow>
+      <>
+        {/* The drill row pushes through `Row push`, which draws the chevron that
+            says it drills. */}
+        <ControlPanelRow
+          push={{
+            key,
+            title: typeof label === "string" ? label : "",
+            render: () => (
+              <div ref={setPage} style={{ display: "contents" }} />
+            ),
+          }}
+          trailing={
+            <>
+              {status}
+              {summary}
+            </>
+          }
+          className={className}
+        >
+          {label}
+        </ControlPanelRow>
+        {page
+          ? createPortal(
+              // A pushed page is a fresh panel body: its groups get the host's
+              // whole inline budget again, as they did when the stack rendered it.
+              <GroupDepthProvider depth={0}>
+                <ControlPanelSection>{children}</ControlPanelSection>
+              </GroupDepthProvider>,
+              page,
+            )
+          : null}
+      </>
     );
   }
 
