@@ -1770,6 +1770,21 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
   leaves it out of `filterFields` — it still sorts), so the user can neither
   name nor widen the scope: a rule over it could only restate it or contradict
   it into an empty list.
+- **Facets** (`liveDataSource(c, { searchable, facets: ["kind", "source"] })`):
+  declared `text` columns whose option list is READ, not declared. For each,
+  `CollectFacetOptions` (`web/internal/facet-options.tsx`, inside
+  `CollectBodyFields`) reads `useLive(c, { groupBy, where: scope, limit:
+  groups maxLimit })` and hands the field over that column
+  `optionsResult: FieldOptionsResult` — `ResourceReadiness`'s loading / error
+  arms, or `{ status: "ready", options }`. `FieldDef` takes `options` XOR
+  `optionsResult` (a type union). The filter input renders loading, or the
+  failure with Retry — never an empty grid. Options are value-sorted (never the
+  grouping's count order) and keep their identity across a count change; a
+  grouping full at its max is refused (`refuseResource`) as the error arm —
+  never a silently truncated option set. A field over a facet that declares
+  `options`, or a facet no field reads, throws at mount; an awaited scope reads
+  nothing (the facets stay loading). The reads are sibling components reporting
+  up, so a scope arriving under a mounted body does not remount it.
 - **`FieldDef.column`** maps a field onto a collection column when its id is not
   that column's name — minted only by `collection.column(name)` or a
   contributed-column handle's `.column(field)`, carrying its collection's key.
@@ -2074,6 +2089,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `fields.Fields`
     - `network/live.LiveSegmentError`
     - `network/live.ScrollTruncation`
+    - `network/live.useLive`
     - `network/live.useLiveScroll`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleProvider`
@@ -2122,7 +2138,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.refuseResource`
+    - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/loading.LoadingVariant`
     - `primitives/overlay/popover.InlinePopover`
@@ -2356,7 +2375,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/table`
     - `primitives/data-view/tree`
     - `primitives/data-view/view-order`
-    - `reports`
     - `runs`
     - `tasks/task-deps-tree`
     - `tasks/task-list`
@@ -2391,6 +2409,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FieldGrouping`
     - `FieldGroupingSet`
     - `FieldOption`
+    - `FieldOptionsResult`
     - `FieldSchemaSection`
     - `FieldValue`
     - `FilterConjunction`
@@ -2418,6 +2437,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActionZone`
     - `LiveDataSource`
     - `LiveDataSourceOf`
+    - `LiveFacetColumn`
     - `LiveSearchableColumn`
     - `LiveSourceScope`
     - `ManualOrderConfig`

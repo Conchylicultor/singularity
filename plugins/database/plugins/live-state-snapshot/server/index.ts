@@ -1,9 +1,12 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
+  persistedKeys,
   recomputeResource,
+  scopedResourceTables,
   seedPersistedSnapshot,
   unboundedWindowKeys,
 } from "@plugins/framework/plugins/server-core/core";
+import { producedTableNames } from "@plugins/database/plugins/change-feed/server";
 import { db } from "@plugins/database/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
@@ -14,7 +17,9 @@ import {
   preloadedKeys,
 } from "./internal/persist";
 import { runCatchUp } from "./internal/catch-up";
+import { assertNoPersistedProducedReader } from "./internal/produced-guard";
 import { liveStateChangelogPruneJob } from "./internal/prune";
+import { openProducedPersistReports } from "./internal/produced-reports";
 
 // L2 persisted materialization. Owns the `live_state_snapshot` table (the durable
 // materialized value), injects the runtime's persist hooks, runs the bounded
@@ -82,7 +87,20 @@ export default {
   // handled EXPLICITLY inside `initSnapshotSubsystem` (catch + log + continue) — it
   // never throws, so a snapshot-table failure can't abort boot. See boot-init.ts.
   async onReadyBlocking() {
-    await initSnapshotSubsystem(db);
+    // The tables an in-process change producer feeds (contributions are
+    // collected before this barrier): volatile, so never L2-persisted (A6).
+    const produced = producedTableNames();
+    await initSnapshotSubsystem(db, produced);
+    // A6 (boot, static evidence): a key the runtime persists whose routes or
+    // identity table name a produced table blocks boot. Outside the graceful
+    // degradation above on purpose — it is a declaration bug, not a snapshot
+    // failure. `persistedKeys()` is the runtime's own gate, which reads the
+    // hooks just installed (a degraded init persists nothing, so finds none).
+    assertNoPersistedProducedReader(
+      persistedKeys(),
+      scopedResourceTables(),
+      produced,
+    );
   },
   // Boot init + bounded catch-up, after the barrier (alongside change-feed's
   // listener, which also starts in onReady).
@@ -125,5 +143,11 @@ export default {
     // that import edge without re-establishing the ordering another way. See the
     // plan's "Ordering invariant" section.
     await runCatchUp(db);
+  },
+  // The A6 reports (boot sweep, runtime refusal) are held until every plugin's
+  // `onReady` ran: the reports plugin installs server-core's error reporter in
+  // its own, and a report filed before that would be dropped.
+  onAllReady() {
+    openProducedPersistReports();
   },
 } satisfies ServerPluginDefinition;

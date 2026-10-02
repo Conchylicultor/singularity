@@ -334,6 +334,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `debug/live-state-churn/emit`
     - `debug/queue-health`
     - `debug/render-profiler`
+    - `debug/reports`
     - `improve/element-picker`
     - `infra/background/catalog`
     - `infra/events-test`

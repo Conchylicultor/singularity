@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { useStaleFrontend } from "@plugins/build/web";
-import type { Report } from "@plugins/reports/core";
+import { reportsList, type Report } from "@plugins/reports/core";
 import { Reports, investigate } from "@plugins/reports/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -19,9 +22,7 @@ import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
-import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { reportDetailPane } from "../panes";
-import { useReport } from "../internal/use-report";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -30,10 +31,12 @@ const openInNewIcon = symbol("open-in-new");
 
 export function ReportDetail() {
   const { reportId } = reportDetailPane.useParams();
-  const read = useReport(reportId);
+  // The report's row, live: a repeat moving its count, a noise flip or a
+  // linked task arrives through the reports producer (`reports.list:rows`).
+  const read = useLiveRow(reportsList, reportId);
   const { serverGraph } = useStaleFrontend();
 
-  if (read.status === "pending") {
+  if (read.status === "loading") {
     return (
       <PaneChrome pane={reportDetailPane}>
         <Loading />
@@ -41,21 +44,31 @@ export function ReportDetail() {
     );
   }
 
-  if (read.status !== "found") {
+  // A failed read keeps painting the row it last saw; with none, the failure
+  // and its Retry — never "not found", which nobody said.
+  const report =
+    read.status === "error" ? read.stale : read.found ? read.row : undefined;
+  if (report === undefined) {
     return (
       <PaneChrome pane={reportDetailPane}>
-        <Center className="h-full">
-          <Text as="div" variant="body" className="text-muted-foreground">
-            {read.status === "missing"
-              ? "Report not found."
-              : `Could not load this report: ${getEndpointErrorMessage(read.error)}`}
-          </Text>
-        </Center>
+        {read.status === "error" ? (
+          <ResourceErrorInline
+            variant="inline"
+            subject="this report"
+            error={read.error}
+            refetch={read.refetch}
+          />
+        ) : (
+          <Center className="h-full">
+            <Text as="div" variant="body" className="text-muted-foreground">
+              Report not found.
+            </Text>
+          </Center>
+        )}
       </PaneChrome>
     );
   }
 
-  const { report, refetch } = read;
   return (
     <PaneChrome pane={reportDetailPane}>
       <ControlSizeProvider size="xs">
@@ -71,7 +84,7 @@ export function ReportDetail() {
               {report.message}
             </Text>
 
-            <Investigate report={report} onLinked={refetch} />
+            <Investigate key={report.id} report={report} />
 
             <Stack gap="sm">
               <Field label="Kind" value={report.kind} mono />
@@ -195,16 +208,14 @@ function TimeField({ label, date }: { label: string; date: Date }) {
   );
 }
 
-function Investigate({
-  report,
-  onLinked,
-}: {
-  report: Report;
-  /** Re-read the row once investigate has linked its task. */
-  onLinked: () => Promise<unknown>;
-}) {
-  if (report.taskId != null) {
-    const taskId = report.taskId;
+function Investigate({ report }: { report: Report }) {
+  // The task investigate() linked, held until the live row carries it: the row
+  // routes after the server's write resolves, so without it a second click in
+  // between would launch a second agent. The row wins once it agrees.
+  const [linkedTaskId, setLinkedTaskId] = useState<string | null>(null);
+  const linked = report.taskId ?? linkedTaskId;
+  if (linked != null) {
+    const taskId = linked;
     return (
       <Stack align="start" gap="none">
         <Button
@@ -241,9 +252,8 @@ function Investigate({
         align="start"
         getRequest={async (userText) => {
           const { taskId } = await investigate(report.id);
-          // The row now carries the task id: show "View task" without waiting
-          // for the debounced `reports.revision` tick.
-          void onLinked();
+          // Show "View task" now, before the linked row arrives.
+          setLinkedTaskId(taskId);
           const parts: string[] = [];
           parts.push(`## Report (${report.kind})\n`);
           parts.push(`**Source:** ${report.source}`);

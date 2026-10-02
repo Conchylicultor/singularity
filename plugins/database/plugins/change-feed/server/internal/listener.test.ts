@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { sql } from "drizzle-orm";
 import { createChangeFeedListener } from "./listener";
-import type { DbChange } from "./parse-payload";
+import type { FeedChange } from "./route-change";
 import {
   createTestDb,
   type TestDb,
@@ -77,17 +77,20 @@ async function waitForListen(timeoutMs = 5000): Promise<void> {
   );
 }
 
-function sameIds(a: string[] | null, b: string[] | null): boolean {
+function sameIds(
+  a: readonly string[] | null,
+  b: readonly string[] | null,
+): boolean {
   if (a === null || b === null) return a === b;
   return a.length === b.length && a.every((x, i) => x === b[i]);
 }
 
 function findChange(
-  routed: DbChange[],
+  routed: FeedChange[],
   table: string,
-  op: DbChange["op"],
+  op: FeedChange["op"],
   ids: string[] | null,
-): DbChange | undefined {
+): FeedChange | undefined {
   return routed.find(
     (c) => c.table === table && c.op === op && sameIds(c.ids, ids),
   );
@@ -103,7 +106,7 @@ afterAll(async () => {
 
 describe("change-feed listener (real DB + real NOTIFY)", () => {
   test("delivers INSERT and UPDATE NOTIFYs to the route spy", async () => {
-    const routed: DbChange[] = [];
+    const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
       connectionString: () => testDb.connectionString,
       route: (c) => routed.push(c),
@@ -131,7 +134,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
   });
 
   test("a routed payload reaches the route with its layout; a malformed one routes unscoped, never skipped", async () => {
-    const routed: DbChange[] = [];
+    const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
       connectionString: () => testDb.connectionString,
       route: (c) => routed.push(c),
@@ -185,7 +188,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
   });
 
   test("first connect does NOT fullSweep", async () => {
-    const routed: DbChange[] = [];
+    const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
       connectionString: () => testDb.connectionString,
       route: (c) => routed.push(c),
@@ -219,7 +222,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
     const fastSetTimeout = ((fn: () => void) =>
       globalThis.setTimeout(fn, 0)) as unknown as typeof setTimeout;
 
-    const routed: DbChange[] = [];
+    const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
       connectionString: () => testDb.connectionString,
       route: (c) => routed.push(c),
@@ -255,7 +258,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
   });
 
   test("malformed NOTIFY payload is skipped, listener survives", async () => {
-    const routed: DbChange[] = [];
+    const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
       connectionString: () => testDb.connectionString,
       route: (c) => routed.push(c),
@@ -277,7 +280,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
       );
 
       // The malformed payload produced no routed entry — everything routed is a
-      // well-formed DbChange.
+      // well-formed FeedChange.
       expect(
         routed.every(
           (c) =>
@@ -299,7 +302,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
       globalThis.clearInterval(id);
     }) as unknown as typeof clearInterval;
 
-    const routed: DbChange[] = [];
+    const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
       connectionString: () => testDb.connectionString,
       route: (c) => routed.push(c),

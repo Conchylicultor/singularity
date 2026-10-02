@@ -83,6 +83,7 @@ function staleFlightHarness(extra: Parameters<typeof createHarness>[0] = {}) {
   // early return.
   const feedFull = () =>
     h.runtime.applyDbChange({
+      source: "feed",
       table: "s_table",
       op: "U",
       ids: null,
@@ -257,6 +258,7 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     // its own notify. They still cannot overlap each other.
     for (let i = 0; i < 3; i++) {
       h.runtime.applyDbChange({
+        source: "feed",
         table: "s_table",
         op: "U",
         ids: null,
@@ -321,6 +323,7 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     await tick();
     ctl.setValue(POST);
     h.runtime.applyDbChange({
+      source: "feed",
       table: "s_table",
       op: "U",
       ids: null,
@@ -427,6 +430,7 @@ describe("stale-flight refusal — the L2 persist floor", () => {
     ctl.setValue(POST);
     truthTag = "post";
     h.runtime.applyDbChange({
+      source: "feed",
       table: "s_table",
       op: "U",
       ids: null,

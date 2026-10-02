@@ -34,7 +34,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import {
   routeChange,
-  type DbChange,
+  type FeedChange,
 } from "@plugins/database/plugins/change-feed/server";
 import {
   createChangeFeedListener,
@@ -100,7 +100,7 @@ let testDb: TestDb;
 let client: Client;
 let db: NodePgDatabase;
 let listener: ReturnType<typeof createChangeFeedListener>;
-const routed: DbChange[] = [];
+const routed: FeedChange[] = [];
 const loads: Load[] = [];
 const frames: RecordedFrame[] = [];
 let frameSeq = 0;
@@ -165,7 +165,7 @@ beforeAll(async () => {
   // Installed from the registered routes, as the booted server does.
   await rebuildTriggers(
     testDb.db,
-    { feedExempt: new Set(), optedOut: new Set() },
+    { feedExempt: new Set(), optedOut: new Set(), produced: new Set() },
     routedTableRequirements(),
   );
   listener = createChangeFeedListener({

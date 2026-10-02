@@ -139,6 +139,7 @@ test("a subscriber joining a read that started before a push never regresses the
   // h3 enters: a scoped refill admits it and advances the snapshot.
   f.hosts.set("h3", 0);
   f.h.runtime.routeTableChange({
+    source: "feed",
     table: "hosts",
     op: "U",
     ids: ["h3"],
@@ -158,6 +159,7 @@ test("a subscriber joining a read that started before a push never regresses the
   const before = f.loads.length;
   f.ext.set("h3", "new");
   f.h.runtime.routeTableChange({
+    source: "feed",
     table: "hosts_ext",
     op: "U",
     ids: ["h3"],
@@ -177,6 +179,7 @@ test("a drain that outlives the last unsubscribe writes no snapshot back: a re-s
   let release = f.parkNextLoad();
   f.hosts.set("h3", 0);
   f.h.runtime.routeTableChange({
+    source: "feed",
     table: "hosts",
     op: "U",
     ids: ["h3"],
@@ -197,6 +200,7 @@ test("a drain that outlives the last unsubscribe writes no snapshot back: a re-s
   await tick();
   f.ext.set("h4", "new"); // lands during that load
   f.h.runtime.routeTableChange({
+    source: "feed",
     table: "hosts_ext",
     op: "U",
     ids: ["h4"],

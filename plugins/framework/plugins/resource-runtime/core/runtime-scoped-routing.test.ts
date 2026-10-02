@@ -62,6 +62,7 @@ function scopeRecordingHarness() {
   );
   const scoped = (ids: string[]) =>
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "U",
       ids,
@@ -70,6 +71,7 @@ function scopeRecordingHarness() {
     });
   const full = () =>
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "I",
       ids: null,
@@ -167,6 +169,7 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
     // A scoped change to up_t: `up` recomputes and cascades to `down` with an empty
     // affected set → `down` is skipped.
     h.runtime.applyDbChange({
+      source: "feed",
       table: "up_t",
       op: "U",
       ids: ["u1"],
@@ -196,6 +199,7 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
     // the version untouched (else this would be one higher).
     downValue = [{ id: "d", n: 2 }];
     h.runtime.applyDbChange({
+      source: "feed",
       table: "up_t",
       op: "I",
       ids: null,

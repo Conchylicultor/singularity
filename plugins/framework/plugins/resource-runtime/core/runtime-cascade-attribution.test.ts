@@ -98,6 +98,7 @@ describe("cascade edge-read attribution", () => {
     // A scoped change to up_t: `up` recomputes and cascades scoped to `down`. The
     // edge's signature + affectedMap run under one `cascade` entry labelled "down".
     h.runtime.applyDbChange({
+      source: "feed",
       table: "up_t",
       op: "U",
       ids: ["u1"],
@@ -169,6 +170,7 @@ describe("cascade edge-read attribution", () => {
 
     const feed = (xid: string) =>
       h.runtime.applyDbChange({
+        source: "feed",
         table: "up_t",
         op: "U",
         ids: ["u1"],
@@ -201,6 +203,7 @@ describe("cascade edge-read attribution", () => {
     // An id-less (FULL) change to up_t: the cascade propagates everything without
     // consulting signature/affectedMap, so no `cascade` entry is opened.
     h.runtime.applyDbChange({
+      source: "feed",
       table: "up_t",
       op: "I",
       ids: null,

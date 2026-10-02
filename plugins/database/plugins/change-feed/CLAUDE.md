@@ -204,13 +204,72 @@ contribution/registry sets:
   `uncovered`) and names what declared the table (`identityTable` or
   `route "<id>"`), so the error carries the right remediation. It cross-checks the
   resource-runtime's `scopedResourceTables()` (surfaced through `server-core`)
-  against `getCoveredTables()`, using `excludedTableNames()` +
-  `feedExemptTables()` only to label the reason. This catches hand-written AND
-  compiled resources uniformly, because the check reads the runtime's stored
-  declarations, not source text. Fix: point the resource at a real triggered base
-  table (not a view/rollup), drop the exclusion, or serve it from an endpoint read
-  on open (like the Slow Ops pane's `listSlowOps`) or refreshed by an in-process
-  revision tick (like the Reports DataView and its `reports.revision` tick).
+  against `getCoveredTables()` ∪ the produced tables (A1′ — a table fed by a
+  change producer has a change source too, see below), using
+  `excludedTableNames()` + `feedExemptTables()` only to label the reason. This
+  catches hand-written AND compiled resources uniformly, because the check reads
+  the runtime's stored declarations, not source text. Fix: point the resource at a
+  real triggered base table (not a view/rollup), drop the exclusion, give the table
+  a change producer, or serve it from an endpoint read on open (like the Slow Ops
+  pane's `listSlowOps`).
+
+The boot body lives in `installFeed` (`internal/install-feed.ts`), parametrized
+on the database and on the contribution / registry sets, so
+`producer-boot.test.ts` runs the real install against a throwaway database.
+
+## Change producers: the in-process change source
+
+A table whose writes are all made by this backend, at a rate where a trigger +
+changelog row + NOTIFY per statement costs more than what the table records,
+declares a **change producer** instead (`defineChangeProducer`,
+`internal/producer.ts`; research/2026-10-01-global-scoped-change-routing-p5-p8.md
+P5). The feed installs no trigger on it (`TriggerExclusions.produced`, read from
+the mounted `declare` contributions), and its writes route straight into
+`routeChange` from the process that made them, tagged `source: "producer"`.
+
+- **The producer owns the write verb.** `mutate(executor, (q, t) => builder,
+  { latency })` runs one insert / update / delete builder on the producer's own
+  table, appends `RETURNING <pk>` itself and emits exactly the returned PKs (an
+  upsert is a `U`, a delete a `D`). There is no `emit` to forget. The executor is
+  the pool (`ProducerExecutor` — a transaction handle, which has `rollback()`, is
+  a type error), so every producer write is one autocommit statement and its
+  emit is after commit. `latency` is required: `interactive` flushes at once.
+- **Coalescing at the source.** A pending `Map<id, U|D>` (last op wins), flushed
+  once per fixed window armed on the first change — a true rate cap, which the
+  runtime's debounce is not. Deletes route before upserts; over
+  `PRODUCER_IDS_CAP` ids the flush routes `ids: null`. The timer and every flush
+  run in the root async context captured at module eval, so a writer inside
+  `runWithoutProfiling` does not hide the `route` span. Each change of a flush
+  routes on its own: a routing throw is filed (`ChangeProducerRouteError`) and
+  the rest still route. The window's timer is unref'd, and `onShutdown` drops
+  every pending window before the listener stops.
+- **Volatile.** No changelog, no NOTIFY: a change still pending at a restart is
+  lost. Clients resubscribe and load in full; inside one subscription a lost emit
+  heals membership but not the values of rows already in the base.
+  live-state-snapshot refuses any L2-persisted reader of a produced table (A6).
+  A producer change has no `unchanged` set, so a `:groups` tuple over a
+  produced table recomputes its whole aggregate on every flush touching the
+  table — bounded by the window, one aggregate per open grouping.
+- **Guards.** A12: `mutate` on a producer whose `declare` is not mounted throws.
+  A13: `mutate` outside the serving backend (`bootMode !== "serve"`) throws — an
+  exec child files through the outbox. A2′: one producer per table (module eval);
+  a produced table is neither `ExcludeFromChangeFeed`-ed nor a rollup, and no
+  `live_state_*` trigger survives on it (catalog, after the rebuild). A3p: a route
+  on a produced table carries no column (a producer emits ids only).
+- **A11, the `change-feed:producer-writes` check** (`check/`): a drizzle
+  `insert` / `update` / `delete` on a produced table's binding that is not the
+  builder a producer's `mutate` callback returns, or a raw SQL write
+  (insert / update / delete / truncate / merge) naming the table, fails the
+  check. Names are scoped per file — an aliased import, a `const t = _reports`
+  re-bind and a `schema._reports` property access are followed; a local that
+  only shares the name is not the table. Test code (throwaway databases, never
+  the serving backend) and the migration runner are exempt.
+- A generic writer finds a table's producer with `changeProducerFor(table)`:
+  retention's `sweepExpired` deletes through it when one exists (the deleted ids
+  come from RETURNING), and takes its plain `DELETE` otherwise.
+- Tests mount producers without a booted graph with the testing barrel's
+  `mountProducersForTest(producers, { route?, mode? })` and drive the window with
+  `flushNow(producer)`.
 
 ## The LISTEN connection
 
@@ -249,9 +308,11 @@ open.
 ## One entry, two routers
 
 `routeChange` (`internal/route-change.ts`) is the single entry every change takes —
-the LISTEN consumer, the L2 catch-up replay and the reconnect `fullSweep`. It hands
-each change to BOTH of the runtime's routers, and each resource is served by exactly
-one of them:
+the LISTEN consumer, the L2 catch-up replay and the reconnect `fullSweep` (all
+`FeedChange`s, `source: "feed"`), and the change producers (`ProducerChange`,
+`source: "producer"`: ids only, no layout, no transaction to ack). It hands each
+change, with its source, to BOTH of the runtime's routers, and each resource is
+served by exactly one of them:
 
 - `routeTableChange` — the ROUTED resources, whose compiler declared `routes`
   (per-table host-id maps and a per-tuple read-set) or, for a non-keyed value,
@@ -276,7 +337,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
 
 ## Plugin reference
 
-- Description: L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
+- Description: L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible. A table written only by this backend at high rate may instead declare an in-process change producer (defineChangeProducer): no trigger, its `mutate` owns the write and routes the returned ids, coalesced at the source and volatile.
 - Server:
   - Contributes: `fork-data-exclusion` "live_state_changelog"
   - Uses:
@@ -291,11 +352,27 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `database/derived-tables.feedExemptTables`
     - `database/derived-views.relationIdentityBase`
     - `primitives/log-channels.defineLogSink`
-  - Exports (types): `DbChange`
+  - DB schema: `plugins/database/plugins/change-feed/server/internal/produced-tables.ts`
+  - Exports (types):
+    - `ChangeProducer`
+    - `ChangeProducerContribution`
+    - `ChangeProducerOptions`
+    - `ChangeProducerSpec`
+    - `DbChange`
+    - `FeedChange`
+    - `ProducerBuilder`
+    - `ProducerChange`
+    - `ProducerExecutor`
+    - `RoutedChange`
+    - `WriteLatency`
   - Exports (values):
+    - `changeProducerFor`
+    - `defineChangeProducer`
     - `ExcludeFromChangeFeed`
     - `getCoveredTables`
     - `parseLiveStatePayload`
+    - `producedTableNames`
+    - `PRODUCER_IDS_CAP`
     - `readLayout`
     - `rebuildTriggers`
     - `routeChange`
@@ -308,11 +385,16 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `debug/latency-ledger`
     - `debug/slow-ops`
     - `debug/trace/engine`
+    - `infra/retention`
     - `reports`
 - Test helpers:
   - Server: `@plugins/database/plugins/change-feed/server/testing`
+    - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
     - `createChangeFeedListener`
     - `ensureChangelogTable`
+    - `findCarriedProducedRoutes` — A3p: the produced tables whose routes need a carried column.
+    - `flushNow` — Flush `producer`'s coalescing buffer now (a test drives the window by hand).
+    - `mountProducersForTest` — Mount `producers` without a booted plugin graph: each is live (A12 passes), runs as boot mode `mode` (default `"serve"`; pass `"exec"` to see A13), and routes through `route` (default the real `routeChange`).
     - `rebuildTriggers`
 
 <!-- AUTOGENERATED:END -->

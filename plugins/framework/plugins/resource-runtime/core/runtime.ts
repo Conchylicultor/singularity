@@ -29,6 +29,7 @@ import {
   tableLayoutRequirements,
   type HostMap,
   type ReachPlan,
+  type ChangeSource,
   type ReverseRoute,
   type Route,
   type RoutePlan,
@@ -1528,6 +1529,17 @@ export interface ScopedResourceTable {
   via: string;
 }
 
+/**
+ * One resource key's notify provenance (the `_debug` payload's `notifyStats`):
+ * hand-`notify()` calls, change-feed deliveries, and in-process change-producer
+ * deliveries (`TableChange.source`). Monotonic for the process lifetime.
+ */
+export interface NotifyCounts {
+  hand: number;
+  feed: number;
+  producer: number;
+}
+
 export interface ResourceRuntime {
   /**
    * Declare a DB-backed resource. Two shapes:
@@ -1667,16 +1679,18 @@ export interface ResourceRuntime {
    * scope from `origin` (the base table that changed) and `identityBase` (the
    * identity of the matched relation) against the resource's `identityTable` +
    * `affectedMap` coverage, fans out to every currently-subscribed params tuple
-   * (param-less → `{}`), and routes through `scheduleNotify` tagged
-   * `source: "feed"`. DB-agnostic and defensive: an unknown table is a no-op, and
-   * it never throws. See
+   * (param-less → `{}`), and routes through `scheduleNotify` tagged with the
+   * change's `source`. DB-agnostic and defensive: an unknown table is a no-op,
+   * and it never throws. See
    * research/2026-06-19-global-live-state-l4-db-change-feed.md §6 and
    * research/2026-06-20-global-scoped-recompute-default.md.
    */
   applyDbChange: (change: {
+    /** Which producer made the change (see `TableChange.source`). */
+    source: ChangeSource;
     table: string;
     op: "I" | "U" | "D";
-    ids: string[] | null;
+    ids: readonly string[] | null;
     origin: string;
     identityBase: string;
     /** Source transaction id (xid8 text) — mutation-ack attribution (`ackTx`). */
@@ -1707,10 +1721,11 @@ export interface ResourceRuntime {
   recomputeResource: (key: string) => void;
   /**
    * Self-verification counters for the `_debug` endpoint: how many notifies for
-   * this resource key came from hand-`notify()` (`hand`) vs the DB change-feed
-   * (`feed`). Used by the read-set debug pane to surface read-set-gap candidates.
+   * this resource key came from hand-`notify()` (`hand`), the DB change-feed
+   * (`feed`) and an in-process change producer (`producer`). Used by the
+   * read-set debug pane to surface read-set-gap candidates.
    */
-  notifyStatsFor: (key: string) => { hand: number; feed: number };
+  notifyStatsFor: (key: string) => NotifyCounts;
   /**
    * Occupancy of the read-admission gate (see `READ_LOAD_CONCURRENCY`):
    * currently-held slots, queued waiters, and the cap. The runtime stays
@@ -1754,6 +1769,14 @@ export interface ResourceRuntime {
    * be served via the L2 boot fast path).
    */
   boundedMembershipKeys: () => string[];
+  /**
+   * Every registered resource L2 persists right now — the runtime's own persist
+   * gate (`isPersisted`: DB-backed, not bounded-membership, and admitted by the
+   * injected `shouldPersist`), evaluated per entry, never a resource-name list.
+   * `live-state-snapshot` reads it after installing its hooks, to refuse a
+   * persisted reader of a table whose change source is volatile (A6).
+   */
+  persistedKeys: () => string[];
   /**
    * Every registered UNBOUNDED-window (`scopedMembership` alias) key — the only
    * membership shape L2-persisted and reconstructed from its per-pk snapshot bytes.
@@ -1905,9 +1928,11 @@ export function createResourceRuntime(
   // hand-notify with no matching recent feed intent points at a table the L3
   // read-set capture missed (a read-set-gap candidate). Cleared never — these are
   // monotonic, surfaced in the `_debug` payload.
-  interface NotifyStats {
-    hand: number;
-    feed: number;
+  //
+  // A `producer` delivery (an in-process change producer, `TableChange.source`)
+  // is counted on its own: it is a real change, but not a feed intent — the
+  // read-set-gap match asks whether the FEED covered a hand-notified change.
+  interface NotifyStats extends NotifyCounts {
     lastHandAt: number;
     lastFeedAt: number;
   }
@@ -1915,7 +1940,7 @@ export function createResourceRuntime(
   function statsFor(key: string): NotifyStats {
     let s = notifyStats.get(key);
     if (!s) {
-      s = { hand: 0, feed: 0, lastHandAt: 0, lastFeedAt: 0 };
+      s = { hand: 0, feed: 0, producer: 0, lastHandAt: 0, lastFeedAt: 0 };
       notifyStats.set(key, s);
     }
     return s;
@@ -3513,7 +3538,7 @@ export function createResourceRuntime(
     rawParams: ResourceParams,
     affected: Set<string> | null,
     opts?: {
-      source?: "hand" | "feed" | "synthetic";
+      source?: "hand" | ChangeSource | "synthetic";
       deleted?: Set<string>;
       /** Source txid (feed only) — mutation-ack attribution. Hand/synthetic
        *  notifies never carry one, so their frames are structurally ack-less. */
@@ -3537,6 +3562,11 @@ export function createResourceRuntime(
     // and falls straight through to the shared merge + flush-scheduling tail.
     if (source === "feed") {
       countFeed(entry.key, pk);
+    } else if (source === "producer") {
+      // A producer change is no feed intent (it never matches a hand-notify)
+      // and no hand-notify (it is the table's declared change source, so a
+      // read-set-gap warning would be false): counted, nothing more.
+      statsFor(entry.key).producer++;
     } else if (source === "hand") {
       const now = performance.now();
       const stats = statsFor(entry.key);
@@ -6091,7 +6121,7 @@ export function createResourceRuntime(
         reason?: string;
       }> | null;
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
-      notifyStats: { hand: number; feed: number };
+      notifyStats: NotifyCounts;
       subShortCircuits: number;
       staleFlightSupersedes: number;
       subTabs: Record<string, number>;
@@ -6171,13 +6201,11 @@ export function createResourceRuntime(
         // Loader frequency over the profiling window (server-only hook; absent on
         // central). Surfaces a cheap-but-hot loader the slow-single-call view misses.
         loaderStats: opts.loaderStats?.(entry.key),
-        // L4 self-verification: how many notifies came from hand-`notify()` vs the
-        // DB change-feed. A resource with `hand > 0, feed === 0` is a read-set-gap
-        // candidate (the feed isn't covering a table this resource reads).
-        notifyStats: (() => {
-          const s = notifyStats.get(entry.key);
-          return { hand: s?.hand ?? 0, feed: s?.feed ?? 0 };
-        })(),
+        // L4 self-verification: how many notifies came from hand-`notify()`, the
+        // DB change-feed and an in-process change producer. A resource with
+        // `hand > 0, feed === 0` is a read-set-gap candidate (the feed isn't
+        // covering a table this resource reads).
+        notifyStats: notifyStatsFor(entry.key),
         // Version short-circuits served for this key (a replayed sub answered
         // `up-to-date` from the in-memory version counter — zero loader runs,
         // zero read-admission slots). Live re-validation gauge for the
@@ -6480,7 +6508,7 @@ export function createResourceRuntime(
     change: TableChange,
   ): void {
     const attribution = {
-      source: "feed" as const,
+      source: change.source,
       ...(change.xid !== undefined ? { sourceTx: change.xid } : {}),
       ...(change.changedAt !== undefined
         ? { changedAt: change.changedAt }
@@ -6524,9 +6552,10 @@ export function createResourceRuntime(
   // view-fanout FULL can't absorb a scoped delivery. See
   // research/2026-06-20-global-scoped-recompute-default.md.
   function applyDbChange(change: {
+    source: ChangeSource;
     table: string;
     op: "I" | "U" | "D";
-    ids: string[] | null;
+    ids: readonly string[] | null;
     origin: string;
     identityBase: string;
     xid?: string;
@@ -6643,7 +6672,7 @@ export function createResourceRuntime(
             }
           }
           scheduleNotify(entry, params, tupleAffected, {
-            source: "feed",
+            source: change.source,
             deleted: tupleDeleted,
             sourceTx: change.xid,
             changedAt: change.changedAt,
@@ -6669,9 +6698,13 @@ export function createResourceRuntime(
     if (entry) scheduleNotify(entry, {}, null, { source: "feed" });
   }
 
-  function notifyStatsFor(key: string): { hand: number; feed: number } {
+  function notifyStatsFor(key: string): NotifyCounts {
     const s = notifyStats.get(key);
-    return { hand: s?.hand ?? 0, feed: s?.feed ?? 0 };
+    return {
+      hand: s?.hand ?? 0,
+      feed: s?.feed ?? 0,
+      producer: s?.producer ?? 0,
+    };
   }
 
   // Enumerate every registered resource that declared a scoped `identityTable`
@@ -6717,6 +6750,16 @@ export function createResourceRuntime(
     const out: string[] = [];
     for (const entry of registry.values()) {
       if (membershipBounded(entry)) out.push(entry.key);
+    }
+    return out;
+  }
+
+  // The keys the persist gate admits — `isPersisted` itself, so the A6 boot
+  // check and the drain can never disagree about which keys persist.
+  function persistedKeys(): string[] {
+    const out: string[] = [];
+    for (const entry of registry.values()) {
+      if (isPersisted(entry)) out.push(entry.key);
     }
     return out;
   }
@@ -6778,6 +6821,7 @@ export function createResourceRuntime(
     scopedResourceTables,
     routedTableRequirements,
     boundedMembershipKeys,
+    persistedKeys,
     unboundedWindowKeys,
     preloadedKeys,
     seedPersistedSnapshot,

@@ -1,4 +1,4 @@
-import type { DbChange } from "./parse-payload";
+import type { FeedChange } from "./route-change";
 
 // Route the NOTIFYs Postgres delivers together as ONE burst: buffer each parsed
 // change and route the whole buffer, in arrival order, from a single macrotask.
@@ -19,10 +19,10 @@ import type { DbChange } from "./parse-payload";
 // notifications (back to back). A burst split by a later socket read is still
 // routed in two flushes.
 export function createBurstRouter(
-  route: (change: DbChange) => void,
+  route: (change: FeedChange) => void,
   defer: (fn: () => void) => void = setImmediate,
-): (change: DbChange) => void {
-  let burst: DbChange[] = [];
+): (change: FeedChange) => void {
+  let burst: FeedChange[] = [];
   let armed = false;
   const flush = (): void => {
     armed = false;

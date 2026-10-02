@@ -10,6 +10,7 @@ import type {
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
   TableChange as RtTableChange,
+  ChangeSource as RtChangeSource,
   TableLayoutRequirement as RtTableLayoutRequirement,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
@@ -76,6 +77,9 @@ export type DependsOnEntry<P extends ResourceParams = ResourceParams> =
 // What a change producer hands `routeTableChange` (see resource-runtime/core's
 // `routing.ts`): the DB change-feed builds one per NOTIFY, catch-up row and sweep.
 export type TableChange = RtTableChange;
+// Which producer made a `TableChange`: the DB change feed, or an in-process
+// change producer (change-feed's `defineChangeProducer`).
+export type ChangeSource = RtChangeSource;
 // One routed table's trigger layout (`routedTableRequirements`).
 export type TableLayoutRequirement = RtTableLayoutRequirement;
 
@@ -433,6 +437,9 @@ export const {
   // deletes leftover persisted rows for these (they are never persisted going
   // forward, so any snapshot row is stale from a pre-migration boot).
   boundedMembershipKeys,
+  // The keys L2 persists right now (the runtime's own persist gate) — the
+  // live-state-snapshot A6 boot check refuses one that reads a produced table.
+  persistedKeys,
   // Unbounded-window (scopedMembership alias) keys — the live-state-snapshot boot
   // seed picks these to reconstruct the in-memory diff base from their L2 value.
   unboundedWindowKeys,

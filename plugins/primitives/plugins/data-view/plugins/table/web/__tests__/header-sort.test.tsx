@@ -81,4 +81,13 @@ describe("data-view table header sort", () => {
     expect(icon("Name")?.getAttribute("data-icon")).toMatch(/upward/);
     expect(icon("Name")?.getAttribute("class")).toContain("text-foreground");
   });
+
+  it("marks each row with its row key, like the list and icons views", () => {
+    const { getByText } = renderTable(() => {});
+    expect(
+      getByText("alpha")
+        .closest("[data-row-key]")
+        ?.getAttribute("data-row-key"),
+    ).toBe("1");
+  });
 });

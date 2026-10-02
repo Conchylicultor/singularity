@@ -38,7 +38,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import {
   routeChange,
-  type DbChange,
+  type FeedChange,
 } from "@plugins/database/plugins/change-feed/server";
 import {
   createChangeFeedListener,
@@ -125,7 +125,7 @@ let db: NodePgDatabase;
 let listener: ReturnType<typeof createChangeFeedListener>;
 let defsServed: ReturnType<typeof serveDefs>;
 let truth: (params: ResourceParams) => Promise<unknown>;
-const routed: DbChange[] = [];
+const routed: FeedChange[] = [];
 const loads: Load[] = [];
 const frames: RecordedFrame[] = [];
 let seq = 0;
@@ -298,7 +298,7 @@ beforeAll(async () => {
   // routed trigger carries `data_view_id`, `row_key` and `column_id`.
   await rebuildTriggers(
     testDb.db,
-    { feedExempt: new Set(), optedOut: new Set() },
+    { feedExempt: new Set(), optedOut: new Set(), produced: new Set() },
     routedTableRequirements(),
   );
   listener = createChangeFeedListener({

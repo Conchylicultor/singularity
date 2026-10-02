@@ -183,6 +183,7 @@ function harness(table = "rows") {
     // delivery would show as a second delta).
     feed(changed: string, op: "I" | "U" | "D", ids: string[]) {
       runtime.routeTableChange({
+        source: "feed",
         table: changed,
         op,
         ids,
@@ -190,6 +191,7 @@ function harness(table = "rows") {
         unchanged: null,
       });
       runtime.applyDbChange({
+        source: "feed",
         table: changed,
         op,
         ids,

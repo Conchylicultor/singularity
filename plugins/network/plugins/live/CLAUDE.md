@@ -848,6 +848,7 @@ grouped under the wave or item that removes it
     - `debug/profiling/ops`
     - `debug/queue`
     - `debug/queue-health`
+    - `debug/reports`
     - `debug/sentinel`
     - `fields/secret/config`
     - `infra/background/catalog`
@@ -873,6 +874,7 @@ grouped under the wave or item that removes it
     - `primitives/metrics`
     - `primitives/usage-rank`
     - `release`
+    - `reports`
     - `review`
     - `review/code-review`
     - `review/plugin-changes`
@@ -891,6 +893,9 @@ grouped under the wave or item that removes it
 - Central:
   - Exports (types): `CentralServedValue`
   - Exports (values): `serveValue`
+- Test helpers:
+  - Server: `@plugins/network/plugins/live/server/testing`
+    - `compileCollection` — Derive the specs for a collection — three, or just `rows` for a lookup-only one.
 - Sub-plugins:
   - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
 

@@ -21,14 +21,17 @@ export const loaderStatsSchema = z.object({
 /**
  * Per-resource notify provenance counters (L4 self-verifying parallel run).
  * `hand` = hand-called notify() invocations; `feed` = DB-change-feed-derived
- * ones. A resource with `hand > 0 && feed === 0` is a read-set-gap candidate —
- * the feed under-covers a table the hand-notify does (the bug class L4
- * eliminates). A feed-only resource is expected (out-of-process writes or a
- * now-redundant hand-notify).
+ * ones; `producer` = deliveries from an in-process change producer (a table
+ * the feed installs no trigger on, whose writes emit their own changes). A
+ * resource with `hand > 0` and no change-source delivery at all is a
+ * read-set-gap candidate — no change source covers a table the hand-notify
+ * does (the bug class L4 eliminates). A feed- or producer-only resource is
+ * expected (out-of-process writes or a now-redundant hand-notify).
  */
 export const notifyStatsSchema = z.object({
   hand: z.number(),
   feed: z.number(),
+  producer: z.number(),
 });
 
 /**

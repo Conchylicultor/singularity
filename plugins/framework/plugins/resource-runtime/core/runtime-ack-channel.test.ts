@@ -62,6 +62,7 @@ function keyedHarness() {
   );
   const feed = (op: "I" | "U" | "D", ids: string[] | null, xid?: string) =>
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op,
       ids,
@@ -125,6 +126,7 @@ describe("ackTx — value frames", () => {
     await h.subscribe("p");
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "p_table",
       op: "U",
       ids: null,
@@ -169,6 +171,7 @@ describe("ackTx — value frames", () => {
     });
     await h.subscribe("i");
     h.runtime.applyDbChange({
+      source: "feed",
       table: "i_table",
       op: "U",
       ids: null,
@@ -243,6 +246,7 @@ describe("ackTx — coalescing", () => {
     );
     const feed = (op: "I" | "U" | "D", ids: string[] | null, xid: string) =>
       h.runtime.applyDbChange({
+        source: "feed",
         table: "m_table",
         op,
         ids,
@@ -320,6 +324,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
       );
       const feed = (op: "I" | "U" | "D", ids: string[] | null, xid?: string) =>
         h.runtime.applyDbChange({
+          source: "feed",
           table: "pt_table",
           op,
           ids,
@@ -395,6 +400,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     );
     const feed = (op: "I" | "U" | "D", ids: string[] | null, xid: string) =>
       h.runtime.applyDbChange({
+        source: "feed",
         table: "w_table",
         op,
         ids,
@@ -550,6 +556,7 @@ describe("ackTx — stale-flight REFUSAL (co-production made exact)", () => {
     await tick(); // the pre-commit read is in the air
     ctl.setValue([{ id: "a", n: 2 }]);
     h.runtime.applyDbChange({
+      source: "feed",
       table: "c_table",
       op: "U",
       ids: null,
@@ -570,6 +577,7 @@ describe("ackTx — stale-flight REFUSAL (co-production made exact)", () => {
     // And an idle-time FULL change — nothing in flight to refuse — is unchanged.
     ctl.setValue([{ id: "a", n: 3 }]);
     h.runtime.applyDbChange({
+      source: "feed",
       table: "c_table",
       op: "U",
       ids: null,
@@ -607,6 +615,7 @@ describe("ackTx — failure and overflow", () => {
     await h.subscribe("f", {}, { acks: true });
     boom = true;
     h.runtime.applyDbChange({
+      source: "feed",
       table: "f_table",
       op: "U",
       ids: ["a"],

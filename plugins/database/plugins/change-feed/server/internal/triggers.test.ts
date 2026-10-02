@@ -36,6 +36,7 @@ let testDb: TestDb;
 const NO_EXCLUSIONS = {
   feedExempt: new Set<string>(),
   optedOut: new Set<string>(),
+  produced: new Set<string>(),
 };
 
 // The feed's own trigger rows, keyed name → oid, for the tables this suite makes.

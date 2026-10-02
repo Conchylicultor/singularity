@@ -1,20 +1,17 @@
 import {
-  Resource,
   setErrorReporter,
   setFatalReporter,
 } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleReport } from "./internal/handle-report";
 import { handleInvestigate } from "./internal/handle-investigate";
-import { reportsRevisionServerResource } from "./internal/revision";
-import { handleQueryReports } from "./internal/handle-query";
-import { handleGetReport, handleReportFacets } from "./internal/handle-read";
-import { queryReports, reportFacets, getReport, reportsConfig } from "../core";
+import { reportsConfig } from "../core";
 import { recordReport } from "./internal/record-report";
 import { ConfigV2 } from "@plugins/config_v2/server";
-import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { _reports } from "./internal/tables";
+import { reportsProducer } from "./internal/producer";
+import { reportsListServed } from "./internal/list-resource";
 import { backfillNoiseWarmup } from "./internal/backfill-noise";
 import { reportsRetention } from "./internal/retention";
 import {
@@ -24,7 +21,6 @@ import {
 import { appendFatalReportSync } from "./internal/buffer";
 import { submitReport, investigateReport } from "../shared/endpoints";
 
-export { _reports } from "./internal/tables";
 export { reportInvestigationSink } from "./internal/investigation-sink";
 export type { InvestigationTaskRequest } from "./internal/investigation-sink";
 export { recordReport } from "./internal/record-report";
@@ -50,27 +46,20 @@ export default {
   httpRoutes: {
     [submitReport.route]: handleReport,
     [investigateReport.route]: handleInvestigate,
-    [queryReports.route]: handleQueryReports,
-    [reportFacets.route]: handleReportFacets,
-    [getReport.route]: handleGetReport,
   },
   contributions: [
-    Resource.Declare(reportsRevisionServerResource),
+    // `reports.list`: the Reports DataView's window, the detail pane's by-id
+    // read and the kind / source filter options (see core/resources.ts).
+    ...reportsListServed.declare,
     // The fan-out ceiling knobs (see server/internal/fan-out.ts). Registered
     // here so they are live-tunable from Settings → Config — the engine reads
     // them per admit.
     ConfigV2.Register({ descriptor: reportsConfig }),
-    // Crash/report rows are deduped aggregates: a recurring fingerprint UPDATEs
-    // its hot row (count++, last_seen_at) on every occurrence — a crash loop
-    // fires this thousands/min. Wiring per-statement live-state invalidation onto
-    // it made `reports` a top source of change-feed churn. The Reports pane reads
-    // pages over HTTP instead and refetches on the in-process, debounced
-    // `reports.revision` tick (see server/internal/revision.ts).
-    ExcludeFromChangeFeed({
-      table: _reports,
-      reason:
-        "High-churn deduped crash/report counter; live-ticking it amplifies load during the exact crash storms it records. The Reports pane pages over HTTP and refetches on a debounced in-process revision tick.",
-    }),
+    // `reports` is change-sourced in-process, not by a feed trigger: every
+    // write goes through `reportsProducer.mutate`, which routes the ids it
+    // touched, coalesced to one flush per 2 s (see server/internal/producer.ts).
+    // Mounting it is what keeps the feed from installing a trigger on the table.
+    reportsProducer.declare,
     // A report records a crash on the machine that crashed, and its
     // investigation link points at a task in the SAME database. A fresh
     // worktree inheriting main's crash history gets a bell full of failures it

@@ -1,7 +1,10 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { getTableColumns, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import type {
+  ProducerBuilder,
+  ProducerExecutor,
+} from "@plugins/database/plugins/change-feed/server";
 import {
   runInBackgroundLane,
   runWithoutProfiling,
@@ -15,7 +18,7 @@ import { reportDetailRoute } from "@plugins/reports/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { _reports } from "./tables";
-import { bumpReportsRevision } from "./revision";
+import { reportsProducer } from "./producer";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise-rules";
 import { ReportKind } from "./report-kinds";
@@ -299,7 +302,7 @@ export async function recordReport(
       // query spans) would run after the ALS scope exits — defeating suppression
       // and re-opening the self-feedback loop. Likewise it must stay inside the
       // enclosing lane scope, or its connection is taken un-declared.
-      return await upsertReport({
+      return await writeReport({
         id,
         kind,
         fingerprint: fp,
@@ -334,9 +337,11 @@ export async function recordReport(
   // gating on it would permanently mute any long-lived singleton fingerprint
   // (e.g. the slow-op rollup) after its first burst.
   if (limited) {
-    // Keep the row's count accurate but don't churn the bus: no bell write and
-    // no `reports.revision` bump, so an open Reports pane stops refetching while
-    // this fingerprint bursts (its count catches up on the next unlimited one).
+    // Keep the row's count accurate but don't churn the bell: no notification
+    // while this fingerprint bursts. The write above still routed its id — an
+    // open Reports pane's count keeps moving, at most once per the producer's
+    // 2 s window — so during a burst the pane and the bell deliberately
+    // disagree.
     return {
       outcome: "recorded",
       reportId: row.id,
@@ -344,10 +349,6 @@ export async function recordReport(
       rateLimited: true,
     };
   }
-
-  // The durable write landed: tell open Reports readers to refetch (debounced
-  // server-side, so a storm costs one push per window).
-  bumpReportsRevision();
 
   // Mirror a "[Stale tab]" marker into the bell so the notification itself reads
   // as benign version-skew at a glance.
@@ -435,16 +436,32 @@ export interface ReportUpsertValues {
   occurredAt: Date;
 }
 
-// The durable upsert half of recordReport, db-parametrized so the DB-backed
-// suite can drive the SQL semantics (greatest/least timestamps, the
-// newest-occurrence guards) against a throwaway Postgres — the session-chain
-// `recordSessionId(…, conn)` precedent. Production callers go through
-// recordReport, which owns validation, the shed gate, velocity, the lane +
-// profiling-suppression scopes, and the bell notification.
-export async function upsertReport(
+// The durable write of recordReport: one upsert through the reports producer,
+// which routes the row's id to live readers (coalesced to one flush per 2 s —
+// see ./producer). Executor-parametrized so the DB-backed suite can drive the
+// SQL semantics (greatest/least timestamps, the newest-occurrence guards)
+// against a throwaway Postgres — the session-chain `recordSessionId(…, conn)`
+// precedent. Production callers go through recordReport, which owns
+// validation, the shed gate, velocity, the lane + profiling-suppression scopes,
+// and the bell notification.
+export async function writeReport(
   v: ReportUpsertValues,
-  conn: NodePgDatabase = db,
+  executor: ProducerExecutor = db,
 ): Promise<(typeof _reports.$inferSelect)[]> {
+  return await reportsProducer.mutate(
+    executor,
+    (q, t) => buildUpsert(q, t, v),
+    { latency: "background", returning: getTableColumns(_reports) },
+  );
+}
+
+// The upsert statement itself, built and not executed: the producer runs it
+// (and appends the RETURNING its emit reads).
+function buildUpsert(
+  q: ProducerExecutor,
+  t: typeof _reports,
+  v: ReportUpsertValues,
+): ProducerBuilder<typeof _reports> {
   const { occurredAt } = v;
   // Timestamps take greatest/least so an out-of-order replay can never move
   // last_seen_at backwards (or first_seen_at forwards); the last-writer-wins
@@ -457,9 +474,9 @@ export async function upsertReport(
   // table's trigger (derived-updated-at) — it moves only when a counted column
   // (message, data, count, the flags, taskId) really changes, so it is never
   // written here.
-  const isNewest = sql`${occurredAt} >= ${_reports.lastSeenAt}`;
-  return await conn
-    .insert(_reports)
+  const isNewest = sql`${occurredAt} >= ${t.lastSeenAt}`;
+  return q
+    .insert(t)
     .values({
       id: v.id,
       kind: v.kind,
@@ -478,22 +495,21 @@ export async function upsertReport(
       lastSeenAt: occurredAt,
     })
     .onConflictDoUpdate({
-      target: [_reports.fingerprint, _reports.worktree],
+      target: [t.fingerprint, t.worktree],
       // Repeats land on the same row (the fingerprint is stable per kind): bump
       // the count, refresh the latest message + payload + attribution.
       set: {
-        message: sql`case when ${isNewest} then ${v.message} else ${_reports.message} end`,
+        message: sql`case when ${isNewest} then ${v.message} else ${t.message} end`,
         // Explicit ::jsonb cast: this rides a raw sql param (not the column's
         // drizzle mapper), so the driver must not guess the wire type.
-        data: sql`case when ${isNewest} then ${JSON.stringify(v.data)}::jsonb else ${_reports.data} end`,
-        count: sql`${_reports.count} + 1`,
-        firstSeenAt: sql`least(${_reports.firstSeenAt}, ${occurredAt})`,
-        lastSeenAt: sql`greatest(${_reports.lastSeenAt}, ${occurredAt})`,
-        rateLimited: sql`${_reports.rateLimited} OR ${v.limited}`,
-        noise: sql`case when ${isNewest} then ${v.noise} else ${_reports.noise} end`,
-        lastClientId: sql`case when ${isNewest} then ${v.clientId} else ${_reports.lastClientId} end`,
-        lastBuildId: sql`case when ${isNewest} then ${v.buildId} else ${_reports.lastBuildId} end`,
+        data: sql`case when ${isNewest} then ${JSON.stringify(v.data)}::jsonb else ${t.data} end`,
+        count: sql`${t.count} + 1`,
+        firstSeenAt: sql`least(${t.firstSeenAt}, ${occurredAt})`,
+        lastSeenAt: sql`greatest(${t.lastSeenAt}, ${occurredAt})`,
+        rateLimited: sql`${t.rateLimited} OR ${v.limited}`,
+        noise: sql`case when ${isNewest} then ${v.noise} else ${t.noise} end`,
+        lastClientId: sql`case when ${isNewest} then ${v.clientId} else ${t.lastClientId} end`,
+        lastBuildId: sql`case when ${isNewest} then ${v.buildId} else ${t.lastBuildId} end`,
       },
-    })
-    .returning();
+    });
 }

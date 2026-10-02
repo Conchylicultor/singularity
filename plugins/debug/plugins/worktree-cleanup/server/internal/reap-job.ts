@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { recordReport } from "@plugins/reports/server";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
 import { WorktreeGitTimeoutError } from "@plugins/infra/plugins/worktree/server";
 import { reclaimNamespace } from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
 import {
@@ -83,7 +83,7 @@ export const worktreeReapJob = defineSupervisedJob({
 
     // Failures of the REPORTING path, not of a reap. Collected rather than
     // thrown where they happen, and re-thrown once the sweep is over — see the
-    // inner catch and the throw at the end of the body.
+    // filing below and the throw at the end of the body.
     const reportFailures: string[] = [];
 
     // One containment, both passes. A failure here is CONTAINED — one corrupt
@@ -108,32 +108,34 @@ export const worktreeReapJob = defineSupervisedJob({
         // that fingerprints a wedge apart from an ordinary failure must not rest
         // on string matching.
         const wedge = err instanceof WorktreeGitTimeoutError ? err : undefined;
-        try {
-          await recordReport({
-            kind: "worktree-reap-failed",
-            source: "server-caught",
-            message: `reap ${targetId} failed: ${String(err)}`,
-            data: {
-              targetId,
-              timedOut: wedge !== undefined,
-              ...(wedge
-                ? { command: wedge.command, timeoutMs: wedge.timeoutMs }
-                : {}),
-              message: String(err),
-            },
-          });
-        } catch (reportErr) {
+
+        // Through the OUTBOX, not `recordReport`: this body runs in the
+        // supervised child, which is not the serving backend — the reports
+        // table's change producer refuses a write there (its change would reach
+        // no subscriber), and the report engine's per-process memory (velocity,
+        // fan-out, shed buffer) would die with the child. Main's drain records
+        // it, as for the sibling jobs (fork-job, backup-body).
+        const filed = await fileReportFromProcess({
+          kind: "worktree-reap-failed",
+          message: `reap ${targetId} failed: ${String(err)}`,
+          data: {
+            targetId,
+            timedOut: wedge !== undefined,
+            ...(wedge
+              ? { command: wedge.command, timeoutMs: wedge.timeoutMs }
+              : {}),
+            message: String(err),
+          },
+        });
+        if (filed.outcome !== "written") {
+          // `fileReportFromProcess` never throws and has already printed why.
           // Not swallowed — parked, and re-thrown below once every target has
-          // been attempted. recordReport throws on a wiring bug (no registered
-          // kind, a payload its schema rejects) and on a DB failure; both must
-          // fail the run loudly, so neither may be dropped here. But throwing
-          // from inside this worker would abandon the remaining targets — the
-          // very containment this catch exists to preserve — and pMap's other
-          // in-flight workers are only awaited through the Promise.all that a
-          // throw here rejects, so a second failure would surface as an
-          // unhandled rejection instead of a run failure. Parking keeps the
-          // sweep whole AND the failure loud.
-          reportFailures.push(String(reportErr));
+          // been attempted: throwing from inside this worker would abandon the
+          // remaining targets, the very containment this catch exists to
+          // preserve. Parking keeps the sweep whole AND the failure loud.
+          reportFailures.push(
+            `${targetId}: report not filed (${filed.outcome})`,
+          );
         }
       }
     };
@@ -175,7 +177,7 @@ export const worktreeReapJob = defineSupervisedJob({
     if (reportFailures.length > 0) {
       throw new Error(
         `worktree reap: ${reportFailures.length} failure report(s) could not be ` +
-          `recorded (the sweep itself ran to completion): ${reportFailures.join("; ")}`,
+          `filed (the sweep itself ran to completion): ${reportFailures.join("; ")}`,
       );
     }
   },

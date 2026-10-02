@@ -109,6 +109,7 @@ describe("watermark — full frames carry it", () => {
       { id: "b", n: 1 },
     ];
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "U",
       ids: ["a"],
@@ -126,6 +127,7 @@ describe("watermark — full frames carry it", () => {
       { id: "b", n: 1 },
     ];
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "U",
       ids: null,
@@ -165,6 +167,7 @@ describe("watermark — full frames carry it", () => {
     // In-place flip (op U, no order asserted).
     table.set("a", 2);
     h.runtime.applyDbChange({
+      source: "feed",
       table: "m_table",
       op: "U",
       ids: ["a"],
@@ -180,6 +183,7 @@ describe("watermark — full frames carry it", () => {
     // a partial re-read — it must stay tokenless.
     table.set("b", 1);
     h.runtime.applyDbChange({
+      source: "feed",
       table: "m_table",
       op: "I",
       ids: ["b"],
@@ -221,6 +225,7 @@ describe("watermark — full frames carry it", () => {
 
     truth = [{ id: "a", n: 2 }];
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "U",
       ids: ["a"],

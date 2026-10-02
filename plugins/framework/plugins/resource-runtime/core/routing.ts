@@ -9,8 +9,20 @@
 // §Algorithm). The legacy read-set path (`applyDbChange`) keeps serving every
 // entry that declares no routes, so a resource moves over one at a time.
 
+/**
+ * Where a change came from. `feed` — the Postgres change feed (a trigger's
+ * NOTIFY, a catch-up replay of its changelog, a reconnect sweep). `producer` —
+ * an in-process change producer (change-feed's `defineChangeProducer`), the
+ * change source of a table the feed installs no trigger on. Attribution only:
+ * the cascade is identical, but the notify counters and the read-set-gap match
+ * are kept per source, and only a feed change carries a transaction to ack.
+ */
+export type ChangeSource = "feed" | "producer";
+
 /** What every producer hands the router. `table` is always a BASE table. */
 export interface TableChange {
+  /** Required: every producer states which one it is (see `ChangeSource`). */
+  source: ChangeSource;
   table: string;
   op: "I" | "U" | "D";
   /**

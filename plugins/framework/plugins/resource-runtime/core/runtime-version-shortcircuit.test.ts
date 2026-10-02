@@ -265,6 +265,7 @@ describe("keyed: an evicted snapshot is never left behind a short-circuit", () =
         { id: "b", n: 1 },
       ]);
       h.runtime.applyDbChange({
+        source: "feed",
         table: "row_table",
         op: "U",
         ids: ["a"],

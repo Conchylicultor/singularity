@@ -19,7 +19,6 @@ segment's `after` / `until` cuts compile through them (query-resource).
     - `conversations/all-conversations`
     - `infra/query-resource`
     - `primitives/data-view/union-query`
-    - `reports`
     - `runs`
 - Server:
   - Exports (types):

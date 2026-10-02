@@ -10,6 +10,7 @@
   - Uses:
     - `database.db`
     - `database/admin.ExcludeFromFork`
+    - `database/change-feed.producedTableNames`
     - `database/change-feed.readLayout`
     - `database/change-feed.routeChange`
     - `infra/jobs.defineJob`

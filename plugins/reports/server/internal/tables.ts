@@ -54,7 +54,7 @@ export const _reports = deriveUpdatedAt(
       count: integer("count").notNull().default(1),
       // Generic velocity state: set when this fingerprint fired faster than the
       // velocity window allows; while the burst lasts, recordReport skips the bell
-      // notification and the `reports.revision` bump. (Was `crash_loop`.)
+      // notification. (Was `crash_loop`.)
       rateLimited: boolean("rate_limited").notNull().default(false),
       noise: boolean("noise").notNull().default(false),
       // Attribution (last-writer-wins): the tab + bundle identity of the most
@@ -90,7 +90,7 @@ export const _reports = deriveUpdatedAt(
       ),
       index("reports_task_id_idx").on(t.taskId),
       // The Reports DataView's default order (last seen, newest first) with the
-      // PK tiebreaker its keyset seek appends — see server/internal/handle-query.ts.
+      // PK tiebreaker the `reports.list` window appends — see core/resources.ts.
       index("reports_last_seen_idx").on(t.lastSeenAt, t.id),
     ],
   ),

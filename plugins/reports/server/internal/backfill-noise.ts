@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import type { ProducerExecutor } from "@plugins/database/plugins/change-feed/server";
 import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
 import { setMutedByMetadata } from "@plugins/shell/plugins/notifications/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { _reports } from "./tables";
 import { isNoiseReport } from "./noise-rules";
-import { bumpReportsRevision } from "./revision";
+import { reportsProducer } from "./producer";
 
 // Re-evaluate every report row against the CURRENT noise-rule set and sync both
 // the stored `reports.noise` flag and the linked notification's `muted` flag.
@@ -31,7 +32,6 @@ export async function backfillNoiseClassification(): Promise<void> {
     })
     .from(_reports);
 
-  let flipped = false;
   const noiseIds: string[] = [];
   const signalIds: string[] = [];
   for (const row of rows) {
@@ -53,14 +53,10 @@ export async function backfillNoiseClassification(): Promise<void> {
       staleOrigin,
     });
     if (noise !== row.noise) {
-      await db.update(_reports).set({ noise }).where(eq(_reports.id, row.id));
-      flipped = true;
+      await setReportNoise(db, row.id, noise);
     }
     (noise ? noiseIds : signalIds).push(row.id);
   }
-  // A reclassified row changes the Noise column of an open Reports pane.
-  if (flipped) bumpReportsRevision();
-
   // Reconcile EVERY linked notification's `muted` to its report row's current
   // noise — not just rows whose flag flipped this boot. A notification can
   // diverge from an unchanged row: pre-dedup, `muted` was snapshotted per
@@ -72,6 +68,26 @@ export async function backfillNoiseClassification(): Promise<void> {
   // does two indexed scans and zero writes.
   await setMutedByMetadata("reportId", noiseIds, true);
   await setMutedByMetadata("reportId", signalIds, false);
+}
+
+/**
+ * One reclassification: set `reportId`'s noise flag. One autocommit statement
+ * per flip, so the reconcile never holds row locks against a concurrent
+ * `recordReport` upsert. Through the producer: a reclassified row changes the
+ * Noise column of an open Reports pane (its id routes with the next 2 s
+ * flush). Exported for the reports.list oracle, which runs it against a
+ * throwaway database.
+ */
+export async function setReportNoise(
+  executor: ProducerExecutor,
+  reportId: string,
+  noise: boolean,
+): Promise<void> {
+  await reportsProducer.mutate(
+    executor,
+    (q, t) => q.update(t).set({ noise }).where(eq(t.id, reportId)),
+    { latency: "background" },
+  );
 }
 
 // Worktree-scoped boot warm-up: the full `_reports` scan + reconcile is a heavy,

@@ -93,6 +93,7 @@ function membershipHarness(
   );
   const feed = (op: "I" | "U" | "D", ids: string[] | null) =>
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op,
       ids,
@@ -506,6 +507,7 @@ describe("scopedMembership — downstream cascade", () => {
     );
     const feedUp = (op: "I" | "U" | "D", ids: string[] | null) =>
       h.runtime.applyDbChange({
+        source: "feed",
         table: "up_t",
         op,
         ids,
@@ -571,6 +573,7 @@ describe("default-off — a keyed resource without scopedMembership is byte-iden
 
     const feed = (op: "I" | "U" | "D", ids: string[]) =>
       h.runtime.applyDbChange({
+        source: "feed",
         table: "row_table",
         op,
         ids,

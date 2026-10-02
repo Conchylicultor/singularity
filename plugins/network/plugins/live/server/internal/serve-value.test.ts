@@ -115,6 +115,7 @@ describe("compileValue", () => {
 
     n = 2;
     h.runtime.applyDbChange({
+      source: "feed",
       table: "t",
       op: "U",
       ids: ["x"],
@@ -139,6 +140,7 @@ describe("compileValue", () => {
     await h.subscribe(v.key);
     n = 2;
     h.runtime.applyDbChange({
+      source: "feed",
       table: "t",
       op: "U",
       ids: ["x"],

@@ -64,6 +64,7 @@ test("legacy routing still works under SINGULARITY_PROFILING=0: a change to a ta
     });
     expect(notifyStatsFor(key).feed).toBe(0);
     applyDbChange({
+      source: "feed",
       table: "install_route_table",
       op: "U",
       ids: null,

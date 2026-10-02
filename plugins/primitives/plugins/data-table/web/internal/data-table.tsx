@@ -339,6 +339,9 @@ function DataTableRow<TRow>({
     <div
       ref={rowRef}
       data-index={measure?.index}
+      // The row's identity on the DOM — the same marker the list and icons
+      // views carry — so a test can address one row instead of walking text.
+      data-row-key={key}
       // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid)
       className={cn(
         "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",

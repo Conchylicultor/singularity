@@ -196,6 +196,7 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     subscribed = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "rows",
       op: "U",
       ids: ["a"],
@@ -233,6 +234,7 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
 
     // origin === identityTable but identityBase !== identityTable ⇒ dropped.
     h.runtime.applyDbChange({
+      source: "feed",
       table: "rows",
       op: "U",
       ids: ["a"],
@@ -273,6 +275,7 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     subscribed = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "rows",
       op: "U",
       ids: ["a"],
@@ -313,6 +316,7 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     subscribed = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "rows",
       op: "U",
       ids: ["a"],
@@ -361,6 +365,7 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     flipped = true; // the UPDATE below flipped `a` out of the result set
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "rows",
       op: "U",
       ids: ["a"],
@@ -424,6 +429,7 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
     subscribed = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "convs",
       op: "U",
       ids: ["c1"],
@@ -510,6 +516,7 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
     subscribed = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "convs",
       op: "U",
       ids: ["c1"],
@@ -591,6 +598,7 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
 
     // First change: new signature → passes → one downstream delta, affectedMap once.
     h.runtime.applyDbChange({
+      source: "feed",
       table: "convs",
       op: "U",
       ids: ["c1"],
@@ -605,6 +613,7 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
     // Second change: identical signature → the gate short-circuits the edge, so
     // no new downstream frame and affectedMap is never re-consulted.
     h.runtime.applyDbChange({
+      source: "feed",
       table: "convs",
       op: "U",
       ids: ["c1"],
@@ -690,6 +699,7 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
     inserted = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "rows",
       op: "I",
       ids: ["b"],
@@ -730,6 +740,7 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
     subscribed = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "rows",
       op: "D",
       ids: ["a"],
@@ -773,6 +784,7 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
     subscribed = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "rows",
       op: "U",
       ids: ["a"],

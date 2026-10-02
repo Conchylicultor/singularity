@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import type { ProducerExecutor } from "@plugins/database/plugins/change-feed/server";
 import {
   runInBackgroundLane,
   runWithoutProfiling,
@@ -7,7 +8,7 @@ import {
 import { _reports } from "./tables";
 import { reportInvestigationSink } from "./investigation-sink";
 import { ReportKind } from "./report-kinds";
-import { bumpReportsRevision } from "./revision";
+import { reportsProducer } from "./producer";
 
 // Appended to every report-filed task. The agent that picks one up is about to
 // debug, so point them at the debugging map first — it routes them to the right
@@ -90,13 +91,7 @@ export async function investigateReport(
           );
         }
         if (result.taskId !== row.taskId) {
-          await db
-            .update(_reports)
-            .set({ taskId: result.taskId })
-            .where(eq(_reports.id, row.id));
-          // The row now links a task: open readers (the detail pane's
-          // "View task" button, the list) refetch.
-          bumpReportsRevision();
+          await linkReportTask(db, row.id, result.taskId);
         }
         return { taskId: result.taskId };
       }),
@@ -105,4 +100,26 @@ export async function investigateReport(
     taskCreationLocks.delete(reportId);
     release();
   }
+}
+
+/**
+ * Link `reportId` to its investigation task — the one write Investigate makes.
+ * `interactive`: the person who clicked Investigate is waiting on the detail
+ * pane's "View task" — stated here, since `investigateReport` runs in the
+ * background lane and its origin says nothing about who waits. Its flush
+ * routes the id at once (in the producer's root context, so the caller's
+ * suppression scope does not hide it) instead of after the 2 s window.
+ * Exported for the reports.list oracle, which runs it against a throwaway
+ * database.
+ */
+export async function linkReportTask(
+  executor: ProducerExecutor,
+  reportId: string,
+  taskId: string,
+): Promise<void> {
+  await reportsProducer.mutate(
+    executor,
+    (q, t) => q.update(t).set({ taskId }).where(eq(t.id, reportId)),
+    { latency: "interactive" },
+  );
 }

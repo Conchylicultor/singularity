@@ -30,23 +30,42 @@ same shape as `meta.fanOutPerWindow`, and deliberately no spelling for "never".
 A dismissed row comes back unread on the next occurrence past the window;
 occurrences inside it only bump `count`.
 
-## Readers page over HTTP; a tick says when to re-read
+## Readers are live; the table's change source is a producer
 
-`reports` is excluded from the change feed — a crash loop UPDATEs its hot row
-thousands of times a minute, and live-ticking that amplifies load during the
-very storms it records. So there is no row-carrying live resource. Readers use
-three endpoints in `core/endpoints.ts`: `POST /api/reports/query` (the Reports
-DataView's keyset page), `GET /api/reports/facets` (distinct kinds / sources for
-its enum filters) and `GET /api/reports/:id` (one row, `null` when absent).
+Every reader reads `reports.list` (`core/resources.ts`), a scroll
+`liveCollection` served by `serveCollection` (`server/internal/list-resource.ts`):
+the Reports DataView's window, the detail pane's by-id row (`useLiveRow`, its
+`:rows`) and the kind / source filter options (its `:groups`, read as DataView
+facets). There are no endpoints and no revision tick.
 
-They refetch when `reports.revision` moves (`server/internal/revision.ts`): an
-in-process counter, never a DB read, pushed with a 2 s debounce. Every writer
-that changes what a reader sees bumps it — `recordReport` after a
-non-rate-limited upsert (duress-buffered and on-disk-buffered reports replay
-through it), `investigateReport` after linking a task, and the boot noise
-backfill when it flips a flag. The nightly retention sweep does not: a swept row
-disappears on the reader's next refetch. A new writer must call
-`bumpReportsRevision()` or open panes will not see its change.
+`reports` has no change-feed trigger. A crash loop UPDATEs its hot row thousands
+of times a minute, and a per-statement trigger + changelog row + NOTIFY would
+amplify load during the very storms it records. Instead the table has an
+in-process **change producer** (`server/internal/producer.ts`,
+change-feed's `defineChangeProducer`): every write is
+`reportsProducer.mutate(db, (q, t) => <builder on t>, { latency })`, which runs
+the statement, reads the PKs it returned and routes them to the tuples reading
+them — coalesced to one flush per 2 s, so a storm costs each reader one scoped
+refill per window. The four writers: `recordReport` (`writeReport`, background —
+the rate-limited path routes too), `investigateReport` (interactive: flushes at
+once), the boot noise backfill (one statement per flip) and the nightly
+retention sweep (retention deletes through the producer when the table has one).
+
+Rules that follow:
+
+- **A new writer goes through `reportsProducer.mutate`.** A bare
+  `db.update(_reports)` — or raw SQL writing `reports` — reaches no live reader;
+  the `change-feed:producer-writes` check fails on it.
+- **Only the serving backend writes.** `mutate` throws in an exec child (a
+  supervised job body) or a CLI: its change would reach no subscriber. Such a
+  process files through the outbox (below).
+- **Volatile.** A change still pending in the 2 s window is lost on a restart;
+  an open reader reloads in full when it resubscribes. Within one subscription a
+  lost change heals the window's membership but not the values of rows already
+  shown. No reader of `reports` may be L2-persisted (A6, live-state-snapshot).
+- **The bell and the pane disagree during a burst, by design.** While a
+  fingerprint is rate-limited the bell stays quiet, but its row's count keeps
+  moving in an open pane (every 2 s).
 
 ## Filing from a process with no server
 
@@ -78,9 +97,11 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `Reports`
 - Server:
   - Contributes:
-    - `resource.declare` "reports.revision"
+    - `resource.declare` "reports.list"
+    - `resource.declare` "reports.list:rows"
+    - `resource.declare` "reports.list:groups"
     - `ConfigV2.Register` "reports"
-    - `change-feed-exclusion` "reports"
+    - `change-producer` "reports"
     - `fork-data-exclusion` "reports"
   - Uses:
     - `build/server-build-id.getServerGraphHash`
@@ -88,7 +109,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `config_v2.getConfig`
     - `database.db`
     - `database/admin.ExcludeFromFork`
-    - `database/change-feed.ExcludeFromChangeFeed`
+    - `database/change-feed.defineChangeProducer`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `infra/endpoints.HttpError`
@@ -97,15 +118,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `infra/host/duress.ShedSummary`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
-    - `primitives/data-view/server-query.applyJoin`
-    - `primitives/data-view/server-query.augmentServerQuery`
-    - `primitives/data-view/server-query.bindColumns`
-    - `primitives/data-view/server-query.compileWhere`
-    - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/keyset.buildSortKeys`
-    - `primitives/keyset.keyValuesOf`
-    - `primitives/keyset.orderByClauses`
-    - `primitives/keyset.seekPredicate`
+    - `network/live.serveCollection`
     - `shell/notifications.recordNotification`
     - `shell/notifications.setMutedByMetadata`
   - DB schema: `plugins/reports/server/internal/tables.ts`
@@ -120,7 +133,6 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `StormRosterEntry`
     - `StormSummary`
   - Exports (values):
-    - `_reports`
     - `DEFAULT_REPORT_DEBOUNCE_MS`
     - `isReportKindRegistered`
     - `recordReport`
@@ -131,48 +143,34 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Register:
     - `defineWarmup('reports.backfill-noise')`
     - `defineJob('retention.reports')`
-  - Resources: `reports.revision` (push)
+  - Resources:
+    - `reports.list` (keyed, window)
+    - `reports.list:groups` (push)
+    - `reports.list:rows` (keyed, point)
   - Routes:
     - `POST /api/reports`
     - `POST /api/reports/:id/investigate`
-    - `POST /api/reports/query`
-    - `GET /api/reports/facets`
-    - `GET /api/reports/:id`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
     - `fields/int/config.intField`
-    - `infra/endpoints.defineEndpoint`
+    - `network/live.liveCollection`
     - `network/live/filter.liveBoolean`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveNumber`
     - `network/live/filter.liveText`
-    - `primitives/data-view.ServerFilterWireSchema`
-    - `primitives/live-state.resourceDescriptor`
     - `primitives/pane.defineRoute`
   - Exports (types):
-    - `QueryReportsBody`
-    - `QueryReportsResponse`
     - `Report`
-    - `ReportByIdResponse`
-    - `ReportFacets`
     - `ReportFingerprintContext`
     - `ReportSource`
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
-    - `getReport`
-    - `queryReports`
-    - `QueryReportsBodySchema`
-    - `QueryReportsResponseSchema`
-    - `ReportByIdResponseSchema`
     - `reportDetailRoute`
-    - `reportFacets`
-    - `ReportFacetsSchema`
-    - `REPORTS_FILTERABLE`
     - `REPORTS_SEARCHABLE`
     - `ReportSchema`
     - `reportsConfig`
-    - `reportsRevisionResource`
+    - `reportsList`
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:

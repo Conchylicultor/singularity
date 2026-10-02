@@ -14,6 +14,7 @@ import {
   combineResources,
   foldResource,
   mapResource,
+  refuseResource,
   statusOf,
 } from "./resource-utils";
 import type { ResourceResult } from "./use-resource";
@@ -151,5 +152,28 @@ describe("mapResource", () => {
     const noStale = mapResource(failed<number[]>(boom), len);
     if (noStale.status !== "error") throw new Error("unreachable");
     expect("stale" in noStale).toBe(false);
+  });
+});
+
+describe("refuseResource", () => {
+  const tooMany = (xs: number[]) =>
+    xs.length > 2 ? new ResourceError("loader-failed", "too many", null) : null;
+
+  test("a refused ready value is the error arm, the value kept as stale", () => {
+    const r = refuseResource(ready([1, 2, 3]), tooMany);
+    expect(r.status).toBe("error");
+    if (r.status !== "error") return;
+    expect(r.error.message).toBe("too many");
+    expect(r.stale).toEqual([1, 2, 3]);
+    expect(r.refetch).toBe(refetch);
+  });
+
+  test("an accepted ready value, loading and error pass through untouched", () => {
+    const ok = ready([1]);
+    expect(refuseResource(ok, tooMany)).toBe(ok);
+    const l = loading<number[]>();
+    expect(refuseResource(l, tooMany)).toBe(l);
+    const e = failed<number[]>(boom);
+    expect(refuseResource(e, tooMany)).toBe(e);
   });
 });

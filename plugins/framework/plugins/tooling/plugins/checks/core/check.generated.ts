@@ -19,6 +19,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/prototypes/plugins/files", id: "apps.prototypes.files", loader: () => import("@plugins/apps/plugins/prototypes/plugins/files/check"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: [] },
   { pluginPath: "conversations/plugins/model-provider", id: "conversations.model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },
+  { pluginPath: "database/plugins/change-feed", id: "database.change-feed", loader: () => import("@plugins/database/plugins/change-feed/check"), dependsOn: [] },
   { pluginPath: "database/plugins/client-tools", id: "database.client-tools", loader: () => import("@plugins/database/plugins/client-tools/check"), dependsOn: [] },
   { pluginPath: "database/plugins/derived-updated-at", id: "database.derived-updated-at", loader: () => import("@plugins/database/plugins/derived-updated-at/check"), dependsOn: ["database/plugins/migrations"] },
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/check"), dependsOn: ["database/plugins/derived-updated-at", "infra/plugins/namespace", "infra/plugins/paths"] },

@@ -777,6 +777,7 @@ and those plugins' `CLAUDE.md`.
     - `packages/resource-protocol.SubErrorFrame`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
+    - `ChangeSource`
     - `DefineResourceInput`
     - `DependsOnEntry`
     - `ExternalResource`
@@ -786,6 +787,7 @@ and those plugins' `CLAUDE.md`.
     - `KeyedMembership`
     - `KeyedMembershipInput`
     - `KeyedServerResourceOptions`
+    - `NotifyCounts`
     - `ReachPlan`
     - `Resource`
     - `ResourceContract`

@@ -25,7 +25,7 @@ import type { RunArmFieldSpecs, UnionRun } from "../../core";
  */
 export function runArmFields<S extends RunArmFieldSpecs>(
   specs: S,
-  defs: (Omit<FieldDef<UnionRun>, "id" | "type"> & {
+  defs: (FieldDef<UnionRun> & {
     id: Extract<keyof S, string>;
     type: string;
   })[],

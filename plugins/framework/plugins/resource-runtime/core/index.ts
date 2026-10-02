@@ -14,6 +14,7 @@ export type {
   ResourceParams,
   DependsOnEntry,
   KeyedMembership,
+  NotifyCounts,
   ScopedResourceTable,
   RoutedRecomputeOn,
   WsData,
@@ -25,6 +26,7 @@ export {
   tableLayoutRequirements,
 } from "./routing";
 export type {
+  ChangeSource,
   FullRoute,
   HostMap,
   ReachPlan,

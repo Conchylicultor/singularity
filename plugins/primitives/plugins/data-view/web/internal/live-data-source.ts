@@ -9,6 +9,7 @@ import type {
 } from "@plugins/network/plugins/live/core";
 import type {
   LiveDataSourceOf,
+  LiveFacetColumn,
   LiveSearchableColumn,
   LiveSourceScope,
 } from "../../core";
@@ -19,22 +20,39 @@ import type {
 /**
  * Declare a live DataView source over a `scroll: true` collection (a
  * collection without it is a tsc error). `searchable` names the text columns
- * the search box matches.
+ * the search box matches; `facets` the text columns whose values the Filter
+ * control offers as options, read live (`LiveDataSource.facets`).
  */
 export function liveDataSource<Row, F, S extends string>(
   collection: LiveScrollCollection<Row, F, S>,
-  opts: { searchable: readonly LiveSearchableColumn<F>[] },
+  opts: {
+    searchable: readonly LiveSearchableColumn<F>[];
+    facets?: readonly LiveFacetColumn<F>[];
+  },
 ): LiveDataSourceOf<Row, F> {
   const filterable = collection.filterable as Record<
     string,
     { domain: string } | undefined
   >;
-  for (const column of opts.searchable) {
-    if (filterable[column]?.domain !== "text") {
-      throw new Error(
-        `liveDataSource("${collection.key}"): searchable column "${column}" must be a declared text column.`,
-      );
+  const facets = opts.facets ?? [];
+  // tsc already narrows both lists to text columns; this catches an erased
+  // (cast) declaration at module load, where it is declared.
+  for (const [role, columns] of [
+    ["searchable", opts.searchable],
+    ["facet", facets],
+  ] as const) {
+    for (const column of columns) {
+      if (filterable[column]?.domain !== "text") {
+        throw new Error(
+          `liveDataSource("${collection.key}"): ${role} column "${column}" must be a declared text column.`,
+        );
+      }
     }
+  }
+  if (new Set(facets).size !== facets.length) {
+    throw new Error(
+      `liveDataSource("${collection.key}"): a facet column is listed twice (${facets.join(", ")}).`,
+    );
   }
   const codec = collection.window.window;
   const erased = collection as unknown as LiveScrollCollection<
@@ -46,6 +64,7 @@ export function liveDataSource<Row, F, S extends string>(
     kind: "live",
     collection: erased,
     searchable: opts.searchable,
+    facets,
     scope:
       scope === undefined ? { kind: "all" } : { kind: "where", filter: scope },
     scoped: ({ where }) => {
@@ -79,6 +98,7 @@ export function liveDataSource<Row, F, S extends string>(
         kind: "live",
         collection: erased,
         searchable: opts.searchable,
+        facets,
         scope: awaiting,
       };
     },

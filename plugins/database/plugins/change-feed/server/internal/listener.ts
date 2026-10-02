@@ -4,9 +4,9 @@ import {
   createDbClient,
   type DbClient,
 } from "@plugins/database/plugins/connection/server";
-import { parseLiveStatePayload, type DbChange } from "./parse-payload";
+import { parseLiveStatePayload } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
-import { routeChange } from "./route-change";
+import { feedChange, routeChange, type FeedChange } from "./route-change";
 import { routeWithSpan } from "./route-span";
 import { createBurstRouter } from "./burst";
 import { changeFeedLog as log } from "./log-sink";
@@ -23,7 +23,7 @@ const RECONNECT_MAX_MS = 10_000;
 
 export interface ChangeFeedListenerOptions {
   connectionString: () => string;
-  route: (change: DbChange) => void;
+  route: (change: FeedChange) => void;
   coveredTables: () => readonly string[];
   livenessIntervalMs?: number;
   reconnectMinMs?: number;
@@ -128,7 +128,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
           );
           return;
         }
-        routeNotify(change);
+        routeNotify(feedChange(change));
       });
 
       await c.connect();
@@ -196,14 +196,13 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   function fullSweep(): void {
     for (const table of opts.coveredTables()) {
       // A reconnect sweep is a synthesized FULL invalidation — no source
-      // transaction corresponds, so no ack attribution (`xid: null`).
+      // transaction corresponds, so no ack attribution (no `xid`).
       routeWithSpan(
         {
+          source: "feed",
           table,
           op: "U",
           ids: null,
-          xid: null,
-          changedAt: null,
           keys: null,
           unchanged: null,
         },

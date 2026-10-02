@@ -202,6 +202,7 @@ describe("H5 — notify races a fresh sub", () => {
     ]);
     await h.subscribe("rows"); // sub-ack parked
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "I",
       ids: null,
@@ -233,6 +234,7 @@ describe("H5 — notify races a fresh sub", () => {
       { id: "b", n: 1 },
     ]);
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "U",
       ids: ["a"],

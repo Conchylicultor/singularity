@@ -180,6 +180,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     await h.subscribe("tasks");
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "tasks",
       op: "I",
       ids: ["a"],
@@ -203,6 +204,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     await h.subscribe("tasks");
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "unrelated_table",
       op: "U",
       ids: ["x"],
@@ -240,6 +242,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     await h.subscribe("rows");
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "U",
       ids: ["a"],
@@ -293,6 +296,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     subscribed = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "U",
       ids: ["a"],
@@ -347,6 +351,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     subscribed = true;
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "up_t",
       op: "U",
       ids: ["u1"],
@@ -405,6 +410,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
 
     // The identity-forwarded scoped change to up_t…
     h.runtime.applyDbChange({
+      source: "feed",
       table: "up_t",
       op: "U",
       ids: ["u1"],
@@ -414,6 +420,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     // …and the secondary-view FULL fanout of the same base change onto down_v
     // (down's identity view), tagged with the originating base up_t.
     h.runtime.applyDbChange({
+      source: "feed",
       table: "down_v",
       op: "U",
       ids: null,
@@ -475,6 +482,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
 
     const change = (): void =>
       h.runtime.applyDbChange({
+        source: "feed",
         table: "up_t",
         op: "U",
         ids: ["u1"],
@@ -539,6 +547,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
 
     const scoped = (): void =>
       h.runtime.applyDbChange({
+        source: "feed",
         table: "up_t",
         op: "U",
         ids: ["u1"],
@@ -556,6 +565,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
 
     // A FULL upstream change (INSERT → ids null) clears the edge's signature memo.
     h.runtime.applyDbChange({
+      source: "feed",
       table: "up_t",
       op: "I",
       ids: null,
@@ -583,6 +593,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     await h.subscribe("rows");
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "D",
       ids: ["a"],
@@ -605,6 +616,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     await h.subscribe("doc", { id: "2" });
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "docs",
       op: "I",
       ids: null,
@@ -620,8 +632,13 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
   test("never throws on a malformed change (defensive no-op)", () => {
     const h = feedHarness({});
     expect(() =>
-      // @ts-expect-error — exercising the defensive path with a bad shape.
-      h.runtime.applyDbChange({ table: "x", op: "U", ids: undefined }),
+      h.runtime.applyDbChange({
+        source: "feed",
+        table: "x",
+        op: "U",
+        // @ts-expect-error — exercising the defensive path with a bad shape.
+        ids: undefined,
+      }),
     ).not.toThrow();
   });
 
@@ -637,6 +654,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
 
     r.notify(); // hand
     h.runtime.applyDbChange({
+      source: "feed",
       table: "tasks",
       op: "I",
       ids: ["a"],
@@ -678,6 +696,7 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
     await h.subscribe("rows");
 
     h.runtime.applyDbChange({
+      source: "feed",
       table: "row_table",
       op: "U",
       ids: ["a"],

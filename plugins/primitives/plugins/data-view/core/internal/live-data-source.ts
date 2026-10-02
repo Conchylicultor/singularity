@@ -22,6 +22,14 @@ export type LiveSearchableColumn<F> = {
 }[keyof F & string];
 
 /**
+ * The columns a live source may declare as FACETS: its `text`-domain
+ * filterable columns (enums included — an enum is a text column narrowed in
+ * tsc). A facet's options are the values the column takes, read live as a
+ * grouping — a number / instant / array column has no option list to read.
+ */
+export type LiveFacetColumn<F> = LiveSearchableColumn<F>;
+
+/**
  * A live source's scope — the base filter ANDed into every tuple before the
  * view's own: `all` (the whole collection), `where` (the canonical filter
  * `scoped` built), or `awaiting` — the scope's value is not known yet (mail's
@@ -45,6 +53,13 @@ export interface LiveDataSource<TRow> {
   readonly collection: LiveScrollCollection<TRow, unknown, string>;
   /** Text-domain filterable columns the search box matches (`contains`, any of). */
   readonly searchable: readonly string[];
+  /**
+   * Text-domain filterable columns whose values are read live (a grouping of
+   * the column over the source's scope) and handed to the field over that
+   * column as its `optionsResult` — the Filter control's option list, never
+   * declared by hand.
+   */
+  readonly facets: readonly string[];
   readonly scope: LiveSourceScope;
 }
 

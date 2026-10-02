@@ -5,19 +5,20 @@ Debug app pane listing every recorded report, including low-signal "noise" crash
 never hidden here. A crash is the first `kind` of report; future kinds (e.g. slow
 operations) appear here too.
 
-Opened from the Debug sidebar ("Reports"). The list is a server-paged DataView
-over `POST /api/reports/query` (sort / filter / search run as SQL, keyset
-pagination); the Kind and Source filter options come from `GET /api/reports/facets`,
-and the detail pane (and its route resolve) reads one row through
-`GET /api/reports/:id`. All three are declared in `@plugins/reports/core`.
+Opened from the Debug sidebar ("Reports"). The list is a live DataView over
+`reportsList` (`reports.list`, declared in `@plugins/reports/core`): a scroll
+collection whose sort / filter / search compile to SQL server-side, with the
+Kind and Source filter options read live as its facets (a grouping of the whole
+table, value-sorted). The detail pane — and its route resolve — reads one row
+with `useLiveRow(reportsList, id)`.
 
-Nothing pushes rows: the `reports` table is excluded from the change feed. Every
-surface instead refetches in place when the `reports.revision` tick moves — an
-in-process counter the reports engine bumps after a write, pushed at most once
-per 2 s — so the list, the filter options and an open detail pane stay current
-through a crash storm at a bounded cost. The sortable / filterable field ids in
-`reports-view.tsx` must match the server's `COLUMN_MAP` keys in
-`plugins/reports/server/internal/handle-query.ts`.
+Nothing refetches: the `reports` table's in-process change producer routes the
+ids of every write (a new report, a repeat moving a count, a noise flip, a
+linked task, a retention delete) to the tuples holding them, at most once per
+2 s — so the list, the filter options and an open detail pane stay current
+through a crash storm at a bounded cost. Investigate keeps the task it linked
+locally until the live row carries it, so "View task" shows at once and a
+second click cannot launch a second agent.
 
 Each row shows:
 
@@ -49,9 +50,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `apps-core/tabs.navigate`
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
+    - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
@@ -62,14 +61,15 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
+    - `primitives/data-view.liveDataSource`
     - `primitives/launch.LaunchAgentPopover`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.useResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.ResolveResult`
+    - `primitives/pane.resolveRow`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/tab-id.getTabId`

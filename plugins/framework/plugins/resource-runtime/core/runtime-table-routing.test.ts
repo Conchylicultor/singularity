@@ -241,6 +241,7 @@ function routed(opts: FixtureOpts = {}) {
     } = {},
   ) =>
     h.runtime.routeTableChange({
+      source: "feed",
       table,
       op,
       ids: o.ids ?? null,
@@ -1470,6 +1471,7 @@ describe("registration and the legacy path", () => {
     const f = await seeded({ runtime: { readSet: () => ["hosts"] } });
     const at = f.loads.length;
     f.h.runtime.applyDbChange({
+      source: "feed",
       table: "hosts",
       op: "U",
       ids: ["h1"],
@@ -1500,6 +1502,7 @@ describe("registration and the legacy path", () => {
     await h.subscribe("legacy");
     const feed = (table: string) =>
       h.runtime.applyDbChange({
+        source: "feed",
         table,
         op: "U",
         ids: null,
@@ -1574,6 +1577,7 @@ describe("reach — a non-keyed entry routed by full routes", () => {
     );
     const change = (table: string, xid?: string) =>
       h.runtime.routeTableChange({
+        source: "feed",
         table,
         op: "U",
         ids: ["x"],
@@ -1605,6 +1609,7 @@ describe("reach — a non-keyed entry routed by full routes", () => {
     await g.h.subscribe("groups", PLAIN);
     g.loads.length = 0;
     g.h.runtime.applyDbChange({
+      source: "feed",
       table: "other",
       op: "U",
       ids: null,
@@ -1818,6 +1823,7 @@ describe("recomputeOn — a routed entry's compiled vocabulary moved", () => {
     const f = withDefs();
     await f.h.subscribe("win", W3);
     f.h.runtime.routeTableChange({
+      source: "feed",
       table: "hosts",
       op: "U",
       ids: ["h1"],
@@ -1832,6 +1838,7 @@ describe("recomputeOn — a routed entry's compiled vocabulary moved", () => {
     expect(f.loads.slice(at)).toEqual([{ params: W3, ids: "FULL" }]);
     // The memo was dropped: the next change asks usesOf again.
     f.h.runtime.routeTableChange({
+      source: "feed",
       table: "hosts",
       op: "U",
       ids: ["h1"],
@@ -1905,5 +1912,37 @@ describe("recomputeOn — a routed entry's compiled vocabulary moved", () => {
         },
       ),
     ).toThrow(/which is not registered/);
+  });
+});
+
+describe("change source", () => {
+  test("a producer change refills scoped, counts as `producer` — never `feed` — and owes no ack", async () => {
+    const f = routed();
+    seed(f);
+    await f.h.subscribe("win", W3, { acks: true });
+    const before = f.h.runtime.notifyStatsFor("win");
+    const at = f.loads.length;
+    f.w.hosts.get("h2")!.n = 2.5;
+    f.h.runtime.routeTableChange({
+      source: "producer",
+      table: "hosts",
+      op: "U",
+      ids: ["h2"],
+      keys: null,
+      unchanged: null,
+      changedAt: Date.now(),
+    });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h2"] }]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+    expect(f.h.runtime.notifyStatsFor("win")).toEqual({
+      hand: before.hand,
+      feed: before.feed,
+      producer: before.producer + 1,
+    });
+    // No transaction to attribute: the delta carries no ack.
+    expect(
+      deltas(f.pushesOf(W3)).every((x) => (x.ackTx ?? []).length === 0),
+    ).toBe(true);
   });
 });

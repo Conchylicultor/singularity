@@ -14,10 +14,12 @@ import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { LIVE_STATE_CHANGELOG_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
 import { feedExemptTables } from "@plugins/database/plugins/derived-tables/server";
-import { rebuildTriggers, getCoveredTables } from "./internal/triggers";
 import { excludedTableNames } from "./internal/exclusion";
-import { assertRouteTablesCovered } from "./internal/route-coverage";
-import { assertRouteLayoutsInstalled } from "./internal/route-layout";
+import { installFeed } from "./internal/install-feed";
+import {
+  dropPendingProducerChanges,
+  producedTableNames,
+} from "./internal/producer";
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
 
@@ -31,10 +33,37 @@ export type { DbChange } from "./internal/parse-payload";
 // driver (live-state-snapshot) so replay can never drift from the live LISTEN
 // path. See research/2026-06-22-global-live-state-l2-persisted-materialization.md.
 export { routeChange } from "./internal/route-change";
+// What `routeChange` takes: every change states its source (the feed, or an
+// in-process change producer).
+export type {
+  FeedChange,
+  ProducerChange,
+  RoutedChange,
+} from "./internal/route-change";
+// The in-process change source of a table the feed installs no trigger on: a
+// producer owns its table's write verb (`mutate`) and routes the rows each
+// statement returned. `changeProducerFor` lets a generic writer (retention) find
+// a table's producer; `producedTableNames` is the mounted set (A6 in
+// live-state-snapshot reads it).
+export {
+  changeProducerFor,
+  defineChangeProducer,
+  producedTableNames,
+  PRODUCER_IDS_CAP,
+} from "./internal/producer";
+export type {
+  ChangeProducer,
+  ChangeProducerContribution,
+  ChangeProducerOptions,
+  ChangeProducerSpec,
+  ProducerBuilder,
+  ProducerExecutor,
+  WriteLatency,
+} from "./internal/producer";
 
 export default {
   description:
-    "L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.",
+    "L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible. A table written only by this backend at high rate may instead declare an in-process change producer (defineChangeProducer): no trigger, its `mutate` owns the write and routes the returned ids, coalesced at the source and volatile.",
   contributions: [
     // The changelog is this feed's transactional OUTBOX — a bounded replay
     // buffer the L2 cold-boot catch-up reads to find what changed while a
@@ -59,51 +88,32 @@ export default {
   // barrier so the feed's triggers exist before any traffic — and the listener
   // (started in onReady, after the barrier) is guaranteed to find them.
   async onReadyBlocking() {
-    // The contributed exclusions, read once here: contributions were collected
-    // before this barrier.
-    const exclusions = {
-      feedExempt: feedExemptTables(),
-      optedOut: excludedTableNames(),
-    };
-    // The routed tables' trigger layouts, derived from every registered route —
+    // The contributed exclusions and producers, read once here: contributions
+    // were collected before this barrier. The routed tables' trigger layouts
+    // and the resource tables are derived from every registered route —
     // resources register at module eval and deferred ones bind right after
     // contributions are collected, both before this barrier.
-    const layouts = routedTableRequirements();
-    // Per-table DROP+CREATE TRIGGER can wait on the previous backend's readers
-    // during a hot-swap: widen the query deadline for the rebuild's own queries.
+    const inputs = {
+      exclusions: {
+        feedExempt: feedExemptTables(),
+        optedOut: excludedTableNames(),
+        produced: producedTableNames(),
+      },
+      layouts: routedTableRequirements(),
+      scoped: scopedResourceTables(),
+    };
+    // The trigger rebuild and the boot invariants it is checked against (A1′,
+    // A2′, A3, A3p — see ./internal/install-feed). Per-table DROP+CREATE
+    // TRIGGER can wait on the previous backend's readers during a hot-swap:
+    // widen the query deadline for the install's own queries.
     await withQueryDeadline(
       {
         ms: BOOT_DDL_QUERY_DEADLINE_MS,
         reason: "boot: change-feed trigger rebuild",
       },
-      () => rebuildTriggers(db, exclusions, layouts),
+      () => installFeed(db, inputs),
     );
-    // Reject dead scope policy (A1): a resource depending on a table the feed
-    // installed no trigger on can never receive the delivery it declares — a
-    // routed resource is reached only through its route tables, a legacy scoped
-    // one only on origin === identityTable, and only a triggered table produces
-    // either. `getCoveredTables()` is the single authoritative set — just
-    // populated by `rebuildTriggers` above — so this one check subsumes the
-    // ExcludeFromChangeFeed case AND catches typo / view / rollup / nonexistent
-    // tables; the exclusion + exempt sets only classify the reason for the
-    // diagnostic. All inputs are authoritative here — contributions were
-    // collected before this barrier and the resource registry is populated at
-    // module-import. Throws loudly (blocks boot) rather than warning: it is always
-    // a definite bug, never transient drift. A legitimate base table is present in
-    // the covered set by construction, so a miss is never a false positive. See
-    // ./internal/route-coverage.
-    assertRouteTablesCovered(
-      scopedResourceTables(),
-      new Set(getCoveredTables()),
-      exclusions.optedOut,
-      exclusions.feedExempt,
-    );
-    // A3: every column a route maps through, filters or matches on is carried
-    // by its table's installed trigger — read back from the catalog (the
-    // trigger arguments), so a layout the routes derive but the database does
-    // not carry blocks boot instead of recomputing its readers FULL forever.
-    await assertRouteLayoutsInstalled(db, layouts);
-    // `rebuildTriggers` above creates `live_state_changelog`, which did not exist
+    // `installFeed` above creates `live_state_changelog`, which did not exist
     // yet when the database plugin took its own snapshot of the public relations.
     // Take it again so a loader naming the changelog unquoted is recognised too.
     // Idempotent, and it replaces the set wholesale.
@@ -136,6 +146,8 @@ export default {
     startListener();
   },
   async onShutdown() {
+    // A producer's pending window must not fire into a runtime tearing down.
+    dropPendingProducerChanges();
     await stopListener();
   },
 } satisfies ServerPluginDefinition;

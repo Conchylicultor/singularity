@@ -81,8 +81,16 @@ function feedChange(
   op: "I" | "U" | "D",
   ids: string[] | null,
 ): void {
-  h.runtime.routeTableChange({ table, op, ids, keys: null, unchanged: null });
+  h.runtime.routeTableChange({
+    source: "feed",
+    table,
+    op,
+    ids,
+    keys: null,
+    unchanged: null,
+  });
   h.runtime.applyDbChange({
+    source: "feed",
     table,
     op,
     ids,
@@ -401,6 +409,8 @@ function membershipSuite(driver: Driver): void {
       });
       await tick();
       expect(persists).toEqual([]); // structurally excluded, not name-excluded
+      // …and `persistedKeys()` is that same gate, so it lists none.
+      expect(w.h.runtime.persistedKeys()).toEqual([]);
 
       // N→0 evicts the snapshot (no persisted-reconstruction carve-out applies)…
       await w.h.unsub("win");
@@ -447,6 +457,7 @@ function membershipSuite(driver: Driver): void {
       );
       table.set("a", { n: 1, where: true });
       h.runtime.applyDbChange({
+        source: "feed",
         table: "row_table",
         op: "U",
         ids: ["a"],
@@ -455,6 +466,7 @@ function membershipSuite(driver: Driver): void {
       });
       await tick();
       expect(persists).toEqual(["rows"]);
+      expect(h.runtime.persistedKeys()).toEqual(["rows"]);
     });
   });
 

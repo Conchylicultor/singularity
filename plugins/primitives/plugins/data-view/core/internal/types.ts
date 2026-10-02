@@ -322,7 +322,42 @@ export interface FieldOption {
  */
 export type RowTone = "default" | "muted";
 
-export interface FieldDef<TRow> {
+/**
+ * A field's option set as a READ STATE — for a field whose closed value set is
+ * not known up front but read (a live source's facet: the values its column
+ * takes, `liveDataSource({ facets })`). Its not-ready arms are a read's own
+ * (`ResourceReadiness`: the typed failure and its `refetch`); `loading` and
+ * `error` are states the filter input renders as such, never as an empty list
+ * — "no options yet" is not "this column has no values".
+ */
+export type FieldOptionsResult =
+  | Exclude<ResourceReadiness, { status: "ready" }>
+  | { readonly status: "ready"; readonly options: readonly FieldOption[] };
+
+/**
+ * A field's option set is declared (`options`) or read (`optionsResult`) —
+ * never both, so no reader has to pick which one wins.
+ */
+type FieldOptionsSpec =
+  | {
+      /** type:"enum"/"tags" — the closed value set, and how each value PRESENTS.
+       *  Read by the chip cell, the inline editor, the filter input and the
+       *  group-by section label. See {@link FieldOption}. */
+      options?: FieldOption[];
+      optionsResult?: never;
+    }
+  | {
+      options?: never;
+      /** The closed value set as a read state (see {@link FieldOptionsResult}).
+       *  Read by the filter input, which renders its loading and error arms. */
+      optionsResult: FieldOptionsResult;
+    };
+
+/** A field of a DataView's schema. `options` xor `optionsResult` (see {@link FieldOptionsSpec}). */
+export type FieldDef<TRow> = FieldDefBase<TRow> & FieldOptionsSpec;
+
+/** Every {@link FieldDef} property but its option set. */
+interface FieldDefBase<TRow> {
   id: string;
   label: string;
   /**
@@ -408,10 +443,6 @@ export interface FieldDef<TRow> {
   width?: string;
   /** Text alignment within the table column (header + cells). Default `"start"`. */
   align?: "start" | "end" | "center";
-  /** type:"enum"/"tags" — the closed value set, and how each value PRESENTS.
-   *  Read by the chip cell, the inline editor, the filter input and the
-   *  group-by section label. See {@link FieldOption}. */
-  options?: FieldOption[];
   /** Opaque per-type config for custom columns; understood only by the field
    *  type's own code (e.g. enum options). Passed through untouched by the host. */
   config?: unknown;

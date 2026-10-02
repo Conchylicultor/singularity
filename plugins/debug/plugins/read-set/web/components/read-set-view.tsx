@@ -30,8 +30,9 @@ import type { ResourceReadSet } from "../../shared/schema";
 //       silently FULL-recompute; explicit `recompute: full` opt-outs and routed
 //       `full` routes are surfaced separately (declared, not a degradation).
 //   C — the over-broad-edges diff vs `dependsOn` (cascade amplification, raw read-set).
-//   D — notify provenance: per-resource hand vs feed counts during the L4
-//       parallel run, flagging read-set-gap candidates (hand > 0 && feed === 0).
+//   D — notify provenance: per-resource hand / feed / producer counts during
+//       the L4 parallel run, flagging read-set-gap candidates (hand > 0 and no
+//       feed or producer delivery).
 
 interface TableEntry {
   table: string;
@@ -67,7 +68,12 @@ interface NotifyEntry {
   key: string;
   hand: number;
   feed: number;
-  /** hand > 0 && feed === 0 — the feed under-covers what the hand-notify does. */
+  /** Deliveries from an in-process change producer (a produced table). */
+  producer: number;
+  /**
+   * hand > 0 with no feed or producer delivery — no change source covers what
+   * the hand-notify does.
+   */
   gap: boolean;
 }
 
@@ -187,8 +193,8 @@ function computeDiff(resources: ResourceReadSet[]): {
 
 /**
  * Project each resource's notify provenance counters into a sorted list, with
- * gap candidates (hand > 0 && feed === 0) first. Resources that have never
- * notified (hand === 0 && feed === 0) are dropped — nothing to compare yet.
+ * gap candidates (hand > 0, no feed or producer delivery) first. Resources that
+ * have never notified (every counter 0) are dropped — nothing to compare yet.
  */
 function buildNotifyEntries(resources: ResourceReadSet[]): NotifyEntry[] {
   return resources
@@ -196,9 +202,13 @@ function buildNotifyEntries(resources: ResourceReadSet[]): NotifyEntry[] {
       key: r.key,
       hand: r.notifyStats.hand,
       feed: r.notifyStats.feed,
-      gap: r.notifyStats.hand > 0 && r.notifyStats.feed === 0,
+      producer: r.notifyStats.producer,
+      gap:
+        r.notifyStats.hand > 0 &&
+        r.notifyStats.feed === 0 &&
+        r.notifyStats.producer === 0,
     }))
-    .filter((e) => e.hand > 0 || e.feed > 0)
+    .filter((e) => e.hand > 0 || e.feed > 0 || e.producer > 0)
     .sort((a, b) => {
       if (a.gap !== b.gap) return a.gap ? -1 : 1; // gaps first
       return a.key.localeCompare(b.key);
@@ -344,7 +354,7 @@ function ChipRow({
   );
 }
 
-// ── Section D: notify provenance (hand vs feed, L4 parallel run) ────────────
+// ── Section D: notify provenance (hand / feed / producer, L4 parallel run) ──
 
 function NotifyProvenanceSection({
   entries,
@@ -356,7 +366,7 @@ function NotifyProvenanceSection({
   return (
     <Stack as="section" gap="sm">
       <SectionLabel>
-        Notify provenance — hand vs feed{" "}
+        Notify provenance — hand / feed / producer{" "}
         <span className="opacity-60">
           {entries.length} active{gaps > 0 ? ` · ${gaps} gap` : ""}
         </span>
@@ -377,9 +387,9 @@ function NotifyProvenanceSection({
 }
 
 /**
- * One resource row: mono key on the left, hand/feed count badges on the right,
- * with a destructive "read-set gap" flag when the feed never covered a table the
- * hand-notify did (hand > 0 && feed === 0).
+ * One resource row: mono key on the left, hand / feed / producer count badges
+ * on the right, with a destructive "read-set gap" flag when no change source
+ * ever covered a table the hand-notify did.
  */
 function NotifyRow({ entry }: { entry: NotifyEntry }): ReactElement {
   return (
@@ -394,6 +404,9 @@ function NotifyRow({ entry }: { entry: NotifyEntry }): ReactElement {
         </Badge>
         <Badge variant={entry.feed > 0 ? "success" : "muted"} mono>
           feed {entry.feed}
+        </Badge>
+        <Badge variant={entry.producer > 0 ? "success" : "muted"} mono>
+          producer {entry.producer}
         </Badge>
       </Cluster>
     </Stack>

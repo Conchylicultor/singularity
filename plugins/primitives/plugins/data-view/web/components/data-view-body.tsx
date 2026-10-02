@@ -52,6 +52,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import type { Filterable } from "@plugins/network/plugins/live/plugins/filter/core";
 import { PendingMoveOverlay } from "../internal/use-pending-move-overlay";
 import { CollectFieldExtensions } from "../internal/field-extensions";
+import { CollectFacetOptions } from "../internal/facet-options";
 import { CollectRowOrder } from "../internal/row-order";
 import {
   effectiveFold,
@@ -166,7 +167,9 @@ export function DataViewSectionsBody<TRow>(
  * on them without declaring them (see `serverFilterFields`).
  *
  * It also resolves the origin's row key (a live source keys rows by its
- * collection's id) and checks every field against a live source.
+ * collection's id), checks every field against a live source, and hands each
+ * field over one of the source's facets its read option state
+ * (`CollectFacetOptions`).
  */
 function CollectBodyFields<TRow>(props: {
   source: Pick<
@@ -235,16 +238,24 @@ function CollectBodyFields<TRow>(props: {
           liveColumnScope={liveColumnScope}
           validate={validate}
         >
-          {(fields) =>
-            children(
-              fields,
-              globalExtensionIds(
-                source.fields as FieldDef<unknown>[],
-                withGlobal,
-              ),
-              rowKey,
-            )
-          }
+          {(folded) => (
+            <CollectFacetOptions
+              source={live as LiveDataSource<unknown> | undefined}
+              fields={folded}
+              resolveOperatorSet={resolveOperatorSet}
+            >
+              {(fields) =>
+                children(
+                  fields,
+                  globalExtensionIds(
+                    source.fields as FieldDef<unknown>[],
+                    withGlobal,
+                  ),
+                  rowKey,
+                )
+              }
+            </CollectFacetOptions>
+          )}
         </CollectFieldExtensions>
       )}
     </CollectFieldExtensions>

@@ -39,6 +39,7 @@ const raw: string[] = [];
 const NO_EXCLUSIONS = {
   feedExempt: new Set<string>(),
   optedOut: new Set<string>(),
+  produced: new Set<string>(),
 };
 
 // The routed tables and what their routes would require:

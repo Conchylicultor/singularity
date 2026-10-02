@@ -233,6 +233,7 @@ function attach(
     },
     changeOn(changed: string, op: "I" | "U" | "D", ids: string[]) {
       runtime.routeTableChange({
+        source: "feed",
         table: changed,
         op,
         ids,
@@ -240,6 +241,7 @@ function attach(
         unchanged: null,
       });
       runtime.applyDbChange({
+        source: "feed",
         table: changed,
         op,
         ids,

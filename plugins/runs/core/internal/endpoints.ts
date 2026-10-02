@@ -4,8 +4,7 @@ import { ServerFilterWireSchema } from "@plugins/primitives/plugins/data-view/co
 import { UnionRunSchema } from "./wire";
 
 // Wire mirror of the data-view `SortRule`. data-view/core exports the TYPE but
-// no zod schema for it, so every server-delegated query body declares its own
-// (as `queryReports` does).
+// no zod schema for it, so every server-delegated query body declares its own.
 const SortRuleSchema = z.object({
   fieldId: z.string(),
   direction: z.enum(["asc", "desc"]),

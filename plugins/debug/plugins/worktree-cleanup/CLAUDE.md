@@ -127,7 +127,6 @@ the panel until it is given something to say.
     - `infra/worktree/reclaim.OwnedNamespace`
     - `infra/worktree/reclaim.reclaimNamespace`
     - `primitives/log-channels.defineLogSink`
-    - `reports.recordReport`
     - `reports.ReportKind`
     - `tasks/tasks-core.getAttempt`
     - `tasks/tasks-core.listAttempts`

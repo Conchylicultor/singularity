@@ -9,7 +9,7 @@ import {
   readLayout,
   routeChange,
 } from "@plugins/database/plugins/change-feed/server";
-import type { DbChange } from "@plugins/database/plugins/change-feed/server";
+import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
 import {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
@@ -58,7 +58,7 @@ const ChangedTableRowSchema = z.object({ t: z.string() });
 // See research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
 function replayChange(
   row: ChangelogRow,
-  route: (change: DbChange) => void,
+  route: (change: FeedChange) => void,
 ): void {
   // The layout is read by the live NOTIFY's own rule (`readLayout`): one that
   // does not parse replays the row unscoped (FULL for its readers) rather than
@@ -70,9 +70,10 @@ function replayChange(
       "stderr",
     );
   }
-  // `xid: null` — catch-up replays run at boot, before any client subscribes, so
+  // No `xid` — catch-up replays run at boot, before any client subscribes, so
   // ack attribution has no consumer here; a missing ack is safe by design (the
   // client's resub snapshot watermark backstops any op the downtime absorbed).
+  // No `changedAt` either: the replay is not when the change happened.
   //
   // `unchanged` replays as written, though a catch-up follows a restart that
   // may have been a deploy that changed the routes: it lists columns KNOWN
@@ -81,10 +82,9 @@ function replayChange(
   // listed, so that route is reached. Likewise its `keys`: a column the old
   // layout did not carry reads as unknown, which recomputes — never skips.
   route({
+    source: "feed",
     table: row.t,
     op: row.op,
-    xid: null,
-    changedAt: null,
     ...scope,
   });
 }
@@ -113,7 +113,7 @@ function replayChange(
 // `SELECT` below is delivered on the live path (no gap).
 export async function runCatchUp(
   db: NodePgDatabase,
-  route: (change: DbChange) => void = routeChange,
+  route: (change: FeedChange) => void = routeChange,
 ): Promise<void> {
   const floorRow = await executeOne(db, {
     query: drizzleSql.raw(
@@ -185,7 +185,7 @@ export async function runCatchUp(
 // changed get a FULL recompute. The rare, loud missing-history path.
 async function fullRecomputeChangedTables(
   db: NodePgDatabase,
-  route: (change: DbChange) => void,
+  route: (change: FeedChange) => void,
 ): Promise<void> {
   const changed = await executeRows(db, {
     query: drizzleSql.raw(

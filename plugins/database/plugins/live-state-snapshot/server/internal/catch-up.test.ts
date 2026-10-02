@@ -12,7 +12,7 @@ import {
   LIVE_STATE_SNAPSHOT_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 import { ensureChangelogTable } from "@plugins/database/plugins/change-feed/server/testing";
-import type { DbChange } from "@plugins/database/plugins/change-feed/server";
+import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
 import { ensureSnapshotTable } from "./tables-ddl";
 import {
   createTestDb,
@@ -90,8 +90,8 @@ async function insertChangelog(row: ChangelogSeed): Promise<void> {
   `);
 }
 
-function recorder(): { routed: DbChange[]; route: (c: DbChange) => void } {
-  const routed: DbChange[] = [];
+function recorder(): { routed: FeedChange[]; route: (c: FeedChange) => void } {
+  const routed: FeedChange[] = [];
   return {
     routed,
     route: (c) => {
@@ -124,8 +124,7 @@ describe("runCatchUp", () => {
         table: "tb",
         op: "I",
         ids: ["2"],
-        xid: null,
-        changedAt: null,
+        source: "feed",
         keys: null,
         unchanged: null,
       },
@@ -133,8 +132,7 @@ describe("runCatchUp", () => {
         table: "tc",
         op: "D",
         ids: ["3"],
-        xid: null,
-        changedAt: null,
+        source: "feed",
         keys: null,
         unchanged: null,
       }, // DELETE ids preserved (replay ≡ live path; a membership entry stays scoped)
@@ -142,8 +140,7 @@ describe("runCatchUp", () => {
         table: "td",
         op: "U",
         ids: null,
-        xid: null,
-        changedAt: null,
+        source: "feed",
         keys: null,
         unchanged: null,
       }, // genuinely null-ids stays FULL
@@ -169,8 +166,7 @@ describe("runCatchUp", () => {
         table: "at",
         op: "U",
         ids: null,
-        xid: null,
-        changedAt: null,
+        source: "feed",
         keys: null,
         unchanged: null,
       },
@@ -247,8 +243,7 @@ describe("runCatchUp", () => {
         table: "side",
         op: "U",
         ids: ["s1"],
-        xid: null,
-        changedAt: null,
+        source: "feed",
         keys: { host: ["h1", "h2"], view: ["v", null] },
         unchanged: ["host"],
       },
@@ -256,8 +251,7 @@ describe("runCatchUp", () => {
         table: "hosts",
         op: "U",
         ids: ["a"],
-        xid: null,
-        changedAt: null,
+        source: "feed",
         keys: null,
         unchanged: [],
       },
@@ -284,8 +278,7 @@ describe("runCatchUp", () => {
         table: "side",
         op: "U",
         ids: null,
-        xid: null,
-        changedAt: null,
+        source: "feed",
         keys: null,
         unchanged: null,
       },

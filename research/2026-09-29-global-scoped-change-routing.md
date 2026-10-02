@@ -105,6 +105,23 @@ fail: the three unrelated failures above, plus the live lint barrel test timing
 out at 5 s under load (it passes re-run alone); `./singularity build` success
 (its checks include `type-check` and `plugin-boundaries`).
 
+## Status (2026-10-02): P5 landed, uncommitted, awaiting review
+
+P5 of the follow-up plan (`research/2026-10-01-global-scoped-change-routing-p5-p8.md`), as landed:
+
+| Piece | Landed |
+|---|---|
+| **Change producer** | `defineChangeProducer` (change-feed): the producer owns the write verb — `mutate(pool, (q, t) => builder, { latency })` appends `RETURNING <pk>` and emits exactly the returned ids (`U` / `D`), after commit by construction (a transaction executor is a type error). Coalesced at the source (fixed 2 s window for `reports`, last op wins, deletes before upserts, `ids: null` over 1000); `interactive` flushes at once. Each change of a flush routes on its own (a throw is filed, the rest still route); the window is unref'd and dropped on shutdown. |
+| **Guards** | A1′ (a produced table counts as covered), A2′ (one producer per table; not also opted out or a rollup; no `live_state_*` trigger survives on it), A3p (no route on a produced table carries a column — also asserted on the real `reports.list` routes in its oracle), A6 (no L2-persisted reader: boot static evidence throws, stale rows are swept, a persist naming one is refused — the persist gate itself never flips; the reports are held until `onAllReady`), A11 (`change-feed:producer-writes` check, names scoped per file: aliases, re-binds and property access followed; only the builder a producer's `mutate` returns is exempt), A12 (unmounted producer throws), A13 (outside the serving backend throws; `reap-job` files through the outbox). |
+| **reports** | `reports.list` is a `serveCollection` (window, `:rows`, `:groups`) fed by `reportsProducer`; every writer (`recordReport`, `linkReportTask`, `setReportNoise`, retention's `sweepExpired`) goes through it. `reports.revision`, `queryReports`, `reportFacets`, `getReport` and `ExcludeFromChangeFeed(reports)` are deleted; the Reports pane, detail pane and facet filters read the live collection. |
+
+**Known limits added by P5** (also listed under *Known limits* below):
+
+- Volatility: a pending coalesced change is lost on a restart or hot swap; clients resubscribe and reload in full. Within one subscription a lost emit heals membership (`windowIdsOf`) but not the values of rows already in the base. A6 keeps "lost" from ever becoming "persisted wrong".
+- A producer change carries no `unchanged` set, so a `:groups` tuple over a produced table recomputes its whole `GROUP BY` on every flush that touches the table, even when only a non-grouped column (`count`) moved — bounded by the 2 s window, one aggregate per open grouping.
+- A slow `reports.list` recompute files a `slow-op` report, which is itself a `reports` write: at most one such round per 2 s window (the same loop existed through the old revision refetch).
+- `recordReport` throws in an exec child (A13). The outbox is not a drop-in replacement there — it records on main's database, and cannot return the `RecordReportResult` — so a caller that may run in an exec child files through `fileReportFromProcess` itself.
+
 ## Design
 
 ### Core idea
@@ -1842,6 +1859,12 @@ was valid and fixed:
 | **P8 retire edges** | Move `attempts`, `tasks` and `agent-launches` onto routed compilers where expressible, which fixes C1 and deletes the `pushesAttemptsCascade` carrier. Delete `rel` / `compileEdge(s)`, `coveredOriginsFor`, the edge-covered `continue`, the uncovered `affected = null` branch, the secondary-view dedup and the view forwarding once the last legacy reader is gone. `tasks_v` / `task_blocking_v` stay `full` with a reason until a closure route is justified by measurement. Structured `View({plan})` is deferred. |
 
 ## Known limits (accepted, and listed by A7)
+
+- (P5) A change producer is volatile: a pending coalesced change is lost on a restart or hot swap (clients
+  resubscribe and reload in full); within one subscription a lost emit heals membership but not the values of
+  rows already in the base. A6 refuses any L2-persisted reader of a produced table.
+- (P5) A grouping over a produced table recomputes whole on every flush that touches the table (a producer
+  change has no `unchanged` set to skip it by).
 
 - A relevant write costs a `:groups` tuple one bounded aggregate, not O(changed).
 - A membership-role lookup flip over the cap is one bounded window FULL per reading tuple.

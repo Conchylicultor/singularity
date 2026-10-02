@@ -8,7 +8,13 @@ import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popov
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import type { FilterValueInputProps } from "../../../core";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import type {
+  FieldOption,
+  FieldOptionsResult,
+  FilterValueInputProps,
+} from "../../../core";
 import { selectChoices } from "../../internal/select-choices";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -38,12 +44,21 @@ const helpIcon = symbol("help");
  * merely unlisted, and the chip says exactly that rather than calling it
  * invalid. Without one it is unreachable: the trigger counts it in "2 selected"
  * while the grid shows nothing to click off.
+ *
+ * A field whose options are READ (`optionsResult` — a live source's facet)
+ * shows the read's state in the popover while it is not ready: loading, or the
+ * failure with its Retry. Never an empty grid, which would claim the column
+ * has no values (and mark every selected value "not listed").
  */
 export function ChipSelectFilterInput(
   props: FilterValueInputProps & { multiple: boolean },
 ): ReactNode {
   const { multiple } = props;
-  const options = props.field.options ?? [];
+  const state: FieldOptionsResult = props.field.optionsResult ?? {
+    status: "ready",
+    options: props.field.options ?? NO_OPTIONS,
+  };
+  const options = state.status === "ready" ? state.options : NO_OPTIONS;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -106,40 +121,53 @@ export function ChipSelectFilterInput(
         </Button>
       }
     >
-      <Stack gap="sm">
-        {choices.length > 6 && (
-          <ControlSizeProvider size="xs">
-            <Input
-              autoFocus
-              placeholder="Search…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </ControlSizeProvider>
-        )}
-        {visible.length > 0 ? (
-          <Stack direction="row" gap="xs" wrap>
-            {visible.map(({ option, listed }) => (
-              <ToggleChip
-                key={option.value}
-                active={selected.includes(option.value)}
-                variant="ghost"
-                icon={listed ? undefined : <Icon icon={helpIcon} />}
-                title={
-                  listed
-                    ? undefined
-                    : `${option.value} — not one of this field's listed options`
-                }
-                onClick={() => pick(option.value)}
-              >
-                {option.label}
-              </ToggleChip>
-            ))}
-          </Stack>
-        ) : (
-          <Placeholder tone="muted">No matches</Placeholder>
-        )}
-      </Stack>
+      {state.status === "loading" ? (
+        <Loading label="Loading options…" />
+      ) : state.status === "error" ? (
+        <ResourceErrorInline
+          variant="inline"
+          error={state.error}
+          refetch={state.refetch}
+          subject="this field's values"
+        />
+      ) : (
+        <Stack gap="sm">
+          {choices.length > 6 && (
+            <ControlSizeProvider size="xs">
+              <Input
+                autoFocus
+                placeholder="Search…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </ControlSizeProvider>
+          )}
+          {visible.length > 0 ? (
+            <Stack direction="row" gap="xs" wrap>
+              {visible.map(({ option, listed }) => (
+                <ToggleChip
+                  key={option.value}
+                  active={selected.includes(option.value)}
+                  variant="ghost"
+                  icon={listed ? undefined : <Icon icon={helpIcon} />}
+                  title={
+                    listed
+                      ? undefined
+                      : `${option.value} — not one of this field's listed options`
+                  }
+                  onClick={() => pick(option.value)}
+                >
+                  {option.label}
+                </ToggleChip>
+              ))}
+            </Stack>
+          ) : (
+            <Placeholder tone="muted">No matches</Placeholder>
+          )}
+        </Stack>
+      )}
     </InlinePopover>
   );
 }
+
+const NO_OPTIONS: readonly FieldOption[] = [];

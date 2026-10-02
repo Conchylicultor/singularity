@@ -25,6 +25,7 @@ describe("routeWithSpan", () => {
     const spans = capture(() =>
       routeWithSpan(
         {
+          source: "feed",
           table: "tasks",
           op: "U",
           ids: ["1", "2"],
@@ -53,8 +54,7 @@ describe("routeWithSpan", () => {
           table: "tasks",
           op: "U",
           ids: null,
-          xid: null,
-          changedAt: null,
+          source: "feed",
           keys: null,
           unchanged: null,
         },
@@ -71,8 +71,7 @@ describe("routeWithSpan", () => {
           table: "t",
           op: "I",
           ids: [],
-          xid: null,
-          changedAt: null,
+          source: "feed",
           keys: null,
           unchanged: null,
         },

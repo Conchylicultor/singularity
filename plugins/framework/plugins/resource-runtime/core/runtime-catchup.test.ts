@@ -59,6 +59,7 @@ describe("over-replay idempotence", () => {
 
     const replay = () =>
       h.runtime.applyDbChange({
+        source: "feed",
         table: "row_table",
         op: "U",
         ids: ["a"],
@@ -146,6 +147,7 @@ describe("over-replay idempotence — a seeded scopedMembership entry", () => {
     );
     const feed = (op: "I" | "U" | "D", ids: string[]) =>
       h.runtime.applyDbChange({
+        source: "feed",
         table: "row_table",
         op,
         ids,
@@ -356,6 +358,7 @@ describe("L2 persist-hook calling contract", () => {
     // A scoped feed change would normally hand the loader `ctx.affectedIds`; a
     // persisted entry ignores it and recomputes FULL (never persists a partial).
     h.runtime.applyDbChange({
+      source: "feed",
       table: "p_table",
       op: "U",
       ids: ["a"],
@@ -390,6 +393,7 @@ describe("L2 persist-hook calling contract", () => {
     });
     await h.subscribe("p");
     h.runtime.applyDbChange({
+      source: "feed",
       table: "p_table",
       op: "U",
       ids: ["a"],
@@ -413,6 +417,7 @@ describe("L2 persist-hook calling contract", () => {
     });
     await h.subscribe("p");
     h.runtime.applyDbChange({
+      source: "feed",
       table: "p_table",
       op: "U",
       ids: ["a"],

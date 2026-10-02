@@ -1,5 +1,6 @@
-// Boot-time invariant (A1): every table a live-state resource's scoped delivery
-// depends on is a table the change-feed ACTUALLY installs a trigger on.
+// Boot-time invariant (A1′): every table a live-state resource's scoped delivery
+// depends on has a change source — a table the change-feed ACTUALLY installs a
+// trigger on, or one a mounted in-process change producer feeds (./producer).
 //
 // Two kinds of declaration depend on a table:
 // - a ROUTED resource (`routes` / `reach`, compiler-emitted) is reached ONLY
@@ -7,7 +8,8 @@
 // - a legacy scoped resource (`identityTable`) gets a scoped update only when a
 //   feed change arrives with `origin === identityTable`.
 // Either way the change can only come from a table the change-feed put a trigger
-// on (see ./triggers `coveredTables`).
+// on (see ./triggers `coveredTables`) or whose producer emits it — the caller
+// passes the union as `coveredTables`.
 //
 // WHY this is a bug, not a warning. If the named table has NO trigger — because
 // it was excluded (ExcludeFromChangeFeed), is a feed-exempt derived-table rollup,
@@ -21,7 +23,7 @@
 // computed from the declaration, not from whether a trigger actually exists.
 //
 // The single authoritative question is "is the table in the set of tables we
-// installed triggers on?" — which subsumes the ExcludeFromChangeFeed case AND
+// installed triggers on, or a produced one?" — which subsumes the ExcludeFromChangeFeed case AND
 // catches the typo / view / rollup / nonexistent variants of the exact same
 // dead-scope failure mode. We still classify each violation by WHY it is
 // uncovered, because the remediations differ (an excluded table can have its
@@ -79,10 +81,11 @@ function classify(
 }
 
 /**
- * The resource tables NOT in the set of tables the change-feed installed a
- * trigger on — i.e. those whose declared delivery can never fire. Pure; the boot
- * hook feeds it `scopedResourceTables()`, `getCoveredTables()`,
- * `excludedTableNames()`, and `feedExemptTables()`. The exclusion / exempt sets
+ * The resource tables NOT in the set of tables with a change source (the
+ * triggered ∪ produced set) — i.e. those whose declared delivery can never
+ * fire. Pure; the boot install feeds it `scopedResourceTables()`,
+ * `getCoveredTables()` ∪ `producedTableNames()`, `excludedTableNames()`, and
+ * `feedExemptTables()`. The exclusion / exempt sets
  * are used only to classify the reason (for remediation), never to decide
  * membership — coverage is the single source of truth.
  */
@@ -100,9 +103,9 @@ export function findUncoveredRouteTables(
     }));
 }
 
-// The remediation copy for each reason. Every case shares the universal fallback
-// (make the resource a plain push resource with no scope, matching
-// reports/slow_ops).
+// The remediation copy for each reason. Every case shares the universal fallback:
+// give the table a change source (a change producer), or make the resource a
+// plain push resource with no scope (hydrate-on-mount, like slow_ops).
 const REASON_SECTIONS: Record<
   RouteCoverageReason,
   { heading: string; fix: string }
@@ -110,7 +113,7 @@ const REASON_SECTIONS: Record<
   excluded: {
     heading:
       "Excluded from the change-feed (ExcludeFromChangeFeed) — no trigger:",
-    fix: "remove the table's ExcludeFromChangeFeed contribution (accept its feed churn)",
+    fix: "remove the table's ExcludeFromChangeFeed contribution (accept its feed churn), or replace it with a change producer (defineChangeProducer) to keep the churn off the feed",
   },
   rollup: {
     heading:
@@ -146,7 +149,7 @@ export function formatUncoveredRouteError(
       "",
       heading,
       ...group,
-      `  Fix: ${fix}, or make the resource a plain push resource (no identityTable / routes, hydrate-on-mount — like reports/slow_ops).`,
+      `  Fix: ${fix}, or make the resource a plain push resource (no identityTable / routes, hydrate-on-mount — like slow_ops).`,
     );
   }
   return [
@@ -160,9 +163,10 @@ export function formatUncoveredRouteError(
 }
 
 /**
- * Throw loudly (blocking boot) if any resource depends on a table the
- * change-feed did not install a trigger on. Called from the change-feed
- * `onReadyBlocking` after `rebuildTriggers` has populated the covered set.
+ * Throw loudly (blocking boot) if any resource depends on a table with no
+ * change source: no trigger the change-feed installed, and no change producer.
+ * Called from the change-feed's boot install (`installFeed`) after
+ * `rebuildTriggers` has populated the triggered set.
  */
 export function assertRouteTablesCovered(
   scoped: readonly ScopedResourceTable[],

@@ -265,6 +265,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):
     - `BootMode`
+    - `ChangeSource`
     - `DependsOnEntry`
     - `ExternalResource`
     - `HttpHandler`
@@ -319,6 +320,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `onDeferredResourcesBound`
     - `onResourceDelivery`
     - `onResourcePush`
+    - `persistedKeys`
     - `physFootprintBytes`
     - `procMemory`
     - `profilerStart`

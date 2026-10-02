@@ -177,6 +177,36 @@ export function mapResource<T, U>(
   }
 }
 
+/**
+ * Refuse a ready value the consumer cannot accept: when `refuse(data)` names a
+ * failure, the ready arm becomes the error arm — that failure, the refused
+ * value as `stale`, the read's own `refetch` — so "the server answered, but not
+ * with something I can show" renders as the failure it is, never as the value.
+ * The loading and error arms pass through. (A grouping read full at its limit
+ * may be missing values: a filter offering it as the complete option set
+ * refuses it.)
+ */
+export function refuseResource<T>(
+  result: ResourceResult<T>,
+  refuse: (data: T) => ResourceError | null,
+): ResourceResult<T> {
+  switch (result.status) {
+    case "loading":
+    case "error":
+      return result;
+    case "ready": {
+      const error = refuse(result.data);
+      if (error === null) return result;
+      return {
+        status: "error",
+        error,
+        stale: result.data,
+        refetch: result.refetch,
+      };
+    }
+  }
+}
+
 /** The handlers of {@link foldResource} — all three required, by design. */
 export interface FoldResourceHandlers<R extends GateInput, U> {
   loading: () => U;

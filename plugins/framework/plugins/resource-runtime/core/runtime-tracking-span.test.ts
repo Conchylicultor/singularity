@@ -89,6 +89,7 @@ describe("a replay after a tracking gap is never up-to-date", () => {
     h.closeSocket(0);
     truth = "v2";
     h.runtime.applyDbChange({
+      source: "feed",
       table: "t",
       op: "U",
       ids: ["x"],

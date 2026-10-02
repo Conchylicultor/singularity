@@ -904,6 +904,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `NotificationsProvider`
     - `pendingMountSnapshot`
     - `queryKeyFor`
+    - `refuseResource`
     - `resourceDescriptorByKey`
     - `ResourceError`
     - `ResourceErrorInline`
@@ -1077,7 +1078,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `primitives/pane`
     - `primitives/usage-rank`
     - `release`
-    - `reports`
     - `reports/live-state-stale-drop`
     - `reports/resource-errors`
     - `review`

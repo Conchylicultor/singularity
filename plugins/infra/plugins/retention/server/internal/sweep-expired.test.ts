@@ -27,12 +27,26 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
+import { defineChangeProducer } from "@plugins/database/plugins/change-feed/server";
+import { mountProducersForTest } from "@plugins/database/plugins/change-feed/server/testing";
 import { retentionCutoff } from "./retention-sql";
 import { sweepExpired } from "./define-retention";
 
 const _scratch = pgTable("retention_sweep_scratch", {
   id: text("id").primaryKey(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+// A table with a change producer: its sweep must route through the producer.
+const _produced = pgTable("retention_sweep_produced", {
+  id: text("id").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+const producedProducer = defineChangeProducer({
+  table: _produced,
+  durability: "volatile",
+  reason: "retention suite fixture",
+  coalesce: "none",
 });
 
 let t: TestDb;
@@ -49,6 +63,9 @@ beforeAll(async () => {
   await dbc.execute(
     sql`CREATE TEMP TABLE retention_sweep_scratch (id text PRIMARY KEY, created_at timestamptz NOT NULL)`,
   );
+  await dbc.execute(
+    sql`CREATE TEMP TABLE retention_sweep_produced (id text PRIMARY KEY, created_at timestamptz NOT NULL)`,
+  );
 });
 
 afterAll(async () => {
@@ -58,6 +75,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await dbc.execute(sql`DELETE FROM retention_sweep_scratch`);
+  await dbc.execute(sql`DELETE FROM retention_sweep_produced`);
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -158,5 +176,65 @@ describe("sweepExpired", () => {
 
     expect(called).toBe(false);
     expect(await remainingIds()).toEqual(["fresh"]);
+  });
+});
+
+describe("sweepExpired on a produced table", () => {
+  test("deletes through the producer, which emits exactly the deleted PKs", async () => {
+    const routed: Array<{
+      source: string;
+      op: string;
+      ids: readonly string[] | null;
+    }> = [];
+    const unmount = mountProducersForTest([producedProducer], {
+      route: (c) => routed.push(c),
+    });
+    try {
+      const at = (ageDays: number) => new Date(Date.now() - ageDays * DAY_MS);
+      await dbc.insert(_produced).values([
+        { id: "old-a", createdAt: at(40) },
+        { id: "old-b", createdAt: at(31) },
+        { id: "fresh", createdAt: at(1) },
+      ]);
+
+      await sweepExpired(dbc, {
+        table: _produced,
+        column: _produced.createdAt,
+        cutoff: retentionCutoff(new Date(), 30),
+      });
+
+      const rows = await dbc.select().from(_produced);
+      expect(rows.map((r) => r.id)).toEqual(["fresh"]);
+      expect(routed).toHaveLength(1);
+      const [change] = routed;
+      expect(change).toMatchObject({
+        source: "producer",
+        table: "retention_sweep_produced",
+        op: "D",
+      });
+      expect([...(change!.ids ?? [])].sort()).toEqual(["old-a", "old-b"]);
+    } finally {
+      unmount();
+    }
+  });
+
+  test("a transaction executor is refused for a produced table", async () => {
+    const unmount = mountProducersForTest([producedProducer], {
+      route: () => {},
+    });
+    try {
+      const err = await rejection(
+        dbc.transaction((tx) =>
+          sweepExpired(tx, {
+            table: _produced,
+            column: _produced.createdAt,
+            cutoff: retentionCutoff(new Date(), 30),
+          }),
+        ),
+      );
+      expect(err.message).toContain("must run on the pool");
+    } finally {
+      unmount();
+    }
   });
 });

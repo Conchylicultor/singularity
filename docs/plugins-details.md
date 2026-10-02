@@ -13593,7 +13593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Test helpers:
         - Server: `@plugins/database/plugins/admin/server/testing`
           - `assertExclusionsClosed` — Check a plugin's `ExcludeFromBackup` / `ExcludeFromFork` declarations against its own drizzle tables, without a database: no kept table may have a foreign key to a table whose rows are left out (pg_restore would fail re-adding it).
-    - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
+    - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible. A table written only by this backend at high rate may instead declare an in-process change producer (defineChangeProducer): no trigger, its `mutate` owns the write and routes the returned ids, coalesced at the source and volatile.
       - Server:
         - Contributes: `fork-data-exclusion` "live_state_changelog"
         - Uses:
@@ -13608,11 +13608,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/derived-tables.feedExemptTables`
           - `database/derived-views.relationIdentityBase`
           - `primitives/log-channels.defineLogSink`
-        - Exports (types): `DbChange`
+        - DB schema: `plugins/database/plugins/change-feed/server/internal/produced-tables.ts`
+        - Exports (types):
+          - `ChangeProducer`
+          - `ChangeProducerContribution`
+          - `ChangeProducerOptions`
+          - `ChangeProducerSpec`
+          - `DbChange`
+          - `FeedChange`
+          - `ProducerBuilder`
+          - `ProducerChange`
+          - `ProducerExecutor`
+          - `RoutedChange`
+          - `WriteLatency`
         - Exports (values):
+          - `changeProducerFor`
+          - `defineChangeProducer`
           - `ExcludeFromChangeFeed`
           - `getCoveredTables`
           - `parseLiveStatePayload`
+          - `producedTableNames`
+          - `PRODUCER_IDS_CAP`
           - `readLayout`
           - `rebuildTriggers`
           - `routeChange`
@@ -13625,11 +13641,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/latency-ledger`
           - `debug/slow-ops`
           - `debug/trace/engine`
+          - `infra/retention`
           - `reports`
       - Test helpers:
         - Server: `@plugins/database/plugins/change-feed/server/testing`
+          - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
           - `createChangeFeedListener`
           - `ensureChangelogTable`
+          - `findCarriedProducedRoutes` — A3p: the produced tables whose routes need a carried column.
+          - `flushNow` — Flush `producer`'s coalescing buffer now (a test drives the window by hand).
+          - `mountProducersForTest` — Mount `producers` without a booted plugin graph: each is live (A12 passes), runs as boot mode `mode` (default `"serve"`; pass `"exec"` to see A13), and routes through `route` (default the real `routeChange`).
           - `rebuildTriggers`
     - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
       - Cross-plugin:
@@ -13867,6 +13888,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `database.db`
           - `database/admin.ExcludeFromFork`
+          - `database/change-feed.producedTableNames`
           - `database/change-feed.readLayout`
           - `database/change-feed.routeChange`
           - `infra/jobs.defineJob`
@@ -15606,9 +15628,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.navigate`
           - `apps/debug/shell.DebugApp`
           - `build.useStaleFrontend`
-          - `infra/endpoints.fetchEndpoint`
-          - `infra/endpoints.getEndpointErrorMessage`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
@@ -15619,14 +15639,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
+          - `primitives/data-view.liveDataSource`
           - `primitives/launch.LaunchAgentPopover`
-          - `primitives/live-state.foldResource`
-          - `primitives/live-state.useResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.ResolveResult`
+          - `primitives/pane.resolveRow`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
           - `primitives/scope/tab-id.getTabId`
@@ -16454,7 +16475,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/worktree/reclaim.OwnedNamespace`
           - `infra/worktree/reclaim.reclaimNamespace`
           - `primitives/log-channels.defineLogSink`
-          - `reports.recordReport`
           - `reports.ReportKind`
           - `tasks/tasks-core.getAttempt`
           - `tasks/tasks-core.listAttempts`
@@ -18218,6 +18238,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `packages/resource-protocol.SubErrorFrame`
           - `packages/semaphore.createSemaphore`
         - Exports (types):
+          - `ChangeSource`
           - `DefineResourceInput`
           - `DependsOnEntry`
           - `ExternalResource`
@@ -18227,6 +18248,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `KeyedMembership`
           - `KeyedMembershipInput`
           - `KeyedServerResourceOptions`
+          - `NotifyCounts`
           - `ReachPlan`
           - `Resource`
           - `ResourceContract`
@@ -18274,6 +18296,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
           - `BootMode`
+          - `ChangeSource`
           - `DependsOnEntry`
           - `ExternalResource`
           - `HttpHandler`
@@ -18328,6 +18351,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `onDeferredResourcesBound`
           - `onResourceDelivery`
           - `onResourcePush`
+          - `persistedKeys`
           - `physFootprintBytes`
           - `procMemory`
           - `profilerStart`
@@ -18891,6 +18915,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/live-state-churn/emit`
               - `debug/queue-health`
               - `debug/render-profiler`
+              - `debug/reports`
               - `improve/element-picker`
               - `infra/background/catalog`
               - `infra/events-test`
@@ -20235,7 +20260,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/queue`
           - `debug/queue-health`
           - `debug/read-set`
-          - `debug/reports`
           - `debug/slow-ops`
           - `debug/slow-ops/cluster`
           - `debug/slow-ops/pane`
@@ -21898,6 +21922,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database.db`
+          - `database/change-feed.changeProducerFor`
           - `infra/jobs.defineJob`
           - `infra/jobs.JobFactory`
         - Exports (types):
@@ -21928,6 +21953,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/todo/task-link`
           - `primitives/usage-rank`
           - `reports`
+      - Test helpers:
+        - Server: `@plugins/infra/plugins/retention/server/testing`
+          - `sweepExpired` — One sweep tick's body, extracted from the job for direct testing (the `findCascadeFk` precedent: barrel-private, exported only for its test). `beforeDelete` sees exactly the rows the DELETE predicate matches at select time; a row aging past the cutoff between the two statements waits for the next tick (the predicate is time-based, so the set can only grow, never lose a row the callback already handled).
     - **`runtime-identity`** — What the spawner hands a PROCESS at its entry point, declared once there and read everywhere else: the namespace it runs as (`--namespace`, from the gateway or an exec child's spawner) and, for a serving backend, the Unix socket it serves on (`--socket`). Asking for one that was never declared throws.
       - Core:
         - Uses:
@@ -23086,6 +23114,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling/ops`
           - `debug/queue`
           - `debug/queue-health`
+          - `debug/reports`
           - `debug/sentinel`
           - `fields/secret/config`
           - `infra/background/catalog`
@@ -23111,6 +23140,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/metrics`
           - `primitives/usage-rank`
           - `release`
+          - `reports`
           - `review`
           - `review/code-review`
           - `review/plugin-changes`
@@ -23129,6 +23159,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Central:
         - Exports (types): `CentralServedValue`
         - Exports (values): `serveValue`
+      - Test helpers:
+        - Server: `@plugins/network/plugins/live/server/testing`
+          - `compileCollection` — Derive the specs for a collection — three, or just `rows` for a lookup-only one.
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
@@ -30639,6 +30672,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields.Fields`
           - `network/live.LiveSegmentError`
           - `network/live.ScrollTruncation`
+          - `network/live.useLive`
           - `network/live.useLiveScroll`
           - `primitives/collapsible.CollapsibleContent`
           - `primitives/collapsible.CollapsibleProvider`
@@ -30687,7 +30721,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useEventCallback`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/live-state.refuseResource`
+          - `primitives/live-state.ResourceError`
           - `primitives/live-state.ResourceErrorInline`
+          - `primitives/live-state.ResourceResult`
           - `primitives/loading.Loading`
           - `primitives/loading.LoadingVariant`
           - `primitives/overlay/popover.InlinePopover`
@@ -30921,7 +30958,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/table`
           - `primitives/data-view/tree`
           - `primitives/data-view/view-order`
-          - `reports`
           - `runs`
           - `tasks/task-deps-tree`
           - `tasks/task-list`
@@ -30956,6 +30992,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FieldGrouping`
           - `FieldGroupingSet`
           - `FieldOption`
+          - `FieldOptionsResult`
           - `FieldSchemaSection`
           - `FieldValue`
           - `FilterConjunction`
@@ -30983,6 +31020,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ItemActionZone`
           - `LiveDataSource`
           - `LiveDataSourceOf`
+          - `LiveFacetColumn`
           - `LiveSearchableColumn`
           - `LiveSourceScope`
           - `ManualOrderConfig`
@@ -31278,7 +31316,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/all-conversations`
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/union-query`
-              - `reports`
               - `runs`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
@@ -32341,7 +32378,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/all-conversations`
           - `infra/query-resource`
           - `primitives/data-view/union-query`
-          - `reports`
           - `runs`
       - Server:
         - Exports (types):
@@ -32613,6 +32649,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `NotificationsProvider`
           - `pendingMountSnapshot`
           - `queryKeyFor`
+          - `refuseResource`
           - `resourceDescriptorByKey`
           - `ResourceError`
           - `ResourceErrorInline`
@@ -32786,7 +32823,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane`
           - `primitives/usage-rank`
           - `release`
-          - `reports`
           - `reports/live-state-stale-drop`
           - `reports/resource-errors`
           - `review`
@@ -36109,9 +36145,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `Reports`
   - Server:
     - Contributes:
-      - `resource.declare` "reports.revision"
+      - `resource.declare` "reports.list"
+      - `resource.declare` "reports.list:rows"
+      - `resource.declare` "reports.list:groups"
       - `ConfigV2.Register` "reports"
-      - `change-feed-exclusion` "reports"
+      - `change-producer` "reports"
       - `fork-data-exclusion` "reports"
     - Uses:
       - `build/server-build-id.getServerGraphHash`
@@ -36119,7 +36157,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.getConfig`
       - `database.db`
       - `database/admin.ExcludeFromFork`
-      - `database/change-feed.ExcludeFromChangeFeed`
+      - `database/change-feed.defineChangeProducer`
       - `database/derived-updated-at.deriveUpdatedAt`
       - `database/sql-column.parsedJson`
       - `infra/endpoints.HttpError`
@@ -36128,15 +36166,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/host/duress.ShedSummary`
       - `infra/retention.defineRetention`
       - `infra/warmup.defineWarmup`
-      - `primitives/data-view/server-query.applyJoin`
-      - `primitives/data-view/server-query.augmentServerQuery`
-      - `primitives/data-view/server-query.bindColumns`
-      - `primitives/data-view/server-query.compileWhere`
-      - `primitives/data-view/server-query.FieldColumnMap`
-      - `primitives/keyset.buildSortKeys`
-      - `primitives/keyset.keyValuesOf`
-      - `primitives/keyset.orderByClauses`
-      - `primitives/keyset.seekPredicate`
+      - `network/live.serveCollection`
       - `shell/notifications.recordNotification`
       - `shell/notifications.setMutedByMetadata`
     - DB schema: `plugins/reports/server/internal/tables.ts`
@@ -36151,7 +36181,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `StormRosterEntry`
       - `StormSummary`
     - Exports (values):
-      - `_reports`
       - `DEFAULT_REPORT_DEBOUNCE_MS`
       - `isReportKindRegistered`
       - `recordReport`
@@ -36162,48 +36191,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register:
       - `defineWarmup('reports.backfill-noise')`
       - `defineJob('retention.reports')`
-    - Resources: `reports.revision` (push)
+    - Resources:
+      - `reports.list` (keyed, window)
+      - `reports.list:groups` (push)
+      - `reports.list:rows` (keyed, point)
     - Routes:
       - `POST /api/reports`
       - `POST /api/reports/:id/investigate`
-      - `POST /api/reports/query`
-      - `GET /api/reports/facets`
-      - `GET /api/reports/:id`
   - Core:
     - Uses:
       - `config_v2.defineConfig`
       - `fields/int/config.intField`
-      - `infra/endpoints.defineEndpoint`
+      - `network/live.liveCollection`
       - `network/live/filter.liveBoolean`
       - `network/live/filter.liveInstant`
       - `network/live/filter.liveNumber`
       - `network/live/filter.liveText`
-      - `primitives/data-view.ServerFilterWireSchema`
-      - `primitives/live-state.resourceDescriptor`
       - `primitives/pane.defineRoute`
     - Exports (types):
-      - `QueryReportsBody`
-      - `QueryReportsResponse`
       - `Report`
-      - `ReportByIdResponse`
-      - `ReportFacets`
       - `ReportFingerprintContext`
       - `ReportSource`
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
-      - `getReport`
-      - `queryReports`
-      - `QueryReportsBodySchema`
-      - `QueryReportsResponseSchema`
-      - `ReportByIdResponseSchema`
       - `reportDetailRoute`
-      - `reportFacets`
-      - `ReportFacetsSchema`
-      - `REPORTS_FILTERABLE`
       - `REPORTS_SEARCHABLE`
       - `ReportSchema`
       - `reportsConfig`
-      - `reportsRevisionResource`
+      - `reportsList`
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:

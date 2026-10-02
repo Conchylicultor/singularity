@@ -1,8 +1,13 @@
-import { getTableName, type SQL } from "drizzle-orm";
+import { getTableName, is, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import {
+  PgTransaction,
+  type PgColumn,
+  type PgTable,
+} from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { changeProducerFor } from "@plugins/database/plugins/change-feed/server";
 import { defineJob, type JobFactory } from "@plugins/infra/plugins/jobs/server";
 import { declareGrowthBound } from "./growth-bounds";
 import { retentionCutoff, retentionPredicate } from "./retention-sql";
@@ -81,6 +86,14 @@ export type RetentionExecutor =
  * time; a row aging past the cutoff between the two statements waits for the
  * next tick (the predicate is time-based, so the set can only grow, never lose
  * a row the callback already handled).
+ *
+ * A table with an in-process change producer (change-feed's
+ * `defineChangeProducer`) has no trigger, so its rows' deletion reaches live
+ * readers only if the producer routes it: the DELETE then runs through the
+ * producer's `mutate`, which returns the deleted PKs and emits them. That path
+ * needs the pool (a producer write is one autocommit statement), so a
+ * transaction executor throws for a produced table. A table with no producer
+ * takes the plain DELETE below, unchanged.
  */
 export async function sweepExpired<T extends PgTable>(
   dbx: RetentionExecutor,
@@ -98,7 +111,21 @@ export async function sweepExpired<T extends PgTable>(
     if (rows.length === 0) return;
     await args.beforeDelete(rows);
   }
-  await dbx.delete(args.table).where(predicate);
+  const producer = changeProducerFor(args.table);
+  if (producer === undefined) {
+    await dbx.delete(args.table).where(predicate);
+    return;
+  }
+  if (is(dbx, PgTransaction)) {
+    throw new Error(
+      `[retention] "${getTableName(args.table)}" has a change producer: its sweep must run on the pool, not inside a transaction (the producer emits after its own autocommit statement)`,
+    );
+  }
+  await producer.mutate(
+    dbx as NodePgDatabase,
+    (q, t) => q.delete(t).where(predicate),
+    { latency: "background" },
+  );
 }
 
 /**

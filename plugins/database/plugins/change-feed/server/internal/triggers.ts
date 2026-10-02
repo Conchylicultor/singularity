@@ -40,7 +40,11 @@ import { changeFeedLog as log } from "./log-sink";
 // the correctly-scoped source-driven recompute. `optedOut` adds the tables a
 // feature plugin opted out via the `ExcludeFromChangeFeed` contribution
 // (`excludedTableNames()`, e.g. high-churn observability counters) — keeping THIS
-// plugin from naming any consumer table (collection-consumer separation). Both are
+// plugin from naming any consumer table (collection-consumer separation).
+// `produced` adds the tables an in-process change producer declares
+// (`producedTableNames()`, ./producer): a produced table's change source is the
+// backend that writes it, so a trigger on it would make its writes reach their
+// readers twice — once from the producer, once from the feed. All three are
 // contribution sets, so the CALLER reads them (see `TriggerExclusions`).
 // `live_state_trigger_state` (this layer's own content signature — see
 // `rebuildTriggers`) is denylisted for the same reason as the snapshot table: it
@@ -55,6 +59,7 @@ function buildDenylist(exclusions: TriggerExclusions): Set<string> {
     LIVE_STATE_TRIGGER_STATE_TABLE,
     ...exclusions.feedExempt,
     ...exclusions.optedOut,
+    ...exclusions.produced,
   ]);
 }
 
@@ -70,6 +75,8 @@ export interface TriggerExclusions {
   feedExempt: ReadonlySet<string>;
   /** Feature opt-outs (`ExcludeFromChangeFeed`: `excludedTableNames()`). */
   optedOut: ReadonlySet<string>;
+  /** Tables with an in-process change producer (`producedTableNames()`). */
+  produced: ReadonlySet<string>;
 }
 
 // L2 durable outbox DDL. Created INSIDE rebuildTriggers' transaction, before the
@@ -724,6 +731,11 @@ export async function rebuildTriggers(
   if (optedOut.size > 0) {
     log.publish(
       `[change-feed] ${optedOut.size} table(s) opted out of the feed via ExcludeFromChangeFeed: ${[...optedOut].sort().join(", ")}`,
+    );
+  }
+  if (exclusions.produced.size > 0) {
+    log.publish(
+      `[change-feed] ${exclusions.produced.size} table(s) fed by an in-process change producer instead: ${[...exclusions.produced].sort().join(", ")}`,
     );
   }
 

@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { createBurstRouter } from "./burst";
-import type { DbChange } from "./parse-payload";
+import type { FeedChange } from "./route-change";
 
-const change = (table: string, xid: string): DbChange => ({
+const change = (table: string, xid: string): FeedChange => ({
+  source: "feed",
   table,
   op: "U",
   ids: ["1"],
   xid,
-  changedAt: null,
   keys: null,
   unchanged: null,
 });

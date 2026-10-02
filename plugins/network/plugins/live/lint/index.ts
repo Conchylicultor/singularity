@@ -125,10 +125,6 @@ export default {
       "plugins/apps/plugins/deploy/plugins/remote-deploy/web/internal/use-release-info.ts",
       "plugins/release/core/resources.ts",
       "plugins/release/server/internal/history-revision-resource.ts",
-      // · reports.revision
-      "plugins/debug/plugins/reports/web/internal/revision.ts",
-      "plugins/reports/core/resources.ts",
-      "plugins/reports/server/internal/revision.ts",
       // · runs.revision
       "plugins/runs/core/internal/resources.ts",
       "plugins/runs/server/internal/revision-resource.ts",

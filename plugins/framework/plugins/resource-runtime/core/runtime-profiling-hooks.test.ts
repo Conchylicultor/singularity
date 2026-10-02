@@ -87,6 +87,7 @@ describe("window membership", () => {
     const insert = (id: string, n: number) => {
       table.set(id, n);
       h.runtime.applyDbChange({
+        source: "feed",
         table: "row_table",
         op: "I",
         ids: [id],

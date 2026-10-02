@@ -45,6 +45,7 @@ export {
 export type {
   LiveDataSource,
   LiveDataSourceOf,
+  LiveFacetColumn,
   LiveSearchableColumn,
   LiveSourceScope,
 } from "./internal/live-data-source";
@@ -72,6 +73,7 @@ export type {
   ColumnConfigDerive,
   FieldDef,
   FieldOption,
+  FieldOptionsResult,
   RowTone,
   HierarchyConfig,
   SelectionConfig,

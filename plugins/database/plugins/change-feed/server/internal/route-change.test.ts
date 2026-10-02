@@ -171,11 +171,11 @@ describe("routeChange — one change, both routers, each entry reached once", ()
     const at = loads.length;
     store.set("a", 2);
     routeChange({
+      source: "feed",
       table: TABLE,
       op: "U",
       ids: ["a"],
       xid: "7001",
-      changedAt: null,
       keys: null,
       unchanged: null,
     });
@@ -200,11 +200,10 @@ describe("routeChange — one change, both routers, each entry reached once", ()
     const at = loads.length;
     const frames = socket.frames.length;
     routeChange({
+      source: "feed",
       table: "rc_unit_elsewhere",
       op: "U",
       ids: ["a"],
-      xid: null,
-      changedAt: null,
       keys: null,
       unchanged: null,
     });
@@ -262,7 +261,7 @@ describe("the feed end to end — trigger → listener → routeChange → delta
     // No rollups and no opt-outs on a throwaway database.
     await rebuildTriggers(
       testDb.db,
-      { feedExempt: new Set(), optedOut: new Set() },
+      { feedExempt: new Set(), optedOut: new Set(), produced: new Set() },
       [],
     );
     listener = createChangeFeedListener({
