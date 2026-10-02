@@ -115,9 +115,7 @@ export function ControlPanelGroup({
           push={{
             key,
             title: typeof label === "string" ? label : "",
-            render: () => (
-              <div ref={setPage} style={{ display: "contents" }} />
-            ),
+            render: () => <div ref={setPage} style={{ display: "contents" }} />,
           }}
           trailing={
             <>

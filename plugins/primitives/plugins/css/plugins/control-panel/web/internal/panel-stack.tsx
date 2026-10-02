@@ -140,7 +140,10 @@ export function ControlPanelStack({
       <div ref={containerRef} style={{ display: "contents" }}>
         {top ? (
           <ControlPanelSection>
-            <ControlPanelRow icon={<Icon icon={arrowBackIcon} />} onSelect={pop}>
+            <ControlPanelRow
+              icon={<Icon icon={arrowBackIcon} />}
+              onSelect={pop}
+            >
               {top.title}
             </ControlPanelRow>
           </ControlPanelSection>

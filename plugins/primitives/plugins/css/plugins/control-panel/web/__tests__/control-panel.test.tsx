@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 
 import { ControlPanel } from "../internal/namespace";
 import { ControlPanelPane } from "../internal/control-panel-pane";
