@@ -160,6 +160,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "conversations.conversation-view.jsonl-viewer.tool-call.workflow.workflow-node.actions", pluginId: "conversations.conversation-view.jsonl-viewer.tool-call.workflow", configName: "workflow-node.actions" },
   { slotId: "conversations.conversation-view.jsonl-viewer.transcript-stats.item", pluginId: "conversations.conversation-view.jsonl-viewer.transcript-stats", configName: "item" },
   { slotId: "conversations.conversation-view.op-status.queue-actions", pluginId: "conversations.conversation-view.op-status", configName: "queue-actions" },
+  { slotId: "conversations.conversation-view.open-app.app-preview.actions", pluginId: "conversations.conversation-view.open-app", configName: "app-preview.actions" },
   { slotId: "conversations.conversation-view.prompt-bar", pluginId: "conversations.conversation-view", configName: "prompt-bar" },
   { slotId: "conversations.conversation-view.prompt-input", pluginId: "conversations.conversation-view", configName: "prompt-input" },
   { slotId: "conversations.conversation-view.push-profiling.conv-push-profiling.actions", pluginId: "conversations.conversation-view.push-profiling", configName: "conv-push-profiling.actions" },

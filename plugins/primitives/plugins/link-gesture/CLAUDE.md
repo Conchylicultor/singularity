@@ -20,6 +20,7 @@ either depending on the other.
   - Imported by:
     - `apps-core/tabs`
     - `apps/prototypes/canvas`
+    - `conversations/conversation-view/open-app`
     - `primitives/pane`
 - Web:
   - Exports (types): `LinkGestureProps`

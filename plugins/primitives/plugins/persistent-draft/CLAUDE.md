@@ -20,6 +20,7 @@ tab's own — the prototype canvas, keyed by its pane instance.
     - `apps/sonata/library`
     - `apps/sonata/rich/chord-readout`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/open-app`
     - `conversations/conversation-view/prompt-input`
     - `conversations/conversation-view/push-and-exit`
     - `page/editor`

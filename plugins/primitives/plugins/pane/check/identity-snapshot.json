@@ -43,6 +43,12 @@
       "parent": null
     },
     {
+      "paneId": "app-preview",
+      "segment": "app/:attemptId/:path?",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "apple-setup",
       "segment": "apple/setup",
       "appIndex": false,
