@@ -13,6 +13,7 @@
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `conversations/model-provider.familyClass`
+    - `conversations/model-provider.useModelCatalog`
     - `infra/claude-cli.ClaudeCliCallDetail`
     - `network/live.LiveListResult`
     - `network/live.useLive`

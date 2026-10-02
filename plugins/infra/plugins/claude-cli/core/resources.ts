@@ -3,9 +3,8 @@ import { liveCollection } from "@plugins/network/plugins/live/core";
 import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   ConversationModelSchema,
-  DEFAULT_MODEL_CHOICE,
+  FALLBACK_MODEL,
   StoredModelSchema,
-  resolveModel,
 } from "@plugins/conversations/plugins/model-provider/core";
 import {
   fieldsToZodObject,
@@ -28,11 +27,11 @@ import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 //
 // `model` is a plain `text` column in the DDL, decoded by the tolerant
 // `StoredModelSchema` — so the `ConversationModel` in its type is what really
-// runs on every read and write, and an unknown stored id normalizes (and is
+// runs on every read and write, and a malformed stored id normalizes (and is
 // reported) instead of being handed to typed code as if it were a live model. That is the same guard the wire schema
 // used to carry alone, now one layer lower, where the server-side readers are.
 //
-// The current default version is the wire/backfill default, where the tuple form silently
+// The baseline's default version (`FALLBACK_MODEL`) is the wire/backfill default, where the tuple form silently
 // gave `"fable-5-1"` — the first entry of the enum, i.e. tuple order rather than
 // anyone's decision. Nothing observable changes: the column is notNull with no
 // DB default, so every row carries a model and the wire schema's `.default()`
@@ -41,7 +40,7 @@ export const claudeCliCallFields = {
   id: uuidField(),
   createdAt: dateField(),
   model: parsedTextField(StoredModelSchema, {
-    default: resolveModel(DEFAULT_MODEL_CHOICE),
+    default: FALLBACK_MODEL,
   }),
   sourceName: textField(),
   sourceContext: nullable(
@@ -64,7 +63,7 @@ export const claudeCliCallFields = {
 } satisfies FieldsRecord;
 
 // No `model` re-widening: the field's own schema IS `StoredModelSchema` now, so
-// `fieldsToZodObject` already derives the tolerant arm — a legacy/unknown stored
+// `fieldsToZodObject` already derives the tolerant arm — a malformed stored
 // model normalizes to a concrete one instead of rejecting the row and blanking
 // the whole calls array on the WS push path. Overriding it here would restate
 // the same schema in a second place, which is the drift this derivation exists

@@ -3,24 +3,35 @@
 Single source of truth for the models an agent can run, and for what the user asked for.
 
 - **Two types.** `ConversationModel` is a concrete version (`opus-5-5`): what a conversation RAN (`conversations.model`, `claude_cli_calls.model`, the spawn job, `--model`). `ModelChoice` is what the user ASKED for: a family (`opus`, `sonnet`, `fable`: whatever version is current at spawn) or a pinned version. Every saved preference is a choice: the auto-start marker, an agent, a launch prompt, the `defaultModel` config, and every launch endpoint's input.
-- **`resolveModel(choice)` is the only way from a choice to a version.** `prepareConversation` calls it once, at spawn, so an armed task launches the version current when it LAUNCHES, not when it was armed. The spawn path's types accept only a concrete version, so tsc forces every launch through it.
-- **A family's current version is its first entry in `MODEL_DEFS`** (registry order = newest first within a family). **To release a model:** add one line above the version it supersedes (and the id to `ConversationModelSchema`). Every family choice follows it; nothing else changes. `label` is derived as `${family} ${version}`, never written by hand.
-- **Pickers:** families show as "Opus" with today's version as a muted hint ("· 5.5") via `ModelChoiceLabel`; pinned versions are hidden until turned on in Settings → Model Provider (`visibleModels`, families default on, versions default off). `useVisibleModels()` / `useModelItems()` / `<ModelSelect>` are the shared readers.
-- **Stored fields use the tolerant schemas:** `StoredModelSchema` (concrete) or `StoredModelChoiceSchema` (choice). An unknown stored value degrades to the default and is reported, instead of throwing on the WS push path and blanking the whole resource. Request-input schemas stay strict (`ModelChoiceSchema`).
+- **An id is a checked format, not a closed list.** `ConversationModelSchema` is `<family>-<major>[-<minor>]` (built from `MODEL_TIERS`), branded — so a family name or an arbitrary string cannot stand where a version is needed, but a version released after this code was written is still a valid id. Everything about a model derives from its id alone: `modelMeta(id)` (cliFlag `claude-<id>`, family, version "5.5", label "Opus 5.5", icon size), `cliFlagFor(id)`. `parseModelId(raw)` and `modelIdFromCliName("claude-haiku-4-5-20251001")` (→ `haiku-4-5`) return results, never null. Families (`FAMILY_META`: label, icon size, print-only) stay a compile-time set; a family's name is also its Claude CLI alias.
+- **The catalog is data** (`core/catalog.ts`): which versions exist (`versions`, each with `firstSeenAt` / `source` / optional `retiredAt`), each family's `current` version, and the `cliVersion` whose model menu discovery last read. `BASELINE_MODELS` is the floor for a machine that never probed — never edited for a release. The catalog lives on disk and is discovered at runtime by the [`catalog`](plugins/catalog/CLAUDE.md) sub-plugin; the `modelCatalog` live value (`boot-and-keep`) is declared here so this plugin's pickers read it without depending on the sub-plugin.
+- **`resolveModel(choice, catalog)` is the only way from a choice to a version**, and every reader takes the catalog explicitly (server: `getModelCatalog()` from `catalog/server`; browser: `useModelCatalog()`). A family resolves to `catalog.current[family]`; a pinned version resolves to itself only while the catalog knows it and it is not retired — otherwise `{ok:false, reason:"retired"|"unknown"}`. Never a silent substitute. Two throwing wrappers, one `ModelUnavailableError` (an `HttpError` naming the label and the current alternatives):
+  - `assertChoiceLaunchable(choice, catalog)` — **400**, at the endpoint boundary. Request schemas (`ModelChoiceSchema`) check only the id grammar; every handler that accepts a choice calls this before writing anything: conversations create, tasks create + set-auto-start, agents create / update / launch, the auto-start launch option's `validate` (run by `resolveLaunchOptions`, before the task exists), and `add_task`'s `autostart` (whose MCP schema is the grammar — an enum of families plus the id pattern — because an MCP schema is fixed at registration).
+  - `requireModel(choice, catalog)` — **409**, at launch: `prepareConversation` calls it once, at spawn, so an armed task launches the version current when it LAUNCHES. A choice valid when saved but retired since is refused here; the auto-start queue checks first and, rather than throw into a dead letter, files `auto-start-model-unavailable` on the task and leaves it armed (its queued chip turns red).
+- **Retirement has one source: the Claude CLI's model menu.** A version the installed CLI no longer offers is retired by discovery, and un-retired if it comes back; nothing else writes the catalog.
+- **Releasing a model: nothing to do.** Discovery (`models.discover`, daily and on every new Claude CLI version) reads the CLI's model menu (the Agent SDK `initialize` request — no model call), appends what is new, moves `current`, retires what the CLI dropped, and rings the bell; every picker, hint, settings option and filter re-renders from the live catalog. No code, no config file, no rebuild. **A new family** is one `FAMILY_META` entry plus its `MODEL_TIERS` slot (label, icon size; the family name is the CLI alias); the id grammar, the schemas, discovery, the `add_task` description and the `no-raw-model-flags` check all derive from that list.
+- **Pickers:** families show as "Opus" with today's version as a muted hint ("· 5.5") via `ModelChoiceLabel`, read from the live catalog; pinned versions (`selectableChoices(catalog)`: non-retired, non-print-only, newest first) are hidden until turned on in Settings → Model Provider. `useVisibleModels()` / `useModelItems()` / `<ModelSelect>` are the shared readers.
+- **Config lists no model.** `defaultModel` is a `dynamicEnumField` and `visibleModels` a `dynamicFlagsField` (a free-key `Record<string, boolean>`); the web barrel contributes their options from the live catalog (`DynamicEnum.Options` / `DynamicFlags.Options`, labelled "Opus · 5.5" by `choiceOptionLabel`). An absent `visibleModels` key is the default (`isShownByDefault`: families on, versions off), so a saved file from when the setting enumerated every model loads unchanged, and unknown keys are ignored (`visibleChoices`). Launch prompts' `model` is the same dynamic enum (`useModelChoiceOptions`), and the all-conversations model filter takes its options from the catalog (`conversationModelOptions`, retired versions included — old conversations ran them).
+- **Stored fields use the tolerant schemas:** `StoredModelSchema` (concrete) or `StoredModelChoiceSchema` (choice), checked against the id GRAMMAR, never the catalog. A well-formed id this machine has not seen (a row from a newer checkout, a retired version) is valid and labels itself from the id; only a MALFORMED value is corruption — it degrades (to `FALLBACK_MODEL` / the default choice) and is reported, instead of throwing on the WS push path and blanking the whole resource.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
+- Description: Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models. Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "config"
+    - `DynamicEnum.Options` "Default model"
+    - `DynamicFlags.Options` "Models shown in the launch dropdown"
     - `Core.Root` → `ModelCorruptionReporter`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
+    - `fields/dynamic-enum/config.DynamicEnum`
+    - `fields/dynamic-flags/config.DynamicFlags`
+    - `network/live.useLive`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Select`
     - `primitives/css/ui-kit.SelectContent`
@@ -36,41 +47,68 @@ Single source of truth for the models an agent can run, and for what the user as
     - `ModelChoiceLabel`
     - `ModelSelect`
     - `useDefaultModel`
+    - `useModelCatalog`
+    - `useModelChoiceOptions`
     - `useModelItems`
     - `useSetDefaultModel`
     - `useVisibleModels`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
-  - Exports (values): `resolveCliFlag`
 - Core:
-  - Uses: `primitives/live-state.tolerantEnum`
+  - Uses:
+    - `infra/endpoints.HttpError`
+    - `network/live.liveValue`
+    - `primitives/live-state.tolerantEnum`
   - Exports (types):
     - `ConversationModel`
+    - `ModelCatalog`
     - `ModelChoice`
+    - `ModelIdParse`
     - `ModelMeta`
+    - `ModelResolution`
     - `ModelTier`
+    - `ModelVersion`
+    - `VisibleModelsSetting`
   - Exports (values):
+    - `assertChoiceLaunchable`
+    - `BASELINE_MODELS`
     - `choiceFamily`
     - `choiceHint`
     - `choiceIconSize`
     - `choiceLabel`
+    - `choiceOptionLabel`
     - `cliFlagFor`
+    - `compareModelsNewestFirst`
     - `ConversationModelSchema`
     - `DEFAULT_MODEL_CHOICE`
-    - `idForCliName`
+    - `FALLBACK_MODEL`
+    - `isChoiceVisible`
     - `isModelFamily`
-    - `MODEL_REGISTRY`
+    - `isPrintOnlyFamily`
+    - `isRetired`
+    - `isShownByDefault`
     - `MODEL_TIERS`
+    - `modelCatalog`
+    - `ModelCatalogSchema`
     - `ModelChoiceSchema`
     - `modelDisplayLabel`
+    - `modelIdFromCliName`
+    - `modelMeta`
+    - `ModelUnavailableError`
+    - `ModelVersionSchema`
     - `normalizeModel`
     - `normalizeModelChoice`
+    - `parseModelId`
     - `registerModelCorruptionReporter`
+    - `requireModel`
     - `resolveModel`
-    - `SELECTABLE_CHOICES`
+    - `SELECTABLE_FAMILIES`
+    - `selectableChoices`
     - `StoredModelChoiceSchema`
     - `StoredModelSchema`
+    - `unavailableMessage`
+    - `visibleChoices`
 - Cross-plugin:
   - Imported by:
     - `conversations`
@@ -81,12 +119,14 @@ Single source of truth for the models an agent can run, and for what the user as
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversations-view`
-    - `conversations/runtime-tmux`
     - `debug/claude-cli-calls`
     - `infra/claude-cli`
     - `primitives/launch`
     - `tasks`
+    - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
     - `tasks/tasks-core`
+- Sub-plugins:
+  - **`catalog`** — The host-global model catalog: getModelCatalog() (catalog.json in memory, re-read by a file watcher, the baseline until the first discovery), the model-provider.catalog live value, and the models.discover job — daily and on every new Claude CLI version, it reads the CLI's model menu (the Agent SDK `initialize` control request, answered locally: no model call), makes each family run what its alias resolves to (with a bell line when that moves), appends new versions, retires versions the menu no longer offers, and files model-unrecognized for an entry it cannot place.
 
 <!-- AUTOGENERATED:END -->

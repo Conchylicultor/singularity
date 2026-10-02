@@ -22,9 +22,10 @@ import {
   checkClaudeCode,
 } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { claudeCodeBlockMessage } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import {
   DEFAULT_MODEL_CHOICE,
-  resolveModel,
+  requireModel,
   type ConversationModel,
   type ModelChoice,
 } from "@plugins/conversations/plugins/model-provider/core";
@@ -224,9 +225,12 @@ export async function prepareConversation(
   // THE point a model choice becomes the version that runs: a family ("opus")
   // resolves to its current version NOW, at spawn — not when the task was
   // armed. The conversation row records the concrete version it ran; a fork
-  // keeps its source's version unless the caller picked one.
-  const model = resolveModel(
+  // keeps its source's version unless the caller picked one. A pinned version
+  // the catalog does not know, or has retired, throws ModelUnavailableError
+  // (409) — never a silent substitute.
+  const model = requireModel(
     opts.model ?? inheritedModel ?? DEFAULT_MODEL_CHOICE,
+    getModelCatalog(),
   );
 
   // The namespace of the backend doing the creating, unless the caller named

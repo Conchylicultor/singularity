@@ -2,6 +2,7 @@ export {
   CONVERSATION_FIELDS,
   CONVERSATION_FILTERABLE,
   CONVERSATION_SEARCHABLE,
+  conversationModelOptions,
 } from "./internal/fields";
 export type {
   ConversationFieldSpec,

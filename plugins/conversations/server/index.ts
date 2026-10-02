@@ -35,6 +35,7 @@ import {
   claudeCodeUnavailableAtSpawnKind,
   conversationSpawnFailedKind,
 } from "./internal/spawn-report-kinds";
+import { autoStartModelUnavailableKind } from "./internal/auto-start-model-report";
 import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
@@ -130,6 +131,7 @@ export default {
     TaskCategory({ id: "system", label: "System", order: 1 }),
     conversationSpawnFailedKind,
     claudeCodeUnavailableAtSpawnKind,
+    autoStartModelUnavailableKind,
   ],
   register: [
     maybeLaunchTaskJob,

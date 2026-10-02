@@ -1,4 +1,8 @@
-import { choiceLabel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  choiceLabel,
+  resolveModel,
+} from "@plugins/conversations/plugins/model-provider/core";
+import { useModelCatalog } from "@plugins/conversations/plugins/model-provider/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
@@ -12,6 +16,7 @@ const scheduleIcon = symbol("schedule");
 export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
   const taskId = row.id;
   const autoStart = useTaskAutoStart(taskId);
+  const catalog = useModelCatalog();
   // Nothing while loading, nor for an unarmed task (no marker row): the chip
   // appears once the task is known to be armed. A failed read is a small error
   // icon whose click retries — never silently "not armed".
@@ -31,6 +36,32 @@ export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
   const queuedModel = autoStart.row.autoStartModel;
 
   const label = choiceLabel(queuedModel);
+  // A pinned version the catalog has retired (or never knew) will not launch:
+  // the queue refuses it rather than substitute another model. Say so here,
+  // where the task shows it is queued. Until the (preloaded) catalog settles,
+  // the plain queued chip — nothing is claimed about the model yet.
+  const resolution =
+    catalog.status === "ready"
+      ? resolveModel(queuedModel, catalog.data)
+      : undefined;
+  if (resolution && !resolution.ok) {
+    return (
+      <Badge
+        as="button"
+        variant="destructive"
+        // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- same one-off offset and rigidity as the queued chip below
+        className="ml-1 shrink-0"
+        title={`${label} is ${resolution.reason === "retired" ? "retired" : "not a model this machine knows"} — this task will not auto-start. Pick another model on the task, or click to cancel.`}
+        aria-label={`Cancel auto-start (${label}, ${resolution.reason})`}
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation();
+          void setAutoStart(taskId, "none");
+        }}
+      >
+        {label} {resolution.reason}
+      </Badge>
+    );
+  }
   return (
     <Badge
       as="button"

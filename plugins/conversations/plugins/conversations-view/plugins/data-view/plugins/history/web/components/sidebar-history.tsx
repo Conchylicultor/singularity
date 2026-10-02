@@ -16,7 +16,7 @@ import {
   conversationsRevisionResource,
   queryConversations,
 } from "@plugins/conversations/plugins/all-conversations/core";
-import { conversationFieldDefs } from "@plugins/conversations/plugins/all-conversations/web";
+import { useConversationFieldDefs } from "@plugins/conversations/plugins/all-conversations/web";
 import {
   SidebarConversationItem,
   type ConversationSidebarProps,
@@ -76,6 +76,7 @@ export function HistorySource({
   // The cheap scalar tick drives an in-place refetch of the loaded window; the
   // paginated SQL query is the source of truth. While pending, hand a null tick.
   const tick = useResource(conversationsRevisionResource);
+  const fields = useConversationFieldDefs();
   const changeTick = matchResource(tick, {
     loading: () => null,
     ready: (d) => d.rev,
@@ -84,7 +85,7 @@ export function HistorySource({
   return (
     <CloseConversationContext.Provider value={onCloseConversation}>
       {render<Conversation>({
-        fields: conversationFieldDefs,
+        fields,
         rowKey: (c) => c.id,
         selectedRowId: activeId ?? undefined,
         onRowActivate: (c) => onNavigate(c.id),

@@ -23,6 +23,7 @@ A sub-plugin rather than part of `auto-start` itself: applying the option means
 - Server:
   - Contributes: `taskLaunchServer` "auto-start"
   - Uses:
+    - `conversations/model-provider/catalog.getModelCatalog`
     - `tasks.armTaskAutoStart`
     - `tasks/auto-start.setTaskAutoStart`
     - `tasks/launch-options.TaskLaunchServer`

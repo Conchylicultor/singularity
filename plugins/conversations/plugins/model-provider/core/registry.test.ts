@@ -1,67 +1,119 @@
 import { describe, expect, test } from "bun:test";
 import {
-  MODEL_REGISTRY,
-  MODEL_TIERS,
-  SELECTABLE_CHOICES,
-  StoredModelChoiceSchema,
-  StoredModelSchema,
-  choiceHint,
+  ConversationModelSchema,
+  ModelChoiceSchema,
+  cliFlagFor,
   choiceLabel,
-  normalizeModelChoice,
-  resolveModel,
-  type ConversationModel,
+  compareModelsNewestFirst,
+  modelDisplayLabel,
+  modelIdFromCliName,
+  modelMeta,
+  parseModelId,
 } from "./registry";
 
-const ids = Object.keys(MODEL_REGISTRY) as ConversationModel[];
+const id = (raw: string) => ConversationModelSchema.parse(raw);
 
-describe("resolveModel", () => {
-  test("a family resolves to its first entry in registry order", () => {
-    for (const tier of MODEL_TIERS) {
-      const first = ids.find((id) => MODEL_REGISTRY[id].family === tier);
-      expect(resolveModel(tier)).toBe(first!);
+describe("the id grammar", () => {
+  test("accepts <family>-<major>[-<minor>] for every known family", () => {
+    for (const raw of [
+      "opus-5",
+      "opus-5-5",
+      "sonnet-9",
+      "haiku-4-5",
+      "fable-5-1",
+      "opus-10-12",
+    ]) {
+      expect(parseModelId(raw)).toEqual({ ok: true, id: id(raw) });
     }
   });
 
-  test("a pinned version resolves to itself", () => {
-    for (const id of ids) expect(resolveModel(id)).toBe(id);
-  });
-});
-
-describe("labels", () => {
-  test("a family reads as its name, with today's version as the hint", () => {
-    expect(choiceLabel("opus")).toBe("Opus");
-    expect(choiceHint("opus")).toBe(
-      MODEL_REGISTRY[resolveModel("opus")].version,
-    );
-  });
-
-  test("a pinned version reads as its full name, with no hint", () => {
-    expect(choiceLabel("opus-5")).toBe("Opus 5");
-    expect(choiceHint("opus-5")).toBeUndefined();
-  });
-});
-
-describe("SELECTABLE_CHOICES", () => {
-  test("families first, then versions, never a print-only model", () => {
-    const firstVersion = SELECTABLE_CHOICES.findIndex((c) => c.includes("-"));
-    expect(SELECTABLE_CHOICES.slice(0, firstVersion)).toEqual([
-      "fable",
+  test("rejects anything else, as a result", () => {
+    // A CLI flag is not an id either: the id is what the flag is derived from.
+    for (const raw of [
       "opus",
-      "sonnet",
-    ]);
-    expect(SELECTABLE_CHOICES).not.toContain("haiku");
-    expect(SELECTABLE_CHOICES).not.toContain("haiku-4-5");
+      "gpt-5",
+      "opus-5-5-1",
+      "opus-",
+      "Opus-5",
+      cliFlagFor(id("opus-5")),
+      "opus-5-x",
+      "",
+    ]) {
+      expect(parseModelId(raw)).toEqual({ ok: false, raw });
+    }
+  });
+
+  test("a choice is a family or an id, nothing else", () => {
+    expect(ModelChoiceSchema.parse("sonnet")).toBe("sonnet");
+    expect(ModelChoiceSchema.parse("sonnet-9")).toBe(id("sonnet-9"));
+    expect(ModelChoiceSchema.safeParse("sonnet-latest").success).toBe(false);
   });
 });
 
-describe("stored schemas", () => {
-  test("a stored choice keeps a family as a family", () => {
-    expect(StoredModelChoiceSchema.parse("sonnet")).toBe("sonnet");
-    expect(StoredModelChoiceSchema.parse("opus-5")).toBe("opus-5");
+describe("modelIdFromCliName", () => {
+  test("inverts cliFlagFor, with or without the CLI's date suffix", () => {
+    for (const raw of ["haiku-4-5", "sonnet-5-5", "opus-5", "fable-12-3"]) {
+      const flag = cliFlagFor(id(raw));
+      expect(modelIdFromCliName(flag)).toEqual({ ok: true, id: id(raw) });
+      expect(modelIdFromCliName(`${flag}-20251001`)).toEqual({
+        ok: true,
+        id: id(raw),
+      });
+    }
   });
 
-  test("unknown values degrade to the default", () => {
-    expect(normalizeModelChoice("nope")).toBe("opus");
-    expect(StoredModelSchema.parse("nope")).toBe(resolveModel("opus"));
+  test("a name that is not a CLI model id is not guessed at", () => {
+    for (const raw of [
+      "sonnet",
+      "not-a-model-9",
+      "claude-3-5-sonnet-20241022",
+      "opus-5-5",
+    ]) {
+      expect(modelIdFromCliName(raw)).toEqual({ ok: false, raw });
+    }
   });
+});
+
+describe("modelMeta", () => {
+  test("everything derives from the id", () => {
+    const opus = id("opus-5-5");
+    expect(modelMeta(opus)).toEqual({
+      cliFlag: `claude-${opus}`,
+      family: "opus",
+      version: "5.5",
+      label: "Opus 5.5",
+      iconSize: "size-4",
+    });
+    expect(modelMeta(id("sonnet-9")).label).toBe("Sonnet 9");
+    expect(modelMeta(id("haiku-4-5")).printOnly).toBe(true);
+    const fable = id("fable-5-1");
+    expect(cliFlagFor(fable)).toBe(`claude-${fable}`);
+  });
+
+  test("labels", () => {
+    expect(choiceLabel("opus")).toBe("Opus");
+    expect(choiceLabel(id("opus-5"))).toBe("Opus 5");
+    expect(modelDisplayLabel(`${cliFlagFor(id("opus-4-8"))}-20260101`)).toBe(
+      "Opus 4.8",
+    );
+    expect(modelDisplayLabel("opus-4-8")).toBe("Opus 4.8");
+    expect(modelDisplayLabel("opus")).toBe("Opus");
+    expect(modelDisplayLabel("mystery")).toBe("mystery");
+  });
+});
+
+test("newest first, grouped by family in picker order", () => {
+  const ids = [
+    "sonnet-4-6",
+    "opus-5",
+    "fable-5",
+    "opus-5-5",
+    "opus-10",
+    "sonnet-5",
+  ].map(id);
+  expect([...ids].sort(compareModelsNewestFirst)).toEqual(
+    ["fable-5", "opus-10", "opus-5-5", "opus-5", "sonnet-5", "sonnet-4-6"].map(
+      id,
+    ),
+  );
 });

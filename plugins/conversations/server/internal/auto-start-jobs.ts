@@ -27,6 +27,9 @@ import {
   type PreparedConversation,
 } from "./lifecycle";
 import { checkClaudeCode } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import { resolveModel } from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
+import { reportAutoStartModelUnavailable } from "./auto-start-model-report";
 
 // The transactional heart of an auto-launch: claim the marker and commit the
 // launch on ONE transaction. Returns whether this call launched.
@@ -222,6 +225,19 @@ export const maybeLaunchTaskJob = defineJob({
       console.warn(
         `[tasks.maybe-launch] task ${taskId} stays armed: Claude Code is ${claude.kind}`,
       );
+      return;
+    }
+
+    // The armed model can no longer run (a pinned version retired since it
+    // was armed). Launching would throw at spawn and graphile would retry it
+    // into a dead letter nobody sees on the task — and substituting another
+    // model is never an option. Say so on the task (its report, and the
+    // queued chip reads the same catalog) and leave it armed: re-picking a
+    // model re-arms it, which wakes this job again.
+    const catalog = getModelCatalog();
+    const resolution = resolveModel(ext.autoStartModel, catalog);
+    if (!resolution.ok) {
+      await reportAutoStartModelUnavailable(taskId, resolution, catalog);
       return;
     }
 

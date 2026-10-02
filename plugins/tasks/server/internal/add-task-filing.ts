@@ -1,6 +1,12 @@
 import type { createTask } from "@plugins/tasks/plugins/tasks-core/server";
-import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
-import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
+import type {
+  ModelCatalog,
+  ModelChoice,
+} from "@plugins/conversations/plugins/model-provider/core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  assertChoiceLaunchable,
+} from "@plugins/conversations/plugins/model-provider/core";
 import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
 import type { RewireOptions } from "./rewire-dependencies";
 
@@ -33,6 +39,8 @@ export interface AddTaskPorts {
     cause: string;
   }): Promise<void>;
   setTrack(taskId: string, track: TaskTrack): Promise<void>;
+  /** The live model catalog the `autostart` choice is checked against. */
+  modelCatalog(): ModelCatalog;
 }
 
 export interface AddTaskResult {
@@ -74,6 +82,12 @@ export async function fileAddTask(
   ports: AddTaskPorts,
 ): Promise<AddTaskResult> {
   assertTrackAllows(input);
+  // The tool's schema checks only the id grammar (the catalog is runtime data
+  // and an MCP schema is fixed at registration): whether this machine can run
+  // the version is checked here, before anything is written, and the refusal
+  // lists the choices that can run today.
+  if (input.autostart !== undefined)
+    assertChoiceLaunchable(input.autostart, ports.modelCatalog());
 
   const conv = await ports.getConversation(conversationId);
   if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);

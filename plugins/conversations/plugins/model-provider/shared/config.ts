@@ -1,47 +1,27 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
-import { objectField } from "@plugins/fields/plugins/object/plugins/config/core";
-import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
-import {
-  DEFAULT_MODEL_CHOICE,
-  SELECTABLE_CHOICES,
-  choiceHint,
-  choiceLabel,
-  isModelFamily,
-} from "../core";
+import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/config/core";
+import { dynamicFlagsField } from "@plugins/fields/plugins/dynamic-flags/plugins/config/core";
+import { DEFAULT_MODEL_CHOICE } from "../core";
 
-// "Opus · 5.5" for a family (the version it runs today), "Opus 5" for a pinned
-// version. SELECTABLE_CHOICES already excludes print-only models (haiku).
-function optionLabel(choice: (typeof SELECTABLE_CHOICES)[number]): string {
-  const hint = choiceHint(choice);
-  return hint ? `${choiceLabel(choice)} · ${hint}` : choiceLabel(choice);
-}
+// Neither field lists a model: the options are the LIVE catalog's, contributed
+// at render time by this plugin's web barrel (`DynamicEnum.Options` /
+// `DynamicFlags.Options`), so a release changes no config file — not the
+// origin, not a saved override. Reads go through the model-aware readers
+// (`normalizeModelChoice`, `isChoiceVisible`), never the raw values.
 
 export const modelProviderConfig = defineConfig({
   fields: {
-    defaultModel: enumField({
+    defaultModel: dynamicEnumField({
       label: "Default model",
       description:
         'Model fired by the launch button and pre-selected in the dropdown. A family ("opus") always runs its newest version.',
-      options: SELECTABLE_CHOICES.map((value) => ({
-        value,
-        label: optionLabel(value),
-      })),
       default: DEFAULT_MODEL_CHOICE,
     }),
-    visibleModels: objectField({
+    // A free-key record: an absent key is the choice's default (families on,
+    // pinned versions off — `isShownByDefault`), so saved files written when
+    // this was a fixed object of every model still load unchanged.
+    visibleModels: dynamicFlagsField({
       label: "Models shown in the launch dropdown",
-      // Families are on by default; a pinned version is off until the user
-      // turns it on — pinning is a deliberate choice, never the default.
-      subFields: Object.fromEntries(
-        SELECTABLE_CHOICES.map((choice) => [
-          choice,
-          boolField({
-            label: optionLabel(choice),
-            default: isModelFamily(choice),
-          }),
-        ]),
-      ),
     }),
   },
 });

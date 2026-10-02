@@ -23,6 +23,7 @@
   - Uses:
     - `conversations.launchTaskNow`
     - `conversations.maybeLaunchTaskJob`
+    - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `infra/attachments.getAttachment`
     - `infra/claude-cli/availability.assertClaudeCodeReady`

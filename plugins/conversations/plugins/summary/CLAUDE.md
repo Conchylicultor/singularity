@@ -39,6 +39,7 @@
     - `conversations.deleteConversation`
     - `conversations.readConversationTurns`
     - `conversations.Turn`
+    - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`

@@ -23,7 +23,7 @@ import {
   conversationsRevisionResource,
   queryConversations,
 } from "../core";
-import { conversationFieldDefs } from "./internal/fields";
+import { useConversationFieldDefs } from "./internal/fields";
 
 const ALL_CONVERSATIONS_VIEW = defineDataView("all-conversations");
 
@@ -44,6 +44,7 @@ function AllConversationsView(): ReactElement {
   // (no refetch) — the first settled `rev` then refreshes once.
   const tick = useResource(conversationsRevisionResource);
   const openPane = useOpenPane();
+  const fields = useConversationFieldDefs();
   const changeTick = matchResource(tick, {
     loading: () => null,
     ready: (d) => d.rev,
@@ -53,7 +54,7 @@ function AllConversationsView(): ReactElement {
     <PaneChrome pane={allConversationsPane}>
       <DataView<Conversation>
         storageKey={ALL_CONVERSATIONS_VIEW}
-        fields={conversationFieldDefs}
+        fields={fields}
         rowKey={(c) => c.id}
         views={["table", "list"]}
         dataSource={{

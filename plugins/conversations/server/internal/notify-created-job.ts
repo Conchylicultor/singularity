@@ -5,7 +5,7 @@ import { recordNotification } from "@plugins/shell/plugins/notifications/server"
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
-  MODEL_REGISTRY,
+  modelMeta,
   normalizeModel,
 } from "@plugins/conversations/plugins/model-provider/core";
 
@@ -40,7 +40,7 @@ export const notifyConversationCreatedJob = defineJob({
     if (!event) return;
     if (!CAUSALITY_VALUES.has(event.spawnedBy)) return;
 
-    const model = MODEL_REGISTRY[normalizeModel(event.model)].label;
+    const model = modelMeta(normalizeModel(event.model)).label;
     const task = await getTask(event.taskId);
     const taskTitle = task?.title ?? "";
     const title =

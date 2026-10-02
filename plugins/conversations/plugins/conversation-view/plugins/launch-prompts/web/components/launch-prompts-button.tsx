@@ -47,9 +47,10 @@ export function LaunchPromptsButton({
         {},
         {
           body: {
-            // item.model is a stored config value (enum-constrained at authoring
-            // time but typed as string) — normalize on read to a ModelChoice
-            // before it enters the strict createConversation body.
+            // item.model is a stored config value (picked from the live catalog
+            // but typed as string) — normalize on read to a ModelChoice before
+            // it enters the strict createConversation body, whose handler
+            // refuses a version the catalog has since retired.
             model: normalizeModelChoice(item.model),
             prompt: item.prompt,
             attemptId: conversation.attemptId,

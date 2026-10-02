@@ -9,7 +9,7 @@ import { costUsageDir } from "../../data-dirs";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { defineCorpusIndex } from "@plugins/infra/plugins/corpus-index/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
-import { idForCliName } from "@plugins/conversations/plugins/model-provider/core";
+import { modelIdFromCliName } from "@plugins/conversations/plugins/model-provider/core";
 import {
   flushArchive,
   loadArchive,
@@ -387,7 +387,9 @@ function classifyProjects(
   return out;
 }
 
-// CLI model name (e.g. "opus-4-7-20250101") → registry id "opus-4-7"; falls back to the original name for historical/unknown models.
+// CLI model name (e.g. "claude-opus-4-7-20250101") → model id "opus-4-7"; a
+// name outside the id grammar (an old "claude-3-5-sonnet" spelling) stays as is.
 export function canonicalModel(name: string): string {
-  return idForCliName(name) ?? name;
+  const id = modelIdFromCliName(name);
+  return id.ok ? id.id : name;
 }

@@ -44,10 +44,10 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server/testing";
 import {
   DEFAULT_MODEL_CHOICE,
-  resolveModel,
+  FALLBACK_MODEL,
 } from "@plugins/conversations/plugins/model-provider/core";
 
-const MODEL = resolveModel(DEFAULT_MODEL_CHOICE);
+const MODEL = FALLBACK_MODEL;
 import { launchArmedTask, type IfAlreadyStarted } from "./auto-start-jobs";
 import type { PreparedConversation } from "./lifecycle";
 

@@ -8,7 +8,8 @@ import type {
   FieldValue,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
-import { CONVERSATION_FIELDS } from "../../core";
+import { useModelCatalog } from "@plugins/conversations/plugins/model-provider/web";
+import { CONVERSATION_FIELDS, conversationModelOptions } from "../../core";
 
 // Comparable projection for one field id. Drives the toolbar sort/filter pills and
 // the default table/list cell. (Search/filter/sort run server-side here; this only
@@ -63,16 +64,31 @@ function cellFor(
   return undefined;
 }
 
-// The web `FieldDef[]`, derived from the shared CONVERSATION_FIELDS vocabulary so
-// it can never drift from the server's FieldColumnMap.
-export const conversationFieldDefs: FieldDef<Conversation>[] =
-  CONVERSATION_FIELDS.map((spec) => ({
+type FieldOptions = FieldDef<Conversation>["options"];
+
+/**
+ * The web `FieldDef[]`, derived from the shared CONVERSATION_FIELDS vocabulary so
+ * it can never drift from the server's FieldColumnMap. A hook, because one
+ * field's options are runtime data: the `model` filter offers the versions in
+ * the LIVE model catalog, so a version discovered today is filterable without a
+ * release. Until the (preloaded) catalog settles, the model field has no
+ * option list — the filter takes free text rather than claiming there are no
+ * models.
+ */
+export function useConversationFieldDefs(): FieldDef<Conversation>[] {
+  const catalog = useModelCatalog();
+  const modelOptions: FieldOptions =
+    catalog.status === "ready"
+      ? conversationModelOptions(catalog.data)
+      : undefined;
+  return CONVERSATION_FIELDS.map((spec) => ({
     id: spec.id,
     label: spec.label,
     type: spec.type,
     primary: spec.primary,
     sortable: spec.sortable,
-    options: spec.options,
+    options: spec.id === "model" ? modelOptions : spec.options,
     value: (c: Conversation) => fieldValue(c, spec.id),
     cell: cellFor(spec.id, spec.type),
   }));
+}

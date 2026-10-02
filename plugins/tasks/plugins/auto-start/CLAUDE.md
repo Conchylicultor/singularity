@@ -8,6 +8,7 @@
 - Web:
   - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
   - Uses:
+    - `conversations/model-provider.useModelCatalog`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`

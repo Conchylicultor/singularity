@@ -16,12 +16,13 @@ import {
 import { claudeCliCalls } from "@plugins/infra/plugins/claude-cli/core";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import {
-  ConversationModelSchema,
   MODEL_TIERS,
-  MODEL_REGISTRY,
+  modelMeta,
   type ConversationModel,
+  type ModelCatalog,
   type ModelTier,
 } from "@plugins/conversations/plugins/model-provider/core";
+import { useModelCatalog } from "@plugins/conversations/plugins/model-provider/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -32,17 +33,35 @@ import { CallRow } from "./call-row";
 type ModelFilter = "all" | ModelTier;
 
 /**
- * A tier's concrete model ids. The tier is not a column, so the tier chip is
- * an `in` over these — the server filters, and a tier's calls older than the
- * loaded window are still found.
+ * A tier's concrete model ids, from the live catalog. The tier is not a
+ * column, so the tier chip is an `in` over these — the server filters, and a
+ * tier's calls older than the loaded window are still found.
  */
-function modelsOfTier(tier: ModelTier): ConversationModel[] {
-  return ConversationModelSchema.options.filter(
-    (id) => MODEL_REGISTRY[id].family === tier,
-  );
+function modelsOfTier(
+  tier: ModelTier,
+  catalog: ModelCatalog,
+): ConversationModel[] {
+  return catalog.versions
+    .map((v) => v.id)
+    .filter((id) => modelMeta(id).family === tier);
 }
 
 export function CallsView() {
+  const catalog = useModelCatalog();
+  if (catalog.status === "loading") return <Loading />;
+  if (catalog.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the model catalog"
+        error={catalog.error}
+        refetch={catalog.refetch}
+      />
+    );
+  return <CallsViewBody catalog={catalog.data} />;
+}
+
+function CallsViewBody({ catalog }: { catalog: ModelCatalog }) {
   const modelChip = useChipFilter<ModelFilter>("all");
   const sourceChip = useChipFilter<string>("all");
   const filtered = modelChip.value !== "all" || sourceChip.value !== "all";
@@ -52,7 +71,7 @@ export function CallsView() {
       model:
         modelChip.value === "all"
           ? undefined
-          : { in: modelsOfTier(modelChip.value) },
+          : { in: modelsOfTier(modelChip.value, catalog) },
     },
   });
 

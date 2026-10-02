@@ -107,10 +107,10 @@ export type Push = z.infer<typeof PushSchema>;
 
 export const ConversationSchema = fieldsToZodObject(conversationFields).extend({
   status: ConversationStatusSchema,
-  // Tolerant by construction (see StoredModelSchema): a legacy/unknown stored
-  // model (e.g. written by a concurrent worktree on pre-flatten code, or an id
-  // later removed from the registry) normalizes to a concrete model instead of
-  // rejecting the row — which would blank a whole conversations sub-resource array.
+  // Tolerant by construction (see StoredModelSchema): a malformed stored
+  // model (e.g. written by a concurrent worktree on incompatible code) normalizes
+  // to a concrete model instead of rejecting the row; a well-formed id is valid
+  // whether or not this machine's catalog knows it — which would blank a whole conversations sub-resource array.
   model: StoredModelSchema,
   kind: ConversationKindSchema,
   worktreePath: z.string(),

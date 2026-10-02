@@ -3,13 +3,20 @@ import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { readConversationTurns } from "@plugins/conversations/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { cliFlagFor } from "@plugins/conversations/plugins/model-provider/core";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  cliFlagFor,
+  requireModel,
+  type ModelChoice,
+} from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { _conversationSummaries } from "./tables";
 import { PhaseSchema } from "../../core";
 
-export const SUMMARY_MODEL_ID: ConversationModel = "sonnet-4-6";
-export const SUMMARY_MODEL = cliFlagFor(SUMMARY_MODEL_ID);
+/**
+ * The summarizer runs whatever Sonnet is current — a family, resolved when it
+ * is used. A pinned version here would go stale on the next release.
+ */
+export const SUMMARY_MODEL_CHOICE: ModelChoice = "sonnet";
 
 function newSummaryId(): string {
   return `summary-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -74,7 +81,14 @@ Use the MCP tool directly — do NOT invoke it via Bash, curl, or HTTP.`,
       .optional()
       .describe("Catch-all for anything else worth recording."),
   },
-  async handler({ conversationId, phase, phaseDetail, flags, nextAction, notes }) {
+  async handler({
+    conversationId,
+    phase,
+    phaseDetail,
+    flags,
+    nextAction,
+    notes,
+  }) {
     const conv = await getConversation(conversationId);
     if (!conv) {
       throw new Error(
@@ -94,7 +108,8 @@ Use the MCP tool directly — do NOT invoke it via Bash, curl, or HTTP.`,
     await db.insert(_conversationSummaries).values({
       id: newSummaryId(),
       conversationId,
-      model: SUMMARY_MODEL,
+      // The CLI flag of the version the summarizer was resolved to (Sonnet's current).
+      model: cliFlagFor(requireModel(SUMMARY_MODEL_CHOICE, getModelCatalog())),
       turnCountAtGeneration: turns.length,
       phase,
       phaseDetail: phaseDetail ?? null,

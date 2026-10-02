@@ -1,6 +1,15 @@
 import { describe, test, expect } from "bun:test";
-import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
-import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
+import type {
+  ModelCatalog,
+  ModelChoice,
+} from "@plugins/conversations/plugins/model-provider/core";
+import {
+  BASELINE_MODELS,
+  ConversationModelSchema,
+  DEFAULT_MODEL_CHOICE,
+  ModelChoiceSchema,
+  ModelUnavailableError,
+} from "@plugins/conversations/plugins/model-provider/core";
 import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
 import {
   fileAddTask,
@@ -17,7 +26,7 @@ const CONV = "conv-1";
 const T = "T"; // the current conversation's task
 const D = "D"; // a task that already waited on T
 
-function makeStore() {
+function makeStore(catalog: ModelCatalog = BASELINE_MODELS) {
   const tasks = new Set<string>([T, D]);
   // "a->b" = a depends on b.
   const edges = new Set<string>([`${D}->${T}`]);
@@ -63,6 +72,7 @@ function makeStore() {
       if (track === "main") tracks.delete(taskId);
       else tracks.set(taskId, track);
     },
+    modelCatalog: () => catalog,
   };
 
   const file = (
@@ -177,5 +187,82 @@ describe("add_task filing: main track vs sidequest", () => {
     expect(err.message).toMatch(/block the main track/);
     expect(s.tasks).toEqual(tasksBefore);
     expect(s.tracks.size).toBe(0);
+  });
+});
+
+describe("add_task autostart: the id grammar at the schema, the catalog at filing", () => {
+  // The MCP input schema is fixed when the tool registers, so it can only
+  // check the grammar; a release after that must still be accepted.
+  test("the schema accepts any well-formed version, known or not", () => {
+    expect(ModelChoiceSchema.safeParse("sonnet-9").success).toBe(true);
+    expect(ModelChoiceSchema.safeParse("opus").success).toBe(true);
+    expect(ModelChoiceSchema.safeParse("gpt-4").success).toBe(false);
+    expect(ModelChoiceSchema.safeParse("opus-5").success).toBe(true);
+  });
+
+  test("a version this machine's catalog never saw is refused before anything is written, listing what can run", async () => {
+    const s = makeStore();
+    const before = new Set(s.tasks);
+    const err = await rejection(
+      s.file({
+        title: "Main",
+        track: "main",
+        autostart: ModelChoiceSchema.parse("sonnet-9"),
+      }),
+    );
+    expect(err).toBeInstanceOf(ModelUnavailableError);
+    expect((err as ModelUnavailableError).status).toBe(400);
+    expect(err.message).toContain("Sonnet 9 is not a model this machine knows");
+    expect(err.message).toContain("pick another: Fable, Opus, Sonnet");
+    expect(s.tasks).toEqual(before);
+    expect(s.armed.size).toBe(0);
+  });
+
+  test("once discovery has seen it, the same version files and arms", async () => {
+    const sonnet9 = ConversationModelSchema.parse("sonnet-9");
+    const s = makeStore({
+      ...BASELINE_MODELS,
+      versions: [
+        ...BASELINE_MODELS.versions,
+        {
+          id: sonnet9,
+          firstSeenAt: "2026-10-01T00:00:00.000Z",
+          source: "cli",
+        },
+      ],
+      current: { ...BASELINE_MODELS.current, sonnet: sonnet9 },
+    });
+    const r = await s.file({
+      title: "Main",
+      track: "main",
+      autostart: sonnet9,
+    });
+    expect(s.armed.get(r.task_id)).toBe(sonnet9);
+  });
+
+  test("a retired version is refused with its reason", async () => {
+    const s = makeStore({
+      ...BASELINE_MODELS,
+      versions: BASELINE_MODELS.versions.map((v) =>
+        v.id === "opus-4-6"
+          ? {
+              ...v,
+              retiredAt: "2026-10-01T00:00:00.000Z",
+              retiredReason: "no longer offered by Claude Code 2.2.0",
+            }
+          : v,
+      ),
+    });
+    const err = await rejection(
+      s.file({
+        title: "Main",
+        track: "main",
+        autostart: ModelChoiceSchema.parse("opus-4-6"),
+      }),
+    );
+    expect(err.message).toContain(
+      "Opus 4.6 is retired (no longer offered by Claude Code 2.2.0)",
+    );
+    expect(err.message).not.toContain("Opus 4.6,");
   });
 });

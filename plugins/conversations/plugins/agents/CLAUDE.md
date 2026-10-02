@@ -123,6 +123,7 @@ migrate (Resources page item 3).
     - `taskCategory` "agents"
   - Uses:
     - `conversations.createConversation`
+    - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `database/derived-tables.DerivedTable`
     - `database/derived-updated-at.deriveUpdatedAt`

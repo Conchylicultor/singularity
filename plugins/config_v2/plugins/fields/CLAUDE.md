@@ -52,7 +52,7 @@ the config-only templates to mirror.
 
 - Description: Field type registry. Sub-plugins contribute field types with core factories and web renderers.
 - Web:
-  - Slots: `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
+  - Slots: `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
   - Uses:
     - `primitives/css/cluster.Cluster`
     - `primitives/css/control-panel.ControlPanel`
@@ -85,6 +85,7 @@ the config-only templates to mirror.
     - `fields/color/config`
     - `fields/directory-path/config`
     - `fields/dynamic-enum/config`
+    - `fields/dynamic-flags/config`
     - `fields/enum/config`
     - `fields/float/config`
     - `fields/int/config`

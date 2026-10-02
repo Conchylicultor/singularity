@@ -6,7 +6,7 @@ import { allConversationsPane } from "./panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { allConversationsPane } from "./panes";
-export { conversationFieldDefs } from "./internal/fields";
+export { useConversationFieldDefs } from "./internal/fields";
 
 export default {
   description:

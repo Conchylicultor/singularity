@@ -7,8 +7,10 @@ import {
   type Scope,
 } from "./load-usage";
 import { logCostBuckets } from "./distribution";
-import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  modelMeta,
+  parseModelId,
+} from "@plugins/conversations/plugins/model-provider/core";
 import {
   getCostAvgPerConversation,
   getCostCumulative,
@@ -21,8 +23,10 @@ import {
 } from "../../shared/endpoints";
 
 function modelFamily(canonical: string): string {
-  const meta = MODEL_REGISTRY[canonical as ConversationModel];
-  return meta ? meta.family : (canonical.split("-")[0] ?? canonical);
+  const id = parseModelId(canonical);
+  return id.ok
+    ? modelMeta(id.id).family
+    : (canonical.split("-")[0] ?? canonical);
 }
 
 function filterDaily(

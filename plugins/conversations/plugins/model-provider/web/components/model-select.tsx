@@ -41,13 +41,12 @@ export function ModelSelect({
   const selected = value ?? OFF;
 
   // base-ui resolves the collapsed trigger label from `items`, not from the
-  // (unmounted) option list. Map every choice — not just visible ones — so a
-  // stored hidden pinned version still shows its label.
+  // (unmounted) option list. Label every visible choice AND the selected one —
+  // a stored hidden pinned version still shows its label, derived from its id.
   const items: Record<string, string> = {
     [OFF]: offLabel,
-    ...Object.fromEntries(
-      ModelChoiceSchema.options.map((m) => [m, choiceLabel(m)]),
-    ),
+    ...Object.fromEntries(visibleModels.map((m) => [m, choiceLabel(m)])),
+    ...(value ? { [value]: choiceLabel(value) } : {}),
   };
 
   return (

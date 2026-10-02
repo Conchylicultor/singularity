@@ -1,8 +1,5 @@
 import { db } from "@plugins/database/server";
-import {
-  DEFAULT_MODEL_CHOICE,
-  resolveModel,
-} from "@plugins/conversations/plugins/model-provider/core";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _attempts, _tasks } from "../tables";
 import { conversations } from "../views";
 import type { Conversation } from "../schema";
@@ -56,6 +53,12 @@ export interface AdoptOrphanInput {
   runtimeId: string;
   status: "starting" | "working" | "waiting" | "gone" | "done";
   title?: string | null;
+  /**
+   * The version recorded for the adopted row. What a stray session runs is not
+   * known; the caller resolves it (the default family's current version) so
+   * this schema layer never reads the runtime model catalog.
+   */
+  model: ConversationModel;
   /**
    * Runs on the adoption's own transaction, only when this call inserted the
    * row — so whatever the caller announces (the `conversationCreated` emit, and
@@ -123,7 +126,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     status: input.status,
     title: input.title ?? null,
     spawnedBy: "poller",
-    model: resolveModel(DEFAULT_MODEL_CHOICE),
+    model: input.model,
   };
   await db.transaction(async (tx) => {
     let rowTaskId: string;

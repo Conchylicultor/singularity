@@ -1,7 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import { ClaudeCliCallDetail } from "@plugins/infra/plugins/claude-cli/web";
-import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
+import { modelMeta } from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
@@ -18,7 +18,7 @@ const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {
   const { open, triggerProps, contentId } = useCollapsible();
-  const modelMeta = MODEL_REGISTRY[call.model];
+  const meta = modelMeta(call.model);
   const isError = call.error !== null;
   const previewText = isError
     ? (call.error ?? "<error>")
@@ -44,9 +44,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
         </span>
         <Stack as={Fill} gap="xs">
           <Text as={Cluster} variant="caption">
-            <Badge colorClass={familyClass(modelMeta.family)}>
-              {modelMeta.label}
-            </Badge>
+            <Badge colorClass={familyClass(meta.family)}>{meta.label}</Badge>
             <Badge variant="muted" className="font-mono">
               {call.sourceName}
             </Badge>

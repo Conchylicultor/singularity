@@ -203,7 +203,6 @@ may be a real command (`/compact`).
 - Server:
   - Uses:
     - `conversations.Runtime`
-    - `conversations/model-provider.resolveCliFlag`
     - `infra/claude-cli/availability.requireClaudeBin`
     - `infra/paths.CLAUDE_SESSIONS_DIR`
     - `infra/paths.PS`

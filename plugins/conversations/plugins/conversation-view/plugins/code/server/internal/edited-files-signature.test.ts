@@ -5,10 +5,7 @@ import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { db } from "@plugins/database/server";
-import {
-  DEFAULT_MODEL_CHOICE,
-  resolveModel,
-} from "@plugins/conversations/plugins/model-provider/core";
+import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import {
   _tasks,
   createAttempt,
@@ -171,7 +168,7 @@ describe('unresolvable worktree — one consistent (unresolved, "no-worktree") p
       id: convId,
       attemptId,
       runtime: "tmux",
-      model: resolveModel(DEFAULT_MODEL_CHOICE),
+      model: FALLBACK_MODEL,
       spawnedBy: "edited-files-signature-test",
     });
 

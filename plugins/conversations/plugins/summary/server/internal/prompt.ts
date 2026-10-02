@@ -2,7 +2,10 @@ import {
   readConversationTurns,
   type Turn,
 } from "@plugins/conversations/server";
-import { getConversation, getTask } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  getConversation,
+  getTask,
+} from "@plugins/tasks/plugins/tasks-core/server";
 
 // Most transcripts fit comfortably in Sonnet's context. For very long ones
 // we keep a head + tail of each turn's text so the model still sees both
@@ -34,12 +37,10 @@ export async function buildSummarizePayload(
   sections.push("<target-conversation>");
   sections.push(`  <id>${escapeText(targetConversationId)}</id>`);
   sections.push(`  <status>${escapeText(conv.status)}</status>`);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; legacy rows may have empty strings
   if (conv.model) sections.push(`  <model>${escapeText(conv.model)}</model>`);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; legacy rows may have empty strings
   if (conv.kind) sections.push(`  <kind>${escapeText(conv.kind)}</kind>`);
-  if (conv.title)
-    sections.push(`  <title>${escapeText(conv.title)}</title>`);
+  if (conv.title) sections.push(`  <title>${escapeText(conv.title)}</title>`);
   sections.push("</target-conversation>");
   sections.push("");
 

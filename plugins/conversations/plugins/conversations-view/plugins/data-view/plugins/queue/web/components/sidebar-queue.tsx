@@ -5,7 +5,7 @@ import {
   type ConversationSidebarProps,
 } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import { useQueueRows, type QueueRow } from "./use-queue-rows";
-import { queueFields } from "./queue-fields";
+import { useQueueFields } from "./queue-fields";
 import {
   QueueItemActions,
   CloseConversationContext,
@@ -28,12 +28,13 @@ export function QueueSource({
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
   const { activeId, onNavigate, onCloseConversation } = hostProps;
   const { rows, dispatchReorder, readiness } = useQueueRows();
+  const fields = useQueueFields();
 
   return (
     <CloseConversationContext.Provider value={onCloseConversation}>
       {render<QueueRow>({
         rows,
-        fields: queueFields,
+        fields,
         rowKey: (c) => c.id,
         readiness,
         selectedRowId: activeId ?? undefined,

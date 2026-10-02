@@ -8,9 +8,10 @@ import {
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   cliFlagFor,
-  resolveModel,
+  requireModel,
   type ModelTier,
 } from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { recordClaudeCliCall } from "./record-call";
 
 // A one-shot `claude --print` starts from the host facts alone (HOME, USER,
@@ -62,7 +63,8 @@ export async function runClaudePrint(
   input: RunClaudePrintInput,
 ): Promise<string> {
   const timeoutMs = input.timeoutMs ?? 15_000;
-  const resolvedModel = resolveModel(input.tier);
+  // A family always resolves (to its current version in the live catalog).
+  const resolvedModel = requireModel(input.tier, getModelCatalog());
   const cliFlag = cliFlagFor(resolvedModel);
   // `--tools ""` disables every tool so the model can't go off and plan/edit;
   // `--system-prompt` replaces (not appends) the default system prompt so the

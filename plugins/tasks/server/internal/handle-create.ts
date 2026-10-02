@@ -14,9 +14,20 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTask as createTaskEndpoint } from "../../core/endpoints";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  assertChoiceLaunchable,
+} from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 
 export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
+  // Before the task is filed, so a model this machine cannot run (unknown, or
+  // retired) is a 400 that leaves nothing behind.
+  const autoStartModel = body.autoStart
+    ? (body.autoStart.model ?? DEFAULT_MODEL_CHOICE)
+    : undefined;
+  if (autoStartModel !== undefined)
+    assertChoiceLaunchable(autoStartModel, getModelCatalog());
   const description = body.description?.trim() || null;
   const explicitTitle = body.title?.trim();
   // Use the synthesised fallback as the initial title so creation is instant;
@@ -78,10 +89,10 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
     }
   }
 
-  if (body.autoStart) {
+  if (autoStartModel !== undefined) {
     await armTaskAutoStart({
       taskId: row.id,
-      model: body.autoStart.model ?? DEFAULT_MODEL_CHOICE,
+      model: autoStartModel,
       cause: "user-launch",
     });
     // Re-fetch so the response reflects the autoStart columns and any

@@ -3,9 +3,9 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  BASELINE_MODELS,
+  ConversationModelSchema,
   cliFlagFor,
-  MODEL_REGISTRY,
-  type ConversationModel,
 } from "@plugins/conversations/plugins/model-provider/core";
 import type { DayBucket, TieredTokens } from "./buckets";
 import { loadFallbackPriceTable } from "./litellm-fallback";
@@ -94,7 +94,10 @@ function bucket(over: Partial<DayBucket> = {}): DayBucket {
 /** Unwrap the ok arm; fails loudly rather than defaulting when it is not ok. */
 function cost(b: DayBucket, table: PriceTable = FIXTURE): number {
   const priced = priceBucket(b, table);
-  if (!priced.ok) throw new Error(`expected priced, got ${priced.reason} for ${priced.model}`);
+  if (!priced.ok)
+    throw new Error(
+      `expected priced, got ${priced.reason} for ${priced.model}`,
+    );
   return priced.cost;
 }
 
@@ -149,7 +152,10 @@ test("untiered kind: below and above recombine at the base rate", () => {
 
 test("tiered kind: below and above are priced by their own rates", () => {
   const c = cost(
-    bucket({ model: "claude-tiered", input: { below: 200_000, above: 300_000 } }),
+    bucket({
+      model: "claude-tiered",
+      input: { below: 200_000, above: 300_000 },
+    }),
   );
   // 200_000 * 1e-6 + 300_000 * 2e-6
   expect(c).toBeCloseTo(0.2 + 0.6, 12);
@@ -182,7 +188,9 @@ test("tiered rates apply to every kind, including the 1h cache split", () => {
 test("the fast multiplier scales the whole bucket, and only when speed is fast", () => {
   const tokens = { input: { below: 1_000_000, above: 0 } };
   const standard = cost(bucket({ model: "claude-speedy", ...tokens }));
-  const fast = cost(bucket({ model: "claude-speedy", speed: "fast", ...tokens }));
+  const fast = cost(
+    bucket({ model: "claude-speedy", speed: "fast", ...tokens }),
+  );
   expect(standard).toBeCloseTo(1, 12);
   expect(fast).toBeCloseTo(2, 12);
   // A model without a `fast` entry is unaffected by the speed dimension.
@@ -196,7 +204,7 @@ test("ground truth: a realistic opus-5 day, hand-computed", async () => {
   //   input 5e-6, output 2.5e-5, cacheCreate5m 6.25e-6, cacheCreate1h 1e-5,
   //   cacheRead 5e-7 — untiered, fast multiplier 2.
   const day = bucket({
-    model: cliFlagFor("opus-5"),
+    model: cliFlagFor(ConversationModelSchema.parse("opus-5")),
     input: { below: 100_000, above: 0 }, // 100_000 * 5e-6    = 0.50
     output: { below: 20_000, above: 0 }, //  20_000 * 2.5e-5  = 0.50
     cacheCreate5m: { below: 40_000, above: 0 }, //  40_000 * 6.25e-6 = 0.25
@@ -212,7 +220,10 @@ test("ground truth: a realistic opus-5 day, hand-computed", async () => {
 
 test("an unknown model is a discriminated failure, never a silent $0", () => {
   const priced = priceBucket(
-    bucket({ model: "some-model-nobody-has-priced", input: { below: 1_000, above: 0 } }),
+    bucket({
+      model: "some-model-nobody-has-priced",
+      input: { below: 1_000, above: 0 },
+    }),
     FIXTURE,
   );
   expect(priced.ok).toBe(false);
@@ -233,13 +244,14 @@ test("a zero-token unknown model reports tokens: 0 so the caller can suppress it
 
 // ─── resolveModel ────────────────────────────────────────────────────────────
 
-test("every model in the registry resolves by exact key", async () => {
-  // The set is DERIVED from `MODEL_REGISTRY`, not restated: adding a model there
-  // extends this assertion automatically, so a new model shipping without a
-  // vendored price — which would send its whole history down `resolveModel`'s
-  // substring fallback, or to `unknown-model` — fails here rather than silently.
+test("every baseline model resolves by exact key", async () => {
+  // The set is DERIVED from `BASELINE_MODELS`, not restated, so a baseline
+  // model without a vendored price — which would send its whole history down
+  // `resolveModel`'s substring fallback, or to `unknown-model` — fails here
+  // rather than silently. A model discovered at runtime is priced by the daily
+  // LiteLLM refresh, and surfaces as a cost-unpriced-model report until it is.
   const fallback = await loadFallbackPriceTable();
-  const ids = Object.keys(MODEL_REGISTRY) as ConversationModel[];
+  const ids = BASELINE_MODELS.versions.map((v) => v.id);
   expect(ids.length).toBeGreaterThan(0);
   for (const id of ids) {
     const flag = cliFlagFor(id);
@@ -253,8 +265,20 @@ test("resolveModel falls back through provider prefixes, then substring, then nu
   const table: PriceTable = {
     fetchedAt: 0,
     models: {
-      "anthropic/claude-prefixed": { input: 1, output: 0, cacheCreate5m: 0, cacheCreate1h: 0, cacheRead: 0 },
-      "claude-substring-3-7-sonnet": { input: 2, output: 0, cacheCreate5m: 0, cacheCreate1h: 0, cacheRead: 0 },
+      "anthropic/claude-prefixed": {
+        input: 1,
+        output: 0,
+        cacheCreate5m: 0,
+        cacheCreate1h: 0,
+        cacheRead: 0,
+      },
+      "claude-substring-3-7-sonnet": {
+        input: 2,
+        output: 0,
+        cacheCreate5m: 0,
+        cacheCreate1h: 0,
+        cacheRead: 0,
+      },
     },
   };
   // Prefix pass: `anthropic/` + the name.
@@ -262,7 +286,9 @@ test("resolveModel falls back through provider prefixes, then substring, then nu
   // Substring pass, table-key-contains-model direction.
   expect(resolveModel(table, "substring-3-7")?.input).toBe(2);
   // Substring pass, model-contains-table-key direction.
-  expect(resolveModel(table, "claude-substring-3-7-sonnet-20250219")?.input).toBe(2);
+  expect(
+    resolveModel(table, "claude-substring-3-7-sonnet-20250219")?.input,
+  ).toBe(2);
   expect(resolveModel(table, "gemini-3-pro")).toBeNull();
 });
 
@@ -274,15 +300,39 @@ test("merge is a union that never drops a key, and fetched wins on collision", (
     models: {
       // Deprecated upstream — LiteLLM has since pruned it. Years of archived
       // buckets still reference it, so losing it would reprice them to nothing.
-      "claude-retired": { input: 9, output: 0, cacheCreate5m: 0, cacheCreate1h: 0, cacheRead: 0 },
-      "claude-untiered": { input: 1, output: 0, cacheCreate5m: 0, cacheCreate1h: 0, cacheRead: 0 },
+      "claude-retired": {
+        input: 9,
+        output: 0,
+        cacheCreate5m: 0,
+        cacheCreate1h: 0,
+        cacheRead: 0,
+      },
+      "claude-untiered": {
+        input: 1,
+        output: 0,
+        cacheCreate5m: 0,
+        cacheCreate1h: 0,
+        cacheRead: 0,
+      },
     },
   };
   const fetched: PriceTable = {
     fetchedAt: 200,
     models: {
-      "claude-untiered": { input: 5, output: 0, cacheCreate5m: 0, cacheCreate1h: 0, cacheRead: 0 },
-      "claude-brand-new": { input: 7, output: 0, cacheCreate5m: 0, cacheCreate1h: 0, cacheRead: 0 },
+      "claude-untiered": {
+        input: 5,
+        output: 0,
+        cacheCreate5m: 0,
+        cacheCreate1h: 0,
+        cacheRead: 0,
+      },
+      "claude-brand-new": {
+        input: 7,
+        output: 0,
+        cacheCreate5m: 0,
+        cacheCreate1h: 0,
+        cacheRead: 0,
+      },
     },
   };
   const merged = mergePriceTable(existing, fetched);
@@ -319,7 +369,9 @@ function rejection(p: Promise<unknown>): Promise<Error> {
 }
 
 test("an absent file is null, a corrupt one throws", async () => {
-  expect(await loadPriceTable(join(dir, "nested", "never-written.json"))).toBeNull();
+  expect(
+    await loadPriceTable(join(dir, "nested", "never-written.json")),
+  ).toBeNull();
 
   // Truncated JSON — the classic half-written file.
   const truncated = join(dir, "truncated.json");
@@ -330,5 +382,7 @@ test("an absent file is null, a corrupt one throws", async () => {
   // overwrite the only record of retired models' prices with a fresh fetch.
   const wrongShape = join(dir, "wrong-shape.json");
   await writeFile(wrongShape, '{"pricedAt":1,"projectCosts":[]}', "utf8");
-  expect((await rejection(loadPriceTable(wrongShape))).message).toMatch(/Corrupt price table/);
+  expect((await rejection(loadPriceTable(wrongShape))).message).toMatch(
+    /Corrupt price table/,
+  );
 });

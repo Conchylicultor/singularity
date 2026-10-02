@@ -26,6 +26,7 @@ interface Checked {
 let last: Checked | null = null;
 let inflight: Promise<ClaudeCodeStatus> | null = null;
 const readyListeners = new Set<() => void>();
+const probedListeners = new Set<(status: ClaudeCodeStatus) => void>();
 
 /**
  * Probe now, sharing a probe already running: concurrent askers (a burst of
@@ -47,6 +48,7 @@ function probe(): Promise<ClaudeCodeStatus> {
 function record(status: ClaudeCodeStatus): void {
   const before = last?.status;
   last = { status, at: Date.now() };
+  for (const fn of probedListeners) fn(status);
   if (before !== undefined && JSON.stringify(before) === JSON.stringify(status))
     return;
   claudeCodeStatusServed.notify();
@@ -109,6 +111,19 @@ export function noteClaudeCodeFailure(): void {
 export function onClaudeCodeReady(fn: () => void): () => void {
   readyListeners.add(fn);
   return () => readyListeners.delete(fn);
+}
+
+/**
+ * Run `fn` with every fresh probe's answer — each time the machine was asked
+ * again, changed or not. The seam for whoever keys work off the installed CLI
+ * itself (a version this code has not seen yet) without this plugin knowing
+ * them. Returns the unsubscribe.
+ */
+export function onClaudeCodeProbed(
+  fn: (status: ClaudeCodeStatus) => void,
+): () => void {
+  probedListeners.add(fn);
+  return () => probedListeners.delete(fn);
 }
 
 /**

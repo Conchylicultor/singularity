@@ -34,6 +34,14 @@ export interface TaskLaunchContext {
 export interface TaskLaunchServerEntry<V> {
   /** The same core token the web control declares — the entry's id and schema. */
   def: LaunchOptionDef<V>;
+  /**
+   * Refuses a parsed value the schema cannot judge — one that depends on
+   * runtime state (auto-start: a model version this machine retired). Runs in
+   * `resolveLaunchOptions`, BEFORE any task exists, so a refusal leaves no
+   * half-filed task; it throws an `HttpError` (typically 400) naming the
+   * problem. Omitted when the schema is the whole check.
+   */
+  validate?: (value: V) => void;
   /** Writes one already-parsed drafted value onto a freshly created task. */
   apply: (ctx: TaskLaunchContext, value: V) => Promise<void>;
   /**

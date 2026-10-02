@@ -11,7 +11,7 @@
     - `SidebarSources` "History" → `HistorySource`
     - `history-actions` "close" → `CloseConvAction`
   - Uses:
-    - `conversations/all-conversations.conversationFieldDefs`
+    - `conversations/all-conversations.useConversationFieldDefs`
     - `conversations/conversations-view/data-view.ConversationSidebarProps`
     - `conversations/conversations-view/data-view.SidebarConversationItem`
     - `conversations/conversations-view/data-view.SidebarSources`

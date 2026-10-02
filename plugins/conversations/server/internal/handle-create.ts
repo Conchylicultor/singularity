@@ -2,14 +2,22 @@ import { recordReport } from "@plugins/reports/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createConversation as createConversationEndpoint } from "../../core/endpoints";
 import { ClaudeCodeUnavailableError } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import {
+  ModelUnavailableError,
+  assertChoiceLaunchable,
+} from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { createConversation, TranscriptCutError } from "./lifecycle";
 
 export const handleCreate = implement(
   createConversationEndpoint,
   async ({ body }) => {
-    // body.model is already a validated ModelChoice | undefined (the endpoint
-    // body schema is the strict enum), so no normalization/coercion is needed here —
-    // an unknown id was already rejected with a 400 before reaching this handler.
+    // body.model is already a well-formed ModelChoice | undefined (the body
+    // schema checks the id grammar). Whether this machine can RUN it is the
+    // live catalog's answer: an unknown or retired version is a 400 listing
+    // what can run, before anything is written.
+    if (body.model !== undefined)
+      assertChoiceLaunchable(body.model, getModelCatalog());
     let session;
     try {
       session = await createConversation({
@@ -29,6 +37,10 @@ export const handleCreate = implement(
       // Claude Code missing or signed out: the machine's state, already shown
       // by the health report — a 409 carrying the fix, not a crash report.
       if (err instanceof ClaudeCodeUnavailableError) throw err;
+      // The model it resolved to cannot run (retired since it was chosen —
+      // a fork inheriting its source's version): the 409 names the
+      // alternatives. A state of the catalog, not a crash.
+      if (err instanceof ModelUnavailableError) throw err;
       const message = err instanceof Error ? err.message : String(err);
       console.error("[conversations] createConversation failed", err);
       // Caught errors don't reach the unhandledRejection hook, so feed them to

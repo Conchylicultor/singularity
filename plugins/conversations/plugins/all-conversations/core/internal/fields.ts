@@ -7,9 +7,10 @@ import {
   liveText,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
-  SELECTABLE_CHOICES,
-  isModelFamily,
-  modelDisplayLabel,
+  compareModelsNewestFirst,
+  isPrintOnlyFamily,
+  modelMeta,
+  type ModelCatalog,
 } from "@plugins/conversations/plugins/model-provider/core";
 
 // The single shared field vocabulary driving BOTH the web `FieldDef[]` (added
@@ -43,14 +44,23 @@ const kindOptions = ConversationKindSchema.options.map((k) => ({
   value: k,
   label: cap(k),
 }));
-// A conversation's model is the concrete version it ran, so the filter offers
-// versions, never families.
-const modelOptions = SELECTABLE_CHOICES.filter((m) => !isModelFamily(m)).map(
-  (m) => ({
-    value: m,
-    label: modelDisplayLabel(m),
-  }),
-);
+/**
+ * The model filter's options: a conversation's model is the concrete version
+ * it RAN, so the filter offers versions, never families — every version the
+ * catalog knows, retired ones included (old conversations ran them), newest
+ * first. Runtime data, so it is not part of the static field vocabulary below:
+ * the web schema fills the `model` field's options from the live catalog
+ * (`useConversationFieldDefs`).
+ */
+export function conversationModelOptions(
+  catalog: ModelCatalog,
+): { value: string; label: string }[] {
+  return catalog.versions
+    .map((v) => v.id)
+    .filter((id) => !isPrintOnlyFamily(modelMeta(id).family))
+    .sort(compareModelsNewestFirst)
+    .map((id) => ({ value: id, label: modelMeta(id).label }));
+}
 
 export const CONVERSATION_FIELDS: ConversationFieldSpec[] = [
   {
@@ -62,7 +72,8 @@ export const CONVERSATION_FIELDS: ConversationFieldSpec[] = [
     nullable: true,
   },
   { id: "status", label: "Status", type: "enum", options: statusOptions },
-  { id: "model", label: "Model", type: "enum", options: modelOptions },
+  // Options from the live catalog: see `conversationModelOptions`.
+  { id: "model", label: "Model", type: "enum" },
   { id: "kind", label: "Kind", type: "enum", options: kindOptions },
   { id: "runtime", label: "Runtime", type: "text" },
   { id: "createdAt", label: "Created", type: "date", sortable: true },

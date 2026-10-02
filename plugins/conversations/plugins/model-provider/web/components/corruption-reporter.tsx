@@ -3,7 +3,7 @@ import { registerModelCorruptionReporter } from "../../core";
 import { report } from "@plugins/reports/web";
 
 /**
- * Routes corrupt/unknown stored-model signals into the visible crash-report
+ * Routes malformed stored-model signals into the visible crash-report
  * pipeline. Mounted once via Core.Root at app startup; installs the sink so an
  * unparseable persisted model surfaces as a real reported browser crash (deduped
  * per distinct value in core) rather than a buried console.error line.

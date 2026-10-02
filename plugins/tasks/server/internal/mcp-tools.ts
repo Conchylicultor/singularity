@@ -6,7 +6,12 @@ import {
   getTask,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
-import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  ModelChoiceSchema,
+  SELECTABLE_FAMILIES,
+} from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { inheritLaunchOptions } from "@plugins/tasks/plugins/launch-options/server";
 import { TaskTrackSchema } from "@plugins/tasks/plugins/task-track/core";
 import { setTaskTrack } from "@plugins/tasks/plugins/task-track/server";
@@ -24,7 +29,12 @@ const ports: AddTaskPorts = {
   rewire: (opts) => withNotifyBatch(() => rewireDependencies(opts)),
   armAutoStart: armTaskAutoStart,
   setTrack: (taskId, track) => setTaskTrack(taskId, track),
+  modelCatalog: getModelCatalog,
 };
+
+// Named from the code's family set, so a family added there is offered here
+// with no edit; versions are never listed (they are runtime data).
+const FAMILIES = SELECTABLE_FAMILIES.map((f) => `"${f}"`).join(", ");
 
 export const addTaskTool = Mcp.tool({
   name: "add_task",
@@ -51,7 +61,7 @@ the critical path. What an agent finds along the way usually is not.
 
 - \`main\` — yes, it is ON THE CRITICAL PATH: a remaining step without which
   the feature is not done. Main-track tasks are spliced into the dependency
-  chain and auto-started (\`autostart\`, default "opus") once the task they
+  chain and auto-started (\`autostart\`, default "${DEFAULT_MODEL_CHOICE}") once the task they
   wait on is done. Chain several with \`target\` (see below).
 
 - \`sidequest\` — no, it is OFF the critical path: every follow-up the feature
@@ -161,9 +171,10 @@ the dependency graph.`,
           "Use a previous call's task_id to chain main-track steps linearly.",
       ),
     autostart: ModelChoiceSchema.optional().describe(
-      'Main track only (an error on a sidequest). Auto-launch model: a family ("opus", "sonnet", "fable") runs that family\'s newest version ' +
-        'when the task launches — use one unless a specific version is required (e.g. "opus-5"). Defaults to "opus". ' +
-        "Use Sonnet only for purely mechanical refactoring (no design decisions, no unknowns).",
+      `Main track only (an error on a sidequest). Auto-launch model: a family (${FAMILIES}) runs that family's newest version ` +
+        "when the task launches — use one unless a specific version is required. " +
+        'A pinned version is "<family>-<major>[-<minor>]"; it must be one this machine can run (an unknown or retired version is refused with the current list). ' +
+        `Defaults to "${DEFAULT_MODEL_CHOICE}". Use Sonnet only for purely mechanical refactoring (no design decisions, no unknowns).`,
     ),
   },
   async handler(input, { conversationId }) {

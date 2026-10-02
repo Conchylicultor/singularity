@@ -4,7 +4,11 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { createConversation } from "@plugins/conversations/server";
-import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  assertChoiceLaunchable,
+} from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { launchAgent } from "../../core/endpoints";
 import { _agent_launches } from "./tables";
 import { agents } from "./views";
@@ -32,8 +36,12 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
   // Before the launch's task is filed, so a refusal leaves nothing behind.
   await assertClaudeCodeReady();
 
-  // A model choice (family or pinned version); the spawn resolves it.
+  // A model choice (family or pinned version); the spawn resolves it. Checked
+  // here, before the launch's task is filed: a request naming a version this
+  // machine cannot run — or an agent whose saved version was retired since —
+  // is a 400 listing what can run, and leaves nothing behind.
   const model = body.model ?? agent.model ?? DEFAULT_MODEL_CHOICE;
+  assertChoiceLaunchable(model, getModelCatalog());
 
   const now = new Date();
   const task = await createTask({

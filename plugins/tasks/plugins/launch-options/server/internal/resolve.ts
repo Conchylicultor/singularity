@@ -13,7 +13,8 @@ export interface ResolvedLaunchOption {
  * value: the registry owns what an id means, so it owns rejecting one too.
  *
  * Call it BEFORE any task exists, so an unknown id or a bad value can't leave a
- * half-filed task behind. An id no plugin claims is a 400 — a client sending it
+ * half-filed task behind — the option's own `validate` runs here too, for the
+ * checks its schema cannot make. An id no plugin claims is a 400 — a client sending it
  * is a real bug, not a setting to drop silently.
  *
  * `where` prefixes every error so the 400 names the input that carried the
@@ -39,6 +40,7 @@ export function resolveLaunchOptions(
         `${where}: invalid launch option "${id}": ${parsed.error.message}`,
       );
     }
+    entry.validate?.(parsed.data);
     resolved.push({ entry, value: parsed.data });
   }
   return resolved;

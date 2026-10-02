@@ -2,6 +2,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { TaskLaunchServer } from "@plugins/tasks/plugins/launch-options/server";
 import { armTaskAutoStart } from "@plugins/tasks/server";
 import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
+import { assertChoiceLaunchable } from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { autoStartLaunchOption } from "../core";
 
 export default {
@@ -10,6 +12,12 @@ export default {
   contributions: [
     TaskLaunchServer({
       def: autoStartLaunchOption,
+      // The schema checks the id grammar; whether this machine can run the
+      // version is the live catalog's answer — a retired or unknown one is a
+      // 400 before the task is filed.
+      validate: (model) => {
+        if (model) assertChoiceLaunchable(model, getModelCatalog());
+      },
       apply: async ({ taskId, cause, start }, model) => {
         if (!model) {
           await setTaskAutoStart(taskId, null);

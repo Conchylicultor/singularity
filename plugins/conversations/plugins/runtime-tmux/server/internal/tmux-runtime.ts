@@ -2,8 +2,10 @@ import type {
   ConversationRuntime,
   RuntimeInfo,
 } from "@plugins/conversations/server";
-import { resolveCliFlag } from "@plugins/conversations/plugins/model-provider/server";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  cliFlagFor,
+  type ConversationModel,
+} from "@plugins/conversations/plugins/model-provider/core";
 import {
   resolveEffortFlag,
   resolveEffortSettings,
@@ -540,7 +542,7 @@ export const tmuxRuntime: ConversationRuntime = {
         ? asLaunchMessage(opts.prompt)
         : undefined;
     const parentHost = runtimeNamespace();
-    const cliFlag = opts?.model ? resolveCliFlag(opts.model) : undefined;
+    const cliFlag = opts?.model ? cliFlagFor(opts.model) : undefined;
     // Thinking mode: levels low..max ride `--effort <flag>`; `ultracode` is not a
     // valid flag value, so it rides `--settings '{"ultracode":true}'` (xhigh +
     // dynamic-workflow orchestration). At most one channel is set per level.

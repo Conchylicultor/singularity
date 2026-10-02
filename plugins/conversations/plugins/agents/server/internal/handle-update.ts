@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
+import { assertChoiceLaunchable } from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { updateAgent } from "../../core/endpoints";
 import { AgentSchema } from "../../core/schemas";
 import { _agents } from "./tables";
@@ -19,6 +21,7 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
     patch.prompt = body.prompt;
   }
   if (body.model === null || typeof body.model === "string") {
+    if (body.model) assertChoiceLaunchable(body.model, getModelCatalog());
     patch.model = body.model;
   }
   if (body.icon !== undefined) patch.icon = body.icon;

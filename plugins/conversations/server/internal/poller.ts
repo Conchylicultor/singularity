@@ -16,6 +16,11 @@ import { isTransientDbError } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { getConfig } from "@plugins/config_v2/server";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
+import {
+  DEFAULT_MODEL_CHOICE,
+  requireModel,
+} from "@plugins/conversations/plugins/model-provider/core";
 import { Runtime, flushInteractivePrompt, type RuntimeInfo } from "./runtime";
 import { autoAnswerConfig } from "../../shared/config";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
@@ -182,6 +187,9 @@ async function tick(): Promise<void> {
             runtimeId: live.runtime,
             status: liveStatusFor(live),
             title: live.title || null,
+            // What a stray session runs is not known; record the default
+            // family's current version.
+            model: requireModel(DEFAULT_MODEL_CHOICE, getModelCatalog()),
             // An adopted conversation is created like any other: announce it
             // on the adoption's tx, so its subscribers (queue rank, title
             // generation, …) run for it too — without a rank the sidebar queue

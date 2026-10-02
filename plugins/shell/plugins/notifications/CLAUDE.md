@@ -119,6 +119,7 @@
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/resume`
     - `conversations/conversation-view/rewind`
+    - `conversations/model-provider/catalog`
     - `conversations/summary`
     - `debug/boot-profile`
     - `debug/queue`

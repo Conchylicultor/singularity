@@ -9,9 +9,8 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { rankField } from "@plugins/fields/plugins/rank/plugins/config/core";
 import {
-  DEFAULT_MODEL_CHOICE,
+  FALLBACK_MODEL,
   StoredModelSchema,
-  resolveModel,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { ConversationStatusSchema } from "../conversation-status";
 
@@ -94,14 +93,14 @@ export const conversationFields = {
   // live-state resource already carried, moved down to the column so it reaches
   // the server-side readers too.
   //
-  // The current default version is the wire/backfill default, where the tuple form
+  // The baseline's default version (`FALLBACK_MODEL`) is the wire/backfill default, where the tuple form
   // silently gave `"fable-5-1"` — the first entry of the enum, i.e. tuple order
   // rather than anyone's decision. Nothing observable changes: the column is
   // notNull with no DB default (every insert passes the resolved version), so
   // every row carries a model and the wire schema's `.default()` never fires. The general factory just makes the value
   // something someone had to choose.
   model: parsedTextField(StoredModelSchema, {
-    default: resolveModel(DEFAULT_MODEL_CHOICE),
+    default: FALLBACK_MODEL,
   }),
   kind: enumTextField(["user", "agent", "system"] as const),
   claudeSessionId: nullable(textField()),
