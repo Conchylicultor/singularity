@@ -11,17 +11,21 @@ const SAFE_AREA_VAR = "--floating-bar-safe-area";
 
 /**
  * Publish the floating bar's safe area while the calling component is mounted.
- * Returns a callback ref for the collapsed trigger.
+ * Returns a callback ref for the bar's band — the fixed box holding the
+ * collapsed-footprint hitbox.
  *
- * The reservation is measured from the trigger's LEFT edge to the viewport's
- * right edge (so it includes the bar's corner offset and its panel chrome, and
+ * The reservation is measured from the band's LEFT edge to the viewport's right
+ * edge (so it includes the bar's corner offset and its panel chrome, and
  * follows the density preset), plus the pane header's own end inset as the gap
  * between the header's last action and the bar. It is the COLLAPSED footprint
- * only: the bar expands leftward on hover as a card over the header, and the
- * trigger stays put, so the value does not change while it is open. The bar is
- * `fixed right-*`, so a window resize moves the trigger's left edge with the
- * viewport's right one and the distance holds — only a resize of the trigger
- * itself needs a re-measure.
+ * only: the bar expands leftward on hover as a card over the header, while the
+ * hitbox the band wraps holds its collapsed size. Never measure the trigger: it
+ * rides the open panel to its left end, so a trigger resize while open (the
+ * health dot growing a count) would publish the expanded width and keep it
+ * after closing, pushing the header's actions away from the collapsed bar.
+ * The band is `fixed right-*`, so a window resize moves its left edge with the
+ * viewport's right one and the distance holds — only a resize of the band
+ * itself (the footprint re-derived on close) needs a re-measure.
  */
 export function useFloatingBarSafeArea(): (node: HTMLElement | null) => void {
   const [node, setNode] = useState<HTMLElement | null>(null);

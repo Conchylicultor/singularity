@@ -6,6 +6,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { useConfig } from "@plugins/config_v2/web";
+import type { ReactNode } from "react";
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
@@ -27,18 +28,29 @@ function HealthItem() {
 }
 
 /**
- * The floating bar's collapsed trigger: the health dot, publishing the room it
- * occupies at the viewport's right edge as the safe area (see
- * {@link useFloatingBarSafeArea}). Mounted only while the floating bar is, so
- * the reservation exists exactly as long as the bar does.
+ * The floating bar's band: fixed at the viewport's right edge, publishing the
+ * room it occupies as the safe area (see {@link useFloatingBarSafeArea}). Its
+ * only in-flow child is the `FloatingAction` hitbox, which is pinned to the
+ * COLLAPSED footprint and never follows the open panel — so the band's box is
+ * the reservation, whether the bar is open or not. (The trigger is not: the
+ * panel grows leftward from the right corner with the trigger at its start, so
+ * opening carries the trigger to the expanded row's left end.) Its own
+ * component so the reservation exists exactly as long as the band is mounted.
  */
-function FloatingTrigger() {
+function FloatingBand({ children }: { children: ReactNode }) {
   const ref = useFloatingBarSafeArea();
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- measurement box around the trigger: the safe area is read off its left edge
-    <span ref={ref} className="inline-flex">
-      <HealthItem />
-    </span>
+    // The band: fixed at the right edge, spanning the header row that
+    // reserves the bar's room (CSS anchor positioning, see
+    // `floating-bar-band` in app.css), so `my-auto` centres the bar on that
+    // header's line at any header height. No header → it hangs at 0.5rem.
+    <div
+      ref={ref}
+      // eslint-disable-next-line layout/no-adhoc-layout -- viewport-edge fixed band anchored to the surface-edge header (outside any transformed ancestor)
+      className="floating-bar-band fixed right-3 z-popover flex flex-col"
+    >
+      {children}
+    </div>
   );
 }
 
@@ -66,12 +78,7 @@ export function FloatingActionBarHost() {
     // wears the chrome's fixed theme, exactly as the docked strip does inside
     // the tab bar. `none` because the floating panel paints its own card.
     <Theme name={chromeThemeScope} surface="none">
-      {/* The band: fixed at the right edge, spanning the header row that
-          reserves the bar's room (CSS anchor positioning, see
-          `floating-bar-band` in app.css), so `my-auto` centres the bar on that
-          header's line at any header height. No header → it hangs at 0.5rem. */}
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- viewport-edge fixed band anchored to the surface-edge header (outside any transformed ancestor) */}
-      <div className="floating-bar-band fixed right-3 z-popover flex flex-col">
+      <FloatingBand>
         <FloatingAction
           // `relative` so the morphing panel anchors to this hitbox; `shrink-0`
           // so the zero-height fallback band cannot squash it (its only child
@@ -83,14 +90,14 @@ export function FloatingActionBarHost() {
           // The health dot and the action row are different heights; centering
           // them keeps the dot on the row's centre line as the panel widens.
           align="center"
-          trigger={<FloatingTrigger />}
+          trigger={<HealthItem />}
         >
           {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
           <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
             <ActionBar.Item.Render />
           </FloatingActionFadeIn>
         </FloatingAction>
-      </div>
+      </FloatingBand>
     </Theme>
   );
 }
