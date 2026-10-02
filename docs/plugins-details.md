@@ -9234,6 +9234,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `Pane.Register` "config-v2-nav"
           - `Pane.Register` "config-v2-detail"
+          - `Specimens.Specimen` "config/field-gallery" → `FieldGallerySpecimen`
         - Uses:
           - `apps-core.Apps`
           - `apps-core/app-icon.AppIconView`
@@ -9245,6 +9246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
+          - `plugin-meta/specimens.Specimens`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
@@ -26606,7 +26608,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readPluginMoves`
     - **`specimens`** — Specimen registry: a plugin exhibits one of its REAL components (Specimens.Specimen, a dispatch slot keyed on the id: label, optional widths, a self-contained component) so another surface can render it standalone inside the running app, with real slots, config and data. useSpecimen(id) answers found / missing / ambiguous; <Specimens.Specimen.Dispatch id/> renders it isolated. Owns the slot; knows no contributor.
       - Web:
-        - Slots: `Specimens.Specimen` ← `primitives.metrics.chart-kit`, `tasks.task-draft-form`
+        - Slots: `Specimens.Specimen` ← `config_v2.settings`, `primitives.metrics.chart-kit`, `tasks.task-draft-form`
         - Uses: `primitives/slot-render.defineDispatchSlot`
         - Exports (types):
           - `SpecimenInfo`
@@ -26620,6 +26622,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/prototypes/compare/component`
+          - `config_v2/settings`
           - `primitives/metrics/chart-kit`
           - `tasks/task-draft-form`
 

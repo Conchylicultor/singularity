@@ -2,6 +2,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane, configDetailPane } from "./internal/panes";
 import { ConfigDetailSlots, ConfigNavSlots } from "./slots";
+import { Specimens } from "@plugins/plugin-meta/plugins/specimens/web";
+import { FieldGallerySpecimen } from "./components/field-gallery-specimen";
 
 export {
   configNavPane,
@@ -23,6 +25,12 @@ export default {
   contributions: [
     Pane.Register({ pane: configNavPane }),
     Pane.Register({ pane: configDetailPane }),
+    Specimens.Specimen({
+      match: "config/field-gallery",
+      label: "Config fields — every field type",
+      widths: [480, 720, 1024],
+      component: FieldGallerySpecimen,
+    }),
   ],
   slots: {
     "config-v2-nav": configNavPane,

@@ -77,6 +77,7 @@ contributor that hands a conflict to an agent.
   - Contributes:
     - `Pane.Register` "config-v2-nav"
     - `Pane.Register` "config-v2-detail"
+    - `Specimens.Specimen` "config/field-gallery" → `FieldGallerySpecimen`
   - Uses:
     - `apps-core.Apps`
     - `apps-core/app-icon.AppIconView`
@@ -88,6 +89,7 @@ contributor that hands a conflict to an agent.
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `plugin-meta/specimens.Specimens`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
