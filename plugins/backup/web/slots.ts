@@ -1,5 +1,5 @@
 import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
-import type { UnionRun } from "@plugins/runs/core";
+import type { RunRow } from "@plugins/runs/core";
 
 /**
  * The sections of one backup run's detail pane.
@@ -10,4 +10,4 @@ import type { UnionRun } from "@plugins/runs/core";
  * handled in exactly one place and no section can paint an empty-looking body
  * while the read is still in flight.
  */
-export const BackupRunDetail = defineDetailSections<{ run: UnionRun }>();
+export const BackupRunDetail = defineDetailSections<{ run: RunRow }>();

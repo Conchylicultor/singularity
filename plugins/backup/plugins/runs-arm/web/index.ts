@@ -2,7 +2,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Runs } from "@plugins/runs/web";
 import { BACKUP_RUN_KIND } from "@plugins/backup/core";
 import { BackupRunDetail, backupRunPane } from "@plugins/backup/web";
-import { backupRunFields } from "../core";
 import { BackupRunFields } from "./components/backup-run-fields";
 import {
   BackupArchiveSize,
@@ -25,7 +24,6 @@ export default {
     Runs.Kind({
       kind: BACKUP_RUN_KIND,
       label: "Backup",
-      fields: backupRunFields,
       open: (run, { openPane }) =>
         openPane(backupRunPane, { runId: run.id }, { mode: "push" }),
     }),

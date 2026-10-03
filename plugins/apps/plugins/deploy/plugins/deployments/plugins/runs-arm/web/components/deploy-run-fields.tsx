@@ -4,13 +4,15 @@ import type {
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { armNumber, armText, runArmFields } from "@plugins/runs/web";
-import type { UnionRun } from "@plugins/runs/core";
+import type { RunRow } from "@plugins/runs/core";
 import {
   DeployPhaseSchema,
   DeployVerbSchema,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
-import { deployRunFields } from "../../core";
+import { deployRunColumns } from "../../core";
+
+/** This arm's slice of a row, or null on another kind's row. */
+const own = (run: RunRow) => deployRunColumns.read(run);
 
 /** An id column reads as a monospace chip, or as nothing on another kind's row. */
 function idCell(value: string | null): ReactNode {
@@ -24,12 +26,9 @@ function idCell(value: string | null): ReactNode {
 /**
  * The deploy arm's own columns in the merged run DataView.
  *
- * Every one is a real projected SQL column, bound to the arm's
- * `defineRunArmFields` declaration twice over — `runArmFields` checks the
- * `FieldDef.id`, and `armText` / `armNumber` check the accessor's type against
- * the same declaration. A field id that drifts off its server column does not
- * fail at runtime; it silently degrades into client-side-only filtering over the
- * loaded window, so both halves are made not to compile instead.
+ * Every one binds the arm's own column (`deployRunColumns.column(…)`), so its
+ * sort and filter are SQL over the union, and its value is read off the arm's
+ * slice of the row (`null` on another kind's row).
  *
  * The verb and phase options come from the deployments plugin's own schemas, not
  * from the loaded rows: the window is server-paginated, so deriving them would
@@ -42,19 +41,20 @@ function idCell(value: string | null): ReactNode {
  */
 export function DeployRunFields({
   render,
-}: FieldExtensionProps<UnionRun>): ReactNode {
-  const fields = useMemo<FieldDef<UnionRun>[]>(() => {
-    const verb = armText(deployRunFields, "deploy.verb");
-    const phaseFailed = armText(deployRunFields, "deploy.phaseFailed");
-    const compositionId = armText(deployRunFields, "deploy.compositionId");
-    const serverId = armText(deployRunFields, "deploy.serverId");
-    const deploymentId = armText(deployRunFields, "deploy.deploymentId");
-    const commitSha = armText(deployRunFields, "deploy.commitSha");
-    const releaseRunId = armText(deployRunFields, "deploy.releaseRunId");
-    const exitCode = armNumber(deployRunFields, "deploy.exitCode");
-    return runArmFields(deployRunFields, [
+}: FieldExtensionProps<RunRow>): ReactNode {
+  const fields = useMemo<FieldDef<RunRow>[]>(() => {
+    const verb = (r: RunRow) => own(r)?.verb ?? null;
+    const phaseFailed = (r: RunRow) => own(r)?.phaseFailed ?? null;
+    const compositionId = (r: RunRow) => own(r)?.compositionId ?? null;
+    const serverId = (r: RunRow) => own(r)?.serverId ?? null;
+    const deploymentId = (r: RunRow) => own(r)?.deploymentId ?? null;
+    const commitSha = (r: RunRow) => own(r)?.commitSha ?? null;
+    const releaseRunId = (r: RunRow) => own(r)?.releaseRunId ?? null;
+    const exitCode = (r: RunRow) => own(r)?.exitCode ?? null;
+    return [
       {
         id: "deploy.verb",
+        column: deployRunColumns.column("verb"),
         label: "Verb",
         type: "enum",
         options: DeployVerbSchema.options.map((value) => ({
@@ -74,6 +74,7 @@ export function DeployRunFields({
       },
       {
         id: "deploy.phaseFailed",
+        column: deployRunColumns.column("phaseFailed"),
         label: "Failed phase",
         type: "enum",
         options: DeployPhaseSchema.options.map((value) => ({
@@ -93,6 +94,7 @@ export function DeployRunFields({
       },
       {
         id: "deploy.compositionId",
+        column: deployRunColumns.column("compositionId"),
         label: "Composition",
         type: "text",
         value: compositionId,
@@ -103,6 +105,7 @@ export function DeployRunFields({
       },
       {
         id: "deploy.serverId",
+        column: deployRunColumns.column("serverId"),
         label: "Server",
         type: "text",
         value: serverId,
@@ -114,6 +117,7 @@ export function DeployRunFields({
       },
       {
         id: "deploy.deploymentId",
+        column: deployRunColumns.column("deploymentId"),
         label: "Deployment",
         type: "text",
         value: deploymentId,
@@ -125,6 +129,7 @@ export function DeployRunFields({
       },
       {
         id: "deploy.commitSha",
+        column: deployRunColumns.column("commitSha"),
         label: "Commit",
         type: "text",
         value: commitSha,
@@ -145,6 +150,7 @@ export function DeployRunFields({
       },
       {
         id: "deploy.releaseRunId",
+        column: deployRunColumns.column("releaseRunId"),
         label: "Release run",
         type: "text",
         value: releaseRunId,
@@ -156,6 +162,7 @@ export function DeployRunFields({
       },
       {
         id: "deploy.exitCode",
+        column: deployRunColumns.column("exitCode"),
         label: "Exit code",
         type: "number",
         value: exitCode,
@@ -164,7 +171,7 @@ export function DeployRunFields({
         visible: false,
         width: "6rem",
       },
-    ]);
+    ];
   }, []);
 
   return <>{render(fields)}</>;

@@ -22,7 +22,6 @@ import type {
   HierarchyConfig,
   LiveDataSource,
   ManualOrderConfig,
-  ServerDataSourceSpec,
 } from "../../core";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import type { DataViewSourceBundle } from "./body-types";
@@ -42,7 +41,6 @@ type Accepts<A, B> = [A] extends [B] ? true : false;
 
 type Base = { fields: FieldDef<Thread>[]; storageKey: DataViewId };
 type Source = LiveDataSource<Thread>;
-type Spec = ServerDataSourceSpec<Thread>;
 type RowKey = (row: Thread, index: number) => string;
 type Props = DataViewProps<Thread>;
 type Bundle = DataViewSourceBundle<Thread>;
@@ -50,23 +48,13 @@ type Bundle = DataViewSourceBundle<Thread>;
 // Each origin, alone, is accepted.
 const inMemory: Accepts<Base & { rows: Thread[]; rowKey: RowKey }, Props> =
   true;
-const fetchPage: Accepts<Base & { dataSource: Spec; rowKey: RowKey }, Props> =
-  true;
 const live: Accepts<Base & { source: Source }, Props> = true;
 const liveBundle: Accepts<
   Omit<Base, "storageKey"> & { source: Source },
   Bundle
 > = true;
 
-// Stand-ins beside a server origin.
-const rowsBesideFetchPage: Rejects<
-  Base & { dataSource: Spec; rowKey: RowKey; rows: Thread[] },
-  Props
-> = true;
-const readinessBesideFetchPage: Rejects<
-  Base & { dataSource: Spec; rowKey: RowKey; readiness: ResourceReadiness },
-  Props
-> = true;
+// Stand-ins beside a live origin.
 const rowsBesideSource: Rejects<
   Base & { source: Source; rows: Thread[] },
   Props
@@ -76,7 +64,7 @@ const readinessBesideSource: Rejects<
   Props
 > = true;
 const twoOrigins: Rejects<
-  Base & { source: Source; dataSource: Spec; rowKey: RowKey },
+  Base & { source: Source; rows: Thread[]; rowKey: RowKey },
   Props
 > = true;
 
@@ -125,11 +113,8 @@ describe("DataView data origin (type-level)", () => {
     expect(
       [
         inMemory,
-        fetchPage,
         live,
         liveBundle,
-        rowsBesideFetchPage,
-        readinessBesideFetchPage,
         rowsBesideSource,
         readinessBesideSource,
         twoOrigins,

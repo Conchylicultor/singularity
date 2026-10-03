@@ -41,10 +41,11 @@ route through `bindIfParam` → `Param(value, column)`.
 A DataView filter operand is deliberately **not** one of them any more. It briefly
 was, and that was wrong in both directions: a strict column threw on a saved view
 holding a retired option, and a tolerant one *normalized* the operand and answered
-a question nobody asked. A comparison operand is not a stored value, so
-`server-query` now hands each filter builder the column as a plain expression
-rather than the column itself, and the encoder never sees it. See
-`primitives/data-view/server-query/CLAUDE.md`.
+a question nobody asked. A comparison operand is not a stored value, so the
+filter language's SQL half (`filterSql`, `network/live/plugins/filter`) renders
+every comparison over the column as a plain SQL expression rather than the
+column itself, and the encoder never sees it. See
+`network/live/plugins/filter/CLAUDE.md`.
 
 Design: `research/2026-08-25-global-decoded-entity-columns.md`, and
 `research/2026-08-27-global-filter-operand-domain.md` for the filter boundary.

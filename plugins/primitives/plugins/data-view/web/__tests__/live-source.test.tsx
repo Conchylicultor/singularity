@@ -65,7 +65,7 @@ import {
 import { liveDataSource } from "../internal/live-data-source";
 import { resolveLiveFields } from "../internal/live-fields";
 import { useLiveSource } from "../internal/live-source";
-import { UnavailableSortRuleError } from "../internal/server-filter";
+import { UnavailableSortRuleError } from "../internal/live-filter";
 import { resolveBodyState } from "../internal/body-state";
 import { BodyFallback } from "../components/body-fallback";
 

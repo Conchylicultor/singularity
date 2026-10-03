@@ -85,9 +85,15 @@ one compute + one cached value (coalesce fan-out).
   recomputes if the signature has since moved. This mirrors the runtime
   single-flight's staleness-sharing contract on its READ path. It is sound here
   because nothing in this memo mints a version; where the runtime *does* (a push
-  drain), it passes `inflight`'s `notBefore` floor instead of sharing — this memo
-  could adopt the same floor later
+  drain), it passes `inflight`'s `notBefore` floor instead of sharing
   (`research/2026-08-08-global-live-state-flight-freshness.md`).
+- A caller that KNOWS an input moved at an instant passes that instant as
+  `get(…, { notBefore })` (`SignedMemo.get(key, { notBefore })`): on a miss, a
+  compute that started before it is superseded rather than joined, so the
+  post-change read cannot inherit a pre-change value. The superseded compute
+  still serves its own callers; settling late, it caches under its own older
+  signature, so the next probe misses — over-invalidation, never a torn hit.
+  (`release.candidate` uses it for a release close.)
 - `evict(worktreePath)` drops a worktree's entry on the subscription lifecycle
   (e.g. a `whileSubscribed` stop); a later re-subscribe re-probes cheaply with one cold
   compute.

@@ -15,7 +15,7 @@ import {
 //
 // - `T` is the TARGET: a rendered SQL expression, never a drizzle column — an
 //   operand is not a stored value, and a column would run its WRITE-side
-//   encoder over it (server-query's comparison-target rule).
+//   encoder over it.
 // - `P` / `X` bind ONE scalar param and `L` ONE array param (`sql.param`: a
 //   bare array inside a `sql` template would expand into a `($1, $2, …)`
 //   tuple), each cast to the domain's SQL type, so the comparison runs in the

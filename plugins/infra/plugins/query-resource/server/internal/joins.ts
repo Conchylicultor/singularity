@@ -14,6 +14,7 @@ import {
   Subquery,
   Table,
   View,
+  type SQLWrapper,
 } from "drizzle-orm";
 import {
   alias as aliasTable,
@@ -25,15 +26,18 @@ import {
   BASE_RELATION,
   familyMember,
   type ColumnRef,
+  type ExprField,
   type JoinFamily,
   type JoinSpec,
   type KeyedSideJoin,
 } from "@plugins/infra/plugins/query-resource/core";
-import type {
-  HostMap,
-  Route,
-} from "@plugins/framework/plugins/resource-runtime/core";
-import { tablePrimary, type RoutedBase } from "./routes";
+import { SQL_TYPE_RE } from "../../core/internal/expr";
+import {
+  tablePrimary,
+  type RawHostMap,
+  type RawRoute,
+  type RoutedBase,
+} from "./routes";
 import type { QueryDb, QueryStep, SelectMap } from "./spec";
 
 // The server half of the join vocabulary (`core/internal/joins.ts`): renders a
@@ -66,18 +70,28 @@ import type { QueryDb, QueryStep, SelectMap } from "./spec";
 export type ReadColumn = PgColumn | SQL;
 
 /**
- * Every read EXPRESSION a plan rendered → the alias column it reads, whether it
- * can be NULL, and its SQL type: a defaulted extension column's COALESCE (never
- * NULL, the column's own type), and a family member's cast value (NULL for a
- * host with no member row, the cast's type). Module-level, not per plan: a
- * compile renders its columns through one plan and hands them to another
- * (`serveCollection` → `compileWindowQuery`), which must still know what each
- * expression reads.
+ * What a read EXPRESSION a plan rendered is:
+ *
+ * - `column` — an expression standing for ONE alias column: a defaulted
+ *   extension column's COALESCE (never NULL, the column's own type), or a
+ *   family member's cast value (NULL for a host with no member row, the cast's
+ *   type). It still IS that column for provenance (`columnOf`).
+ * - `expr` — an `ExprField` rendered over `j` (`JoinPlan.renderExpr`): it
+ *   reads any number of columns (read off its SQL, `columnsIn`), so it has no
+ *   one column — `columnOf` / `relationOf` throw on it — but a name, a declared
+ *   nullability and an SQL type.
  */
-const readExpressions = new WeakMap<
-  SQL,
-  { col: PgColumn; nullable: boolean; sqlType: string }
->();
+type ReadExpression =
+  | { kind: "column"; col: PgColumn; nullable: boolean; sqlType: string }
+  | { kind: "expr"; name: string; nullable: boolean; sqlType: string };
+
+/**
+ * Every read expression a plan rendered → what it is (`ReadExpression`), keyed
+ * by the SQL object's identity. Module-level, not per plan: a compile renders
+ * its columns through one plan and hands them to another (`serveCollection` →
+ * `compileWindowQuery`), which must still know what each expression reads.
+ */
+const readExpressions = new WeakMap<SQL, ReadExpression>();
 
 /**
  * Each family's members by alias, as any plan rendered them — module-level for
@@ -124,10 +138,40 @@ export interface JoinPlan {
    * NULL handling.
    */
   columns(): Readonly<Record<string, Readonly<Record<string, PgColumn>>>>;
-  /** The relation a rendered column belongs to; throws for an undeclared one. */
+  /**
+   * The relation a rendered column belongs to; throws for an undeclared one,
+   * and for an `ExprField` (it reads no one relation — see `relationsIn`).
+   */
   relationOf(col: ReadColumn): string;
-  /** The column a rendered one reads: itself, or the alias column a defaulted one coalesces. */
+  /**
+   * The column a rendered one reads: itself, or the alias column a defaulted
+   * one coalesces. Throws for an `ExprField`, which reads no one column.
+   */
   columnOf(col: ReadColumn): PgColumn;
+  /** Whether a rendered read is an `ExprField` (see `renderExpr`). */
+  isExpr(col: ReadColumn): boolean;
+  /** A read's name, for keys and messages: its column's DB name, or an expression's field name. */
+  nameOf(col: ReadColumn): string;
+  /** The family member's join alias a read is, or `undefined` (any other column, or an expression). */
+  memberOf(col: ReadColumn): string | undefined;
+  /**
+   * What a read is keyed by in a memo of renderings: its relation, or — for an
+   * `ExprField` — `expr:<name>` (its identity is the SQL object's).
+   */
+  relationKey(col: ReadColumn): string;
+  /**
+   * Render an `ExprField` — its SQL over the binding's `j` (refs rendering
+   * this plan's DEFAULTED wire columns) — once per plan: the same SQL object
+   * every time, which every other plan recognises by identity. Throws on an
+   * expression that is exactly one column (bind a column override), reads a
+   * column that is neither a wire column of its relation nor a declared
+   * `serverOnly` base column (`baseColumns`: the base source's wire columns),
+   * or reads a relation that is neither the base nor a declared join.
+   */
+  renderExpr(
+    field: ExprField,
+    opts: { name: string; baseColumns: Readonly<Record<string, PgColumn>> },
+  ): SQL;
   /**
    * Whether a rendered column can read NULL: a nullable column, or one a LEFT
    * join (its own or an ancestor's) may leave NULL — never a defaulted
@@ -163,22 +207,39 @@ export interface JoinPlan {
 }
 
 /**
- * The `j` of a `(j) => ColumnRef` override: `j.base.x` over `baseColumns` (the
- * base source's wire columns), `j.<alias>.x` over each join's wire columns
- * (`wireColumns`, else every column of its table) — one `ColumnRef` per column,
- * so a server-only column is not offered. Data only — `compileJoins` checks
- * what a ref names when it renders it.
+ * The `j` of a field binding: `j.base.x` over `baseColumns` (the base source's
+ * wire columns), `j.<alias>.x` over each join's wire columns (`wireColumns`,
+ * else every column of its table) — one `ColumnRef` per column, so a
+ * server-only column is not offered. A column override returns one;
+ * `compileJoins` checks what it names when it renders it.
+ *
+ * Each ref is also a SQL fragment (`TypedColumnRef`): interpolated into an
+ * `ExprField`'s SQL it renders through `render` — the plan's defaulted wire
+ * column. `render` is called only when a query is built or walked, so the
+ * plan it names may be compiled after the refs (a binding's id resolves first).
  */
 export function joinRefs(
   baseColumns: Readonly<Record<string, PgColumn>>,
   specs: readonly JoinSpec[],
+  render: (ref: ColumnRef) => ReadColumn,
 ): Readonly<Record<string, Readonly<Record<string, ColumnRef>>>> {
   const refsOf = (from: string, columns: Readonly<Record<string, PgColumn>>) =>
     Object.fromEntries(
-      Object.entries(columns).map(([k, col]) => [
-        k,
-        { from, col } satisfies ColumnRef,
-      ]),
+      Object.entries(columns).map(([k, col]) => {
+        const ref = { from, col };
+        return [
+          k,
+          {
+            ...ref,
+            getSQL: (): SQL => {
+              const rendered = render(ref);
+              return is(rendered, SQL) ? rendered : sql`${rendered}`;
+            },
+            // A column reads as itself: no parentheses around it.
+            shouldOmitSQLParens: () => true,
+          } satisfies ColumnRef & SQLWrapper,
+        ];
+      }),
     );
   return {
     [BASE_RELATION]: refsOf(BASE_RELATION, baseColumns),
@@ -314,6 +375,7 @@ export function compileJoins(
       expr = sql`COALESCE(${col}, ${sql.param(fallback, col)})`.mapWith(col);
       defaultedCache.set(cacheKey, expr);
       readExpressions.set(expr, {
+        kind: "column",
         col,
         nullable: false,
         sqlType: col.getSQLType(),
@@ -323,23 +385,31 @@ export function compileJoins(
   };
 
   // A join condition compares stored keys: the raw column, never a default.
-  const rawRender = (ref: ColumnRef): PgColumn => {
-    const rendered = render(ref);
-    return is(rendered, SQL) ? readExpressions.get(rendered)!.col : rendered;
-  };
+  const rawRender = (ref: ColumnRef): PgColumn => columnOf(render(ref));
 
-  const expressionOf = (col: SQL) => {
+  const expressionOf = (col: SQL): ReadExpression => {
     const known = readExpressions.get(col);
     if (known === undefined) {
       return fail(
-        "a SQL expression is not one of this compile's rendered columns — render a ColumnRef through the plan.",
+        "a SQL expression is not one of this compile's rendered columns — render a ColumnRef (or an ExprField) through the plan.",
       );
     }
     return known;
   };
 
-  const columnOf = (col: ReadColumn): PgColumn =>
-    is(col, SQL) ? expressionOf(col).col : col;
+  function columnOf(col: ReadColumn): PgColumn {
+    if (!is(col, SQL)) return col;
+    const known = expressionOf(col);
+    if (known.kind === "expr") {
+      return fail(
+        `expression field "${known.name}" reads no single column — read its relations off its SQL (relationsIn), not one column.`,
+      );
+    }
+    return known.col;
+  }
+
+  const isExpr = (col: ReadColumn): boolean =>
+    is(col, SQL) && expressionOf(col).kind === "expr";
 
   const primaryOf = (table: PgTable): PgColumn | null => tablePrimary(table);
 
@@ -615,6 +685,117 @@ export function compileJoins(
   const relationsIn = (fragment: unknown): Set<string> =>
     new Set(columnsIn(fragment).map(([r]) => r));
 
+  const familyOf = (
+    relation: string,
+  ): { family: JoinFamily; member: string } | undefined => {
+    if (byAlias.has(relation) || relation === BASE_RELATION) return undefined;
+    return joinOfAlias(relation) === undefined
+      ? undefined
+      : memberOfAlias.get(relation);
+  };
+
+  const nameOf = (col: ReadColumn): string => {
+    if (is(col, SQL)) {
+      const known = expressionOf(col);
+      return known.kind === "expr" ? known.name : known.col.name;
+    }
+    return (col as PgColumn).name;
+  };
+
+  const memberOf = (col: ReadColumn): string | undefined => {
+    if (isExpr(col)) return undefined;
+    const relation = relationOf(col);
+    return familyOf(relation) === undefined ? undefined : relation;
+  };
+
+  const relationKey = (col: ReadColumn): string =>
+    isExpr(col) ? `expr:${nameOf(col)}` : relationOf(col);
+
+  // ── ExprField: rendered once per plan ─────────────────────────────────────
+  // Whether a fragment is exactly ONE column read (through any wrapping that
+  // adds nothing: blank text, a ref, a plain `sql\`${col}\``).
+  const bareColumn = (x: unknown): boolean => {
+    if (is(x, Column)) return true;
+    if (is(x, SQL)) {
+      if (readExpressions.get(x as SQL)?.kind === "column") return true;
+      const chunks = (x as SQL).queryChunks.filter(
+        (c) =>
+          !(
+            is(c, StringChunk) &&
+            (c as StringChunk).value.join("").trim() === ""
+          ),
+      );
+      return chunks.length === 1 && bareColumn(chunks[0]);
+    }
+    const getSQL = (x as { getSQL?: () => unknown } | null)?.getSQL;
+    return typeof getSQL === "function" && bareColumn(getSQL.call(x));
+  };
+  const renderedExprs = new WeakMap<ExprField, SQL>();
+  const renderExpr = (
+    field: ExprField,
+    opts: { name: string; baseColumns: Readonly<Record<string, PgColumn>> },
+  ): SQL => {
+    const cached = renderedExprs.get(field);
+    if (cached !== undefined) return cached;
+    const where = `expression field "${opts.name}"`;
+    // Re-checked at the boundary every compile passes through: the type is
+    // interpolated raw into a cut's cast.
+    if (!SQL_TYPE_RE.test(field.sqlType)) {
+      fail(
+        `${where} declares sqlType "${field.sqlType}", which is not a Postgres type name (${SQL_TYPE_RE.source}) — it is interpolated raw into casts.`,
+      );
+    }
+    if (bareColumn(field.sql)) {
+      fail(
+        `${where} is exactly one column — bind it with a column override (\`(j) => j.<relation>.<column>\`), which types and routes it as that column.`,
+      );
+    }
+    for (const col of field.serverOnly) {
+      if (col.table !== base.table) {
+        fail(
+          `${where} declares server-only column "${col.name}" of table "${getTableName(col.table)}", which is not the base table "${baseName}" — a server-only read is a base column, named by the table's own column.`,
+        );
+      }
+    }
+    // Parenthesised, so an operator inside binds before any cast or operator
+    // a shape wraps it in (`(…)::text`, a cut's comparison).
+    const rendered = sql`(${field.sql})`.mapWith(field.decoder);
+    readExpressions.set(rendered, {
+      kind: "expr",
+      name: opts.name,
+      nullable: !field.notNull,
+      sqlType: field.sqlType,
+    });
+    // Provenance, read off the SQL: every relation it reads is the base or a
+    // declared join (a correlated subquery over another table throws), and
+    // every column a wire column of its relation or a declared server-only one.
+    const wireOf = (relation: string): ReadonlySet<string> => {
+      if (relation === BASE_RELATION) {
+        return new Set([
+          ...Object.values(opts.baseColumns).map((c) => c.name),
+          ...field.serverOnly.map((c) => c.name),
+        ]);
+      }
+      const spec = specs.find((j) => j.alias === relation);
+      if (spec === undefined) return new Set();
+      return new Set(
+        Object.values(
+          spec.wireColumns ??
+            (getTableColumns(spec.table) as Record<string, PgColumn>),
+        ).map((c) => c.name),
+      );
+    };
+    for (const [relation, column] of columnsIn(rendered)) {
+      if (!wireOf(relation).has(column)) {
+        fail(
+          `${where} reads "${relation}"."${column}", which is not a wire column of that relation — a server-only base column is read only when declared in the expression's \`serverOnly\` (its value reaches the wire through the expression).`,
+        );
+      }
+    }
+    renderedExprs.set(field, rendered);
+    return rendered;
+  };
+
   const closure = (seeds: Iterable<string>): Set<string> => {
     const out = new Set<string>();
     for (const seed of seeds) {
@@ -666,6 +847,11 @@ export function compileJoins(
     },
     relationOf,
     columnOf,
+    isExpr,
+    nameOf,
+    memberOf,
+    relationKey,
+    renderExpr,
     canBeNull: (col) =>
       is(col, SQL)
         ? expressionOf(col).nullable
@@ -713,6 +899,7 @@ export function compileJoins(
         expr = read.cast(raw);
         defaultedCache.set(cacheKey, expr);
         readExpressions.set(expr, {
+          kind: "column",
           col: raw,
           nullable: true,
           sqlType: read.sqlType,
@@ -720,12 +907,7 @@ export function compileJoins(
       }
       return expr;
     },
-    familyOf(relation) {
-      if (byAlias.has(relation) || relation === BASE_RELATION) return undefined;
-      return joinOfAlias(relation) === undefined
-        ? undefined
-        : memberOfAlias.get(relation);
-    },
+    familyOf,
     sqlTypeOf: (col) =>
       is(col, SQL) ? expressionOf(col).sqlType : (col as PgColumn).getSQLType(),
   };
@@ -764,7 +946,8 @@ export interface JoinRouteHost {
 
 /**
  * A lookup's `reverse` route map (the host side references the looked-up row):
- * the changed rows' `pk` values are resolved, in the drain, to the hosts whose
+ * the changed rows' `pk` values (`change.ids` when `pk` is the table's primary
+ * key, else the carried `pk` column) are resolved, in the drain, to the hosts whose
  * `on` column names one — `SELECT DISTINCT <host pk> FROM <base> [the lookup
  * chain up to \`on\`'s relation] WHERE on = ANY($changed) [AND pk = ANY($within)]
  * LIMIT cap + 1`, `"over-cap"` past the cap.
@@ -779,7 +962,10 @@ export interface JoinRouteHost {
  * pre-image, which no layout carries for it: that route is `full`, with the
  * reason.
  */
-function reverseMap(join: CompiledJoin, host: JoinRouteHost): HostMap {
+function reverseMap(
+  join: CompiledJoin,
+  host: JoinRouteHost,
+): Extract<RawHostMap, { kind: "reverse" | "full" }> {
   const spec = join.spec;
   if (spec.kind !== "lookup") {
     throw new Error(`reverseMap: join "${join.alias}" is not a lookup`);
@@ -803,7 +989,10 @@ function reverseMap(join: CompiledJoin, host: JoinRouteHost): HostMap {
   const on = plan.columnOf(plan.render(spec.on));
   return {
     kind: "reverse",
-    column: spec.pk.name,
+    // On the changed table's own PK the changed values ARE `change.ids`, so no
+    // key need be carried (the rule `joinRoute`'s alias arm applies); a lookup
+    // on a UNIQUE non-PK column (A4) reads that column off the carried keys.
+    ...(tablePrimary(spec.table) === spec.pk ? {} : { column: spec.pk.name }),
     resolve: async (changed, within, cap) => {
       if (changed.length === 0 || (within !== null && within.size === 0)) {
         return [];
@@ -826,7 +1015,7 @@ export function joinRoute(
   join: CompiledJoin,
   host: JoinRouteHost,
   columns: readonly string[],
-): Route {
+): RawRoute {
   const spec = join.spec;
   const base = { id: join.alias, table: getTableName(spec.table), columns };
   switch (spec.kind) {
@@ -864,7 +1053,7 @@ export function joinRoute(
  * (`match` on the member column). Its `columns` are the ones every member's
  * join and read touch: the key columns and the value.
  */
-export function familyRoute(family: JoinFamily): Route {
+export function familyRoute(family: JoinFamily): RawRoute {
   const read = new Set<string>([
     family.hostKey.name,
     family.member.name,

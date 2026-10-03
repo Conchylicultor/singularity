@@ -114,9 +114,3 @@ export const LatencySummarySchema = z.object({
   slowestInteractions: z.array(InteractionSchema),
 });
 export type LatencySummary = z.infer<typeof LatencySummarySchema>;
-
-export const getLatencySummary = defineEndpoint({
-  route: "GET /api/latency-ledger/summary",
-  query: z.object({ window: z.enum(LATENCY_WINDOWS).optional() }),
-  response: LatencySummarySchema,
-});

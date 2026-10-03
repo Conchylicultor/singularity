@@ -3,7 +3,6 @@ import { setCustomColumnValue, deleteCustomColumnValues } from "../core";
 import { handleSetCustomColumnValue } from "./internal/handle-set-custom-column-value";
 import { handleDeleteCustomColumnValues } from "./internal/handle-delete-custom-column-values";
 import { customColumnValuesServed } from "./internal/resource";
-import { customColumnsQueryAugmentor } from "./internal/query-augmentor";
 import {
   customColumnDefsServed,
   customColumnsScoped,
@@ -22,7 +21,6 @@ export default {
   contributions: [
     ...customColumnValuesServed.declare,
     ...customColumnDefsServed.declare,
-    customColumnsQueryAugmentor,
     customColumnsScoped,
   ],
   // The surfaces a live collection is scoped to were collected at bind; the

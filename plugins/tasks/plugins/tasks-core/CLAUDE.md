@@ -188,6 +188,15 @@ serves them.
   `useLive(pushRows, { where: { attemptId } })` — a filter, never a slice of a
   global recent window (that dropped an old attempt's pushes). Named `…Rows`
   because `pushes` is the server table handle.
+- **`conversationOwnerJoins` / `conversationOwnerColumns`** (server barrel) are
+  the one spelling of a conversation's owners for a routed collection over
+  `_conversations`: a required `attempt` lookup on `base.attemptId`, then a
+  required `task` lookup on `attempt.taskId` (INNER is lossless — both FKs are
+  NOT NULL cascades), binding `worktreePath`, `taskId` and the task's current
+  `taskTitle`. Their routes are reverses on each pk: an attempt write resolves
+  to its conversations, a task write through `attempts` (never the changed
+  `tasks`, A10). The conversation lists (`all-conversations`) serve through
+  them; the tree's conversation collections reuse them.
 - **The tree** (`tasks`, `attempts`, `conversations-active` / `-system` /
   `-gone`) stays on the old descriptor + `defineResource` / `queryResource`
   spellings until Resources page item 3
@@ -296,6 +305,8 @@ serves them.
     - `conversationAttachments`
     - `conversationCascadeSignatures`
     - `ConversationKindSchema`
+    - `conversationOwnerColumns`
+    - `conversationOwnerJoins`
     - `conversationsActiveResource`
     - `ConversationSchema`
     - `conversationsGoneResource`

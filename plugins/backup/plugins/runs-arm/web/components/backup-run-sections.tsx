@@ -11,7 +11,7 @@ import type {
   BackupSourceReport,
   BackupTargetResult,
 } from "@plugins/backup/core";
-import type { UnionRun } from "@plugins/runs/core";
+import type { RunRow } from "@plugins/runs/core";
 import {
   backupArchiveSize,
   backupSources,
@@ -146,7 +146,7 @@ function SourceReportLines({
  * decoder. A backup is the run someone audits after the fact, and "2 sources"
  * is not an answer to what was in it.
  */
-export function BackupSourcesSection({ run }: { run: UnionRun }): ReactNode {
+export function BackupSourcesSection({ run }: { run: RunRow }): ReactNode {
   return (
     <Stack gap="xs">
       {backupSources(run).map((source) => (
@@ -164,7 +164,7 @@ export function BackupSourcesSection({ run }: { run: UnionRun }): ReactNode {
  * answer to what happened. This is the per-target reading it stands for, and on
  * a refused OAuth token it is also where the repair lives.
  */
-export function BackupTargetsSection({ run }: { run: UnionRun }): ReactNode {
+export function BackupTargetsSection({ run }: { run: RunRow }): ReactNode {
   return (
     <Stack gap="xs">
       {backupTargetResults(run).map((result) => (
@@ -208,7 +208,7 @@ function OutcomeSummary({
 }
 
 /** The Sources header's verdict: how many of the archive's sources failed. */
-export function BackupSourcesSummary({ run }: { run: UnionRun }): ReactNode {
+export function BackupSourcesSummary({ run }: { run: RunRow }): ReactNode {
   const sources = backupSources(run);
   return (
     <OutcomeSummary
@@ -219,7 +219,7 @@ export function BackupSourcesSummary({ run }: { run: UnionRun }): ReactNode {
 }
 
 /** The Targets header's verdict: how many targets the archive did not reach. */
-export function BackupTargetsSummary({ run }: { run: UnionRun }): ReactNode {
+export function BackupTargetsSummary({ run }: { run: RunRow }): ReactNode {
   const results = backupTargetResults(run);
   return (
     <OutcomeSummary
@@ -242,7 +242,7 @@ export function BackupTargetsSummary({ run }: { run: UnionRun }): ReactNode {
  * The same column the DataView's "Archive size" field reads, through the same
  * accessor, so the line and the column cannot disagree.
  */
-export function BackupArchiveSize({ run }: { run: UnionRun }): ReactNode {
+export function BackupArchiveSize({ run }: { run: RunRow }): ReactNode {
   const bytes = backupArchiveSize(run);
   // Unreachable through the section's `useAvailable` gate, which is what keeps
   // a run with no archive from painting a titled row over nothing. Stated

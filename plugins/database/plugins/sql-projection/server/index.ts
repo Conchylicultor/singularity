@@ -1,7 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export type { SqlDecoder, SqlDecoderLike } from "./internal/decoders";
-export { nullable, parsed } from "./internal/decoders";
+export { nullable, parsed, toMapper } from "./internal/decoders";
+export { decodedRow } from "./internal/decoded-row";
+export type { DecodedRow } from "./internal/decoded-row";
 export type { SqlProjectionFailure } from "./internal/errors";
 export {
   SqlProjectionError,

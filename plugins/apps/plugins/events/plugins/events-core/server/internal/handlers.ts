@@ -3,8 +3,6 @@ import {
   createEventSource,
   deleteEventSource,
   getEventSource,
-  getEventSourceRun,
-  listEventSourceRuns,
   listEventSources,
   listRunEvents,
   refreshAllEventSources,
@@ -15,7 +13,6 @@ import {
   createSource,
   deleteSource,
   listRunEvents as selectRunEvents,
-  listRuns,
   listSources,
   requireRun,
   requireSource,
@@ -100,20 +97,6 @@ export const handleRefreshAll = implement(refreshAllEventSources, async () => {
   }
   return tally;
 });
-
-export const handleListRuns = implement(
-  listEventSourceRuns,
-  async ({ params, query }) => {
-    await requireSource(params.id);
-    return listRuns(params.id, query.limit ?? 50);
-  },
-);
-
-// Keyed by the run id alone — no source id to check it against, and none needed:
-// the run row carries its own `sourceId`.
-export const handleGetRun = implement(getEventSourceRun, async ({ params }) =>
-  requireRun(params.runId),
-);
 
 // `requireRun` first, so an unknown run is a 404 rather than an empty list — the
 // two mean completely different things here ("this run is gone" vs "this run

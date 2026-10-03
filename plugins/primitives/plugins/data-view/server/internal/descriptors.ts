@@ -21,9 +21,9 @@ export const extraFields = {
  * The reference-stable `ConfigDescriptor` per DataView id for the server runtime —
  * the server twin of the web `dataViewDescriptors`. Built off the SAME per-id
  * `viewsDescriptor` cache the config registrations use, so `getConfig(descriptor)`
- * reads the exact doc a `ConfigV2.Register` planted. This is what lets
- * `augmentServerQuery` resolve a surface's config by `dataViewId` server-side,
- * independent of the web.
+ * reads the exact doc a `ConfigV2.Register` planted. This is what lets a server
+ * plugin (custom-columns' scoped column set) resolve a surface's config by
+ * `dataViewId`, independent of the web.
  */
 export const dataViewDescriptors: Map<string, ConfigDescriptor> = new Map(
   dataViews.map((v) => [v.id, viewsDescriptor(v.id, extraFields)]),
@@ -33,8 +33,8 @@ export const dataViewDescriptors: Map<string, ConfigDescriptor> = new Map(
  * Read the parsed config doc for one DataView surface by id (`views` +
  * `sortPresets` + `filterPresets` + `customColumns`), or `{}` for an
  * unregistered id (fail-soft). data-view owns the config descriptors, so this is
- * the single server-side entry point other plugins (e.g. server-query's
- * `augmentServerQuery`) use to resolve a surface's config opaquely — without
+ * the single server-side entry point other plugins (e.g. custom-columns'
+ * scoped column set) use to resolve a surface's config opaquely — without
  * rebuilding the descriptor map.
  */
 export function readDataViewConfigDoc(

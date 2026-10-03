@@ -1,12 +1,7 @@
 import type { OpenPaneFn } from "@plugins/primitives/plugins/pane/web";
-import { armText, type RunRowProps } from "@plugins/runs/web";
+import type { RunRowProps } from "@plugins/runs/web";
 import { deploymentDetailPane } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
-import { deployRunFields } from "../../core";
-
-// Built once at module eval, not per click: each accessor validates its id and
-// type against the arm's own declaration when it is built.
-const serverIdOf = armText(deployRunFields, "deploy.serverId");
-const deploymentIdOf = armText(deployRunFields, "deploy.deploymentId");
+import { deployRunColumns } from "../../core";
 
 /**
  * Where a deploy row goes when it is clicked.
@@ -22,23 +17,18 @@ const deploymentIdOf = armText(deployRunFields, "deploy.deploymentId");
  * pane's own id strands the pane without its ancestor.
  *
  * It lives here rather than in the barrel because a barrel may hold only
- * imports, re-exports, type aliases and the single default export — and the two
- * accessors above are top-level `const`s.
+ * imports, re-exports, type aliases and the single default export.
  */
 export function openDeployRun(
   run: RunRowProps["run"],
   openPane: OpenPaneFn,
 ): void {
-  const serverId = serverIdOf(run);
-  const deploymentId = deploymentIdOf(run);
-  // Both columns are `.notNull()` on `deploy_runs`, so this is an assertion
-  // about an impossible row, not a case to handle. Throwing beats returning: a
-  // click that quietly does nothing is the failure mode with no way back to the
-  // cause.
-  if (serverId === null || deploymentId === null) {
-    throw new Error(
-      `Deploy run ${run.id} is missing serverId/deploymentId — both columns are NOT NULL on deploy_runs.`,
-    );
+  // A deploy row always carries its slice (the handle throws otherwise), and
+  // both ids are NOT NULL there. Not a deploy row is a caller bug.
+  const own = deployRunColumns.read(run);
+  if (own === null) {
+    throw new Error(`openDeployRun: run ${run.runKey} is not a deploy run.`);
   }
+  const { serverId, deploymentId } = own;
   openPane(deploymentDetailPane, { serverId, deploymentId }, { mode: "push" });
 }

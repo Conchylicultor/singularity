@@ -45,9 +45,12 @@ function createFakeAuthority() {
     },
     compute: async () => {
       state.computeCalls++;
+      // Read the authority when the compute starts, as a real read does: a
+      // change landing while it is parked is not in its result.
+      const value = state.value;
       if (state.gate) await state.gate.promise;
       if (state.computeThrows) throw new Error("compute failed");
-      return state.value;
+      return value;
     },
   });
   return { state, memo };
@@ -132,6 +135,55 @@ describe("createSignedMemo", () => {
     const b = memo.get("k");
     state.gate.release();
 
+    expect(await a).toBe("V1");
+    expect(await b).toBe("V1");
+    expect(state.computeCalls).toBe(1);
+  });
+
+  test("notBefore supersedes a compute started before it instead of joining it", async () => {
+    const { state, memo } = createFakeAuthority();
+    const first = openGate();
+    state.gate = first;
+
+    // A compute starts and parks mid-flight on the pre-change state.
+    const stale = memo.get("k");
+    await Bun.sleep(0);
+    expect(state.computeCalls).toBe(1);
+
+    // The input moves; the caller knows the instant and moves the signature.
+    const changedAt = performance.now();
+    state.sig = "S2";
+    state.value = "V2";
+    state.gate = null;
+
+    // Without the floor this would join the parked flight and get V1.
+    const fresh = memo.get("k", { notBefore: changedAt });
+    expect(await fresh).toBe("V2");
+    expect(state.computeCalls).toBe(2);
+
+    first.release();
+    expect(await stale).toBe("V1");
+
+    // The superseded flight settled last, caching V1 under S1 — the probe (S2)
+    // misses rather than serving it: over-invalidation, never a torn hit.
+    expect(await memo.get("k")).toBe("V2");
+    expect(state.computeCalls).toBe(3);
+  });
+
+  test("without notBefore a mid-flight miss joins the running compute", async () => {
+    const { state, memo } = createFakeAuthority();
+    const gate = openGate();
+    state.gate = gate;
+
+    const a = memo.get("k");
+    await Bun.sleep(0);
+    expect(state.computeCalls).toBe(1);
+    state.sig = "S2";
+    state.value = "V2";
+    const b = memo.get("k");
+    gate.release();
+
+    // The documented ≤1-event staleness-sharing default.
     expect(await a).toBe("V1");
     expect(await b).toBe("V1");
     expect(state.computeCalls).toBe(1);

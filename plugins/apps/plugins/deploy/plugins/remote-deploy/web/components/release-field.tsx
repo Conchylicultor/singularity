@@ -19,7 +19,11 @@ import {
 import { useDeploymentsListServerId } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import type { PlatformTag } from "@plugins/release/core";
 import { RELEASE_STATE_OPTIONS } from "../../core";
-import { useReleaseInfo, type ReleaseInfo } from "../internal/use-release-info";
+import {
+  releaseStateOf,
+  useReleaseInfo,
+  type ReleaseInfo,
+} from "../internal/use-release-info";
 import { ReleaseChip } from "./release-chip";
 
 /**
@@ -69,7 +73,7 @@ export function ReleaseField({
         type: "enum",
         align: "end",
         options: RELEASE_STATE_OPTIONS,
-        value: (d) => infos.get(d.id)?.state ?? null,
+        value: (d) => releaseStateOf(infos.get(d.id)),
         cell: (d) => <ReleaseChip info={infos.get(d.id)} />,
       },
     ],

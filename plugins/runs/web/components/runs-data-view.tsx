@@ -1,27 +1,23 @@
 import { useCallback, useMemo, type ReactNode } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
+  liveDataSource,
   type DataViewDensity,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { unionFilterable } from "@plugins/primitives/plugins/data-view/plugins/union-query/core";
-import {
-  queryRuns,
-  RUN_BASE_COLUMNS,
-  RUN_SEARCH_COLUMNS,
-  runArmUnionSpecs,
-  runRowKey,
-  runsRevisionResource,
-} from "../../core";
-import type { UnionRun } from "../../core";
+import { runRowKey, runs, type RunRow } from "../../core";
 import { useRunFields } from "../internal/fields";
 import { Runs } from "../internal/slots";
 import { RUNS_VIEW } from "../internal/view-id";
+
+/**
+ * The live source: the `runs` union window, read as a scroll. Everything a
+ * person types into the search box is a name or an error — never an id, which
+ * would make the box a lookup rather than a search.
+ */
+const runsSource = liveDataSource(runs, {
+  searchable: ["label", "message", "namespace", "trigger"],
+});
 
 export interface RunsDataViewProps {
   /** How much room the host gives it — a popover declares `"compact"`. */
@@ -30,11 +26,12 @@ export interface RunsDataViewProps {
   views?: string[];
   defaultView?: string;
   /**
-   * Override the empty line. Rarely needed: the default already distinguishes
-   * an empty LEDGER from a view that matches nothing, which is the distinction
-   * a host would otherwise be overriding to get.
+   * The empty line — REQUIRED, each host's own copy (T12). The surface cannot
+   * tell "nothing has ever run" from "nothing matches this view" without a
+   * count over every ledger, which no bounded reader has; the host knows which
+   * sentence its own scope means.
    */
-  emptyState?: ReactNode;
+  emptyState: ReactNode;
   /**
    * Highlight the row whose detail surface is open.
    *
@@ -52,7 +49,7 @@ export interface RunsDataViewProps {
    * with its own chrome (the build popover closing itself, so it does not hang
    * over the pane the click just opened). It runs after the arm's opener.
    */
-  onRowActivate?: (run: UnionRun) => void;
+  onRowActivate?: (run: RunRow) => void;
   /**
    * Show exactly this view instance, and paint no switcher.
    *
@@ -69,11 +66,11 @@ export interface RunsDataViewProps {
  * **Runs** — every long-running operation on this machine, from every ledger, in
  * one list.
  *
- * One ordinary `<DataView>` whose row space is a discriminated union: the rows
- * arrive already merged from `POST /api/runs/query`, so the host needs to know
- * nothing about arms. Filter, sort, group-by and search all compile to SQL
- * across every ledger at once, and pagination is keyset — infinite scroll walks
- * across arm boundaries without duplicating or dropping a row.
+ * One ordinary `<DataView>` over the `runs` union window (a live scroll): the
+ * rows arrive already merged, so the host needs to know nothing about arms.
+ * Filter, sort and search compile to SQL across every ledger at once, the
+ * scroll walks across arm boundaries without duplicating or dropping a row,
+ * and a write to one ledger refills just the rows it changed.
  *
  * The same component at every density: a build popover and a full debug pane are
  * the same surface asking for different room.
@@ -87,43 +84,9 @@ export function RunsDataView({
   onRowActivate,
   pinnedView,
 }: RunsDataViewProps): ReactNode {
-  // The tick drives an in-place refetch of the loaded window; the keyset query
-  // is the source of truth. While pending, hand a null tick (no refetch) — the
-  // first settled `rev` then refreshes once.
-  const tick = useResource(runsRevisionResource);
-  const changeTick = matchResource(tick, {
-    loading: () => null,
-    ready: (d) => d.rev,
-  });
-
-  // "Nothing has run" is a claim about the LEDGER, and the loaded page cannot
-  // make it: every tab here is a filter, and the default one (Active) is empty
-  // whenever nothing happens to be in flight. A machine with three thousand
-  // recorded runs opening the build button must not be told nothing ever ran.
-  //
-  // The tick carries `hasRuns` for exactly this. While it is pending the
-  // narrower sentence is used — it is true of an empty ledger too, so the strong
-  // claim is only ever made once it is known to be true, and there is no loading
-  // state to render for a line of copy.
-  const everRan = matchResource(tick, {
-    loading: () => true,
-    ready: (d) => d.hasRuns,
-  });
-
   const openPane = useOpenPane();
   const kinds = Runs.Kind.useContributions();
   const fields = useRunFields(kinds);
-  // What the server can filter: the base columns, the discriminator and every
-  // registered arm's own columns — the same declarations the server's union is
-  // compiled (and its filter decoded) from.
-  const filterable = useMemo(
-    () =>
-      unionFilterable(
-        RUN_BASE_COLUMNS,
-        runArmUnionSpecs(kinds.map((k) => k.fields)),
-      ),
-    [kinds],
-  );
 
   const openers = useMemo(
     () =>
@@ -140,7 +103,7 @@ export function RunsDataView({
   const viewOptions = useMemo(
     () => ({
       list: {
-        leading: (run: UnionRun) => <Runs.Leading.Dispatch run={run} />,
+        leading: (run: RunRow) => <Runs.Leading.Dispatch run={run} />,
       },
     }),
     [],
@@ -156,7 +119,7 @@ export function RunsDataView({
   // own side effect), so a row activates if EITHER is present and runs both when
   // both are.
   const resolveActivation = useCallback(
-    (run: UnionRun): (() => void) | undefined => {
+    (run: RunRow): (() => void) | undefined => {
       const open = openers.get(run.kind);
       if (!open && !onRowActivate) return undefined;
       return () => {
@@ -168,32 +131,19 @@ export function RunsDataView({
   );
 
   return (
-    <DataView<UnionRun>
+    <DataView<RunRow>
       storageKey={RUNS_VIEW}
+      source={runsSource}
       fields={fields}
       fieldExtensions={Runs.Fields}
-      rowKey={runRowKey}
       views={views}
       defaultView={defaultView}
       pinnedView={pinnedView}
       density={density}
       viewOptions={viewOptions}
-      emptyState={
-        emptyState ??
-        (everRan ? (
-          <>No runs match this view.</>
-        ) : (
-          <>Nothing has run on this machine yet.</>
-        ))
-      }
+      emptyState={emptyState}
       selectedRowId={selectedRun ? runRowKey(selectedRun) : undefined}
       rowActivation={resolveActivation}
-      dataSource={{
-        changeTick,
-        filterable,
-        searchable: RUN_SEARCH_COLUMNS,
-        fetchPage: (args) => fetchEndpoint(queryRuns, {}, { body: args }),
-      }}
     />
   );
 }

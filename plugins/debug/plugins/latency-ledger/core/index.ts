@@ -30,7 +30,6 @@ export type {
 } from "./internal/metrics";
 export {
   submitClientLatency,
-  getLatencySummary,
   ClientMinuteSchema,
   InteractionSchema,
   LATENCY_WINDOWS,
@@ -42,4 +41,4 @@ export type {
   LatencySummary,
   LatencyWindow,
 } from "./internal/endpoints";
-export { latencyLedgerRevisionResource } from "./internal/resources";
+export { latencySummary } from "./internal/resources";

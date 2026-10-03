@@ -50,7 +50,6 @@ channel is free text.
   - Uses:
     - `apps/events/events-core.useEventSourceRun`
     - `apps/events/sources/source-detail/runs.EventSourceRunDetail`
-    - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`

@@ -1,7 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { getLatencySummary, submitClientLatency } from "../core";
+import { submitClientLatency } from "../core";
 import { handleClientLatency } from "./internal/ingest";
-import { handleLatencySummary } from "./internal/query";
 import { startLatencyRecorder, stopLatencyRecorder } from "./internal/recorder";
 import {
   hostMinuteRetention,
@@ -17,7 +16,6 @@ export default {
   contributions: ledgerContributions,
   httpRoutes: {
     [submitClientLatency.route]: handleClientLatency,
-    [getLatencySummary.route]: handleLatencySummary,
   },
   register: [
     minuteRetention,

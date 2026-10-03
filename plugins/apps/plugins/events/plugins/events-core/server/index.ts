@@ -1,13 +1,8 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
   createEventSource,
   deleteEventSource,
   getEventSource,
-  getEventSourceRun,
-  listEventSourceRuns,
   listEventSources,
   listRunEvents,
   refreshAllEventSources,
@@ -17,18 +12,16 @@ import {
 import {
   handleCreateSource,
   handleDeleteSource,
-  handleGetRun,
   handleGetSource,
   handleListRunEvents,
-  handleListRuns,
   handleListSources,
   handleRefreshAll,
   handleRefreshSource,
   handleUpdateSource,
 } from "./internal/handlers";
 import {
+  eventSourceRunsServed,
   eventSourcesServed,
-  eventRunsRevisionServerResource,
 } from "./internal/resources";
 
 // The physical tables, the source-type registry, the repo functions, and the
@@ -72,20 +65,16 @@ export {
   createSource,
   updateSource,
   deleteSource,
-  listRuns,
   listRunEvents,
   requireRun,
 } from "./internal/sources-repo";
 export { registerRefreshRunner } from "./internal/refresh-runner";
 export type { RefreshRunner } from "./internal/refresh-runner";
-export {
-  eventSourcesServed,
-  eventRunsRevisionServerResource,
-} from "./internal/resources";
+export { eventSourcesServed } from "./internal/resources";
 
 export default {
   description:
-    "Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + the run ledger's revision tick.",
+    "Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources and run-ledger collections.",
   httpRoutes: {
     [listEventSources.route]: handleListSources,
     [createEventSource.route]: handleCreateSource,
@@ -94,12 +83,10 @@ export default {
     [deleteEventSource.route]: handleDeleteSource,
     [refreshEventSourceNow.route]: handleRefreshSource,
     [refreshAllEventSources.route]: handleRefreshAll,
-    [listEventSourceRuns.route]: handleListRuns,
-    [getEventSourceRun.route]: handleGetRun,
     [listRunEvents.route]: handleListRunEvents,
   },
   contributions: [
     ...eventSourcesServed.declare,
-    Resource.Declare(eventRunsRevisionServerResource),
+    ...eventSourceRunsServed.declare,
   ],
 } satisfies ServerPluginDefinition;

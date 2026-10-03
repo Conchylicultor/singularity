@@ -1,13 +1,10 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import {
-  EventSourceRunSchema,
-  EventSourceSchema,
-  RunEventSchema,
-} from "./schema";
+import { EventSourceSchema, RunEventSchema } from "./schema";
 import { REFRESH_CADENCES } from "./vocab";
 
-// Source CRUD + the run ledger read. `events` rows themselves are NOT served
+// Source CRUD + one run's touched-events read. The run ledger itself is the
+// live `events.source-runs` collection (`./resources.ts`). `events` rows themselves are NOT served
 // here — they are a server-delegated DataView query owned by `event-list`.
 
 export const CreateEventSourceBodySchema = z.object({
@@ -122,28 +119,6 @@ export const refreshAllEventSources = defineEndpoint({
   response: RefreshAllResultSchema,
 });
 
-export const ListEventSourceRunsQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().max(200).optional(),
-});
-
-export const listEventSourceRuns = defineEndpoint({
-  route: "GET /api/events/sources/:id/runs",
-  query: ListEventSourceRunsQuerySchema,
-  response: z.array(EventSourceRunSchema),
-});
-
-/**
- * One run, by its own id. Deliberately NOT nested under `/sources/:id`: the run
- * id identifies the row on its own, and a surface that has only the run id (a
- * deep-linked run pane, whose params are own-only) must be able to resolve it
- * without first knowing which source it belongs to — or it would depend on
- * whatever window the runs list happened to have loaded.
- */
-export const getEventSourceRun = defineEndpoint({
-  route: "GET /api/events/runs/:runId",
-  response: EventSourceRunSchema,
-});
-
 export const ListRunEventsQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional(),
 });
@@ -152,10 +127,10 @@ export const ListRunEventsQuerySchema = z.object({
  * The events one run touched, each with what the run did to it — the detail
  * behind that run's counts.
  *
- * Nested under the run and keyed by the run id alone, for the same reason
- * `getEventSourceRun` is: the run pane's params are own-only, so a deep-linked
- * run must resolve its whole content from the URL without first learning which
- * source it belongs to.
+ * Nested under the run and keyed by the run id alone: the run pane's params are
+ * own-only, so a deep-linked run must resolve its whole content from the URL
+ * without first learning which source it belongs to (the run row itself is read
+ * the same way, through the `events.source-runs` point sibling).
  *
  * A plain bounded list rather than a delegated keyset query (the shape
  * `event-list` uses): one run's set is one extraction — tens of events, closed

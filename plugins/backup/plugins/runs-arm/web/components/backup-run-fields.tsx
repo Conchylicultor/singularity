@@ -4,9 +4,8 @@ import type {
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { armNumber, armText, runArmFields } from "@plugins/runs/web";
-import type { UnionRun } from "@plugins/runs/core";
-import { BACKUP_RUN_STATUSES, backupRunFields } from "../../core";
+import type { RunRow } from "@plugins/runs/core";
+import { BACKUP_RUN_STATUSES, backupRunColumns } from "../../core";
 import { backupArchiveSize } from "../internal/payload";
 import { formatBytes } from "../internal/format-bytes";
 
@@ -23,12 +22,9 @@ function numberCell(
 /**
  * The backup arm's own columns in the merged run DataView.
  *
- * Every one is a real projected SQL column, bound to the arm's
- * `defineRunArmFields` declaration twice over — `runArmFields` checks the
- * `FieldDef.id`, and `armText` / `armNumber` check the accessor's type against
- * the same declaration. A field id that drifts off its server column does not
- * fail at runtime; it silently degrades into client-side-only filtering over the
- * loaded window, so both halves are made not to compile instead.
+ * Every one binds the arm's own column (`backupRunColumns.column(…)`), so its
+ * sort and filter are SQL over the union, and its value is read off the arm's
+ * slice of the row (`null` on another kind's row).
  *
  * Three of the four default to hidden. They are dimensions first: "backups whose
  * archive is over a gigabyte" is a filter that compiles to SQL across the whole
@@ -54,14 +50,16 @@ function numberCell(
  */
 export function BackupRunFields({
   render,
-}: FieldExtensionProps<UnionRun>): ReactNode {
-  const fields = useMemo<FieldDef<UnionRun>[]>(() => {
-    const status = armText(backupRunFields, "backup.status");
-    const sourceCount = armNumber(backupRunFields, "backup.sourceCount");
-    const targetCount = armNumber(backupRunFields, "backup.targetCount");
-    return runArmFields(backupRunFields, [
+}: FieldExtensionProps<RunRow>): ReactNode {
+  const fields = useMemo<FieldDef<RunRow>[]>(() => {
+    const own = (r: RunRow) => backupRunColumns.read(r);
+    const status = (r: RunRow) => own(r)?.status ?? null;
+    const sourceCount = (r: RunRow) => own(r)?.sourceCount ?? null;
+    const targetCount = (r: RunRow) => own(r)?.targetCount ?? null;
+    return [
       {
         id: "backup.status",
+        column: backupRunColumns.column("status"),
         label: "Backup status",
         type: "enum",
         options: BACKUP_RUN_STATUSES.map((value) => ({ value, label: value })),
@@ -78,6 +76,7 @@ export function BackupRunFields({
       },
       {
         id: "backup.archiveSize",
+        column: backupRunColumns.column("archiveSize"),
         label: "Archive size",
         type: "number",
         // The same accessor the detail pane's Archive line reads, so the
@@ -90,6 +89,7 @@ export function BackupRunFields({
       },
       {
         id: "backup.sourceCount",
+        column: backupRunColumns.column("sourceCount"),
         label: "Sources",
         type: "number",
         value: sourceCount,
@@ -101,6 +101,7 @@ export function BackupRunFields({
       },
       {
         id: "backup.targetCount",
+        column: backupRunColumns.column("targetCount"),
         label: "Targets",
         type: "number",
         value: targetCount,
@@ -110,7 +111,7 @@ export function BackupRunFields({
         visible: false,
         width: "6rem",
       },
-    ]);
+    ];
   }, []);
 
   return <>{render(fields)}</>;

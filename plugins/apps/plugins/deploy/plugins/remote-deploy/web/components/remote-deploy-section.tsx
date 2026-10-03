@@ -311,7 +311,22 @@ function stateOf(
  * button would have to start from.
  */
 function Provenance({ info }: { info: ReleaseInfo }): ReactNode {
-  if (info.pending || !info.candidate) {
+  switch (info.status) {
+    case "loading":
+      return <Loading label="Resolving what is built…" />;
+    case "error":
+      return (
+        <ResourceErrorInline
+          variant="inline"
+          error={info.error}
+          refetch={info.refetch}
+          subject="what is built for this server"
+        />
+      );
+    case "ready":
+      break;
+  }
+  if (info.data.kind === "no-platform") {
     return (
       <StepNote>
         No verified platform for this server yet, so there is no candidate to
@@ -320,7 +335,7 @@ function Provenance({ info }: { info: ReleaseInfo }): ReactNode {
     );
   }
 
-  const { resolution, staleness } = info.candidate;
+  const { resolution, staleness } = info.data.candidate;
 
   if (!resolution.ok) {
     return (

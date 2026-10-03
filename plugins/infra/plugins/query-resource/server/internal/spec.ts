@@ -1,6 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable, PgView } from "drizzle-orm/pg-core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { SqlExecutable } from "@plugins/database/plugins/sql-rows/core";
 import type {
   JoinFamily,
   JoinSpec,
@@ -38,7 +39,8 @@ export type RoutedSource = PgTable | EntitySource;
 
 /**
  * A drizzle select projection: JS key → column, an expression standing for
- * one (a defaulted extension column's COALESCE), or an aliased expression.
+ * one (a defaulted extension column's COALESCE), a rendered `ExprField`
+ * (`JoinPlan.renderExpr`), or an aliased expression.
  */
 export type SelectMap = Record<string, PgColumn | SQL | SQL.Aliased>;
 
@@ -75,7 +77,16 @@ export interface QueryStep<Row = unknown> extends PromiseLike<Row[]> {
 export interface QueryFrom<Row = unknown> {
   from(source: PgTable | PgView): QueryStep<Row>;
 }
-export interface QueryDb {
+/**
+ * The query surface: drizzle's builder, plus its raw `execute` — for the
+ * shapes the builder cannot render (a union whose outer order keys are
+ * expressions: drizzle's `unionAll` rewrites column chunks to bare
+ * identifiers; a recursive CTE, which drizzle 0.36 has no builder for). Every
+ * raw read goes through sql-rows' `executeRows(db, { query, row:
+ * decodedRow(…), label })`, so its rows are decoded and checked like a
+ * builder's.
+ */
+export interface QueryDb extends SqlExecutable<SQL> {
   select<Row = unknown>(fields?: SelectMap): QueryFrom<Row>;
   selectDistinct<Row = unknown>(fields: SelectMap): QueryFrom<Row>;
 }

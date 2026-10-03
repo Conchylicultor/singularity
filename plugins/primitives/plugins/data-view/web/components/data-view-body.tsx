@@ -19,7 +19,6 @@ import {
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
-import { useServerDataSource } from "../internal/use-server-data-source";
 import { resolveBodyState } from "../internal/body-state";
 import { BodyFallback } from "./body-fallback";
 import {
@@ -47,9 +46,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResolveOperatorSet } from "../filter-slot";
 import { useGroupingClock } from "../internal/use-grouping-clock";
 import { useRowFilter } from "../internal/use-row-filter";
-import { serverFilterFields, useServerFilter } from "../internal/server-filter";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import type { Filterable } from "@plugins/network/plugins/live/plugins/filter/core";
 import { PendingMoveOverlay } from "../internal/use-pending-move-overlay";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import { CollectFacetOptions } from "../internal/facet-options";
@@ -92,12 +89,11 @@ const TRUNCATION_HINT: Readonly<Record<ScrollTruncation, string>> = {
 export function DataViewBody<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   return (
     <CollectBodyFields source={props}>
-      {(fields, globalExtensionIds, rowKeyOf) => (
+      {(fields, rowKeyOf) => (
         <DataViewBodyInner
           {...props}
           fields={fields as FieldDef<TRow>[]}
           rowKeyOf={rowKeyOf}
-          globalExtensionIds={globalExtensionIds}
         />
       )}
     </CollectBodyFields>
@@ -106,7 +102,7 @@ export function DataViewBody<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
 
 /**
  * The `{ kind: "sections" }` body: EVERY instance, stacked in config order,
- * each a full `DataViewBodyInner` (its own controllers, server source, row
+ * each a full `DataViewBodyInner` (its own controllers, live source, row
  * order and view) rendered under its own section header. The inner body is
  * already keyed by view id through the id-parameterised `ReadyViewModel`, so a
  * section is simply the body with that instance as its "active" one — and the
@@ -124,7 +120,7 @@ export function DataViewSectionsBody<TRow>(
   const { instances } = props;
   return (
     <CollectBodyFields source={props}>
-      {(fields, globalExtensionIds, rowKeyOf) =>
+      {(fields, rowKeyOf) =>
         instances.map((instance) => (
           <DataViewBodyInner
             key={instance.instance.id}
@@ -132,7 +128,6 @@ export function DataViewSectionsBody<TRow>(
             activeInstance={instance}
             fields={fields as FieldDef<TRow>[]}
             rowKeyOf={rowKeyOf}
-            globalExtensionIds={globalExtensionIds}
           />
         ))
       }
@@ -161,11 +156,6 @@ export function DataViewSectionsBody<TRow>(
  * row types), so `props.fields`/`rowKey` and the merged result cross a safe
  * `FieldDef<unknown>`↔`FieldDef<TRow>` boundary cast.
  *
- * The global slot is folded in its OWN pass so the body knows which fields it
- * contributed: those are served server-side by the slot's server twin
- * (`DataViewServer.QueryAugmentor`), so a server-delegated source may filter
- * on them without declaring them (see `serverFilterFields`).
- *
  * It also resolves the origin's row key (a live source keys rows by its
  * collection's id), checks every field against a live source, and hands each
  * field over one of the source's facets its read option state
@@ -178,7 +168,6 @@ function CollectBodyFields<TRow>(props: {
   >;
   children: (
     fields: FieldDef<unknown>[],
-    globalExtensionIds: ReadonlySet<string>,
     rowKeyOf: (row: TRow, index: number) => string,
   ) => ReactNode;
 }): ReactNode {
@@ -218,45 +207,28 @@ function CollectBodyFields<TRow>(props: {
   );
   return (
     <CollectFieldExtensions
-      sources={[DataViewSlots.FieldExtension]}
+      sources={
+        source.fieldExtensions
+          ? [
+              DataViewSlots.FieldExtension,
+              source.fieldExtensions as FieldExtensionsDescriptor<unknown>,
+            ]
+          : [DataViewSlots.FieldExtension]
+      }
       base={source.fields as FieldDef<unknown>[]}
       storageKey={source.storageKey}
       rowKey={rowKey as (row: unknown, index: number) => string}
       liveColumnScope={liveColumnScope}
       validate={validate}
     >
-      {(withGlobal) => (
-        <CollectFieldExtensions
-          sources={
-            source.fieldExtensions
-              ? [source.fieldExtensions as FieldExtensionsDescriptor<unknown>]
-              : []
-          }
-          base={withGlobal}
-          storageKey={source.storageKey}
-          rowKey={rowKey as (row: unknown, index: number) => string}
-          liveColumnScope={liveColumnScope}
-          validate={validate}
+      {(folded) => (
+        <CollectFacetOptions
+          source={live as LiveDataSource<unknown> | undefined}
+          fields={folded}
+          resolveOperatorSet={resolveOperatorSet}
         >
-          {(folded) => (
-            <CollectFacetOptions
-              source={live as LiveDataSource<unknown> | undefined}
-              fields={folded}
-              resolveOperatorSet={resolveOperatorSet}
-            >
-              {(fields) =>
-                children(
-                  fields,
-                  globalExtensionIds(
-                    source.fields as FieldDef<unknown>[],
-                    withGlobal,
-                  ),
-                  rowKey,
-                )
-              }
-            </CollectFacetOptions>
-          )}
-        </CollectFieldExtensions>
+          {(fields) => children(fields, rowKey)}
+        </CollectFacetOptions>
       )}
     </CollectFieldExtensions>
   );
@@ -270,20 +242,10 @@ function liveRowKey<TRow>(
   return (row) => String((row as Record<string, unknown>)[id]);
 }
 
-/** The ids the global field-extension slot added on top of the base schema. */
-function globalExtensionIds(
-  base: FieldDef<unknown>[],
-  withGlobal: FieldDef<unknown>[],
-): ReadonlySet<string> {
-  const baseIds = new Set(base.map((f) => f.id));
-  return new Set(withGlobal.filter((f) => !baseIds.has(f.id)).map((f) => f.id));
-}
-
 /** All body hooks, unconditional — the only gate is the shell's placeholder
  *  early-return, which unmounts the whole body (a separate component). */
 function DataViewBodyInner<TRow>(
   props: DataViewBodyProps<TRow> & {
-    globalExtensionIds: ReadonlySet<string>;
     /** The row key the origin implies (`rowKey`, or a live collection's id). */
     rowKeyOf: (row: TRow, index: number) => string;
   },
@@ -313,7 +275,6 @@ function DataViewBodyInner<TRow>(
     viewModel,
     activeInstance,
     chrome,
-    sourceScope,
   } = props;
 
   // The schema is already fully merged: `props.fields` here arrives AFTER
@@ -383,10 +344,10 @@ function DataViewBodyInner<TRow>(
       : { ...storedState, query: search.query };
 
   // The fold in effect: suspended while a search is typed (a match must never
-  // hide behind "…"). Computed from `activeState` BEFORE the server branch below
+  // hide behind "…"). Computed from `activeState` BEFORE the live branch below
   // zeroes `query`, and carried through that branch like `visibleFields`.
   // A view that draws no fold lines (the tree) gets no fold at all — applying
-  // one would hold its server paging for rows it never set aside.
+  // one would hold its live paging for rows it never set aside.
   const activeSupportsFold = activeInstance.viewType.supportsFold !== false;
   const fold = activeSupportsFold ? effectiveFold(activeState) : undefined;
   // Which sections' fold lines are open. Ephemeral on purpose — in memory, keyed
@@ -412,7 +373,7 @@ function DataViewBodyInner<TRow>(
   );
 
   // The operator-set resolver, read here (not off the filter controller below)
-  // because the server source's paging hold needs it before that exists.
+  // because the live source's paging hold needs it before that exists.
   const resolveOperatorSet = useResolveOperatorSet();
   // The fold rule's `keep` tree as a row predicate (null ⇒ keeps every row).
   const matchesFoldKeep = useRowFilter(
@@ -421,25 +382,6 @@ function DataViewBodyInner<TRow>(
     resolveOperatorSet,
   );
 
-  // A server-delegated source filters only what it DECLARES: the schema narrowed
-  // to its declared (+ globally-augmented) fields, which is all the Filter
-  // control offers and all the lowering reads. In memory: the whole schema.
-  const dataSource = props.dataSource;
-  const globalExtensionIds = props.globalExtensionIds;
-  const serverFields = useMemo(
-    () =>
-      dataSource
-        ? serverFilterFields(
-            fields,
-            dataSource.filterable,
-            globalExtensionIds,
-            resolveOperatorSet,
-          )
-        : null,
-    [dataSource, fields, globalExtensionIds, resolveOperatorSet],
-  );
-  // The view's filter + search lowered into the ONE canonical `Filter` the
-  // server receives (unused on the in-memory path, where it lowers nothing).
   // A live source: its fields resolved against the collection (what the Sort
   // and Filter controls offer, and each field's column).
   const liveSource = props.source;
@@ -450,20 +392,7 @@ function DataViewBodyInner<TRow>(
         : null,
     [liveSource, fields, resolveOperatorSet],
   );
-  const serverFilter = useServerFilter({
-    group: serverFields ? activeState.filter : null,
-    query: serverFields ? activeState.query : "",
-    fields: serverFields?.fields ?? (NO_FIELDS as FieldDef<TRow>[]),
-    resolveOperatorSet,
-    filterable: serverFields?.filterable ?? NO_FILTERABLE,
-    searchable: dataSource?.searchable ?? NO_SEARCHABLE,
-  });
 
-  // Optional server-delegated data source. Called unconditionally (the hook
-  // no-ops and returns `null` when `props.dataSource` is absent — the in-memory
-  // path). When present, filter/sort/search/paginate run server-side over the
-  // live `activeState`, so the accumulated pages replace `rows` and the client
-  // pipeline (`useFlatRows`) is neutralized into a pass-through below.
   // While the fold is closed everywhere and the LAST loaded row is folded,
   // stop auto-fetching: the next page would only land behind "…". Opening any
   // fold lifts the hold (and brings the sentinel back).
@@ -479,14 +408,10 @@ function DataViewBodyInner<TRow>(
         : () => true,
       rowKey,
     });
-  const server = useServerDataSource(
-    { sort: activeState.sort, filter: serverFilter },
-    dataSource,
-    storageKey,
-    sourceScope,
-    { holdPaging },
-  );
-  // Optional live source (always called; `null` without one).
+  // Optional live source (always called; `null` without one). When present,
+  // filter/sort/search/paginate run server-side over the live `activeState`,
+  // so its segments replace `rows` and the client pipeline (`useFlatRows`) is
+  // neutralized into a pass-through below.
   const groupingRegistry = useGroupingRegistry();
   const live = useLiveSource({
     source: liveSource,
@@ -497,25 +422,8 @@ function DataViewBodyInner<TRow>(
     resolveGrouping: groupingRegistry.resolve,
     holdPaging,
   });
-  // The one server-ordered origin in effect, as the body renders it.
-  const origin: SourceView<TRow> | null = useMemo(
-    () =>
-      live ??
-      (server
-        ? {
-            rows: server.rows,
-            loading: server.loading,
-            error: server.error,
-            readError: null,
-            scroll: server.scroll,
-            rowsComplete: server.rowsComplete,
-            sectionOrder: "bucket",
-            truncated: false,
-            notices: NO_NOTICES,
-          }
-        : null),
-    [live, server],
-  );
+  // The server-ordered origin in effect, as the body renders it.
+  const origin: SourceView<TRow> | null = live;
 
   // Filter controller — the popover builder consumes the full surface (filter,
   // setFilter, filterableFields, resolveOperatorSet, ruleCount).
@@ -524,9 +432,7 @@ function DataViewBodyInner<TRow>(
     [viewModel, activeViewId],
   );
   const filterController = useFilterController(
-    livePlan?.filterFields ??
-      (serverFields?.fields as FieldDef<TRow>[] | undefined) ??
-      fields,
+    livePlan?.filterFields ?? fields,
     activeState.filter,
     setActiveFilter,
   );
@@ -588,7 +494,7 @@ function DataViewBodyInner<TRow>(
   // no second config axis.
   //
   // It reads `activeState.sort` and NOT `effectiveState.sort`, which a
-  // server-delegated source zeroes out (the SQL already sorted) — the views can
+  // live source zeroes out (the SQL already sorted) — the views can
   // therefore no longer see the direction themselves, which is exactly why this
   // is computed here and threaded down.
   const groupOrder: "asc" | "desc" =
@@ -604,8 +510,7 @@ function DataViewBodyInner<TRow>(
   const rowOrderEnabled =
     activeSupportsManualOrder && // list / table only
     manualOrder == null && // a consumer's domain order wins
-    props.dataSource == null && // server-paginated ⇒ the client cannot own the order
-    props.source == null && // a live source is server-sorted ⇒ likewise
+    props.source == null && // a live source is server-sorted ⇒ the client cannot own the order
     aggregate == null; // an aggregate representative's rank cannot stand for its members
   // Group-by is deliberately NOT a clause. Reordering WITHIN a section is
   // well-defined (the contributed order covers the whole unpartitioned set, so a
@@ -621,9 +526,8 @@ function DataViewBodyInner<TRow>(
   // `activeState.visibleFields` / `viewModel.setVisibleFields` via
   // `DataViewSettingsContext` — no host wiring needed here.
 
-  // Server-delegated substitution: when a `dataSource` drives this DataView, the
-  // SQL already applied sort/filter/search, so feed the accumulated server rows
-  // and neutralize the client pipeline (`useFlatRows` collapses to a pass-through
+  // Live substitution: when a `source` drives this DataView, the SQL already
+  // applied sort/filter/search, so feed the loaded segments' rows and neutralize the client pipeline (`useFlatRows` collapses to a pass-through
   // when sort/filter/query are empty). Absent → the in-memory path is untouched.
   const effectiveRows: readonly unknown[] = origin
     ? origin.rows
@@ -631,7 +535,7 @@ function DataViewBodyInner<TRow>(
   // Neutralize ONLY the server-owned dimensions (sort/filter/query already ran in
   // SQL). `visibleFields` is display-only — it never touches the query — so the
   // `...activeState` spread deliberately PRESERVES it so the views still honor
-  // Properties on the server-delegated path.
+  // Properties on the live path.
   const effectiveState = origin
     ? { ...activeState, sort: [], filter: null, query: "", fold }
     : { ...activeState, fold };
@@ -662,7 +566,7 @@ function DataViewBodyInner<TRow>(
     activeInstance.viewType.hierarchical === true;
   const hasNoRows = useMemo(() => {
     if (!decideEmptiness) return false;
-    // A server-ordered origin (fetch-page or live) already filtered in SQL.
+    // A live origin already filtered in SQL.
     if (origin) return origin.rows.length === 0;
     const matches = emptinessFilter ?? (() => true);
     if (!rows) return true;
@@ -1045,11 +949,7 @@ function SegmentNotices(props: {
   );
 }
 
-const NO_NOTICES: readonly LiveSegmentNotice[] = [];
 const NO_ROWS: readonly unknown[] = [];
-const NO_FIELDS: FieldDef<unknown>[] = [];
-const NO_FILTERABLE: Filterable = {};
-const NO_SEARCHABLE: readonly string[] = [];
 
 /** The shared "no fold open" set — one identity, so an idle view's `openFolds`
  *  never changes between renders. */

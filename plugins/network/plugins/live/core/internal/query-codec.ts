@@ -47,6 +47,8 @@ export interface LiveQueryCodecSpec {
   contributed: boolean;
   /** A collection's column scope: its queries may name scoped sets of that scope; `null` = none. */
   columnScope: string | null;
+  /** A union collection's queries may name its arms' own columns (by wire name); any other's may not. */
+  arms: boolean;
   filterable: Filterable;
   sortable: readonly string[];
   defaultOrderBy: LiveOrderBy<string>;
@@ -156,25 +158,43 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     let filterable: Filterable = spec.filterable;
     const sortable: string[] = [...spec.sortable];
     for (const handle of columns) {
-      if (handle.scope !== null) {
-        if (handle.scope !== spec.columnScope) {
-          fail(
-            spec.columnScope === null
-              ? `a query names scoped columns "${handle.name}", but the collection declares no \`columnScope\``
-              : `scoped columns "${handle.name}" belong to scope "${handle.scope}", not this collection's "${spec.columnScope}"`,
-          );
-        }
-      } else {
-        if (!spec.contributed) {
-          fail(
-            "a query names contributed columns, but the collection is not declared `contributed: true`",
-          );
-        }
-        if (handle.collection !== spec.key) {
-          fail(
-            `contributed columns "${handle.name}" belong to "${handle.collection}"`,
-          );
-        }
+      const owner = handle.owner;
+      switch (owner.kind) {
+        case "scoped":
+          if (owner.scope !== spec.columnScope) {
+            fail(
+              spec.columnScope === null
+                ? `a query names scoped columns "${handle.name}", but the collection declares no \`columnScope\``
+                : `scoped columns "${handle.name}" belong to scope "${owner.scope}", not this collection's "${spec.columnScope}"`,
+            );
+          }
+          break;
+        case "contributed":
+          if (!spec.contributed) {
+            fail(
+              "a query names contributed columns, but the collection is not declared `contributed: true`",
+            );
+          }
+          if (owner.collection !== spec.key) {
+            fail(
+              `contributed columns "${handle.name}" belong to "${owner.collection}"`,
+            );
+          }
+          break;
+        case "arm":
+          if (!spec.arms) {
+            fail(
+              `a query names arm "${owner.arm}"'s columns, but the collection is not declared with \`arms\``,
+            );
+          }
+          if (owner.collection !== spec.key) {
+            fail(
+              `arm columns "${handle.name}" belong to "${owner.collection}"`,
+            );
+          }
+          break;
+        default:
+          owner satisfies never;
       }
       if (names.has(handle.name)) {
         fail(`two contributed column sets are named "${handle.name}"`);

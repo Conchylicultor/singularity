@@ -9,12 +9,12 @@ working cache into what reads as a broken source, which is the single most
 likely misreading of this app.
 
 Typed fields (outcome, the four counts, duration, error) mean "show me only the
-failures" is a filter, not a bespoke chip. Data comes from `useEventSourceRuns` —
-a plain endpoint read (a bounded filterable list is a query, not live-state rows)
-that the `events.runs-revision` tick refetches in place. The liveness is inside
-the hook, so this section subscribes to nothing. A fetch failure gets its own
-message rather than an eternal skeleton, since "unreachable" and "never run" are
-different answers.
+failures" is a filter, not a bespoke chip. Data is the live `events.source-runs`
+window (`liveDataSource(eventSourceRuns, …)`, scoped to the source with
+`.scoped({ where: { sourceId } })`): sort, filter, search and the DataView's
+custom columns all run server-side, a run landing or being swept moves its row in
+place, and the scroll pages the whole 30-day ledger. `Caveats` (the flags count)
+is display-only — `flags` has no column to sort or filter on.
 
 ## A run drills into its own pane
 
@@ -24,7 +24,8 @@ activation, not a hover-revealed action competing with the row body for the
 pointer. `RunActions` stays as the slot for actions that are genuinely actions
 (re-run, copy id); it ships none.
 
-The pane resolves the run by its **own id** (`GET /api/events/runs/:runId`):
+The pane resolves the run by its **own id** (`useEventSourceRun` →
+`useLiveRow`, the collection's point sibling):
 pane params are own-only, so it never sees the parent's `sourceId`, and a deep
 link must resolve from the URL rather than from whatever window the runs list
 happened to have loaded.
@@ -48,7 +49,6 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
     - `Pane.Register` "event-source-run"
   - Uses:
     - `apps/events/events-core.useEventSourceRun`
-    - `apps/events/events-core.useEventSourceRuns`
     - `apps/events/sources.describeRun`
     - `apps/events/sources.EventSourceDetail`
     - `apps/events/sources.eventSourceDetailRoute`
@@ -56,8 +56,6 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
     - `apps/events/sources.RUN_OUTCOME_LABEL`
     - `apps/events/sources.RUN_OUTCOME_OPTIONS`
     - `apps/events/sources.RUN_OUTCOME_VARIANT`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -69,13 +67,14 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineItemActions`
     - `primitives/data-view.FieldDef`
+    - `primitives/data-view.liveDataSource`
     - `primitives/detail-sections.defineDetailSections`
-    - `primitives/live-state.foldResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.ResolveResult`
+    - `primitives/pane.resolveRow`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`

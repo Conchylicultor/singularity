@@ -1,4 +1,11 @@
-import { defineRunArmFields } from "@plugins/runs/core";
+import { z } from "zod";
+import { liveArmColumns } from "@plugins/network/plugins/live/core";
+import {
+  liveBoolean,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
+import { ReleaseRunSchema } from "@plugins/release/core";
+import { runs } from "@plugins/runs/core";
 
 /**
  * This arm's name, in one place: the kind string is the server's discriminator,
@@ -6,8 +13,8 @@ import { defineRunArmFields } from "@plugins/runs/core";
  * the `{ kind, id }` pair a surface builds to highlight a selected row. A rename
  * with literals in each spot breaks the highlight silently.
  *
- * Passing it to `defineRunArmFields` ties the column ids to it: that call throws
- * at module eval if any declared id is not prefixed with this exact string.
+ * It is this arm's column set's arm (`liveArmColumns`), so every wire name
+ * (`release.<field>`) and every row key (`release:<id>`) is prefixed by it.
  *
  * Unlike the build arm's twin — which had to move down into
  * `run-ledger/core` — this one stays in the arm, and the asymmetry is a
@@ -21,26 +28,37 @@ import { defineRunArmFields } from "@plugins/runs/core";
 export const RELEASE_RUN_KIND = "release";
 
 /**
- * The columns only a release row has.
+ * The columns only a release row has — its slice of the `runs` union
+ * (`$columns.release`), wire names `release.<field>`.
  *
- * **`release.kind` is why the namespace prefix exists.** `release_runs` has a
- * `kind` column of its own — `staged` (a `--dev` run, previewable only) vs
- * `candidate` (packed for a named platform, shippable) — and it means something
- * entirely different from the run *kind* the whole union is discriminated on. An
- * unprefixed `kind` here would shadow the discriminator; prefixed, the two can
- * sit side by side in one filter bar and say different things.
+ * **`kind` is why the wire names are prefixed.** `release_runs` has a `kind`
+ * column of its own — `staged` (a `--dev` run, previewable only) vs
+ * `candidate` (packed for a named platform, shippable) — meaning something
+ * entirely different from the run *kind* the whole union is discriminated on.
+ * As `release.kind` the two sit side by side in one filter bar.
  *
- * `release.composition` and `release.target` are declared even though `label`
- * already joins them: a label is text a person reads, and these are dimensions a
- * person filters and groups by. "Every release of sonata" is a filter on the
- * composition, not a substring of the title.
+ * `composition` and `target` are columns even though `label` already joins
+ * them: a label is text a person reads, and these are dimensions a person
+ * filters and groups by.
  */
-export const releaseRunArmFields = defineRunArmFields(RELEASE_RUN_KIND, {
-  "release.kind": { type: "enum", sqlType: "text" },
-  "release.composition": { type: "text", sqlType: "text" },
-  "release.target": { type: "text", sqlType: "text" },
-  "release.platform": { type: "text", sqlType: "text", nullable: true },
-  "release.commitSha": { type: "text", sqlType: "text", nullable: true },
-  "release.commitDirty": { type: "bool", sqlType: "boolean", nullable: true },
-  "release.artifactPath": { type: "text", sqlType: "text", nullable: true },
+export const releaseRunColumns = liveArmColumns(runs, RELEASE_RUN_KIND, {
+  row: z.object({
+    kind: ReleaseRunSchema.shape.kind,
+    composition: z.string(),
+    target: z.string(),
+    platform: z.string().nullable(),
+    commitSha: z.string().nullable(),
+    commitDirty: z.boolean().nullable(),
+    artifactPath: z.string().nullable(),
+  }),
+  filterable: {
+    kind: liveText(),
+    composition: liveText(),
+    target: liveText(),
+    platform: liveText(),
+    commitSha: liveText(),
+    commitDirty: liveBoolean(),
+    artifactPath: liveText(),
+  },
+  sortable: ["kind", "composition", "target", "platform"],
 });

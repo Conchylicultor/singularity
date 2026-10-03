@@ -33,16 +33,23 @@ export {
   conversationAttachments,
 } from "./internal/schema-attachments";
 export { _tasks, _attempts, _conversations } from "./internal/tables";
+// A conversation's owner joins (attempt → task) and the owner columns bound over
+// them — the one spelling every routed conversation collection reads.
+export {
+  conversationOwnerJoins,
+  conversationOwnerColumns,
+} from "./internal/conversation-owner";
 // The derived `conversations_v` relation (carries worktreePath / taskId / taskTitle / active
-// on top of the base columns). Exposed so the All-conversations query compiler can
-// bind its FieldColumnMap to the SAME view the live resources read.
+// on top of the base columns). Exposed for the legacy `rel()` edge of the agents
+// plugin's resources; routed collections read the base tables through
+// `conversationOwnerJoins` instead (a routed compile never reads a view).
 export { conversations as conversationsView } from "./internal/views";
 // The derived `tasks_v` relation. A task's `status` is COMPUTED there and exists
 // as no column of `tasks`, so a consumer that needs the status of a SET of tasks
 // in one query has nowhere else to read it — and a `tasks_v` read costs the same
 // whether it asks for one id or fifty, so per-id reads turn a page read into one
 // full-graph round trip per linked task. Bound to the same view the live
-// resources read, for the same reason `conversationsView` is. Today's consumer
+// resources read. Today's consumer
 // is `page/annotations/todo/task-link`'s markdown provider.
 export { tasks as tasksView } from "./internal/views";
 

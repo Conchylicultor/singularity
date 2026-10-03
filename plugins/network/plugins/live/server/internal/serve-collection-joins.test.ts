@@ -223,7 +223,9 @@ describe("serveCollection with joins — routes", () => {
         id: "artist",
         table: "artists",
         // The host references it (`songs.artist_id`): resolved in the drain.
-        map: { kind: "reverse", column: "id", resolve: expect.any(Function) },
+        // Looked up by the table's own PK: the changed values are the feed's
+        // `ids`, so no key column is carried (no `column`).
+        map: { kind: "reverse", resolve: expect.any(Function) },
         columns: ["id", "name", "label_id"],
       },
       {
@@ -231,7 +233,7 @@ describe("serveCollection with joins — routes", () => {
         table: "labels",
         // Reached through `artist` — another table, read host-side of the
         // changed one: complete after commit (A10).
-        map: { kind: "reverse", column: "id", resolve: expect.any(Function) },
+        map: { kind: "reverse", resolve: expect.any(Function) },
         columns: ["id", "name"],
       },
       {
@@ -330,6 +332,55 @@ describe("serveCollection with joins — reverse routes", () => {
     const at = calls.length;
     expect(await map.resolve(["a1"], new Set(), 500)).toEqual([]);
     expect(calls.length).toBe(at);
+  });
+
+  test("a lookup on a UNIQUE non-PK column keeps `column`: its values are carried keys, not the feed's ids (A4)", async () => {
+    const studios = pgTable("studios", {
+      id: text("id").primaryKey(),
+      slug: text("slug").notNull().unique(),
+      name: text("name").notNull(),
+    });
+    const films = pgTable("films", {
+      id: text("id").primaryKey(),
+      studioSlug: text("studio_slug"),
+    });
+    const c = liveCollection(`test.live.joins-${seq++}`, {
+      row: z.object({ id: z.string(), studio: z.string().nullable() }),
+      id: "id",
+      filterable: {},
+      sortable: ["id"],
+      default: { orderBy: [["id", "asc"]], limit: 10 },
+      maxLimit: 50,
+    });
+    const recording = recordingQueryDb();
+    const specs = compileCollection(c, {
+      from: films,
+      joins: [
+        {
+          kind: "lookup",
+          alias: "studio",
+          table: studios,
+          pk: studios.slug,
+          on: { from: "base", col: films.studioSlug },
+          required: false,
+        },
+      ],
+      columns: { studio: (j) => j.studio.name },
+      db: recording.db,
+    });
+    const routes = compileWindowQuery(c.window, specs.window).serverOpts.routes!
+      .routes;
+    const map = routes.find((r) => r.id === "studio")!.map;
+    expect(map).toEqual({
+      kind: "reverse",
+      column: "slug",
+      resolve: expect.any(Function),
+    });
+    if (map.kind !== "reverse") throw new Error("not reverse");
+    await map.resolve(["acme"], null, 500);
+    expect(recording.calls.at(-1)!.sql).toBe(
+      `select distinct "id" from "films" where "films"."studio_slug" = ANY($1::text[]) limit $2`,
+    );
   });
 
   test("a lookup reached through a join over the SAME table needs the pre-image: full, with the reason (A10)", () => {

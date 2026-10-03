@@ -358,13 +358,13 @@ export function resolveRegisterCall(
   }
   // A keyed descriptor fixes the mode — the runtime serves it `keyed` whatever
   // the options say, and the keyed options take no `mode:`. `serveCollection`
-  // serves its one non-keyed mint (`:groups`) as a push value, by
+  // (and `serveUnionCollection`) serves its one non-keyed mint (`:groups`) as a push value, by
   // construction. Every other non-keyed resource is an old form serving a
   // plain descriptor, whose options must spell the mode.
   return infos.map((info) => {
     const mode = info.keyed
       ? "keyed"
-      : marker === "serveCollection"
+      : marker === "serveCollection" || marker === "serveUnionCollection"
         ? "push"
         : literalMode(marker, argsText, where);
     return info.membership

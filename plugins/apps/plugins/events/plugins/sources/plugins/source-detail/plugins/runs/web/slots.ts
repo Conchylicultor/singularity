@@ -20,8 +20,8 @@ export const RunActions = defineItemActions<EventSourceRun>();
  * `model-call` sub-plugin's section instead, and a future non-LLM source type
  * simply produces runs whose section reports that no call was made.
  *
- * The entity prop is the `runId`, NOT the row: a section fetches the run
- * through `useEventSourceRun` (one shared query key), so each owns its own
- * freshness and can mount before the pane has resolved anything.
+ * The entity prop is the `runId`, NOT the row: a section reads the run through
+ * `useEventSourceRun` (one live row subscription, shared), so each owns its own
+ * loading state and can mount before the pane has resolved anything.
  */
 export const EventSourceRunDetail = defineDetailSections<{ runId: string }>();

@@ -208,51 +208,62 @@ share one descriptor — the interleaving survives, the classification does not.
 The live view of the same bytes already says `stdout` (the log channel defaults
 an unclassified line to it), so the two views now agree.
 
-## `GET /api/release/candidate?composition&platform`
+## The release candidate and the newest run: two live reads
 
-*What would `ship` pick here, and where did it come from?* →
-`{ resolution, run, staleness }`. **The filesystem says whether a shippable
-bundle exists and matches; the DB says where it came from.** `resolution` is the
-EXACT `BundleResolution` `resolveBundle` returns — the same value
-`./singularity deploy ship` acts on — so a consumer renders
-`bundleRefusalMessage(resolution.refusal)` verbatim and **never re-derives
-shippability**. `run` is legitimately `null` (hand-run CLI releases are
-deliberately absent from `release_runs`). `staleness` compares the **manifest's**
-provenance, not the row's: they agree by construction, but the manifest always
-exists.
+A pipeline UI asks two questions that neither can answer for the other, so they
+are two reads (research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md I7c,
+D14) — both live, with no tick and no refetch:
 
-Owned here, not by deploy: the only deploy-specific input is the platform, so
-this adds no server-side edge from deploy toward release.
+- **What would `ship` pick?** — `releaseCandidate` (`release.candidate`, params
+  `{ composition, platform }`) → `{ resolution, staleness, observedAt }`.
+  `resolution` is the EXACT `BundleResolution` `resolveBundle` returns — the
+  same value `./singularity deploy ship` acts on — so a consumer renders
+  `bundleRefusalMessage(resolution.refusal)` verbatim and **never re-derives
+  shippability**. `staleness` compares the **manifest's** provenance (a hand-run
+  CLI release writes a manifest and no row). There is no `run`: a filesystem
+  value cannot carry a row the change feed would have to see.
+- **What is the newest run, whatever its state?** — the routed
+  `release.history` window at `limit: 1`, `where: { composition }`, newest
+  first. The candidate is a bundle on disk, so it is blind by construction to a
+  build in flight or one that just failed.
 
-A `dedupe: true` GET, **not** a live resource — its answer is a directory walk
-and git, not a table. Consumers refetch on the `release.history-revision` tick
-(its one remaining reader: remote-deploy's release info).
+`release.candidate` is **external** (`server/internal/candidate-resource.ts`,
+the memoized observation in `candidate-observer.ts`):
+its truth is the bundle directory and git. It recomputes on `refHeadServed`
+(staleness is relative to HEAD) and on `noteCandidateClosed`, which
+`closeReleaseRow` calls when ITS guarded UPDATE closed the row (`.returning`)
+and the run was a `candidate` of the `web` target whose manifest names a
+`PlatformTag` — the one pair that can have moved. A `createSignedMemo` keyed
+`composition\0platform` makes every other recompute a cache hit; its signature
+is `rev-parse HEAD` ‖ `bundleSignature` (bundles: the pointer's target, the
+manifest's mtime and size, whether `dist/<comp>-web-<platform>` exists) ‖ the
+pair's close epoch, and `revalidate` is that same signature. A failed compute
+(a corrupt `RELEASE.json`) is not cached, so it is the value's error arm. The
+memo entry is evicted when the pair's last subscriber leaves.
 
-## `GET /api/release/latest?composition=<name>`
+**`observedAt` and the client gate.** Nothing orders the two streams, so the
+newest run can land before the candidate it produced. The consumer holds
+`loading` only while the candidate PROVABLY predates the run (remote-deploy's
+`candidatePredatesLatest`): the run is a succeeded web `candidate` of this
+platform and either the candidate resolved an older run built before it
+started, or found no pointer and was observed before it finished. The close
+epoch is what makes the second arm end: every candidate close forces a fresh
+observation (stamped before the filesystem read) even when the bundle
+signature did not move, so a run that succeeded yet claimed no pointer cannot
+hold the gate forever. The close instant is also the memo's `notBefore`, so a
+compute already running when the run closed (a HEAD-advance recompute in its
+`compareToHead` spawn) is superseded rather than joined — its pre-close
+observation can never be the post-close push. The epoch carries the process's
+boot instant, so an ETag from a previous process never matches.
 
-*What is the newest run of this composition, whatever its state?* →
-`{ run: ReleaseRun | null }`.
+**Known limit:** a hand-run `./singularity release` writes no row, so it
+notifies nothing — it shows on the next HEAD advance, candidate close or
+remount.
 
-**Both endpoints exist because neither can answer the other's question.** The
-candidate asks the **filesystem** — *what would `ship` pick* — a resolved bundle,
-so it is blind by construction to a build still running or one that just failed.
-This asks the **DB** — *what is the newest run*, any status. A pipeline needs
-both, gated together. Scoped `(namespace, composition) ORDER BY started_at DESC
-LIMIT 1`, exactly the `release_runs_ns_comp_started_idx` prefix.
-
-`run` is wrapped in an object, not a top-level `ReleaseRunSchema.nullable()`:
-`implement()` turns a `null` return into **204** and `fetchEndpoint` turns 204
-into `undefined`, indistinguishable from still-loading. Applies to any
-`implement()` handler whose absence is meaningful.
-
-**Never borrow the history window to fetch one row.** `releaseHistory` is the
-Studio history DataView's live source, scoped to that surface's custom columns;
-the latest run is this endpoint, a run by id is `useLiveRow(releaseRuns, id)`.
-
-`internal/wire-columns.ts` is the one `release_runs` projection the two
-hand-written read paths (candidate, latest run) select; add a column there, not
-per-site. The collections are not among them: `serveCollection` projects exactly
-`ReleaseRunSchema`'s keys, so a new column reaches them through the schema.
+`serveCollection` projects exactly `ReleaseRunSchema`'s keys for both
+collections, so a new `release_runs` column reaches every read through the
+schema; there is no hand-written projection left (`wire-columns.ts` is gone with
+the two endpoints that selected it).
 
 ## Public surface (for the Studio UI)
 
@@ -271,8 +282,8 @@ per-site. The collections are not among them: `serveCollection` projects exactly
     custom columns sort and filter it server-side
     (research/2026-09-29-global-scoped-change-routing.md P3). It replaced the
     `queryReleaseHistory` keyset endpoint.
-  - `releaseRunsRevisionResource` — a scalar invalidation tick; its one reader
-    is remote-deploy's release info (the candidate refetch).
+  - `releaseCandidate` / `ReleaseCandidate` — what `ship` would pick for one
+    `(composition, platform)`, live (see above).
   - `releasePreviews` / `Preview` — the live preview map, read with
     `useLive(releasePreviews)`.
 
@@ -406,13 +417,15 @@ remote is built here.
     - `resource.declare` "release.history"
     - `resource.declare` "release.history:rows"
     - `resource.declare` "release.history:groups"
-    - `resource.declare` "release.history-revision"
+    - `resource.declare` "release.candidate"
     - `resource.declare` "release.previews"
   - Uses:
     - `database.db`
     - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/git/git-read-cache.createSignedMemo`
+    - `infra/git/git-watcher.refHeadServed`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/jobs/supervised-job.runEnded`
     - `infra/jobs/supervised-job.RunEndedPayload`
@@ -424,8 +437,10 @@ remote is built here.
     - `network/live.serveCollection`
     - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
+    - `release/bundles.bundleSignature`
     - `release/bundles.compareToHead`
     - `release/bundles.newReleaseRunId`
+    - `release/bundles.readHeadSha`
     - `release/bundles.releaseOutDir`
     - `release/bundles.resolveBundle`
   - DB schema: `plugins/release/server/internal/tables.ts`
@@ -442,16 +457,14 @@ remote is built here.
     - `defineSupervisedJob('release.run.supervised')`
     - `defineDaemon('release.preview')`
   - Resources:
+    - `release.candidate` (push)
     - `release.history` (keyed, window)
-    - `release.history-revision` (push)
     - `release.history:groups` (push)
     - `release.history:rows` (keyed, point)
     - `release.previews` (push)
     - `release.runs:rows` (keyed, point)
   - Routes:
     - `POST /api/release`
-    - `GET /api/release/candidate`
-    - `GET /api/release/latest`
     - `POST /api/release/runs/:id/preview`
     - `POST /api/release/runs/:id/preview/stop`
     - `GET /api/release/runs/:id/logs`
@@ -462,15 +475,13 @@ remote is built here.
     - `network/live.liveValue`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveText`
-    - `primitives/live-state.resourceDescriptor`
     - `release/bundles.ReleaseManifestSchema`
   - Exports (types):
     - `PlatformTag`
     - `PlatformTagResult`
     - `Preview`
-    - `ReleaseCandidateResponse`
+    - `ReleaseCandidate`
     - `ReleaseIntent`
-    - `ReleaseLatestRunResponse`
     - `ReleaseLogLine`
     - `ReleaseLogsResponse`
     - `ReleaseRun`
@@ -490,18 +501,15 @@ remote is built here.
     - `PreviewSchema`
     - `RELEASE_LOG_CHANNEL`
     - `RELEASE_TARGETS`
-    - `releaseCandidateEndpoint`
-    - `ReleaseCandidateResponseSchema`
+    - `releaseCandidate`
+    - `ReleaseCandidateSchema`
     - `releaseHistory`
     - `ReleaseIntentSchema`
-    - `releaseLatestRunEndpoint`
-    - `ReleaseLatestRunResponseSchema`
     - `releaseLogsEndpoint`
     - `ReleaseLogsResponseSchema`
     - `releasePreviews`
     - `releaseRuns`
     - `ReleaseRunSchema`
-    - `releaseRunsRevisionResource`
     - `releaseTargetById`
     - `STAGED_INTENT`
     - `StalenessSchema`

@@ -1,12 +1,24 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
+import { LATENCY_WINDOWS, LatencySummarySchema } from "./endpoints";
 
 /**
- * A tick that moves each time the server writes a minute of the ledger. The Stats
- * card keeps it OUT of its query key and refetches its summary in place when it
- * moves (the `runs.revision` precedent): the rows themselves are a growing
- * collection with no bounded reader, a number is bounded by construction.
+ * The responsiveness summary for one window: p50 / p95 by minute class, the
+ * exit criteria, thread owners and the slowest interactions.
+ *
+ * Served external (`server/internal/summary-resource.ts`): its tables are
+ * excluded from the change feed by declaration, so the ledger's own minute
+ * flush is the only change signal, and it notifies the subscribed windows.
+ *
+ * `load: "on-demand"`: the 7-day histogram sum alone — one of the loader's
+ * queries, so a lower bound on the whole load — measured ~340 ms on main
+ * (2026-10-02, EXPLAIN ANALYZE, 28k minute rows × 67 buckets), past the 50 ms
+ * bar for a value recomputed in the shared flush — so a flush sends an `invalidate` and each
+ * open card refetches over HTTP (D15 of
+ * research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md).
  */
-export const latencyLedgerRevisionResource = resourceDescriptor<{
-  rev: number;
-}>("latency-ledger.revision", z.object({ rev: z.number() }), { rev: 0 });
+export const latencySummary = liveValue("latency-ledger.summary", {
+  schema: LatencySummarySchema,
+  params: { window: z.enum(LATENCY_WINDOWS) },
+  load: "on-demand",
+});

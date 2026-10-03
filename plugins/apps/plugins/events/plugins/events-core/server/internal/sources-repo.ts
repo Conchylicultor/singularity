@@ -167,18 +167,6 @@ export async function requireRun(runId: string): Promise<EventSourceRun> {
   return row;
 }
 
-export async function listRuns(
-  sourceId: string,
-  limit: number,
-): Promise<EventSourceRun[]> {
-  return db
-    .select()
-    .from(_eventSourceRuns)
-    .where(eq(_eventSourceRuns.sourceId, sourceId))
-    .orderBy(desc(_eventSourceRuns.startedAt))
-    .limit(limit);
-}
-
 /**
  * The events one run touched, each carrying what that run did to it, ordered by
  * when the event happens — the order a person reads an events list in.

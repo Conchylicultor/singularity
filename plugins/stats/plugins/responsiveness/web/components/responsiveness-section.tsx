@@ -1,25 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
-import {
-  getEndpointErrorMessage,
-  useEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
-import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ChartState } from "@plugins/stats/plugins/commits/web";
 import {
   METRIC_LABELS,
   PRESSURE_DECOMPRESSIONS_PER_SEC,
   PRESSURE_FREE_MEM_MB,
-  getLatencySummary,
-  latencyLedgerRevisionResource,
+  latencySummary,
   type LatencyStat,
   type LatencySummary,
   type LatencyWindow,
@@ -36,23 +28,10 @@ type Summary = LatencySummary;
 
 export function ResponsivenessSection() {
   const [window, setWindow] = useState<LatencyWindow>("24h");
-  const {
-    data: summary,
-    error,
-    refetch,
-  } = useEndpoint(getLatencySummary, {}, { query: { window } });
-
-  // The server ticks this each time it writes a minute. Kept OUT of the query key
-  // and used to refetch in place (the `runs.revision` pattern): a tick in the key
-  // would drop the card back to its loading state once a minute.
-  const tick = useResource(latencyLedgerRevisionResource);
-  const rev = matchResource(tick, { loading: () => null, ready: (d) => d.rev });
-  const lastRev = useRef<unknown>(rev);
-  useEffect(() => {
-    if (lastRev.current === rev) return;
-    lastRev.current = rev;
-    void refetch();
-  }, [rev, refetch]);
+  // Live: the server's minute flush refreshes the subscribed window. A switch
+  // of window is a new tuple, so it shows its loading state rather than the
+  // previous window's numbers.
+  const summary = useLive(latencySummary, { window });
 
   return (
     <Stack gap="lg">
@@ -71,11 +50,11 @@ export function ResponsivenessSection() {
         />
       </Stack>
       <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={summary === undefined}
+        error={summary.status === "error" ? summary.error.message : null}
+        loading={summary.status === "loading"}
         empty={false}
       >
-        {summary && <SummaryView summary={summary} />}
+        {summary.status === "ready" && <SummaryView summary={summary.data} />}
       </ChartState>
     </Stack>
   );

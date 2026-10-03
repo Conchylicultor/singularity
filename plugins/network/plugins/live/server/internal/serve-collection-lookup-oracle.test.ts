@@ -63,6 +63,8 @@ import {
 } from "@plugins/database/plugins/change-feed/server";
 import {
   createChangeFeedListener,
+  installedLayouts,
+  readInstalledTriggers,
   rebuildTriggers,
 } from "@plugins/database/plugins/change-feed/server/testing";
 import {
@@ -76,9 +78,10 @@ import {
   type ClientView,
   type RecordedFrame,
 } from "@plugins/framework/plugins/resource-runtime/core/testing";
-import type {
-  KeyedSideJoin,
-  LookupJoin,
+import {
+  expr,
+  type KeyedSideJoin,
+  type LookupJoin,
 } from "@plugins/infra/plugins/query-resource/core";
 import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
@@ -165,6 +168,20 @@ const itemsCollection = liveCollection("test.live.lookup-oracle.items", {
     note: liveText(),
   },
   sortable: ["n", "title", "srcLabel"],
+  default: { orderBy: [["n", "asc"]], limit: 4 },
+  maxLimit: 20,
+});
+
+// An EXPRESSION over the lookup (step 10 of
+// research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md): `tag` reads
+// the source's label through its reverse route, and the host's title through
+// its identity route — a label rename refills exactly the source's items.
+const TagRow = z.object({ id: z.string(), tag: z.string(), n: z.number() });
+const tagCollection = liveCollection("test.live.lookup-oracle.tags", {
+  row: TagRow,
+  id: "id",
+  filterable: { tag: liveText() },
+  sortable: ["tag", "n"],
   default: { orderBy: [["n", "asc"]], limit: 4 },
   maxLimit: 20,
 });
@@ -290,6 +307,28 @@ beforeAll(async () => {
     ...specs.groups,
     loader: record(itemsCollection.groups.key, specs.groups.loader),
   });
+  const tagSpecs = compileCollection(tagCollection, {
+    from: items,
+    joins: [sourceJoin],
+    columns: {
+      tag: (j) =>
+        expr(sql`${j.source.label} || '/' || ${j.base.title}`, {
+          decoder: String,
+          sqlType: "text",
+          notNull: true,
+        }),
+    },
+    db: db as unknown as QueryDb,
+  });
+  const tagWindow = compileWindowQuery(
+    tagCollection.window,
+    tagSpecs.window,
+  ).serverOpts;
+  defineResource(tagCollection.window, {
+    ...tagWindow,
+    loader: record(tagCollection.key, tagWindow.loader),
+  });
+  truth.set(tagCollection.key, (p) => tagWindow.loader(p as never));
   truth.set(itemsCollection.key, (p) => windowOpts.loader(p as never));
   truth.set(itemsCollection.rows.key, (p) => rowsOpts.loader(p as never));
   truth.set(itemsCollection.groups.key, (p) => specs.groups.loader(p as never));
@@ -483,6 +522,31 @@ interface Step {
 }
 
 describe("serveCollection over lookups, a self-join and a keyed side — differential oracle", () => {
+  test("reverse routes on a PK carry no key (A17): the derived layout and the installed triggers both carry [] for the looked-up tables", async () => {
+    // `source` and `parent` look up by their table's own PK, so their changed
+    // values are the feed's `ids` — no `column`, nothing carried. (`items` is
+    // also the identity table, which reads `ids` too.) The keyed side still
+    // carries its selectors and host key.
+    const required = new Map(
+      routedTableRequirements().map((r) => [r.table, r.carry]),
+    );
+    expect(required.get(SRC)).toEqual([]);
+    expect(required.get(HOST)).toEqual([]);
+    expect(required.get(NOTES)).toEqual(["col", "row_key", "view_id"]);
+    const installed = installedLayouts(
+      await readInstalledTriggers(testDb.db, [SRC, HOST]),
+    );
+    for (const table of [SRC, HOST]) {
+      const layout = installed.get(table)!;
+      expect(layout.pk).toBe("id");
+      expect([...layout.triggers.values()]).toEqual([
+        { pk: "id", carry: [] },
+        { pk: "id", carry: [] },
+        { pk: "id", carry: [] },
+      ]);
+    }
+  });
+
   test("random host / source / note writes: every view converges, refills stay O(changed), unread columns reach nothing", async () => {
     const rand = prng(7171);
     const any = <T>(xs: readonly T[]) => xs[Math.floor(rand() * xs.length)]!;
@@ -1008,5 +1072,70 @@ describe("serveCollection over lookups, a self-join and a keyed side — differe
       );
     expect(stray).toEqual([]);
     unsubscribe(tuple.key, tuple.params);
+  }, 60_000);
+
+  test("an expression over the lookup: a label rename refills exactly the source's items, sorted and filtered by it", async () => {
+    await db.execute(
+      sql.raw(
+        `INSERT INTO ${SRC} (id, label, enabled, status) VALUES ('ea', 'A', true, 'idle'), ('eb', 'B', true, 'idle');
+         INSERT INTO ${HOST} (id, title, n, src_id)
+           SELECT 'ea-' || g, 't' || g, 300 + g, 'ea' FROM generate_series(1, 3) g;
+         INSERT INTO ${HOST} (id, title, n, src_id)
+           SELECT 'eb-' || g, 't' || g, 400 + g, 'eb' FROM generate_series(1, 3) g;`,
+      ),
+    );
+    await quiet();
+    const tw = tagCollection.window.window;
+    const tuples = [
+      // Sorted by the expression: the lookup is membership.
+      {
+        key: tagCollection.key,
+        params: tw.encode({ orderBy: [["tag", "desc"]], limit: 5 }),
+      },
+      // Filtered by it: a rename moves items in and out.
+      {
+        key: tagCollection.key,
+        params: tw.encode({ where: { tag: { contains: "Z/" } }, limit: 10 }),
+      },
+    ];
+    for (const t of tuples) await subscribe(t.key, t.params);
+    await converge(tuples, "subscribed");
+
+    for (const [src, label] of [
+      ["ea", "Z"],
+      ["eb", "ZZ"],
+      ["ea", "A2"],
+    ] as const) {
+      const at = loads.length;
+      await db.execute(
+        sql`UPDATE ${sources} SET label = ${label} WHERE id = ${src}`,
+      );
+      await until(
+        () => loads.slice(at).some((l) => l.key === tagCollection.key),
+        () => `the rename of ${src} reached the tag windows`,
+      );
+      const expected = await converge(tuples, `rename ${src} → ${label}`);
+      const refills = loads
+        .slice(at)
+        .filter((l) => l.key === tagCollection.key);
+      expect(refills.some((l) => l.ids === "FULL")).toBe(false);
+      // The source's own items, or a row their moves made room for.
+      const held = new Set(
+        [...expected.values()].flatMap((v) =>
+          (v as { id: string }[]).map((r) => r.id),
+        ),
+      );
+      const stray = refills
+        .flatMap((l) => l.ids as string[])
+        .filter((id) => !id.startsWith(`${src}-`) && !held.has(id));
+      expect(stray).toEqual([]);
+    }
+    // The filtered tuple now holds exactly the items whose tag reads "…Z/…".
+    expect(
+      (viewOf(tuples[1]!.key, tuples[1]!.params).value as { id: string }[])
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual(["eb-1", "eb-2", "eb-3"]);
+    for (const t of tuples) unsubscribe(t.key, t.params);
   }, 60_000);
 });

@@ -1,9 +1,5 @@
 import type { ReactElement } from "react";
 import {
-  useResource,
-  matchResource,
-} from "@plugins/primitives/plugins/live-state/web";
-import {
   Pane,
   PaneChrome,
   useOpenPane,
@@ -13,19 +9,27 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import {
   DataView,
   defineDataView,
+  liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  CONVERSATION_FILTERABLE,
+  allConversations,
   CONVERSATION_SEARCHABLE,
-  conversationsRevisionResource,
-  queryConversations,
+  type ConversationListRow,
 } from "../core";
 import { useConversationFieldDefs } from "./internal/fields";
 
+/** The surface id — and `allConversations`' column scope (asserted at mount). */
 const ALL_CONVERSATIONS_VIEW = defineDataView("all-conversations");
+
+/**
+ * The live source: the `conversations.all` collection, kept fresh by the routed
+ * change feed (a conversation write, an attempt's move, a task rename) with no
+ * tick and no refetch of the loaded pages.
+ */
+const allConversationsSource = liveDataSource(allConversations, {
+  searchable: CONVERSATION_SEARCHABLE,
+});
 
 export const allConversationsPane = Pane.define({
   route: defineRoute({
@@ -39,31 +43,16 @@ export const allConversationsPane = Pane.define({
 });
 
 function AllConversationsView(): ReactElement {
-  // The cheap scalar tick drives an in-place refetch of the loaded window; the
-  // paginated SQL query is the source of truth. While pending, hand a null tick
-  // (no refetch) — the first settled `rev` then refreshes once.
-  const tick = useResource(conversationsRevisionResource);
   const openPane = useOpenPane();
   const fields = useConversationFieldDefs();
-  const changeTick = matchResource(tick, {
-    loading: () => null,
-    ready: (d) => d.rev,
-  });
 
   return (
     <PaneChrome pane={allConversationsPane}>
-      <DataView<Conversation>
+      <DataView<ConversationListRow>
         storageKey={ALL_CONVERSATIONS_VIEW}
         fields={fields}
-        rowKey={(c) => c.id}
         views={["table", "list"]}
-        dataSource={{
-          changeTick,
-          filterable: CONVERSATION_FILTERABLE,
-          searchable: CONVERSATION_SEARCHABLE,
-          fetchPage: (args) =>
-            fetchEndpoint(queryConversations, {}, { body: args }),
-        }}
+        source={allConversationsSource}
         onRowActivate={(c) =>
           openPane(conversationPane, { convId: c.id }, { mode: "push" })
         }

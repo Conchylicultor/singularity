@@ -562,6 +562,48 @@ describe("reverse routes", () => {
     expect(f.clientValue(E)).toEqual(f.full(E));
   });
 
+  // The compiler omits `column` on a lookup by the changed table's own PK:
+  // the changed values are then `change.ids`, and no key is carried.
+  const pkReverseRoutes = (w: World, log: ResolveCall[]): Route[] =>
+    worldRoutes(w, log).map((r) => {
+      if (r.map.kind !== "reverse") return r;
+      const { column: _column, ...map } = r.map;
+      return { ...r, map };
+    });
+
+  test("a column-less reverse (on the PK) resolves `change.ids` — no keys needed", async () => {
+    const f = await seeded({ routes: pkReverseRoutes });
+    expect(
+      f.h.runtime.routedTableRequirements().find((r) => r.table === "sources")!
+        .carry,
+    ).toEqual([]);
+    const at = f.loads.length;
+    f.w.sources.get("s1")!.label = "S1'";
+    f.change("sources", "U", { ids: ["s1"], keys: null });
+    await settle();
+    expect(f.resolveLog).toEqual([
+      { changed: ["s1"], within: ["h1", "h2", "h3"] },
+    ]);
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h1", "h2"] }]);
+    expect(f.clientValue(W3)).toEqual(f.full(W3));
+  });
+
+  test("a column-less reverse: unknown ids (null) recompute FULL; a known-empty set ([]) touches nothing", async () => {
+    const f = await seeded({ routes: pkReverseRoutes });
+    let at = f.loads.length;
+    f.change("sources", "U", { ids: null, keys: null });
+    await settle();
+    expect(f.resolveLog).toEqual([]);
+    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: "FULL" }]);
+    at = f.loads.length;
+    const pushes = f.pushesOf(W3).length;
+    f.change("sources", "U", { ids: [], keys: null });
+    await settle();
+    expect(f.resolveLog).toEqual([]);
+    expect(f.loadsSince(at)).toEqual([]);
+    expect(f.pushesOf(W3).length).toBe(pushes);
+  });
+
   test("a throwing resolve recomputes its readers FULL, and is reported", async () => {
     const f = routed({
       routes: (w, log) =>

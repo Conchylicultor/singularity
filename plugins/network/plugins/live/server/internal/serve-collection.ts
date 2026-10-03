@@ -23,7 +23,9 @@ import {
 } from "@plugins/database/plugins/sql-column/server";
 import {
   BASE_RELATION,
+  isExprField,
   type ColumnRef,
+  type ExprField,
   type JoinColumns,
   type JoinRef,
   type JoinRefs,
@@ -52,6 +54,7 @@ import {
   scopedLiveColumns,
   type LiveCollection,
   type LiveColumnsDeclaration,
+  type LiveColumnsOwner,
   type LiveGroup,
   type LiveGroupParams,
   type LiveLookupCollection,
@@ -136,20 +139,37 @@ export type ColumnOverride<
 > = (j: JoinRefs<ColumnsOf<T>, J>) => JoinRef<JoinRefs<ColumnsOf<T>, J>>;
 
 /**
+ * How one row field binds, over the same `j` as a `ColumnOverride`: to one of
+ * its column refs, or to an expression over them (query-resource's
+ * `ExprField`: `(j) => expr(sql\`upper(${j.artist.name})\`, { decoder,
+ * sqlType })`, each ref rendering its relation's defaulted wire column). An
+ * expression's value type `V` — its decoder's, `| null` unless `notNull`, or
+ * its `wire` codec's — must be the row field's type (tsc). Never the id.
+ */
+type FieldBinding<
+  T extends CollectionSource,
+  J extends readonly JoinSpec[],
+  V,
+> = (
+  j: JoinRefs<ColumnsOf<T>, J>,
+) => JoinRef<JoinRefs<ColumnsOf<T>, J>> | ExprField<V>;
+
+/**
  * `columns` is optional while every row field is a column of `from` by
  * property name, and REQUIRED — naming exactly the missing ones — when some
- * are not (a renamed column, or a joined one). A row field bound nowhere is a
- * tsc error.
+ * are not (a renamed column, a joined one, or an expression). A row field
+ * bound nowhere is a tsc error.
  */
 type ColumnOverrides<
   T extends CollectionSource,
-  N extends string,
+  Row,
+  N extends string & keyof Row,
   J extends readonly JoinSpec[],
 > = [Exclude<N, ColumnNamesOf<T>>] extends [never]
-  ? { columns?: { [K in N]?: ColumnOverride<T, J> } }
+  ? { columns?: { [K in N]?: FieldBinding<T, J, Row[K]> } }
   : {
-      columns: { [K in N]?: ColumnOverride<T, J> } & {
-        [K in Exclude<N, ColumnNamesOf<T>>]: ColumnOverride<T, J>;
+      columns: { [K in N]?: FieldBinding<T, J, Row[K]> } & {
+        [K in Exclude<N, ColumnNamesOf<T>>]: FieldBinding<T, J, Row[K]>;
       };
     };
 
@@ -200,7 +220,7 @@ export type ServeCollectionOptions<
   defaults?: readonly DefaultScope<T, Row, J, U>[];
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
-} & ColumnOverrides<T, BoundFields<Row>, J> &
+} & ColumnOverrides<T, Row, BoundFields<Row>, J> &
   WireCheck<T, Row>;
 
 /** One default scope of a collection (see `ServeCollectionOptions.defaults`). */
@@ -260,6 +280,16 @@ function isEntitySource(from: CollectionSource): from is EntitySource {
 }
 
 /**
+ * A collection one table serves: any but a union (`arms`), whose rows come
+ * from several tables (T12) — its `arms` is `null`.
+ */
+type SingleTableCollection<Row, F, S extends string> = LiveCollection<
+  Row,
+  F,
+  S
+> & { arms: null };
+
+/**
  * Derive the specs for a collection — three, or just `rows` for a lookup-only
  * one. Exported apart from `serveCollection` (which also registers) so a test
  * can compile them against a fake or throwaway `db` and its own runtime — the
@@ -272,7 +302,7 @@ export function compileCollection<
   T extends CollectionSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
-  collection: LiveCollection<Row, F, S>,
+  collection: SingleTableCollection<Row, F, S>,
   opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
   contributed?: readonly ServedColumns[],
   scoped?: readonly ServedScopedColumns[],
@@ -302,6 +332,12 @@ export function compileCollection<
   const fail = (message: string): never => {
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
   };
+  // Typed away (`SingleTableCollection`); refused against a cast past it.
+  if (((collection as { arms?: unknown }).arms ?? null) !== null) {
+    fail(
+      "a union collection (declared with `arms`) reads several tables — its server half compiles its arms as one union, never one table's `serveCollection`",
+    );
+  }
   const isContributed =
     (collection as { contributed?: boolean }).contributed === true;
   if (contributed.length > 0 && !isContributed) {
@@ -313,10 +349,24 @@ export function compileCollection<
   // fold into one `$columns` slot.
   const handles: LiveColumnsDeclaration[] = [];
   for (const c of contributed) {
-    if (c.handle.collection !== collection.key) {
-      fail(
-        `contributed columns "${c.handle.name}" belong to "${c.handle.collection}"`,
-      );
+    // Typed contributed (`ServedColumns`); checked against a cast past it.
+    const owner: LiveColumnsOwner = c.handle.owner;
+    switch (owner.kind) {
+      case "contributed":
+        if (owner.collection !== collection.key) {
+          fail(
+            `contributed columns "${c.handle.name}" belong to "${owner.collection}"`,
+          );
+        }
+        break;
+      case "scoped":
+      case "arm":
+        fail(
+          `columns "${c.handle.name}" are ${owner.kind === "scoped" ? "a scoped set (served by `LiveColumns.Scoped`)" : `arm "${owner.arm}"'s own (served by its union)`} — only a contributed set is served through \`LiveColumns.Serve\``,
+        );
+        break;
+      default:
+        owner satisfies never;
     }
     // The type admits only an extension join; a cast past it would widen the
     // base collection's semantics (an INNER lookup drops hosts).
@@ -341,14 +391,26 @@ export function compileCollection<
     : (getTableColumns(table) as Record<string, PgColumn>);
   const overrides = (opts.columns ?? {}) as Record<
     string,
-    ((j: unknown) => ColumnRef) | undefined
+    ((j: unknown) => ColumnRef | ExprField) | undefined
   >;
   const joinSpecs: readonly JoinSpec[] = [
     ...(opts.joins ?? []),
     ...contributed.map((c) => c.join),
   ];
-  const refs = joinRefs(sourceColumns, joinSpecs);
-  const refOf = (name: string): ColumnRef => {
+  // A ref interpolated into an expression renders through the plan — compiled
+  // below, once the id (which keys it) is resolved; nothing renders before.
+  let renderRef: ((ref: ColumnRef) => ReadColumn) | undefined;
+  const refs = joinRefs(sourceColumns, joinSpecs, (ref) =>
+    (
+      renderRef ??
+      fail(
+        `"${ref.from}"."${ref.col.name}" was rendered before the joins were compiled.`,
+      )
+    )(ref),
+  );
+  // A row field's binding: an override's answer (a ref, or an expression),
+  // else the source's column of the same name.
+  const bindingOf = (name: string): ColumnRef | ExprField => {
     const override = overrides[name];
     if (override) return override(refs);
     const col = sourceColumns[name];
@@ -360,7 +422,13 @@ export function compileCollection<
   };
   // The id binds to the base table — it IS the host identity every join and
   // route is keyed by — so it is resolved before the joins are rendered.
-  const idRef = refOf(collection.id);
+  const idBinding = bindingOf(collection.id);
+  if (isExprField(idBinding)) {
+    fail(
+      `the id "${collection.id}" binds to an expression — a collection's id is its base table's column, the identity every route is keyed by.`,
+    );
+  }
+  const idRef = idBinding as ColumnRef;
   if (idRef.from !== BASE_RELATION) {
     fail(
       `the id "${collection.id}" binds to join "${idRef.from}" — a collection's id is its base table's column.`,
@@ -397,6 +465,7 @@ export function compileCollection<
     `serveCollection("${collection.key}")`,
     families,
   );
+  renderRef = joins.render;
 
   // The projection IS the row schema: every row field bound to a column, and
   // nothing else — so a server-only column (a dedup key) cannot reach the
@@ -407,8 +476,24 @@ export function compileCollection<
   // registered against (a join's rendered column is an alias proxy, a
   // different object).
   const boundRefs = new Map<string, ColumnRef>();
+  // The expression fields' wire codecs (an `ExprField`'s `wire`).
+  const exprWires = new Map<string, WireCodec<unknown, unknown>>();
   for (const name of collection.rowKeys) {
-    const ref = name === collection.id ? idRef : refOf(name);
+    const binding = name === collection.id ? idRef : bindingOf(name);
+    if (isExprField(binding)) {
+      // Rendered once, here, over this plan's defaulted wire columns: the one
+      // SQL object every shape (window, point, groups) projects, filters and
+      // sorts by, and every plan recognises.
+      bound.set(
+        name,
+        joins.renderExpr(binding, { name, baseColumns: sourceColumns }),
+      );
+      if (binding.wire !== undefined) {
+        exprWires.set(name, binding.wire as WireCodec<unknown, unknown>);
+      }
+      continue;
+    }
+    const ref = binding;
     bound.set(name, joins.render(ref));
     // A ref `j` did not offer: a server-only column (the types stop a
     // literal `j` never made; this stops a cast).
@@ -469,14 +554,25 @@ export function compileCollection<
   // host with no joined row, whatever its own NOT NULL says — so its field
   // must accept null, or the first such host fails the row parse at load time.
   // A defaulted extension column reads its default instead (never NULL).
+  // An expression that does not declare `notNull` may read NULL: its field
+  // must accept null too (the type says so; this is the runtime backstop).
   for (const [name, col] of bound) {
+    if (joins.isExpr(col)) {
+      if (joins.canBeNull(col) && !fieldSchema(name).safeParse(null).success) {
+        fail(
+          `row field "${name}" is an expression that may read NULL (it declares no \`notNull: true\`) — make the field nullable, or declare notNull when its SQL cannot produce NULL.`,
+        );
+      }
+      continue;
+    }
+    const [relation] = joins.relationsIn(col);
     if (
-      joins.outer(joins.relationOf(col)) &&
+      joins.outer(relation!) &&
       joins.canBeNull(col) &&
       !fieldSchema(name).safeParse(null).success
     ) {
       fail(
-        `row field "${name}" reads "${joins.relationOf(col)}"."${joins.columnOf(col).name}" through a LEFT join, which is NULL for a host with no joined row — make the field nullable.`,
+        `row field "${name}" reads "${relation}"."${joins.nameOf(col)}" through a LEFT join, which is NULL for a host with no joined row — make the field nullable.`,
       );
     }
   }
@@ -500,7 +596,7 @@ export function compileCollection<
 
   // A column type's wire form (sql-column `withWire`), applied in JS to every
   // row a loader returns — the field's type is the codec's wire type (tsc).
-  const wired: [string, WireCodec<unknown, unknown>][] = [];
+  const wired: [string, WireCodec<unknown, unknown>][] = [...exprWires];
   for (const [name, ref] of boundRefs) {
     const codec = columnWireCodec(ref.col);
     if (codec) wired.push([name, codec]);
@@ -857,7 +953,7 @@ export function serveCollection<
   T extends CollectionSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
-  collection: LiveCollection<Row, F, S>,
+  collection: SingleTableCollection<Row, F, S>,
   opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
 ): ServedCollection<Row>;
 export function serveCollection<
@@ -875,7 +971,7 @@ export function serveCollection<
   T extends CollectionSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
-  collection: LiveCollection<Row, F, S> | LiveLookupCollection<Row>,
+  collection: SingleTableCollection<Row, F, S> | LiveLookupCollection<Row>,
   opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
 ): ServedCollection<Row> | ServedLookupCollection<Row> {
   if (collection.window === undefined) {
@@ -928,8 +1024,7 @@ const contributedKeys = new Set<string>();
 // reach the wire: its web half would fail every decode instead. Fail boot.
 onDeferredResourcesBound(() => {
   const orphans = LiveColumns.Serve.getContributions().filter(
-    (s) =>
-      s.handle.collection === null || !contributedKeys.has(s.handle.collection),
+    (s) => !contributedKeys.has(s.handle.owner.collection),
   );
   if (orphans.length > 0) {
     throw new Error(
@@ -937,7 +1032,7 @@ onDeferredResourcesBound(() => {
         orphans
           .map(
             (s) =>
-              `"${s.handle.collection}" ← "${s.handle.name}" (${s._pluginId ?? "?"})`,
+              `"${s.handle.owner.collection}" ← "${s.handle.name}" (${s._pluginId ?? "?"})`,
           )
           .join(", ") +
         ". Serve the contributed collection (declared `contributed: true`), or drop the contribution.",
@@ -952,7 +1047,7 @@ function serveContributed<
   T extends CollectionSource,
   const J extends readonly JoinSpec[],
 >(
-  collection: LiveCollection<Row, F, S>,
+  collection: SingleTableCollection<Row, F, S>,
   opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
 ): ServedCollection<Row> {
   if (collection.contributed) contributedKeys.add(collection.key);
@@ -963,7 +1058,7 @@ function serveContributed<
       collection,
       opts,
       LiveColumns.Serve.getContributions().filter(
-        (s) => s.handle.collection === collection.key,
+        (s) => s.handle.owner.collection === collection.key,
       ),
       collection.columnScope === null
         ? []

@@ -2,12 +2,14 @@ import { useMemo, type ReactNode } from "react";
 import {
   DataView,
   defineDataView,
+  liveDataSource,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { useEventSourceRuns } from "@plugins/apps/plugins/events/plugins/events-core/web";
-import type { EventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  eventSourceRuns,
+  type EventSourceRun,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 import {
   RUN_OUTCOME_OPTIONS,
   formatDuration,
@@ -19,25 +21,32 @@ import { RunRow } from "./run-row";
 /**
  * The run ledger, config-backed like every DataView: the view instances live
  * only in `config/apps/events/sources/source-detail/runs/events.source-runs.jsonc`.
+ * It IS `eventSourceRuns`' column scope (asserted at mount): the surface whose
+ * custom columns sort and filter the live window.
  */
 const RUNS_VIEW = defineDataView("events.source-runs");
 
-/** How many runs to load. The ledger is retention-swept at 30 days upstream. */
-const RUN_LIMIT = 50;
-
 /**
- * Stable identity for the loading render, so a re-render while the fetch is in
- * flight does not churn the DataView's row pipeline. Never a "failure" value —
- * `loading` below is what distinguishes empty-because-loading from empty.
+ * The live source: the `events.source-runs` window, read as a scroll (the
+ * ledger keeps 30 days, past one window on a short cadence). "Which run said
+ * that" is the one thing anyone searches a ledger for, so the search box
+ * matches the error and the outcome.
  */
-const EMPTY_RUNS: EventSourceRun[] = [];
+const runsSource = liveDataSource(eventSourceRuns, {
+  searchable: ["error", "outcome"],
+});
 
 export function SourceRunsSection({
   sourceId,
 }: {
   sourceId: string;
 }): ReactNode {
-  const query = useEventSourceRuns(sourceId, RUN_LIMIT);
+  // This source's runs: its scope, stated as data (never a filter the user's
+  // Filter control could name or widen).
+  const source = useMemo(
+    () => runsSource.scoped({ where: { sourceId } }),
+    [sourceId],
+  );
   const openPane = useOpenPane();
   // Which run the pane beside this list is showing, so the ledger marks it. Read
   // off the route rather than held here: the pane may equally have been reached
@@ -91,10 +100,10 @@ export function SourceRunsSection({
         value: (r) => r.eventsDisappeared,
         align: "end",
       },
-      // The count, not the text: "show me runs that reported caveats" is then a
-      // filter on a typed dimension rather than a bespoke control, exactly like
-      // "show me only the failures" is a filter on `outcome`. An `unchanged` or
-      // `failed` run never extracted anything, so it reads 0 — truthfully.
+      // The count, not the text. Display-only: `flags` is a jsonb list with no
+      // column the server could sort or filter on, and no saved view asks for
+      // it. An `unchanged` or `failed` run never extracted anything, so it
+      // reads 0 — truthfully.
       {
         id: "flags",
         label: "Caveats",
@@ -115,22 +124,11 @@ export function SourceRunsSection({
     [],
   );
 
-  // The rows only reach the view once the read is ready (`readiness`): a
-  // failed fetch renders its failure with Retry, never an eternal skeleton —
-  // "the ledger is unreachable" and "this source has never run" are different
-  // answers to the question this card exists to settle.
-  const runs = foldResource(query, {
-    loading: () => EMPTY_RUNS,
-    error: () => EMPTY_RUNS,
-    ready: (rows) => rows,
-  });
-
   return (
     <DataView<EventSourceRun>
       storageKey={RUNS_VIEW}
-      rows={runs}
+      source={source}
       fields={fields}
-      rowKey={(r) => r.id}
       itemActions={RunActions}
       selectedRowId={openRunId}
       // Clicking the row IS opening the run — the same call the sources list
@@ -153,7 +151,6 @@ export function SourceRunsSection({
         )
       }
       views={["list", "table"]}
-      readiness={query}
       viewOptions={{
         list: {
           size: "sm",

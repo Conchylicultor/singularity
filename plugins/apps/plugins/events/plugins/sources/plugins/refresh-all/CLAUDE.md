@@ -36,7 +36,7 @@ to the single-source `RefreshSourceResult`. A resolved promise is **not**
   on.
 
 The toast is never `success`: what succeeded is the *enqueue*. The runs have not
-happened yet, and they surface as they land, off the `events.runs-revision` tick.
+happened yet, and they surface as they land: the `events.source-runs` window is live.
 
 A failed request is left entirely to the global mutation toast
 (`useRefreshAllEventSources` passes no `onError`, so `useEndpointMutation` keeps

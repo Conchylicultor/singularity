@@ -28,7 +28,14 @@ export interface ColumnRef {
   col: PgColumn;
 }
 
-/** A `ColumnRef` that names its relation and column in its type: what `j.<relation>.<column>` is. */
+/**
+ * A `ColumnRef` that names its relation and column in its type: what
+ * `j.<relation>.<column>` is. At runtime it is also a SQL fragment — the
+ * column as the compile reads it (rendered against its relation, a defaulted
+ * extension column as its COALESCE) — so an `ExprField` interpolates it
+ * (`sql\`upper(${j.artist.name})\``; drizzle's `sql` takes any value, so the
+ * type need not say so, and a hand-written ref stays a plain `ColumnRef`).
+ */
 export interface TypedColumnRef<
   R extends string,
   C extends PgColumn,

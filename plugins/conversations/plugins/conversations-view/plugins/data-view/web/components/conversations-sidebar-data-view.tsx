@@ -25,7 +25,7 @@ import { SIDEBAR_TOOLBAR } from "./sidebar-frame";
  *
  * `<Scroll axis="y" fill>` is the ONE scroll ancestor. The mount point is a
  * `Shell.Sidebar` fill contribution (a flex column cell), the DataView never
- * owns a scroller, and the sticky toolbar / server-query sentinel / row
+ * owns a scroller, and the sticky toolbar / live-scroll sentinel / row
  * virtualization all bind to this single scroll viewport.
  *
  * The chrome is the sidebar's own ({@link SIDEBAR_TOOLBAR}): one sticky line

@@ -23,7 +23,7 @@ import {
   type MetricMinute,
   type ThreadMinute,
 } from "./store";
-import { noteFlushedMinute } from "./revision-resource";
+import { noteFlushedMinute } from "./summary-resource";
 import { ownerOfSample, samplePeriodMs } from "./thread-owners";
 
 // The server half of the ledger: it listens to three things that already happen —

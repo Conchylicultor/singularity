@@ -143,6 +143,51 @@ drizzle):
   `recordingQueryDb` is the fake that renders every query through drizzle's real
   dialect.
 
+### Expression fields — `ExprField` (`core/internal/expr.ts`)
+
+A row field computed by a SQL expression binds where a column override does,
+over the same `j`: `(j) => expr(sql\`upper(${j.artist.name})\`, { decoder,
+sqlType, notNull?, serverOnly?, wire? })` (network/live's `serveCollection`
+`columns`; the union arms and the persisted alias reuse it). `expr` is published
+from the core barrel (the run arms' labels and outcomes are the first shipping
+declarations).
+
+- **`j`'s refs render.** Each `j.<relation>.<column>` is also a SQL fragment
+  (`joinRefs`' `getSQL`): the relation's DEFAULTED wire column (an extension
+  column's COALESCE). A server-only base column is named by the table's own
+  column and declared in `serverOnly`.
+- **Rendered once per compile** (`JoinPlan.renderExpr`): `(<sql>)` with the
+  decoder `.mapWith`'d, registered in the module-level `readExpressions` (now a
+  union: `column` — a defaulted / member read standing for one column — or
+  `expr`), so every plan recognises the SQL object: `canBeNull` is
+  `!notNull`, `sqlTypeOf` its `sqlType` (a cut's cast), `nameOf` its field
+  name. `columnOf` / `relationOf` THROW on an expression (it reads no one
+  column); callers use `nameOf` / `memberOf` / `relationKey` / `relationsIn`.
+- **Provenance is read off the SQL** (`columnsIn`): its columns are route
+  columns like a projected one's, an order or filter over a lookup it reads makes
+  the lookup membership, and a relation that is neither the base nor a declared
+  join throws — a correlated subquery over an undeclared table cannot be
+  written. A column that is neither a wire column of its relation nor a
+  declared `serverOnly` one throws; so does an expression that is exactly one
+  column (bind a column override), and an `sqlType` outside `SQL_TYPE_RE`
+  (checked by `expr` and again by `renderExpr`).
+- **Unforgeable.** An `ExprField` carries an unexported brand only `expr` sets:
+  an object literal cannot spell one (tsc), and `isExprField` reads the brand,
+  not `kind`.
+- **Value type.** `V` is the decoder's result, `| null` unless `notNull: true`,
+  or the `wire` codec's output; the binding's return type must be an
+  `ExprField<Row[K]>` (tsc), and serveCollection backstops a nullable
+  expression on a non-null field at module eval. Never the id.
+
+### Raw execution — `QueryDb.execute`
+
+`QueryDb extends SqlExecutable<SQL>` (sql-rows): drizzle's raw `execute`, for
+the shapes the builder cannot render (a union with expression order keys — drizzle's
+`unionAll` rewrites column chunks to bare identifiers —, a recursive CTE). Every
+raw read goes through `executeRows(db, { query, row: decodedRow(…), label })`
+(sql-projection), so its rows decode like a builder's. `recordingQueryDb`
+records `execute` too and answers a full `SqlResult`.
+
 ### Reverse routes — a lookup's changes, resolved to hosts (P4)
 
 A lookup is joined N:1 from the host side, so a change to a looked-up row names
@@ -170,10 +215,11 @@ SELECT DISTINCT <host pk> FROM <base> [the joins up to `on`'s relation]
   — resolved unbounded — or `value` — resolved within its members; `moves` turns a
   `U` of the lookup's projected-only columns into the latter.
 - **Host ids are the pk's own values.** The probe answers the host pk as it is
-  stored and reads `within` the same way, so `compiledRoutePlan` refuses a
-  reverse route beside an identity route that `encode`s its ids (a union arm's
-  `kind:id`): a compiler emitting both must encode the answer and decode
-  `within` through the identity's codec first.
+  stored and reads `within` the same way. A single compile's routes are
+  `RawRoute`s — an `identity` / `alias` map cannot carry `encode` (T10, a tsc
+  error) — so `compiledRoutePlan` mints one key space. A union re-keys its
+  arms through `compiledUnionRoutePlan` (below), which encodes the reverse
+  answer and decodes `within` together with the identity.
 - **The probe does not apply the collection's predicates** (base `where`,
   default scopes): hosts no tuple can hold count toward the cap. A default is
   per tuple, and a predicate reading the looked-up row must not filter the
@@ -183,6 +229,67 @@ SELECT DISTINCT <host pk> FROM <base> [the joins up to `on`'s relation]
 - The grouping compiler's routes stay `full` (a count has no hosts); a keyed
   side's `full` route there carries its selectors as `rows`, so a write to
   another scope's or member's rows moves no count.
+
+### Union route plans — `compiledUnionRoutePlan` (P6)
+
+A union window lists N arms (tables) in one `kind:raw` key space
+(`armKeyCodec(kind)`, core: `encode` = `kind:raw`, `decode` strips the prefix
+once — a raw id may contain `:` — and answers `null` for another arm's key;
+`KIND_RE` is what a kind may be). `armKeySql(kind, idCol)` (server) is the SQL
+that projects the same key, tested byte-equal to `encode` against Postgres.
+`compiledUnionRoutePlan(arms, usesOf)` mints the union's plan from each arm's
+raw routes:
+
+- route ids are prefixed — the base `<kind>`, any other `<kind>.<id>` — and
+  must be unique, kinds too (A14); an arm's `identity` route carries no
+  `column` (an arm's raw id is its table's single-column pk);
+- `identity` and `alias` maps gain the arm's `encode`;
+- a `reverse` map's `resolve` decodes `within` to that arm's raw ids (another
+  arm's keys dropped; none left ⇒ no probe), passes `within: null` (an
+  unbounded reader) through, and encodes the answer; `"over-cap"` passes
+  through;
+- `full` is unchanged. `usesOf` answers in the prefixed ids.
+
+### Union collections — `compileUnionCollection` (P6)
+
+The compiler behind network/live's `serveUnionCollection`
+(`internal/compile-union-window.ts`): N ARMS — a table each, its id its
+single-column primary key — listed as one collection in one key space
+(`kind:raw`). It returns the three server halves a `liveCollection({ arms })`
+mints (window, `:rows`, `:groups`). It knows tables, joins, SQL and routes; the
+filter language (which arms a tuple keeps, an arm's compiled `where`) and the
+row's wire shape are the caller's.
+
+- **Routed per arm, rendered positionally.** Each arm is routed exactly as a
+  single-table compile is (`routedReads`, `arm-plan.ts`' routed half: its
+  base `identity`, one route per join, each gated by the columns its SQL reads,
+  `moves` from its `where` and order) and re-keyed by `compiledUnionRoutePlan`;
+  `usesOf` answers only the tuple's surviving arms. The SQL is rendered here —
+  every arm projects `__kind`, `__key` (`armKeySql`) and `__c<i>` (its read, or
+  `NULL::<sqlType>`) — and run raw through `QueryDb.execute`, each row decoded
+  by its own arm's decoders (`decodedRow`, dispatched on `__kind`).
+- **Shapes.** Full: per surviving arm `SELECT … WHERE arm.where ∧ whereOf ∧ cut
+  ORDER BY … LIMIT n`, `UNION ALL`, re-ordered and re-limited outside (zero arms:
+  a typed `WHERE false` scaffold). Scoped refill: keys decoded per arm (another
+  arm's or an undecodable one dropped), `pk = ANY`, no order. `windowIdsOf`: the
+  full shape projecting the key and the order columns. Point (`:rows`): grouped
+  by kind over every arm, `arm.where` kept; an unknown kind is absent, never a
+  contract error. Groups: a per-arm `GROUP BY 1` (a constant arm groups as one
+  value), summed outside, `full` routes per arm.
+- **Static nullability.** A column is nullable when ANY registered arm reads
+  NULL for it — computed once at bind, never per surviving arm, so a cut and a
+  signature never depend on what a tuple pruned.
+- **Total order.** The tuple's keys, then the row key. Inside an arm a constant
+  key orders nothing and is dropped from its ORDER BY, but the cut (keyset
+  `seekPredicate` / `atOrBeforePredicate`) runs over every key, constants
+  included, each operand cast to the column's type. The scroll row key is the
+  outer `u."__c<i>"::text` of each key — the union's own text.
+- **A14 at bind:** kinds unique and `KIND_RE`; `id` the base table's
+  single-column primary key; every column's `sqlType` a type name, and every
+  arm's read of it producing that type (`canonicalSqlType` folds
+  `timestamptz` / `timestamp with time zone`, `int4` / `integer`, …); the key
+  field and the discriminator never a bound column. Unit suite:
+  `server/internal/compile-union-window.test.ts`.
 
 ### Join families — members joined per tuple (P3)
 
@@ -333,6 +440,32 @@ in `core/`. The compiler's tests therefore live beside `serveCollection`, in
 `compile-window-runtime.test.ts`), and reach `compileWindowQuery` through this
 plugin's `server/testing` barrel; a test here importing `network/live` would
 close an import cycle.
+
+**Arms and assembly.** The compile is split in two (`internal/arm-plan.ts`,
+`internal/compile-window.ts`). `planArm` plans ONE relation set — identity,
+joins, projection, routes, each tuple's reads (`tuple(params)`: where,
+included joins, uses with `moves`), the order (plan, cuts, signature parts) and
+the SQL each shape renders (`fullQuery` / `scopedQuery` / `idsQuery` /
+`pointQuery`, rendered, never executed) plus `fold` — as an `ArmPlan` whose
+`mode` is `window` or `point`. `assembleWindow` / `assemblePoint` own the rest:
+the signature-field list (every arm must project the same field per signature
+column), the clamped limit, the loaders, `windowIdsOf`, the membership and the
+scope policy. The spec's own guards (kind, codec, `orderBy`, limits, a function
+order's `signatureColumns`) run before `planArm`. A single-table spec is the
+1-arm case. The union compiler (*Union collections*) reuses the arm's routed
+half (`routedReads`) and renders its own positional SQL; the persisted alias
+(P8) consumes the contract in mode `all`. The grouping compiler splits the same way: `planGroupArm` and
+`compileArmGroups`, with `compileGroupsQuery` the 1-arm case.
+
+The split is pinned byte for byte by `network/live`'s
+`server/internal/compile-sql-golden.test.ts`: a fixed matrix of declarations
+(`network/live/server/testing/compile-sql-golden.ts`) whose every shape's SQL
+and params, routes, `usesOf`, signatures, folded rows and per-tuple
+`where` / `orderBy` resolutions must equal
+`network/live/fixtures/compile-sql-golden.json`. The test only reads the
+fixture; a deliberate SQL change regenerates it with
+`./singularity run plugins/network/plugins/live/server/testing/gen-compile-golden.ts`
+and reviews its diff.
 
 The bounded-working-set sibling of `queryResource`: the subscription's params tuple
 names a **bounded selector**, so a change costs O(changed) + O(window), never
@@ -521,6 +654,9 @@ importing `db` never touches a worktree — no test env shim needed.
 - Server:
   - Uses:
     - `database.db`
+    - `database/sql-projection.decodedRow`
+    - `database/sql-projection.nullable`
+    - `database/sql-projection.SqlDecoderLike`
     - `primitives/keyset.atOrBeforePredicate`
     - `primitives/keyset.orderByClauses`
     - `primitives/keyset.seekPredicate`
@@ -528,6 +664,7 @@ importing `db` never touches a worktree — no test env shim needed.
   - Exports (types):
     - `CompiledGroups`
     - `CompiledQuery`
+    - `CompiledUnion`
     - `Edge`
     - `EntitySource`
     - `Hop`
@@ -537,6 +674,12 @@ importing `db` never touches a worktree — no test env shim needed.
     - `ReadColumn`
     - `RoutedSource`
     - `SelectMap`
+    - `UnionArmSpec`
+    - `UnionCollectionSpec`
+    - `UnionColumn`
+    - `UnionCuts`
+    - `UnionGroupsQuery`
+    - `UnionOrderKey`
     - `WindowOrderKey`
     - `WindowQueryResourceSpec`
   - Exports (values):
@@ -544,6 +687,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `compileGroupsQuery`
     - `compileJoins`
     - `compileQuery`
+    - `compileUnionCollection`
     - `deferredWindowQueryResource`
     - `joinRefs`
     - `queryResource`
@@ -559,8 +703,10 @@ importing `db` never touches a worktree — no test env shim needed.
     - `primitives/live-state.WindowResourceDescriptor`
     - `primitives/live-state.WindowSelector`
   - Exports (types):
+    - `ArmKeyCodec`
     - `ColumnRef`
     - `ColumnRefsOf`
+    - `ExprField`
     - `ExtensionJoin`
     - `JoinColumns`
     - `JoinFamily`
@@ -572,16 +718,22 @@ importing `db` never touches a worktree — no test env shim needed.
     - `LookupJoin`
     - `PointQueryResourceContract`
     - `QueryResourceContract`
+    - `TypedColumnRef`
     - `WindowQueryResourceContract`
   - Exports (values):
+    - `armKeyCodec`
     - `BASE_RELATION`
+    - `expr`
     - `familyMember`
     - `familyMemberAlias`
+    - `isExprField`
+    - `KIND_RE`
     - `queryResourceDescriptor`
 - Cross-plugin:
   - Imported by:
     - `conversations/agents`
     - `network/live`
+    - `runs`
     - `tasks/task-category`
     - `tasks/tasks-core`
 - Test helpers:

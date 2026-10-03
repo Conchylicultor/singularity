@@ -9,13 +9,18 @@ import {
   mintReachPlan,
   mintRoutePlan,
   type FullRoute,
+  type HostMap,
   type ReachPlan,
   type ResourceParams,
   type Route,
   type RoutePlan,
   type TupleUse,
 } from "@plugins/framework/plugins/resource-runtime/core";
-import { BASE_RELATION } from "@plugins/infra/plugins/query-resource/core";
+import {
+  armKeyCodec,
+  BASE_RELATION,
+  type ArmKeyCodec,
+} from "@plugins/infra/plugins/query-resource/core";
 import type { EntitySource, QuerySource } from "./spec";
 
 // The routed half of a compiled read: the `RoutePlan` (or, for a non-keyed
@@ -96,7 +101,7 @@ export function baseIdentityRoute(
   base: RoutedBase,
   pk: PgColumn,
   columns: readonly string[],
-): Route {
+): RawRoute {
   return {
     id: BASE_ROUTE_ID,
     table: base.name,
@@ -109,29 +114,132 @@ export function baseIdentityRoute(
 }
 
 /**
- * Mint a keyed compile's plan (the one production `mintRoutePlan` caller).
- *
- * Refuses a `reverse` route beside an `identity` route that `encode`s its
- * ids (a union arm's `kind:id`): a reverse probe answers the host pk's own
- * values, and its `within` is cut from the snapshot's (encoded) keys, so both
- * would be in the wrong key space — the probe would name the wrong hosts and
- * its cast would fail. A compiler emitting both must encode the answer and
- * decode `within` through the identity's codec first.
+ * A route as one compile's SQL emits it, before any union: its `identity` and
+ * `alias` maps name RAW host ids — `encode` is never set (T10). Only
+ * `compiledUnionRoutePlan` encodes them (into its arms' `kind:raw` key space),
+ * and it encodes a `reverse` answer and decodes its `within` at the same time,
+ * so a reverse probe can never read or answer the wrong key space: a single
+ * compile cannot spell an encoded route at all.
  */
+export type RawHostMap =
+  | { kind: "identity"; column?: string; encode?: never }
+  | { kind: "alias"; column?: string; encode?: never }
+  | Extract<HostMap, { kind: "reverse" | "full" }>;
+
+/** A route whose maps name raw host ids (see {@link RawHostMap}). */
+export type RawRoute = Omit<Route, "map"> & { map: RawHostMap };
+
+/** Mint a keyed compile's plan over its raw routes (one key space: the base table's own ids). */
 export function compiledRoutePlan<P extends ResourceParams>(
-  routes: readonly Route[],
+  routes: readonly RawRoute[],
   usesOf: (params: P) => ReadonlyMap<string, TupleUse>,
 ): RoutePlan<P> {
-  const encoded = routes.find(
-    (r) => r.map.kind === "identity" && r.map.encode !== undefined,
-  );
-  const reverse = routes.find((r) => r.map.kind === "reverse");
-  if (encoded !== undefined && reverse !== undefined) {
-    throw new Error(
-      `a reverse route ("${reverse.id}") beside an encoded identity route ("${encoded.id}") — the reverse probe answers raw host ids and reads \`within\` as raw ids, but this compile's host ids are encoded. Encode the answer and decode \`within\` through the identity's codec before emitting both.`,
-    );
+  return mintRoutePlan({ routes, usesOf });
+}
+
+/** One arm of a union compile, as its routes are minted: its kind and its raw routes. */
+export interface UnionArmRoutes {
+  kind: string;
+  routes: readonly RawRoute[];
+}
+
+/**
+ * An arm's route id in the union plan: its base route is `<kind>`, any other
+ * `<kind>.<id>` — unique across arms because a kind never contains a `.`.
+ */
+export function unionRouteId(kind: string, routeId: string): string {
+  return routeId === BASE_ROUTE_ID ? kind : `${kind}.${routeId}`;
+}
+
+/**
+ * Mint a union compile's plan (P6): every arm's raw routes, re-keyed into the
+ * union's `kind:raw` row-key space through the arm's `armKeyCodec`.
+ *
+ * - route ids are prefixed (`unionRouteId`) and must stay unique (A14);
+ * - an `identity` route must read the base table's own primary key (no
+ *   `column`): an arm's raw id IS its pk, which is what the key encodes;
+ * - `identity` and `alias` maps gain the arm's `encode`;
+ * - a `reverse` map's `resolve` decodes `within` to THIS arm's raw ids
+ *   (another arm's keys dropped; an empty set skips the probe — no host of
+ *   this arm can be held; `null` passes through, an unbounded reader), probes,
+ *   and encodes the answer; `"over-cap"` passes through;
+ * - a `full` map is the same for every key space.
+ *
+ * `usesOf` answers in the PREFIXED route ids — the union compiler's own.
+ */
+export function compiledUnionRoutePlan<P extends ResourceParams>(
+  arms: readonly UnionArmRoutes[],
+  usesOf: (params: P) => ReadonlyMap<string, TupleUse>,
+): RoutePlan<P> {
+  const kinds = new Set<string>();
+  const ids = new Set<string>();
+  const routes: Route[] = [];
+  for (const arm of arms) {
+    if (kinds.has(arm.kind)) {
+      throw new Error(
+        `union route plan: two arms of kind "${arm.kind}" — a kind is a row key's prefix, so it names one arm`,
+      );
+    }
+    kinds.add(arm.kind);
+    const codec = armKeyCodec(arm.kind);
+    for (const route of arm.routes) {
+      const id = unionRouteId(arm.kind, route.id);
+      if (ids.has(id)) {
+        throw new Error(
+          `union route plan: route id "${id}" is minted twice — an arm's route ids must be unique across the union`,
+        );
+      }
+      ids.add(id);
+      routes.push({ ...route, id, map: encodedMap(arm.kind, route, codec) });
+    }
   }
   return mintRoutePlan({ routes, usesOf });
+}
+
+function encodedMap(
+  kind: string,
+  route: RawRoute,
+  codec: ArmKeyCodec,
+): HostMap {
+  const map = route.map;
+  switch (map.kind) {
+    case "identity":
+      if (map.column !== undefined) {
+        throw new Error(
+          `union route plan: arm "${kind}"'s identity route "${route.id}" reads "${map.column}" — an arm's id is its base table's single-column primary key, read off the change's ids`,
+        );
+      }
+      return { kind: "identity", encode: codec.encode };
+    case "alias":
+      return {
+        kind: "alias",
+        ...(map.column === undefined ? {} : { column: map.column }),
+        encode: codec.encode,
+      };
+    case "reverse": {
+      const resolve = map.resolve;
+      return {
+        kind: "reverse",
+        ...(map.column === undefined ? {} : { column: map.column }),
+        resolve: async (changed, within, cap) => {
+          let raw: Set<string> | null = null;
+          if (within !== null) {
+            raw = new Set<string>();
+            for (const key of within) {
+              const id = codec.decode(key);
+              if (id !== null) raw.add(id);
+            }
+            // No host of this arm is held: nothing it could answer is kept.
+            if (raw.size === 0) return [];
+          }
+          const answer = await resolve(changed, raw, cap);
+          return answer === "over-cap" ? answer : answer.map(codec.encode);
+        },
+      };
+    }
+    case "full":
+      return map;
+  }
 }
 
 /**

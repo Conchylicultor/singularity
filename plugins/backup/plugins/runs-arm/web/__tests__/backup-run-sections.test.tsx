@@ -14,7 +14,7 @@ import {
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
 import { authState } from "@plugins/auth/core";
-import type { UnionRun } from "@plugins/runs/core";
+import type { RunRow } from "@plugins/runs/core";
 import {
   BackupArchiveSize,
   BackupSourcesSection,
@@ -41,8 +41,10 @@ import { backupArchiveSize } from "../internal/payload";
  * list renders them from the schema.
  */
 
-function backupRun(overrides: Record<string, unknown> = {}): UnionRun {
-  return {
+function backupRun(overrides: Record<string, unknown> = {}): RunRow {
+  // `backup.<field>` keys are the arm's own columns: they ride `$columns.backup`.
+  const flat: Record<string, unknown> = {
+    runKey: "backup:run-1",
     kind: "backup",
     id: "run-1",
     label: "Backup · 2 sources",
@@ -96,7 +98,14 @@ function backupRun(overrides: Record<string, unknown> = {}): UnionRun {
       },
     ],
     ...overrides,
-  } as unknown as UnionRun;
+  };
+  const row: Record<string, unknown> = {};
+  const slice: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(flat)) {
+    if (key.startsWith("backup.")) slice[key.slice("backup.".length)] = value;
+    else row[key] = value;
+  }
+  return { ...row, $columns: { backup: slice } } as unknown as RunRow;
 }
 
 /**

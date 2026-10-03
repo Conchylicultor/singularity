@@ -282,6 +282,8 @@ export const resourceRegisterMarkers = {
   windowQueryResource: { barrel: QUERY_RESOURCE_SERVER },
   deferredWindowQueryResource: { barrel: QUERY_RESOURCE_SERVER },
   serveCollection: { barrel: LIVE_SERVER },
+  // A union `liveCollection` (`arms`): every resource it mints, from its arms.
+  serveUnionCollection: { barrel: LIVE_SERVER },
   serveValue: { barrel: LIVE_SERVER },
 } satisfies Record<string, RegisterMarker>;
 

@@ -8,42 +8,37 @@ import {
   BUILD_STATUS_OPTIONS,
   BuildStatusChip,
 } from "@plugins/build/plugins/build-status/web";
-import { armNumber, armTags, armText, runArmFields } from "@plugins/runs/web";
-import type { UnionRun } from "@plugins/runs/core";
+import type { RunRow } from "@plugins/runs/core";
 import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
-import { buildRunArmFields } from "../../core";
+import { buildRunColumns } from "../../core";
 import { buildOutcomeOf } from "../internal/outcome";
 
-// Bound once against this arm's own column declaration: the id must be declared,
-// and its declared type must be one the accessor can read, or it does not
-// compile. `runArmFields` makes the same binding for the `FieldDef.id` below.
-const statusOf = armText(buildRunArmFields, "build.status");
-const targetsOf = armTags(buildRunArmFields, "build.targets");
-const commitHashOf = armText(buildRunArmFields, "build.commitHash");
-const exitCodeOf = armNumber(buildRunArmFields, "build.exitCode");
+/** This arm's slice of a row, or null on another kind's row. */
+const own = (run: RunRow) => buildRunColumns.read(run);
 
 /**
  * The dimensions only a build row has.
  *
  * Every cell here has to survive being rendered on a row of ANOTHER kind: the
  * table view is strictly field-driven, so a backup row still gets a `Status`
- * cell — it is simply blank, because the column is NULL there. That is why each
- * cell reads the projected column (or checks the kind) rather than assuming a
- * build.
+ * cell — blank, because the arm's handle reads `null` off another kind's row.
+ * Each field binds its arm column (`column`), so the field id stays
+ * `build.<field>` (saved views unchanged) and its sort / filter is SQL.
  *
  * Plain data behind a trivial component: `Runs.Fields` takes a component so a
  * contributor CAN load its options from a hook (the events source field does),
  * and this one has nothing to load — the six build statuses are a closed set the
  * `build-status` plugin already publishes.
  */
-const FIELDS: FieldDef<UnionRun>[] = runArmFields(buildRunArmFields, [
+const FIELDS: FieldDef<RunRow>[] = [
   {
     id: "build.status",
     label: "Build status",
     type: "enum",
-    // The projected column, so sort / filter / group-by compile to SQL against
-    // the same expression the cell renders.
-    value: statusOf,
+    // The arm's column, so sort / filter compile to SQL against the same
+    // expression the cell renders.
+    column: buildRunColumns.column("status"),
+    value: (run) => own(run)?.status ?? null,
     options: BUILD_STATUS_OPTIONS,
     cell: (run) =>
       run.kind === BUILD_RUN_KIND ? (
@@ -61,7 +56,8 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(buildRunArmFields, [
     // `values`, not `value`: one build carries N target chips, and filtering
     // "contains sonata" has to mean one chip of the list rather than a substring
     // of a joined string.
-    values: targetsOf,
+    column: buildRunColumns.column("targets"),
+    values: (run) => own(run)?.targets ?? [],
     filterable: true,
     // Off by default: `label` already IS the joined targets, so the column earns
     // its place only when someone wants to filter one chip out of the list.
@@ -72,9 +68,10 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(buildRunArmFields, [
     id: "build.commitHash",
     label: "Commit",
     type: "text",
-    value: commitHashOf,
+    column: buildRunColumns.column("commitHash"),
+    value: (run) => own(run)?.commitHash ?? null,
     cell: (run) => {
-      const hash = commitHashOf(run);
+      const hash = own(run)?.commitHash ?? null;
       return hash === null ? null : (
         <Badge variant="muted" mono title={hash}>
           {hash.slice(0, 8)}
@@ -89,16 +86,17 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(buildRunArmFields, [
     id: "build.exitCode",
     label: "Exit code",
     type: "number",
-    value: exitCodeOf,
+    column: buildRunColumns.column("exitCode"),
+    value: (run) => own(run)?.exitCode ?? null,
     sortable: true,
     filterable: true,
     visible: false,
     width: "6rem",
   },
-]);
+];
 
 export function BuildRunFields({
   render,
-}: FieldExtensionProps<UnionRun>): ReactNode {
+}: FieldExtensionProps<RunRow>): ReactNode {
   return <>{render(FIELDS)}</>;
 }

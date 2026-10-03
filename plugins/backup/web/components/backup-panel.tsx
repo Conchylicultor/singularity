@@ -105,8 +105,8 @@ export function BackupPanel({ selectedRunId }: BackupPanelProps) {
           and so is the disclosure row that replaced them: a run's detail is now
           a pane of its own, which is what lets the row be an ordinary
           field-driven line that obeys the Properties panel. A new backup
-          arrives through `runs.revision` rather than through this panel
-          re-fetching a list of its own. */}
+          arrives live, through the `runs` union window's backup arm, rather
+          than through this panel re-fetching a list of its own. */}
       <RunsDataView
         pinnedView="backups"
         emptyState={<>No backups yet.</>}

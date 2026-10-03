@@ -10,7 +10,7 @@ import type {
 // A DataView's LIVE data origin: a `network/live` collection declared
 // `scroll: true`, read as a segmented scroll (`useLiveScroll`). The view's
 // sort, filter, search and group-by lower onto its window params, and the rows
-// stay live through the routed runtime — no fetchPage, no change tick. The
+// stay live through the routed runtime. The
 // types live here (the props union names them); the constructor,
 // `liveDataSource`, is web's (`web/internal/live-data-source.ts`).
 

@@ -8,16 +8,13 @@
 - Web:
   - Contributes: `Stats.Chart` "Responsiveness" → `ResponsivenessSection`
   - Uses:
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/grid.Grid`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
     - `stats.Stats`
     - `stats/commits.ChartState`
 

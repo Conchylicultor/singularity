@@ -224,7 +224,7 @@ the source axis only decides *which data bundle* feeds the body.
   keys, on purpose: the view model must resolve *every* config row (switcher
   chips, add-menu gating, the hierarchical gate) before any source component
   mounts — and only the ACTIVE source ever mounts. Everything dynamic (rows,
-  fields, the actual `hierarchy` accessors, `viewOptions`, `dataSource`, …)
+  fields, the actual `hierarchy` accessors, `viewOptions`, `source`, …)
   stays in the bundle; the host dev-warns when a bundle's `hierarchy` presence
   contradicts the declared `hasHierarchy`. Code-only `viewOptions`
   (`renderRow`, `renderBody`, …) reach the view through the body's options
@@ -232,8 +232,7 @@ the source axis only decides *which data bundle* feeds the body.
   on the single-source path).
 - **Only the active source mounts** (plain `renderIsolated`, no recursive
   fold); switching sources remounts the body (`key={source.id}`), so
-  per-source subscriptions/controllers restart cleanly, and the server-page
-  cache is scoped per source (`sourceScope`).
+  per-source subscriptions/controllers restart cleanly.
 - **Fail-soft on unknown sources.** A row whose `source` matches no live
   contribution (renamed/removed source id) is kept in config and skipped —
   the same hazard class as an orphan `view.type`.
@@ -435,8 +434,7 @@ exclusion, not a preference:
 const rowOrderEnabled =
   activeSupportsManualOrder &&   // list / table only — gallery/tree have no flat rank axis
   manualOrder == null &&         // a consumer's domain order wins
-  props.dataSource == null &&    // server-paginated ⇒ the client cannot own the order
-  props.source == null &&        // a live source is server-sorted ⇒ likewise
+  props.source == null &&        // a live source is server-sorted ⇒ the client cannot own the order
   aggregate == null;             // an aggregate representative's rank cannot stand for its members
 ```
 
@@ -509,7 +507,7 @@ Three things about it are load-bearing:
   `startsAt asc` reads Today → Tomorrow → Later and `startsAt desc` reads newest
   month first, out of one ordinal with no second config axis. The host derives
   it from **`activeState.sort`**, not the view's `state.sort`, which a
-  server-delegated source zeroes out. The `None` bucket holds no position on the
+  live source zeroes out. The `None` bucket holds no position on the
   ordinal, so it stays **last in both directions**.
 
 ### There is exactly one "None", and a grouping cannot mint a second
@@ -727,9 +725,9 @@ The rules, each enforced in exactly one place:
    end, and opening it re-inserts them in sorted order.
 5. **Open state is ephemeral** — in memory in `DataViewBodyInner`, keyed by the
    active view id; a view switch or reload re-closes every fold. Never config.
-6. **Server-paged sources stop paging behind a folded tail** — while a fold is in
+6. **Live sources stop paging behind a folded tail** — while a fold is in
    effect, none is open and the LAST loaded row is folded (`isTailFolded`), the
-   host passes `holdPaging` to `useServerDataSource`, which feeds it into the
+   host passes `holdPaging` to `useLiveSource`, which feeds it into the
    scroll observer's own `hasNextPage` gate. It is a gate, not a hidden footer:
    unmounting the sentinel behind the observer's back would never re-observe it
    and paging would stall silently. Opening any fold lifts the hold.
@@ -923,8 +921,8 @@ no switcher. The Pages sidebar is the reference.
   as an empty section, nor flashed in and out), hidden once ready with no row
   surviving the view's filter (the same `useRowFilter` predicate, under the
   same `filterScope` via the shared `scopeFilterRows` — "any root matches" for
-  a roots-scoped tree), shown otherwise, a failed read included. A
-  server-delegated source reports its own filtered page.
+  a roots-scoped tree), shown otherwise, a failed read included. A live
+  source reports its own filtered rows.
 - **`description`** (view row key): the header label's tooltip, and the first
   line of its `⋯` panel.
 - **`selectedRowId` stays surface-level.** It highlights the row in EVERY
@@ -1669,49 +1667,26 @@ applies it subtree-preserving before handing rows to the tree primitive; the fol
 rule's `keep` tree goes through the same `useRowFilter`. Filter semantics are
 therefore identical across all views.
 
-### Server-delegated sources (`dataSource`): nothing falls back to the client
+### A source's filter: nothing falls back to the client
 
-A `dataSource` (`ServerDataSourceSpec`) runs filter / sort / search / paging on
-the server, so the host must never offer a filter the server cannot run, nor
-drop one on the way. The source therefore DECLARES, once in its owning plugin's
-`core/`, what its server can filter:
+A live `source` (below) runs filter / sort / search / paging on the server, so
+the host must never offer a filter the server cannot run, nor drop one on the
+way. `web/internal/live-filter.ts` holds the lowering every such source shares:
 
-```ts
-dataSource={{
-  filterable: THINGS_FILTERABLE,   // column → filter-language domain (liveText(), liveInstant(), …)
-  searchable: THINGS_SEARCHABLE,   // text-domain columns the search box matches
-  changeTick,
-  fetchPage: (args) => fetchEndpoint(queryThings, {}, { body: args }),
-}}
-```
-
-— the same object the server binds (`server-query`'s `bindColumns`) and strictly
-decodes against (`decodeFilterBody` / `augmentServerQuery`: a 400 on anything
-else). The host (`web/internal/server-filter.ts`, generic — any source that
-declares `filterable`):
-
-- **offers only declared fields** in the Filter control (`serverFilterFields`),
-  and only when the field's operator set lowers over the DECLARED domain — a
-  mismatch is a declaration bug and throws. A field from the global
-  `DataViewSlots.FieldExtension` slot (custom columns) is offered too: its server
-  twin, `DataViewServer.QueryAugmentor`, binds it in the domain its set lowers
-  over. Any other field (a display field the server has no column for) is not
-  offered. A SAVED rule the source cannot run — its field undeclared or gone,
-  its operator gone — is refused (`UnavailableFilterRuleError`) and the surface
-  says which rule, instead of silently running the rest of the filter and
-  showing rows the view claims to hide. (An incomplete rule is not an error: it
-  constrains nothing, as authored.)
-- **lowers** the view's `FilterGroup` (against `useFilterClock`, armed only
-  while a rule reads the clock, so "Today" re-queries at local midnight) AND the
-  search box — `or(contains(col, q) …)` over `searchable` — into ONE canonical
-  `Filter`, `fetchPage`'s `filter` argument. The wire carries that tree as JSON
-  (`ServerFilterWireSchema`); there is no separate `query` and no server-side
-  `searchWhere`.
-- **refuses a tree over the language's bounds** (depth 4, 50 clauses, 100
-  list values): `canonicalizeFilter` throws `FilterError`, the query is not
-  sent, and the surface renders the error in place of the view — never a
-  silently-trimmed filter. A first-page failure (e.g. the server's 400) renders
-  the same way (`ServerDataSourceResult.error`) rather than as an empty list.
+- **A SAVED rule the source cannot run** — its field's column not filterable or
+  gone, its operator gone — is refused (`UnavailableFilterRuleError`; a sort
+  rule likewise, `UnavailableSortRuleError`) and the surface says which rule,
+  instead of silently running the rest of the filter and showing rows the view
+  claims to hide. (An incomplete rule is not an error: it constrains nothing,
+  as authored.)
+- **`useViewFilter`** lowers the view's `FilterGroup` over field ids against
+  `useFilterClock` (armed only while a rule reads the clock, so "Today"
+  re-queries at local midnight); **`lowerSearch`** lowers the search box to
+  `or(contains(col, q) …)` over the source's `searchable` text columns.
+- **A tree over the language's bounds** (depth 4, 50 clauses, 100 list values)
+  is refused: `canonicalizeFilter` throws `FilterError`, the query is not read,
+  and the surface renders the error in place of the view — never a
+  silently-trimmed filter.
 
 Operator-set tests pin a lowering by its effect on values with
 `lowersToMatch(op, domain, operand, value, now?)` from
@@ -1740,7 +1715,6 @@ A DataView's rows come from exactly ONE origin — `DataViewProps` is a union, s
 stand-in (`rows={[]}` beside a server origin) cannot be spelled:
 
 - `{ rows; loading?; rowKey }` — in memory;
-- `{ dataSource; rowKey }` — fetchPage + a `changeTick` refetch (above);
 - `{ source }` — a live collection (`liveDataSource`, web; its types are
   core's), read as
   `network/live`'s segmented scroll (`useLiveScroll`). It refuses `rowKey` (the
@@ -1805,12 +1779,11 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
   column throws, a ref naming another collection throws. The host's own fields
   are checked in `DataViewBody`; a `FieldExtension` contributor's inside its own
   `render(fields)`, so its item boundary contains the crash and the error names
-  it. A `column` on an in-memory or fetchPage DataView throws (it would be
-  ignored).
+  it. A `column` on an in-memory DataView throws (it would be ignored).
 - **Lowering** (`web/internal/live-source.ts`, `useLiveSource`): the Filter
   control offers only fields whose column is filterable, the Sort control only
-  those whose column sorts. The view's `FilterGroup` lowers as fetchPage's does
-  (`useServerFilter`, relative dates on the day clock), then each clause's field
+  those whose column sorts. The view's `FilterGroup` lowers over field ids
+  (`useViewFilter`, relative dates on the day clock), then each clause's field
   id is renamed to its column, ANDed after the source's scope with the search box
   (debounced 200 ms, `or(contains …)` over `searchable`), and canonicalized; a
   tree over the language's bounds is the error arm. Sort rules map to columns (an
@@ -1832,8 +1805,7 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
 - **Section counts are a type** (`SectionCount`: `exact` | `atLeast`), printed by
   one formatter (`formatSectionCount`: `n` / `n+`) and derived from loaded rows
   only: exact when every row is loaded (`DataViewRenderProps.rowsComplete` —
-  always in memory; a server-ordered origin once read to its end, fetchPage
-  included), or — sections in row order — when a later section has started.
+  always in memory; a live origin once read to its end), or — sections in row order — when a later section has started.
 - **States.** The skeleton while the head segment (or a pending rule) is pending;
   the empty state once every segment settled with no row; an unavailable rule
   (or a filter over the bounds) in place of the view, as its message; a head

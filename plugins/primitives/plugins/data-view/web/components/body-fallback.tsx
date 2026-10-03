@@ -10,7 +10,7 @@ import type { BodyState } from "../internal/body-state";
 import {
   UnavailableFilterRuleError,
   UnavailableSortRuleError,
-} from "../internal/server-filter";
+} from "../internal/live-filter";
 
 /**
  * What the body renders in place of the active view (`resolveBodyState`'s

@@ -36,6 +36,7 @@ import {
   LIVE_SCOPED_KEY,
   type LiveColumnsDeclaration,
   type LiveContributedCollection,
+  type WithContributedColumns,
 } from "./live-columns";
 import {
   pointQueryResourceDescriptor,
@@ -181,6 +182,13 @@ export interface LiveCollection<
    */
   columnScope: string | null;
   /**
+   * Declared `arms`: a UNION collection — rows of several kinds (arms), each
+   * served from its own table; `discriminator` is the row field naming a
+   * row's arm, and each arm's own columns ride under `$columns[<arm>]`
+   * (`liveArmColumns`). `null` = a single-table collection.
+   */
+  arms: LiveArms | null;
+  /**
    * A declared filterable or sortable column, as a list binds a field to it
    * (`FieldDef.column`) — for a field whose id is not its column name.
    */
@@ -203,7 +211,8 @@ export type LiveScrollCollection<Row, F, S extends string> = LiveCollection<
 /**
  * What `liveCollection` mints for a window declaration: a collection whose row
  * carries `$columns` when declared `contributed`, and flagged `scroll` when
- * declared so.
+ * declared so. Never a union (`arms: null`): a single-table collection is what
+ * `serveCollection` serves.
  */
 export type LiveCollectionOf<
   Row,
@@ -214,7 +223,29 @@ export type LiveCollectionOf<
 > = (Co extends true
   ? LiveContributedCollection<Row, F, S>
   : LiveCollection<Row, F, S>) &
-  (Sc extends true ? { scroll: true } : unknown);
+  (Sc extends true ? { scroll: true } : unknown) & { arms: null };
+
+/** A union collection's arms declaration: the row field naming each row's arm. */
+export interface LiveArms<D extends string = string> {
+  readonly discriminator: D;
+}
+
+/**
+ * A UNION collection (`liveCollection(key, { arms })`): a scroll collection
+ * whose rows carry `$columns` — each arm's own columns, under its kind
+ * (`liveArmColumns`) — and whose `discriminator` field names a row's arm.
+ */
+export type LiveArmsCollection<
+  Row,
+  F,
+  S extends string,
+  D extends keyof Row & string = keyof Row & string,
+> = LiveCollection<WithContributedColumns<Row>, F, S> & {
+  scroll: true;
+  contributed: false;
+  columnScope: null;
+  arms: LiveArms<D>;
+};
 
 /**
  * A lookup-only collection: declared without a default window, so it mints
@@ -264,6 +295,32 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
    * collection: a surface listing it under another id cannot bind them.
    */
   columnScope?: string;
+  /** A union collection is the `arms` overload's ({@link LiveArmsSpec}). */
+  arms?: never;
+}
+
+/**
+ * A UNION collection's declaration (T12): a window over N arms — tables of
+ * several kinds listed in one order, each arm's own columns declared by
+ * `liveArmColumns` and riding its rows under `$columns[<arm>]`. Always a
+ * scroll (`scroll: true`, required): a union is listed as a live DataView.
+ * Its column vocabulary is closed — every arm's set is a static handle — so it
+ * takes no `contributed` columns and no `columnScope`.
+ */
+export interface LiveArmsSpec<
+  Row,
+  F,
+  S extends string,
+  D extends string,
+> extends Omit<
+  LiveCollectionSpec<Row, F, S>,
+  "scroll" | "contributed" | "columnScope" | "arms"
+> {
+  /** The row field naming each row's arm (its value is the arm's kind). */
+  arms: LiveArms<D>;
+  scroll: true;
+  contributed?: never;
+  columnScope?: never;
 }
 
 /**
@@ -284,6 +341,7 @@ export interface LiveLookupSpec<Row> {
   scroll?: never;
   contributed?: never;
   columnScope?: never;
+  arms?: never;
 }
 
 /**
@@ -297,8 +355,26 @@ export interface LiveLookupSpec<Row> {
  * `filterable` / `preload`), it is lookup-only and mints `${key}:rows` alone —
  * for a table whose rows are only ever read by id (one row per mounted block).
  *
+ * Declared with `arms` (and so `scroll: true`), it is a UNION collection over
+ * several tables: see {@link LiveArmsSpec}.
+ *
  * `key` stays a positional string literal: the build scanners read it statically.
  */
+export function liveCollection<
+  Row,
+  const F extends LiveFilterable<Row>,
+  const S extends keyof Row & string = never,
+  const D extends keyof Row & string = never,
+>(
+  key: string,
+  spec: LiveArmsSpec<Row, F, S, D> & {
+    filterable: {
+      [
+        K in Exclude<keyof F, keyof Row> | Extract<keyof F, LiveReservedColumn>
+      ]: never;
+    };
+  },
+): LiveArmsCollection<Row, F, S, D>;
 export function liveCollection<
   Row,
   const F extends LiveFilterable<Row>,
@@ -323,8 +399,46 @@ export function liveCollection<Row>(
 ): LiveLookupCollection<Row>;
 export function liveCollection<Row, F, S extends string>(
   key: string,
-  spec: LiveCollectionSpec<Row, F, S> | LiveLookupSpec<Row>,
+  spec:
+    | LiveCollectionSpec<Row, F, S>
+    | LiveLookupSpec<Row>
+    | LiveArmsSpec<Row, F, S, string>,
 ): LiveCollection<Row, F, S> | LiveLookupCollection<Row> {
+  if (spec.arms !== undefined) {
+    // An untyped caller could pass what the overload forbids (T12): a union's
+    // column vocabulary is its arms' static handles, and it is always a scroll.
+    const fail = (message: string): never => {
+      throw new Error(`liveCollection("${key}"): ${message}`);
+    };
+    const stray = (["contributed", "columnScope"] as const).filter(
+      (f) => (spec as unknown as Record<string, unknown>)[f] !== undefined,
+    );
+    if (stray.length > 0) {
+      fail(
+        `${stray.join(", ")} beside \`arms\` — a union collection's columns are its arms' own (\`liveArmColumns\`), never contributed or scoped.`,
+      );
+    }
+    if (spec.default === undefined) {
+      fail("`arms` without `default` — a union collection is a window.");
+    }
+    if ((spec as { scroll?: unknown }).scroll !== true) {
+      fail(
+        "`arms` needs `scroll: true` — a union collection is listed as a scroll.",
+      );
+    }
+    const discriminator = spec.arms.discriminator;
+    if (!Object.hasOwn(spec.row.shape, discriminator)) {
+      fail(
+        `the discriminator "${discriminator}" is not a field of the row schema`,
+      );
+    }
+    if (discriminator === spec.id) {
+      fail(
+        `the discriminator "${discriminator}" is the id — a row's key names its arm, its arm is a field of its own`,
+      );
+    }
+    return fullCollection(key, spec as LiveArmsSpec<Row, F, S, string>);
+  }
   if (spec.default === undefined) {
     // An untyped caller could pass half a window: every window field goes
     // with `default`, so a stray one is a declaration that means nothing.
@@ -351,6 +465,7 @@ const WINDOW_FIELDS: readonly string[] = [
   "scroll",
   "contributed",
   "columnScope",
+  "arms",
 ];
 
 /** The `:rows` point sibling and the row schema — what every collection mints. */
@@ -369,7 +484,7 @@ function rowsPart<Row>(
 
 function fullCollection<Row, F, S extends string>(
   key: string,
-  spec: LiveCollectionSpec<Row, F, S>,
+  spec: LiveCollectionSpec<Row, F, S> | LiveArmsSpec<Row, F, S, string>,
 ): LiveCollection<Row, F, S> {
   const scroll = spec.scroll === true;
   if (scroll && spec.maxLimit < 3 * spec.default.limit) {
@@ -380,10 +495,13 @@ function fullCollection<Row, F, S extends string>(
     );
   }
   const contributed = spec.contributed === true;
+  const arms: LiveArms | null = spec.arms ?? null;
   // A contributed collection's rows carry `$columns` beside the author's
   // fields: declared on the row schema (so every parse keeps it), never bound
-  // to a column (the server folds the contributors' projections into it).
-  const row = contributed ? withColumnsSchema(key, spec.row) : spec.row;
+  // to a column (the server folds the contributors' projections into it). A
+  // union's rows carry its arms' own columns the same way.
+  const row =
+    contributed || arms !== null ? withColumnsSchema(key, spec.row) : spec.row;
   const columnScope = spec.columnScope ?? null;
   if (columnScope !== null && columnScope.length === 0) {
     throw new Error(`liveCollection("${key}"): \`columnScope\` is empty`);
@@ -394,6 +512,7 @@ function fullCollection<Row, F, S extends string>(
     scroll,
     contributed,
     columnScope,
+    arms: arms !== null,
     // `LiveFilterable`'s keys are optional; a declared one always holds a column.
     filterable: spec.filterable as unknown as Filterable,
     sortable: spec.sortable,
@@ -488,8 +607,7 @@ function fullCollection<Row, F, S extends string>(
       );
     }
     return mintColumnRef({
-      collection: key,
-      scope: null,
+      owner: { kind: "own", collection: key },
       name,
       domain: declared?.domain ?? null,
       sortable,
@@ -504,6 +622,7 @@ function fullCollection<Row, F, S extends string>(
     scroll,
     contributed,
     columnScope,
+    arms,
     column,
   };
 }
@@ -516,12 +635,12 @@ function withColumnsSchema<Row>(
   const extend = (row as unknown as { extend?: unknown }).extend;
   if (typeof extend !== "function") {
     throw new Error(
-      `liveCollection("${key}"): a contributed collection's row must be a zod object`,
+      `liveCollection("${key}"): a contributed or union collection's row must be a zod object`,
     );
   }
   if (Object.hasOwn(row.shape, LIVE_COLUMNS_KEY)) {
     throw new Error(
-      `liveCollection("${key}"): "${LIVE_COLUMNS_KEY}" is reserved — the contributed values ride under it`,
+      `liveCollection("${key}"): "${LIVE_COLUMNS_KEY}" is reserved — the contributed (or arm) values ride under it`,
     );
   }
   return (row as unknown as z.AnyZodObject).extend({

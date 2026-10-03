@@ -885,6 +885,26 @@ describe("useLive — value", () => {
     };
     expect(typeof useTypeOnly).toBe("function");
   });
+
+  it("types: a typed param narrows the params useLive takes to its parser's output", () => {
+    const typed = liveValue(`test.use-live.value.${seq++}`, {
+      schema: Unread,
+      params: { window: z.enum(["1h", "24h", "7d"]) },
+    });
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const useTypeOnly = (window: "1h" | "24h" | "7d") => {
+      useLive(typed, { window: "1h" });
+      useLive(typed, { window });
+      useLive(typed, null);
+      // @ts-expect-error — "2h" is not a declared window
+      useLive(typed, { window: "2h" });
+      // @ts-expect-error — a plain string is wider than the parser's output
+      useLive(typed, { window: String(window) });
+      // @ts-expect-error — the typed param is required
+      useLive(typed, {});
+    };
+    expect(typeof useTypeOnly).toBe("function");
+  });
 });
 
 describe("status arms", () => {

@@ -7,6 +7,16 @@ export {
   windowQueryResource,
 } from "./internal/compile-window";
 export { compileGroupsQuery } from "./internal/compile-groups";
+export { compileUnionCollection } from "./internal/compile-union-window";
+export type {
+  CompiledUnion,
+  UnionArmSpec,
+  UnionCollectionSpec,
+  UnionColumn,
+  UnionCuts,
+  UnionGroupsQuery,
+  UnionOrderKey,
+} from "./internal/compile-union-window";
 export { compileJoins, joinRefs } from "./internal/joins";
 export type { ReadColumn } from "./internal/joins";
 export type { CompiledGroups } from "./internal/compile-groups";

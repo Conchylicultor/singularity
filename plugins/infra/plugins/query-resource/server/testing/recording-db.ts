@@ -12,8 +12,8 @@ export interface RecordedQuery {
  * A `QueryDb` that renders every query through drizzle's real `PgDialect` —
  * the SQL a compiler would send — records it, and answers with `script`'s rows
  * instead of running it. The whole `QueryStep` surface is here (joins,
- * `groupBy` included), so a suite can read exactly which relations each shape
- * reads.
+ * `groupBy` included), and the raw `execute` (answered as a full `SqlResult`),
+ * so a suite can read exactly which relations each shape reads.
  */
 export function recordingQueryDb(
   script: (query: RecordedQuery) => unknown[] = () => [],
@@ -48,6 +48,17 @@ export function recordingQueryDb(
     select: (fields?: SelectMap) =>
       makeFrom(fields ? qb.select(fields) : qb.select()),
     selectDistinct: (fields: SelectMap) => makeFrom(qb.selectDistinct(fields)),
+    // A raw statement: rendered and recorded like a builder's, answered as a
+    // full `SqlResult` (rows as the script returns them — raw, undecoded, as
+    // a driver hands them back).
+    execute: (query: SQL): ReturnType<QueryDb["execute"]> => {
+      const rendered = dialect.sqlToQuery(query);
+      const call = { sql: rendered.sql, params: rendered.params };
+      calls.push(call);
+      return Promise.resolve()
+        .then(() => script(call))
+        .then((rows) => ({ rows, rowCount: rows.length, fields: [] }));
+    },
   } as unknown as QueryDb;
   return { db, calls };
 }

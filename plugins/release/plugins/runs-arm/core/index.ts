@@ -1,1 +1,1 @@
-export { RELEASE_RUN_KIND, releaseRunArmFields } from "./internal/fields";
+export { RELEASE_RUN_KIND, releaseRunColumns } from "./internal/fields";

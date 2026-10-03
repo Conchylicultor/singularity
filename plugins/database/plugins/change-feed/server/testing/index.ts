@@ -16,3 +16,10 @@ export { flushNow, mountProducersForTest } from "../internal/producer"; // The b
 // for a suite that registers a REAL produced collection without booting the feed.
 export { findCarriedProducedRoutes } from "../internal/produced-tables";
 export { assertRouteTablesCovered } from "../internal/route-coverage";
+// The layout a table's installed `live_state_*` triggers emit, read back from
+// the catalog (the PK and carried columns of each), for a suite asserting what
+// the routes it registered actually installed.
+export {
+  installedLayouts,
+  readInstalledTriggers,
+} from "../internal/route-layout";

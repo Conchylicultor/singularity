@@ -5,7 +5,7 @@
  *
  * See research/2026-07-09-global-etag-value-coproduction.md.
  */
-import { createGitStateMemo } from "./git-state-memo";
+import { createGitStateMemo, type MemoGetOptions } from "./git-state-memo";
 
 export interface SignedMemo<T> {
   /**
@@ -23,8 +23,11 @@ export interface SignedMemo<T> {
    * A signature hit short-circuits BEFORE any compute, so it acquires no heavy
    * slot at all — `compute` owns its own `withHeavyReadSlot`; the memo never
    * touches the heavy-read gate.
+   *
+   * `opts.notBefore` refuses to join a compute that started before it (see
+   * `MemoGetOptions`).
    */
-  get(key: string): Promise<T>;
+  get(key: string, opts?: MemoGetOptions): Promise<T>;
   /**
    * Write-through prime from an **authoritative external writer** that already
    * holds both a value and the signature it belongs to (e.g. the @parcel watcher
@@ -83,11 +86,12 @@ export function createSignedMemo<T>(opts: {
     signature(key) {
       return opts.signature(key);
     },
-    get(key) {
+    get(key, getOpts) {
       return memo.get(
         key,
         () => opts.signature(key),
         () => opts.compute(key), // compute owns withHeavyReadSlot
+        getOpts,
       );
     },
     prime(key, signature, value) {

@@ -95,6 +95,14 @@ useLiveRow(eventSources, sourceId);                                   // one row
     write to a row the tuple does not hold loads nothing) or `membership` (its
     where / order reads it, or a required lookup). A grouping joins only what its
     column and `where` read.
+  - **Expression fields.** A field computed by SQL binds in `columns` too, over
+    the same `j`: `label: (j) => expr(sql\`${j.base.title} || ' by ' ||
+    ${j.artist.name}\`, { decoder: String, sqlType: "text", notNull: true })`
+    (query-resource's `ExprField`: `j`'s refs render as their relation's
+    defaulted wire columns). It projects, filters, sorts, cuts and groups like a
+    column; its provenance (route columns, the joins it reads) is read off its
+    SQL. Its value type must be the field's (tsc: the decoder's result,
+    `| null` unless `notNull`), and it is never the id.
   - **The projection is derived from the row schema**: exactly its keys, so a
     server-only column (a dedup key, a secret) can never reach the wire.
   - **`where`** is the collection's base membership — the collection IS the rows
@@ -374,11 +382,74 @@ DataView surface (research/2026-09-29-global-scoped-change-routing.md P3).
   tuple once (the runtime's routed `recomputeOn`).
 - **Browser**: `scopedLiveColumns(scope, name, members)` declares the members as
   the browser knows them (built from the definitions each render) and mints their
-  refs (`.column(member)`, carrying `scope` instead of a collection key). The codec
+  refs (`.column(member)`, whose owner is `{ kind: "scoped", scope }` rather than a collection). The codec
   takes a scoped set only on a collection whose `columnScope` is its scope. A
   DataView listing a scoped collection must BE its scope (its `storageKey` —
   asserted at mount), and hands the scope to its field extensions
   (`FieldExtensionProps.liveColumnScope`).
+
+## Union collections — `arms` / `liveArmColumns`
+
+A collection declared with `arms: { discriminator }` lists rows of several
+KINDS — each served from its own table — in one window (the runs of every run
+kind): `liveCollection(key, { row, id, arms: { discriminator: "kind" }, scroll:
+true, filterable, sortable, default, maxLimit })`. Its id is the union row key
+`kind:raw` (query-resource's `armKeyCodec`).
+
+- **The overload (T12).** `scroll: true` is required (a union is listed as a
+  live DataView); `contributed` and `columnScope` are `never` — a union's
+  column vocabulary is its arms' static handles. The discriminator is a row
+  field (tsc) other than the id. An untyped caller's stray field throws. The
+  collection is `LiveArmsCollection` (`arms` set); every single-table
+  collection is `arms: null`, which is what `serveCollection` takes (a union
+  is a tsc error there, and throws against a cast).
+- **Rows** carry `$columns` like a contributed collection's: each arm's OWN
+  columns under `$columns[<arm>]`.
+- **`liveArmColumns(collection, arm, { row, filterable, sortable })`** declares
+  one arm's own columns in the arm's core: wire names `<arm>.<field>`;
+  `read(row)` is `null` for another arm's row, parses its own slice once per
+  row object, and THROWS on its own arm's row with no slice (A16 — a server
+  that did not fold the arm is a bug, never "no values").
+- **Owners (T11).** Every column set's declaration carries an `owner` —
+  `contributed` (`liveColumns`), `scoped` (`scopedLiveColumns`) or `arm`
+  (`liveArmColumns`) — and a column ref's owner adds `own`. The codec, data-view's
+  field resolution and the server switch on it exhaustively, so a codec takes
+  an arm set only on its own union, a contributed set only on its
+  `contributed` collection, a scoped set only in its scope.
+- **Serve — `serveUnionCollection(c, { arms: () => UnionArmBinding[] })`**
+  (P6 of `research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md`). Each
+  binding is one arm: its column set (`columns`, a `liveArmColumns` handle —
+  its arm IS the kind), its table and single-column primary key (`from`, `id`),
+  its `joins`, `base(j)` (every base field but the id and the discriminator →
+  a column ref, an `ExprField`, or `null` for "no such notion"), `extra(j)`
+  (exactly its column set's fields) and an always-on `where(j)`. A domain
+  types this through its own facade (`runs`' `defineRunKind`, T9).
+  - **Deferred.** `arms` is read once at `bindDeferredResources` (arms register
+    in the register phase), and the three resources compile there — before
+    anything serves and before the change feed rebuilds triggers from routes.
+  - **The compile** is query-resource's `compileUnionCollection` (its CLAUDE.md,
+    *Union collections*): per-arm positional SQL, static nullability over every
+    arm, the row key `kind:raw` as the total order's tiebreaker, each arm routed
+    as a single-table compile is and re-keyed by `compiledUnionRoutePlan`.
+  - **Filter targets.** In an arm a field's target is its read; on another
+    arm's rows a typed `NULL`; the discriminator is the arm's kind as a literal.
+    The decode is strict over the static set of the arms' column sets.
+  - **Arm pruning** (`armsOf`): a clause reachable from the root through AND
+    groups only, over an arm CONSTANT (a typed NULL, or the discriminator), is
+    answered once by the op's own `testClause`; `false` prunes the arm — no SQL,
+    no routes in `usesOf`. A negative op or `isEmpty` keeps it (NULL satisfies
+    it). Groupings prune the same way.
+  - **Rows on the wire.** The compiler names the row back (the key field and
+    the discriminator are its own projections), and `encodeRow` folds the row's
+    own arm columns into `$columns[<kind>]` (wire codecs applied per arm); the
+    order signature reads an arm column off `$columns`.
+  - Bind-time throws: a binding naming a field that is not a base field (or
+    missing one), an arm column with no binding, a read that may be NULL on a
+    non-nullable field, two arms of one kind, a set owned by another
+    collection. The DB oracle is `server/internal/serve-union-oracle.test.ts`
+    (real triggers: arm-`where` flips, `pid` writes loading nothing, a lookup
+    rename under and over the reverse cap, retention and cascade deletes,
+    raw ids containing `:`).
 
 ## Values — `liveValue` / `serveValue` / `useLive(value)`
 
@@ -442,10 +513,26 @@ useLive(taskDetail, id === null ? null : { id });  // no subject yet: skipped, p
     each mapped `recomputeOn` tuple), as does `preloadParams` — so
     `{ path }`, `{ path, scopeId: undefined }` and `{ path, scopeId: "" }` are
     ONE tuple, and a notify can never miss the tuple a read holds.
+  - **Typed params.** `params` may instead be a record of string parsers —
+    `params: { window: z.enum(LATENCY_WINDOWS) }` → `P = { window: "1h" | … }`,
+    so `useLive(v, { window: "2h" })` and the loader's argument are typed by
+    each parser's OUTPUT. Every typed name is required. A parser may only
+    NARROW the wire string: its output must be a `string` (tsc — `z.number()`
+    is an error), and the declaration throws on a `ZodEffects` (transform,
+    preprocess, refine), `ZodDefault` or `ZodCatch` anywhere inside it, on a
+    string check that rewrites the value (`.trim()`, `.toLowerCase()`,
+    `.toUpperCase()`), and on a parser that accepts `undefined`. The names
+    must be literal keys (tsc — a record typed `Record<string, …>` is an
+    error, since `useLive` would read it as param-less). So the loader
+    receives the wire tuple itself, unchanged.
   - **The params gate.** The descriptor's `validateParams` (run by the runtime
     on the canonical tuple, before a sub registers) refuses an unknown name, a
     non-string value, or a missing REQUIRED name as `contract-mismatch`; an
-    absent optional param is valid.
+    absent optional param is valid. A typed param is also parsed: a refusal is
+    `contract-mismatch` too, and a parser whose result is not the wire string
+    (one that slipped past the declaration walk) throws a plain Error — the
+    backstop. The gate stays `void`: the runtime keys and loads the tuple as
+    sent.
   - **The default tuple.** A param-less preloaded value sets
     `defaultParams: {}`, the tuple both the boot snapshot and `useLive(v)` use.
     A PARAMETERIZED value has none, so it is branded
@@ -568,6 +655,21 @@ grouped under the wave or item that removes it
 **Never add an entry for new code** — declare it with `liveValue` /
 `liveCollection`. A migration must delete its files from the list:
 `lint/index.test.ts` fails on a listed file that no longer imports one.
+
+One group is permanent rather than burndown: **Declared legacy-full (item 9)**,
+the readers of the two page resources (`pagesResource`, `pageLinksResource`),
+which stay on `resourceDescriptor` — and reload in full — until item 9. The
+`live:legacy-descriptors-pinned` check (`check/legacy-descriptors.ts`) pins
+the resources: it reads every non-test file's AST for a `resourceDescriptor(`
+call (by name, under any import alias, or as a namespace import's member —
+`keyedResourceDescriptor` / `queryResourceDescriptor` are other names, the
+tree's, Item 3) and fails unless each initializes one of the two pinned
+bindings and each pinned binding is still declared; a reference to it that is
+not a call (`const rd = resourceDescriptor`) fails too, since it would hide a
+call from the scan. A new legacy resource is a check failure, not a lint-list
+entry. The check does not pin the group's membership or what its files read —
+like any ignore, an entry is exempt from every legacy spelling — so add one only
+for a new reader of the two page resources.
 
 ## Internals
 

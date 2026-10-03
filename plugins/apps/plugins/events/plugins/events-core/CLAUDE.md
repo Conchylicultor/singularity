@@ -88,13 +88,16 @@ Four `defineEntity` tables, field records in `core/internal/fields.ts`:
   pairs: `created_at`/`updated_at` are row lifecycle, `first_seen_at`/
   `last_seen_at`/`disappeared_at` are extraction sighting.
 - `event_source_runs` — the run ledger, including the cheap `unchanged` runs.
-  This is what makes "why did nothing happen" answerable. Insert-only (rows are
-  complete by construction), so its `events.runs-revision` tick is
-  `count(*) + max(started_at)`; `useEventSourceRuns` refetches off it, which is
-  what keeps the ledger and the live source status from disagreeing. Readable one at a time
-  (`GET /api/events/runs/:runId` → `requireRun`, 404 on absent) — deliberately
-  NOT nested under the source, so a deep-linked run pane resolves from its own id
-  instead of whatever window the runs list happens to have loaded.
+  This is what makes "why did nothing happen" answerable. Served as the live
+  `events.source-runs` collection (`eventSourceRuns`): a scrollable window the
+  source pane scopes to one source (`.scoped({ where: { sourceId } })`), its
+  `columnScope` the runs DataView (whose custom columns sort and filter it), and
+  a `:rows` point sibling. The change feed routes each run row's write to the
+  tuples holding it, so the ledger and the live source status — written in one
+  transaction — never disagree. One run is `useEventSourceRun(runId)` →
+  `useLiveRow`: by its own id, deliberately NOT through the source, so a
+  deep-linked run pane resolves from the URL instead of whatever window the runs
+  list happens to have loaded. `flags` rides on the wire but is display-only.
 - `event_source_run_events` — which events one run touched and how
   (`created`/`updated`/`disappeared`), the detail behind the run row's counts.
   Written by the engine INSIDE the ledger's own transaction, so a run and its
@@ -146,19 +149,16 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 
 ## Plugin reference
 
-- Description: Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / run-ledger hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + the run ledger's revision tick.
+- Description: Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / run hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources and run-ledger collections.
 - Web:
   - Slots: `EventSources.Type` ← `apps.events.sources.coworkmeet`, `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
   - Uses:
-    - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveListResult`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
     - `network/live.useLiveRow`
-    - `primitives/live-state.foldResource`
     - `primitives/live-state.useEndpointResource`
-    - `primitives/live-state.useResource`
   - Exports (values):
     - `EventSources`
     - `useCreateEventSource`
@@ -166,7 +166,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useEventSourceOrigin`
     - `useEventSourceRow`
     - `useEventSourceRun`
-    - `useEventSourceRuns`
     - `useEventSources`
     - `useRefreshAllEventSources`
     - `useRefreshEventSourceNow`
@@ -177,7 +176,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `resource.declare` "events.sources"
     - `resource.declare` "events.sources:rows"
     - `resource.declare` "events.sources:groups"
-    - `resource.declare` "events.runs-revision"
+    - `resource.declare` "events.source-runs"
+    - `resource.declare` "events.source-runs:rows"
+    - `resource.declare` "events.source-runs:groups"
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`
@@ -202,13 +203,11 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `createSource`
     - `defineEventSourceType`
     - `deleteSource`
-    - `eventRunsRevisionServerResource`
     - `eventSourcesServed`
     - `eventsTable`
     - `getEventSourceType`
     - `listEventSourceTypes`
     - `listRunEvents`
-    - `listRuns`
     - `listSources`
     - `markEventsDisappeared`
     - `reanchorRecurringEvents`
@@ -218,7 +217,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `updateSource`
     - `upsertEvents`
   - Resources:
-    - `events.runs-revision` (push)
+    - `events.source-runs` (keyed, window)
+    - `events.source-runs:groups` (push)
+    - `events.source-runs:rows` (keyed, point)
     - `events.sources` (keyed, window)
     - `events.sources:groups` (push)
     - `events.sources:rows` (keyed, point)
@@ -230,8 +231,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `DELETE /api/events/sources/:id`
     - `POST /api/events/sources/:id/refresh`
     - `POST /api/events/sources/refresh-all`
-    - `GET /api/events/sources/:id/runs`
-    - `GET /api/events/runs/:runId`
     - `GET /api/events/runs/:runId/events`
 - Core:
   - Uses:
@@ -249,8 +248,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
     - `network/live/filter.liveBoolean`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveNumber`
     - `network/live/filter.liveText`
-    - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `CreateEventSourceBody`
     - `EventCategory`
@@ -279,12 +279,12 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `deleteEventSource`
     - `EVENT_CATEGORIES`
     - `eventFields`
-    - `eventRunsRevisionResource`
     - `EventSchema`
     - `eventSourceFields`
     - `eventSourceRunEventFields`
     - `EventSourceRunEventSchema`
     - `eventSourceRunFields`
+    - `eventSourceRuns`
     - `EventSourceRunSchema`
     - `eventSources`
     - `EventSourceSchema`
@@ -294,9 +294,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `ExtractionResultSchema`
     - `extractionStatus`
     - `getEventSource`
-    - `getEventSourceRun`
-    - `listEventSourceRuns`
-    - `ListEventSourceRunsQuerySchema`
     - `listEventSources`
     - `listRunEvents`
     - `ListRunEventsQuerySchema`

@@ -38,7 +38,12 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 // the resource to hydrate-on-mount. A surface that reads an excluded table should
 // be an endpoint read on open, like the Slow Ops pane's `listSlowOps` (a live
 // value over it would never update); one that must stay live makes the table a
-// change producer.
+// change producer — or, for an aggregate recomputed on the writer's own cadence
+// rather than per row, is served external and notified by that writer (the
+// latency ledger's summary, on its minute flush). The no-db-backed-notify check
+// derives that exemption from this declaration, per table: a DB-reading value
+// served external passes only in the plugin that excludes a table, and only when
+// its call names that table — so pass `table: <identifier>` literally.
 export const ExcludeFromChangeFeed = defineServerContribution<{
   table: PgTable;
   reason: string;

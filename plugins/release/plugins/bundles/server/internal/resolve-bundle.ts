@@ -1,4 +1,10 @@
-import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import { basename, join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { ReleaseManifestSchema } from "../../core";
@@ -137,10 +143,63 @@ export function resolveBundle(opts: {
     };
   }
 
-  const binaryName = `${composition}-web-${platform}`;
+  const binaryName = bundleBinaryName(composition, platform);
   const localPath = join(runDir, "dist", binaryName);
   if (!existsSync(localPath)) {
     return { ok: false, refusal: { kind: "not-packed", localPath } };
   }
   return { ok: true, runId, localPath, binaryName, manifest };
+}
+
+/**
+ * The packed binary's file name inside a run's `dist/` — the one spelling
+ * {@link resolveBundle} and {@link bundleSignature} both read.
+ */
+function bundleBinaryName(composition: string, platform: string): string {
+  return `${composition}-web-${platform}`;
+}
+
+/**
+ * A cheap fingerprint of every filesystem fact {@link resolveBundle} reads for
+ * `(composition, platform)` — when it is unchanged, `resolveBundle` would
+ * return the same verdict. No parse, no directory listing: a handful of
+ * `stat`s and one `realpath`, so a caller can probe it on every read and run
+ * the real resolution only when it moved (the release candidate's signed memo).
+ *
+ * Covered, in the order `resolveBundle` meets them:
+ *
+ * - whether the composition directory exists (`no-releases`);
+ * - where `latest-<platform>` resolves to, or that it does not (`no-pointer`);
+ * - the run's `RELEASE.json` mtime and size (`no-manifest`, and every check
+ *   the manifest's fields feed — a rewrite moves at least the mtime);
+ * - whether `dist/<comp>-web-<platform>` exists (`not-packed`).
+ *
+ * It does not cover an explicit `release` — the candidate is always the
+ * pointer's run, and that is the only question this answers. DB-free, like
+ * everything in this plugin, so a CLI process can import it.
+ */
+export function bundleSignature(opts: {
+  namespace: Namespace;
+  composition: string;
+  platform: string;
+}): string {
+  const { composition, platform } = opts;
+  const { compDir } = bundleRoot(opts.namespace, composition);
+  if (!existsSync(compDir)) return "no-releases";
+  const pointerPath = latestPointerPath(compDir, platform);
+  if (!existsSync(pointerPath)) return "no-pointer";
+  const runDir = realpathSync(pointerPath);
+  const manifest = statSync(join(runDir, "RELEASE.json"), {
+    throwIfNoEntry: false,
+  });
+  const packed = existsSync(
+    join(runDir, "dist", bundleBinaryName(composition, platform)),
+  );
+  return [
+    runDir,
+    manifest === undefined
+      ? "no-manifest"
+      : `${manifest.mtimeMs}:${manifest.size}`,
+    packed ? "packed" : "not-packed",
+  ].join("\0");
 }

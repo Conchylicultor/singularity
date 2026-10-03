@@ -16,7 +16,7 @@ import { useEventSourceRun } from "@plugins/apps/plugins/events/plugins/events-c
 /**
  * The section is available even while the run is still loading: loading is not
  * emptiness, and a section that gated itself on data would flicker its whole
- * card in after the fetch (the `source-detail` house rule).
+ * card in after the read (the `source-detail` house rule).
  */
 export function useModelCallAvailable(): boolean {
   return true;
@@ -26,19 +26,18 @@ export function ModelCallSection({ runId }: { runId: string }): ReactNode {
   // The run's own `startedAt` is what lets the call log distinguish "never
   // called" from "called, then trimmed" — so the section reads the run rather
   // than asking with a bare correlation id and accepting a wrong answer.
-  const runQuery = useEventSourceRun(runId);
+  const row = useEventSourceRun(runId);
+  const run = row.status === "ready" && row.found ? row.row : undefined;
   const calls = useClaudeCliCalls({
     correlationId: runId,
-    occurredAt: runQuery.data?.startedAt,
+    occurredAt: run?.startedAt,
   });
 
-  if (runQuery.isError) {
-    return (
-      <Placeholder tone="error">
-        {getEndpointErrorMessage(runQuery.error)}
-      </Placeholder>
-    );
+  if (row.status === "error") {
+    return <Placeholder tone="error">{row.error.message}</Placeholder>;
   }
+  // Absent: the pane's own resolve turns this into its Not Found.
+  if (row.status === "ready" && !row.found) return null;
   if (calls.isError) {
     return (
       <Placeholder tone="error">
@@ -46,9 +45,9 @@ export function ModelCallSection({ runId }: { runId: string }): ReactNode {
       </Placeholder>
     );
   }
-  // Both fetches gate the answer: asking before `startedAt` has landed would
+  // Both reads gate the answer: asking before `startedAt` has landed would
   // report `none` for a run whose call merely aged out.
-  if (runQuery.isPending || calls.isPending) return <Loading variant="rows" />;
+  if (run === undefined || calls.isPending) return <Loading variant="rows" />;
 
   const result = calls.data;
 

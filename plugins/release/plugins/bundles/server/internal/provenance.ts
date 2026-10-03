@@ -58,6 +58,15 @@ export async function readGitProvenance(cwd: string): Promise<GitProvenance> {
 }
 
 /**
+ * `git rev-parse HEAD` of `cwd` — the one git fact {@link compareToHead}'s
+ * answer moves with (besides the bundle's own provenance), so it is what a
+ * memo of that answer keys on. One cheap metadata read; throws when git fails.
+ */
+export async function readHeadSha(cwd: string): Promise<string> {
+  return (await git(["rev-parse", "HEAD"], cwd)).trim();
+}
+
+/**
  * How a bundle's recorded provenance relates to this repository's `HEAD`.
  *
  * The rules, in the order they are applied:

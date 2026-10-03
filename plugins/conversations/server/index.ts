@@ -54,8 +54,6 @@ import { Trigger } from "@plugins/infra/plugins/events/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { autoAnswerConfig } from "../shared/config";
-import { queryConversations } from "@plugins/conversations/plugins/all-conversations/core";
-import { handleQuery } from "@plugins/conversations/plugins/all-conversations/server";
 
 export { maybeLaunchTaskJob, launchTaskNow } from "./internal/auto-start-jobs";
 export type {
@@ -109,7 +107,6 @@ export default {
     [stopConversation.route]: handleStop,
     [listConversationTurns.route]: handleListTurns,
     [closeConversation.route]: handleClose,
-    [queryConversations.route]: handleQuery,
   },
   // The conversations live resources (active/system/gone/gone-stats) are mounted on tasks-core.
   contributions: [

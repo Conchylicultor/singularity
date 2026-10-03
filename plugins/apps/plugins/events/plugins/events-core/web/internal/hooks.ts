@@ -1,13 +1,5 @@
-import { useCallback, useEffect, useRef } from "react";
-import {
-  useEndpoint,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
-import {
-  useResource,
-  foldResource,
-  useEndpointResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpointResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   useLive,
   useLiveRow,
@@ -17,15 +9,14 @@ import {
 import {
   createEventSource,
   deleteEventSource,
-  eventRunsRevisionResource,
+  eventSourceRuns,
   eventSources,
-  getEventSourceRun,
-  listEventSourceRuns,
   listRunEvents,
   refreshAllEventSources,
   refreshEventSourceNow,
   updateEventSource,
   type EventSource,
+  type EventSourceRun,
 } from "../../core";
 
 /**
@@ -49,65 +40,16 @@ export function useEventSourceRow(
 }
 
 /**
- * The run ledger for one source, newest first — and LIVE.
- *
- * The rows are a plain endpoint read (a bounded, filterable list is a query, not
- * something to ship over live-state), kept fresh by the cheap
- * `events.runs-revision` scalar tick: when a run lands, this refetches the same
- * query key in place, so the loaded list keeps rendering while it updates rather
- * than flashing a skeleton. The tick is deliberately NOT part of the query key —
- * that would mint a new cache entry per revision and re-show the loading state.
- *
- * Liveness lives HERE rather than at each call site: the ledger and the source
- * row's status are written in one transaction and the status is already live, so
- * a runs list that needs a page reload contradicts the card beside it. Binding
- * the tick into the hook makes forgetting it impossible.
+ * One run, by its own id, live: pending, then found or determinately absent
+ * (swept by retention, or its source deleted). Reads the `events.source-runs`
+ * point sibling, so it answers for ANY run — a deep-linked run pane resolves
+ * from the URL, never from whatever window the runs list happened to load.
+ * The run pane and its sections all read it here; one id is one subscription.
  */
-export function useEventSourceRuns(sourceId: string, limit?: number) {
-  const query = useEndpointResource(
-    listEventSourceRuns,
-    { id: sourceId },
-    limit === undefined ? undefined : { query: { limit } },
-  );
-
-  // A derived slice read, not a value this renders: all we want out of the tick
-  // is the `rev` string, so `select` narrows the subscription to it.
-  const selectRev = useCallback((d: { rev: string }) => d.rev, []);
-  const tick = useResource(eventRunsRevisionResource, undefined, {
-    select: selectRev,
-  });
-  // A failed tick has nothing to say either: the runs query keeps rendering
-  // what it last fetched (and surfaces its own failures), and the tick's
-  // failure is reported by live-state itself.
-  const rev = foldResource(tick, {
-    loading: () => null,
-    error: () => null,
-    ready: (r) => r,
-  });
-  const { refetch } = query;
-  // Compared against the last revision acted on, not just watched as a dep: the
-  // effect must fire once per genuine change, and never re-fire on a re-render
-  // that happens to hand back a fresh `refetch` identity.
-  const actedOn = useRef<string | null>(null);
-  useEffect(() => {
-    // A pending tick has nothing to say yet; the first settled `rev` refreshes
-    // once, which also covers a run that finished between mount and subscribe.
-    if (rev === null || rev === actedOn.current) return;
-    actedOn.current = rev;
-    void refetch();
-  }, [rev, refetch]);
-
-  return query;
-}
-
-/**
- * One run, by its own id. The run pane and its sections both read it through
- * this hook, so the shared query key means one fetch rather than one per
- * consumer — and a section reaching for the run's `startedAt` never has to know
- * which source it belongs to.
- */
-export function useEventSourceRun(runId: string) {
-  return useEndpoint(getEventSourceRun, { runId });
+export function useEventSourceRun(
+  runId: string,
+): LiveRowResult<EventSourceRun> {
+  return useLiveRow(eventSourceRuns, runId);
 }
 
 /**
@@ -144,7 +86,7 @@ export function useDeleteEventSource() {
  *
  * It invalidates nothing: this resolves at `enqueued`, before the run has even
  * started, so a refetch here could only ever re-read the list unchanged. The run
- * appears when it actually lands, off the `events.runs-revision` tick.
+ * appears when it actually lands: the `events.source-runs` window is live.
  */
 export function useRefreshEventSourceNow() {
   return useEndpointMutation(refreshEventSourceNow);
@@ -158,8 +100,8 @@ export function useRefreshEventSourceNow() {
  *
  * It invalidates nothing, for the same reason that one does not: this resolves at
  * enqueue time, before any run has started, so a refetch here could only re-read
- * the list unchanged. The runs appear as they land, off the
- * `events.runs-revision` tick.
+ * the list unchanged. The runs appear as they land: the `events.source-runs`
+ * window is live.
  */
 export function useRefreshAllEventSources() {
   return useEndpointMutation(refreshAllEventSources);

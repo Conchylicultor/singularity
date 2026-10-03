@@ -124,7 +124,7 @@ export function ExtractedEventsSection({
   // Only to word the empty state truthfully — an `unchanged` run touching
   // nothing is the cache working, which is a different sentence from an
   // extraction that ran and changed nothing.
-  const runQuery = useEventSourceRun(runId);
+  const row = useEventSourceRun(runId);
   const openEvent = useOpenEvent();
 
   const fields = useMemo<FieldDef<RunEvent>[]>(
@@ -169,7 +169,9 @@ export function ExtractedEventsSection({
     error: () => EMPTY_EVENTS,
     ready: (rows) => rows,
   });
-  const run = runQuery.data;
+  // Only a found run words the empty state; loading, failed or absent fall back
+  // to the plain sentence (the summary above and the pane's resolve own those).
+  const run = row.status === "ready" && row.found ? row.row : undefined;
 
   return (
     <DataView<RunEvent>

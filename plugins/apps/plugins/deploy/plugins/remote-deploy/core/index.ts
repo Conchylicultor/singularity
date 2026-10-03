@@ -1,4 +1,5 @@
 export {
+  candidatePredatesLatest,
   RELEASE_STATE_OPTIONS,
   releaseStateLabel,
   resolveReleaseState,

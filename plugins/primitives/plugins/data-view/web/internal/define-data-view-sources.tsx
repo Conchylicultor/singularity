@@ -30,7 +30,7 @@ export interface DataViewSourceProps<THostProps> {
  * purpose: the view model must resolve *every* config row — switcher chips,
  * add-menu gating, the hierarchical gate — before any source component mounts,
  * and only the ACTIVE source ever mounts. Everything dynamic (rows, fields,
- * rowKey, the actual `hierarchy` accessors, viewOptions, dataSource, …) stays
+ * rowKey, the actual `hierarchy` accessors, viewOptions, source, …) stays
  * in the bundle.
  */
 export interface DataViewSourceContribution<THostProps> {

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
   liveInstant,
@@ -105,17 +104,6 @@ export const releaseHistory = liveCollection("release.history", {
   scroll: true,
   columnScope: RELEASE_HISTORY_VIEW_ID,
 });
-
-// Scalar invalidation tick: a cheap `{ rev }` hash the server pushes only when a
-// real change lands (new run / status flip). Its one reader is remote-deploy's
-// release info, which refetches the candidate endpoint (a directory walk and
-// git, not a table) when it moves. Browser-safe descriptor; the server half
-// (loader + push mode) is built from it via `defineResource`. Not preloaded.
-export const releaseRunsRevisionResource = resourceDescriptor<{ rev: string }>(
-  "release.history-revision",
-  z.object({ rev: z.string() }),
-  { rev: "" },
-);
 
 // One running (or stopping) preview of a release run's artifact.
 export const PreviewSchema = z.object({

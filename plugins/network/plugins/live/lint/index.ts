@@ -29,9 +29,8 @@ export default {
       // network/live. Each file sits under the LAST wave or item that still
       // needs it (· names the resources that keep it there), and each wave's
       // barrier deletes its group. Wave 7 moves only substrate, so it has none.
-      // What is left after Wave 7 is the tree (item 3) and the revision ticks
-      // (item 7) — the living inventory of those items (config, item 9, has
-      // migrated).
+      // What is left is the tree (item 3) — the living inventory of that item
+      // (the revision ticks, item 7, and config have migrated).
 
       // Item 3 (tree) — stays until the tree migrates.
       // · agent-launches
@@ -63,6 +62,35 @@ export default {
       "plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/web/components/use-queue-rows.ts",
       // · conversations-gone
       "plugins/conversations/plugins/recover/web/components/recovery-view.tsx",
+      // · task-categories
+      "plugins/tasks/plugins/task-category/server/internal/resource.ts",
+      "plugins/tasks/plugins/task-category/shared/resources.ts",
+      "plugins/tasks/plugins/task-category/web/hooks.ts",
+      // · tasks
+      "plugins/active-data/plugins/task-link/web/components/task-link-chip.tsx",
+      "plugins/active-data/plugins/task/web/components/task-card.tsx",
+      "plugins/conversations/plugins/conversation-view/plugins/dependencies/web/components/dependencies-button.tsx",
+      "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/add-task/web/components/add-task-tool-view.tsx",
+      "plugins/page/plugins/annotations/plugins/todo/plugins/task-link/web/hooks.ts",
+      "plugins/tasks/plugins/task-dependencies/web/components/task-dependencies.tsx",
+      "plugins/tasks/plugins/task-deps-tree/web/components/deps-tree-section.tsx",
+      "plugins/tasks/plugins/task-detail/web/panes.tsx",
+      "plugins/tasks/plugins/task-draft-form/web/components/task-draft-popover.tsx",
+      "plugins/tasks/plugins/task-graph/web/hooks.ts",
+      "plugins/tasks/plugins/task-list/web/components/child-count-action.tsx",
+      "plugins/tasks/plugins/task-list/web/components/tasks-list-view.tsx",
+      "plugins/tasks/web/client.ts",
+
+      // (c) DECLARED LEGACY-FULL (item 9) — the readers of the two page
+      // resources, which stay on the legacy spelling (and reload in full)
+      // until item 9 migrates them. Not burndown: no wave deletes this group.
+      // `live:legacy-descriptors-pinned` (network/live check) pins the
+      // resources themselves — `pagesResource` and `pageLinksResource` are
+      // the only `resourceDescriptor(` calls — so no NEW legacy resource can
+      // be declared. It does not pin this group's membership or what these
+      // files read: an entry here is exempt from every legacy spelling, like
+      // any other ignore. Add one only for a new reader of the two page
+      // resources, never to read anything else.
       // · page-links
       "plugins/page/plugins/links/core/resources.ts",
       "plugins/page/plugins/links/server/internal/resources.ts",
@@ -87,49 +115,6 @@ export default {
       "plugins/page/plugins/inline-page-link/web/components/page-link-chip.tsx",
       "plugins/page/plugins/inline-page-link/web/components/page-link-inline-node.tsx",
       "plugins/page/plugins/page-link/web/components/page-link-block.tsx",
-      // · task-categories
-      "plugins/tasks/plugins/task-category/server/internal/resource.ts",
-      "plugins/tasks/plugins/task-category/shared/resources.ts",
-      "plugins/tasks/plugins/task-category/web/hooks.ts",
-      // · tasks
-      "plugins/active-data/plugins/task-link/web/components/task-link-chip.tsx",
-      "plugins/active-data/plugins/task/web/components/task-card.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/dependencies/web/components/dependencies-button.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/add-task/web/components/add-task-tool-view.tsx",
-      "plugins/page/plugins/annotations/plugins/todo/plugins/task-link/web/hooks.ts",
-      "plugins/tasks/plugins/task-dependencies/web/components/task-dependencies.tsx",
-      "plugins/tasks/plugins/task-deps-tree/web/components/deps-tree-section.tsx",
-      "plugins/tasks/plugins/task-detail/web/panes.tsx",
-      "plugins/tasks/plugins/task-draft-form/web/components/task-draft-popover.tsx",
-      "plugins/tasks/plugins/task-graph/web/hooks.ts",
-      "plugins/tasks/plugins/task-list/web/components/child-count-action.tsx",
-      "plugins/tasks/plugins/task-list/web/components/tasks-list-view.tsx",
-      "plugins/tasks/web/client.ts",
-
-      // Item 7 (revision ticks) — stays until the ticks migrate.
-      // · conversations-revision
-      "plugins/conversations/plugins/all-conversations/core/internal/resources.ts",
-      "plugins/conversations/plugins/all-conversations/server/internal/revision-resource.ts",
-      "plugins/conversations/plugins/all-conversations/web/panes.tsx",
-      "plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/history/web/components/sidebar-history.tsx",
-      // · events.runs-revision
-      "plugins/apps/plugins/events/plugins/events-core/core/internal/resources.ts",
-      "plugins/apps/plugins/events/plugins/events-core/server/internal/resources.ts",
-      "plugins/apps/plugins/events/plugins/events-core/web/internal/hooks.ts",
-      // · latency-ledger.revision
-      "plugins/debug/plugins/latency-ledger/core/internal/resources.ts",
-      "plugins/debug/plugins/latency-ledger/server/internal/revision-resource.ts",
-      "plugins/stats/plugins/responsiveness/web/components/responsiveness-section.tsx",
-      // · release.history-revision (the history window is live; the candidate
-      //   refetch in remote-deploy is its one remaining reader)
-      "plugins/apps/plugins/deploy/plugins/remote-deploy/web/internal/use-release-info.ts",
-      "plugins/release/core/resources.ts",
-      "plugins/release/server/internal/history-revision-resource.ts",
-      // · runs.revision
-      "plugins/runs/core/internal/resources.ts",
-      "plugins/runs/server/internal/revision-resource.ts",
-      "plugins/runs/web/components/runs-data-view.tsx",
-      "plugins/runs/web/internal/use-run.ts",
     ],
   },
 };

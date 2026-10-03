@@ -7,14 +7,19 @@ import type {
   FieldDef,
   FieldValue,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { useModelCatalog } from "@plugins/conversations/plugins/model-provider/web";
-import { CONVERSATION_FIELDS, conversationModelOptions } from "../../core";
+import {
+  CONVERSATION_FIELDS,
+  conversationModelOptions,
+  type ConversationFieldSpec,
+  type ConversationListRow,
+} from "../../core";
 
 // Comparable projection for one field id. Drives the toolbar sort/filter pills and
-// the default table/list cell. (Search/filter/sort run server-side here; this only
-// powers the chrome and read cells.)
-function fieldValue(c: Conversation, id: string): FieldValue {
+// the default table/list cell. (Under a live source search/filter/sort run
+// server-side and this only powers the chrome and read cells; the Queue's
+// in-memory rows evaluate it.)
+function fieldValue(c: ConversationListRow, id: string): FieldValue {
   switch (id) {
     case "title":
       return c.title;
@@ -34,12 +39,14 @@ function fieldValue(c: Conversation, id: string): FieldValue {
       return c.endedAt;
     case "worktreePath":
       return c.worktreePath;
+    case "taskTitle":
+      return c.taskTitle;
     default:
       return null;
   }
 }
 
-function StatusCell({ conv }: { conv: Conversation }): ReactElement {
+function StatusCell({ conv }: { conv: ConversationListRow }): ReactElement {
   return (
     <Inline gap="xs">
       <ConvStatusDot conv={conv} />
@@ -53,42 +60,47 @@ function StatusCell({ conv }: { conv: Conversation }): ReactElement {
 function cellFor(
   id: string,
   type: string,
-): ((c: Conversation) => ReactNode) | undefined {
+): ((c: ConversationListRow) => ReactNode) | undefined {
   if (type === "date") {
-    return (c: Conversation) => {
+    return (c: ConversationListRow) => {
       const v = fieldValue(c, id);
       return v instanceof Date ? <RelativeTime date={v} /> : null;
     };
   }
-  if (id === "status") return (c: Conversation) => <StatusCell conv={c} />;
+  if (id === "status")
+    return (c: ConversationListRow) => <StatusCell conv={c} />;
   return undefined;
 }
 
-type FieldOptions = FieldDef<Conversation>["options"];
+type FieldOptions = FieldDef<ConversationListRow>["options"];
 
 /**
  * The web `FieldDef[]`, derived from the shared CONVERSATION_FIELDS vocabulary so
- * it can never drift from the server's FieldColumnMap. A hook, because one
+ * it can never drift from the collections' declarations. Typed over the LIST row
+ * (`ConversationListRow`): the full `Conversation` the Queue holds is one, so
+ * the Queue reuses them. No field names a `column` — a field id IS its column,
+ * and the in-memory Queue would refuse a column ref at mount. A hook, because one
  * field's options are runtime data: the `model` filter offers the versions in
  * the LIVE model catalog, so a version discovered today is filterable without a
  * release. Until the (preloaded) catalog settles, the model field has no
  * option list — the filter takes free text rather than claiming there are no
  * models.
  */
-export function useConversationFieldDefs(): FieldDef<Conversation>[] {
+export function useConversationFieldDefs(): FieldDef<ConversationListRow>[] {
   const catalog = useModelCatalog();
   const modelOptions: FieldOptions =
     catalog.status === "ready"
       ? conversationModelOptions(catalog.data)
       : undefined;
-  return CONVERSATION_FIELDS.map((spec) => ({
+  const specs: readonly ConversationFieldSpec[] = CONVERSATION_FIELDS;
+  return specs.map((spec) => ({
     id: spec.id,
     label: spec.label,
     type: spec.type,
     primary: spec.primary,
     sortable: spec.sortable,
     options: spec.id === "model" ? modelOptions : spec.options,
-    value: (c: Conversation) => fieldValue(c, spec.id),
+    value: (c: ConversationListRow) => fieldValue(c, spec.id),
     cell: cellFor(spec.id, spec.type),
   }));
 }

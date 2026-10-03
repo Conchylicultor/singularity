@@ -1,6 +1,7 @@
 export { liveCollection } from "./internal/live-collection";
-export type { LiveColumnRef } from "./internal/column-ref";
+export type { LiveColumnRef, LiveColumnRefOwner } from "./internal/column-ref";
 export {
+  liveArmColumns,
   liveColumns,
   LIVE_COLUMNS_KEY,
   LIVE_SCOPED_KEY,
@@ -8,7 +9,9 @@ export {
 } from "./internal/live-columns";
 export type {
   ContributedColumns,
+  LiveArmColumnsHandle,
   LiveColumnsDeclaration,
+  LiveColumnsOwner,
   LiveColumnsHandle,
   LiveContributedCollection,
   LiveScopedColumns,
@@ -21,12 +24,18 @@ export type {
   LiveParamValueSpec,
   LivePreloadedParamValue,
   LivePreloadedParamValueSpec,
+  LiveTypedParamValueSpec,
+  LiveTypedValueParams,
   LiveValue,
   LiveValueOrigin,
+  LiveValueParamParsers,
   LiveValueParams,
   LiveValueSpec,
 } from "./internal/live-value";
 export type {
+  LiveArms,
+  LiveArmsCollection,
+  LiveArmsSpec,
   LiveCollection,
   LiveCollectionOf,
   LiveCollectionSpec,

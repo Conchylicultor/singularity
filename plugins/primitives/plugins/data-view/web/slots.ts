@@ -222,7 +222,7 @@ export const DataViewSlots = {
   FieldExtension: defineFieldExtensions<unknown>(),
   /**
    * Global, always-on row-order slot: every DataView eligible for a manual order
-   * (list/table, no consumer `manualOrder`, no `dataSource`/`aggregate`/group-by)
+   * (list/table, no consumer `manualOrder`, no live `source`, no `aggregate`)
    * folds its contributions, threading `{ storageKey, viewId, rowKey, rows }` so
    * a contributor can key a per-view-instance drag order over the surface.
    * **First non-null wins** (the fold order is a committed reorder override), and

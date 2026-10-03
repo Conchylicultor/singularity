@@ -90,7 +90,4 @@ export type DataViewBodyProps<TRow> = DataViewSourceBundle<TRow> & {
   viewModel: ReadyViewModel;
   activeInstance: ResolvedViewInstance<DataViewContribution>;
   chrome: DataViewShellChrome;
-  /** Scopes the server-page cache per source; `""` (the default) on the
-   *  single-source path. See `useServerDataSource`. */
-  sourceScope?: string;
 };

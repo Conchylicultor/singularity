@@ -1,5 +1,10 @@
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { NOTIFY_MARKERS, scanDbBackedNotify } from "./scan";
+import {
+  FEED_EXCLUSION_MARKER,
+  NOTIFY_MARKERS,
+  findFeedExclusions,
+  scanDbBackedNotify,
+} from "./scan";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -7,7 +12,7 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 const check: Check = {
   id: "no-db-backed-notify",
   description:
-    'Resources that read the DB must not be served external (`defineExternalResource`, or `serveValue` with `source: "external"`), which exposes hand-`notify` — the DB change-feed is their only invalidation path.',
+    'Resources that read the DB must not be served external (`defineExternalResource`, or `serveValue` with `source: "external"`), which exposes hand-`notify` — the DB change-feed is their only invalidation path. Exempt: a call that names a table its own plugin excludes from the feed (`ExcludeFromChangeFeed({ table: <identifier> })`), whose writer is then the only change signal.',
   async run() {
     // Fast pre-filter: candidate files mentioning either bare identifier. We
     // match the identifiers — NOT a `(`-anchored token — because a call's
@@ -20,9 +25,16 @@ const check: Check = {
       grepArg: NOTIFY_MARKERS.join("|"),
       fixed: false,
     });
-    const offenders = scanDbBackedNotify(sources).map(
-      (o) => `${o.path}:${o.line} (${o.marker})`,
-    );
+    // The exemption, derived: per plugin, the tables it excludes from the feed
+    // by its own declaration (see `findFeedExclusions`).
+    const exclusionSources = await listCandidateSources({
+      grepArg: FEED_EXCLUSION_MARKER,
+      fixed: true,
+    });
+    const offenders = scanDbBackedNotify(
+      sources,
+      findFeedExclusions(exclusionSources),
+    ).map((o) => `${o.path}:${o.line} (${o.marker})`);
 
     if (offenders.length === 0) return { ok: true };
 

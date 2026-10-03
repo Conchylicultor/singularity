@@ -7,6 +7,8 @@ import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervis
 import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { releaseOutDir } from "@plugins/release/plugins/bundles/server";
 import type { ReleaseIntent } from "../../core/endpoints";
+import { isPlatformTag } from "../../core/platforms";
+import { noteCandidateClosed } from "./candidate-resource";
 import { _releaseRuns } from "./tables";
 import {
   releaseFailureMessage,
@@ -128,6 +130,7 @@ export async function closeReleaseRow(
     .select({
       composition: _releaseRuns.composition,
       target: _releaseRuns.target,
+      kind: _releaseRuns.kind,
       startedAt: _releaseRuns.startedAt,
     })
     .from(_releaseRuns)
@@ -155,7 +158,7 @@ export async function closeReleaseRow(
   };
   const succeeded = releaseSucceeded(ending);
 
-  await db
+  const closed = await db
     .update(_releaseRuns)
     .set({
       finishedAt: terminal.finishedAt,
@@ -175,9 +178,25 @@ export async function closeReleaseRow(
       // wording, not two.
       error: succeeded ? null : releaseFailureMessage(ending),
     })
-    .where(
-      and(eq(_releaseRuns.id, releaseId), isNull(_releaseRuns.finishedAt)),
-    );
+    .where(and(eq(_releaseRuns.id, releaseId), isNull(_releaseRuns.finishedAt)))
+    .returning({ id: _releaseRuns.id });
+
+  // The `release.candidate` value is read off the filesystem, which the change
+  // feed cannot see — so the one write that says "a new bundle may be on disk"
+  // nudges it. Only when THIS call closed the row (a concurrent closer that
+  // lost the guarded UPDATE got nothing back), and only for the one pair that
+  // can have moved: a candidate run (a staged one claims no pointer) of the web
+  // target (the only one `resolveBundle` resolves), whose manifest names a
+  // platform the value is keyed by.
+  if (
+    closed.length > 0 &&
+    row.kind === "candidate" &&
+    row.target === "web" &&
+    manifest !== null &&
+    isPlatformTag(manifest.platform)
+  ) {
+    noteCandidateClosed(row.composition, manifest.platform);
+  }
 }
 
 /**

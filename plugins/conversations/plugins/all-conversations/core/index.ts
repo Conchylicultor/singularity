@@ -2,6 +2,7 @@ export {
   CONVERSATION_FIELDS,
   CONVERSATION_FILTERABLE,
   CONVERSATION_SEARCHABLE,
+  CONVERSATION_SORTABLE,
   conversationModelOptions,
 } from "./internal/fields";
 export type {
@@ -9,10 +10,8 @@ export type {
   ConversationFieldType,
 } from "./internal/fields";
 export {
-  queryConversations,
-  SortRuleSchema,
-  QueryConversationsBodySchema,
-  QueryConversationsResponseSchema,
-} from "./internal/endpoints";
-export type { QueryConversationsBody } from "./internal/endpoints";
-export { conversationsRevisionResource } from "./internal/resources";
+  allConversations,
+  conversationHistory,
+  ConversationListRowSchema,
+} from "./internal/collection";
+export type { ConversationListRow } from "./internal/collection";

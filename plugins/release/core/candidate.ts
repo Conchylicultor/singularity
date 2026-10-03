@@ -1,15 +1,16 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { ReleaseManifestSchema } from "@plugins/release/plugins/bundles/core";
 import type {
   BundleRefusal,
   BundleResolution,
   Staleness,
 } from "@plugins/release/plugins/bundles/core";
-import { ReleaseRunSchema } from "./resources";
+import { PlatformTagSchema } from "./platforms";
 
 /**
- * The wire schemas for the two verdicts `GET /api/release/candidate` carries
+ * The wire schemas for the two verdicts the `release.candidate` value carries
  * across the network: bundle discovery's `BundleResolution` and provenance's
  * `Staleness`.
  *
@@ -17,7 +18,7 @@ import { ReleaseRunSchema } from "./resources";
  * is the single authority on what a bundle is and why it isn't shippable, and it
  * stays free of any transport concern (a CLI process asks it the same question
  * with no HTTP anywhere in sight). What lives here is only their *serialization*,
- * which is this plugin's endpoint's business.
+ * which is this plugin's value's business.
  *
  * The `satisfies ZodParser<…>` on each schema is what keeps the two from
  * drifting: adding a refusal case, or a field to one, makes THIS file a tsc
@@ -92,25 +93,43 @@ export const StalenessSchema = z.union([
 ]) satisfies ZodParser<Staleness>;
 
 /**
- * What `ship` would do for one `(composition, platform)`, and what it would be
- * shipping.
+ * What `ship` would pick for one `(composition, platform)`, as the
+ * `release.candidate` live value carries it.
  *
- * The split between the three fields is the point, and consumers must respect
- * it: **the filesystem says whether a shippable bundle exists and matches** —
- * that is `resolution`, the EXACT value `ship` itself acts on, so a UI renders
+ * **The filesystem says whether a shippable bundle exists and matches** — that
+ * is `resolution`, the EXACT value `ship` itself acts on, so a UI renders
  * `bundleRefusalMessage(resolution.refusal)` verbatim and never re-derives
- * shippability — while **the DB says where it came from**, which is `run`.
+ * shippability. `staleness` is how its recorded provenance relates to HEAD.
  *
- * `run` is legitimately `null`: a hand-run `./singularity release` is
- * deliberately not recorded in `release_runs` (the filesystem is the registry —
- * see `plugins/release/CLAUDE.md` §Discovery), so "there is a perfectly good
- * bundle and no row for it" is an expected answer, not an error.
+ * There is no `run`: a value read off the filesystem and git cannot also carry
+ * a `release_runs` row (a DB read inside an external value is invisible to the
+ * change feed). The newest run is its own read — the routed `release.history`
+ * window, limit 1 — and a consumer orders the two by `observedAt`.
+ *
+ * `observedAt` is when the server last looked: the start of the newest
+ * observation this value describes (a fresh one is taken whenever a release
+ * closes, HEAD moves, or the bundle on disk changed). A run that FINISHED
+ * before `observedAt` is reflected in `resolution`; one that finished after it
+ * may not be yet.
  */
-export const ReleaseCandidateResponseSchema = z.object({
+export const ReleaseCandidateSchema = z.object({
   resolution: BundleResolutionSchema,
-  run: ReleaseRunSchema.nullable(),
   staleness: StalenessSchema,
+  observedAt: z.coerce.date(),
 });
-export type ReleaseCandidateResponse = z.infer<
-  typeof ReleaseCandidateResponseSchema
->;
+export type ReleaseCandidate = z.infer<typeof ReleaseCandidateSchema>;
+
+/**
+ * The release candidate for one `(composition, platform)` — what `ship` would
+ * pick, live. External on the server (its truth is the bundle directory and
+ * git, not Postgres): it recomputes when HEAD moves and when a candidate
+ * release of that pair closes, and a signed memo over HEAD plus the bundle's
+ * filesystem fingerprint makes every other recompute a cache hit.
+ *
+ * Not preloaded: its readers are the Deploy app's release column and pane,
+ * one subscription per deployment row, released when the row unmounts.
+ */
+export const releaseCandidate = liveValue("release.candidate", {
+  schema: ReleaseCandidateSchema,
+  params: { composition: z.string().min(1), platform: PlatformTagSchema },
+});

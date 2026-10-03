@@ -10,7 +10,7 @@ export { useConversationFieldDefs } from "./internal/fields";
 
 export default {
   description:
-    "All-conversations app pane: a server-delegated DataView (filter/sort/search/keyset over every conversation) reachable from the agent-manager sidebar.",
+    "All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar.",
   contributions: [
     Pane.Register({ pane: allConversationsPane }),
     Shell.Sidebar({

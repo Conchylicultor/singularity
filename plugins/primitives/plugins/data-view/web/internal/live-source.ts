@@ -39,8 +39,8 @@ import {
   lowerSearch,
   UnavailableFilterRuleError,
   UnavailableSortRuleError,
-  useServerFilter,
-} from "./server-filter";
+  useViewFilter,
+} from "./live-filter";
 
 // The DataView → live-window adapter (research/2026-09-29-global-scoped-change-routing.md,
 // "P2 — DataView live-window adapter"): a `source` DataView reads its collection
@@ -67,13 +67,13 @@ export interface LiveSegmentNotice {
   retry: () => void;
 }
 
-/** A data origin's answer, as the body renders it (fetchPage and live alike). */
+/** A live origin's answer, as the body renders it. */
 export interface SourceView<TRow> {
   rows: readonly TRow[];
   loading: boolean;
   /**
-   * Why no query can be read — the view's own sort/filter/search lowering, or
-   * a fetched page — rendered in place of the view.
+   * Why no query can be read — the view's own sort/filter/search lowering —
+   * rendered in place of the view.
    */
   error: Error | null;
   /**
@@ -126,13 +126,11 @@ export function useLiveSource<TRow>(args: {
 
   // The view's filter, lowered over FIELD ids (relative dates against the day
   // clock), before its rename onto columns.
-  const lowered = useServerFilter({
+  const lowered = useViewFilter({
     group: plan ? state.filter : null,
-    query: "",
     fields: plan?.filterFields ?? NO_FIELDS,
     resolveOperatorSet,
     filterable: plan?.filterable ?? NO_FILTERABLE,
-    searchable: NO_SEARCHABLE,
   });
 
   const lowering = useMemo(():
@@ -352,6 +350,5 @@ export function useLiveSource<TRow>(args: {
 
 const NO_FIELDS: FieldDef<never>[] = [];
 const NO_FILTERABLE: Filterable = {};
-const NO_SEARCHABLE: readonly string[] = [];
 const NO_ROWS: readonly unknown[] = [];
 const NOOP = () => {};

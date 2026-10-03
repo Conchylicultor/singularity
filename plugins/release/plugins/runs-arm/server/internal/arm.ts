@@ -1,57 +1,58 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { eq, sql } from "drizzle-orm";
+import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import { defineRunKind } from "@plugins/runs/server";
+import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
 import { _releaseRuns } from "@plugins/release/server";
-import { RELEASE_RUN_KIND, releaseRunArmFields } from "../../core";
+import { releaseRunColumns } from "../../core";
 import { releaseOutcomeExpr } from "./outcome-sql";
 
 /**
  * Releases, as an arm of the merged run space.
  *
- * The base columns worth explaining:
- *
- * - `label` — composition **and** target. A release is of a composition *for* a
- *   target, and the composition alone would put two rows of the same name next
- *   to each other in a list whose whole job is telling runs apart. Both stay
- *   available as their own filterable arm fields.
- * - `trigger` is **null**. The base column means "what set this off" — a person,
- *   a schedule, another run — and `release_runs` records nothing of the sort.
- *   The nearest column is `kind` (`staged` / `candidate`), but that is *why the
- *   run was cut*, not what started it: filling `trigger` with it would make the
- *   shared Trigger column mean one thing for a build and another for a release,
- *   which is the one thing a shared column may not do. It is `release.kind`
- *   instead, where it is exactly itself.
+ * - `label` — composition **and** target: a release is of a composition *for*
+ *   a target, and the composition alone would put two rows of the same name
+ *   next to each other in a list whose job is telling runs apart.
+ * - `trigger` is **null**: `release_runs` records nothing that set it off. Its
+ *   `kind` (`staged` / `candidate`) is *why the run was cut*, not what
+ *   started it — it is `release.kind`, where it is exactly itself.
  * - `message` is `error`, the run's own words about the failure, verbatim.
- * - `namespace` is real: a worktree DB forks main and inherits main's rows, so a
- *   release row without its producing namespace is a phantom.
  */
 export const releaseRunKind = defineRunKind({
-  kind: RELEASE_RUN_KIND,
-  table: _releaseRuns,
-  fields: releaseRunArmFields,
-  base: {
-    id: _releaseRuns.id,
-    label: sql`concat_ws(' · ', ${_releaseRuns.composition}, ${_releaseRuns.target})`,
-    outcome: releaseOutcomeExpr(_releaseRuns.status),
+  columns: releaseRunColumns,
+  from: _releaseRuns,
+  id: _releaseRuns.id,
+  base: (j) => ({
+    label: expr(
+      sql`concat_ws(' · ', ${j.base.composition}, ${j.base.target})`,
+      {
+        decoder: String,
+        sqlType: "text",
+        notNull: true,
+      },
+    ),
+    outcome: expr(releaseOutcomeExpr(j.base.status), {
+      decoder: parsed(RunOutcomeSchema, "runs.release.outcome"),
+      sqlType: "text",
+      notNull: true,
+    }),
     trigger: null,
-    startedAt: _releaseRuns.startedAt,
-    finishedAt: _releaseRuns.finishedAt,
-    namespace: _releaseRuns.namespace,
-    message: _releaseRuns.error,
-  },
-  extra: {
-    "release.kind": _releaseRuns.kind,
-    "release.composition": _releaseRuns.composition,
-    "release.target": _releaseRuns.target,
-    "release.platform": _releaseRuns.platform,
-    "release.commitSha": _releaseRuns.commitSha,
-    "release.commitDirty": _releaseRuns.commitDirty,
-    "release.artifactPath": _releaseRuns.artifactPath,
-  },
-  // THIS WORKTREE'S releases only — the same fork-inheritance problem as the
-  // build arm, and the same fix. `release_runs` has a real `namespace` column
-  // precisely because a worktree DB inherits main's rows, and the table's own
-  // comment says so. Unscoped, every worktree's merged list would open on
-  // main's release history.
-  where: eq(_releaseRuns.namespace, runtimeNamespace()),
+    startedAt: j.base.startedAt,
+    finishedAt: j.base.finishedAt,
+    namespace: j.base.namespace,
+    message: j.base.error,
+  }),
+  extra: (j) => ({
+    kind: j.base.kind,
+    composition: j.base.composition,
+    target: j.base.target,
+    platform: j.base.platform,
+    commitSha: j.base.commitSha,
+    commitDirty: j.base.commitDirty,
+    artifactPath: j.base.artifactPath,
+  }),
+  // THIS WORKTREE'S releases only — a worktree DB inherits main's rows, and
+  // `release_runs` carries its producing namespace for exactly that reason.
+  where: (j) => eq(j.base.namespace, runtimeNamespace()),
 });

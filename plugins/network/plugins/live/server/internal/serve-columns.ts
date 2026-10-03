@@ -14,6 +14,7 @@ import type { FilterDomainId } from "@plugins/network/plugins/live/plugins/filte
 import type {
   LiveColumnsDeclaration,
   LiveColumnsHandle,
+  LiveColumnsOwner,
 } from "@plugins/network/plugins/live/core";
 
 // The server half of a contributed-column handle (`liveColumns`, core): the
@@ -51,7 +52,10 @@ type ContributorColumns<N extends string, J extends ExtensionJoin> = [
 
 /** One contributor's columns, served: what `serveCollection` compiles into the collection. */
 export interface ServedColumns {
-  readonly handle: LiveColumnsDeclaration;
+  /** A CONTRIBUTED set's handle — only a contributor serves through `LiveColumns.Serve`. */
+  readonly handle: LiveColumnsDeclaration & {
+    readonly owner: Extract<LiveColumnsOwner, { kind: "contributed" }>;
+  };
   /**
    * The relation its fields are read through: an extension's `join(alias)`,
    * and only that — a LEFT join 1:1 on the host's id, so contributing columns
@@ -113,14 +117,6 @@ export interface ScopedMemberRead {
 export interface ServedScopedColumns {
   /** Unique; the prefix of every wire name (`<name>.<member>`) and the family's route id. */
   readonly name: string;
-  /**
-   * The side table and its key columns, bound to one scope, for a read that
-   * compiles no live tuple (the DataView's HTTP query augmentor). Records
-   * nothing, so its scope is not watched for definition changes — named for
-   * that, since a live fold that took it would route but never recompute on
-   * `recomputeOn`: a fold calls `bind`.
-   */
-  unwatchedFamily(scope: string): JoinFamily;
   /**
    * A collection's fold: binds the set to the collection's scope — recorded
    * in `scopes()` — and returns that scope's family. Every `columnScope`
@@ -187,7 +183,6 @@ export function serveScopedColumns<P extends Record<string, string>>(spec: {
   const bound = new Set<string>();
   return {
     name: spec.name,
-    unwatchedFamily: family,
     bind: (scope) => {
       bound.add(scope);
       return family(scope);
@@ -205,7 +200,7 @@ export const LiveColumns = {
    * `serveCollection` compiles every contribution naming it.
    */
   Serve: defineServerContribution<ServedColumns>("live.columns.serve", {
-    docLabel: (s) => `${s.handle.collection} ← ${s.handle.name}`,
+    docLabel: (s) => `${s.handle.owner.collection} ← ${s.handle.name}`,
   }),
   /**
    * A scoped column set (`serveScopedColumns`): every collection declaring a

@@ -1,4 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
+import type { ColumnRef } from "@plugins/infra/plugins/query-resource/core";
 import type { ColumnExpr } from "@plugins/primitives/plugins/keyset/server";
 import type { ReleaseRun } from "@plugins/release/core";
 import type { RunOutcome } from "@plugins/runs/plugins/run-outcome/core";
@@ -24,7 +25,7 @@ const OUTCOME_OF_STATUS: Record<ReleaseRun["status"], RunOutcome> = {
  * The shared `outcome`, from the release ledger's own status column.
  *
  * Two things are deliberate. There is **no `else`**: a status outside the map
- * projects NULL, and `UnionRunSchema`'s `RunOutcomeSchema` throws on it rather
+ * projects NULL, and the arm's `RunOutcomeSchema` decoder refuses it on it rather
  * than an unlabelled row reaching the list — `outcome-sql.test.ts` drives a
  * value the map does not cover through it to hold that true. And the `::text`
  * cast is on the whole expression, because every arm of a `UNION ALL` has to
@@ -35,7 +36,7 @@ const OUTCOME_OF_STATUS: Record<ReleaseRun["status"], RunOutcome> = {
  * `_releaseRuns.status`, so the suite can evaluate it over a parameter and needs
  * no table, no migration chain and no fixture rows.
  */
-export function releaseOutcomeExpr(status: ColumnExpr): SQL {
+export function releaseOutcomeExpr(status: ColumnExpr | ColumnRef): SQL {
   const whens = Object.entries(OUTCOME_OF_STATUS).map(
     ([from, to]) => sql`when ${from} then ${to}`,
   );

@@ -31,7 +31,7 @@ import { DataViewSlots, type GlobalRowOrderProps } from "../slots";
  *
  * `enabled: false` short-circuits **before** `useContributions()` AND before the
  * ordered set is derived — so a DataView that cannot use a row order (a
- * tree/gallery view, a `dataSource` surface, an aggregated or grouped view, or one
+ * tree/gallery view, a live `source` surface, an aggregated view, or one
  * whose consumer already owns a domain order) never mounts a contributor, never
  * subscribes to its live resource, and never pays for a filter pass it discards.
  * That is why the fold takes the RAW rows plus the pipeline's ingredients rather

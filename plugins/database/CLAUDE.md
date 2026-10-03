@@ -291,7 +291,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `build/build-commits`
     - `conversations`
     - `conversations/agents`
-    - `conversations/all-conversations`
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
@@ -343,7 +342,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `primitives/usage-rank`
     - `release`
     - `reports`
-    - `runs`
     - `search/engine`
     - `shell/notifications`
     - `stats/cost`

@@ -6,8 +6,8 @@ import {
   RUN_OUTCOME_OPTIONS,
   RunOutcomeChip,
 } from "@plugins/runs/plugins/run-outcome/web";
-import type { UnionRun } from "../../core";
-import { formatDuration } from "./format";
+import type { RunRow } from "../../core";
+import { RunDuration } from "../components/run-duration";
 import type { RunKindContribution } from "./slots";
 
 function muted(text: string | null): ReactNode {
@@ -19,10 +19,10 @@ function muted(text: string | null): ReactNode {
 /**
  * The base field schema — one entry per base column, and nothing else.
  *
- * Every one of these is a real projected column, so every `sortable` /
- * `filterable` flag here compiles to SQL on the server. Nothing is derived from
- * the loaded rows: the window is server-paginated, so a derived option list
- * would offer only what happens to be on screen.
+ * Every one of these is a column of the `runs` union, so every sort and
+ * filter compiles to SQL on the server (a field's id IS its column). Nothing is
+ * derived from the loaded rows: the window is server-paginated, so a derived
+ * option list would offer only what happens to be on screen.
  *
  * `kind` is the exception that proves it — its options come from the registered
  * arms (a build kind is a fact about what is installed, not about this page),
@@ -30,7 +30,7 @@ function muted(text: string | null): ReactNode {
  */
 export function useRunFields(
   kinds: readonly RunKindContribution[],
-): FieldDef<UnionRun>[] {
+): FieldDef<RunRow>[] {
   return useMemo(() => {
     const kindOptions = kinds.map((k) => ({ value: k.kind, label: k.label }));
     return [
@@ -100,8 +100,14 @@ export function useRunFields(
         value: (r) => r.duration,
         // Sortable and filterable BECAUSE it is a real projected column, derived
         // in SQL rather than in the cell — so "the ten slowest runs" is a sort,
-        // not a thing you can only eyeball on the loaded page.
-        cell: (r) => muted(formatDuration(r.duration)),
+        // not a thing you can only eyeball on the loaded page. It is
+        // finished-only (NULL while running, so a running run sorts last by
+        // "Took"); the cell ticks a running run's elapsed time itself.
+        cell: (r) => (
+          <span className="text-muted-foreground">
+            <RunDuration run={r} />
+          </span>
+        ),
         sortable: true,
         filterable: true,
         width: "6rem",
@@ -158,12 +164,12 @@ export function useRunFields(
         // `build.status` / the exit codes. Where the verbatim text matters it is
         // one click away in the run's own detail surface.
         //
-        // `filterable` stays, and `RUN_SEARCH_COLUMNS` already lists `message`,
+        // `filterable` stays, and the runs source searches `message`,
         // so searching for a failure's own words is unaffected by the default.
         filterable: true,
         visible: false,
         width: "24rem",
       },
-    ] satisfies FieldDef<UnionRun>[];
+    ] satisfies FieldDef<RunRow>[];
   }, [kinds]);
 }

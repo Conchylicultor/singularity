@@ -1,6 +1,19 @@
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
+/** Per-call options for `GitStateMemo.get` / `SignedMemo.get`. */
+export interface MemoGetOptions {
+  /**
+   * Freshness floor on the `performance.now()` clock, passed straight to the
+   * embedded single-flight: on a miss, refuse to JOIN a compute that started
+   * before this instant and start a fresh one instead. For a caller that knows
+   * an input moved at `notBefore` (and bumped the signature for it) — a compute
+   * already running then cannot reflect it. Omitted ⇒ join any live compute,
+   * the ≤1-event staleness-sharing default.
+   */
+  notBefore?: number;
+}
+
 export interface GitStateMemo<T> {
   /**
    * Return the memoized value for `worktreePath` if the cheap ungated
@@ -19,6 +32,7 @@ export interface GitStateMemo<T> {
     worktreePath: string,
     signatureFn: () => Promise<string>,
     computeFn: () => Promise<T>,
+    opts?: MemoGetOptions,
   ): Promise<T>;
   /**
    * Write-through prime: store `{ signature, value }` for `worktreePath`
@@ -56,7 +70,7 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
   const cache = new Map<string, { signature: string; value: T }>();
   const inflight = createInflight();
   return {
-    async get(worktreePath, signatureFn, computeFn) {
+    async get(worktreePath, signatureFn, computeFn, getOpts) {
       const sig = await signatureFn(); // cheap, ungated, no slot
       const hit = cache.get(worktreePath);
       if (hit && hit.signature === sig) {
@@ -78,9 +92,16 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
         },
         // Joiners charge the time spent awaiting the shared compute to their
         // OWN enclosing entry — the starter's compute is real work, not wait.
-        // No `notBefore`: this memo mints no version, so sharing a ≤1-event
-        // stale result is the documented contract above, not a hazard.
-        { onWait: (ms) => chargeWait(`git-coalesce:${opts.name}`, ms) },
+        // `notBefore` only when the caller asks: by default sharing a ≤1-event
+        // stale result is the documented contract above, not a hazard. A
+        // caller that knows an input moved at an instant passes it, and a
+        // compute started before then is superseded rather than joined. (A
+        // superseded compute settling late caches under its own, older
+        // signature — the next probe misses: over-invalidation, never a torn hit.)
+        {
+          onWait: (ms) => chargeWait(`git-coalesce:${opts.name}`, ms),
+          notBefore: getOpts?.notBefore,
+        },
       );
     },
     set(worktreePath, signature, value) {

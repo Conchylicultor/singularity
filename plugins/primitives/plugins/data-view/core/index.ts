@@ -21,7 +21,6 @@ export {
 
 export {
   FilterGroupSchema,
-  ServerFilterWireSchema,
   FilterNodeSchema,
   FilterRuleSchema,
 } from "./internal/filter-schema";
@@ -94,7 +93,6 @@ export type {
   DataViewSearch,
   DataViewDataOrigin,
   DataViewInMemoryOrigin,
-  DataViewFetchPageOrigin,
   DataViewLiveOrigin,
   DataViewSurfaceChrome,
   DataViewActiveChrome,
@@ -111,8 +109,6 @@ export type {
   FilterRule,
   FilterGroup,
   FilterNode,
-  ServerPage,
-  ServerDataSourceSpec,
   ItemActionProps,
   ItemActionsDescriptor,
   ItemActionZone,

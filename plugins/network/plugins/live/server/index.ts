@@ -5,6 +5,14 @@ export {
   serveCollection,
 } from "./internal/serve-collection";
 export { serveValue } from "./internal/serve-value";
+export { serveUnionCollection } from "./internal/serve-union";
+export type {
+  ServeUnionOptions,
+  UnionArmBinding,
+  UnionArmColumns,
+  UnionArmRefs,
+  UnionFieldBinding,
+} from "./internal/serve-union";
 export {
   LiveColumns,
   serveColumns,
@@ -25,6 +33,8 @@ export type {
 export type {
   CollectionSource,
   CollectionSpecs,
+  ColumnOverride,
+  DefaultScope,
   LookupCollectionSpecs,
   ServeCollectionOptions,
   ServedCollection,

@@ -4,9 +4,8 @@ import type { FilterGroup, FilterNode, FilterRule } from "./types";
 
 /**
  * Zod mirror of the `FilterRule` / `FilterGroup` / `FilterNode` interfaces, for
- * validating a `FilterGroup` arriving over the wire (the server-delegated
- * `dataSource` path posts the user-authored filter tree in a request body). The
- * recursion is closed with `z.lazy` so the group's `children` can nest groups.
+ * validating a `FilterGroup` read from untrusted JSON (persisted view state,
+ * presets). The recursion is closed with `z.lazy` so the group's `children` can nest groups.
  *
  * `value` is `unknown` (operands are JSON-safe but otherwise opaque — a rule's
  * operand shape is owned by its field-type operator, not this schema).
@@ -31,12 +30,3 @@ export const FilterGroupSchema: ZodParser<FilterGroup> = z.lazy(() =>
     children: z.array(FilterNodeSchema),
   }),
 );
-
-/**
- * The wire form of a server-delegated query's `filter`: the host's lowered,
- * canonical filter-language `Filter` tree (see `ServerDataSourceSpec`), carried
- * as JSON. Opaque HERE on purpose — the handler decodes it STRICTLY against its
- * source's declared `filterable` (`server-query`'s `decodeFilterBody`), which is
- * the only place that knows which columns and domains are legal.
- */
-export const ServerFilterWireSchema = z.unknown();

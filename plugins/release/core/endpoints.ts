@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { PlatformTagSchema } from "./platforms";
-import { ReleaseCandidateResponseSchema } from "./candidate";
-import { ReleaseRunSchema } from "./resources";
 
 /**
  * WHY a release is being cut — the one input that decides whether the artifact
@@ -50,35 +48,6 @@ export const triggerReleaseEndpoint = defineEndpoint({
   }),
 });
 
-/**
- * What `ship` would pick for one `(composition, platform)`, and where it came
- * from. See {@link ReleaseCandidateResponseSchema} for the three fields.
- *
- * **Owned by `release`, not by `deploy`.** "Which run would ship for composition
- * C on platform P" is a release-engine question whose only deploy-specific input
- * is P — which a deploy UI already has from the server's health probe. Putting
- * it here means the feature adds no server-side plugin edge from deploy to
- * release at all.
- *
- * A plain deduped GET rather than a live resource, deliberately: a
- * per-composition collection resource would be unbounded, which the bounded
- * working-set contract forbids. Consumers refetch on the existing
- * `release.history-revision` tick, which already fires on every new run and
- * status flip.
- */
-export const releaseCandidateEndpoint = defineEndpoint({
-  route: "GET /api/release/candidate",
-  query: z.object({
-    composition: z.string().min(1),
-    platform: PlatformTagSchema,
-  }),
-  response: ReleaseCandidateResponseSchema,
-  // Every deployment row of the same composition asks the identical question;
-  // the answer costs a directory walk plus two `git` spawns, so collapsing a
-  // burst onto one handler run is free correctness.
-  dedupe: true,
-});
-
 // Start a local preview of a finished release artifact (spawns its `launch`).
 export const previewEndpoint = defineEndpoint({
   route: "POST /api/release/runs/:id/preview",
@@ -106,45 +75,4 @@ export type ReleaseLogsResponse = z.infer<typeof ReleaseLogsResponseSchema>;
 export const releaseLogsEndpoint = defineEndpoint({
   route: "GET /api/release/runs/:id/logs",
   response: ReleaseLogsResponseSchema,
-});
-
-/**
- * Wrapped in an object rather than a bare `ReleaseRunSchema.nullable()`, and
- * that is load-bearing, not style: `implement()` turns a `null` handler return
- * into **204**, and `fetchEndpoint` turns a 204 into `undefined`. A top-level
- * nullable response would therefore reach the client as `undefined` — the same
- * value a still-loading query has — collapsing "this composition has never been
- * released" into "we have not asked yet". The wrapper keeps the answer a 200
- * with an explicit `run: null`.
- */
-export const ReleaseLatestRunResponseSchema = z.object({
-  run: ReleaseRunSchema.nullable(),
-});
-export type ReleaseLatestRunResponse = z.infer<
-  typeof ReleaseLatestRunResponseSchema
->;
-
-/**
- * The newest run of `composition` in this namespace, **whatever its state** —
- * running, failed, or succeeded.
- *
- * The sibling of `releaseCandidateEndpoint`, and the two are not
- * interchangeable: that one answers *what would ship* (a resolved bundle on
- * disk, so it structurally cannot show a build that is still running or one that
- * just failed), this one answers *what is the newest run*. A pipeline UI needs
- * both — the first to gate Ship, the second to say "a build is in flight" or
- * "the last build failed".
- *
- * A GET, so consumers use `useEndpoint` rather than borrowing the history
- * DataView's live source (`releaseHistory`), which is scoped to that one
- * surface's custom columns.
- *
- * `release_runs_ns_comp_started_idx` — `(namespace, composition, started_at
- * DESC)` — covers this exactly; it needs no index of its own.
- */
-export const releaseLatestRunEndpoint = defineEndpoint({
-  route: "GET /api/release/latest",
-  query: z.object({ composition: z.string().min(1) }),
-  response: ReleaseLatestRunResponseSchema,
-  dedupe: true,
 });

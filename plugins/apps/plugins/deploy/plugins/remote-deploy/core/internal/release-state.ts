@@ -1,4 +1,8 @@
-import type { ReleaseCandidateResponse, ReleaseRun } from "@plugins/release/core";
+import type {
+  PlatformTag,
+  ReleaseCandidate,
+  ReleaseRun,
+} from "@plugins/release/core";
 
 /**
  * What `ship` would pick for this deployment right now, as one word.
@@ -43,8 +47,8 @@ export function releaseStateLabel(state: ReleaseState): string {
 }
 
 export interface ReleaseStateInput {
-  /** `GET /api/release/candidate` for this (composition, platform). */
-  candidate: ReleaseCandidateResponse;
+  /** The `release.candidate` value for this (composition, platform). */
+  candidate: ReleaseCandidate;
   /**
    * The newest `release_runs` row for this composition in this namespace,
    * whatever its platform or kind — the engine's in-flight uniqueness is
@@ -86,4 +90,54 @@ export function resolveReleaseState({
   return staleness.kind === "behind" || staleness.kind === "diverged"
     ? "stale"
     : "built";
+}
+
+/**
+ * Whether the candidate is PROVABLY older than the newest run — the two reads
+ * are separate streams nothing orders on the server, so the newest run can
+ * land before the candidate it produced. Holding `loading` then is what stops
+ * a just-finished build from flashing "Not built" (or the previous bundle).
+ *
+ * Only a provable lag holds, never a merely possible one, so the gate cannot
+ * stay shut: the run must be a succeeded `candidate` of this platform's web
+ * target — the only kind that claims the `latest-<platform>` pointer this
+ * value resolves — and EITHER
+ *
+ * - the candidate resolved a different run, built before the newest one
+ *   started (that run's bundle replaces it), OR
+ * - the candidate found no pointer at all, observed before the newest run
+ *   finished (the server observes afresh on every candidate close, so this
+ *   ends when that observation lands — whatever it finds).
+ *
+ * Anything else — another platform, a staged run, a failed one, a hand-run CLI
+ * release with no row, a refusal that is not about a missing pointer — is
+ * rendered as it stands.
+ */
+export function candidatePredatesLatest(
+  candidate: ReleaseCandidate,
+  latest: ReleaseRun | null,
+  platform: PlatformTag,
+): boolean {
+  if (
+    latest === null ||
+    latest.status !== "succeeded" ||
+    latest.kind !== "candidate" ||
+    latest.platform !== platform ||
+    latest.target !== "web"
+  ) {
+    return false;
+  }
+  const { resolution } = candidate;
+  if (resolution.ok) {
+    return (
+      resolution.runId !== latest.id &&
+      Date.parse(resolution.manifest.builtAt) < latest.startedAt.getTime()
+    );
+  }
+  const refusal = resolution.refusal.kind;
+  return (
+    (refusal === "no-releases" || refusal === "no-pointer") &&
+    latest.finishedAt !== null &&
+    candidate.observedAt.getTime() < latest.finishedAt.getTime()
+  );
 }

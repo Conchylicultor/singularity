@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import {
   ExcludeFromBackup,
@@ -10,25 +9,44 @@ import {
   _latencyLedgerMinute,
   _latencyLedgerThreadMinute,
 } from "./tables";
-import { latencyLedgerRevisionServerResource } from "./revision-resource";
+import { latencySummaryServed } from "./summary-resource";
 
 // Observability about THIS machine in THIS database. Three consequences, the same
 // for all four tables:
 //  - no change feed: a write that happens every minute must not drive a live-state
-//    recompute; the card refreshes from the `latency-ledger.revision` tick instead;
+//    recompute; the `latency-ledger.summary` value is served external and the
+//    minute flush notifies it (./summary-resource);
 //  - no fork: a worktree showing main's numbers as its own would be wrong;
 //  - no backup: 35-day observability, not user data.
-const ledgerTablePolicies = [
+const ledgerTables = [
   _latencyLedgerMinute,
   _latencyLedgerHostMinute,
   _latencyLedgerThreadMinute,
   _latencyLedgerInteraction,
-].flatMap((table) => [
+];
+
+// Each feed exclusion names its table literally: the no-db-backed-notify check
+// derives which tables this plugin may serve external from these `table:`
+// identifiers, so a loop variable here would sanction nothing.
+const feedReason =
+  "Written every minute by the ledger itself; the latency-ledger.summary value is notified by the ledger's minute flush instead.";
+const feedExclusions = [
+  ExcludeFromChangeFeed({ table: _latencyLedgerMinute, reason: feedReason }),
   ExcludeFromChangeFeed({
-    table,
-    reason:
-      "Written every minute by the ledger itself; the card refreshes from the latency-ledger.revision tick instead.",
+    table: _latencyLedgerHostMinute,
+    reason: feedReason,
   }),
+  ExcludeFromChangeFeed({
+    table: _latencyLedgerThreadMinute,
+    reason: feedReason,
+  }),
+  ExcludeFromChangeFeed({
+    table: _latencyLedgerInteraction,
+    reason: feedReason,
+  }),
+];
+
+const ledgerTablePolicies = ledgerTables.flatMap((table) => [
   ExcludeFromFork({
     table,
     reason:
@@ -41,6 +59,7 @@ const ledgerTablePolicies = [
 ]);
 
 export const ledgerContributions = [
-  Resource.Declare(latencyLedgerRevisionServerResource),
+  ...latencySummaryServed.declare,
+  ...feedExclusions,
   ...ledgerTablePolicies,
 ];

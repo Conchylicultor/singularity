@@ -39,7 +39,7 @@ protection and are untouched.
 
 ## Nothing here re-derives shippability
 
-`GET /api/release/candidate` returns the exact `BundleResolution` that
+The `release.candidate` live value carries the exact `BundleResolution` that
 `./singularity deploy ship` acts on; refusals render through
 `bundleRefusalMessage()` **verbatim**. The platform is never a picker — it comes
 from the server's health probe, the same argument that keeps `runUser` derived.
@@ -51,16 +51,32 @@ the refusal is rendered as *what Deploy would have to start from*, not as a wall
 
 ## Two questions, gated together
 
-`useReleaseInfo` reports `state: null` until both land, so a half-loaded snapshot
-never paints as a state:
+`useReleaseInfo` asks both live — no tick, no refetch — and answers with a
+`ResourceResult<ReleaseSnapshot>`, so "no bundle", "not asked yet", "cannot
+ask" and "asking failed" never render alike: `loading`, `error` (a corrupt
+`RELEASE.json` is the candidate's error, not a refusal), and a ready snapshot
+that is either `no-platform` (the server reported none, so there is no
+candidate question) or `resolved` (`state` derived once by
+`resolveReleaseState`). It is derived only through the sanctioned combinators
+(`mapResource`, `combineResources`, `foldResource`); the ordering gate below is
+one more gate input to the combine. `releaseStateOf(info)` is what the Release
+column's `value` reads. The chip and the pane render every state.
 
-- **filesystem** — the candidate endpoint, refetched on the
-  `release.history-revision` tick (a per-composition live resource would be
-  unbounded, which the working-set contract forbids);
-- **DB** — the newest run of that composition, the only way to know a build is
-  running or that the last one failed. The engine's in-flight uniqueness is
-  `(namespace, composition)`, so a staged Studio run really does block a
-  candidate build here.
+- **filesystem** — `useLive(releaseCandidate, { composition, platform })`;
+- **DB** — `useLive(releaseHistory, { where: { composition }, orderBy:
+  startedAt desc, limit: 1 })`, the newest run of that composition, the only way
+  to know a build is running or that the last one failed. The engine's in-flight
+  uniqueness is `(namespace, composition)`, so a staged Studio run really does
+  block a candidate build here.
+
+Nothing orders the two streams, so the newest run can arrive before the
+candidate it produced. `candidatePredatesLatest` (core) holds `loading` only
+while that lag is PROVABLE — the run is a succeeded web `candidate` of this
+platform, and the candidate either resolved an older run built before it
+started, or found no pointer and was observed (`observedAt`) before it
+finished. Anything else (another platform, a staged or failed run, a hand-run
+CLI release, any other refusal) renders as it stands, so the gate cannot stay
+shut. `release-info-live-verify` drives it end to end.
 
 ## The Output tab follows the phase
 
@@ -129,7 +145,6 @@ remote health gate.
     - `apps/deploy/health.ServerHealthRow`
     - `apps/deploy/health.useServerHealth`
     - `apps/deploy/health.useServerHealthMap`
-    - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `network/live.useLiveRow`
@@ -142,11 +157,13 @@ remote health gate.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/live-state.combineResources`
     - `primitives/live-state.foldResource`
+    - `primitives/live-state.GateInput`
+    - `primitives/live-state.mapResource`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/log-channels.LiveLogChannel`
     - `primitives/relative-time.RelativeTime`
@@ -162,6 +179,7 @@ remote health gate.
     - `ReleaseState`
     - `ReleaseStateInput`
   - Exports (values):
+    - `candidatePredatesLatest`
     - `RELEASE_STATE_OPTIONS`
     - `releaseStateLabel`
     - `resolveReleaseState`

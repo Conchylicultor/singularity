@@ -105,7 +105,10 @@ fail: the three unrelated failures above, plus the live lint barrel test timing
 out at 5 s under load (it passes re-run alone); `./singularity build` success
 (its checks include `type-check` and `plugin-boundaries`).
 
-## Status (2026-10-02): P5 landed, uncommitted, awaiting review
+## Status (2026-10-02): P5 landed in `3f7fe72db4`
+
+Steps 7–14 (P6, P7 and the item-7 remainder) are tracked in
+`research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md`, whose "As landed" section records them.
 
 P5 of the follow-up plan (`research/2026-10-01-global-scoped-change-routing-p5-p8.md`), as landed:
 

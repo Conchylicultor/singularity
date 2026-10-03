@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: All-conversations app pane: a server-delegated DataView (filter/sort/search/keyset over every conversation) reachable from the agent-manager sidebar. Global conversations query handler (filter/sort/search/keyset over conversations_v) + the scalar revision-tick live resource that keeps the All-conversations DataView window fresh.
+- Description: All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar. Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
 - Web:
   - Slots: `allConversationsPane.Actions` ← `primitives.pane`
   - Contributes:
@@ -14,14 +14,12 @@
     - `conversations/conversation-ui/item.ConvStatusDot`
     - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.useModelCatalog`
-    - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.opensPane`
     - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
+    - `primitives/data-view.liveDataSource`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
@@ -32,56 +30,52 @@
     - `allConversationsPane`
     - `useConversationFieldDefs`
 - Server:
-  - Contributes: `resource.declare` "conversations-revision"
+  - Contributes:
+    - `resource.declare` "conversations.all"
+    - `resource.declare` "conversations.all:rows"
+    - `resource.declare` "conversations.all:groups"
+    - `resource.declare` "conversations.history"
+    - `resource.declare` "conversations.history:rows"
+    - `resource.declare` "conversations.history:groups"
   - Uses:
-    - `database.db`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `primitives/data-view/server-query.applyJoin`
-    - `primitives/data-view/server-query.augmentServerQuery`
-    - `primitives/data-view/server-query.bindColumns`
-    - `primitives/data-view/server-query.compileWhere`
-    - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/keyset.buildSortKeys`
-    - `primitives/keyset.keyValuesOf`
-    - `primitives/keyset.orderByClauses`
-    - `primitives/keyset.seekPredicate`
-    - `tasks/tasks-core.conversationsView`
-  - Exports (values):
-    - `conversationsRevisionResource`
-    - `handleQuery`
-  - Resources: `conversations-revision` (push)
+    - `network/live.serveCollection`
+    - `tasks/tasks-core._conversations`
+    - `tasks/tasks-core.conversationOwnerColumns`
+    - `tasks/tasks-core.conversationOwnerJoins`
+  - Resources:
+    - `conversations.all` (keyed, window)
+    - `conversations.all:groups` (push)
+    - `conversations.all:rows` (keyed, point)
+    - `conversations.history` (keyed, window)
+    - `conversations.history:groups` (push)
+    - `conversations.history:rows` (keyed, point)
 - Core:
   - Uses:
     - `conversations/model-provider.compareModelsNewestFirst`
     - `conversations/model-provider.isPrintOnlyFamily`
     - `conversations/model-provider.ModelCatalog`
     - `conversations/model-provider.modelMeta`
-    - `infra/endpoints.defineEndpoint`
+    - `network/live.liveCollection`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveText`
-    - `primitives/data-view.ServerFilterWireSchema`
-    - `primitives/live-state.resourceDescriptor`
     - `tasks/tasks-core.ConversationKindSchema`
     - `tasks/tasks-core.ConversationSchema`
     - `tasks/tasks-core.ConversationStatusSchema`
   - Exports (types):
     - `ConversationFieldSpec`
     - `ConversationFieldType`
-    - `QueryConversationsBody`
+    - `ConversationListRow`
   - Exports (values):
+    - `allConversations`
     - `CONVERSATION_FIELDS`
     - `CONVERSATION_FILTERABLE`
     - `CONVERSATION_SEARCHABLE`
+    - `CONVERSATION_SORTABLE`
+    - `conversationHistory`
+    - `ConversationListRowSchema`
     - `conversationModelOptions`
-    - `conversationsRevisionResource`
-    - `queryConversations`
-    - `QueryConversationsBodySchema`
-    - `QueryConversationsResponseSchema`
-    - `SortRuleSchema`
 - Cross-plugin:
   - Imported by:
-    - `conversations`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
 

@@ -45,7 +45,7 @@ describe("resolveBodyState", () => {
     );
   });
 
-  test("the server-delegated path keeps its own error and loading", () => {
+  test("a live origin keeps its own error and loading", () => {
     const err = new Error("sql");
     expect(
       resolveBodyState({

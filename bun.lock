@@ -4485,20 +4485,12 @@
       "name": "@singularity/plugin-primitives-data-view-list",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/data-view/plugins/server-query": {
-      "name": "@singularity/plugin-primitives-data-view-server-query",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/data-view/plugins/table": {
       "name": "@singularity/plugin-primitives-data-view-table",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/data-view/plugins/tree": {
       "name": "@singularity/plugin-primitives-data-view-tree",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/data-view/plugins/union-query": {
-      "name": "@singularity/plugin-primitives-data-view-union-query",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/data-view/plugins/view-core": {
@@ -8286,13 +8278,9 @@
 
     "@singularity/plugin-primitives-data-view-list": ["@singularity/plugin-primitives-data-view-list@workspace:plugins/primitives/plugins/data-view/plugins/list"],
 
-    "@singularity/plugin-primitives-data-view-server-query": ["@singularity/plugin-primitives-data-view-server-query@workspace:plugins/primitives/plugins/data-view/plugins/server-query"],
-
     "@singularity/plugin-primitives-data-view-table": ["@singularity/plugin-primitives-data-view-table@workspace:plugins/primitives/plugins/data-view/plugins/table"],
 
     "@singularity/plugin-primitives-data-view-tree": ["@singularity/plugin-primitives-data-view-tree@workspace:plugins/primitives/plugins/data-view/plugins/tree"],
-
-    "@singularity/plugin-primitives-data-view-union-query": ["@singularity/plugin-primitives-data-view-union-query@workspace:plugins/primitives/plugins/data-view/plugins/union-query"],
 
     "@singularity/plugin-primitives-data-view-view-core": ["@singularity/plugin-primitives-data-view-view-core@workspace:plugins/primitives/plugins/data-view/plugins/view-core"],
 

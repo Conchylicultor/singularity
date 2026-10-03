@@ -53,16 +53,26 @@ function columnFor<TRow>(
 ): FieldColumn | null {
   const c = source.collection;
   if (field.column !== undefined) {
-    if (field.column.scope !== null) {
-      if (field.column.scope !== c.columnScope) {
-        throw new Error(
-          `data-view: field "${field.id}" names a scoped column of "${field.column.scope}", but this DataView reads "${c.key}", whose column scope is ${c.columnScope === null ? "none" : `"${c.columnScope}"`}.`,
-        );
-      }
-    } else if (field.column.collection !== c.key) {
-      throw new Error(
-        `data-view: field "${field.id}" names a column of "${field.column.collection}", but this DataView reads "${c.key}" — a field's column must be its source collection's.`,
-      );
+    const owner = field.column.owner;
+    switch (owner.kind) {
+      case "scoped":
+        if (owner.scope !== c.columnScope) {
+          throw new Error(
+            `data-view: field "${field.id}" names a scoped column of "${owner.scope}", but this DataView reads "${c.key}", whose column scope is ${c.columnScope === null ? "none" : `"${c.columnScope}"`}.`,
+          );
+        }
+        break;
+      case "own":
+      case "contributed":
+      case "arm":
+        if (owner.collection !== c.key) {
+          throw new Error(
+            `data-view: field "${field.id}" names a column of "${owner.collection}", but this DataView reads "${c.key}" — a field's column must be its source collection's.`,
+          );
+        }
+        break;
+      default:
+        owner satisfies never;
     }
     return {
       name: field.column.name,

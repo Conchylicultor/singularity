@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import {
@@ -36,6 +37,35 @@ export type LiveValueParams<N extends readonly string[]> = Simplify<
     [O in OptionalParamName<N[number]>]?: string;
   }
 >;
+
+/**
+ * A TYPED params declaration: each param name → the parser its wire string
+ * must pass (`{ window: z.enum(LATENCY_WINDOWS) }`). The parser narrows the
+ * string — it never changes it: its output is a `string` (tsc), and at
+ * declaration a transforming, refining-by-effect, defaulting or catching
+ * parser (`ZodEffects` / `ZodDefault` / `ZodCatch` anywhere in it, or a
+ * rewriting string check — `.trim()` / `.toLowerCase()` / `.toUpperCase()`)
+ * and one that accepts `undefined` are refused (a throw). So the value the loader
+ * receives IS the wire string the client sent, and the runtime's tuple key is
+ * unchanged. Every name is required: an optional typed param has no consumer
+ * yet.
+ */
+export type LiveValueParamParsers = Readonly<Record<string, ZodParser<string>>>;
+
+/** The params object a typed declaration derives: each name → its parser's output. */
+export type LiveTypedValueParams<R extends LiveValueParamParsers> = {
+  [K in keyof R & string]: z.output<R[K]>;
+};
+
+/**
+ * Refuses (tsc) a parsers record typed with an index signature
+ * (`Record<string, z.ZodString>`, `LiveValueParamParsers`): its derived `P`
+ * would be `{ [k: string]: string }`, which `useLive` reads as param-less —
+ * a read the runtime gate always refuses, since every typed name is required.
+ */
+type LiteralParamNames<R> = string extends keyof R
+  ? { params: never }
+  : unknown;
 
 /** One object type out of an intersection (keeps each key's `?`). */
 type Simplify<T> = { [K in keyof T]: T[K] };
@@ -159,6 +189,23 @@ export interface LivePreloadedParamValueSpec<T, N extends readonly string[]> {
 }
 
 /**
+ * A value with TYPED params (see {@link LiveValueParamParsers}), not preloaded:
+ * `P` is each parser's output, so `useLive` and the loader see the narrowed
+ * type (`{ window: "1h" | "24h" | "7d" }`), and the runtime gate parses every
+ * arriving tuple through the parsers.
+ */
+export interface LiveTypedParamValueSpec<T, R extends LiveValueParamParsers> {
+  schema: ZodParser<T>;
+  /** The param parsers — every name required. */
+  params: R;
+  preload?: never;
+  /** Default `"push"` (see {@link LiveValueLoad}). */
+  load?: LiveValueLoad;
+  /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
+  origin?: "central";
+}
+
+/**
  * A PARAMETERIZED preloaded value (`liveValue` with `params` and `preload`). It
  * has no default tuple, so `preloadsParams` brands it: its `serveValue` must
  * enumerate the tuples to hydrate (`preloadParams` — a tsc error without it,
@@ -187,6 +234,10 @@ export type LivePreloadedParamValue<
  *   schema: ConfigValuesSchema,
  *   params: ["path", "scopeId?"],    // → P = { path: string; scopeId?: string }
  *   preload: "boot-and-keep",        // the served half enumerates the tuples
+ * });
+ * export const latencySummary = liveValue("latency-ledger.summary", {
+ *   schema: LatencySummarySchema,
+ *   params: { window: z.enum(LATENCY_WINDOWS) }, // → P = { window: "1h" | … }
  * });
  * ```
  *
@@ -219,15 +270,36 @@ export function liveValue<T, const N extends readonly [string, ...string[]]>(
   key: string,
   spec: LiveParamValueSpec<T, N> & { origin?: undefined },
 ): LiveValue<T, LiveValueParams<N>>;
+export function liveValue<T, const R extends LiveValueParamParsers>(
+  key: string,
+  spec: LiveTypedParamValueSpec<T, R> & {
+    origin: "central";
+  } & LiteralParamNames<R>,
+): LiveValue<T, LiveTypedValueParams<R>, "central">;
+export function liveValue<T, const R extends LiveValueParamParsers>(
+  key: string,
+  spec: LiveTypedParamValueSpec<T, R> & {
+    origin?: undefined;
+  } & LiteralParamNames<R>,
+): LiveValue<T, LiveTypedValueParams<R>>;
 export function liveValue<T>(
   key: string,
   spec:
     | LiveValueSpec<T>
     | LiveCentralValueSpec<T>
     | LiveParamValueSpec<T, readonly string[]>
-    | LivePreloadedParamValueSpec<T, readonly string[]>,
+    | LivePreloadedParamValueSpec<T, readonly string[]>
+    | LiveTypedParamValueSpec<T, LiveValueParamParsers>,
 ): LiveValue<T, Record<string, string>, LiveValueOrigin> {
-  const { params, optionalParams } = parseParamNames(key, spec.params ?? []);
+  // A name list (`["id", "scopeId?"]`) or a typed record of parsers.
+  const declared = spec.params ?? [];
+  const { params, optionalParams, parsers } = isParamNameList(declared)
+    ? { ...parseParamNames(key, declared), parsers: undefined }
+    : {
+        params: Object.keys(checkParamParsers(key, declared)),
+        optionalParams: [],
+        parsers: declared,
+      };
   const preload =
     spec.preload === undefined || spec.preload === "none"
       ? undefined
@@ -245,7 +317,7 @@ export function liveValue<T>(
     live: "value",
     params,
     ...(optionalParams.length > 0 ? { optionalParams } : {}),
-    validateParams: paramsGate(key, params, optionalParams),
+    validateParams: paramsGate(key, params, optionalParams, parsers),
     ...(spec.origin === "central" ? { origin: "central" as const } : {}),
     // A param-less preload has ONE tuple, `{}` — the one `useLive(value)`
     // reads. A param'd one has none: its server half enumerates them.
@@ -261,6 +333,132 @@ export function liveValue<T>(
   };
   registerResourceDescriptor(value as ResourceDescriptor<unknown>);
   return value;
+}
+
+function isParamNameList(
+  params: readonly string[] | LiveValueParamParsers,
+): params is readonly string[] {
+  return Array.isArray(params);
+}
+
+/**
+ * The zod type names a typed param's parser may not contain anywhere: each one
+ * either CHANGES the value (a transform / preprocess — `ZodEffects`, which also
+ * carries `.refine`, refused with it rather than told apart by a private
+ * `effect.type`) or invents one where the wire had none (`ZodDefault`,
+ * `ZodCatch`). Any of them would hand the loader something other than the
+ * wire string its tuple is keyed by.
+ */
+const REFUSED_PARSER_KINDS: ReadonlySet<string> = new Set([
+  "ZodEffects",
+  "ZodDefault",
+  "ZodCatch",
+]);
+
+/**
+ * The `ZodString` checks that REWRITE the value in place rather than test it:
+ * zod implements `.trim()` / `.toLowerCase()` / `.toUpperCase()` as entries in
+ * `_def.checks`, not as a `ZodEffects`, so the type-name walk alone would let
+ * them through — and `" a"` would reach the loader as `"a"`.
+ */
+const REFUSED_STRING_CHECKS: ReadonlySet<string> = new Set([
+  "trim",
+  "toLowerCase",
+  "toUpperCase",
+]);
+
+/**
+ * Validate a typed params declaration at declaration time (what tsc cannot
+ * see): a non-empty record of non-empty names, none of whose parsers contains a
+ * refused kind (walked through every nested schema in its `_def`), and none of
+ * which accepts `undefined` — every typed param is required, so a parser that
+ * passes an absent value is a declaration of an optional param in disguise.
+ */
+function checkParamParsers(
+  key: string,
+  parsers: LiveValueParamParsers,
+): LiveValueParamParsers {
+  // Returns `parsers` itself, so the call reads as the checked record.
+  const names = Object.keys(parsers);
+  if (names.length === 0) {
+    throw new Error(
+      `liveValue("${key}"): an empty params record — omit \`params\` for a ` +
+        `param-less value.`,
+    );
+  }
+  for (const [name, parser] of Object.entries(parsers)) {
+    if (name === "" || name.includes("?")) {
+      throw new Error(
+        `liveValue("${key}"): bad param name "${name}" — a typed param is a ` +
+          `non-empty name, always required (no "?").`,
+      );
+    }
+    const refused = findRefusedKind(parser, new Set());
+    if (refused !== undefined) {
+      throw new Error(
+        `liveValue("${key}"): param "${name}" is parsed by a ${refused} — a ` +
+          `typed param's parser may only narrow the wire string, never ` +
+          `transform, default or catch it (the loader receives the wire ` +
+          `string itself).`,
+      );
+    }
+    if (parser.safeParse(undefined).success) {
+      throw new Error(
+        `liveValue("${key}"): param "${name}"'s parser accepts undefined — ` +
+          `every typed param is required.`,
+      );
+    }
+  }
+  return parsers;
+}
+
+/** A schema's zod type name (`_def.typeName`), or undefined for a non-schema. */
+function zodTypeName(node: unknown): string | undefined {
+  if (typeof node !== "object" || node === null || !("_def" in node)) {
+    return undefined;
+  }
+  const def: unknown = node._def;
+  if (typeof def !== "object" || def === null || !("typeName" in def)) {
+    return undefined;
+  }
+  return typeof def.typeName === "string" ? def.typeName : undefined;
+}
+
+/**
+ * The first refused zod kind anywhere in `schema`: the schema itself, then
+ * every schema (or array of schemas) held in its `_def` — `innerType`,
+ * `schema`, `in` / `out`, `options`, `type`, … — so a refused kind cannot hide
+ * under `.optional()`, `.pipe()`, `.brand()` or a union. A `ZodLazy` getter is
+ * not followed (it is never a string parser's shape).
+ */
+function findRefusedKind(
+  schema: unknown,
+  seen: Set<unknown>,
+): string | undefined {
+  const typeName = zodTypeName(schema);
+  if (typeName === undefined || seen.has(schema)) return undefined;
+  seen.add(schema);
+  if (REFUSED_PARSER_KINDS.has(typeName)) return typeName;
+  const def = (schema as { _def: Record<string, unknown> })._def;
+  if (typeName === "ZodString" && Array.isArray(def.checks)) {
+    for (const check of def.checks as readonly unknown[]) {
+      const kind =
+        typeof check === "object" && check !== null && "kind" in check
+          ? check.kind
+          : undefined;
+      if (typeof kind === "string" && REFUSED_STRING_CHECKS.has(kind)) {
+        return `ZodString .${kind}()`;
+      }
+    }
+  }
+  for (const child of Object.values(def)) {
+    const children: readonly unknown[] = Array.isArray(child) ? child : [child];
+    for (const c of children) {
+      const found = findRefusedKind(c, seen);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -296,11 +494,19 @@ function parseParamNames(
  * (`canonicalParams`) before the gate runs. Without the gate a loader reads
  * `undefined` for a required param an older (or newer) bundle does not send,
  * and fails somewhere far from the cause.
+ *
+ * A typed declaration also parses each present param through its parser: a
+ * refusal is a `ResourceContractError` (a bundle sending a value the
+ * declaration does not admit). The gate stays `void` — the loader receives the
+ * wire tuple — so a parser whose output is not the wire string itself is a
+ * broken declaration the declaration-time walk missed: a plain Error, the
+ * backstop.
  */
 function paramsGate(
   key: string,
   declared: readonly string[],
   optional: readonly string[],
+  parsers: LiveValueParamParsers | undefined,
 ): (params: Record<string, string>) => void {
   const names = new Set(declared);
   const required = declared.filter((name) => !optional.includes(name));
@@ -312,6 +518,21 @@ function paramsGate(
       if (!names.has(name)) reject(`unknown param "${name}"`);
       if (typeof v !== "string") {
         reject(`param "${name}" must be a string, got ${JSON.stringify(v)}`);
+      }
+      const parser = parsers?.[name];
+      if (parser === undefined) continue;
+      const parsed = parser.safeParse(v);
+      if (!parsed.success) {
+        reject(
+          `param "${name}" = ${JSON.stringify(v)} is refused by its parser: ` +
+            parsed.error.issues.map((i) => i.message).join("; "),
+        );
+      } else if (parsed.data !== v) {
+        throw new Error(
+          `liveValue("${key}"): param "${name}"'s parser turned ` +
+            `${JSON.stringify(v)} into ${JSON.stringify(parsed.data)} — a ` +
+            `typed param's parser must return the wire string unchanged.`,
+        );
       }
     }
     for (const name of required) {

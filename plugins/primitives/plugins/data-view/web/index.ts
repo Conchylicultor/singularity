@@ -89,8 +89,6 @@ export type { GroupedSectionsProps } from "./internal/grouped-sections";
 export { useGroupByController } from "./internal/use-group-by-controller";
 export type { GroupByController } from "./internal/use-group-by-controller";
 export { liveDataSource } from "./internal/live-data-source";
-export { useServerDataSource } from "./internal/use-server-data-source";
-export type { ServerDataSourceResult } from "./internal/use-server-data-source";
 export { applyFilter } from "./internal/evaluate-filter";
 export type { LoweredFilter } from "./internal/evaluate-filter";
 export { useRowFilter } from "./internal/use-row-filter";
@@ -150,8 +148,6 @@ export type {
   FilterRule,
   FilterGroup,
   FilterNode,
-  ServerPage,
-  ServerDataSourceSpec,
   ItemActionProps,
   ItemActionsDescriptor,
   ItemActionZone,

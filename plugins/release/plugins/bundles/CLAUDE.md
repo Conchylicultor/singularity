@@ -44,6 +44,17 @@ would not fail a check — it would make `./singularity release` and
 `core/` is browser-safe (zod + plain types only), so a web pane can render a
 refusal and reason about staleness without a server round-trip for the strings.
 
+## `bundleSignature`: when could the verdict have moved?
+
+`bundleSignature({ namespace, composition, platform })` sits beside
+`resolveBundle` and stats the same paths, in the same order: whether the
+composition dir exists, where `latest-<platform>` resolves (or that it does
+not), the run's `RELEASE.json` mtime and size, and whether
+`dist/<comp>-web-<platform>` exists. Equal signatures ⇒ `resolveBundle` would
+return the same verdict, so the release engine's `release.candidate` memo runs
+the real resolution only when it moved. The packed binary is in it on purpose:
+its appearance is the step that turns `not-packed` into shippable.
+
 ## The `latest-<platform>` pointer
 
 A composition's run dirs sit under
@@ -107,6 +118,7 @@ process can import it.
     - `PruneResult`
   - Exports (values):
     - `bundleRoot`
+    - `bundleSignature`
     - `claimLatestPointer`
     - `compareToHead`
     - `compositionReleaseDir`
@@ -116,6 +128,7 @@ process can import it.
     - `newReleaseRunId`
     - `pruneReleaseRunDirs`
     - `readGitProvenance`
+    - `readHeadSha`
     - `releaseOutDir`
     - `resolveBundle`
 - Cross-plugin:

@@ -3,7 +3,6 @@ import { type ComponentType, type ReactNode } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type {
   Filter,
-  Filterable,
   FilterDomainId,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
@@ -425,7 +424,7 @@ interface FieldDefBase<TRow> {
    * by `collection.column(name)` (or a contributed-column handle), never
    * written. Field ids stay the persisted vocabulary (saved views, presets),
    * so nothing in config moves. A field without one lowers under its own id.
-   * On an in-memory or fetchPage DataView it would mean nothing, so it throws
+   * On an in-memory DataView it would mean nothing, so it throws
    * at mount.
    *
    * Either way the field's `value` must BE that column's value: the server
@@ -860,13 +859,13 @@ export interface DataViewRenderProps<TRow> {
    * Which end of `GroupBucket.order` the sections read from, derived by the host
    * from the view's own sort direction on the grouped field ("asc" when it has
    * none). The host computes it from `activeState.sort` rather than the view's
-   * `state.sort`, which a server-delegated source zeroes out — so a
+   * `state.sort`, which a server-ordered source zeroes out — so a
    * server-sorted grouped view still reads the right way round.
    */
   groupOrder: "asc" | "desc";
   /**
    * Whether `rows` is the whole set: always in memory; a server-ordered list
-   * (live or fetchPage) only once read to its end. Section counts are exact
+   * (live) only once read to its end. Section counts are exact
    * only when it is (or when a later section has started — see `sectionOrder`).
    */
   rowsComplete: boolean;
@@ -1091,68 +1090,6 @@ export interface FilterGroup {
 export type FilterNode = FilterRule | FilterGroup;
 
 /**
- * One page of a server-delegated query. `nextCursor` is the server-computed
- * keyset cursor to seek the next page from (null when exhausted); `hasMore`
- * gates whether `fetchPage` should be called again.
- */
-export interface ServerPage<TRow> {
-  items: TRow[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
-
-/**
- * Server-delegated data source. Present on `DataViewProps` → filter/sort/search/
- * paginate run server-side; the host feeds accumulated pages through and
- * neutralizes the client pipeline (`useFlatRows` becomes identity). Absent → the
- * DataView stays 100% in-memory over `rows` (the default for every consumer).
- *
- * `fetchPage` is a factory (not pre-resolved rows): `DataViewInner` invokes it
- * with the live `activeState` it already owns plus the keyset `cursor` +
- * `limit`, so `ViewState` stays the single source of truth and the consumer
- * never touches it. `dataViewId` is the surface's `storageKey`, injected by the
- * host so the server can key per-surface augmentations (e.g. custom columns)
- * off it — the consumer's closure carries it with no extra work.
- *
- * **Nothing silently falls back to the client.** The source DECLARES what its
- * server can filter (`filterable`, column → filter-language domain) and search
- * (`searchable`, text-domain columns), once, in the owning plugin's `core/` —
- * the same object its server binds (`server-query`'s `bindColumns`) and decodes
- * against. The host then:
- *
- * - offers in the Filter control only fields that are declared, and only when
- *   the field's operator set lowers over the DECLARED domain (a mismatch is a
- *   declaration bug and throws); fields contributed through the global
- *   `DataViewSlots.FieldExtension` slot (custom columns) are served by their
- *   server twin (`DataViewServer.QueryAugmentor`) and are offered too;
- * - lowers the view's `FilterGroup` (relative dates resolved against the local
- *   clock) AND the search box — `or(contains(col, q) …)` over `searchable` —
- *   into ONE canonical `Filter`, the `filter` argument below (`undefined` = no
- *   filter). A tree over the language's bounds (depth, clause count, list
- *   length) never reaches `fetchPage`: the surface shows the error instead.
- *
- * The server strict-decodes `filter` against the declaration (a 400 on anything
- * else), so a rule can never be dropped on the way.
- */
-export interface ServerDataSourceSpec<TRow> {
-  fetchPage: (args: {
-    sort: SortRule[];
-    /** The lowered, CANONICAL filter (search folded in); `undefined` = none. */
-    filter: Filter | undefined;
-    cursor: string | null;
-    limit: number;
-    dataViewId: string;
-  }) => Promise<ServerPage<TRow>>;
-  /** Column → domain the server can filter on. See above. */
-  filterable: Filterable;
-  /** `text`-domain columns of `filterable` the search box matches (`contains`, any of). */
-  searchable: readonly string[];
-  /** Changes when server truth changes — drives an in-place refetch of loaded pages. */
-  changeTick: unknown;
-  pageSize?: number;
-}
-
-/**
  * The chromes that show ONE active instance: a toolbar band (optionally laid
  * out by an arrangement) with its `title` / `actions`, or a
  * {@link HostedToolbar} whose frame is the surface's own header — which is why
@@ -1204,7 +1141,7 @@ export type DataViewProps<TRow> = DataViewBaseProps<TRow> &
 
 /**
  * The props a surface's rows are identified and shaped by — for rows the
- * consumer holds (in memory, or fetchPage pages). A live `source` refuses all
+ * consumer holds in memory. A live `source` refuses all
  * four: its row key is its collection's `id`, a tree over a partial paged set
  * orphans children, a consumer's rank would reorder server-sorted segments,
  * and its search is the source's `searchable`.
@@ -1239,22 +1176,6 @@ export interface DataViewInMemoryOrigin<
    * as a confirmed-empty one (`emptyState` needs `ready` and zero rows).
    */
   readiness?: ResourceReadiness;
-  dataSource?: never;
-  source?: never;
-}
-
-/**
- * Server-delegated pages (`fetchPage` + a `changeTick` refetch). Filter / sort
- * / search / paginate run server-side over the live `activeState` the host
- * owns; the accumulated pages are the rows and the client pipeline collapses
- * to a pass-through.
- */
-export interface DataViewFetchPageOrigin<
-  TRow,
-> extends DataViewHeldRowProps<TRow> {
-  dataSource: ServerDataSourceSpec<TRow>;
-  rows?: never;
-  readiness?: never;
   source?: never;
 }
 
@@ -1267,7 +1188,6 @@ export interface DataViewLiveOrigin<TRow> {
   source: LiveDataSource<TRow>;
   rows?: never;
   readiness?: never;
-  dataSource?: never;
   rowKey?: never;
   searchAccessor?: never;
   hierarchy?: never;
@@ -1276,9 +1196,7 @@ export interface DataViewLiveOrigin<TRow> {
 
 /** Where a DataView's rows come from — exactly one, so a stand-in (`rows={[]}` beside a server source) cannot be spelled. */
 export type DataViewDataOrigin<TRow> =
-  | DataViewInMemoryOrigin<TRow>
-  | DataViewFetchPageOrigin<TRow>
-  | DataViewLiveOrigin<TRow>;
+  DataViewInMemoryOrigin<TRow> | DataViewLiveOrigin<TRow>;
 
 /**
  * Every `DataViewProps` key except the data origin ({@link DataViewDataOrigin})

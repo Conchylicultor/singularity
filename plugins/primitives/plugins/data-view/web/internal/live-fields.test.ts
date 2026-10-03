@@ -231,7 +231,7 @@ describe("resolveLiveFields", () => {
 });
 
 describe("checkFieldColumns", () => {
-  test("a column on an in-memory (or fetchPage) DataView throws — it would be ignored", () => {
+  test("a column on an in-memory DataView throws — it would be ignored", () => {
     const c = threads();
     expect(() =>
       checkFieldColumns(

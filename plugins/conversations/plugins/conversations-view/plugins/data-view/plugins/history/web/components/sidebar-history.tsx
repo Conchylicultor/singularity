@@ -1,34 +1,30 @@
 import { createContext, useContext, type ReactElement } from "react";
 import {
-  useResource,
-  matchResource,
-} from "@plugins/primitives/plugins/live-state/web";
-import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
+  defineItemActions,
+  liveDataSource,
+} from "@plugins/primitives/plugins/data-view/web";
 import type {
   DataViewSourceProps,
   ItemActionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  CONVERSATION_FILTERABLE,
   CONVERSATION_SEARCHABLE,
-  conversationsRevisionResource,
-  queryConversations,
+  conversationHistory,
+  type ConversationListRow,
 } from "@plugins/conversations/plugins/all-conversations/core";
 import { useConversationFieldDefs } from "@plugins/conversations/plugins/all-conversations/web";
 import {
   SidebarConversationItem,
   type ConversationSidebarProps,
 } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
-import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
 
 // Per-consumer trailing-action slot. The close action contribution lives in this
 // plugin's `web/index.ts`.
-export const HistoryItemActions = defineItemActions<Conversation>();
+export const HistoryItemActions = defineItemActions<ConversationListRow>();
 
 /**
  * The per-render close handler cannot ride on `itemActions` props (item-action
@@ -42,7 +38,7 @@ const CloseConversationContext = createContext<
 /** The hover-revealed Close action contributed into {@link HistoryItemActions}. */
 export function CloseConvAction({
   row,
-}: ItemActionProps<Conversation>): ReactElement | null {
+}: ItemActionProps<ConversationListRow>): ReactElement | null {
   const onCloseConversation = useContext(CloseConversationContext);
   if (!onCloseConversation) return null;
   return (
@@ -58,57 +54,45 @@ export function CloseConvAction({
 }
 
 /**
- * The History source of the merged conversation-sidebar DataView: the History
- * list handed to the shared surface as a server-delegated bundle, reusing the
- * `all-conversations` query infra (keyset cursor over `conversations_v`,
- * `created_at DESC`). System conversations are included
- * (`includeSystem: true`); the authored "Hide system" filter preset lets the
- * user drop them.
- *
- * `render(bundle)` is ALWAYS called — rows come from the server `dataSource`,
- * so the bundle's `rows` stays `[]` by design.
+ * The live source: the `conversations.history` collection (every conversation,
+ * system ones included — the authored "Hide system" filter preset drops them),
+ * kept fresh by the routed change feed with no tick and no refetch: a status
+ * flip of any conversation, a task rename and an attempt's move all reach the
+ * rows a segment holds.
+ */
+const historySource = liveDataSource(conversationHistory, {
+  searchable: CONVERSATION_SEARCHABLE,
+});
+
+/**
+ * The History source of the merged conversation-sidebar DataView: the
+ * {@link historySource} live origin handed to the shared surface (whose
+ * `storageKey`, `conversations-sidebar`, is the collection's column scope).
+ * `render(bundle)` is ALWAYS called — the rows are the source's.
  */
 export function HistorySource({
   hostProps,
   render,
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
   const { activeId, onNavigate, onCloseConversation } = hostProps;
-  // The cheap scalar tick drives an in-place refetch of the loaded window; the
-  // paginated SQL query is the source of truth. While pending, hand a null tick.
-  const tick = useResource(conversationsRevisionResource);
   const fields = useConversationFieldDefs();
-  const changeTick = matchResource(tick, {
-    loading: () => null,
-    ready: (d) => d.rev,
-  });
 
   return (
     <CloseConversationContext.Provider value={onCloseConversation}>
-      {render<Conversation>({
+      {render<ConversationListRow>({
         fields,
-        rowKey: (c) => c.id,
+        source: historySource,
         selectedRowId: activeId ?? undefined,
         onRowActivate: (c) => onNavigate(c.id),
         viewOptions: {
           list: {
-            renderRow: (c: Conversation) => (
+            renderRow: (c: ConversationListRow) => (
               <SidebarConversationItem conv={c} />
             ),
             size: "sm",
           },
         },
         itemActions: HistoryItemActions,
-        dataSource: {
-          changeTick,
-          filterable: CONVERSATION_FILTERABLE,
-          searchable: CONVERSATION_SEARCHABLE,
-          fetchPage: (args) =>
-            fetchEndpoint(
-              queryConversations,
-              {},
-              { body: { ...args, includeSystem: true } },
-            ),
-        },
       })}
     </CloseConversationContext.Provider>
   );

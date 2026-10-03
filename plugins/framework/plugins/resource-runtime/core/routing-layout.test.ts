@@ -61,6 +61,20 @@ describe("tableLayoutRequirements", () => {
     ]);
   });
 
+  test("A17: a reverse on the changed table's PK (no `column`) carries nothing — its values are `ids`", () => {
+    const routes: Route[] = [
+      {
+        id: "src",
+        table: "sources",
+        map: { kind: "reverse", resolve },
+        columns: ["id", "label"],
+      },
+    ];
+    expect(tableLayoutRequirements(routes)).toEqual([
+      { table: "sources", carry: [], reads: [["id", "label"]] },
+    ]);
+  });
+
   test("two routes reading the same columns list their set once", () => {
     const route = (id: string, columns: string[]): Route => ({
       id,

@@ -1,130 +1,142 @@
 import { sql, type SQL } from "drizzle-orm";
+import { z } from "zod";
+import { expr } from "@plugins/infra/plugins/query-resource/core";
+import {
+  nullable,
+  parsed,
+} from "@plugins/database/plugins/sql-projection/server";
 import { _backupRuns } from "@plugins/backup/server";
 import { defineRunKind } from "@plugins/runs/server";
-import { BACKUP_RUN_KIND } from "@plugins/backup/core";
-import { BACKUP_STATUS_OUTCOME, backupRunFields } from "../../core";
+import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
+import {
+  BACKUP_RUN_STATUSES,
+  BACKUP_STATUS_OUTCOME,
+  BackupSourceReportSchema,
+  backupRunColumns,
+  type BackupRunStatus,
+} from "../../core";
 
 /**
  * `backup_runs.status` → the shared outcome vocabulary, folded out of the map
- * in `core/` rather than hand-written here.
- *
- * The union query validates every row's outcome against the closed vocabulary,
- * so a `CASE` that missed a native status yields `NULL` and throws the whole
- * page. Generating the branches from the map means the branch set IS the status
- * set: adding a status to `backup_runs` without saying what it means fails at
- * `tsc`, long before it can fail at query time.
+ * in `core/`: the branch set IS the status set, so a status added to
+ * `backup_runs` without saying what it means fails at `tsc`, and one that
+ * escaped it projects NULL, which the arm's `RunOutcomeSchema` decoder refuses.
  */
-function outcomeExpr(): SQL {
+function outcomeExpr(status: unknown): SQL {
   const branches = Object.entries(BACKUP_STATUS_OUTCOME).map(
-    ([status, outcome]) => sql`when ${status}::text then ${outcome}::text`,
+    ([from, to]) => sql`when ${from}::text then ${to}::text`,
   );
-  return sql`(case ${_backupRuns.status} ${sql.join(branches, sql` `)} end)`;
+  return sql`(case ${status} ${sql.join(branches, sql` `)} end)`;
 }
 
 /**
- * How many sources actually went into the archive.
- *
- * Counts the manifest's non-skipped entries, which is the number the backup
- * card has always shown. Guarded by `jsonb_typeof`, because v1 rows stored
- * `sources` as an object rather than an array (see `BackupManifestSchema`) —
- * for those the honest answer is "unknown", not zero, and a `jsonb_array_length`
- * over an object would error the whole page rather than one row.
- *
- * Both manifest shapes count here, and this is the SQL half of the reading
- * `backupSourceWentIn` states once in `backup/core`: v3 rows say `outcome`
- * (anything but `skipped` went in — a FAILED source wrote whatever it got
- * through, so it is in the archive and is counted), v2 rows say `skipped`. The
- * `outcome` test comes first so a v3 row is never read through the absent
- * boolean, and the boolean's `coalesce` still answers for a v2 row that omitted
- * it. Written as `->> 'outcome' is not null` rather than the `?` key-existence
- * operator, which collides with the placeholder syntax of every SQL driver that
- * uses `?` and is not worth the footgun for a test that reads the same.
+ * `backup_runs.status`, read only as one of the statuses `core/` declares:
+ * the same fold as {@link outcomeExpr}, each known status mapped to itself.
  */
-const sourceCountExpr = sql`(case
-  when jsonb_typeof(${_backupRuns.manifest} -> 'sources') = 'array' then (
-    select count(*)::integer
-    from jsonb_array_elements(${_backupRuns.manifest} -> 'sources') as s
-    where case
-      when s ->> 'outcome' is not null then s ->> 'outcome' <> 'skipped'
-      else coalesce((s ->> 'skipped')::boolean, false) = false
-    end
-  )
-  else null::integer
-end)`;
+function statusExpr(status: unknown): SQL {
+  const branches = BACKUP_RUN_STATUSES.map(
+    (s) => sql`when ${s}::text then ${s}::text`,
+  );
+  return sql`(case ${status} ${sql.join(branches, sql` `)} end)`;
+}
 
 /**
- * The manifest's source reports, in their v2 array form.
- *
- * The same `jsonb_typeof` guard as the count: v1 rows stored `sources` as an
- * object, and handing the row renderer a shape its decoder would reject reads as
- * "unknown" rather than as a crash. What the archive actually holds is the
- * non-skipped subset, and that filter lives in the decoder beside the one the
- * count applies — so the list and the number cannot disagree.
+ * How many sources actually went into the archive — the manifest's
+ * non-skipped entries. Guarded by `jsonb_typeof`, because v1 rows stored
+ * `sources` as an object (the honest answer there is "unknown", not zero).
+ * Both manifest shapes count: v3 rows say `outcome` (anything but `skipped`
+ * went in), v2 rows say `skipped` — the SQL half of `backupSourceWentIn`.
  */
-const sourcesExpr = sql`(case
-  when jsonb_typeof(${_backupRuns.manifest} -> 'sources') = 'array'
-    then ${_backupRuns.manifest} -> 'sources'
-  else null::jsonb
-end)`;
-
-/** How many storage targets the run dispatched to. Null before it dispatched. */
-const targetCountExpr = sql`(case
-  when jsonb_typeof(${_backupRuns.targetResults}) = 'array'
-    then jsonb_array_length(${_backupRuns.targetResults})
-  else null::integer
-end)`;
+function sourceCountExpr(manifest: unknown): SQL {
+  return sql`(case
+    when jsonb_typeof(${manifest} -> 'sources') = 'array' then (
+      select count(*)::integer
+      from jsonb_array_elements(${manifest} -> 'sources') as s
+      where case
+        when s ->> 'outcome' is not null then s ->> 'outcome' <> 'skipped'
+        else coalesce((s ->> 'skipped')::boolean, false) = false
+      end
+    )
+    else null::integer
+  end)`;
+}
 
 /**
  * The backup arm of the merged run space.
  *
- * ## The two base columns that read `null`, and why
+ * - `namespace` is **null** — a backup is host-global; `backup_runs.namespace`
+ *   records who CLAIMED the run (the in-flight index's scope), not what it
+ *   covers, and is never read here.
+ * - `message` is **null** — a backup's failure words are per target, inside
+ *   `target_results`, where the detail pane shows every failed target's own.
+ * - `label` is `Backup · N sources`; the archive size is `backup.archiveSize`,
+ *   a real sortable column, not part of the title.
  *
- * - `namespace` — a backup is **host-global**. It archives `~/.singularity`,
- *   not a checkout, and there is no worktree it belongs to. Reading null there
- *   is the true answer; naming the worktree whose backend happened to run the
- *   job would be a fact about scheduling dressed up as a fact about the backup.
- *
- *   `backup_runs` **does** carry a `namespace` column, and projecting it here
- *   would be exactly that mistake. It exists for two things that need a scope
- *   and have none otherwise — it is what `backup_runs_inflight_uniq` contends
- *   on, and what keeps a worktree's `listUnfinished` off the rows it inherited
- *   from main in its DB fork. In practice it is nearly always
- *   `MAIN_WORKTREE_NAME`, since the schedule is main-only; a worktree can still
- *   claim one through the manual trigger. Either way it records who CLAIMED the
- *   run, not what the run covers.
- * - `message` — a backup has no per-run failure string. What it has is a
- *   per-target one, inside `target_results`, and there is no single target
- *   whose words could stand for the run: the interesting case is precisely the
- *   one where a `partial` reached some targets and not others. Flattening that
- *   into one line would lose the only fact that matters, so it stays null here
- *   and the row renderer shows every failed target's own words.
- *
- * `label` is `Backup · N sources` — what the run covered, which is what
- * distinguishes one backup from another in a list that also holds builds and
- * deploys. The archive size is deliberately NOT in it: that is
- * `backup.archiveSize`, a real sortable column, and a label that restates a
- * column is a second place for the same number to be read off.
+ * Its route columns are exactly what it reads: `id`, `trigger`, `started_at`,
+ * `finished_at`, `status`, `archive_size_bytes`, `manifest`, `target_results`
+ * — so a `pid` write routes nowhere.
  */
 export const backupRunKind = defineRunKind({
-  kind: BACKUP_RUN_KIND,
-  table: _backupRuns,
-  fields: backupRunFields,
-  base: {
-    id: _backupRuns.id,
-    label: sql`('Backup' || coalesce(' · ' || ${sourceCountExpr}::text || ' sources', ''))`,
-    outcome: outcomeExpr(),
-    trigger: _backupRuns.trigger,
-    startedAt: _backupRuns.startedAt,
-    finishedAt: _backupRuns.finishedAt,
+  columns: backupRunColumns,
+  from: _backupRuns,
+  id: _backupRuns.id,
+  base: (j) => ({
+    label: expr(
+      sql`('Backup' || coalesce(' · ' || ${sourceCountExpr(j.base.manifest)}::text || ' sources', ''))`,
+      { decoder: String, sqlType: "text", notNull: true },
+    ),
+    outcome: expr(outcomeExpr(j.base.status), {
+      decoder: parsed(RunOutcomeSchema, "runs.backup.outcome"),
+      sqlType: "text",
+      notNull: true,
+    }),
+    trigger: j.base.trigger,
+    startedAt: j.base.startedAt,
+    finishedAt: j.base.finishedAt,
     namespace: null,
     message: null,
-  },
-  extra: {
-    "backup.status": _backupRuns.status,
-    "backup.archiveSize": _backupRuns.archiveSizeBytes,
-    "backup.sourceCount": sourceCountExpr,
-    "backup.targetCount": targetCountExpr,
-    "backup.targetResults": _backupRuns.targetResults,
-    "backup.sources": sourcesExpr,
-  },
+  }),
+  extra: (j) => ({
+    // The column is plain `text`; the field is the arm's status vocabulary —
+    // so it is the same fold as `outcome` (each known status to itself), and a
+    // status nobody declared projects NULL, which the decoder refuses, rather
+    // than a string the field's type says cannot exist.
+    status: expr(statusExpr(j.base.status), {
+      decoder: parsed(
+        z.enum(BACKUP_RUN_STATUSES as [BackupRunStatus, ...BackupRunStatus[]]),
+        "runs.backup.status",
+      ),
+      sqlType: "text",
+      notNull: true,
+    }),
+    archiveSize: j.base.archiveSizeBytes,
+    sourceCount: expr(sourceCountExpr(j.base.manifest), {
+      decoder: Number,
+      sqlType: "integer",
+    }),
+    targetCount: expr(
+      sql`(case
+        when jsonb_typeof(${j.base.targetResults}) = 'array'
+          then jsonb_array_length(${j.base.targetResults})
+        else null::integer
+      end)`,
+      { decoder: Number, sqlType: "integer" },
+    ),
+    targetResults: j.base.targetResults,
+    // The manifest's source reports, in their v2+ array form (a v1 object
+    // reads null — "unknown"), decoded by the arm's own schema.
+    sources: expr(
+      sql`(case
+        when jsonb_typeof(${j.base.manifest} -> 'sources') = 'array'
+          then ${j.base.manifest} -> 'sources'
+        else null::jsonb
+      end)`,
+      {
+        decoder: nullable(
+          parsed(z.array(BackupSourceReportSchema), "runs.backup.sources"),
+        ),
+        sqlType: "jsonb",
+      },
+    ),
+  }),
 });

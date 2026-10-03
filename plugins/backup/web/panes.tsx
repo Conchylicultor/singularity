@@ -2,6 +2,8 @@ import type { ReactElement } from "react";
 import {
   Pane,
   PaneChrome,
+  resolveRow,
+  rowOrStale,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
@@ -30,7 +32,7 @@ export const backupRunPane = Pane.define({
 /**
  * Whether the URL's run exists — a real resolve, not a `useResolve: false` opt-out.
  *
- * This is what a by-id read of the merged run space buys. `buildDetailPane`
+ * This is what a by-id (point) read of the merged run space buys. `buildDetailPane`
  * opts out because it has no such read — it can only look for its row inside a
  * loaded window — so its miss surfaces as a string somewhere in the body. Here
  * the pane primitive paints its own Loading and Not Found chrome, and a stale
@@ -40,8 +42,8 @@ export const backupRunPane = Pane.define({
  * never the Not Found chrome for a run that may well exist.
  */
 function useResolveBackupRun({ runId }: { runId: string }): ResolveResult {
-  // The by-id read already answers in the resolve vocabulary.
-  return useRun({ kind: BACKUP_RUN_KIND, id: runId });
+  // A failed re-read that still holds the row stays `found` (`resolveRow`).
+  return resolveRow(useRun({ kind: BACKUP_RUN_KIND, id: runId }));
 }
 
 function BackupBody(): ReactElement {
@@ -59,20 +61,14 @@ function BackupBody(): ReactElement {
 
 function BackupRunBody(): ReactElement {
   const { runId } = backupRunPane.useParams();
-  const state = useRun({ kind: BACKUP_RUN_KIND, id: runId });
-
   // The resolve guard has already answered "does this run exist" before this
-  // body mounts, so the only way to be here without a row is its sticky path: a
-  // pane that HAS resolved, re-reading after its cache entry went away. That is
-  // a loading state, never an empty one — the sections are handed a run or they
-  // are not rendered at all.
+  // body mounts, so a row is in hand — or, on a failed re-read, the row as
+  // last seen (`rowOrStale`). Without either it is a loading state, never an
+  // empty one: the sections are handed a run or they are not rendered at all.
+  const run = rowOrStale(useRun({ kind: BACKUP_RUN_KIND, id: runId }));
   return (
     <PaneChrome pane={backupRunPane}>
-      {state.status === "found" ? (
-        <BackupRunDetail.Host run={state.run} />
-      ) : (
-        <Loading />
-      )}
+      {run !== undefined ? <BackupRunDetail.Host run={run} /> : <Loading />}
     </PaneChrome>
   );
 }

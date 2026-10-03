@@ -21,4 +21,9 @@ export type {
   JoinWireColumns,
   KeyedSideJoin,
   LookupJoin,
+  TypedColumnRef,
 } from "./internal/joins";
+export { expr, isExprField } from "./internal/expr";
+export type { ExprField } from "./internal/expr";
+export { armKeyCodec, KIND_RE } from "./internal/arm-key";
+export type { ArmKeyCodec } from "./internal/arm-key";

@@ -1,26 +1,17 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
-import { getRun, queryRuns } from "../core";
-import { handleRunGet } from "./internal/handle-get";
-import { handleRunsQuery } from "./internal/handle-query";
-import { runsRevisionServerResource } from "./internal/revision-resource";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { runsServed } from "./internal/served";
 
 export { defineRunKind, getRunKinds } from "./internal/registry";
 export type {
+  RunArmBase,
+  RunArmRefs,
+  RunFieldBinding,
   RunKind,
   RunKindSpec,
-  RunArmBaseColumns,
 } from "./internal/registry";
-export { durationMsExpr } from "./internal/arms";
 
 export default {
   description:
-    "The run-kind registry and the one query behind the merged run space: defineRunKind binds a domain's own ledger into the union (base columns typed against the base declaration, extra columns typed against the arm's own field declaration), POST /api/runs/query compiles every registered arm into one keyset page, GET /api/runs/:kind/:id compiles the one arm that owns the kind against every arm's column specs so a single row comes back shaped exactly like a listed one, and runs.revision is the scalar tick that refreshes the loaded window. Names no run kind.",
-  httpRoutes: {
-    [queryRuns.route]: handleRunsQuery,
-    [getRun.route]: handleRunGet,
-  },
-  contributions: [Resource.Declare(runsRevisionServerResource)],
+    "The run-kind registry and the merged run space as ONE routed union window: defineRunKind binds a domain's own ledger into the `runs` collection as an arm (base fields typed against the row, its own columns against its liveArmColumns set; id and duration derived), and serveUnionCollection serves the window, its `:rows` point read (useRun) and `:groups` from every registered arm — a write to one ledger refills only the rows it changed. Names no run kind.",
+  contributions: [...runsServed.declare],
 } satisfies ServerPluginDefinition;

@@ -1,12 +1,14 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Resource } from "@plugins/framework/plugins/server-core/core";
-import { conversationsRevisionResource } from "./internal/revision-resource";
-
-export { handleQuery } from "./internal/handle-query";
-export { conversationsRevisionResource } from "./internal/revision-resource";
+import {
+  allConversationsServed,
+  conversationHistoryServed,
+} from "./internal/collection";
 
 export default {
   description:
-    "Global conversations query handler (filter/sort/search/keyset over conversations_v) + the scalar revision-tick live resource that keeps the All-conversations DataView window fresh.",
-  contributions: [Resource.Declare(conversationsRevisionResource)],
+    "Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.",
+  contributions: [
+    ...allConversationsServed.declare,
+    ...conversationHistoryServed.declare,
+  ],
 } satisfies ServerPluginDefinition;

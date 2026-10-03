@@ -7,34 +7,32 @@ import {
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { useEventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/web";
 
 /**
  * The section is available even while the run is still loading: loading is not
  * emptiness, and a section that gated itself on data would flicker its whole
- * card in after the fetch (the `source-detail` house rule).
+ * card in after the read (the `source-detail` house rule).
  */
 export function useCaveatsAvailable(): boolean {
   return true;
 }
 
 export function CaveatsSection({ runId }: { runId: string }): ReactNode {
-  const runQuery = useEventSourceRun(runId);
+  const row = useEventSourceRun(runId);
 
-  if (runQuery.isError) {
-    return (
-      <Placeholder tone="error">
-        {getEndpointErrorMessage(runQuery.error)}
-      </Placeholder>
-    );
-  }
-  // Pending is its own arm. Rendering the empty copy here would state "no
+  // Loading is its own arm. Rendering the empty copy here would state "no
   // limitations" about a run whose flags have simply not arrived — a confident
   // wrong answer, and the one the reader is least equipped to doubt.
-  if (runQuery.isPending) return <Loading variant="rows" />;
+  if (row.status === "loading") return <Loading variant="rows" />;
+  if (row.status === "error") {
+    return <Placeholder tone="error">{row.error.message}</Placeholder>;
+  }
+  // Absent: the pane's own resolve turns this into its Not Found; the section
+  // has nothing of its own to say about a run that does not exist.
+  if (!row.found) return null;
 
-  const flags = runQuery.data.flags;
+  const flags = row.row.flags;
 
   if (flags.length === 0) {
     return (

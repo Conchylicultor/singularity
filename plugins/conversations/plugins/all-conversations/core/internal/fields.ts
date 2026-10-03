@@ -14,8 +14,8 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 
 // The single shared field vocabulary driving BOTH the web `FieldDef[]` (added
-// `value`/`cell` accessors) and the server `FieldColumnMap` (added drizzle
-// columns), so the two runtimes can never drift on which dimensions exist, what
+// `value`/`cell` accessors) and the live collections' declarations (what the
+// server filters and sorts on), so the two runtimes can never drift on which dimensions exist, what
 // type they are, or what enum choices they offer. Plain data only (browser-safe)
 // — no React, no drizzle.
 export type ConversationFieldType = "text" | "enum" | "date";
@@ -24,9 +24,9 @@ export interface ConversationFieldSpec {
   id: string;
   label: string;
   type: ConversationFieldType;
-  /** Sortable in the toolbar Sort pill (also the keyset-sortable set). */
+  /** Sortable in the toolbar Sort pill — exactly `CONVERSATION_SORTABLE`. */
   sortable?: boolean;
-  /** Column may be NULL — drives null-aware keyset seek terms server-side. */
+  /** The column may be NULL. */
   nullable?: boolean;
   /** Tree/primary label field (the one rendered as the row title). */
   primary?: boolean;
@@ -62,7 +62,7 @@ export function conversationModelOptions(
     .map((id) => ({ value: id, label: modelMeta(id).label }));
 }
 
-export const CONVERSATION_FIELDS: ConversationFieldSpec[] = [
+export const CONVERSATION_FIELDS = [
   {
     id: "title",
     label: "Title",
@@ -77,21 +77,35 @@ export const CONVERSATION_FIELDS: ConversationFieldSpec[] = [
   { id: "kind", label: "Kind", type: "enum", options: kindOptions },
   { id: "runtime", label: "Runtime", type: "text" },
   { id: "createdAt", label: "Created", type: "date", sortable: true },
-  // Last activity. Deliberately NOT sortable: the status reconciler bumps it on
-  // every working/waiting transition and
-  // the History revision tick ignores it, so a server keyset sort on it would go
-  // stale. Filterable (the Queue's default fold keeps rows updated recently).
-  { id: "updatedAt", label: "Updated", type: "date" },
+  // Last activity. Sortable: it is DERIVED (a DB trigger) and moves only on a
+  // title / model edit and the working ⇄ reply status transitions — never on
+  // the status reconciler's `waitingFor` / `lastViewedAt` writes — so a live window
+  // ordered by it re-sorts on real activity only.
+  { id: "updatedAt", label: "Updated", type: "date", sortable: true },
   { id: "endedAt", label: "Ended", type: "date", nullable: true },
   { id: "worktreePath", label: "Worktree", type: "text" },
-];
+  // The owning task's CURRENT title (joined live: a task rename reaches every
+  // list holding its conversations). Searchable and filterable; no facet — a
+  // facet over a joined text column would recount on every rename.
+  { id: "taskTitle", label: "Task", type: "text" },
+] as const satisfies readonly ConversationFieldSpec[];
 
 /**
- * What the server can filter on, by filter-language domain — the ONE
- * declaration both runtimes read: the web `dataSource.filterable` (so the
- * Filter control offers exactly these fields) and the server column map
- * (`bindColumns`) the handler strict-decodes against. A field missing here is
- * not filterable server-side, and so is not offered.
+ * What the lists sort by — exactly the fields marked `sortable` above (a test
+ * pins the two equal: a field marked sortable over a column the collection
+ * does not sort throws at mount, on both surfaces).
+ */
+export const CONVERSATION_SORTABLE = [
+  "title",
+  "createdAt",
+  "updatedAt",
+] as const;
+
+/**
+ * What the lists filter on, by filter-language domain — the conversation
+ * collections' `filterable` (`allConversations`, `conversationHistory`), so the
+ * DataView's Filter control offers exactly these and the server strict-decodes
+ * against them.
  */
 export const CONVERSATION_FILTERABLE = {
   title: liveText(),
@@ -103,6 +117,7 @@ export const CONVERSATION_FILTERABLE = {
   updatedAt: liveInstant(),
   endedAt: liveInstant(),
   worktreePath: liveText(),
+  taskTitle: liveText(),
 };
 
 /** The text columns the search box matches (any of, case-insensitively). */
@@ -110,4 +125,5 @@ export const CONVERSATION_SEARCHABLE = [
   "title",
   "model",
   "worktreePath",
+  "taskTitle",
 ] as const;

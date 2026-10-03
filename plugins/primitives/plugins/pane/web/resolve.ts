@@ -6,8 +6,8 @@ import type { LiveRowResult } from "@plugins/network/plugins/live/web";
 
 /**
  * What a pane's resolve hook answers about the entity its URL names — the same
- * four-state lookup a by-id domain read already returns (`useRun`,
- * `useReport`, `useEventSource`), so such a read is returned as is:
+ * four-state lookup a by-id domain read already returns (`useReport`,
+ * `useEventSource`), so such a read is returned as is:
  *
  * - `pending` — not known yet;
  * - `error` — nobody could answer (with the read's `retry`, when it has one).
@@ -60,5 +60,25 @@ export function resolveRow<Row>(row: LiveRowResult<Row>): ResolveResult {
         : { status: "error", error: row.error, retry: row.refetch };
     case "ready":
       return row.found ? FOUND : MISSING;
+  }
+}
+
+/**
+ * The row a pane BODY renders off a by-id row read (`useLiveRow`) its resolve
+ * guard already answered: the found row, else — on a failed re-read — the row
+ * as last seen (`stale`), else `undefined`, which the body renders as its
+ * loading state (never an empty one: the guard has said the row exists).
+ *
+ * The body's twin of {@link resolveRow}: where that keeps a pane whose read
+ * failed but still holds its row `found`, this hands the body that row.
+ */
+export function rowOrStale<Row>(row: LiveRowResult<Row>): Row | undefined {
+  switch (row.status) {
+    case "loading":
+      return undefined;
+    case "error":
+      return row.stale;
+    case "ready":
+      return row.found ? row.row : undefined;
   }
 }

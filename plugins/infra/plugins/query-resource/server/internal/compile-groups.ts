@@ -12,8 +12,13 @@ import {
   BASE_RELATION,
   type JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
-import { compileJoins, routeColumnsOf } from "./joins";
-import { BASE_ROUTE_ID, compiledReachPlan, routedBase } from "./routes";
+import { compileJoins, routeColumnsOf, type JoinPlan } from "./joins";
+import {
+  BASE_ROUTE_ID,
+  compiledReachPlan,
+  routedBase,
+  type RoutedBase,
+} from "./routes";
 import type { QueryDb, QueryStep, RoutedSource } from "./spec";
 
 // The grouping compiler — a collection's `:groups` sibling (network/live's
@@ -32,6 +37,11 @@ import type { QueryDb, QueryStep, RoutedSource } from "./spec";
 // and its writes reach none of those tuples. Rendered here, beside the window
 // compiler, so the relations its SQL reads and the ones its routes name come
 // from one declaration.
+//
+// Split like the window compiler (`./arm-plan`): `planGroupArm` plans one
+// relation set — its routes, each tuple's reads and the SQL it renders — and
+// `compileArmGroups` turns arms into the loader and the reach plan.
+// `compileGroupsQuery` is the 1-arm case.
 
 // Every table a grouping reads can move its counts, so every use is membership.
 const MEMBERSHIP: TupleUse = { role: "membership" };
@@ -78,16 +88,34 @@ export type CompiledGroups<
   P extends ResourceParams,
 > = ServerResourceOptions<Row[], P> & { mode: "push"; reach: ReachPlan<P> };
 
+/** One grouping tuple of an arm: its decoded query, the joins its SQL reads, and its uses. */
+export interface GroupTuple {
+  q: GroupsQuery;
+  included: ReadonlySet<string>;
+  uses: ReadonlyMap<string, TupleUse>;
+}
+
+/** One relation set a grouping counts over — see `planGroupArm`. */
+export interface GroupArmPlan<Row, P extends ResourceParams> {
+  label: string;
+  base: RoutedBase;
+  joins: JoinPlan;
+  /** One `full` route per relation: any written row may move a count. */
+  routes: readonly FullRoute[];
+  /** One tuple's grouping and the joins its SQL reads. */
+  tuple(params: P): GroupTuple;
+  /** The tuple's grouping query — rendered, never executed. */
+  query(tuple: GroupTuple): QueryStep<Row>;
+}
+
 /**
- * Compile a grouping spec into push `defineResource` opts carrying its `reach`
- * plan. `Row` is the caller's group row (`{ value, count }`), stated once at the
- * select. Misuse (a view `from`) throws here, at module eval.
+ * Plan one grouping arm. Misuse (a view `from`, an undeclared relation) throws
+ * here, at module eval.
  */
-export function compileGroupsQuery<
+export function planGroupArm<
   Row extends { value: unknown; count: number },
   P extends ResourceParams,
->(key: string, spec: GroupsQuerySpec<P>): CompiledGroups<Row, P> {
-  const label = `groupsQuery("${key}")`;
+>(label: string, spec: GroupsQuerySpec<P>): GroupArmPlan<Row, P> {
   const base = routedBase(spec.from, label);
   // One boundary cast — the `compileWindowQuery` precedent.
   const db: QueryDb = spec.db ?? (realDb as unknown as QueryDb);
@@ -129,7 +157,7 @@ export function compileGroupsQuery<
 
   // One tuple's grouping and the joins its SQL reads: the grouped column's and
   // the `where`'s relations, the required lookups, and what they hang off.
-  const tuple = (params: P) => {
+  const tuple = (params: P): GroupTuple => {
     const q = spec.query(params);
     const read = joins.columnsIn([q.column, q.where]);
     if (!open) {
@@ -153,26 +181,56 @@ export function compileGroupsQuery<
   // NULL is its own group (sorted last among equal counts); the cluster's `C`
   // collation makes the value tiebreak code-point order, matching the filter
   // language's `compareScalars`.
-  const loader = async (params: P): Promise<Row[]> => {
-    const { q, included } = tuple(params);
-    let query: QueryStep<Row> = joins.apply(
+  const query = ({ q, included }: GroupTuple): QueryStep<Row> => {
+    let step: QueryStep<Row> = joins.apply(
       db
         .select<Row>({ value: q.column, count: count().as("count") })
         .from(base.table),
       included,
     );
-    if (q.where) query = query.where(q.where);
-    const rows = await query
+    if (q.where) step = step.where(q.where);
+    return step
       .groupBy(q.column)
       .orderBy(sql`count(*) DESC`, sql`${q.column} ASC NULLS LAST`)
       .limit(q.limit);
-    for (const row of rows) if (row.value !== null) q.check(row.value);
-    return rows;
   };
 
+  return { label, base, joins, routes, tuple, query };
+}
+
+/**
+ * The grouping loader and reach plan over its one arm. A union's groupings
+ * (`./compile-union-window`) reuse each arm's plan — its routes and tuple
+ * reads — and render their own summed SQL.
+ */
+export function compileArmGroups<
+  Row extends { value: unknown; count: number },
+  P extends ResourceParams,
+>(arms: readonly [GroupArmPlan<Row, P>]): CompiledGroups<Row, P> {
+  const [arm] = arms;
+  const loader = async (params: P): Promise<Row[]> => {
+    const t = arm.tuple(params);
+    const rows = await arm.query(t);
+    for (const row of rows) if (row.value !== null) t.q.check(row.value);
+    return rows;
+  };
   return {
     mode: "push",
     loader,
-    reach: compiledReachPlan<P>(routes, (params) => tuple(params).uses),
+    reach: compiledReachPlan<P>(arm.routes, (params) => arm.tuple(params).uses),
   };
+}
+
+/**
+ * Compile a grouping spec into push `defineResource` opts carrying its `reach`
+ * plan. `Row` is the caller's group row (`{ value, count }`), stated once at the
+ * select. Misuse (a view `from`) throws here, at module eval.
+ */
+export function compileGroupsQuery<
+  Row extends { value: unknown; count: number },
+  P extends ResourceParams,
+>(key: string, spec: GroupsQuerySpec<P>): CompiledGroups<Row, P> {
+  return compileArmGroups<Row, P>([
+    planGroupArm<Row, P>(`groupsQuery("${key}")`, spec),
+  ]);
 }

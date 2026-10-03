@@ -207,7 +207,6 @@ function MergedSourceBody(props: {
       viewModel={viewModel}
       activeInstance={activeInstance}
       chrome={chrome}
-      sourceScope={sourceId}
     />
   );
 }

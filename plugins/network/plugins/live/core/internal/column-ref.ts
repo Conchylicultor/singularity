@@ -1,5 +1,12 @@
 import type { FilterDomainId } from "@plugins/network/plugins/live/plugins/filter/core";
-import type { LiveColumnsDeclaration } from "./live-columns";
+import type { LiveColumnsDeclaration, LiveColumnsOwner } from "./live-columns";
+
+/**
+ * Who a column ref's column belongs to: the collection's OWN column, or a
+ * column set's (its handle's owner). Readers switch on it exhaustively.
+ */
+export type LiveColumnRefOwner =
+  { readonly kind: "own"; readonly collection: string } | LiveColumnsOwner;
 
 // The mark `mintColumnRef` puts on a ref. Module-private, so no code outside
 // this file can write the property — a ref literal is a tsc error.
@@ -7,15 +14,17 @@ declare const MINTED: unique symbol;
 
 /** The fields of a column ref, before it is minted (see `mintColumnRef`). */
 interface ColumnRefFields {
-  /** Its collection's key — `null` for a scoped set's member, which names its `scope` instead. */
-  readonly collection: string | null;
-  /** A scoped member's scope (the collection's `columnScope` it binds under); `null` otherwise. */
-  readonly scope: string | null;
+  /**
+   * Whose column it is — the collection's own (by key), a contributed or arm
+   * set's (by its collection's key), or a scoped set's member (by the scope it
+   * binds under, a collection's `columnScope`).
+   */
+  readonly owner: LiveColumnRefOwner;
   /** The column's wire name (a contributed column's is `<contributor>.<field>`). */
   readonly name: string;
   readonly domain: FilterDomainId | null;
   readonly sortable: boolean;
-  /** The contributed-column handle that declared it; absent for the collection's own column. */
+  /** The column set's handle that declared it; absent for the collection's own column. */
   readonly handle?: LiveColumnsDeclaration;
 }
 

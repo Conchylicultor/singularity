@@ -29,7 +29,12 @@
  * it can never police nullability — that stays the author's claim, spelled with
  * {@link nullable}.
  */
-import type { DriverValueDecoder, GetDecoderResult } from "drizzle-orm";
+import {
+  Column,
+  is,
+  type DriverValueDecoder,
+  type GetDecoderResult,
+} from "drizzle-orm";
 import type { ZodError } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
@@ -53,12 +58,18 @@ export type SqlDecoderLike =
   | DriverValueDecoder<any, any>
   | DriverValueDecoder<any, any>["mapFromDriverValue"];
 
-/** A drizzle `Column` decodes through a method, so keep `this` bound. */
-function toMapper(decoder: SqlDecoderLike): (value: unknown) => unknown {
+/**
+ * Any decoder `.mapWith()` accepts, as a plain function. A drizzle `Column`
+ * decodes through a method, so keep `this` bound.
+ */
+export function toMapper(decoder: SqlDecoderLike): (value: unknown) => unknown {
   return typeof decoder === "function"
     ? (decoder as (value: unknown) => unknown)
     : (value) => decoder.mapFromDriverValue(value);
 }
+
+/** The decoders {@link nullable} made — the functions whose type admits NULL. */
+const nullableDecoders = new WeakSet<SqlDecoderLike>();
 
 /**
  * `decoder`, and `NULL` is a legitimate value for this projection.
@@ -76,10 +87,24 @@ export function nullable<D extends SqlDecoderLike>(
   decoder: D,
 ): SqlDecoder<GetDecoderResult<D> | null> {
   const map = toMapper(decoder);
-  return (value) =>
+  const out: SqlDecoder<GetDecoderResult<D> | null> = (value) =>
     value === null || value === undefined
       ? null
       : (map(value) as GetDecoderResult<D>);
+  nullableDecoders.add(out);
+  return out;
+}
+
+/**
+ * Whether a decoder's result type admits NULL — the runtime twin of its
+ * type: a column that is not NOT NULL (`GetColumnData` adds `| null`), or a
+ * {@link nullable} decoder. Every other decoder's type is non-null, so a
+ * reader that skips it on NULL (drizzle's own mapping) must refuse the NULL
+ * rather than hand it on as the non-null type.
+ */
+export function admitsNull(decoder: SqlDecoderLike): boolean {
+  if (is(decoder, Column)) return !decoder.notNull;
+  return nullableDecoders.has(decoder);
 }
 
 /**

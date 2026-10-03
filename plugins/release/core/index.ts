@@ -20,9 +20,6 @@ export {
   triggerReleaseEndpoint,
   ReleaseIntentSchema,
   STAGED_INTENT,
-  releaseCandidateEndpoint,
-  releaseLatestRunEndpoint,
-  ReleaseLatestRunResponseSchema,
   previewEndpoint,
   stopPreviewEndpoint,
   releaseLogsEndpoint,
@@ -30,21 +27,20 @@ export {
 } from "./endpoints";
 export type {
   ReleaseIntent,
-  ReleaseLatestRunResponse,
   ReleaseLogLine,
   ReleaseLogsResponse,
 } from "./endpoints";
 export {
   BundleResolutionSchema,
   StalenessSchema,
-  ReleaseCandidateResponseSchema,
+  ReleaseCandidateSchema,
+  releaseCandidate,
 } from "./candidate";
-export type { ReleaseCandidateResponse } from "./candidate";
+export type { ReleaseCandidate } from "./candidate";
 export {
   ReleaseRunSchema,
   releaseRuns,
   releaseHistory,
-  releaseRunsRevisionResource,
   PreviewSchema,
   releasePreviews,
 } from "./resources";

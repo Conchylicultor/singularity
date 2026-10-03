@@ -1,5 +1,9 @@
 import { sql, type SQL } from "drizzle-orm";
+import type { ColumnRef } from "@plugins/infra/plugins/query-resource/core";
 import type { ColumnExpr } from "@plugins/primitives/plugins/keyset/server";
+
+/** A column the expression reads: a column or expression, or a `j` ref (which renders as one). */
+type Operand = ColumnExpr | ColumnRef;
 import {
   BUILD_EXIT_HARD_KILLED,
   BUILD_EXIT_SIGNAL_BASE,
@@ -29,10 +33,7 @@ import type { RunOutcome } from "@plugins/runs/plugins/run-outcome/core";
  * which falls through to `else 'failed'` — the same answer as the function's
  * `exitCode !== null &&` guard, reached a different way.
  */
-export function buildStatusExpr(
-  finishedAt: ColumnExpr,
-  exitCode: ColumnExpr,
-): SQL {
+export function buildStatusExpr(finishedAt: Operand, exitCode: Operand): SQL {
   // `::text` on the whole expression, not on each branch: every arm of a
   // `UNION ALL` must agree on a column's type, and an all-`unknown` CASE would
   // leave that to Postgres' literal resolution rather than saying it.

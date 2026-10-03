@@ -87,10 +87,13 @@ export type HostMap =
    * `column` values are resolved to host ids in the drain, batched once per
    * (entry, route, flush); `within` bounds the answer to ids the reading tuples
    * can hold (null = unbounded), and more than `cap` hosts answers `"over-cap"`.
+   * `column` absent = the lookup is on the changed table's single-column PK,
+   * read from `change.ids` (no carried key — so a statement too large to list
+   * its keys still names its rows, and `ids: null` is FULL like any unknown).
    */
   | {
       kind: "reverse";
-      column: string;
+      column?: string;
       resolve: (
         changed: readonly string[],
         within: ReadonlySet<string> | null,

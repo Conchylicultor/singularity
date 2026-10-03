@@ -1,80 +1,146 @@
-import type { SQL } from "drizzle-orm";
-import type { PgTable } from "drizzle-orm/pg-core";
+import { sql, type SQL } from "drizzle-orm";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import type { ColumnExpr } from "@plugins/primitives/plugins/keyset/server";
+import {
+  expr,
+  type ExprField,
+  type JoinColumns,
+  type JoinRefs,
+  type JoinSpec,
+  type TypedColumnRef,
+} from "@plugins/infra/plugins/query-resource/core";
+import type { LiveArmColumnsHandle } from "@plugins/network/plugins/live/core";
 import type {
-  RunArmBaseColumnId,
-  RunArmFieldSpecs,
-  RunBaseColumnNullable,
-} from "../../core";
+  UnionArmBinding,
+  UnionArmColumns,
+  UnionFieldBinding,
+} from "@plugins/network/plugins/live/server";
+import type { RunOutcome } from "@plugins/runs/plugins/run-outcome/core";
+import type { RunRow } from "../../core";
+
+/** `j` of an arm over table `T` and joins `J`: each relation's wire columns, as refs. */
+export type RunArmRefs<
+  T extends PgTable,
+  J extends readonly JoinSpec[],
+> = JoinRefs<T["_"]["columns"], J>;
+
+/** The value a column reads as: its data type, `| null` unless it is NOT NULL. */
+type ColumnValue<C extends PgColumn> = C["_"]["notNull"] extends true
+  ? C["_"]["data"]
+  : C["_"]["data"] | null;
 
 /**
- * Where an arm's base columns come from — one key per base column `runs`
- * declared, **derived from that declaration** rather than restated.
- *
- * Two things follow, and both are the point of the plugin:
- *
- * - Every key is REQUIRED. An arm that forgets `outcome` does not get a silently
- *   NULL column that renders as a blank chip forever; it fails `tsc`.
- * - A key is `ColumnExpr | null` exactly when the base declaration says the
- *   column is nullable. So `namespace: null` ("a backup is host-global") is
- *   spellable and `startedAt: null` is not.
- *
- * `duration` is absent on purpose: it is derived from `startedAt` / `finishedAt`,
- * so no arm can supply one and no two arms can disagree about what a duration is.
+ * The refs `j` offers whose column reads as a `V` — `JoinRef` narrowed by the
+ * column's own type, so binding an integer column to a text field (or a
+ * nullable one to a NOT NULL field) is a tsc error rather than a row the
+ * browser's parse refuses. (A non-required join's column is NULL on a miss
+ * whatever its type says; serve-union checks that nullability at bind.)
  */
-export type RunArmBaseColumns = {
-  [K in RunArmBaseColumnId]: RunBaseColumnNullable[K] extends true
-    ? ColumnExpr | null
-    : ColumnExpr;
-};
+export type TypedJoinRef<Refs, V> = {
+  [R in keyof Refs]: {
+    [K in keyof Refs[R]]: Refs[R][K] extends TypedColumnRef<string, infer C>
+      ? [ColumnValue<C>] extends [V]
+        ? Refs[R][K]
+        : never
+      : never;
+  }[keyof Refs[R]];
+}[keyof Refs];
 
 /**
- * What a domain hands `defineRunKind`.
- *
- * `extra` is keyed against `fields` — the arm's own declaration in its `core/` —
- * so a declared field with no column, or a column with no declared field, is a
- * `tsc` error. That is the same key set the web side binds its `FieldDef.id`s
- * to, which is what stops a web field id from drifting off the server column it
- * is supposed to filter through.
+ * One field's binding: a column ref `j` offers whose column reads as the
+ * field's type, or an expression over them whose VALUE type is the field's
+ * (`ExprField<V>`) — both checked by tsc.
  */
-export interface RunKindSpec<S extends RunArmFieldSpecs = RunArmFieldSpecs> {
-  /** The discriminator value. Must match the `defineRunArmFields` prefix. */
-  kind: string;
-  /** The domain's own ledger table. Stays plugin-private; only bound here. */
-  table: PgTable;
-  /** This arm's extra-column declaration, from the arm's `core/`. */
-  fields: S;
-  base: RunArmBaseColumns;
-  extra: { [K in keyof S]: ColumnExpr };
-  /** Always-on scope for this arm — a soft-delete flag, a retention window. */
-  where?: SQL;
+export type RunFieldBinding<
+  T extends PgTable,
+  J extends readonly JoinSpec[],
+  V,
+> = TypedJoinRef<RunArmRefs<T, J>, V> | ExprField<V>;
+
+/**
+ * Where an arm's base fields come from — one key per base field, derived from
+ * the row (T9). `id` and `duration` are absent: the id is the arm's primary key
+ * (`spec.id`) and the duration is derived from `startedAt` / `finishedAt`, so no
+ * arm can supply either and no two arms can disagree about what they are.
+ *
+ * `startedAt` / `finishedAt` are columns (the duration is computed from them);
+ * a nullable field (`trigger`, `namespace`, `message`) may be `null` — "this
+ * kind has no such notion" — and a non-nullable one may not.
+ */
+export interface RunArmBase<T extends PgTable, J extends readonly JoinSpec[]> {
+  label: RunFieldBinding<T, J, string>;
+  outcome: RunFieldBinding<T, J, RunOutcome>;
+  trigger: RunFieldBinding<T, J, string | null> | null;
+  startedAt: TypedJoinRef<RunArmRefs<T, J>, Date>;
+  finishedAt: TypedJoinRef<RunArmRefs<T, J>, Date | null>;
+  namespace: RunFieldBinding<T, J, string | null> | null;
+  message: RunFieldBinding<T, J, string | null> | null;
 }
 
 /**
- * A registered arm, as the query compiler and the revision tick read it.
+ * What a domain hands `defineRunKind` (T9).
+ *
+ * - `columns` is the arm's own column set (`liveArmColumns(runs, kind, …)`, in
+ *   the arm's core): the kind is ITS arm, so the discriminator, the row key's
+ *   prefix and the web field ids cannot drift apart.
+ * - `extra` binds exactly that set's fields, each to a value of the field's
+ *   type — a declared field with no column, or a column with no field, is a
+ *   tsc error.
+ * - `id` is the ledger's single-column primary key — the row key encodes it.
+ */
+export interface RunKindSpec<
+  T extends PgTable,
+  J extends readonly JoinSpec[],
+  CRow,
+  F,
+  S extends string,
+> {
+  columns: LiveArmColumnsHandle<RunRow, CRow, F, S>;
+  /** The domain's own ledger table. Stays plugin-private; only bound here. */
+  from: T;
+  id: PgColumn;
+  joins?: J;
+  base: (j: RunArmRefs<T, J>) => RunArmBase<T, J>;
+  extra: (j: RunArmRefs<T, J>) => {
+    [K in keyof CRow & string]-?: RunFieldBinding<T, J, CRow[K]>;
+  };
+  /** Always-on scope for this arm — a namespace, a soft-delete flag. */
+  where?: (j: JoinColumns<T, J>) => SQL;
+}
+
+/**
+ * A registered arm: its kind, and its binding into the union
+ * (network/live's `serveUnionCollection`).
  *
  * There is deliberately **no `label`** here. The kind's human name is a web
- * concern — the filter chip's options must list every registered kind, not the
- * ones that happen to be on the loaded page — so it is declared once, on
- * `Runs.Kind`. A second copy on the server would be written by every arm and
- * read by nothing, and two labels for one kind can disagree.
+ * concern — the filter chip's options must list every registered kind, not
+ * the ones on the loaded page — so it is declared once, on `Runs.Kind`.
  */
 export interface RunKind {
   kind: string;
-  table: PgTable;
-  fields: RunArmFieldSpecs;
-  base: RunArmBaseColumns;
-  extra: Record<string, ColumnExpr>;
-  where?: SQL;
+  binding: UnionArmBinding;
 }
 
 // Module-load-time registry. Populated by `defineRunKind`'s `register()` during
 // the framework's register phase (mirrors `defineTrashSource` /
-// `defineHistorySource`). Insertion order is the order the arms appear in the
-// UNION, which is the order they were loaded — irrelevant to the result, since
-// the outer ORDER BY is total.
+// `defineHistorySource`), read once by the union's deferred compile.
 const runKindRegistry = new Map<string, RunKind>();
+
+/**
+ * Wall-clock milliseconds, derived rather than stored: `finishedAt −
+ * startedAt`, NULL while the run is in flight (the browser ticks a running
+ * run's elapsed time itself — `<RunDuration>`). Cast to `double precision`
+ * because `extract(epoch …)` yields `numeric`, which `pg` decodes as a string.
+ */
+function durationOf(
+  startedAt: unknown,
+  finishedAt: unknown,
+): ExprField<number | null> {
+  return expr(
+    sql`(extract(epoch from (${finishedAt} - ${startedAt})) * 1000)::double precision`,
+    { decoder: Number, sqlType: "double precision" },
+  );
+}
 
 /**
  * Register a run kind — one arm of the merged run space.
@@ -83,45 +149,60 @@ const runKindRegistry = new Map<string, RunKind>();
  * when the token sits in a plugin's `register: [...]` array. `runs` never names
  * an arm and an arm never edits `runs`; adding a kind is one folder.
  */
-export function defineRunKind<const S extends RunArmFieldSpecs>(
-  spec: RunKindSpec<S>,
-): RunKind & Registration {
-  const kind: RunKind = {
-    kind: spec.kind,
-    table: spec.table,
-    fields: spec.fields,
-    base: spec.base,
-    extra: spec.extra as Record<string, ColumnExpr>,
-    where: spec.where,
+export function defineRunKind<
+  T extends PgTable,
+  CRow,
+  F,
+  S extends string,
+  // No `joins` → no join relations, not the constraint's open set (whose
+  // string index would swallow `base`, so no column could bind).
+  const J extends readonly JoinSpec[] = readonly [],
+>(spec: RunKindSpec<T, J, CRow, F, S>): RunKind & Registration {
+  const kind = spec.columns.owner.arm;
+  // The facade's typed `j` and bindings, erased to the union's loose shape:
+  // every binding was type-checked against the row and the arm's column set
+  // above (T9), and `serveUnionCollection` re-checks the key sets at bind.
+  const binding: UnionArmBinding = {
+    columns: spec.columns,
+    from: spec.from,
+    id: spec.id,
+    ...(spec.joins ? { joins: spec.joins } : {}),
+    base: (j) => {
+      const b = spec.base(j as unknown as RunArmRefs<T, J>);
+      return {
+        id: { from: "base", col: spec.id },
+        label: b.label,
+        outcome: b.outcome,
+        trigger: b.trigger,
+        startedAt: b.startedAt,
+        finishedAt: b.finishedAt,
+        duration: durationOf(b.startedAt, b.finishedAt),
+        namespace: b.namespace,
+        message: b.message,
+      } as unknown as Readonly<Record<string, UnionFieldBinding | null>>;
+    },
+    extra: (j) =>
+      spec.extra(j as unknown as RunArmRefs<T, J>) as unknown as Readonly<
+        Record<string, UnionFieldBinding>
+      >,
+    ...(spec.where
+      ? {
+          where: (j: UnionArmColumns) =>
+            spec.where!(j as unknown as JoinColumns<T, J>),
+        }
+      : {}),
   };
+  const run: RunKind = { kind, binding };
   return {
-    ...kind,
+    ...run,
     _kind: "run-kind",
     _factory: "defineRunKind",
-    _doc: { label: spec.kind },
+    _doc: { label: kind },
     register() {
-      if (runKindRegistry.has(spec.kind)) {
-        throw new Error(`[runs] duplicate run kind: ${spec.kind}`);
+      if (runKindRegistry.has(kind)) {
+        throw new Error(`[runs] duplicate run kind: ${kind}`);
       }
-      // The prefix rule is enforced at declaration time by `defineRunArmFields`;
-      // re-stated here because `fields` is structurally typed and a hand-rolled
-      // object literal would otherwise slip past it.
-      const prefix = `${spec.kind}.`;
-      for (const id of Object.keys(spec.fields)) {
-        if (!id.startsWith(prefix)) {
-          throw new Error(
-            `[runs] arm field "${id}" of kind "${spec.kind}" must be namespaced "${prefix}<id>".`,
-          );
-        }
-        for (const [otherKind, other] of runKindRegistry) {
-          if (id in other.fields) {
-            throw new Error(
-              `[runs] arm field "${id}" is already declared by kind "${otherKind}".`,
-            );
-          }
-        }
-      }
-      runKindRegistry.set(spec.kind, kind);
+      runKindRegistry.set(kind, run);
     },
   };
 }

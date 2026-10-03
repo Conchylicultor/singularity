@@ -158,4 +158,146 @@ describe("liveValue", () => {
       );
     });
   });
+
+  describe("typed params — a record of string parsers", () => {
+    const WINDOWS = ["1h", "24h", "7d"] as const;
+    const v = liveValue("test.live-value.typed", {
+      schema: S,
+      params: { window: z.enum(WINDOWS), id: z.string().min(1) },
+    });
+
+    test("records the names (all required) and derives P from each parser's output", () => {
+      expect(v.params).toEqual(["window", "id"]);
+      expect(v.optionalParams).toBeUndefined();
+      const p: NonNullable<typeof v.__params> = { window: "24h", id: "x" };
+      expect(p.window).toBe("24h");
+      type P = NonNullable<typeof v.__params>;
+      // @ts-expect-error — "2h" is not one of the parser's outputs
+      const badWindow: P["window"] = "2h";
+      // @ts-expect-error — every typed param is required
+      const missing: NonNullable<typeof v.__params> = { window: "1h" };
+      expect([badWindow, missing]).toHaveLength(2);
+    });
+
+    test("the gate accepts a tuple every parser admits", () => {
+      expect(() => v.validateParams({ window: "7d", id: "a" })).not.toThrow();
+    });
+
+    test("the gate refuses a value a parser refuses, a missing, an unknown or a non-string param — typed", () => {
+      const bad: Record<string, unknown>[] = [
+        { window: "2h", id: "a" },
+        { window: "1h", id: "" },
+        { window: "1h" },
+        { window: "1h", id: "a", extra: "x" },
+        { window: 1, id: "a" },
+      ];
+      for (const params of bad) {
+        expect(() =>
+          v.validateParams(params as Record<string, string>),
+        ).toThrow(ResourceContractError);
+      }
+      expect(() => v.validateParams({ window: "2h", id: "a" })).toThrow(
+        /param "window" = "2h" is refused/,
+      );
+    });
+
+    test("a transforming, refining, defaulting or catching parser throws at declaration — wherever it hides", () => {
+      const refused: [string, z.ZodType<string, z.ZodTypeDef, unknown>][] = [
+        ["ZodEffects", z.string().transform((s) => s.toLowerCase())],
+        ["ZodEffects", z.string().refine((s) => s.length > 0)],
+        ["ZodEffects", z.preprocess((x) => String(x), z.string())],
+        ["ZodDefault", z.string().default("1h")],
+        ["ZodCatch", z.string().catch("1h")],
+        ["ZodEffects", z.string().pipe(z.string().transform((s) => s.trim()))],
+        ["ZodDefault", z.union([z.literal("a"), z.string().default("b")])],
+        // String checks that rewrite the value in place (no ZodEffects).
+        ["ZodString \\.trim\\(\\)", z.string().trim()],
+        ["ZodString \\.toLowerCase\\(\\)", z.string().min(1).toLowerCase()],
+        [
+          "ZodString \\.toUpperCase\\(\\)",
+          z.string().pipe(z.string().toUpperCase()),
+        ],
+      ];
+      refused.forEach(([kind, parser], i) => {
+        expect(() =>
+          liveValue(`test.live-value.typed-refused-${i}`, {
+            schema: S,
+            params: { window: parser },
+          }),
+        ).toThrow(new RegExp(`parsed by a ${kind}`));
+      });
+    });
+
+    test("a parser that accepts undefined throws at declaration (every typed param is required)", () => {
+      expect(() =>
+        liveValue("test.live-value.typed-optional", {
+          schema: S,
+          // An untyped caller: `.optional()`'s output admits undefined (tsc).
+          params: { id: z.string().optional() as unknown as z.ZodString },
+        }),
+      ).toThrow(/accepts undefined/);
+    });
+
+    test("an empty record throws at declaration", () => {
+      expect(() =>
+        liveValue("test.live-value.typed-empty", { schema: S, params: {} }),
+      ).toThrow(/empty params record/);
+    });
+
+    test("the backstop: a parser that slips a transform past the walk throws a plain Error at the gate", () => {
+      // A hand-rolled ZodType whose _parse changes the value: no refused kind
+      // in its `_def`, so only the gate's `data !== v` can catch it.
+      class Upper extends z.ZodType<string, z.ZodTypeDef, unknown> {
+        _parse(input: z.ParseInput): z.ParseReturnType<string> {
+          if (typeof input.data === "string") {
+            return z.OK(input.data.toUpperCase());
+          }
+          z.addIssueToContext(this._getOrReturnCtx(input), {
+            code: z.ZodIssueCode.custom,
+            message: "not a string",
+          });
+          return z.INVALID;
+        }
+      }
+      const sneaky = liveValue("test.live-value.typed-backstop", {
+        schema: S,
+        params: { id: new Upper({}) },
+      });
+      let thrown: unknown;
+      try {
+        sneaky.validateParams({ id: "a" });
+      } catch (err) {
+        thrown = err;
+      }
+      expect(thrown).toBeInstanceOf(Error);
+      expect(thrown).not.toBeInstanceOf(ResourceContractError);
+      expect(String(thrown)).toMatch(/must return the wire string unchanged/);
+      // A value it returns unchanged passes.
+      expect(() => sneaky.validateParams({ id: "A" })).not.toThrow();
+    });
+
+    test("types: a parsers record typed with an index signature is refused", () => {
+      // Its `P` would be `{ [k: string]: string }`, which `useLive` would read
+      // as param-less — a read the gate always refuses. Never called.
+      const loose: Record<string, z.ZodString> = { id: z.string() };
+      const typeOnly = () =>
+        liveValue("test.live-value.typed-index-signature", {
+          schema: S,
+          // @ts-expect-error — the param names must be literal keys
+          params: loose,
+        });
+      expect(typeof typeOnly).toBe("function");
+    });
+
+    test("types: a parser whose output is not a string is refused", () => {
+      // Never called — the assertion is the `@ts-expect-error`.
+      const typeOnly = () =>
+        liveValue("test.live-value.typed-number", {
+          schema: S,
+          // @ts-expect-error — a typed param's parser outputs a string
+          params: { n: z.number() },
+        });
+      expect(typeof typeOnly).toBe("function");
+    });
+  });
 });

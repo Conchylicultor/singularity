@@ -67,6 +67,7 @@ the durable emit that follows.
     - `build`
     - `build/deployment`
     - `conversations/conversation-view/commits-graph`
+    - `release`
     - `review/plugin-changes`
     - `tasks/attempt-work`
     - `tasks/tasks-core`

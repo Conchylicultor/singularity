@@ -22,11 +22,11 @@ export interface MailSearchHandle {
 /**
  * Accumulating on-demand mail search. Gmail returns an OPAQUE `nextPageToken`
  * (undefined on the last page), so this is NOT a keyset cursor — it can't use
- * the `useCursorPagination` primitive (`getCursor(item)`). Instead it mirrors
- * the `data-view` `useServerDataSource` shape: a `useInfiniteQuery` keyed by the
- * query, coalescing each page's thread groups by `threadId` (a thread can match
- * on two pages, so pages aren't just flattened), delegating the auto-fetch to the
- * shared `useInfiniteScroll` primitive.
+ * the `useCursorPagination` primitive (`getCursor(item)`). Instead it is a
+ * `useInfiniteQuery` keyed by the query, coalescing each page's thread groups
+ * by `threadId` (a thread can match on two pages, so pages aren't just
+ * flattened), delegating the auto-fetch to the shared `useInfiniteScroll`
+ * primitive.
  *
  * The `!isFetchNextPageError` gate that stops a failed next-page fetch from
  * hot-looping the sentinel (with the Retry button as the recovery path) now lives

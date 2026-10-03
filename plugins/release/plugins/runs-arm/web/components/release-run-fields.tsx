@@ -5,21 +5,12 @@ import type {
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { armBool, armText, runArmFields } from "@plugins/runs/web";
-import type { UnionRun } from "@plugins/runs/core";
+import type { RunRow } from "@plugins/runs/core";
 import type { ReleaseRun } from "@plugins/release/core";
-import { releaseRunArmFields } from "../../core";
+import { releaseRunColumns } from "../../core";
 
-// Bound once against this arm's own column declaration: the id must be declared,
-// and its declared type must be one the accessor can read, or it does not
-// compile. `runArmFields` makes the same binding for the `FieldDef.id` below.
-const kindOf = armText(releaseRunArmFields, "release.kind");
-const compositionOf = armText(releaseRunArmFields, "release.composition");
-const targetOf = armText(releaseRunArmFields, "release.target");
-const platformOf = armText(releaseRunArmFields, "release.platform");
-const commitShaOf = armText(releaseRunArmFields, "release.commitSha");
-const commitDirtyOf = armBool(releaseRunArmFields, "release.commitDirty");
-const artifactPathOf = armText(releaseRunArmFields, "release.artifactPath");
+/** This arm's slice of a row, or null on another kind's row. */
+const own = (run: RunRow) => releaseRunColumns.read(run);
 
 /**
  * The two ways a release run is cut, and how each reads.
@@ -61,12 +52,13 @@ const KIND_OPTIONS: FieldOption[] = (
  * say. They stay one click away in the view's Properties list, and they filter,
  * sort and group whether or not they are shown.
  */
-const FIELDS: FieldDef<UnionRun>[] = runArmFields(releaseRunArmFields, [
+const FIELDS: FieldDef<RunRow>[] = [
   {
     id: "release.kind",
     label: "Release kind",
     type: "enum",
-    value: kindOf,
+    column: releaseRunColumns.column("kind"),
+    value: (run) => own(run)?.kind ?? null,
     options: KIND_OPTIONS,
     sortable: true,
     filterable: true,
@@ -77,7 +69,8 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(releaseRunArmFields, [
     id: "release.composition",
     label: "Composition",
     type: "text",
-    value: compositionOf,
+    column: releaseRunColumns.column("composition"),
+    value: (run) => own(run)?.composition ?? null,
     sortable: true,
     filterable: true,
     // The one release dimension worth a column by default: it is what a person
@@ -89,7 +82,8 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(releaseRunArmFields, [
     id: "release.target",
     label: "Target",
     type: "text",
-    value: targetOf,
+    column: releaseRunColumns.column("target"),
+    value: (run) => own(run)?.target ?? null,
     sortable: true,
     filterable: true,
     visible: false,
@@ -99,7 +93,8 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(releaseRunArmFields, [
     id: "release.platform",
     label: "Platform",
     type: "text",
-    value: platformOf,
+    column: releaseRunColumns.column("platform"),
+    value: (run) => own(run)?.platform ?? null,
     sortable: true,
     filterable: true,
     visible: false,
@@ -109,15 +104,16 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(releaseRunArmFields, [
     id: "release.commitSha",
     label: "Commit",
     type: "text",
-    value: commitShaOf,
+    column: releaseRunColumns.column("commitSha"),
+    value: (run) => own(run)?.commitSha ?? null,
     cell: (run) => {
-      const sha = commitShaOf(run);
+      const sha = own(run)?.commitSha ?? null;
       if (sha === null) return null;
       // The dirty flag belongs ON the sha, not beside it: a dirty run's sha names
       // its PARENT commit, not its bytes, so the sha alone is a claim the row
       // cannot support. Rendering them apart lets someone read the first without
       // the second.
-      const dirty = commitDirtyOf(run);
+      const dirty = own(run)?.commitDirty ?? null;
       return (
         <Badge
           variant={dirty === true ? "warning" : "muted"}
@@ -137,7 +133,8 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(releaseRunArmFields, [
     id: "release.commitDirty",
     label: "Dirty tree",
     type: "bool",
-    value: commitDirtyOf,
+    column: releaseRunColumns.column("commitDirty"),
+    value: (run) => own(run)?.commitDirty ?? null,
     filterable: true,
     groupable: true,
     visible: false,
@@ -147,9 +144,10 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(releaseRunArmFields, [
     id: "release.artifactPath",
     label: "Artifact",
     type: "text",
-    value: artifactPathOf,
+    column: releaseRunColumns.column("artifactPath"),
+    value: (run) => own(run)?.artifactPath ?? null,
     cell: (run) => {
-      const path = artifactPathOf(run);
+      const path = own(run)?.artifactPath ?? null;
       return path === null ? null : (
         <span className="text-muted-foreground" title={path}>
           {path}
@@ -160,10 +158,10 @@ const FIELDS: FieldDef<UnionRun>[] = runArmFields(releaseRunArmFields, [
     visible: false,
     width: "20rem",
   },
-]);
+];
 
 export function ReleaseRunFields({
   render,
-}: FieldExtensionProps<UnionRun>): ReactNode {
+}: FieldExtensionProps<RunRow>): ReactNode {
   return <>{render(FIELDS)}</>;
 }

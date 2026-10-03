@@ -1,16 +1,11 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
   triggerReleaseEndpoint,
-  releaseCandidateEndpoint,
-  releaseLatestRunEndpoint,
   previewEndpoint,
   stopPreviewEndpoint,
   releaseLogsEndpoint,
 } from "../core/endpoints";
 import { handleRelease } from "./internal/handle-release";
-import { handleReleaseCandidate } from "./internal/handle-candidate";
-import { handleLatestRun } from "./internal/handle-latest-run";
 import { handlePreview, handleStopPreview } from "./internal/handle-preview";
 import { handleReleaseLogs } from "./internal/handle-logs";
 import {
@@ -22,7 +17,7 @@ import {
   releaseHistoryServed,
   releaseRunsServed,
 } from "./internal/release-runs-resource";
-import { releaseRunsRevisionResource } from "./internal/history-revision-resource";
+import { releaseCandidateServed } from "./internal/candidate-resource";
 import { releasePreviewsServed } from "./internal/preview-state-resource";
 export { _releaseRuns } from "./internal/tables";
 export { enqueueRelease } from "./internal/enqueue-release";
@@ -45,13 +40,11 @@ export default {
   contributions: [
     ...releaseRunsServed.declare,
     ...releaseHistoryServed.declare,
-    Resource.Declare(releaseRunsRevisionResource),
+    ...releaseCandidateServed.declare,
     ...releasePreviewsServed.declare,
   ],
   httpRoutes: {
     [triggerReleaseEndpoint.route]: handleRelease,
-    [releaseCandidateEndpoint.route]: handleReleaseCandidate,
-    [releaseLatestRunEndpoint.route]: handleLatestRun,
     [previewEndpoint.route]: handlePreview,
     [stopPreviewEndpoint.route]: handleStopPreview,
     [releaseLogsEndpoint.route]: handleReleaseLogs,
