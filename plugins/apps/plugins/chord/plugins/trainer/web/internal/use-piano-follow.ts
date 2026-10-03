@@ -16,6 +16,9 @@ const JUMP_BACK_SECONDS = 0.25;
  * box and the seconds it still has to run. When the song stops playing,
  * `silence` is called, so the piano never outlasts the record it follows.
  *
+ * Nothing is struck while the song is not playing, even if its playhead moves
+ * (the video cued at the loop's start when the screen opens).
+ *
  * The song is the clock, muted or not: this only watches its playhead, so a
  * muted video keeps the piano in time exactly as an audible one does. The
  * playhead is read once per animation frame (the player's own subscription),
@@ -44,7 +47,13 @@ export function usePianoFollow({
     lastRef.current = null;
     const onPlayhead = () => {
       const t = player.getPlayhead();
-      if (t === null) return;
+      // The playhead also moves while the song is not playing — the video
+      // cued at the loop's start on open, a seek while paused. Only a playing
+      // song enters a box; the one under the playhead is struck on resume.
+      if (t === null || !player.isPlaying) {
+        lastRef.current = null;
+        return;
+      }
       const box = boxAt(round.boxes, t);
       const last = lastRef.current;
       const jumpedBack = last !== null && t < last.t - JUMP_BACK_SECONDS;

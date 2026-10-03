@@ -100,7 +100,9 @@ prev, next)` between two playhead reads — a forward move finishes every box
   The song's level and mute go to the player's `audio` prop (off = muted, still
   playing). With the piano on, `usePianoFollow` watches the playhead and strikes
   each box's chord as the song enters it, held for the rest of the box; it
-  silences the piano when the song stops, and strikes again on resume. It plays
+  silences the piano when the song stops, and strikes again on resume. A
+  playhead that moves while the song is not playing (the video cued at the
+  loop's start when the screen opens) strikes nothing. It plays
   before the check too, and writes nothing the keyboard reads.
 - **After the check**: a box plays its bars of the song once
   (`controller.playRange`), heard through whichever channels are on. A chord button, or the struck answer inside a
