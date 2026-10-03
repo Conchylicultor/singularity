@@ -197,6 +197,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `active-data/plugin-link`
     - `active-data/prototype`
     - `apps-core/app-icon`
+    - `apps-core/app-launcher`
     - `apps-core/surface`
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper`
@@ -216,12 +217,10 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/file-explorer/places`
-    - `apps/file-explorer/shell`
     - `apps/home/app-cards`
     - `apps/mail/attachments`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
-    - `apps/mail/shell`
     - `apps/mail/sync-status`
     - `apps/mail/threads`
     - `apps/pages/auto-icon`

@@ -11,7 +11,7 @@
     - `apps-core.useActiveApp`
     - `apps-core/app-icon.AppIconView`
     - `apps-core/chrome-theme.chromeThemeScope`
-    - `apps-core/tabs.useTabs`
+    - `apps-core/tabs.useActivateApp`
     - `primitives/css/center.Center`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`

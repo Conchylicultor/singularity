@@ -46,6 +46,10 @@ export interface AppEntry {
   app: AppRef;
   /** The app's canonical serializable icon descriptor (see {@link AppIcon}). */
   icon: AppIcon;
+  /** The app's brand mark — the icon heading its own chrome (the app
+   * launcher's button). Omitted, the launcher draws {@link icon}. For an app
+   * whose identity is a drawn logo rather than a glyph. */
+  mark?: ComponentType<{ className?: string }>;
   component: ComponentType;
   onClick?: () => void;
   /** Marks this app as the fallback when the URL matches no app and on initial boot. */

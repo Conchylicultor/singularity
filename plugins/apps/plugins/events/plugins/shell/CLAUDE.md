@@ -34,7 +34,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
     - `primitives/css/center.Center`
-    - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/pane.defineRoute`

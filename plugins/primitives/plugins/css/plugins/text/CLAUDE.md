@@ -279,12 +279,12 @@ to reconcile them; they never needed reconciling.
     - `active-data/commit-link`
     - `active-data/plugin-link`
     - `active-data/task`
+    - `apps-core/app-launcher`
     - `apps-core/layout`
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper`
     - `apps-core/surface/floating/wallpaper/from-url`
     - `apps-core/surface/floating/wallpaper/upload`
-    - `apps/agent-manager/shell`
     - `apps/agent-manager/welcome`
     - `apps/browser/bookmarks`
     - `apps/browser/start-page`
@@ -292,7 +292,6 @@ to reconcile them; they never needed reconciling.
     - `apps/browser/webview`
     - `apps/chord/curriculum`
     - `apps/chord/piano`
-    - `apps/chord/shell`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
@@ -315,16 +314,13 @@ to reconcile them; they never needed reconciling.
     - `apps/events/sources/source-detail/status`
     - `apps/file-explorer/browser`
     - `apps/file-explorer/places`
-    - `apps/file-explorer/shell`
     - `apps/home/shell`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
-    - `apps/mail/shell`
     - `apps/mail/sync-status`
     - `apps/mail/threads`
     - `apps/pages/history`
     - `apps/pages/page-tree`
-    - `apps/pages/shell`
     - `apps/pages/trash`
     - `apps/pages/welcome`
     - `apps/pages/welcome/quick-create`

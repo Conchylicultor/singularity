@@ -4,10 +4,10 @@ The Chord app's identity and frame.
 
 - `core` — `chordApp` (id `chord`, base path `/chord`). Every chord pane
   declares `Pane.define({ app: chordApp, … })`.
-- `web` — the rail entry (`Apps.App`) and `ChordLayout`: a thin header (the
-  three-bar logo in the chord colours of V, IV and I, and the name) above
-  `<FullPane />`. The shell registers **no pane**: the trainer registers the
-  app's index pane (`appIndex: true`) and it fills the space under the header.
+- `web` — the rail entry (`Apps.App`) and `ChordLayout`: `<AppShellLayout>`
+  (no sidebar) around `<FullPane />`. The shell registers **no pane**: the
+  trainer registers the app's index pane (`appIndex: true`), whose pane header
+  (titled "Chord") is the surface's top chrome and so carries the app launcher.
 - `web/internal/theme.ts` — `chordTheme` (id `chord`), selected by
   `config/ui/theme-engine/@app/chord/theme.jsonc`. **Dark only**: every
   fragment is written with `both(…)`, so light mode paints the same values.
@@ -20,7 +20,7 @@ The Chord app's identity and frame.
 
 ## Plugin reference
 
-- Description: The Chord app's rail entry and frame: a thin header (the three-bar logo and the name) above the full-pane renderer, where the trainer's pane is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
+- Description: The Chord app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the trainer's pane (whose header carries the app launcher) is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
 - Web:
   - Contributes:
     - `Apps.App` "Chord" → `ChordLayout`
@@ -28,10 +28,9 @@ The Chord app's identity and frame.
   - Uses:
     - `apps-core.Apps`
     - `layouts/full-pane.FullPane`
-    - `primitives/bar.Bar`
-    - `primitives/css/column.Column`
+    - `primitives/app-shell.AppShellLayout`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `ui/theme-engine.ThemeEngine`
 - Core:
   - Uses: `primitives/pane.defineApp`

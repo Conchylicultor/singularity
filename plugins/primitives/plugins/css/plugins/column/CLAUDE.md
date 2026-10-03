@@ -59,7 +59,6 @@ Only present slots render — an absent slot produces no region and no phantom g
   - Exports (values): `Column`
 - Cross-plugin:
   - Imported by:
-    - `apps/chord/shell`
     - `apps/file-explorer/browser`
     - `apps/home/shell`
     - `apps/mail/shell`

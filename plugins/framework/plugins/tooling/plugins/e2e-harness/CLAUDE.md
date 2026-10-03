@@ -272,6 +272,7 @@ own `requestfailed` listener calls it too. Diagnosis:
   - Imported by:
     - `active-data/page-link`
     - `active-data/prototype`
+    - `apps-core/app-launcher`
     - `apps-core/chrome-theme`
     - `apps-core/layout`
     - `apps-core/surface`

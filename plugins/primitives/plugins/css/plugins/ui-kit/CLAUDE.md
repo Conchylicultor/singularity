@@ -486,6 +486,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
 - Cross-plugin:
   - Imported by:
     - `active-data/task`
+    - `apps-core/app-icon`
+    - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/chrome-theme`
     - `apps-core/layout`
@@ -497,7 +499,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
-    - `apps/agent-manager/shell`
     - `apps/agent-manager/welcome`
     - `apps/browser/bookmarks`
     - `apps/browser/omnibox`
@@ -507,6 +508,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/browser/webview`
     - `apps/chord/curriculum`
     - `apps/chord/piano`
+    - `apps/chord/shell`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
     - `apps/chord/vocabulary`
@@ -524,7 +526,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/mail/sync-status`
     - `apps/pages/page-author`
     - `apps/pages/page-tree`
-    - `apps/pages/shell`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/canvas`
@@ -776,6 +777,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/overlay/cursor-menu`
     - `primitives/overlay/floating-action`
     - `primitives/overlay/floating-surface`
+    - `primitives/overlay/hover-popover`
     - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog`
     - `primitives/overlay/imperative-dialog/confirm`

@@ -1,18 +1,12 @@
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Events } from "../slots";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const eventIcon = symbol("event");
 
 /**
  * Events' main-area layout: the app shell wraps the `Events.Sidebar` left rail
  * (the events surfaces — the list, Sources — each contributed by its own
- * sub-plugin) around the Miller body. The sidebar header carries a small Events
- * brand.
+ * sub-plugin) around the Miller body. The sidebar header is the shared app brand
+ * (AppShell.Brand).
  *
  * Sidebar-only, no app toolbar (the Pages/Settings shape): with no `chrome`-tier
  * toolbar above it, the active pane's own `PaneChrome` header owns the surface
@@ -20,17 +14,7 @@ const eventIcon = symbol("event");
  */
 export function EventsLayout() {
   return (
-    <AppShellLayout
-      sidebarSlot={Events.Sidebar}
-      header={
-        <Inline gap="xs">
-          <Icon icon={eventIcon} className="icon-auto" />
-          <Text variant="label" className="font-semibold">
-            Events
-          </Text>
-        </Inline>
-      }
-    >
+    <AppShellLayout sidebarSlot={Events.Sidebar}>
       <MillerColumns />
     </AppShellLayout>
   );

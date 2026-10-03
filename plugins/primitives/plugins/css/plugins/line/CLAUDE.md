@@ -33,8 +33,8 @@ attribute type carries.
   - Exports (values): `Line`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-launcher`
     - `apps-core/tab-bar`
-    - `apps/agent-manager/shell`
     - `apps/browser/shell`
     - `apps/chord/curriculum`
     - `apps/chord/piano`
@@ -49,7 +49,6 @@ attribute type carries.
     - `apps/mail/search`
     - `apps/mail/threads`
     - `apps/pages/history`
-    - `apps/pages/shell`
     - `apps/prototypes/canvas`
     - `apps/sonata/library`
     - `apps/sonata/sources/midi`

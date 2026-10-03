@@ -7,7 +7,7 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Apps, useActiveApp } from "@plugins/apps-core/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
-import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
+import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 
 export function AppRail() {
   // Self-sufficient: the rail derives its own active-app highlight rather than
@@ -15,7 +15,7 @@ export function AppRail() {
   // wiring. Width reads the same `--app-rail-width` var its parent variant sets
   // (single source of truth — no `w-10`-vs-`2.5rem` drift).
   const activeAppId = useActiveApp()?.id;
-  const { focusedTabId, replaceTabApp } = useTabs();
+  const activate = useActivateApp();
   return (
     <Theme
       as={Stack}
@@ -38,9 +38,7 @@ export function AppRail() {
               // Icon-only button: the tooltip is invisible to the a11y tree, so
               // the app name must ALSO be the accessible name.
               aria-label={entry.app.name}
-              onClick={
-                entry.onClick ?? (() => replaceTabApp(focusedTabId, entry.id))
-              }
+              onClick={() => activate(entry)}
               // Idle apps are dim and step up on hover; the selected app sits
               // one step further (`accent`) in full text colour. Monochrome on
               // purpose: the only accent on screen belongs to the app itself.

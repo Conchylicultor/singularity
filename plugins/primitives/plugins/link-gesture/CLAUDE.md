@@ -18,6 +18,7 @@ either depending on the other.
 - Description: The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open elsewhere. A <button> gets none of this for free, so every navigating control reads it from one place.
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-launcher`
     - `apps-core/tabs`
     - `apps/prototypes/canvas`
     - `conversations/conversation-view/open-app`

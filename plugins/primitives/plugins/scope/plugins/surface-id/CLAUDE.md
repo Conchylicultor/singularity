@@ -24,7 +24,6 @@ once per surface by `TabSurface`.
   - Imported by:
     - `apps-core/tabs`
     - `apps/file-explorer/browser`
-    - `apps/home/app-cards`
     - `apps/sonata/controls`
     - `conversations/conversation-view`
     - `conversations/conversation-view/jsonl-viewer`

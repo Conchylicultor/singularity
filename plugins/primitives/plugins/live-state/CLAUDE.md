@@ -964,7 +964,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`
-    - `apps/pages/shell`
     - `apps/pages/starred`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`

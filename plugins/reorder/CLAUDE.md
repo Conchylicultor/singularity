@@ -187,6 +187,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `reorderDirectiveDescriptor`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-launcher`
     - `conversations/conversation-view/artifacts`
     - `page/editor`
     - `primitives/collapsible-wrap`

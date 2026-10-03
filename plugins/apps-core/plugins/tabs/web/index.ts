@@ -12,6 +12,7 @@ export {
   type NavigateOptions,
 } from "./internal/use-tabs";
 export { appLinkProps } from "./internal/app-link";
+export { useActivateApp } from "./internal/use-activate-app";
 export {
   appPathFor,
   appContributionFor,

@@ -81,7 +81,7 @@ primitive exists to name.
     - `fillClasses`
 - Cross-plugin:
   - Imported by:
-    - `apps/agent-manager/shell`
+    - `apps-core/app-launcher`
     - `apps/agent-manager/welcome`
     - `apps/browser/shell`
     - `apps/chord/curriculum`

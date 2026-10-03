@@ -133,6 +133,7 @@ color palette.
     - `DEFAULT_AGENT_AVATAR`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-icon`
     - `apps/mail/reading-pane`
     - `apps/website/pages/apps`
     - `conversations/agents`

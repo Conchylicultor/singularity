@@ -1,5 +1,5 @@
 import { Apps, type ActiveApp, useCurrentAppId } from "@plugins/apps-core/web";
-import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
+import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   DataView,
@@ -8,7 +8,6 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { capsuleToolbar } from "@plugins/primitives/plugins/data-view/plugins/capsule-toolbar/web";
 import { avatarFieldDef } from "@plugins/fields/plugins/avatar/plugins/table/web";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
 import { APPS_CATEGORY_ID } from "@plugins/apps/plugins/home/core";
@@ -124,11 +123,9 @@ function newApp(): void {
 export function AppGrid() {
   const apps = Apps.App.useContributions();
   const currentId = useCurrentAppId();
-  const { focusedTabId, replaceTabApp } = useTabs();
-  // Target the grid's OWN surface tab — in desktop mode multiple Home windows
-  // can be open, so the global focused tab is the wrong target. Falls back to
-  // the focused tab when rendered outside a surface.
-  const ownTabId = useSurfaceTabId();
+  // Lands in the grid's OWN surface tab — in desktop mode multiple Home
+  // windows can be open, so the global focused tab is the wrong target.
+  const activate = useActivateApp();
   const launchable = apps.filter((a) => a.id !== currentId);
 
   const creators: CreateOption[] = [
@@ -168,9 +165,7 @@ export function AppGrid() {
       storageKey={HOME_APPS_VIEW}
       // The grid only renders inside the visible (focused) Home tab, so the
       // launcher navigates that tab into the picked app in place.
-      onRowActivate={(a) =>
-        a.onClick ? a.onClick() : replaceTabApp(ownTabId ?? focusedTabId, a.id)
-      }
+      onRowActivate={activate}
       creators={creators}
       // Every install has apps, so an empty grid is a search that matched
       // nothing — which is when building the missing app is the useful offer.

@@ -5,7 +5,7 @@ as the user is doing one thing, and then it goes away. A menu, a tooltip, a moda
 panel that grows out of a button. Everything here answers **what floats above the page,
 and what does it anchor to?**
 
-The eleven members overlap enough that the choice is easy to get wrong, so pick by the
+The twelve members overlap enough that the choice is easy to get wrong, so pick by the
 anchor and the focus behaviour, not by the word in the name.
 
 Reach for:
@@ -15,6 +15,7 @@ Reach for:
 | A panel hung off a **trigger element** the user clicked, which takes focus | `popover` |
 | A menu pinned at the **point that was clicked** (a right-click context menu) | `cursor-menu` |
 | A menu pinned at the **text caret**, which must never take focus away from the editor | `floating-surface` |
+| A panel hung off a trigger that opens on **hover**, while the trigger's click does something else | `hover-popover` |
 | A control that **expands on hover / focus / touch** and collapses again | `floating-action` |
 | A **modal opened from a callback** that has nowhere to hold `open` state | `imperative-dialog` |
 | A **yes/no guard** before something destructive | `imperative-dialog/confirm` |
@@ -55,6 +56,7 @@ read.
   - **`cursor-menu`** — Cursor-anchored DropdownMenu: a body-portaled zero-size anchor pinned at an (x,y) point, so position:fixed resolves against the viewport even inside a transformed ancestor.
   - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
   - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
+  - **`hover-popover`** — Hover-opened popover: a controlled ui-kit Popover revealed by pointer hover (open intent delay, grace close while the pointer is on neither the trigger nor the portaled panel), ArrowDown, or a first touch tap; closed by Esc, outside press or focus leaving. The trigger's own click is never intercepted, so a trigger can navigate on click and preview on hover.
   - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
   - **`imperative-dialog`** — Imperative dialog primitive: openDialog(render) mounts a modal Dialog from any callback (create affordances, confirms) via a single Core.Root host — the toaster pattern for dialogs. Returns a promise that resolves when the dialog closes.
   - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.

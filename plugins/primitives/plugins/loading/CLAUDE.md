@@ -90,7 +90,6 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/pages/history`
     - `apps/pages/page-author`
     - `apps/pages/page-tree`
-    - `apps/pages/shell`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/canvas`

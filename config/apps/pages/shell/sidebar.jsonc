@@ -1,4 +1,4 @@
-// @hash 54b7e9b02375
+// @hash 8554a7157dd5
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -12,9 +12,7 @@
   // instances of the page-tree DataView (`pages`), each rendered as its own
   // section. `pages` is the one growing item (a `Scroll fill`), so "New page"
   // and "Trash" after it sit at the bottom of the sidebar, under a divider.
-  // `workspace` heads the sidebar: the initial tile and "<first name>'s pages".
   "items": [
-    "apps.pages.shell:workspace",
     "apps.pages.content-search:search",
     "apps.pages.page-tree:pages",
     { "type": "divider", "id": "pages-sidebar-footer" },

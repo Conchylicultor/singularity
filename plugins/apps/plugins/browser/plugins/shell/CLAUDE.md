@@ -18,6 +18,7 @@
   - Contributes: `Apps.App` "Browser" → `BrowserLayout`
   - Uses:
     - `apps-core.Apps`
+    - `primitives/app-shell.AppShellBrand`
     - `primitives/bar.Bar`
     - `primitives/css/clip.Clip`
     - `primitives/css/clip.clipClasses`

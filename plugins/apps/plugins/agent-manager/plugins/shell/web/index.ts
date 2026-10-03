@@ -5,6 +5,7 @@ import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { agentManagerApp } from "../core";
 import { AgentManagerLayout } from "./components/agent-manager-layout";
+import { EquinMark } from "./components/equin-mark";
 import { mistTheme } from "./internal/theme";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -15,6 +16,7 @@ export default {
     Apps.App({
       app: agentManagerApp,
       icon: appIcon(symbol("chat-bubble")),
+      mark: EquinMark,
       component: AgentManagerLayout,
     }),
     // The agent manager's theme, selected for the app in

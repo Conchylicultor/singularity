@@ -997,6 +997,7 @@ See "Open questions" in the design doc.
     - `active-data/task`
     - `active-data/task-link`
     - `apps-core`
+    - `apps-core/app-launcher`
     - `apps-core/layout`
     - `apps-core/tab-surface`
     - `apps-core/tabs`

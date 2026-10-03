@@ -215,6 +215,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `registerPlacementCapabilities`
     - `setSurfaceMode`
     - `TabsProvider`
+    - `useActivateApp`
     - `useDefaultPlacement`
     - `usePlacementCapabilities`
     - `useSurfaceFocused`
@@ -222,6 +223,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useTabs`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/layout`
     - `apps-core/surface`
@@ -230,7 +232,6 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
-    - `apps/agent-manager/shell`
     - `apps/deploy/composition`
     - `apps/home/app-cards`
     - `apps/mail/shell`

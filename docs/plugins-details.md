@@ -314,15 +314,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ThemeEngine.Theme` "Mist"
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/tabs.navigate`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/pane.currentRoutePath`
               - `shell.Shell`
               - `ui/theme-engine.ThemeEngine`
           - Core:
@@ -509,6 +502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Browser" → `BrowserLayout`
             - Uses:
               - `apps-core.Apps`
+              - `primitives/app-shell.AppShellBrand`
               - `primitives/bar.Bar`
               - `primitives/css/clip.Clip`
               - `primitives/css/clip.clipClasses`
@@ -832,7 +826,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RoundAnswerSchema`
               - `TARGET_ACCURACY`
               - `TARGET_MEDIAN_MS`
-        - **`shell`** — The Chord app's rail entry and frame: a thin header (the three-bar logo and the name) above the full-pane renderer, where the trainer's pane is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
+        - **`shell`** — The Chord app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the trainer's pane (whose header carries the app launcher) is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
           - Web:
             - Contributes:
               - `Apps.App` "Chord" → `ChordLayout`
@@ -840,10 +834,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps-core.Apps`
               - `layouts/full-pane.FullPane`
-              - `primitives/bar.Bar`
-              - `primitives/css/column.Column`
+              - `primitives/app-shell.AppShellLayout`
               - `primitives/css/rigid.rigidClass`
-              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -1068,7 +1061,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/line.Line`
               - `primitives/css/overlay.Overlay`
               - `primitives/css/rigid.rigidClass`
-              - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -1083,6 +1075,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/tooltip.Kbd`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `shell/toast.showToast`
               - `ui/icons.Icon`
@@ -2445,7 +2438,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/css/center.Center`
-              - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/pane.defineRoute`
@@ -2966,10 +2958,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.Apps`
               - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/text.Text`
               - `primitives/slot-render.defineRenderSlot`
-              - `ui/icons.Icon`
             - Exports (types):
               - `PlaceGroup`
               - `PlaceItem`
@@ -2994,7 +2983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.ActiveApp`
               - `apps-core.Apps`
               - `apps-core.useCurrentAppId`
-              - `apps-core/tabs.useTabs`
+              - `apps-core/tabs.useActivateApp`
               - `apps/home/shell.Home`
               - `apps/prototypes/gallery.mintPrototypeFolder`
               - `apps/prototypes/gallery.newPrototypePrompt`
@@ -3006,7 +2995,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/capsule-toolbar.capsuleToolbar`
               - `primitives/launch.LaunchAgentForm`
               - `primitives/overlay/imperative-dialog.openDialog`
-              - `primitives/scope/surface-id.useSurfaceTabId`
               - `ui/icons.Icon`
         - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
           - Web:
@@ -3335,15 +3323,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/app-shell.AppShellLayout`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/text.Text`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/slot-render.defineRenderSlot`
-              - `ui/icons.Icon`
             - Exports (values): `Mail`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -3814,26 +3799,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `tasks/task-detail.TaskDetailSlots`
               - `ui/icons.Icon`
-        - **`shell`** — App shell for Pages. Registers the /pages app entry, defines the Pages.Sidebar slot and heads it with the workspace row (the user's initial tile and "<first name>'s pages", from the OS account), and contributes the app's own theme (Ink), which Pages selects.
+        - **`shell`** — App shell for Pages. Registers the /pages app entry, defines the Pages.Sidebar slot (headed by the standard app-shell brand header), and contributes the app's own theme (Ink), which Pages selects.
           - Web:
-            - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.shell`, `apps.pages.trash`
+            - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.trash`
             - Contributes:
               - `Apps.App` "Pages" → `PagesLayout`
-              - `Pages.Sidebar` "Workspace" → `PagesWorkspace`
               - `ThemeEngine.Theme` "Ink"
             - Uses:
               - `apps-core.Apps`
-              - `infra/host-account.useHostAccount`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
-              - `primitives/css/center.Center`
-              - `primitives/css/line.Line`
-              - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/live-state.ResourceErrorInline`
-              - `primitives/loading.Loading`
               - `primitives/slot-render.defineRenderSlot`
               - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
@@ -5621,6 +5597,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.Apps`
               - `config_v2.useConfig`
               - `layouts/full-pane.FullPane`
+              - `primitives/app-shell.AppShellLayout`
               - `primitives/css/center.Center`
               - `primitives/css/text.Text`
               - `primitives/detail-sections.defineDetailSections`
@@ -7091,6 +7068,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `usePathname`
   - Cross-plugin:
     - Imported by:
+      - `apps-core/app-launcher`
       - `apps-core/app-rail`
       - `apps-core/app-rail-framing`
       - `apps-core/layout`
@@ -7139,12 +7117,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
       - Web:
-        - Uses: `ui/icons.Icon`
+        - Uses:
+          - `primitives/avatar.Avatar`
+          - `primitives/avatar.AvatarPresentationProvider`
+          - `primitives/css/ui-kit.cn`
+          - `ui/icons.Icon`
         - Exports (values):
+          - `AppIconTile`
           - `AppIconView`
           - `DEFAULT_APP_ICON`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-launcher`
           - `apps-core/app-rail`
           - `apps-core/surface/floating`
           - `config_v2/settings`
@@ -7156,6 +7140,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `appIcon`
           - `appIconToSvg`
+    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home.
+      - Web:
+        - Contributes: `AppShell.Brand` "Brand" → `AppBrand`
+        - Uses:
+          - `apps-core.ActiveApp`
+          - `apps-core.Apps`
+          - `apps-core.defaultApp`
+          - `apps-core.useActiveApp`
+          - `apps-core/app-icon.AppIconTile`
+          - `apps-core/app-icon.AppIconView`
+          - `apps-core/tabs.appLinkProps`
+          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.useActivateApp`
+          - `primitives/app-shell.AppShell`
+          - `primitives/css/fill.fillClasses`
+          - `primitives/css/grid.Grid`
+          - `primitives/css/line.Line`
+          - `primitives/css/pin.Pin`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/link-gesture.linkGestureProps`
+          - `primitives/overlay/hover-popover.HoverPopover`
+          - `primitives/pane.currentRoutePath`
+          - `reorder.isNodeData`
+          - `reorder.useReorderedEntries`
+          - `ui/icons.Icon`
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
       - Web:
         - Uses:
@@ -7163,7 +7175,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.useActiveApp`
           - `apps-core/app-icon.AppIconView`
           - `apps-core/chrome-theme.chromeThemeScope`
-          - `apps-core/tabs.useTabs`
+          - `apps-core/tabs.useActivateApp`
           - `primitives/css/center.Center`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
@@ -7601,6 +7613,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `registerPlacementCapabilities`
           - `setSurfaceMode`
           - `TabsProvider`
+          - `useActivateApp`
           - `useDefaultPlacement`
           - `usePlacementCapabilities`
           - `useSurfaceFocused`
@@ -7608,6 +7621,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useTabs`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-launcher`
           - `apps-core/app-rail`
           - `apps-core/layout`
           - `apps-core/surface`
@@ -7616,7 +7630,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tab-bar`
           - `apps-core/tab-surface`
           - `apps-core/theme-scope`
-          - `apps/agent-manager/shell`
           - `apps/deploy/composition`
           - `apps/home/app-cards`
           - `apps/mail/shell`
@@ -18977,6 +18990,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data/page-link`
               - `active-data/prototype`
+              - `apps-core/app-launcher`
               - `apps-core/chrome-theme`
               - `apps-core/layout`
               - `apps-core/surface`
@@ -21177,8 +21191,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `accountInitial`
           - `hostAccount`
           - `HostAccountSchema`
-      - Cross-plugin:
-        - Imported by: `apps/pages/shell`
     - **`host-fs`** — The one host-filesystem API: list / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
       - Server:
         - Uses:
@@ -27021,7 +27033,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/overlay/image-viewer`
     - **`app-shell`** — Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
       - Web:
-        - Slots: `AppShell.Framing` ← `ui.sidebar-framing`
+        - Slots:
+          - `AppShell.Framing` ← `ui.sidebar-framing`
+          - `AppShell.Brand` ← `apps-core.app-launcher`
         - Uses:
           - `primitives/bar.Bar`
           - `primitives/collapsible.CollapsibleChevron`
@@ -27052,24 +27066,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.RenderSlot`
           - `ui/icons.Icon`
         - Exports (types):
+          - `AppShellBrandForm`
           - `AppShellSidebarComponent`
           - `AppShellSidebarItem`
           - `AppShellSidebarNav`
           - `AppShellToolbarAction`
           - `AppShellToolbarComponent`
           - `AppShellToolbarItem`
+          - `BrandContribution`
           - `FramingContribution`
           - `SidebarFramingProps`
           - `SidebarNavTarget`
         - Exports (values):
           - `AppShell`
+          - `AppShellBrand`
           - `AppShellLayout`
           - `opensPane`
           - `SidebarItem`
           - `SidebarPaneSection`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-launcher`
           - `apps/agent-manager/shell`
+          - `apps/browser/shell`
+          - `apps/chord/shell`
           - `apps/debug/shell`
           - `apps/deploy/shell`
           - `apps/events/shell`
@@ -27079,6 +27099,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/shell`
           - `apps/prototypes/shell`
           - `apps/settings/shell`
+          - `apps/sonata/shell`
           - `apps/studio/shell`
           - `code-explorer`
           - `conversations/agents`
@@ -27115,6 +27136,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DEFAULT_AGENT_AVATAR`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-icon`
           - `apps/mail/reading-pane`
           - `apps/website/pages/apps`
           - `conversations/agents`
@@ -27151,7 +27173,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/shell`
           - `apps/browser/tabs`
-          - `apps/chord/shell`
           - `apps/file-explorer/browser`
           - `conversations/conversation-view`
           - `primitives/app-shell`
@@ -27632,7 +27653,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/pages/page-tree`
-              - `apps/pages/shell`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
               - `apps/sonata/notation`
@@ -27890,7 +27910,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `Column`
           - Cross-plugin:
             - Imported by:
-              - `apps/chord/shell`
               - `apps/file-explorer/browser`
               - `apps/home/shell`
               - `apps/mail/shell`
@@ -28050,7 +28069,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fillClasses`
           - Cross-plugin:
             - Imported by:
-              - `apps/agent-manager/shell`
+              - `apps-core/app-launcher`
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/chord/curriculum`
@@ -28196,6 +28215,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `Grid`
           - Cross-plugin:
             - Imported by:
+              - `apps-core/app-launcher`
               - `apps-core/surface/floating/wallpaper`
               - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
@@ -28266,10 +28286,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/ssh-setup`
-              - `apps/events/shell`
-              - `apps/file-explorer/shell`
               - `apps/mail/reading-pane`
-              - `apps/mail/shell`
               - `apps/mail/sync-status`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
@@ -28440,8 +28457,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `Line`
           - Cross-plugin:
             - Imported by:
+              - `apps-core/app-launcher`
               - `apps-core/tab-bar`
-              - `apps/agent-manager/shell`
               - `apps/browser/shell`
               - `apps/chord/curriculum`
               - `apps/chord/piano`
@@ -28456,7 +28473,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/search`
               - `apps/mail/threads`
               - `apps/pages/history`
-              - `apps/pages/shell`
               - `apps/prototypes/canvas`
               - `apps/sonata/library`
               - `apps/sonata/sources/midi`
@@ -28607,6 +28623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `pinClasses`
           - Cross-plugin:
             - Imported by:
+              - `apps-core/app-launcher`
               - `apps-core/app-rail`
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
@@ -28789,14 +28806,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `rigidClass`
           - Cross-plugin:
             - Imported by:
-              - `apps/agent-manager/shell`
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/chord/curriculum`
               - `apps/chord/piano`
               - `apps/chord/shell`
               - `apps/chord/trainer`
-              - `apps/pages/shell`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/canvas`
               - `apps/sonata/sources/midi`
@@ -28985,7 +29000,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
-              - `apps/chord/trainer`
               - `apps/file-explorer/browser`
               - `apps/file-explorer/places`
               - `apps/mail/reading-pane`
@@ -29128,6 +29142,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data/commit-link`
               - `active-data/task`
+              - `apps-core/app-launcher`
               - `apps-core/app-rail`
               - `apps-core/app-rail-framing/hidden`
               - `apps-core/app-rail-framing/rail`
@@ -29678,12 +29693,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/commit-link`
               - `active-data/plugin-link`
               - `active-data/task`
+              - `apps-core/app-launcher`
               - `apps-core/layout`
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
               - `apps-core/surface/floating/wallpaper/from-url`
               - `apps-core/surface/floating/wallpaper/upload`
-              - `apps/agent-manager/shell`
               - `apps/agent-manager/welcome`
               - `apps/browser/bookmarks`
               - `apps/browser/start-page`
@@ -29691,7 +29706,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/webview`
               - `apps/chord/curriculum`
               - `apps/chord/piano`
-              - `apps/chord/shell`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
@@ -29714,16 +29728,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/status`
               - `apps/file-explorer/browser`
               - `apps/file-explorer/places`
-              - `apps/file-explorer/shell`
               - `apps/home/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
-              - `apps/mail/shell`
               - `apps/mail/sync-status`
               - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/pages/page-tree`
-              - `apps/pages/shell`
               - `apps/pages/trash`
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
@@ -30260,6 +30271,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data/task`
+              - `apps-core/app-icon`
+              - `apps-core/app-launcher`
               - `apps-core/app-rail`
               - `apps-core/chrome-theme`
               - `apps-core/layout`
@@ -30271,7 +30284,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
-              - `apps/agent-manager/shell`
               - `apps/agent-manager/welcome`
               - `apps/browser/bookmarks`
               - `apps/browser/omnibox`
@@ -30281,6 +30293,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/webview`
               - `apps/chord/curriculum`
               - `apps/chord/piano`
+              - `apps/chord/shell`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/chord/vocabulary`
@@ -30298,7 +30311,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/sync-status`
               - `apps/pages/page-author`
               - `apps/pages/page-tree`
-              - `apps/pages/shell`
               - `apps/pages/trash`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/canvas`
@@ -30550,6 +30562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/cursor-menu`
               - `primitives/overlay/floating-action`
               - `primitives/overlay/floating-surface`
+              - `primitives/overlay/hover-popover`
               - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog`
               - `primitives/overlay/imperative-dialog/confirm`
@@ -32700,6 +32713,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open elsewhere. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-launcher`
           - `apps-core/tabs`
           - `apps/prototypes/canvas`
           - `conversations/conversation-view/open-app`
@@ -32845,7 +32859,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-outline`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`
-          - `apps/pages/shell`
           - `apps/pages/starred`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
@@ -33080,7 +33093,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/history`
           - `apps/pages/page-author`
           - `apps/pages/page-tree`
-          - `apps/pages/shell`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
           - `apps/prototypes/canvas`
@@ -33849,6 +33861,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/link`
               - `primitives/path-bar`
               - `primitives/text-editor/caret-trigger`
+        - **`hover-popover`** — Hover-opened popover: a controlled ui-kit Popover revealed by pointer hover (open intent delay, grace close while the pointer is on neither the trigger nor the portaled panel), ArrowDown, or a first touch tap; closed by Esc, outside press or focus leaving. The trigger's own click is never intercepted, so a trigger can navigate on click and preview on hover.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.Popover`
+              - `primitives/css/ui-kit.PopoverContent`
+              - `primitives/css/ui-kit.PopoverMaxHeight`
+              - `primitives/css/ui-kit.PopoverPadding`
+              - `primitives/css/ui-kit.PopoverTrigger`
+              - `primitives/css/ui-kit.PopoverWidth`
+            - Exports (types):
+              - `HoverPopoverApi`
+              - `HoverPopoverProps`
+            - Exports (values): `HoverPopover`
+          - Cross-plugin:
+            - Imported by: `apps-core/app-launcher`
+          - Core:
+            - Exports (types):
+              - `HoverIntent`
+              - `HoverIntentOptions`
+            - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
             - Uses:
@@ -34377,6 +34409,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/task`
           - `active-data/task-link`
           - `apps-core`
+          - `apps-core/app-launcher`
           - `apps-core/layout`
           - `apps-core/tab-surface`
           - `apps-core/tabs`
@@ -34914,7 +34947,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/tabs`
               - `apps/file-explorer/browser`
-              - `apps/home/app-cards`
               - `apps/sonata/controls`
               - `conversations/conversation-view`
               - `conversations/conversation-view/jsonl-viewer`
@@ -36152,6 +36184,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reorderDirectiveDescriptor`
   - Cross-plugin:
     - Imported by:
+      - `apps-core/app-launcher`
       - `conversations/conversation-view/artifacts`
       - `page/editor`
       - `primitives/collapsible-wrap`
@@ -39173,6 +39206,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/plugin-link`
           - `active-data/prototype`
           - `apps-core/app-icon`
+          - `apps-core/app-launcher`
           - `apps-core/surface`
           - `apps-core/surface/floating`
           - `apps-core/surface/floating/wallpaper`
@@ -39192,12 +39226,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/file-explorer/places`
-          - `apps/file-explorer/shell`
           - `apps/home/app-cards`
           - `apps/mail/attachments`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
-          - `apps/mail/shell`
           - `apps/mail/sync-status`
           - `apps/mail/threads`
           - `apps/pages/auto-icon`

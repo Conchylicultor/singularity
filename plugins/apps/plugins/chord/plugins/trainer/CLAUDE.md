@@ -229,7 +229,6 @@ piano.
     - `primitives/css/line.Line`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -244,6 +243,7 @@ piano.
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `shell/toast.showToast`
     - `ui/icons.Icon`

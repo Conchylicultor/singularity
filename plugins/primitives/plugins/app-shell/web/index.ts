@@ -12,9 +12,14 @@ export type {
   AppShellToolbarComponent,
 } from "./components/app-shell-layout";
 export { SidebarItem } from "./components/sidebar-nav-item";
+export { AppShellBrand } from "./components/app-shell-brand";
 export { SidebarPaneSection } from "./components/sidebar-pane-section";
 export { AppShell } from "./slots";
-export type { FramingContribution } from "./slots";
+export type {
+  FramingContribution,
+  BrandContribution,
+  AppShellBrandForm,
+} from "./slots";
 export type { SidebarFramingProps } from "../core";
 
 export default {

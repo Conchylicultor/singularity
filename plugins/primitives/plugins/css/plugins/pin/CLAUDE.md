@@ -101,6 +101,7 @@ offsets expressible on the semantic ramp.
     - `pinClasses`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/surface/floating/wallpaper`
     - `apps/browser/webview`

@@ -1,19 +1,13 @@
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Mail } from "../slots";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const mailIcon = symbol("mail");
 
 /**
  * Mail's main-area layout: the app shell wraps the `Mail.Sidebar` left rail
  * (today just the Search entry from the search plugin — the mailboxes are the
  * threads DataView's own tabs, not a sidebar nav) around the Miller body. The
- * sidebar header carries a small Mail brand.
+ * sidebar header is the shared app brand (AppShell.Brand).
  *
  * The `Mail.Banner` strip is a rigid header above the mailbox surface, so a
  * sync-status banner shows on every mail route while `MillerColumns` keeps
@@ -23,17 +17,7 @@ const mailIcon = symbol("mail");
  */
 export function MailLayout() {
   return (
-    <AppShellLayout
-      sidebarSlot={Mail.Sidebar}
-      header={
-        <Inline gap="xs">
-          <Icon icon={mailIcon} className="icon-auto" />
-          <Text variant="label" className="font-semibold">
-            Mail
-          </Text>
-        </Inline>
-      }
-    >
+    <AppShellLayout sidebarSlot={Mail.Sidebar}>
       <Column
         className="h-full"
         scrollBody={false}

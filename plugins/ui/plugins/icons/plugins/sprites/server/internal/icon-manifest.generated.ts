@@ -13,7 +13,6 @@ export const ICON_MANIFEST: {
 } = {
   symbols: [
     "account-balance",
-    "account-circle",
     "account-tree",
     "add",
     "add-circle",

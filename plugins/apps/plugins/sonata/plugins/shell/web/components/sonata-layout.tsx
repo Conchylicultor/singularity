@@ -1,4 +1,5 @@
 import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
+import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { Sonata } from "../slots";
 import { SonataProvider } from "../context";
 import { CursorStoreProvider } from "../cursor-store";
@@ -6,9 +7,11 @@ import { LoadedSongProvider } from "../loaded-song";
 import { SongSettingsMount } from "../song-setting-mount";
 
 /**
- * Sonata's app surface. Sonata is a pure full-surface app, so it mounts the
- * full-pane renderer directly: the active pane (the library index at `/sonata`
- * or the player at `/sonata/song/:songId`) fills the whole surface. Navigation
+ * Sonata's app surface. Sonata is a pure full-surface app: the sidebar-less
+ * app shell around the full-pane renderer, so the active pane (the library
+ * index at `/sonata` or the player at `/sonata/song/:songId`) fills the whole
+ * surface and its header — the surface's top chrome — carries the app
+ * launcher at its leading edge. Navigation
  * is URL-driven via the pane router — reload / back / forward all persist.
  *
  * Alongside the renderer it keeps the headless, always-mounted Sonata-scoped
@@ -32,7 +35,9 @@ export function SonataLayout() {
       <LoadedSongProvider>
         <SonataProvider>
           <div className="h-full min-h-0">
-            <FullPane />
+            <AppShellLayout>
+              <FullPane />
+            </AppShellLayout>
             <Sonata.Effect.Mount />
             <SongSettingsMount />
           </div>

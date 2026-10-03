@@ -96,6 +96,7 @@ view, which only it reads. A read is `SongSetting<T>` =
     - `apps-core.Apps`
     - `config_v2.useConfig`
     - `layouts/full-pane.FullPane`
+    - `primitives/app-shell.AppShellLayout`
     - `primitives/css/center.Center`
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`

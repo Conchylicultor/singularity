@@ -1,4 +1,5 @@
 import { Bar } from "@plugins/primitives/plugins/bar/web";
+import { AppShellBrand } from "@plugins/primitives/plugins/app-shell/web";
 import {
   Clip,
   clipClasses,
@@ -16,7 +17,8 @@ import { BrowserTabsStore } from "../nav-store";
  * tab strip, chrome bars, sub-bar, viewport, effects) can read the per-surface
  * tab store.
  *
- * The chrome bar is a single-line row: leading nav controls, the flexible
+ * The chrome bar is a single-line row: the app launcher (the shared app-shell
+ * brand, at the same leading edge every app shows it), the nav controls, the flexible
  * omnibox in the truncating fill track, and the trailing actions cluster. The
  * outer shell is the full-surface column — a `Stack` that also clips, so it
  * takes `clipClasses()` rather than wrapping itself in a `<Clip>`.
@@ -33,6 +35,7 @@ function BrowserInner() {
       <Browser.TabStrip.Render />
       <Bar tier="chrome">
         <Line className="w-full gap-sm">
+          <AppShellBrand form="icon" />
           <Browser.NavControls.Render />
           <Fill>
             <Browser.Omnibox.Render />

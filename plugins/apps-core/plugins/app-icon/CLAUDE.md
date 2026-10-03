@@ -48,12 +48,18 @@ changes to existing `kind: "symbol"` authors.
 
 - Description: Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
 - Web:
-  - Uses: `ui/icons.Icon`
+  - Uses:
+    - `primitives/avatar.Avatar`
+    - `primitives/avatar.AvatarPresentationProvider`
+    - `primitives/css/ui-kit.cn`
+    - `ui/icons.Icon`
   - Exports (values):
+    - `AppIconTile`
     - `AppIconView`
     - `DEFAULT_APP_ICON`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/surface/floating`
     - `config_v2/settings`

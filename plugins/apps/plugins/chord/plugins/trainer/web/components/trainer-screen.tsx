@@ -48,7 +48,6 @@ import {
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   Inset,
   Stack,
@@ -122,7 +121,9 @@ type RoundSession = {
 export function TrainerScreen() {
   const curriculum = useCurriculum();
   return (
-    <Scroll className="chord-trainer @container h-full">
+    // The pane chrome owns the one scroll viewport; this box only scopes the
+    // trainer's CSS variables and its container queries.
+    <div className="chord-trainer @container">
       <Inset x="lg" t="lg" b="xl" className="mx-auto max-w-[1280px]">
         {/* eslint-disable-next-line layout/no-adhoc-layout -- the page's two tracks: the main column and the 316px side panel, which drops below it when the pane is under 1000px wide. A container-query track template, which no layout primitive expresses. */}
         <div className="grid items-start gap-lg @[1000px]:grid-cols-[minmax(0,1fr)_316px]">
@@ -132,7 +133,7 @@ export function TrainerScreen() {
           })}
         </div>
       </Inset>
-    </Scroll>
+    </div>
   );
 }
 

@@ -84,6 +84,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
   - Imported by:
     - `active-data/commit-link`
     - `active-data/task`
+    - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/app-rail-framing/hidden`
     - `apps-core/app-rail-framing/rail`

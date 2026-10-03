@@ -109,6 +109,10 @@
       "name": "@singularity/plugin-apps-core-app-icon",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/app-launcher": {
+      "name": "@singularity/plugin-apps-core-app-launcher",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/app-rail": {
       "name": "@singularity/plugin-apps-core-app-rail",
       "version": "0.0.1",
@@ -4716,6 +4720,10 @@
         "@floating-ui/react-dom": "^2.1.8",
       },
     },
+    "plugins/primitives/plugins/overlay/plugins/hover-popover": {
+      "name": "@singularity/plugin-primitives-overlay-hover-popover",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/overlay/plugins/image-viewer": {
       "name": "@singularity/plugin-primitives-overlay-image-viewer",
       "version": "0.0.1",
@@ -6233,6 +6241,8 @@
     "@singularity/plugin-apps-core": ["@singularity/plugin-apps-core@workspace:plugins/apps-core"],
 
     "@singularity/plugin-apps-core-app-icon": ["@singularity/plugin-apps-core-app-icon@workspace:plugins/apps-core/plugins/app-icon"],
+
+    "@singularity/plugin-apps-core-app-launcher": ["@singularity/plugin-apps-core-app-launcher@workspace:plugins/apps-core/plugins/app-launcher"],
 
     "@singularity/plugin-apps-core-app-rail": ["@singularity/plugin-apps-core-app-rail@workspace:plugins/apps-core/plugins/app-rail"],
 
@@ -8381,6 +8391,8 @@
     "@singularity/plugin-primitives-overlay-floating-action": ["@singularity/plugin-primitives-overlay-floating-action@workspace:plugins/primitives/plugins/overlay/plugins/floating-action"],
 
     "@singularity/plugin-primitives-overlay-floating-surface": ["@singularity/plugin-primitives-overlay-floating-surface@workspace:plugins/primitives/plugins/overlay/plugins/floating-surface"],
+
+    "@singularity/plugin-primitives-overlay-hover-popover": ["@singularity/plugin-primitives-overlay-hover-popover@workspace:plugins/primitives/plugins/overlay/plugins/hover-popover"],
 
     "@singularity/plugin-primitives-overlay-image-viewer": ["@singularity/plugin-primitives-overlay-image-viewer@workspace:plugins/primitives/plugins/overlay/plugins/image-viewer"],
 

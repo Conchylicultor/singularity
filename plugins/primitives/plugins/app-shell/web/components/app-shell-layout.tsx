@@ -31,6 +31,7 @@ import { AppShell } from "../slots";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { SidebarItem } from "./sidebar-nav-item";
+import { AppShellBrand, useHasAppShellBrand } from "./app-shell-brand";
 
 /**
  * Where a nav entry goes, as DATA: a pane and its params, opened as the root
@@ -205,7 +206,6 @@ function DefaultFlushFraming({
 export function AppShellLayout({
   sidebarSlot,
   toolbarSlot,
-  header,
   sidebarToggleIcons,
   children,
 }: {
@@ -222,8 +222,6 @@ export function AppShellLayout({
    * the surface-edge chrome (sidebar toggle) until something contributes.
    */
   toolbarSlot?: RenderSlot<AppShellToolbarItem>;
-  /** Brand/header content for the top of the sidebar. Only shown with a sidebar. */
-  header?: ReactNode;
   /**
    * The sidebar toggle's glyphs, one per state. Omitted, the toggle keeps the
    * default pair (`left-panel-close` while open / `left-panel-open` while closed).
@@ -244,10 +242,19 @@ export function AppShellLayout({
   // empty chrome strip strands the sidebar toggle above the content's own pane
   // header). The slot stays a no-op until something contributes to it.
   const hasToolbar = useSlotHasContributions(toolbarSlot);
+  // The brand is contributed (AppShell.Brand), never passed: every app draws
+  // the same one. With a sidebar it heads the sidebar; without one, its icon
+  // form takes the leading edge of the top chrome — the spot the sidebar toggle
+  // would otherwise hold. No contribution → nothing, and no empty header.
+  const hasBrand = useHasAppShellBrand();
 
   const toolbar = hasToolbar && toolbarSlot && (
     <Bar tier="chrome">
-      {sidebarSlot && <SidebarTrigger icons={sidebarToggleIcons} />}
+      {sidebarSlot ? (
+        <SidebarTrigger icons={sidebarToggleIcons} />
+      ) : (
+        hasBrand && <AppShellBrand form="icon" />
+      )}
       <toolbarSlot.Render>
         {(item) => <ToolbarItem {...item} />}
       </toolbarSlot.Render>
@@ -256,16 +263,19 @@ export function AppShellLayout({
 
   // Hand the content region's top-most pane header the surface-edge chrome.
   // When there's no `chrome`-tier toolbar above it, the columns own the surface
-  // top: the first column header hosts the sidebar toggle and the last reserves
-  // the floating-action-bar safe area. With a toolbar, the toolbar owns both.
+  // top: the first column header hosts the sidebar toggle (with no sidebar, the
+  // brand's icon form) and the last reserves the floating-action-bar safe area.
+  // With a toolbar, the toolbar owns both.
   const surfaceChrome = useMemo(
     () => ({
       contentOwnsTopChrome: !hasToolbar,
       leadingControl: sidebarSlot ? (
         <SidebarTrigger icons={sidebarToggleIcons} />
+      ) : hasBrand ? (
+        <AppShellBrand form="icon" />
       ) : undefined,
     }),
-    [hasToolbar, sidebarSlot, sidebarToggleIcons],
+    [hasToolbar, sidebarSlot, sidebarToggleIcons, hasBrand],
   );
   const body = (
     <>
@@ -351,7 +361,11 @@ export function AppShellLayout({
   // useContributions() seals the `component` field, so the framing can't be
   // rendered as <Framing/>; route it through renderIsolated (which unseals and
   // applies the error-boundary middleware). No contribution → inline default.
-  const framingProps: SidebarFramingProps = { header, sidebarContent, body };
+  const framingProps: SidebarFramingProps = {
+    header: hasBrand ? <AppShellBrand form="header" /> : undefined,
+    sidebarContent,
+    body,
+  };
   const framing = framings[0];
   return framing ? (
     renderIsolated(
