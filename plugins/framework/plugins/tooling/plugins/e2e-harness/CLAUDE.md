@@ -291,6 +291,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/file-explorer`
+    - `apps/file-explorer/git`
     - `apps/home`
     - `apps/mail/threads`
     - `apps/pages/auto-icon`
@@ -315,7 +316,6 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/website/improve`
     - `apps/website/shell`
     - `build`
-    - `code-explorer`
     - `config_v2`
     - `config_v2/settings`
     - `config_v2/settings/conflict-agent`

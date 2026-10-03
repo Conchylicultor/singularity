@@ -18,16 +18,19 @@ import { absolutePath } from "@plugins/apps/plugins/file-explorer/plugins/browse
 import {
   FileExplorer,
   type PlaceGroup,
-  type PlaceItem,
-  type PlaceState,
+  type PlacesSource,
+  type PlacesState,
 } from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
 
 const PLACES_VIEW = defineDataView("file-explorer.places");
 
-/** Every authored section (Favorites, Locations) at once, each under its header. */
+/**
+ * Every authored section (Favorites, Worktrees, Locations) at once, each under
+ * its header.
+ */
 const SECTIONS: SectionsToolbar = { kind: "sections" };
 
-/** One place as a row: resolved, or failed (listed, saying why). */
+/** One place as a row: resolved, or a failed source (listed, saying why). */
 interface PlaceRow {
   id: string;
   group: PlaceGroup;
@@ -56,85 +59,117 @@ const fields: FieldDef<PlaceRow>[] = [
 
 const viewOptions = {
   list: {
-    leading: (r: PlaceRow) => <Icon icon={r.icon} className="size-4" />,
+    // A failed source's row says why on hover; its muted tone says it is not
+    // a place to go.
+    leading: (r: PlaceRow) => (
+      <span title={r.message ?? undefined}>
+        <Icon icon={r.icon} className="size-4" />
+      </span>
+    ),
   },
 };
 
 /**
- * The Places sidebar: every `FileExplorer.Place` contribution as a DataView
- * list in two sections, Favorites and Locations (config-authored filters on
- * `group`). The place whose folder the explorer is showing is the active row.
+ * The Places sidebar: the places of every `FileExplorer.Places` source as a
+ * DataView list in sections — Favorites, Worktrees, Locations (config-authored
+ * filters on `group`). The place whose folder the explorer is showing is the active row.
  * The list grows to fill the sidebar, so the storage meter after it sits at
  * the bottom.
  */
 export function PlacesSidebar(): ReactNode {
-  const items = FileExplorer.Place.useContributions();
+  const sources = FileExplorer.Places.useContributions();
   return (
-    <ResolvePlaces items={items} index={0} resolved={[]}>
+    <ResolvePlaces sources={sources} index={0} resolved={[]}>
       {(rows, pending) => <PlacesList rows={rows} pending={pending} />}
     </ResolvePlaces>
   );
 }
 
 /**
- * Resolve every place's `usePlace` hook — one component per place, chained, so
- * each hook has its own component and the call order never changes.
+ * Resolve every source's `usePlaces` hook — one component per source, chained,
+ * so each hook has its own component and the call order never changes.
  */
 function ResolvePlaces({
-  items,
+  sources,
   index,
   resolved,
   children,
 }: {
-  items: readonly PlaceItem[];
+  sources: readonly PlacesSource[];
   index: number;
-  resolved: readonly { item: PlaceItem; state: PlaceState }[];
+  resolved: readonly { source: PlacesSource; state: PlacesState }[];
   children: (rows: PlaceRow[], pending: boolean) => ReactNode;
 }): ReactNode {
-  const item = items[index];
-  if (item === undefined) {
-    const rows: PlaceRow[] = [];
-    let pending = false;
-    for (const { item: it, state } of resolved) {
-      if (state.kind === "pending") {
-        pending = true;
-        continue;
-      }
-      rows.push({
-        id: it.id,
-        group: it.group,
-        icon: it.icon,
-        label: state.label,
-        path: state.kind === "ready" ? state.path : null,
-        message: state.kind === "failed" ? state.message : null,
-      });
-    }
+  const source = sources[index];
+  if (source === undefined) {
+    const { rows, pending } = placeRows(resolved);
     return children(rows, pending);
   }
   return (
-    <ResolvePlace key={item.id} item={item}>
+    <ResolveSource key={source.id} source={source}>
       {(state) => (
         <ResolvePlaces
-          items={items}
+          sources={sources}
           index={index + 1}
-          resolved={[...resolved, { item, state }]}
+          resolved={[...resolved, { source, state }]}
         >
           {children}
         </ResolvePlaces>
       )}
-    </ResolvePlace>
+    </ResolveSource>
   );
 }
 
-function ResolvePlace({
-  item,
+function ResolveSource({
+  source,
   children,
 }: {
-  item: PlaceItem;
-  children: (state: PlaceState) => ReactNode;
+  source: PlacesSource;
+  children: (state: PlacesState) => ReactNode;
 }): ReactNode {
-  const { usePlace } = item;
-  return children(usePlace());
+  const { usePlaces } = source;
+  return children(usePlaces());
+}
+
+/**
+ * Every resolved source's places as rows, in source order; a failed source is
+ * one muted row saying why. `pending` while any source has not answered.
+ */
+function placeRows(
+  resolved: readonly { source: PlacesSource; state: PlacesState }[],
+): { rows: PlaceRow[]; pending: boolean } {
+  const rows: PlaceRow[] = [];
+  let pending = false;
+  for (const { source, state } of resolved) {
+    switch (state.kind) {
+      case "pending":
+        pending = true;
+        break;
+      case "failed":
+        rows.push({
+          id: source.id,
+          group: source.group,
+          icon: state.icon,
+          label: state.label,
+          path: null,
+          message: state.message,
+        });
+        break;
+      case "ready":
+        for (const place of state.places) {
+          rows.push({
+            id: `${source.id}:${place.id}`,
+            group: source.group,
+            icon: place.icon,
+            label: place.label,
+            path: place.path,
+            message: null,
+          });
+        }
+        break;
+    }
+  }
+  return { rows, pending };
 }
 
 function PlacesList({

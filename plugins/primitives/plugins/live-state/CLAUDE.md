@@ -953,6 +953,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/runs/extracted-events`
     - `apps/events/sources/source-field`
+    - `apps/file-explorer/git`
     - `apps/mail/mail-core`
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
@@ -1010,6 +1011,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-and-exit`
+    - `conversations/conversation-view/explorer`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/event-counter`

@@ -35,6 +35,8 @@ that settles would stop retrying and would render as a permanent answer.
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `network/live.serveValue`
+    - `primitives/commit-list.parseDiffNameStatusZ`
+    - `primitives/commit-list.parseDiffNumstatZ`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.WorktreeGoneError`
     - `tasks/tasks-core.getConversation`

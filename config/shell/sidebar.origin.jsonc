@@ -1,4 +1,4 @@
-// @hash f0826ed92a91
+// @hash b9198a6e36cd
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "code-explorer:code-explorer",
     "conversations.agents:agents",
     "conversations.all-conversations:all-conversations",
     "conversations.conversations-view:launch",

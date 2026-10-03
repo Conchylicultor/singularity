@@ -18,7 +18,10 @@ import {
   FileContent,
   useFileRenderers,
 } from "@plugins/primitives/plugins/file-viewer/web";
-import type { FileRef } from "@plugins/primitives/plugins/file-viewer/core";
+import {
+  fileRefForPath,
+  type FileRef,
+} from "@plugins/primitives/plugins/file-viewer/core";
 import {
   FilePeekHeaderProvider,
   FilePeekTitle,
@@ -63,28 +66,36 @@ function FilePeekPaneBody() {
 
   const resolved = useResolvedFile(worktree, filePath);
 
-  // Use the resolved path directly instead of swapping the pane — a swap
+  // Read the resolved file directly instead of swapping the pane — a swap
   // re-mounts the component (new URL → new params → new fetches), which
-  // destroys in-progress text selection.
-  const effectivePath =
+  // destroys in-progress text selection. Until (or unless) it resolves, the
+  // path as requested: a relative one from the checkout, an absolute or `~`
+  // one from the host, so a miss is reported by whichever source owns it.
+  const file: FileRef =
     resolved.status === "resolved" || resolved.status === "exact"
-      ? resolved.path
-      : filePath;
+      ? resolved.file
+      : fileRefForPath(worktree, filePath);
+  const effectivePath = file.path;
 
   const filesResult = useEditedFiles(convId ?? null);
   // `status` is a derived renderer hint, so an unknown file set (loading, a
   // failed read, or an unresolved worktree) safely defaults to "clean" — no
-  // display surface here; the file content itself is a separate read.
+  // display surface here; the file content itself is a separate read. Only a
+  // checkout file has one: a host file sits outside the worktree.
   const status = foldResource(filesResult, {
     loading: () => "clean" as const,
     error: () => "clean" as const,
     ready: (files) =>
-      files.resolved
-        ? (files.value.find((f) => f.path === effectivePath)?.status ?? "clean")
+      files.resolved && file.source === "git"
+        ? (files.value.find((f) => f.path === file.path)?.status ?? "clean")
         : "clean",
   });
-  const file: FileRef = { source: "git", worktree, path: effectivePath };
-  const renderers = useFileRenderers({ file, gitStatus: status });
+  const renderers = useFileRenderers({
+    file,
+    ...(file.source === "git"
+      ? { git: { checkout: file.worktree, path: file.path, status } }
+      : {}),
+  });
 
   // The header's title and renderer tabs read this (see file-peek-header): the
   // requested path and no tabs until the path resolves to one file.

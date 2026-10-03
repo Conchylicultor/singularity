@@ -379,7 +379,6 @@ to reconcile them; they never needed reconciling.
     - `build/build-logs`
     - `build/deployment`
     - `build/serve-composition`
-    - `code-explorer`
     - `code-explorer/commit-detail`
     - `code-explorer/file-resolve`
     - `config_v2/config-link`

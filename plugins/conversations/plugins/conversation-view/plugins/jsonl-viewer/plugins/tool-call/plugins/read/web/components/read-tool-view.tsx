@@ -79,6 +79,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
           ) : isImagePath(file_path) ? (
             <ReadImageView
               worktree={conversation.attemptId}
+              worktreePath={conversation.worktreePath}
               filePath={file_path}
             />
           ) : (

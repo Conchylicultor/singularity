@@ -1,7 +1,9 @@
-import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
+/** A path's status in a `git diff --name-status` between two trees. */
+export type DiffNameStatus =
+  "added" | "deleted" | "modified" | "renamed" | "copied";
 
 export interface NameStatusRecord {
-  status: EditedFileStatus;
+  status: DiffNameStatus;
   path: string;
   from?: string;
 }
@@ -87,12 +89,13 @@ function splitNul(out: string): string[] {
 }
 
 function toCount(s: string): number {
+  // "-" means binary; treat as 0.
   if (s === "-") return 0;
   const n = Number.parseInt(s, 10);
   return Number.isFinite(n) ? n : 0;
 }
 
-function mapSimpleStatus(code: string): EditedFileStatus {
+function mapSimpleStatus(code: string): DiffNameStatus {
   if (code === "A") return "added";
   if (code === "D") return "deleted";
   return "modified";

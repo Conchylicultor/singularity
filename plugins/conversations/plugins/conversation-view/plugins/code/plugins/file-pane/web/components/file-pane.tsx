@@ -20,7 +20,7 @@ export function FilePaneView({
   return (
     <FileView
       file={{ source: "git", worktree, path }}
-      gitStatus={status}
+      git={{ checkout: worktree, path, status }}
       line={line}
     />
   );

@@ -6,38 +6,35 @@ import {
   type FieldDef,
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { HostedToolbar } from "@plugins/primitives/plugins/data-view/core";
+import type {
+  HostedToolbar,
+  HostedToolbarParts,
+} from "@plugins/primitives/plugins/data-view/core";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import type { TreeChildrenState } from "@plugins/primitives/plugins/tree/core";
-import type {
-  HostFsEntry,
-  HostFsEntryKind,
-} from "@plugins/infra/plugins/host-fs/core";
+import type { HostFsEntry } from "@plugins/infra/plugins/host-fs/core";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   formatCount,
   formatModified,
   formatModifiedFull,
   formatSize,
   joinPath,
+  type EntryRow,
 } from "../../core";
 import type { Listing, Listings } from "../internal/listings";
+import { FileBrowserSlots } from "../slots";
 
 const FILE_TREE_VIEW = defineDataView("file-explorer.tree");
 
-/** One entry of a listed folder, as a tree row. Its path is its id. */
-export interface EntryRow {
-  id: string;
-  parentId: string | null;
-  rank: Rank;
-  name: string;
-  path: string;
-  kind: HostFsEntryKind;
-  size: number;
-  mtimeMs: number;
-  hidden: boolean;
-}
+/**
+ * Whether the browser shows a listed entry, `path` in display form: Show
+ * hidden files and every lens's hide rule decide it.
+ */
+export type EntryFilter = (entry: HostFsEntry, path: string) => boolean;
 
 /** What a listing's failure says, in the user's terms. */
 function listingFailure(listing: Listing): string | null {
@@ -57,11 +54,12 @@ function listingFailure(listing: Listing): string | null {
 
 /** The entries a listing shows: folders first, then by name, as people sort. */
 function visibleEntries(
+  dir: string,
   entries: readonly HostFsEntry[],
-  showHidden: boolean,
+  shows: EntryFilter,
 ): HostFsEntry[] {
   return entries
-    .filter((e) => showHidden || !e.hidden)
+    .filter((e) => shows(e, joinPath(dir, e.name)))
     .sort((a, b) => {
       const ad = a.kind === "dir" ? 0 : 1;
       const bd = b.kind === "dir" ? 0 : 1;
@@ -82,14 +80,14 @@ function visibleEntries(
 function buildRows(
   listings: Listings,
   root: string,
-  showHidden: boolean,
+  shows: EntryFilter,
 ): EntryRow[] {
   const rows: EntryRow[] = [];
   const walk = (dir: string, parentId: string | null) => {
     const listing = listings.get(dir);
     if (listing?.result?.kind !== "ok") return;
     let rank: Rank | null = null;
-    for (const entry of visibleEntries(listing.result.entries, showHidden)) {
+    for (const entry of visibleEntries(dir, listing.result.entries, shows)) {
       rank = Rank.between(rank, null);
       const path = joinPath(dir, entry.name);
       rows.push({
@@ -114,11 +112,11 @@ function buildRows(
 export function childCount(
   listings: Listings,
   path: string,
-  showHidden: boolean,
+  shows: EntryFilter,
 ): number | null {
   const result = listings.get(path)?.result;
   if (result?.kind !== "ok") return null;
-  return result.entries.filter((e) => showHidden || !e.hidden).length;
+  return result.entries.filter((e) => shows(e, joinPath(path, e.name))).length;
 }
 
 /** A tree-view listing's state, as the lazy-children contract spells it. */
@@ -133,11 +131,23 @@ function childrenState(listings: Listings, path: string): TreeChildrenState {
   return { kind: "loaded" };
 }
 
-/** Hosted toolbar: no band — the explorer's own toolbar owns the filter. */
-const HOSTED: HostedToolbar = {
-  kind: "hosted",
-  frame: ({ body }) => body,
-};
+/**
+ * No band — the explorer's own toolbar owns the name filter. The options
+ * trigger (sort, and filter on any field, a contributed one like git's
+ * "Changed vs main" included) is still the only way to reach those controls,
+ * so it sits at the listing's top-right edge, beside the column header,
+ * hover-revealed.
+ */
+function FileTreeFrame({ options, body }: HostedToolbarParts): ReactNode {
+  return (
+    <Stack direction="row" gap="xs" align="start">
+      <Fill>{body}</Fill>
+      {options}
+    </Stack>
+  );
+}
+
+const HOSTED: HostedToolbar = { kind: "hosted", frame: FileTreeFrame };
 
 export interface FileTreeProps {
   root: string;
@@ -145,7 +155,7 @@ export interface FileTreeProps {
   listings: Listings;
   /** Ask for a folder's listing (when the tree opens it). */
   request: (path: string) => void;
-  showHidden: boolean;
+  shows: EntryFilter;
   query: string;
   onQueryChange: (q: string) => void;
   selectedPath: string | null;
@@ -158,7 +168,7 @@ export interface FileTreeProps {
 
 /**
  * The folder's contents as a DataView tree: Name / Modified / Size in aligned
- * columns, folders first, every folder lazily listed through host-fs on first
+ * columns plus every `FileBrowserSlots.Fields` contribution, folders first, every folder lazily listed through host-fs on first
  * expand. Click selects (a file opens beside the listing), double-click or
  * Enter opens (a folder becomes the listing).
  */
@@ -166,7 +176,7 @@ export function FileTree({
   root,
   listings,
   request,
-  showHidden,
+  shows,
   query,
   onQueryChange,
   selectedPath,
@@ -178,8 +188,8 @@ export function FileTree({
   // "Today" is today as of this listing: the folder is re-listed on every visit.
   const [now] = useState(() => Date.now());
   const rows = useMemo(
-    () => buildRows(listings, root, showHidden),
-    [listings, root, showHidden],
+    () => buildRows(listings, root, shows),
+    [listings, root, shows],
   );
 
   const hierarchy = useMemo<HierarchyConfig<EntryRow>>(
@@ -218,12 +228,12 @@ export function FileTree({
         value: (r) => (r.kind === "dir" ? null : r.size),
         cell: (r) => {
           if (r.kind !== "dir") return formatSize(r.size);
-          const n = childCount(listings, r.path, showHidden);
+          const n = childCount(listings, r.path, shows);
           return n === null ? "—" : formatCount(n);
         },
       },
     ],
-    [now, showHidden, listings],
+    [now, shows, listings],
   );
 
   const treeOptions = useMemo<TreeViewOptions<EntryRow>>(
@@ -247,6 +257,7 @@ export function FileTree({
     <DataView<EntryRow>
       rows={rows}
       fields={fields}
+      fieldExtensions={FileBrowserSlots.Fields}
       rowKey={(r) => r.id}
       views={["tree"]}
       storageKey={FILE_TREE_VIEW}

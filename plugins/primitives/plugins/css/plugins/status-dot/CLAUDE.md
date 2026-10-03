@@ -51,6 +51,7 @@ same paint through `statusDotPaintClass(paint)`.
     - `apps/deploy/deploy-history`
     - `apps/deploy/health`
     - `apps/deploy/remote-deploy`
+    - `apps/file-explorer/git`
     - `apps/mail/search`
     - `apps/mail/sync-status`
     - `apps/studio/compositions/release`

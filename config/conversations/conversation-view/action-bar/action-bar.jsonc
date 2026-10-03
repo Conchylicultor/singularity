@@ -1,4 +1,4 @@
-// @hash b1cf0a6dffc5
+// @hash f8e52ad0bd94
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,15 @@
 //   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items stacked above and below it (a sidebar's footer rows).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// Arrange "items" for how this slot ACTUALLY renders — a sidebar is a
+// vertical list, a toolbar a horizontal bar, a pane a stack of blocks.
+// Look at the surface, then order for that reading direction.
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   "items": [
     "tasks.attempt-view:attempt-switch",
@@ -13,7 +22,7 @@
     "conversations.conversation-view.tasks-panel:tasks",
     "conversations.conversation-view.terminal-pane:terminal",
     "conversations.conversation-view.open-app:open-app",
-    "code-explorer:explorer",
+    "conversations.conversation-view.explorer:explorer",
     "apps.agent-manager.pages-nav:pages",
     "conversations.conversation-view.artifacts:artifacts",
     "conversations.conversation-view.push-profiling:push-profiling",

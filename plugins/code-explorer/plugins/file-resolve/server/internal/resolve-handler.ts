@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { resolveWorktreePath } from "@plugins/code-explorer/server";
 import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
@@ -56,7 +56,12 @@ export const handleResolve = implement(
       ? resolve(cleaned)
       : resolve(wtPath, cleaned);
     if (await Bun.file(absTarget).exists()) {
-      return { kind: "exact" as const };
+      // Inside the worktree → a checkout-relative path (code-api reads only
+      // those); anywhere else → the absolute path, for host-fs to read.
+      const rel = relative(resolve(wtPath), absTarget);
+      return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel)
+        ? { kind: "exact" as const, source: "git" as const, path: rel }
+        : { kind: "exact" as const, source: "host" as const, path: absTarget };
     }
 
     // ~-rooted and absolute paths are not in the git tree; skip ls-files

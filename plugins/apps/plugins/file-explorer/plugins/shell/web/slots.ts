@@ -10,26 +10,36 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 /** Which run of the Places sidebar a place sits in. */
 export type PlaceGroup = "favorites" | "locations";
 
-/**
- * Where a place leads, once known. A place whose folder or name comes from
- * the server (the Singularity checkout, the startup volume) is `pending` until
- * it answers, and `failed` — still listed, saying why — when it cannot.
- */
-export type PlaceState =
-  | { kind: "pending" }
-  | { kind: "ready"; label: string; path: string }
-  | { kind: "failed"; label: string; message: string };
+/** One place the sidebar lists. `path` is in display form (`~/…` under home). */
+export interface Place {
+  /** Unique within its source; the row's key is `<source id>:<place id>`. */
+  id: string;
+  label: string;
+  path: string;
+  icon: IconRef;
+}
 
 /**
- * One entry of the Places sidebar. `usePlace` resolves it (a hook, so a place
- * may read the server); `path` is in display form (`~/…` under home).
+ * What a source of places answers. Its places come from the server or a live
+ * resource more often than not, so they are `pending` until it answers, and a
+ * source that cannot answer is `failed` — still one row, under `label` and
+ * `icon`, saying why — never an empty list that looks like "no places".
  */
-export interface PlaceItem {
-  /** Unique among places; the row's key. */
+export type PlacesState =
+  | { kind: "pending" }
+  | { kind: "ready"; places: readonly Place[] }
+  | { kind: "failed"; label: string; icon: IconRef; message: string };
+
+/**
+ * One source of Places sidebar entries: a single place (Home) and a set of
+ * places are the same shape. `usePlaces` resolves them (a
+ * hook, so a source may read the server).
+ */
+export interface PlacesSource {
+  /** Unique among sources. */
   id: string;
   group: PlaceGroup;
-  icon: IconRef;
-  usePlace: Hook<() => PlaceState>;
+  usePlaces: Hook<() => PlacesState>;
 }
 
 export const FileExplorer = {
@@ -41,8 +51,11 @@ export const FileExplorer = {
     docLabel: (p) => ("label" in p ? p.label : undefined),
   }),
 
-  /** The places the sidebar lists: Home, Downloads, the startup volume, … */
-  Place: defineSlot<PlaceItem>({
+  /**
+   * The sources of the places the sidebar lists: Home, Downloads, the startup
+   * volume, …
+   */
+  Places: defineSlot<PlacesSource>({
     docLabel: (p) => p.id,
   }),
 };

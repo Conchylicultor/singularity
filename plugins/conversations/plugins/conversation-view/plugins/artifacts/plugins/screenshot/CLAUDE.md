@@ -6,8 +6,10 @@ popover.
 A `Read` on an image path counts, and its relation is `created`: agents read a
 picture after making it (a screenshot of the app they just changed, a compare
 sheet). The key is the path exactly as the tool got it — screenshots usually
-land in a temp directory, outside any worktree, and the image endpoint serves an
-absolute path fine.
+land in a temp directory, outside any worktree. `fileRefForPath`
+(`primitives/file-viewer/core`) sends such a path to host-fs and one inside the
+conversation's worktree to the checkout; the code-api image endpoint itself
+serves only paths relative to a checkout.
 
 The kind is `origin: "consumed"` all the same, and the two are about different
 things. The relation says how this conversation came by one picture; `origin`

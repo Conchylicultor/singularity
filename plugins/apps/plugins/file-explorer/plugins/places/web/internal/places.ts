@@ -7,21 +7,35 @@ import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/
 import { displayPath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
   FileExplorer,
-  type PlaceState,
+  type PlacesState,
 } from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { fileExplorerCheckout } from "../../core";
 
-/** A place that is the same everywhere: a fixed label and path. */
-function fixedPlace(label: string, path: string): () => PlaceState {
-  const state: PlaceState = { kind: "ready", label, path };
+const homeIcon = symbol("home");
+const downloadsIcon = symbol("download");
+const folderIcon = symbol("folder");
+const driveIcon = symbol("hard-drive");
+const trashIcon = symbol("delete");
+
+/** A source of one place that is the same everywhere: a fixed label and path. */
+function fixedPlace(
+  id: string,
+  label: string,
+  path: string,
+  icon: IconRef,
+): () => PlacesState {
+  const state: PlacesState = {
+    kind: "ready",
+    places: [{ id, label, path, icon }],
+  };
   return function useFixedPlace() {
     return state;
   };
 }
 
 /** The Singularity main checkout — its path is the server's to say. */
-function useSingularityPlace(): PlaceState {
+function useSingularityPlace(): PlacesState {
   const checkout = useEndpoint(fileExplorerCheckout, {});
   const home = useHomeDir();
   const label = "Singularity";
@@ -29,69 +43,86 @@ function useSingularityPlace(): PlaceState {
     return {
       kind: "failed",
       label,
+      icon: folderIcon,
       message: getEndpointErrorMessage(checkout.error),
     };
   }
   if (!checkout.data || home.kind === "pending") return { kind: "pending" };
+  const path =
+    home.kind === "ready"
+      ? displayPath(checkout.data.path, home.home)
+      : checkout.data.path;
   return {
     kind: "ready",
-    label,
-    path:
-      home.kind === "ready"
-        ? displayPath(checkout.data.path, home.home)
-        : checkout.data.path,
+    places: [{ id: "singularity", label, path, icon: folderIcon }],
   };
 }
 
 /** The startup volume, named as the system names it ("Macintosh HD"). */
-function useStartupVolumePlace(): PlaceState {
+function useStartupVolumePlace(): PlacesState {
   const volume = useEndpoint(hostFsVolume, {}, { query: { path: "/" } });
   if (volume.isError) {
     return {
       kind: "failed",
       label: "/",
+      icon: driveIcon,
       message: getEndpointErrorMessage(volume.error),
     };
   }
   if (!volume.data) return { kind: "pending" };
   if (volume.data.kind !== "ok") {
-    return { kind: "failed", label: "/", message: `/ is ${volume.data.kind}` };
+    return {
+      kind: "failed",
+      label: "/",
+      icon: driveIcon,
+      message: `/ is ${volume.data.kind}`,
+    };
   }
-  return { kind: "ready", label: volume.data.name, path: "/" };
+  return {
+    kind: "ready",
+    places: [
+      {
+        id: "startup-volume",
+        label: volume.data.name,
+        path: "/",
+        icon: driveIcon,
+      },
+    ],
+  };
 }
 
-/** The places this plugin contributes, in sidebar order within each group. */
+/** The place sources this plugin contributes, in sidebar order within each group. */
 export const placeContributions = [
-  FileExplorer.Place({
+  FileExplorer.Places({
     id: "home",
     group: "favorites",
-    icon: symbol("home"),
-    usePlace: fixedPlace("Home", "~"),
+    usePlaces: fixedPlace("home", "Home", "~", homeIcon),
   }),
-  FileExplorer.Place({
+  FileExplorer.Places({
     id: "downloads",
     group: "favorites",
-    icon: symbol("download"),
-    usePlace: fixedPlace("Downloads", "~/Downloads"),
+    usePlaces: fixedPlace(
+      "downloads",
+      "Downloads",
+      "~/Downloads",
+      downloadsIcon,
+    ),
   }),
-  FileExplorer.Place({
+  FileExplorer.Places({
     id: "singularity",
     group: "favorites",
-    icon: symbol("folder"),
-    usePlace: useSingularityPlace,
+    usePlaces: useSingularityPlace,
   }),
-  FileExplorer.Place({
+  FileExplorer.Places({
     id: "startup-volume",
     group: "locations",
-    icon: symbol("hard-drive"),
-    usePlace: useStartupVolumePlace,
+    usePlaces: useStartupVolumePlace,
   }),
   // Without Full Disk Access the Trash cannot be listed; the browser says so
   // (a denied folder) rather than showing it empty.
-  FileExplorer.Place({
+  FileExplorer.Places({
     id: "trash",
     group: "locations",
-    icon: symbol("delete"),
-    usePlace: fixedPlace("Trash", "~/.Trash"),
+    usePlaces: fixedPlace("trash", "Trash", "~/.Trash", trashIcon),
   }),
 ];

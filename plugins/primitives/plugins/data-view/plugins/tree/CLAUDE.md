@@ -194,8 +194,7 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   collapsible, since a user toggle writes a map entry that wins. Default `false`.
 - `expandOnActivate?(row)` — rows whose activation (a body click) toggles
   expansion **instead of** firing `onRowActivate` — the "click a folder to open
-  it" affordance (`(r) => r.isDir` in the code-explorer file tree,
-  `(r) => !r.registration` on the config nav's group headers). It is
+  it" affordance (`(r) => !r.registration` on the config nav's group headers). It is
   **stateless**: it routes the gesture only, the value still lives in the view's
   expand map, so unlike a consumer-held expand accessor it cannot be half-wired.
   Alias rows never toggle — an alias is a reference leaf whose subtree lives at

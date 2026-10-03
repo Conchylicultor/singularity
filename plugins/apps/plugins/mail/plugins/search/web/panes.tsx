@@ -36,9 +36,7 @@ export const mailSearchPane = Pane.define({
  *
  * `useResolve: false` opts out of route-resolution: the pane self-fetches by
  * `messageId` and owns its own loading / not-found / error states in the body,
- * so there is no live-state resource to gate reload/deep-link against. Mirrors
- * `code-explorer`'s `globalFileTreePane` (`segment: "code/:worktree"`,
- * `useResolve: false`).
+ * so there is no live-state resource to gate reload/deep-link against.
  */
 export const mailMessagePane = Pane.define({
   route: defineRoute({

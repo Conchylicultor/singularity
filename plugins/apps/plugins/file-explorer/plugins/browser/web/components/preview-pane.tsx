@@ -15,6 +15,7 @@ import {
   useFileRenderers,
   useOpenHostFile,
 } from "@plugins/primitives/plugins/file-viewer/web";
+import type { FileViewerGit } from "@plugins/primitives/plugins/file-viewer/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { baseName, formatModified, formatSize, parentPath } from "../../core";
 
@@ -24,22 +25,29 @@ const closeIcon = symbol("close");
 /**
  * The file open beside the listing: a header naming it (`parent · size ·
  * modified`) with Open with default app and Close, over the file viewer's best
- * renderer for it. The renderer tabs show only when there is a choice.
+ * renderer for it. The renderer tabs show only when there is a choice — a
+ * changed file in a git checkout (`git`, from a lens) also offers its diff.
  */
 export function PreviewPane({
   path,
   home,
+  git,
   onClose,
   endSafeArea,
 }: {
   /** The file, in display form (`~/…`). */
   path: string;
   home: string;
+  /** The file's git context, when a lens knows it. */
+  git: FileViewerGit | undefined;
   onClose: () => void;
   /** The header sits at the surface's top-right corner (floating action bar). */
   endSafeArea: boolean;
 }): ReactNode {
-  const renderers = useFileRenderers({ file: { source: "host", path } });
+  const renderers = useFileRenderers({
+    file: { source: "host", path },
+    ...(git !== undefined ? { git } : {}),
+  });
   const openHostFile = useOpenHostFile();
   const name = baseName(path);
   return (

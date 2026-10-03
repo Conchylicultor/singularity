@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history.
+- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to onOpenFile; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history.
 - Web:
   - Slots:
     - `filesHomePane.Actions` ← `primitives.pane`
     - `filesAtPane.Actions` ← `primitives.pane`
+    - `FileBrowserSlots.Fields` ← `apps.file-explorer.git`
+    - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
   - Contributes:
     - `Pane.Register` "files-home"
     - `Pane.Register` "files-at"
@@ -33,6 +35,7 @@
     - `primitives/css/ui-kit.ResizablePanelGroup`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
+    - `primitives/data-view.defineFieldExtensions`
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.HierarchyConfig`
     - `primitives/file-type.FileTypeIcon`
@@ -53,20 +56,31 @@
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
   - Exports (types):
+    - `ExplorerLensItem`
     - `ExplorerNavigator`
     - `FileBrowserProps`
     - `HomeDir`
   - Exports (values):
     - `FileBrowser`
+    - `FileBrowserSlots`
     - `filesAtPane`
     - `filesHomePane`
+    - `useExplorerDir`
     - `useExplorerLocation`
     - `useHomeDir`
     - `useOpenExplorerFolder`
 - Cross-plugin:
-  - Imported by: `apps/file-explorer/places`
+  - Imported by:
+    - `apps/file-explorer/git`
+    - `apps/file-explorer/places`
+    - `conversations/conversation-view/explorer`
+    - `plugin-meta/plugin-view/file-tree`
 - Core:
-  - Exports (types): `ExplorerLocation`
+  - Exports (types):
+    - `EntryRow`
+    - `ExplorerLens`
+    - `ExplorerLocation`
+    - `LensHideRule`
   - Exports (values):
     - `absolutePath`
     - `baseName`

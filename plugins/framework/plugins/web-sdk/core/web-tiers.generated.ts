@@ -15,6 +15,7 @@
 
 // App-content plugins pinned EAGER (would otherwise defer), and why:
 //   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
+//   - apps/plugins/file-explorer/plugins/browser: dependency closure (imported by an eager plugin)
 //   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
 //   - apps/plugins/pages/plugins/auto-icon: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
@@ -72,7 +73,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/events/plugins/sources/plugins/source-detail/plugins/status",
   "apps/plugins/events/plugins/sources/plugins/source-field",
   "apps/plugins/events/plugins/sources/plugins/url-extract",
-  "apps/plugins/file-explorer/plugins/browser",
+  "apps/plugins/file-explorer/plugins/git",
   "apps/plugins/file-explorer/plugins/places",
   "apps/plugins/home/plugins/app-cards",
   "apps/plugins/mail/plugins/attachments",

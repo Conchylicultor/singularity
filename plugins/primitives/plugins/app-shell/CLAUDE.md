@@ -108,7 +108,6 @@ whose chrome bar is its own rather than `AppShellLayout`'s renders
     - `apps/settings/shell`
     - `apps/sonata/shell`
     - `apps/studio/shell`
-    - `code-explorer`
     - `conversations/agents`
     - `conversations/all-conversations`
     - `stats`

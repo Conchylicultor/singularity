@@ -4,7 +4,10 @@ import {
   ImageGallery,
   ViewerThumbnail,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
-import { codeImageUrl } from "@plugins/code-explorer/plugins/code-api/core";
+import {
+  fileRefForPath,
+  fileUrl,
+} from "@plugins/primitives/plugins/file-viewer/core";
 import { useConversationById } from "@plugins/conversations/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
@@ -36,11 +39,10 @@ export const SCREENSHOT_ICON = photoCameraIcon;
 export function ScreenshotSection({ items }: { items: ArtifactItem[] }) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const worktree = conversation?.attemptId;
-
-  // A picture's address is worktree-scoped, so until the conversation row
+  // A picture's address depends on its worktree (a path inside it reads from
+  // the checkout, any other from the host), so until the conversation row
   // arrives there is no image to show — a loading state, not an empty grid.
-  if (worktree === undefined) {
+  if (conversation === null) {
     return <Loading variant="cards" count={items.length} />;
   }
 
@@ -53,7 +55,11 @@ export function ScreenshotSection({ items }: { items: ArtifactItem[] }) {
             <span key={item.key} title={item.key} className="block">
               <ViewerThumbnail
                 image={{
-                  src: codeImageUrl(worktree, item.key),
+                  src: fileUrl(
+                    fileRefForPath(conversation.attemptId, item.key, {
+                      root: conversation.worktreePath,
+                    }),
+                  ),
                   name,
                   sourceLabel: "Screenshot",
                 }}

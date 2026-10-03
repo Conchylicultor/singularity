@@ -48,6 +48,7 @@
     - `config_v2/settings`
     - `conversations/agents`
     - `conversations/conversation-view/commits-graph`
+    - `conversations/conversation-view/explorer`
     - `conversations/recover`
     - `debug/boot-profile`
     - `debug/health-monitor`
@@ -78,6 +79,7 @@
     - `page/map`
     - `page/page-link`
     - `page/place`
+    - `plugin-meta/plugin-view/file-tree`
     - `primitives/cursor-pagination`
     - `primitives/data-view`
     - `primitives/diff-view`

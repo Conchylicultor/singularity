@@ -20,3 +20,5 @@ export {
   formatModifiedFull,
   formatSize,
 } from "./internal/format";
+export type { EntryRow } from "./internal/entry-row";
+export type { ExplorerLens, LensHideRule } from "./internal/lens";

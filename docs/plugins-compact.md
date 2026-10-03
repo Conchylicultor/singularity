@@ -14,7 +14,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [test helpers] [17 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`events`** [22 sub-plugins] — Events — track events from pluggable sources in one database.
-    - **`file-explorer`** [3 sub-plugins] — File explorer app.
+    - **`file-explorer`** [4 sub-plugins] — File explorer app.
     - **`home`** [2 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [15 sub-plugins] — Notion-like pages app.
@@ -57,7 +57,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`build`** [12 sub-plugins] — Trigger `./singularity build` from the toolbar.
 
-- **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
+- **`code-explorer`** — Worktree-scoped file reads: raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Plugins:
     - **`code-api`** — Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.
@@ -65,7 +65,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config_v2`** [test helpers] [5 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 
-- **`conversations`** [load-bearing] [145 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** [load-bearing] [146 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
 - **`database`** [load-bearing] — Core database infrastructure. Connection pooling and DB readiness.
   - Plugins:
@@ -297,7 +297,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
     - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
-    - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
+    - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat parsers, the runGit invocation and commit row types for reuse across plugins.
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
     - **`css`** [48 sub-plugins] — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
     - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), the useCursorPagination keyset wrapper (frozen-cursor + useInfiniteQuery), and the ScrollSentinel component.
@@ -337,7 +337,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText reading a FileRef from the host (infra/host-fs) or a git checkout (code-api).
       - Plugins:
         - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
-        - **`diff`** — Side-by-side diff of a changed checkout file vs HEAD — a contextual tab, offered only when the host reports a non-clean git status.
+        - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's bytes are read from.
         - **`fallback`** — Last-resort renderer for a file no other renderer offers to show (binary formats): a large file icon, "No preview for <kind> files", and Open with default app for a host file.
         - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
         - **`markdown`** — Rendered markdown preview for .md and .mdx files.

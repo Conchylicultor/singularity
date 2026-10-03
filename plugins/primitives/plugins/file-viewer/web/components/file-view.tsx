@@ -4,7 +4,7 @@ import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import type { FileGitStatus, FileRef } from "../../core";
+import type { FileRef, FileViewerGit } from "../../core";
 import { FileContent } from "./file-content";
 import { FileTabs } from "./file-tabs";
 import { useFileRenderers } from "./use-file-renderers";
@@ -17,16 +17,16 @@ import { useFileRenderers } from "./use-file-renderers";
  */
 export function FileView({
   file,
-  gitStatus,
+  git,
   line,
 }: {
   file: FileRef;
-  gitStatus?: FileGitStatus;
+  git?: FileViewerGit;
   line?: number;
 }) {
   const renderers = useFileRenderers({
     file,
-    ...(gitStatus !== undefined ? { gitStatus } : {}),
+    ...(git !== undefined ? { git } : {}),
   });
   return (
     <Column

@@ -8,14 +8,13 @@
 - Load-bearing: yes
 - Web:
   - Slots:
-    - `Shell.Sidebar` ← `code-explorer`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversations-view`, `stats`, `tasks.task-detail`
+    - `Shell.Sidebar` ← `conversations.agents`, `conversations.all-conversations`, `conversations.conversations-view`, `stats`, `tasks.task-detail`
     - `Shell.Toolbar`
   - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports (values): `Shell`
 - Cross-plugin:
   - Imported by:
     - `apps/agent-manager/shell`
-    - `code-explorer`
     - `conversations/agents`
     - `conversations/all-conversations`
     - `conversations/conversations-view`

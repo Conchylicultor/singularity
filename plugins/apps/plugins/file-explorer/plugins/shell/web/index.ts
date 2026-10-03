@@ -9,14 +9,15 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export {
   FileExplorer,
+  type Place,
   type PlaceGroup,
-  type PlaceItem,
-  type PlaceState,
+  type PlacesSource,
+  type PlacesState,
 } from "./slots";
 
 export default {
   description:
-    "App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Place slots.",
+    "App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.",
   contributions: [
     Apps.App({
       app: fileExplorerApp,

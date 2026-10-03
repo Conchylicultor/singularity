@@ -11,7 +11,10 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { codeImageUrl } from "@plugins/code-explorer/plugins/code-api/core";
+import {
+  fileRefForPath,
+  fileUrl,
+} from "@plugins/primitives/plugins/file-viewer/core";
 
 const IMG_HREF_RE = /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico)(?:[?#].*)?$/i;
 
@@ -36,6 +39,9 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
   const taskEntry = taskDetailPane.useRouteEntry();
   const openPane = useOpenPane();
   const worktree = conversation?.attemptId ?? (taskEntry ? "main" : undefined);
+  // Known only for a conversation's worktree: an absolute path inside it reads
+  // from git; any other absolute or `~` path reads from the host.
+  const worktreePath = conversation?.worktreePath;
 
   const onFileOpen = useMemo(() => {
     if (!worktree) return undefined;
@@ -54,7 +60,17 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
             return (
               <ViewerThumbnail
                 image={{
-                  src: isExternalUrl(src) ? src : codeImageUrl(worktree, src),
+                  src: isExternalUrl(src)
+                    ? src
+                    : fileUrl(
+                        fileRefForPath(
+                          worktree,
+                          src,
+                          worktreePath !== undefined
+                            ? { root: worktreePath }
+                            : {},
+                        ),
+                      ),
                   name: basename(src),
                   sourceLabel: "Markdown",
                   alt: alt || undefined,
@@ -79,7 +95,7 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
         },
       },
     };
-  }, [worktree, onFileOpen]);
+  }, [worktree, worktreePath, onFileOpen]);
 
   const value = useMarkdownEnhancement(enhancement);
   return (

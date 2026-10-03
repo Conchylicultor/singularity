@@ -1,9 +1,10 @@
-import { resolve, sep } from "node:path";
+import { resolve } from "node:path";
 
-import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { HOST_FS_TEXT_MAX_BYTES } from "@plugins/infra/plugins/host-fs/core";
 import { decodeTextBytes } from "@plugins/infra/plugins/host-fs/server";
+import { resolveInsideRoot } from "./contained-path";
 
 // Every git read in this file serves an open HTTP request from the code
 // explorer: a local, metadata-or-blob read that finishes in milliseconds. The
@@ -13,12 +14,6 @@ import { decodeTextBytes } from "@plugins/infra/plugins/host-fs/server";
 // forever.
 const GIT_TIMEOUT_MS = 30_000;
 
-function expandTilde(path: string): string {
-  if (path === "~") return HOME_DIR;
-  if (path.startsWith("~/")) return resolve(HOME_DIR, path.slice(2));
-  return path;
-}
-
 export type FileReadResult =
   | { kind: "ok"; content: string }
   | { kind: "invalid-path" }
@@ -26,21 +21,14 @@ export type FileReadResult =
   | { kind: "too-large"; size: number }
   | { kind: "binary" };
 
-function isPathInside(root: string, target: string): boolean {
-  const rootNorm = root.endsWith(sep) ? root : root + sep;
-  return target === root || target.startsWith(rootNorm);
-}
-
 export async function getFileContentAtRef(
   worktreePath: string,
   relPath: string,
   ref: string,
 ): Promise<FileReadResult> {
-  if (!relPath || relPath.includes("\0")) return { kind: "invalid-path" };
-
+  if (resolveInsideRoot(worktreePath, relPath) === null)
+    return { kind: "invalid-path" };
   const absRoot = resolve(worktreePath);
-  const absTarget = resolve(absRoot, relPath);
-  if (!isPathInside(absRoot, absTarget)) return { kind: "invalid-path" };
 
   const result = await spawnCaptured(
     [GIT, "--no-optional-locks", "-C", absRoot, "show", `${ref}:${relPath}`],
@@ -56,15 +44,10 @@ export async function getFileContent(
   worktreePath: string,
   relPath: string,
 ): Promise<FileReadResult> {
-  if (!relPath || relPath.includes("\0")) return { kind: "invalid-path" };
-
-  const expanded = expandTilde(relPath);
-  const absRoot = resolve(worktreePath);
-  const absTarget = expanded.startsWith("/")
-    ? resolve(expanded)
-    : resolve(absRoot, expanded);
-  if (!expanded.startsWith("/") && !isPathInside(absRoot, absTarget))
-    return { kind: "invalid-path" };
+  // The file as it is on disk right now — inside the checkout only. A file
+  // elsewhere on the host is host-fs's to read (file-viewer's `host` FileRef).
+  const absTarget = resolveInsideRoot(worktreePath, relPath);
+  if (absTarget === null) return { kind: "invalid-path" };
 
   const file = Bun.file(absTarget);
   if (!(await file.exists())) return { kind: "not-found" };

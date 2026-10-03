@@ -109,6 +109,7 @@ froze). Pinned by `server/internal/pool.test.ts`. See
     - `withHeavyReadSlot`
 - Cross-plugin:
   - Imported by:
+    - `apps/file-explorer/git`
     - `code-explorer`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/commits-graph`

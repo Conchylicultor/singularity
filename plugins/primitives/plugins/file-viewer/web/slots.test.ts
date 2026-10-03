@@ -27,8 +27,8 @@ const registry = [
   renderer("code", ({ file }) =>
     file.path.endsWith(".png") ? false : "fallback",
   ),
-  renderer("diff", ({ gitStatus }) =>
-    gitStatus && gitStatus !== "clean" ? "contextual" : false,
+  renderer("diff", ({ git }) =>
+    git && git.status !== "clean" ? "contextual" : false,
   ),
   renderer("image", ({ file }) =>
     file.path.endsWith(".png") ? "native" : false,
@@ -41,7 +41,7 @@ describe("resolveRenderers", () => {
       ids(
         {
           file: { source: "git", worktree: "w", path: "a.ts" },
-          gitStatus: "modified",
+          git: { checkout: "w", path: "a.ts", status: "modified" },
         },
         registry,
       ),

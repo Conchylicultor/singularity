@@ -2834,11 +2834,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `urlSourceConfigFields`
     - **`file-explorer`** — File explorer app.
       - Plugins:
-        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history.
+        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to onOpenFile; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history.
           - Web:
             - Slots:
               - `filesHomePane.Actions` ← `primitives.pane`
               - `filesAtPane.Actions` ← `primitives.pane`
+              - `FileBrowserSlots.Fields` ← `apps.file-explorer.git`
+              - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
             - Contributes:
               - `Pane.Register` "files-home"
               - `Pane.Register` "files-at"
@@ -2863,6 +2865,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.ResizablePanelGroup`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineFieldExtensions`
               - `primitives/data-view.FieldDef`
               - `primitives/data-view.HierarchyConfig`
               - `primitives/file-type.FileTypeIcon`
@@ -2883,20 +2886,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
             - Exports (types):
+              - `ExplorerLensItem`
               - `ExplorerNavigator`
               - `FileBrowserProps`
               - `HomeDir`
             - Exports (values):
               - `FileBrowser`
+              - `FileBrowserSlots`
               - `filesAtPane`
               - `filesHomePane`
+              - `useExplorerDir`
               - `useExplorerLocation`
               - `useHomeDir`
               - `useOpenExplorerFolder`
           - Cross-plugin:
-            - Imported by: `apps/file-explorer/places`
+            - Imported by:
+              - `apps/file-explorer/git`
+              - `apps/file-explorer/places`
+              - `conversations/conversation-view/explorer`
+              - `plugin-meta/plugin-view/file-tree`
           - Core:
-            - Exports (types): `ExplorerLocation`
+            - Exports (types):
+              - `EntryRow`
+              - `ExplorerLens`
+              - `ExplorerLocation`
+              - `LensHideRule`
             - Exports (values):
               - `absolutePath`
               - `baseName`
@@ -2913,24 +2927,58 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `locationKey`
               - `parentPath`
               - `pathChain`
-        - **`places`** — The file explorer's Places sidebar: every FileExplorer.Place (Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: the main checkout's path (GET /api/file-explorer/checkout).
+        - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field, ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (GET /api/file-explorer/git/checkout, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from a file watcher on the checkout and its git dir while subscribed.
+          - Web:
+            - Contributes:
+              - `FileBrowserSlots.Fields` "git" → `GitFields`
+              - `FileBrowserSlots.Lens` "git"
+            - Uses:
+              - `apps/file-explorer/browser.FileBrowserSlots`
+              - `apps/file-explorer/browser.useExplorerDir`
+              - `apps/file-explorer/browser.useHomeDir`
+              - `network/live.useLive`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/status-dot.StatusDot`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useEndpointResource`
+              - `primitives/loading.Loading`
+          - Server:
+            - Contributes: `resource.declare` "file-explorer.git-status"
+            - Uses:
+              - `infra/endpoints.implement`
+              - `infra/file-watcher.defineFileWatcher`
+              - `infra/file-watcher.FileChangeEvent`
+              - `infra/git/git-read-cache.createSignedMemo`
+              - `infra/host/host-read-pool.withHeavyReadSlot`
+              - `network/live.serveValue`
+              - `primitives/commit-list.GitError`
+              - `primitives/commit-list.parseDiffNameStatusZ`
+              - `primitives/commit-list.runGit`
+              - `primitives/commit-list.tryRunGit`
+            - Register: `defineFileWatcher('file-explorer.git-status')`
+            - Resources: `file-explorer.git-status` (push)
+            - Routes: `GET /api/file-explorer/git/checkout`
+          - Cross-plugin:
+            - Endpoint callers: `places`
+        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: the main checkout's path (GET /api/file-explorer/checkout).
           - Web:
             - Contributes:
               - `FileExplorer.Sidebar` "Places" → `PlacesSidebar`
               - `FileExplorer.Sidebar` "Storage" → `StorageMeter`
-              - `FileExplorer.Place` "home"
-              - `FileExplorer.Place` "downloads"
-              - `FileExplorer.Place` "singularity"
-              - `FileExplorer.Place` "startup-volume"
-              - `FileExplorer.Place` "trash"
+              - `FileExplorer.Places` "home"
+              - `FileExplorer.Places` "downloads"
+              - `FileExplorer.Places` "singularity"
+              - `FileExplorer.Places` "startup-volume"
+              - `FileExplorer.Places` "trash"
             - Uses:
               - `apps/file-explorer/browser.useExplorerLocation`
               - `apps/file-explorer/browser.useHomeDir`
               - `apps/file-explorer/browser.useOpenExplorerFolder`
               - `apps/file-explorer/shell.FileExplorer`
               - `apps/file-explorer/shell.PlaceGroup`
-              - `apps/file-explorer/shell.PlaceItem`
-              - `apps/file-explorer/shell.PlaceState`
+              - `apps/file-explorer/shell.PlacesSource`
+              - `apps/file-explorer/shell.PlacesState`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpoint`
               - `primitives/css/clip.Clip`
@@ -2947,12 +2995,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`
             - Exports (values): `fileExplorerCheckout`
-        - **`shell`** — App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Place slots.
+        - **`shell`** — App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
           - Web:
             - Slots:
               - `FileExplorer.Sidebar` ← `apps.file-explorer.places`
               - `FileExplorer.Toolbar`
-              - `FileExplorer.Place` ← `apps.file-explorer.places`
+              - `FileExplorer.Places` ← `apps.file-explorer.places`
             - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
             - Uses:
               - `apps-core.Apps`
@@ -2960,9 +3008,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
             - Exports (types):
+              - `Place`
               - `PlaceGroup`
-              - `PlaceItem`
-              - `PlaceState`
+              - `PlacesSource`
+              - `PlacesState`
             - Exports (values): `FileExplorer`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -8799,43 +8848,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports`
           - `reports/crash`
 
-- **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
-  - Web:
-    - Slots:
-      - `global-file-tree.actions` ← `primitives.pane`
-      - `conv-file-tree.actions` ← `primitives.pane`
-    - Contributes:
-      - `Pane.Register` "global-file-tree"
-      - `Pane.Register` "conv-file-tree"
-      - `Shell.Sidebar` "Explorer"
-      - `Conversation.ActionBar` → `ConvTreeButton`
-    - Uses:
-      - `conversations.useConversationById`
-      - `conversations/conversation-view.conversationPane`
-      - `conversations/conversation-view/action-bar.Conversation`
-      - `conversations/conversation-view/code/file-pane.FilePaneView`
-      - `infra/endpoints.useEndpoint`
-      - `primitives/app-shell.opensPane`
-      - `primitives/css/center.Center`
-      - `primitives/css/clip.Clip`
-      - `primitives/css/text.Text`
-      - `primitives/css/ui-kit.ResizableHandle`
-      - `primitives/css/ui-kit.ResizablePanel`
-      - `primitives/css/ui-kit.ResizablePanelGroup`
-      - `primitives/data-view.DataView`
-      - `primitives/data-view.DataViewId`
-      - `primitives/data-view.defineDataView`
-      - `primitives/data-view.FieldDef`
-      - `primitives/data-view.HierarchyConfig`
-      - `primitives/icon-button.IconButton`
-      - `primitives/loading.Loading`
-      - `primitives/pane.defineRoute`
-      - `primitives/pane.Pane`
-      - `primitives/pane.PaneChrome`
-      - `primitives/pane.PaneScroll`
-      - `shell.Shell`
-      - `ui/icons.Icon`
-    - Exports (values): `FileTree`
+- **`code-explorer`** — Worktree-scoped file reads: raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Server:
     - Uses:
       - `infra/endpoints.HttpError`
@@ -8843,10 +8856,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/host-fs.decodeTextBytes`
       - `infra/host/host-read-pool.withHeavyReadSlot`
       - `infra/paths.GIT`
-      - `infra/paths.HOME_DIR`
       - `infra/paths.REPO_ROOT`
       - `infra/worktree.ensureMainWorktreeRoot`
       - `primitives/commit-list.LOG_FORMAT`
+      - `primitives/commit-list.parseDiffNameStatusZ`
+      - `primitives/commit-list.parseDiffNumstatZ`
       - `primitives/commit-list.parseGitLog`
       - `primitives/commit-list.tryRunGit`
       - `tasks/tasks-core.getAttempt`
@@ -8858,7 +8872,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Cross-plugin:
     - Imported by:
       - `code-explorer/file-resolve`
-      - `plugin-meta/plugin-view/file-tree`
       - `review/plugin-changes`
   - Plugins:
     - **`code-api`** — Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
@@ -8871,7 +8884,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.resolvableSchema`
         - Exports (values):
           - `codeImageUrl`
-          - `getCodeTree`
           - `getCommitFiles`
           - `getCommitInfo`
           - `getFileContent`
@@ -9644,7 +9656,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `active-data/task`
       - `apps/agent-manager/welcome`
       - `apps/prototypes/checkpoints`
-      - `code-explorer`
       - `conversations/agents`
       - `conversations/conversation-category`
       - `conversations/conversation-preprompt`
@@ -9660,6 +9671,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/drop-dependents`
       - `conversations/conversation-view/exit`
       - `conversations/conversation-view/exit-menu`
+      - `conversations/conversation-view/explorer`
       - `conversations/conversation-view/fork-session`
       - `conversations/conversation-view/hold-and-exit`
       - `conversations/conversation-view/jsonl-viewer/background-shells`
@@ -10293,7 +10305,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/plugin-link`
           - `active-data/task`
           - `apps/agent-manager/welcome`
-          - `code-explorer`
           - `conversations/agents`
           - `conversations/all-conversations`
           - `conversations/conversation-preprompt`
@@ -10310,6 +10321,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/dependencies`
           - `conversations/conversation-view/exit-menu`
+          - `conversations/conversation-view/explorer`
           - `conversations/conversation-view/fork-conversation`
           - `conversations/conversation-view/fork-session`
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
@@ -10351,7 +10363,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Web:
-            - Slots: `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`, `code-explorer`, `conversations.conversation-view.artifacts`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.event-counter`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.tasks-panel`, `conversations.conversation-view.terminal-pane`, `conversations.conversation-view.vscode`, `review`, `tasks.attempt-view`
+            - Slots: `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`, `conversations.conversation-view.artifacts`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.explorer`, `conversations.conversation-view.jsonl-viewer.event-counter`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.tasks-panel`, `conversations.conversation-view.terminal-pane`, `conversations.conversation-view.vscode`, `review`, `tasks.attempt-view`
             - Uses:
               - `primitives/css/spacing.Stack`
               - `primitives/slot-render.defineRenderSlot`
@@ -10361,10 +10373,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/agent-manager/pages-nav`
-              - `code-explorer`
               - `conversations/conversation-view`
               - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/commits-graph`
+              - `conversations/conversation-view/explorer`
               - `conversations/conversation-view/jsonl-viewer/event-counter`
               - `conversations/conversation-view/open-app`
               - `conversations/conversation-view/push-profiling`
@@ -10535,6 +10547,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/git/git-read-cache.createSignedMemo`
               - `infra/host/host-read-pool.withHeavyReadSlot`
               - `network/live.serveValue`
+              - `primitives/commit-list.parseDiffNameStatusZ`
+              - `primitives/commit-list.parseDiffNumstatZ`
               - `primitives/commit-list.runGit`
               - `primitives/commit-list.WorktreeGoneError`
               - `tasks/tasks-core.getConversation`
@@ -10600,7 +10614,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `filePeekPane`
               - Cross-plugin:
                 - Imported by:
-                  - `code-explorer`
                   - `conversations/conversation-view/artifacts/research`
                   - `conversations/conversation-view/artifacts/skill`
                   - `conversations/conversation-view/jsonl-viewer/file-path`
@@ -10784,6 +10797,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/drop-dependents`
               - `conversations/conversation-view/exit`
               - `conversations/conversation-view/hold-and-exit`
+        - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/>, rooted at the checkout (git status from the file explorer's git lens).
+          - Web:
+            - Slots: `conv-file-tree.actions` ← `primitives.pane`
+            - Contributes:
+              - `Pane.Register` "conv-file-tree"
+              - `Conversation.ActionBar` → `ConvTreeButton`
+            - Uses:
+              - `apps/file-explorer/browser.FileBrowser`
+              - `conversations.useConversation`
+              - `conversations/conversation-view.conversationPane`
+              - `conversations/conversation-view/action-bar.Conversation`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
         - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
           - Web:
             - Contributes: `Conversation.PromptBar` "New" → `ForkConversationButtons`
@@ -19001,6 +19032,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
               - `apps/file-explorer`
+              - `apps/file-explorer/git`
               - `apps/home`
               - `apps/mail/threads`
               - `apps/pages/auto-icon`
@@ -19025,7 +19057,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/improve`
               - `apps/website/shell`
               - `build`
-              - `code-explorer`
               - `config_v2`
               - `config_v2/settings`
               - `config_v2/settings/conflict-agent`
@@ -20286,6 +20317,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
           - `apps/file-explorer/browser`
+          - `apps/file-explorer/git`
           - `apps/file-explorer/places`
           - `apps/mail/attachments`
           - `apps/mail/reading-pane`
@@ -20848,6 +20880,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry.
       - Cross-plugin:
         - Imported by:
+          - `apps/file-explorer/git`
           - `apps/prototypes/files`
           - `apps/sonata/sources/midi/folders`
           - `config_v2`
@@ -20909,6 +20942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
           - Cross-plugin:
             - Imported by:
+              - `apps/file-explorer/git`
               - `build/deployment`
               - `conversations/conversation-view/code`
               - `conversations/conversation-view/jsonl-viewer`
@@ -21155,6 +21189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `withHeavyReadSlot`
           - Cross-plugin:
             - Imported by:
+              - `apps/file-explorer/git`
               - `code-explorer`
               - `conversations/conversation-view/code`
               - `conversations/conversation-view/commits-graph`
@@ -23174,6 +23209,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/event-list`
           - `apps/events/events-core`
           - `apps/events/sources/source-field`
+          - `apps/file-explorer/git`
           - `apps/mail/mail-core`
           - `apps/mail/reading-pane`
           - `apps/mail/sync`
@@ -26842,12 +26878,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `PluginViewSlots.Section` "Files" → `FileTreeSection`
             - Uses:
-              - `code-explorer.FileTree`
+              - `apps/file-explorer/browser.FileBrowser`
               - `conversations/conversation-view/code/file-pane.filePeekPane`
+              - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpoint`
               - `plugin-meta/plugin-view.PluginViewSlots`
-              - `primitives/css/scroll.Scroll`
-              - `primitives/data-view.defineDataView`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/loading.Loading`
               - `primitives/pane.useOpenPane`
         - **`inclusion`** — Composition-membership section in the plugin detail pane: state badge, why-included edge path, select/prune impact, and a pin-as-root affordance.
           - Web:
@@ -27128,7 +27166,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/settings/shell`
           - `apps/sonata/shell`
           - `apps/studio/shell`
-          - `code-explorer`
           - `conversations/agents`
           - `conversations/all-conversations`
           - `stats`
@@ -27357,7 +27394,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/icons.Icon`
         - Exports (types): `CommandPaletteItem`
         - Exports (values): `CommandPalette`
-    - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
+    - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat parsers, the runGit invocation and commit row types for reuse across plugins.
       - Web:
         - Uses:
           - `primitives/css/badge.Badge`
@@ -27378,16 +27415,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MergeBaseMarker`
       - Server:
         - Uses: `infra/paths.GIT`
-        - Exports (types): `GitResult`
+        - Exports (types):
+          - `GitResult`
+          - `NameStatusRecord`
         - Exports (values):
           - `GitError`
           - `LOG_FORMAT`
+          - `parseDiffNameStatusZ`
+          - `parseDiffNumstatZ`
           - `parseGitLog`
           - `runGit`
           - `tryRunGit`
           - `WorktreeGoneError`
       - Cross-plugin:
         - Imported by:
+          - `apps/file-explorer/git`
           - `build/build-commits`
           - `build/deployment`
           - `code-explorer`
@@ -27463,6 +27505,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/runs/extracted-events`
               - `apps/events/sources/source-detail/status`
+              - `apps/file-explorer/git`
               - `apps/mail/attachments`
               - `apps/mail/search`
               - `apps/prototypes/canvas`
@@ -27692,7 +27735,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/improve`
               - `apps/website/landing/layers`
               - `apps/website/pages/download`
-              - `code-explorer`
               - `config_v2/settings`
               - `conversations/agents`
               - `conversations/conversation-ui/item`
@@ -27794,7 +27836,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/scrubber`
               - `apps/studio/graph`
               - `build/build-logs`
-              - `code-explorer`
               - `config_v2/settings`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view`
@@ -27817,6 +27858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/links`
               - `page/map`
               - `page/math/equation`
+              - `plugin-meta/plugin-view/file-tree`
               - `primitives/app-shell`
               - `primitives/data-view/gallery`
               - `primitives/data-view/list`
@@ -28726,6 +28768,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings`
               - `conversations/agents`
               - `conversations/conversation-view/commits-graph`
+              - `conversations/conversation-view/explorer`
               - `conversations/recover`
               - `debug/boot-profile`
               - `debug/health-monitor`
@@ -28756,6 +28799,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/map`
               - `page/page-link`
               - `page/place`
+              - `plugin-meta/plugin-view/file-tree`
               - `primitives/cursor-pagination`
               - `primitives/data-view`
               - `primitives/diff-view`
@@ -29071,7 +29115,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/exhibits`
               - `plugin-meta/plugin-health`
               - `plugin-meta/plugin-view`
-              - `plugin-meta/plugin-view/file-tree`
               - `primitives/css/column`
               - `primitives/data-view`
               - `primitives/diff-view`
@@ -29548,6 +29591,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/deploy-history`
               - `apps/deploy/health`
               - `apps/deploy/remote-deploy`
+              - `apps/file-explorer/git`
               - `apps/mail/search`
               - `apps/mail/sync-status`
               - `apps/studio/compositions/release`
@@ -29797,7 +29841,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/build-logs`
               - `build/deployment`
               - `build/serve-composition`
-              - `code-explorer`
               - `code-explorer/commit-detail`
               - `code-explorer/file-resolve`
               - `config_v2/config-link`
@@ -30366,7 +30409,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/build-logs`
               - `build/deployment`
               - `build/serve-composition`
-              - `code-explorer`
               - `code-explorer/commit-detail`
               - `config_v2/config-link`
               - `config_v2/settings`
@@ -30811,7 +30853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
-          - `ConfigV2.WebRegister` ×45: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+          - `ConfigV2.WebRegister` ×43: "agent-launches", "agents-list", "all-conversations", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
           - `DataViewSlots.Setting` "data-view.fold" → `FoldControl`
@@ -31024,7 +31066,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useServerDataSource`
           - `useSortController`
       - Server:
-        - Contributes: `ConfigV2.Register` ×45: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+        - Contributes: `ConfigV2.Register` ×43: "agent-launches", "agents-list", "all-conversations", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
         - Uses:
           - `config_v2.getConfig`
           - `config_v2.watchConfig`
@@ -31054,7 +31096,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions/closure-tree`
           - `apps/studio/compositions/release`
           - `apps/studio/explorer`
-          - `code-explorer`
           - `config_v2/settings`
           - `conversations/agents`
           - `conversations/all-conversations`
@@ -31101,7 +31142,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/background/catalog`
           - `infra/deps`
           - `page/links`
-          - `plugin-meta/plugin-view/file-tree`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/gallery`
           - `primitives/data-view/icons`
@@ -32172,8 +32212,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `FileGitStatus`
           - `FileRef`
+          - `FileViewerGit`
         - Exports (values):
           - `fileExtension`
+          - `fileRefForPath`
           - `fileRefKey`
           - `fileRefName`
           - `fileUrl`
@@ -32200,7 +32242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/file-viewer.useFileText`
               - `primitives/loading.Loading`
               - `primitives/syntax-highlight.CodeListing`
-        - **`diff`** — Side-by-side diff of a changed checkout file vs HEAD — a contextual tab, offered only when the host reports a non-clean git status.
+        - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's bytes are read from.
           - Web:
             - Contributes: `FileViewer.Renderer` "Diff" → `FileDiffView`
             - Uses:
@@ -32419,11 +32461,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/website/shell`
           - `build`
           - `build/build-logs`
-          - `code-explorer`
           - `config_v2/config-link`
           - `config_v2/fields`
           - `config_v2/settings`
           - `conversations/agents`
+          - `conversations/conversation-view/explorer`
           - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/task-notification`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -32853,6 +32895,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources/source-detail/runs`
           - `apps/events/sources/source-detail/runs/extracted-events`
           - `apps/events/sources/source-field`
+          - `apps/file-explorer/git`
           - `apps/mail/mail-core`
           - `apps/mail/reading-pane`
           - `apps/mail/shell`
@@ -32910,6 +32953,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/dependencies`
           - `conversations/conversation-view/dependent-count`
           - `conversations/conversation-view/drop-and-exit`
+          - `conversations/conversation-view/explorer`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
@@ -33092,6 +33136,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources/source-detail/settings`
           - `apps/events/sources/source-detail/status`
           - `apps/file-explorer/browser`
+          - `apps/file-explorer/git`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
           - `apps/mail/shell`
@@ -33135,7 +33180,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-commits`
           - `build/build-info`
           - `build/deployment`
-          - `code-explorer`
           - `code-explorer/commit-detail`
           - `config_v2/settings`
           - `conversations/agents`
@@ -33144,6 +33188,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/artifacts/prototype`
           - `conversations/conversation-view/artifacts/screenshot`
           - `conversations/conversation-view/commits-graph`
+          - `conversations/conversation-view/explorer`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/subagents`
@@ -33184,6 +33229,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/exhibits`
           - `plugin-meta/plugin-view`
           - `plugin-meta/plugin-view/dependencies`
+          - `plugin-meta/plugin-view/file-tree`
           - `primitives/cursor-pagination`
           - `primitives/data-view`
           - `primitives/diff-view`
@@ -34177,7 +34223,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.file-explorer.browser`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.pages.vision`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.exhibits`, `plugin-meta.plugin-view`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.file-explorer.browser`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.pages.vision`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.explorer`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.exhibits`, `plugin-meta.plugin-view`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Contributes:
           - `plugin-conv-side.actions` "title" → `PaneTitleItem`
           - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -34225,8 +34271,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `backupRunPane.Actions` "title" → `PaneTitleItem`
           - `buildPane.Actions` "title" → `PaneTitleItem`
           - `buildDetailPane.Actions` "title" → `PaneTitleItem`
-          - `global-file-tree.actions` "title" → `PaneTitleItem`
-          - `conv-file-tree.actions` "title" → `PaneTitleItem`
           - `commitDetailPane.Actions` "title" → `PaneTitleItem`
           - `configNavPane.Actions` "title" → `PaneTitleItem`
           - `configDetailPane.Actions` "title" → `PaneTitleItem`
@@ -34238,6 +34282,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversationPane.Actions` "title" → `PaneTitleItem`
           - `filePeekPane.Actions` "title" → `PaneTitleItem`
           - `conv-commits-graph.actions` "title" → `PaneTitleItem`
+          - `conv-file-tree.actions` "title" → `PaneTitleItem`
           - `shellOutputPane.Actions` "title" → `PaneTitleItem`
           - `agentReportPane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
@@ -34478,7 +34523,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `auth/google/setup-wizard`
           - `backup`
           - `build`
-          - `code-explorer`
           - `code-explorer/commit-detail`
           - `config_v2/settings`
           - `conversations`
@@ -34490,6 +34534,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/artifacts/skill`
           - `conversations/conversation-view/code/file-pane`
           - `conversations/conversation-view/commits-graph`
+          - `conversations/conversation-view/explorer`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
@@ -36146,7 +36191,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×223: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "exhibits.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.WebRegister` ×223: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "exhibits.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -36176,7 +36221,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×222: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "exhibits.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.Register` ×222: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "exhibits.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -37218,14 +37263,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Web:
     - Slots:
-      - `Shell.Sidebar` ← `code-explorer`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversations-view`, `stats`, `tasks.task-detail`
+      - `Shell.Sidebar` ← `conversations.agents`, `conversations.all-conversations`, `conversations.conversations-view`, `stats`, `tasks.task-detail`
       - `Shell.Toolbar`
     - Uses: `primitives/slot-render.defineRenderSlot`
     - Exports (values): `Shell`
   - Cross-plugin:
     - Imported by:
       - `apps/agent-manager/shell`
-      - `code-explorer`
       - `conversations/agents`
       - `conversations/all-conversations`
       - `conversations/conversations-view`
@@ -39272,7 +39316,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-fix`
           - `build/build-logs`
           - `build/deployment`
-          - `code-explorer`
           - `config_v2/settings`
           - `config_v2/settings/conflict-agent`
           - `conversations/agents`

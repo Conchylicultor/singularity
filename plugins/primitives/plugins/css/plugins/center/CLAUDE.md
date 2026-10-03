@@ -71,7 +71,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/website/improve`
     - `apps/website/landing/layers`
     - `apps/website/pages/download`
-    - `code-explorer`
     - `config_v2/settings`
     - `conversations/agents`
     - `conversations/conversation-ui/item`

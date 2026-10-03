@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Side-by-side diff of a changed checkout file vs HEAD — a contextual tab, offered only when the host reports a non-clean git status.
+- Description: Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's bytes are read from.
 - Web:
   - Contributes: `FileViewer.Renderer` "Diff" → `FileDiffView`
   - Uses:

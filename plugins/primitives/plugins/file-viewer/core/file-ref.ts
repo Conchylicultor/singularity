@@ -27,6 +27,17 @@ export type FileGitStatus =
   | "copied"
   | "clean";
 
+/**
+ * Git context for a previewed file, independent of where its bytes come from.
+ * `checkout` is the code-api `:worktree` id (`"main"`, `"self"`, an attempt id,
+ * or an absolute checkout root); `path` is relative to that checkout.
+ */
+export interface FileViewerGit {
+  checkout: string;
+  path: string;
+  status: FileGitStatus;
+}
+
 /** The file's basename. */
 export function fileRefName(file: FileRef): string {
   return file.path.slice(file.path.lastIndexOf("/") + 1);

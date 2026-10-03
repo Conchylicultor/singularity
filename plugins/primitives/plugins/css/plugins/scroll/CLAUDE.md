@@ -112,7 +112,6 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `plugin-meta/exhibits`
     - `plugin-meta/plugin-health`
     - `plugin-meta/plugin-view`
-    - `plugin-meta/plugin-view/file-tree`
     - `primitives/css/column`
     - `primitives/data-view`
     - `primitives/diff-view`

@@ -40,8 +40,8 @@ export function isImagePath(filePath: string): boolean {
  * taking it — a screenshot of the app it just changed, a diff sheet — so the
  * picture exists *because* of this conversation even though the tool that
  * brought it here is a read. The key is the path exactly as the tool got it,
- * which is what the image endpoint takes: screenshots usually land in a temp
- * directory, outside any worktree.
+ * which is what file-viewer's `fileRefForPath` takes: screenshots usually land
+ * in a temp directory, outside any worktree, and are then read from the host.
  */
 export function extractScreenshots(event: JsonlEvent): ArtifactHit[] {
   if (event.kind !== "tool-call" || event.name !== "Read") return [];

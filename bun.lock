@@ -466,6 +466,10 @@
       "name": "@singularity/plugin-apps-file-explorer-browser",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/file-explorer/plugins/git": {
+      "name": "@singularity/plugin-apps-file-explorer-git",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/file-explorer/plugins/places": {
       "name": "@singularity/plugin-apps-file-explorer-places",
       "version": "0.0.1",
@@ -1435,6 +1439,10 @@
     },
     "plugins/conversations/plugins/conversation-view/plugins/exit-menu": {
       "name": "@singularity/plugin-conversations-conversation-view-exit-menu",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/explorer": {
+      "name": "@singularity/plugin-conversations-conversation-view-explorer",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/fork-conversation": {
@@ -6370,6 +6378,8 @@
 
     "@singularity/plugin-apps-file-explorer-browser": ["@singularity/plugin-apps-file-explorer-browser@workspace:plugins/apps/plugins/file-explorer/plugins/browser"],
 
+    "@singularity/plugin-apps-file-explorer-git": ["@singularity/plugin-apps-file-explorer-git@workspace:plugins/apps/plugins/file-explorer/plugins/git"],
+
     "@singularity/plugin-apps-file-explorer-places": ["@singularity/plugin-apps-file-explorer-places@workspace:plugins/apps/plugins/file-explorer/plugins/places"],
 
     "@singularity/plugin-apps-file-explorer-shell": ["@singularity/plugin-apps-file-explorer-shell@workspace:plugins/apps/plugins/file-explorer/plugins/shell"],
@@ -6839,6 +6849,8 @@
     "@singularity/plugin-conversations-conversation-view-exit": ["@singularity/plugin-conversations-conversation-view-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/exit"],
 
     "@singularity/plugin-conversations-conversation-view-exit-menu": ["@singularity/plugin-conversations-conversation-view-exit-menu@workspace:plugins/conversations/plugins/conversation-view/plugins/exit-menu"],
+
+    "@singularity/plugin-conversations-conversation-view-explorer": ["@singularity/plugin-conversations-conversation-view-explorer@workspace:plugins/conversations/plugins/conversation-view/plugins/explorer"],
 
     "@singularity/plugin-conversations-conversation-view-fork-conversation": ["@singularity/plugin-conversations-conversation-view-fork-conversation@workspace:plugins/conversations/plugins/conversation-view/plugins/fork-conversation"],
 

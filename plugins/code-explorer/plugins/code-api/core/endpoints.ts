@@ -4,11 +4,6 @@ import { EditedFileSchema } from "@plugins/conversations/plugins/conversation-vi
 import { CommitRowSchema } from "@plugins/primitives/plugins/commit-list/core";
 import { resolvableSchema } from "@plugins/primitives/plugins/live-state/core";
 
-export const getCodeTree = defineEndpoint({
-  route: "GET /api/code/:worktree/tree",
-  response: z.object({ files: z.array(z.string()) }),
-});
-
 export const getFileContent = defineEndpoint({
   route: "GET /api/code/:worktree/file",
   query: z.object({

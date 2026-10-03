@@ -3,7 +3,7 @@ import {
   type SealContributions,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
-import type { FileGitStatus, FileRef } from "../core";
+import type { FileRef, FileViewerGit } from "../core";
 
 /**
  * How well a renderer fits a file:
@@ -21,13 +21,19 @@ export type RendererMatch =
 /** What a renderer's `supports()` decides on: the file, plus its context. */
 export interface FileRendererTarget {
   file: FileRef;
-  /** The file's status vs its checkout's base, when the host knows it. */
-  gitStatus?: FileGitStatus;
+  /**
+   * The file's git context (its checkout, its path there, and its status vs
+   * the checkout's base), when the host knows it — independent of where
+   * `file`'s bytes come from, so a host file can carry it too.
+   */
+  git?: FileViewerGit;
 }
 
 /** What a renderer's component is handed. */
 export interface FileRendererProps {
   file: FileRef;
+  /** The git context the renderer was offered on (see FileRendererTarget). */
+  git?: FileViewerGit;
   /** A 1-based line to reveal and highlight, for renderers that show lines. */
   line?: number;
 }
@@ -61,6 +67,11 @@ export type SealedFileRendererContribution =
 export interface ResolvedRenderer {
   contribution: SealedFileRendererContribution;
   tier: Exclude<RendererMatch, false>;
+  /**
+   * The target the renderer was offered on — FileContent hands its context to
+   * the component, so a renderer always mounts with what `supports()` saw.
+   */
+  target: FileRendererTarget;
 }
 
 export function resolveRenderers(
@@ -71,7 +82,7 @@ export function resolveRenderers(
   for (const c of contributions) {
     const tier = c.supports(target);
     if (tier === false) continue;
-    resolved.push({ contribution: c, tier });
+    resolved.push({ contribution: c, tier, target });
   }
   resolved.sort((a, b) => TIER[b.tier] - TIER[a.tier]);
   // A last-resort renderer exists to say "nothing else can show this"; beside

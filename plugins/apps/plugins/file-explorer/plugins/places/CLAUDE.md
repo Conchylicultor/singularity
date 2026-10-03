@@ -4,24 +4,24 @@
 
 ## Plugin reference
 
-- Description: The file explorer's Places sidebar: every FileExplorer.Place (Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: the main checkout's path (GET /api/file-explorer/checkout).
+- Description: The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: the main checkout's path (GET /api/file-explorer/checkout).
 - Web:
   - Contributes:
     - `FileExplorer.Sidebar` "Places" → `PlacesSidebar`
     - `FileExplorer.Sidebar` "Storage" → `StorageMeter`
-    - `FileExplorer.Place` "home"
-    - `FileExplorer.Place` "downloads"
-    - `FileExplorer.Place` "singularity"
-    - `FileExplorer.Place` "startup-volume"
-    - `FileExplorer.Place` "trash"
+    - `FileExplorer.Places` "home"
+    - `FileExplorer.Places` "downloads"
+    - `FileExplorer.Places` "singularity"
+    - `FileExplorer.Places` "startup-volume"
+    - `FileExplorer.Places` "trash"
   - Uses:
     - `apps/file-explorer/browser.useExplorerLocation`
     - `apps/file-explorer/browser.useHomeDir`
     - `apps/file-explorer/browser.useOpenExplorerFolder`
     - `apps/file-explorer/shell.FileExplorer`
     - `apps/file-explorer/shell.PlaceGroup`
-    - `apps/file-explorer/shell.PlaceItem`
-    - `apps/file-explorer/shell.PlaceState`
+    - `apps/file-explorer/shell.PlacesSource`
+    - `apps/file-explorer/shell.PlacesState`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
     - `primitives/css/clip.Clip`

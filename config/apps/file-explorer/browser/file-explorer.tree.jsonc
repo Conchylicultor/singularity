@@ -3,15 +3,14 @@
   // The file explorer's listing (browser/web/components/file-tree.tsx): one
   // tree, its rows in the manual (rank) order the browser mints — folders
   // first, then by name — until a column header picks a field sort.
-  // `visibleFields` is the aligned columns, Name / Modified / Size, in order.
+  // No `visibleFields`: the aligned columns are every visible field — Name /
+  // Modified / Size, then each FileBrowserSlots.Fields contribution (the git
+  // badge) — so a contributed column shows without this file naming it.
   "views": [
     {
       "id": "tree",
       "name": "Tree",
-      "view": {
-        "type": "tree",
-        "visibleFields": ["name", "modified", "size"]
-      }
+      "view": { "type": "tree" }
     }
   ],
   "sortPresets": [],

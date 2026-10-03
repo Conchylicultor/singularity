@@ -37,5 +37,5 @@ export function treeToPayload(tree: PluginTree): PluginTreePayload {
   const plugins = tree.roots.map(toApiNode);
   const totals = { plugins: 0, loadBearing: 0, umbrellas: 0 };
   for (const p of plugins) tally(p, totals);
-  return { plugins, totals };
+  return { pluginsRoot: tree.pluginsRoot, plugins, totals };
 }

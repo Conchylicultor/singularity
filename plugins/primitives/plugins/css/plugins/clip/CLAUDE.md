@@ -50,7 +50,6 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `apps/sonata/progress/scrubber`
     - `apps/studio/graph`
     - `build/build-logs`
-    - `code-explorer`
     - `config_v2/settings`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view`
@@ -73,6 +72,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `page/links`
     - `page/map`
     - `page/math/equation`
+    - `plugin-meta/plugin-view/file-tree`
     - `primitives/app-shell`
     - `primitives/data-view/gallery`
     - `primitives/data-view/list`

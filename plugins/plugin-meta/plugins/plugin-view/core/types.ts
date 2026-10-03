@@ -22,6 +22,11 @@ export interface PluginNode {
 }
 
 export interface PluginTreePayload {
+  /**
+   * The absolute `plugins/` folder this tree was read from (this checkout's) —
+   * what every node's `path` is relative to.
+   */
+  pluginsRoot: string;
   plugins: PluginNode[];
   totals: {
     plugins: number;

@@ -7,7 +7,7 @@ import { placeContributions } from "./internal/places";
 
 export default {
   description:
-    "The file explorer's Places sidebar: every FileExplorer.Place (Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot.",
+    "The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot.",
   contributions: [
     FileExplorer.Sidebar({
       id: "places",

@@ -1,4 +1,11 @@
-import { useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -28,13 +35,18 @@ import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { hostFsVolume } from "@plugins/infra/plugins/host-fs/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import type { HostFsEntry } from "@plugins/infra/plugins/host-fs/core";
 import {
+  absolutePath,
   baseName,
   formatCount,
   formatSize,
   HOME,
   isWithin,
+  joinPath,
   parentPath,
+  type EntryRow,
+  type LensHideRule,
 } from "../../core";
 import {
   hostPathSource,
@@ -46,7 +58,8 @@ import {
   useLocalNavigator,
   type ExplorerNavigator,
 } from "../internal/navigator";
-import { FileTree, type EntryRow } from "./file-tree";
+import { WithLenses, type ComposedLens } from "../internal/lenses";
+import { FileTree, type EntryFilter } from "./file-tree";
 import { PreviewPane } from "./preview-pane";
 
 const backIcon = symbol("arrow-back");
@@ -56,6 +69,10 @@ const hiddenOnIcon = symbol("visibility");
 const hiddenOffIcon = symbol("visibility-off");
 
 const SHOW_HIDDEN_TTL_MS = 365 * 24 * 60 * 60 * 1000;
+
+/** Which lens hide rules are switched to show, by rule id. Absent → hidden. */
+type LensShown = Readonly<Record<string, boolean>>;
+const NONE_SHOWN: LensShown = {};
 
 export interface FileBrowserProps {
   /**
@@ -72,6 +89,12 @@ export interface FileBrowserProps {
    * (an embedded browser rooted at a checkout). Absent → the whole host.
    */
   root?: string;
+  /**
+   * Open a file somewhere else (a consumer with its own preview), given its
+   * absolute path. When set, the browser has no preview pane of its own:
+   * selecting or opening a file calls this instead.
+   */
+  onOpenFile?: (path: string) => void;
 }
 
 /**
@@ -97,6 +120,7 @@ function FileBrowserReady({
   navigator,
   initialPath = HOME,
   root,
+  onOpenFile,
   home,
 }: FileBrowserProps & { home: string }): ReactNode {
   const local = useLocalNavigator({ dir: initialPath, open: null });
@@ -112,19 +136,37 @@ function FileBrowserReady({
     false,
     { ttl: SHOW_HIDDEN_TTL_MS },
   );
+  const [lensShown, setLensShown] = useDraft<LensShown>(
+    "file-explorer:lens-shown",
+    NONE_SHOWN,
+    { ttl: SHOW_HIDDEN_TTL_MS },
+  );
 
   const listing = (
-    <Listing
-      key={dir}
-      nav={nav}
-      home={home}
-      root={root}
-      showHidden={showHidden}
-      onToggleHidden={() => setShowHidden(!showHidden)}
-      leading={atTopEdge ? leadingControl : undefined}
-      endSafeArea={atTopEdge && open === null}
-    />
+    <WithLenses dir={absolutePath(dir, home)}>
+      {(lens) => (
+        <Listing
+          key={dir}
+          nav={nav}
+          home={home}
+          root={root}
+          onOpenFile={onOpenFile}
+          lens={lens}
+          showHidden={showHidden}
+          onToggleHidden={() => setShowHidden(!showHidden)}
+          lensShown={lensShown}
+          onToggleLens={(id) =>
+            setLensShown({ ...lensShown, [id]: lensShown[id] !== true })
+          }
+          leading={atTopEdge ? leadingControl : undefined}
+          endSafeArea={atTopEdge && open === null}
+        />
+      )}
+    </WithLenses>
   );
+
+  // A consumer bringing its own preview gets the listing alone.
+  if (onOpenFile !== undefined) return listing;
 
   return (
     <ResizablePanelGroup orientation="horizontal" id="file-explorer-split">
@@ -135,13 +177,18 @@ function FileBrowserReady({
         <>
           <ResizableHandle />
           <ResizablePanel id="preview" minSize="360px" defaultSize="52%">
-            <PreviewPane
-              key={open}
-              path={open}
-              home={home}
-              onClose={() => nav.openFile(null)}
-              endSafeArea={atTopEdge}
-            />
+            <WithLenses dir={absolutePath(parentPath(open, home) ?? "/", home)}>
+              {(lens) => (
+                <PreviewPane
+                  key={open}
+                  path={open}
+                  home={home}
+                  git={lens.fileGit(absolutePath(open, home))}
+                  onClose={() => nav.openFile(null)}
+                  endSafeArea={atTopEdge}
+                />
+              )}
+            </WithLenses>
           </ResizablePanel>
         </>
       )}
@@ -157,16 +204,24 @@ function Listing({
   nav,
   home,
   root,
+  onOpenFile,
+  lens,
   showHidden,
   onToggleHidden,
+  lensShown,
+  onToggleLens,
   leading,
   endSafeArea,
 }: {
   nav: ExplorerNavigator;
   home: string;
   root: string | undefined;
+  onOpenFile: ((path: string) => void) | undefined;
+  lens: ComposedLens;
   showHidden: boolean;
   onToggleHidden: () => void;
+  lensShown: LensShown;
+  onToggleLens: (id: string) => void;
   leading: ReactNode;
   endSafeArea: boolean;
 }): ReactNode {
@@ -176,12 +231,29 @@ function Listing({
   const treeRef = useRef<HTMLElement | null>(null);
   const rootName = useRootVolumeName();
   const source = useMemo(
-    () => hostPathSource(home, rootName),
-    [home, rootName],
+    () => hostPathSource(home, rootName, root),
+    [home, rootName, root],
   );
   const { listings, request } = useListings(dir);
 
-  const up = root !== undefined && dir === root ? null : parentPath(dir, home);
+  // Show hidden files, then every lens hide rule that is not switched to show.
+  const activeHides = useMemo(
+    () => lens.hides.filter((rule) => lensShown[rule.id] !== true),
+    [lens, lensShown],
+  );
+  const shows = useCallback<EntryFilter>(
+    (entry: HostFsEntry, path: string) => {
+      if (!showHidden && entry.hidden) return false;
+      if (activeHides.length === 0) return true;
+      const abs = absolutePath(path, home);
+      return !activeHides.some((rule) => rule.isHidden(abs));
+    },
+    [showHidden, activeHides, home],
+  );
+
+  const atRoot =
+    root !== undefined && absolutePath(dir, home) === absolutePath(root, home);
+  const up = atRoot ? null : parentPath(dir, home);
   const goTo = (target: PathTarget) => {
     if (target.kind === "dir") nav.navigate(target.path, open);
     else nav.navigate(parentPath(target.path, home) ?? "/", target.path);
@@ -219,20 +291,24 @@ function Listing({
   );
   useSurfaceShortcuts(shortcuts);
 
+  const openFile = (path: string) => {
+    if (onOpenFile !== undefined) onOpenFile(absolutePath(path, home));
+    else nav.openFile(path);
+  };
   const onActivate = (row: EntryRow) => {
     setSelected(row.path);
-    if (row.kind !== "dir") nav.openFile(row.path);
+    if (row.kind !== "dir") openFile(row.path);
   };
   const onOpen = (row: EntryRow) => {
     if (row.kind === "dir") nav.navigate(row.path, open);
-    else nav.openFile(row.path);
+    else openFile(row.path);
   };
 
   const rootListing = listings.get(dir);
   const result = rootListing?.result ?? null;
   const entries =
     result?.kind === "ok"
-      ? result.entries.filter((e) => showHidden || !e.hidden)
+      ? result.entries.filter((e) => shows(e, joinPath(dir, e.name)))
       : null;
 
   let body: ReactNode;
@@ -261,7 +337,7 @@ function Listing({
         root={dir}
         listings={listings}
         request={request}
-        showHidden={showHidden}
+        shows={shows}
         query={query}
         onQueryChange={setQuery}
         selectedPath={selected}
@@ -326,6 +402,14 @@ function Listing({
             variant="ghost"
             onClick={onToggleHidden}
           />
+          {lens.hides.map((rule) => (
+            <LensToggle
+              key={rule.id}
+              rule={rule}
+              shown={lensShown[rule.id] === true}
+              onToggle={() => onToggleLens(rule.id)}
+            />
+          ))}
         </Bar>
       }
       body={
@@ -340,6 +424,28 @@ function Listing({
           selected={selected}
         />
       }
+    />
+  );
+}
+
+/** A lens hide rule's toolbar toggle: "Show ignored files" / "Hide …". */
+function LensToggle({
+  rule,
+  shown,
+  onToggle,
+}: {
+  rule: LensHideRule;
+  shown: boolean;
+  onToggle: () => void;
+}): ReactNode {
+  return (
+    <IconButton
+      icon={rule.icon}
+      active={shown}
+      aria-pressed={shown}
+      label={shown ? `Hide ${rule.label}` : `Show ${rule.label}`}
+      variant="ghost"
+      onClick={onToggle}
     />
   );
 }

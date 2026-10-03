@@ -373,12 +373,6 @@
       "parent": null
     },
     {
-      "paneId": "global-file-tree",
-      "segment": "code/:worktree",
-      "appIndex": false,
-      "parent": null
-    },
-    {
       "paneId": "google-maps-live-map-setup",
       "segment": "google-maps/live-map",
       "appIndex": false,

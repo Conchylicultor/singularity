@@ -778,6 +778,7 @@ grouped under the wave or item that removes it
     - `apps/events/event-list`
     - `apps/events/events-core`
     - `apps/events/sources/source-field`
+    - `apps/file-explorer/git`
     - `apps/mail/mail-core`
     - `apps/mail/reading-pane`
     - `apps/mail/sync`

@@ -12,7 +12,14 @@ import type {
   PathBarSource,
   PathResolution,
 } from "@plugins/primitives/plugins/path-bar/web";
-import { baseName, displayPath, HOME, pathChain } from "../../core";
+import {
+  absolutePath,
+  baseName,
+  displayPath,
+  HOME,
+  isWithin,
+  pathChain,
+} from "../../core";
 
 /**
  * The user's home directory, absolute — what `~` stands for. Every comparison
@@ -65,18 +72,28 @@ export function crumbLabel(path: string, rootName: string | undefined): string {
  * folder completions from host-fs `complete`, and validation from `stat` (a
  * file resolves to itself, so the explorer opens its folder and previews it).
  * Paths come back in display form (`~/…` under home).
+ *
+ * With a `root` (an embedded browser), the bar never leads above it: the
+ * crumbs start at the root, completions outside it are dropped, and a typed
+ * path outside it is invalid.
  */
 export function hostPathSource(
   home: string,
   rootName: string | undefined,
+  root?: string,
 ): PathBarSource {
+  const rootAbs = root === undefined ? undefined : absolutePath(root, home);
+  const inRoot = (path: string) =>
+    rootAbs === undefined || isWithin(absolutePath(path, home), rootAbs);
   return {
     segments: (path) =>
-      pathChain(path).map((p) => ({
-        key: p,
-        label: crumbLabel(p, rootName),
-        path: p,
-      })),
+      pathChain(path)
+        .filter(inRoot)
+        .map((p) => ({
+          key: p,
+          label: crumbLabel(p, rootName),
+          path: p,
+        })),
     complete: async (prefix) => {
       const result = await fetchEndpoint(
         hostFsComplete,
@@ -85,7 +102,9 @@ export function hostPathSource(
       );
       switch (result.kind) {
         case "ok":
-          return result.matches.map((m) => displayPath(m.path, home));
+          return result.matches
+            .filter((m) => inRoot(m.path))
+            .map((m) => displayPath(m.path, home));
         // Typed into a folder that is not there (or into a file): no folder
         // completes it, which is the answer, not a failure.
         case "missing":
@@ -99,6 +118,13 @@ export function hostPathSource(
       const result = await fetchEndpoint(hostFsStat, {}, { query: { path } });
       switch (result.kind) {
         case "ok":
+          if (!inRoot(result.path)) {
+            return {
+              kind: "invalid",
+              path,
+              reason: `Outside ${displayPath(rootAbs ?? "/", home)}`,
+            };
+          }
           return {
             kind: result.entry.kind === "dir" ? "dir" : "file",
             path: displayPath(result.path, home),

@@ -1,8 +1,9 @@
-import { resolve, sep } from "node:path";
-import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
+import { resolve } from "node:path";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { ALLOWED_REFS, resolveRef } from "./resolve-ref";
 import { resolveWorktreePath } from "./resolve-worktree-path";
+import { resolveInsideRoot } from "./contained-path";
 
 // Every git read in this file serves an open HTTP request from the code
 // explorer: a local, metadata-or-blob read that finishes in milliseconds. The
@@ -35,17 +36,6 @@ function mimeForPath(path: string): string | null {
   return EXT_TO_MIME[extForPath(path)] ?? null;
 }
 
-function isPathInside(root: string, target: string): boolean {
-  const rootNorm = root.endsWith(sep) ? root : root + sep;
-  return target === root || target.startsWith(rootNorm);
-}
-
-function expandTilde(path: string): string {
-  if (path === "~") return HOME_DIR;
-  if (path.startsWith("~/")) return resolve(HOME_DIR, path.slice(2));
-  return path;
-}
-
 export async function handleImageContent(
   req: Request,
   params: Record<string, string>,
@@ -66,17 +56,14 @@ export async function handleImageContent(
   const mime = mimeForPath(path);
   if (!mime) return new Response("Unsupported media type", { status: 415 });
 
+  // Inside the checkout only, with or without a ref: an image elsewhere on the
+  // host is host-fs's to serve (file-viewer's `host` FileRef).
+  const absTarget = resolveInsideRoot(wtPath, path);
+  if (absTarget === null) return new Response("Invalid path", { status: 400 });
   const absRoot = resolve(wtPath);
   let bytes: Uint8Array<ArrayBuffer>;
 
   if (ref) {
-    const absTarget = resolve(absRoot, path);
-    if (
-      path.startsWith("/") ||
-      path.startsWith("~") ||
-      !isPathInside(absRoot, absTarget)
-    )
-      return new Response("Invalid path", { status: 400 });
     if (!ALLOWED_REFS.has(ref))
       return new Response("Invalid ref", { status: 400 });
     const resolvedRef = await resolveRef(wtPath, ref);
@@ -95,12 +82,6 @@ export async function handleImageContent(
       return new Response("File not found", { status: 404 });
     bytes = new Uint8Array(result.stdoutBytes);
   } else {
-    const expanded = expandTilde(path);
-    const absTarget = expanded.startsWith("/")
-      ? resolve(expanded)
-      : resolve(absRoot, expanded);
-    if (!expanded.startsWith("/") && !isPathInside(absRoot, absTarget))
-      return new Response("Invalid path", { status: 400 });
     const file = Bun.file(absTarget);
     if (!(await file.exists()))
       return new Response("File not found", { status: 404 });

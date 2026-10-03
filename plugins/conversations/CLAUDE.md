@@ -224,7 +224,6 @@
     - `active-data/task`
     - `apps/agent-manager/welcome`
     - `apps/prototypes/checkpoints`
-    - `code-explorer`
     - `conversations/agents`
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
@@ -240,6 +239,7 @@
     - `conversations/conversation-view/drop-dependents`
     - `conversations/conversation-view/exit`
     - `conversations/conversation-view/exit-menu`
+    - `conversations/conversation-view/explorer`
     - `conversations/conversation-view/fork-session`
     - `conversations/conversation-view/hold-and-exit`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
@@ -315,6 +315,7 @@
       - **`drop-dependents`** — Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.
       - **`exit`** — Exit-menu entry that closes the conversation without changing any task state.
       - **`exit-menu`** — Ghost icon button next to Push & Exit that opens a menu of exit actions (hold, exit, drop, drop dependents). Hosts the ExitMenu.Item slot each action contributes to.
+      - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/>, rooted at the checkout (git status from the file explorer's git lens).
       - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
       - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
       - **`header`** — HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips in the conversation pane header share.

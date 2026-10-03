@@ -83,6 +83,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`
     - `apps/file-explorer/browser`
+    - `apps/file-explorer/git`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/mail/shell`
@@ -126,7 +127,6 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `build/build-commits`
     - `build/build-info`
     - `build/deployment`
-    - `code-explorer`
     - `code-explorer/commit-detail`
     - `config_v2/settings`
     - `conversations/agents`
@@ -135,6 +135,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/commits-graph`
+    - `conversations/conversation-view/explorer`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/subagents`
@@ -175,6 +176,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `plugin-meta/exhibits`
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/dependencies`
+    - `plugin-meta/plugin-view/file-tree`
     - `primitives/cursor-pagination`
     - `primitives/data-view`
     - `primitives/diff-view`

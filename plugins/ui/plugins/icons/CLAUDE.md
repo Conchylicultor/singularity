@@ -268,7 +268,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `build/build-fix`
     - `build/build-logs`
     - `build/deployment`
-    - `code-explorer`
     - `config_v2/settings`
     - `config_v2/settings/conflict-agent`
     - `conversations/agents`

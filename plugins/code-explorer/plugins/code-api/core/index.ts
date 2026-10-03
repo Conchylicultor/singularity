@@ -1,5 +1,4 @@
 export {
-  getCodeTree,
   getFileContent,
   getFileDiff,
   getImageContent,

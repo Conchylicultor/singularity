@@ -26,7 +26,13 @@ export function FileContent({
       {renderIsolated(
         FileViewer.Renderer,
         active.contribution as unknown as Contribution,
-        { file, line },
+        {
+          file,
+          line,
+          ...(active.target.git !== undefined
+            ? { git: active.target.git }
+            : {}),
+        },
       )}
     </ContentScope>
   );

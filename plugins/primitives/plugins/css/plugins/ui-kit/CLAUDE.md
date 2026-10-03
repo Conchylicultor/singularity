@@ -576,7 +576,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `build/build-logs`
     - `build/deployment`
     - `build/serve-composition`
-    - `code-explorer`
     - `code-explorer/commit-detail`
     - `config_v2/config-link`
     - `config_v2/settings`

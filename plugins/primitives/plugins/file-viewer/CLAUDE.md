@@ -71,8 +71,10 @@ source to read.
   - Exports (types):
     - `FileGitStatus`
     - `FileRef`
+    - `FileViewerGit`
   - Exports (values):
     - `fileExtension`
+    - `fileRefForPath`
     - `fileRefKey`
     - `fileRefName`
     - `fileUrl`
@@ -88,7 +90,7 @@ source to read.
     - `primitives/file-viewer/markdown`
 - Sub-plugins:
   - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
-  - **`diff`** — Side-by-side diff of a changed checkout file vs HEAD — a contextual tab, offered only when the host reports a non-clean git status.
+  - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's bytes are read from.
   - **`fallback`** — Last-resort renderer for a file no other renderer offers to show (binary formats): a large file icon, "No preview for <kind> files", and Open with default app for a host file.
   - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
   - **`markdown`** — Rendered markdown preview for .md and .mdx files.

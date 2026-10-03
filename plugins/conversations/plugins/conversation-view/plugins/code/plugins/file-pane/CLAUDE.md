@@ -32,7 +32,6 @@
     - `filePeekPane`
 - Cross-plugin:
   - Imported by:
-    - `code-explorer`
     - `conversations/conversation-view/artifacts/research`
     - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/jsonl-viewer/file-path`

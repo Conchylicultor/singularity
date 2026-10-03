@@ -4,12 +4,12 @@
 
 ## Plugin reference
 
-- Description: App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Place slots.
+- Description: App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
 - Web:
   - Slots:
     - `FileExplorer.Sidebar` ← `apps.file-explorer.places`
     - `FileExplorer.Toolbar`
-    - `FileExplorer.Place` ← `apps.file-explorer.places`
+    - `FileExplorer.Places` ← `apps.file-explorer.places`
   - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
   - Uses:
     - `apps-core.Apps`
@@ -17,9 +17,10 @@
     - `primitives/app-shell.AppShellLayout`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):
+    - `Place`
     - `PlaceGroup`
-    - `PlaceItem`
-    - `PlaceState`
+    - `PlacesSource`
+    - `PlacesState`
   - Exports (values): `FileExplorer`
 - Core:
   - Uses: `primitives/pane.defineApp`

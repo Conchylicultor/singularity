@@ -84,6 +84,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/runs/extracted-events`
     - `apps/events/sources/source-detail/status`
+    - `apps/file-explorer/git`
     - `apps/mail/attachments`
     - `apps/mail/search`
     - `apps/prototypes/canvas`

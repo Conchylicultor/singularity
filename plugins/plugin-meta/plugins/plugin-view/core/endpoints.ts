@@ -27,6 +27,7 @@ const pluginNodeSchema: ZodParser<PluginNode> = z.lazy(() =>
 );
 
 export const pluginTreePayloadSchema: ZodParser<PluginTreePayload> = z.object({
+  pluginsRoot: z.string(),
   plugins: z.array(pluginNodeSchema),
   totals: z.object({
     plugins: z.number(),

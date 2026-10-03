@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { FileGitStatus, FileRef } from "../../core";
+import type { FileRef, FileViewerGit } from "../../core";
 import { FileViewer, resolveRenderers, type ResolvedRenderer } from "../slots";
 import { useStableFileRef } from "../internal/use-stable-file-ref";
 
@@ -17,20 +17,29 @@ export interface FileRenderersHandle {
  */
 export function useFileRenderers({
   file,
-  gitStatus,
+  git,
 }: {
   file: FileRef;
-  gitStatus?: FileGitStatus;
+  git?: FileViewerGit;
 }): FileRenderersHandle {
   const contributions = FileViewer.Renderer.useContributions();
   const stableFile = useStableFileRef(file);
+  // Keyed on the fields, so a host building `git` inline each render does not
+  // re-resolve the renderers.
+  const checkout = git?.checkout;
+  const gitPath = git?.path;
+  const status = git?.status;
   const resolved = useMemo(
     () =>
       resolveRenderers(contributions, {
         file: stableFile,
-        ...(gitStatus !== undefined ? { gitStatus } : {}),
+        ...(checkout !== undefined &&
+        gitPath !== undefined &&
+        status !== undefined
+          ? { git: { checkout, path: gitPath, status } }
+          : {}),
       }),
-    [contributions, stableFile, gitStatus],
+    [contributions, stableFile, checkout, gitPath, status],
   );
   const defaultId = resolved[0]?.contribution.id ?? null;
   const [activeId, setActiveId] = useState<string | null>(defaultId);

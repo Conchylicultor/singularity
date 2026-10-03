@@ -81,6 +81,7 @@ moved (see `apps/prototypes/files`).
 - Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry.
 - Cross-plugin:
   - Imported by:
+    - `apps/file-explorer/git`
     - `apps/prototypes/files`
     - `apps/sonata/sources/midi/folders`
     - `config_v2`

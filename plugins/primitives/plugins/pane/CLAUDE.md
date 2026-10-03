@@ -765,7 +765,7 @@ See "Open questions" in the design doc.
 - Description: Unified pane primitive: Pane.define and chrome components.
 - Load-bearing: yes
 - Web:
-  - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.file-explorer.browser`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.pages.vision`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.exhibits`, `plugin-meta.plugin-view`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+  - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.file-explorer.browser`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.pages.vision`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.explorer`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.exhibits`, `plugin-meta.plugin-view`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
   - Contributes:
     - `plugin-conv-side.actions` "title" → `PaneTitleItem`
     - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -813,8 +813,6 @@ See "Open questions" in the design doc.
     - `backupRunPane.Actions` "title" → `PaneTitleItem`
     - `buildPane.Actions` "title" → `PaneTitleItem`
     - `buildDetailPane.Actions` "title" → `PaneTitleItem`
-    - `global-file-tree.actions` "title" → `PaneTitleItem`
-    - `conv-file-tree.actions` "title" → `PaneTitleItem`
     - `commitDetailPane.Actions` "title" → `PaneTitleItem`
     - `configNavPane.Actions` "title" → `PaneTitleItem`
     - `configDetailPane.Actions` "title" → `PaneTitleItem`
@@ -826,6 +824,7 @@ See "Open questions" in the design doc.
     - `conversationPane.Actions` "title" → `PaneTitleItem`
     - `filePeekPane.Actions` "title" → `PaneTitleItem`
     - `conv-commits-graph.actions` "title" → `PaneTitleItem`
+    - `conv-file-tree.actions` "title" → `PaneTitleItem`
     - `shellOutputPane.Actions` "title" → `PaneTitleItem`
     - `agentReportPane.Actions` "title" → `PaneTitleItem`
     - `workflow-node.actions` "title" → `PaneTitleItem`
@@ -1066,7 +1065,6 @@ See "Open questions" in the design doc.
     - `auth/google/setup-wizard`
     - `backup`
     - `build`
-    - `code-explorer`
     - `code-explorer/commit-detail`
     - `config_v2/settings`
     - `conversations`
@@ -1078,6 +1076,7 @@ See "Open questions" in the design doc.
     - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
+    - `conversations/conversation-view/explorer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
