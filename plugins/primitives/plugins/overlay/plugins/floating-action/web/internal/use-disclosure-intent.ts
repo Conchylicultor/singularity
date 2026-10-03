@@ -13,10 +13,8 @@ const DEFAULT_CLOSE_DELAY = 150;
 export interface DisclosureIntentProps {
   tabIndex: 0;
   "aria-expanded": boolean;
-  onPointerEnter: () => void;
-  onPointerLeave: () => void;
   onPointerDown: () => void;
-  onFocus: () => void;
+  onFocus: (e: FocusEvent) => void;
   onBlur: (e: FocusEvent) => void;
   onKeyDown: (e: KeyboardEvent) => void;
 }
@@ -35,8 +33,19 @@ export interface DisclosureIntent {
  *                delay. Re-entry ALWAYS cancels the pending close, so returning
  *                to the trigger reliably reopens — there is no timer "lock" that
  *                swallows a genuine re-entry (the dead-zone bug this replaces).
- *   - focus    — opens while keyboard focus is anywhere inside the subtree, so
- *                the control is reachable by Tab, not mouse-only.
+ *                Hover is the pointer being over the root's DOM box, read from
+ *                NATIVE events — never React's synthetic enter/leave, which
+ *                follow the React tree: a portaled overlay opened from inside
+ *                (the element picker, a popover) counts as "inside" there, and
+ *                when it unmounts under the cursor React synthesizes no leave
+ *                at all, so hover stuck on and the open panel kept covering
+ *                what was behind it. While hovered, every document pointer
+ *                move re-checks containment, which catches that removal.
+ *   - focus    — opens while KEYBOARD focus (`:focus-visible`) is anywhere
+ *                inside the subtree, so the control is reachable by Tab, not
+ *                mouse-only. A mouse click leaves its button focused (and a
+ *                closing popover restores focus to it); counting that would
+ *                pin the panel open long after the pointer left.
  *   - latch    — a pointer-press while fully closed (the touch path, where
  *                there is no hover) pins it open until Esc or an outside press.
  *                Presses while already open are left to bubble to the content,
@@ -65,15 +74,48 @@ export function useDisclosureIntent(
 
   const open = hovered || focused || latched || held;
 
-  const onPointerEnter = useCallback(() => {
+  // `closeTimer.current` is defined exactly while a hover close is pending.
+  const cancelClose = useCallback(() => {
     clearTimeout(closeTimer.current);
-    setHovered(true);
+    closeTimer.current = undefined;
   }, []);
 
-  const onPointerLeave = useCallback(() => {
-    clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setHovered(false), closeDelay);
+  // Idempotent: re-arming on every pointer move outside would postpone the
+  // close forever while the cursor keeps moving.
+  const scheduleClose = useCallback(() => {
+    if (closeTimer.current !== undefined) return;
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = undefined;
+      setHovered(false);
+    }, closeDelay);
   }, [closeDelay]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const enter = () => {
+      cancelClose();
+      setHovered(true);
+    };
+    root.addEventListener("pointerenter", enter);
+    root.addEventListener("pointerleave", scheduleClose);
+    return () => {
+      root.removeEventListener("pointerenter", enter);
+      root.removeEventListener("pointerleave", scheduleClose);
+    };
+  }, [rootRef, cancelClose, scheduleClose]);
+
+  // An element removed from under the cursor (a portaled overlay closing)
+  // fires no leave on the root, so while hovered, re-check containment on
+  // every move: the first move that lands outside the root starts the close.
+  useEffect(() => {
+    if (!hovered) return;
+    const onDocPointerMove = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) scheduleClose();
+    };
+    document.addEventListener("pointermove", onDocPointerMove);
+    return () => document.removeEventListener("pointermove", onDocPointerMove);
+  }, [hovered, rootRef, scheduleClose]);
 
   const onPointerDown = useCallback(() => {
     // Touch has no hover: the first press on a closed control opens it. While
@@ -81,10 +123,16 @@ export function useDisclosureIntent(
     setLatched((latchedNow) => (open ? latchedNow : true));
   }, [open]);
 
-  const onFocus = useCallback(() => {
-    clearTimeout(closeTimer.current);
-    setFocused(true);
-  }, []);
+  const onFocus = useCallback(
+    (e: FocusEvent) => {
+      // Only keyboard focus opens (see `focus` above); a pointer-driven focus
+      // moving inside clears it, so the panel follows the pointer again.
+      const keyboard = (e.target as Element).matches(":focus-visible");
+      if (keyboard) cancelClose();
+      setFocused(keyboard);
+    },
+    [cancelClose],
+  );
 
   const onBlur = useCallback((e: FocusEvent) => {
     // Only collapse once focus has left the whole subtree, not when it moves
@@ -99,12 +147,12 @@ export function useDisclosureIntent(
       // key to us through its portal, and it must close only the popup.
       if (e.key === "Escape" && open && !held) {
         e.stopPropagation();
-        clearTimeout(closeTimer.current);
+        cancelClose();
         setHovered(false);
         setLatched(false);
       }
     },
-    [open, held],
+    [open, held, cancelClose],
   );
 
   // An outside press dismisses a latched (touch / click) open. Hover and focus
@@ -128,8 +176,6 @@ export function useDisclosureIntent(
     rootProps: {
       tabIndex: 0,
       "aria-expanded": open,
-      onPointerEnter,
-      onPointerLeave,
       onPointerDown,
       onFocus,
       onBlur,
