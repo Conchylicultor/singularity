@@ -2,7 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ownFolderBarrelPlugin, parseEmittedImports } from "./vite-builder";
+import {
+  assertCoEntriesOffHostPath,
+  ownFolderBarrelPlugin,
+  parseEmittedImports,
+} from "./vite-builder";
 
 // Regression: an artifact with internal dynamic imports code-splits into `.mjs`
 // chunks; their imports were once invisible (only `index.js` was scanned), so
@@ -86,5 +90,43 @@ describe("ownFolderBarrelPlugin", () => {
     const importer = join(pluginDir, "web", "components", "a.tsx");
     expect(resolveId("../internal/x", importer)).toBeNull();
     expect(resolveId("../../shared/x", importer)).toBeNull();
+  });
+});
+
+describe("assertCoEntriesOffHostPath (exhibits.js never on the boot path)", () => {
+  const coEntries = [
+    {
+      folder: "exhibits",
+      entryFile: "/p/exhibits/index.ts",
+      specifier: "@plugins/p/exhibits",
+    },
+  ];
+
+  test("shared chunks are fine — the host only reaches common code", () => {
+    expect(() =>
+      assertCoEntriesOffHostPath({
+        dirName: "p.web.1",
+        coEntries,
+        staticImportsByFile: {
+          "index.js": ["./shared-abc.mjs", "@plugins/other/web"],
+          "exhibits.js": ["./shared-abc.mjs", "./index.js"],
+          "shared-abc.mjs": ["react"],
+        },
+      }),
+    ).not.toThrow();
+  });
+
+  test("index.js reaching exhibits.js (directly or through a chunk) throws", () => {
+    expect(() =>
+      assertCoEntriesOffHostPath({
+        dirName: "p.web.1",
+        coEntries,
+        staticImportsByFile: {
+          "index.js": ["./shared-abc.mjs"],
+          "shared-abc.mjs": ["./exhibits.js"],
+          "exhibits.js": [],
+        },
+      }),
+    ).toThrow("statically reaches exhibits.js");
   });
 });

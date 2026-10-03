@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-primitives-css-layout-harness",
-  "description": "Layout-primitive geometry regression harness: a declarative fixtures catalog (one fixtures/index.ts per primitive) measured by a generic geometry oracle that asserts no-overlap / no-clip / truncation-onset invariants.",
+  "description": "Layout-primitive geometry regression harness: every geometry-gated exhibit in the exhibit catalog (an exhibits/index.ts per contributor) measured by a generic geometry oracle that asserts no-overlap / no-clip / truncation-onset invariants.",
   "private": true,
   "version": "0.0.1",
   "devDependencies": {

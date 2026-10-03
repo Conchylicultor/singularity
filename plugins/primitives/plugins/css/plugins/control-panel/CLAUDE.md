@@ -533,7 +533,7 @@ hosting the panel.
 
 ## Enforcement
 
-`fixtures/` contributes the geometry fixtures to the layout-harness catalog,
+`exhibits/` contributes geometry-gated exhibits to the exhibit catalog,
 swept at every width role (262 / 320 / 500 / 524 — the three popover roles plus
 the config settings PANE, whose geometry was untested until it was added) and
 measured in a real browser by
@@ -555,7 +555,7 @@ the text rail, a sub-head on the eyebrow's — each gated in a panel with an ico
 column so the two rails are genuinely apart) and `group-nested-rail` (a nested
 group's republished rail against its children).
 
-Plus `region` and `pane-region` — two **`RegionFixture`s**, which say only
+Plus `region` and `pane-region` — two **region exhibits** (`regionExhibit`), which say only
 "`ControlPanel` / `ControlPanelPane` opens a region" and lets the harness fill it from `REGION_CHILDREN` (bare input, bare
 button, bare prose, a `display: contents` contribution, a `rail-follow` band, a
 `rail-bleed` row). This file used to ask authors to "render something other than

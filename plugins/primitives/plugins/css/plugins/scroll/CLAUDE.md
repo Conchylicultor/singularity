@@ -109,11 +109,11 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `page/page-link`
     - `page/place`
     - `page/table`
+    - `plugin-meta/exhibits`
     - `plugin-meta/plugin-health`
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/file-tree`
     - `primitives/css/column`
-    - `primitives/css/layout-harness`
     - `primitives/data-view`
     - `primitives/diff-view`
     - `primitives/file-viewer`

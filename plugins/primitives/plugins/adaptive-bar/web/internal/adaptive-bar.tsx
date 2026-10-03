@@ -223,7 +223,7 @@ export type AdaptiveBarProps = AdaptiveBarBaseProps &
  * three `display: contents` wrappers down, still a flex item of this row and no
  * longer a child of it. So the row-level selector silently stopped reaching the
  * containers, and a squeezable occupant is the proven blind-the-guard failure
- * (`fixtures/` → `adaptive-bar/squeezable-occupants`, 186px → 83px). The two
+ * (`exhibits/` → `adaptive-bar/squeezable-occupants`, 186px → 83px). The two
  * things that ARE direct children and must stay rigid say so themselves: the `⋯`
  * trigger (whose width `measureTrigger` caches, so one squeezed reading would
  * under-reserve it forever) and, by construction, every minted container
@@ -2095,8 +2095,9 @@ function px(value: string): number {
  * one that can be anywhere on the page. A bar inside a horizontally scrolled
  * strip sits hundreds of pixels to its right in viewport space while fitting
  * its own row perfectly, and was accused on every pass — which is what killed
- * the Layout Lab, where every fixture card has exactly that shape. Do not
- * reintroduce an ancestor comparison in any form; `parentElement` is no better,
+ * the Layout Lab (now Debug → Exhibits), where every exhibit card has exactly
+ * that shape. Do not reintroduce an ancestor comparison in any form;
+ * `parentElement` is no better,
  * since the parent may shrink or carry padding of its own.
  *
  * **And not `root.scrollWidth > root.clientWidth` either**, tempting as the

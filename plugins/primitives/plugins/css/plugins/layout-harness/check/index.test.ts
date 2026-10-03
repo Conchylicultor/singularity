@@ -83,7 +83,7 @@ plugins/.../layout-geometry.test.ts:
  0 pass
  1 fail`;
 
-const ASSERTION_FAILURE = `(fail) the fixture catalog is non-empty
+const ASSERTION_FAILURE = `(fail) the geometry-gated exhibit set is non-empty
 error: expect(received).toBeGreaterThan(expected)
 AssertionError: Expected 0 to be greater than 0
  0 pass

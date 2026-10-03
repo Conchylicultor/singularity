@@ -4,8 +4,10 @@ One repo-wide ESLint rule policing imports **inside a single plugin's own
 tree**:
 
 - **`no-deep-own-folder-import`**: a browser-built file (`web/`, `core/`,
-  `shared/`, `fixtures/`) reaches a sibling folder only through its barrel —
-  `../../core`, never `../../core/merge-group-values`. See below.
+  `shared/`, `exhibits/`) reaches a sibling folder only through its barrel —
+  `../../core`, never `../../core/merge-group-values` — except that
+  `exhibits/` may deep-import its own `web/`, which it is co-built with. See
+  below.
 
 It reads the plugin-dir grammar through `lint/own-tree.ts`.
 

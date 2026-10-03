@@ -69,11 +69,10 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `page/bookmark`
     - `page/file`
     - `page/place`
-    - `primitives/css/layout-harness`
+    - `plugin-meta/exhibits`
     - `primitives/data-view/gallery`
     - `primitives/file-viewer/markdown`
     - `primitives/metrics`
-    - `primitives/metrics/chart-kit`
     - `primitives/section-card`
     - `review/plugin-changes`
 

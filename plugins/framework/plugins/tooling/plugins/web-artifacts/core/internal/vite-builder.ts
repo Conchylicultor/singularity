@@ -34,7 +34,7 @@ export interface BuilderCtx {
 export interface ArtifactBuildTarget {
   /** Store dir name (`<slug>.<kind>.<hash16>`). */
   dirName: string;
-  /** `web`, `entry`, or a folder-barrel kind (`core`, `fixtures`, …). */
+  /** `web`, `entry`, or a folder-barrel kind (`core`, `prewarm`, …). */
   kind: string;
   /** null for the entry artifact. */
   pluginPath: string | null;
@@ -42,6 +42,69 @@ export interface ArtifactBuildTarget {
   specifier: string | null;
   entryFile: string;
   inputsHash: string;
+  /**
+   * Extra entries built into THIS artifact (a co-built folder such as
+   * `exhibits/` of a `web` artifact — `COBUILT_FOLDERS` in `../own-roots.ts`).
+   * Empty for every ordinary artifact. Required, so no target constructor can
+   * forget to say whether it carries any.
+   */
+  coEntries: readonly CoEntry[];
+}
+
+/** A co-built folder's entry inside its host artifact. */
+export interface CoEntry {
+  /** The plugin folder (`exhibits`) — also the emitted file's name, `<folder>.js`. */
+  folder: string;
+  /** Absolute path of the folder's barrel. */
+  entryFile: string;
+  /** The import-map specifier served by `<folder>.js` (`@plugins/<p>/<folder>`). */
+  specifier: string;
+}
+
+/** The emitted file a co-entry is served from, inside its host artifact dir. */
+export function coEntryFileName(entry: Pick<CoEntry, "folder">): string {
+  return `${entry.folder}.js`;
+}
+
+/**
+ * The module a multi-entry artifact's extracted CSS is injected from. Each entry
+ * imports it, so the styles apply once whichever entry the browser loads first —
+ * an exhibit can be the first module of its plugin a tab ever fetches.
+ */
+export const COBUILT_STYLES_FILE = "__artifact-styles.js";
+
+/**
+ * Rung-4 guard of "a co-entry is never on the boot path": no file the host
+ * entry (`index.js`) statically reaches may be a co-entry file. `web/` cannot
+ * import `exhibits/` (leaf folders are never import targets), so this holds by
+ * the boundary rules — the throw covers a build that skipped them. Without it,
+ * the modulepreload closure (which follows static edges from `index.js`) would
+ * silently put every exhibit in the eager boot bundle.
+ */
+export function assertCoEntriesOffHostPath(opts: {
+  dirName: string;
+  staticImportsByFile: Record<string, string[]>;
+  coEntries: readonly CoEntry[];
+}): void {
+  const coFiles = new Set(opts.coEntries.map(coEntryFileName));
+  const seen = new Set<string>();
+  const queue = ["index.js"];
+  while (queue.length > 0) {
+    const file = queue.shift()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    if (coFiles.has(file)) {
+      throw new Error(
+        `web-artifact ${opts.dirName}: index.js statically reaches ${file}, a co-built ` +
+          `entry. Co-entries must be reachable only through their registry's dynamic ` +
+          `import, or they join the eager modulepreload closure. Something in web/ ` +
+          `imports the co-built folder — remove that import.`,
+      );
+    }
+    for (const spec of opts.staticImportsByFile[file] ?? []) {
+      if (spec.startsWith("./")) queue.push(spec.slice(2));
+    }
+  }
 }
 
 // Neither pin is baked into artifacts (either would churn every hash every
@@ -263,6 +326,24 @@ export async function buildArtifact(
     );
   }
 
+  const multiEntry = target.coEntries.length > 0;
+  const lib = multiEntry
+    ? {
+        entry: {
+          index: target.entryFile,
+          ...Object.fromEntries(
+            target.coEntries.map((e) => [e.folder, e.entryFile]),
+          ),
+        },
+        formats: ["es" as const],
+        fileName: (_format: string, entryName: string) => `${entryName}.js`,
+      }
+    : {
+        entry: target.entryFile,
+        formats: ["es" as const],
+        fileName: () => "index.js",
+      };
+
   try {
     await viteBuild({
       configFile: false,
@@ -273,11 +354,7 @@ export async function buildArtifact(
       define: ARTIFACT_DEFINE,
       resolve: { alias: { "@plugins": ctx.pluginsRoot } },
       build: {
-        lib: {
-          entry: target.entryFile,
-          formats: ["es"],
-          fileName: () => "index.js",
-        },
+        lib,
         outDir: tmpDir,
         emptyOutDir: true,
         minify: ctx.minify ? "esbuild" : false,
@@ -302,22 +379,45 @@ export async function buildArtifact(
       // Whole-file rewrite (read + concatenate + write), not an append: this is
       // build-artifact ASSEMBLY of a freshly-emitted index.js, not a durable
       // growing log — so it stays on the sanctioned whole-file writer.
-      const indexJsPath = join(tmpDir, "index.js");
-      const emitted = readFileSync(indexJsPath, "utf8");
-      writeFileSync(
-        indexJsPath,
-        emitted + cssInjectionSnippet(css, target.dirName),
-      );
+      const appendTo = (file: string, text: string): void => {
+        const path = join(tmpDir, file);
+        writeFileSync(path, readFileSync(path, "utf8") + text);
+      };
+      if (multiEntry) {
+        // One styles module every entry imports (an import declaration is
+        // hoisted wherever it sits, so appending it is enough).
+        const stylesPath = join(tmpDir, COBUILT_STYLES_FILE);
+        if (existsSync(stylesPath)) {
+          throw new Error(
+            `vite build of ${target.dirName} emitted its own ${COBUILT_STYLES_FILE}`,
+          );
+        }
+        writeFileSync(stylesPath, cssInjectionSnippet(css, target.dirName));
+        for (const file of [
+          "index.js",
+          ...target.coEntries.map(coEntryFileName),
+        ]) {
+          appendTo(file, `\nimport "./${COBUILT_STYLES_FILE}";\n`);
+        }
+      } else {
+        appendTo("index.js", cssInjectionSnippet(css, target.dirName));
+      }
       for (const f of cssFiles) unlinkSync(join(tmpDir, f));
     }
 
-    const indexJs = join(tmpDir, "index.js");
-    if (!existsSync(indexJs)) {
-      throw new Error(`vite build of ${target.dirName} emitted no index.js`);
+    for (const file of ["index.js", ...target.coEntries.map(coEntryFileName)]) {
+      if (!existsSync(join(tmpDir, file))) {
+        throw new Error(`vite build of ${target.dirName} emitted no ${file}`);
+      }
     }
 
     const { staticImportsByFile, dynamicImports } =
       await parseEmittedImports(tmpDir);
+    assertCoEntriesOffHostPath({
+      dirName: target.dirName,
+      staticImportsByFile,
+      coEntries: target.coEntries,
+    });
     const meta: ArtifactMeta = {
       specifier: target.specifier,
       kind: target.kind,

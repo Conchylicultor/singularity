@@ -53,7 +53,7 @@ export interface TaskDraftComposerProps {
  * the contributed prose actions (the element picker) and the launch-option
  * pills. Everything about the TASK, nothing about the chain card that holds it
  * (drag, remove): so it renders on its own, which is what the composer
- * specimen does.
+ * exhibit does.
  */
 export function TaskDraftComposer({
   cardId,

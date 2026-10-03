@@ -45,7 +45,7 @@ source root (`web/index.html`, `web/main.tsx`, `web/public/`) the pipeline
 composes from.
 
 Each plugin's `web/` barrel (plus every statically or dynamically imported folder
-barrel — `core`, `fixtures`, …) builds into an independent, content-addressed
+barrel — `core`, `prewarm`, …) builds into an independent, content-addressed
 ES-module artifact; the browser composes them via an inline import map in
 `dist/index.html`. Only changed plugins rebuild (typical warm step: a few
 seconds). Artifacts are stored in `~/.singularity/cache/web-artifacts/` (`store/`

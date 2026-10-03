@@ -42,7 +42,7 @@ export function useCounterpartKinds(): readonly CounterpartKindMeta[] {
  * Rendered through the same `children(resolution)` path as a kind that handles
  * the tag but cannot resolve the ref, so the frame's chrome is identical in
  * both — only the sentence differs, and the reader can
- * tell "no such kind" from "no such fixture" at a glance.
+ * tell "no such kind" from "no such exhibit" at a glance.
  */
 function UnknownKind({ kind, children }: CounterpartKindProps): ReactElement {
   const kinds = useCounterpartKinds();

@@ -172,9 +172,9 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `page/inline-page-link`
     - `page/page-link`
     - `page/place`
+    - `plugin-meta/exhibits`
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/dependencies`
-    - `primitives/css/layout-harness`
     - `primitives/cursor-pagination`
     - `primitives/data-view`
     - `primitives/diff-view`

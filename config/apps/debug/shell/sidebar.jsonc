@@ -1,4 +1,4 @@
-// @hash 8d1442de96c1
+// @hash a4818cecb937
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -32,7 +32,7 @@
     { "type": "spacer", "id": "spacer-1" },
     "conversations.recover:conversations-recover",
     "infra.events-test:events-test",
-    "primitives.css.layout-harness:layout-lab",
+    "plugin-meta.exhibits:exhibits",
     "backup:backup"
   ]
 }

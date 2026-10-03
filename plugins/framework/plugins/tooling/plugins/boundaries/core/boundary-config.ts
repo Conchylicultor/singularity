@@ -110,8 +110,10 @@ export default defineBoundaries({
     facet: ["core"],
     bin: ["core", "shared", "data-dirs", "server", "central", "cli", "deps"],
     scripts: ["core", "shared", "data-dirs", "server", "deps"],
-    // Layout-harness fixtures render real components in the browser.
-    fixtures: ["web", "core"],
+    // Exhibits (`plugin-meta/exhibits`) render a plugin's own real components
+    // standalone. Co-built into the plugin's web artifact, so its own `web/`
+    // may be imported deeply (runtime-isolation/no-deep-own-folder-import).
+    exhibits: ["web", "core"],
     vite: ["core"],
     prewarm: ["core", "shared"],
     // One uv project (`infra/deps/plugins/python`): Python source plus

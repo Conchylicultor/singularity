@@ -9,7 +9,7 @@ literal.** `core/runtimes.ts` holds `runtimeNames`, the folder names a
 
 The folder vocabulary lives in `plugin-id/core`: `RUNTIME_FOLDERS` (barrels:
 `web`, `server`, `core`, …) and `LEAF_FOLDERS` (`check`, `lint`, `facet`, `bin`,
-`scripts`, `fixtures`, `vite`, `prewarm`), together `PLUGIN_FOLDERS`. Plus
+`scripts`, `exhibits`, `vite`, `prewarm`, `python`), together `PLUGIN_FOLDERS`. Plus
 `plugins/`, which holds child plugins, not code.
 
 - **Every folder has a row.** The table is `Record<PluginFolder, RuntimeFolder[]>`,

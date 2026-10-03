@@ -9,7 +9,7 @@
 //
 // The prototype names its counterpart itself, in its own
 // `<meta name="mocks" content="<kind>:<ref>">` (`route:/agents`,
-// `fixture:control-panel/setting-rail`). This script does not read that tag
+// `exhibit:task-draft/composer`). This script does not read that tag
 // and does not know the kinds: it opens the prototype's canvas and adds the
 // Real app frame — frame A (the mock) beside the Real app frame, which
 // dispatches the declaration to whichever kind plugin handles it — and

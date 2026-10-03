@@ -73,7 +73,7 @@ export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
 /** The plugin folders that are NOT barrels: each is found by discovery (a
  *  collected-dir loader, a process entry point, a script run by path), and
  *  nothing imports it. `check/` and `lint/` are collected by the check runner
- *  and the ESLint config, `facet/` by the facet pipeline, `fixtures/`,
+ *  and the ESLint config, `facet/` by the facet pipeline, `exhibits/`,
  *  `vite/` and `prewarm/` by their own collected dirs; `bin/` and `scripts/`
  *  are run by path; `python/` holds one uv project (`pyproject.toml`, `uv.lock`)
  *  that `infra/deps`' python kind installs and runs, and holds no TypeScript.
@@ -88,7 +88,7 @@ export const LEAF_FOLDERS = [
   "facet",
   "bin",
   "scripts",
-  "fixtures",
+  "exhibits",
   "vite",
   "prewarm",
   "python",

@@ -74,7 +74,7 @@ barrel.
     - `framework/web-core`
     - `layouts/full-pane`
     - `layouts/miller`
-    - `primitives/css/layout-harness`
+    - `plugin-meta/exhibits`
     - `primitives/text-editor/inline-chip`
     - `reports/crash`
     - `reports/launch-fix`

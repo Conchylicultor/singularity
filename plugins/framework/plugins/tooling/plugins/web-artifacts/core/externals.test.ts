@@ -67,22 +67,23 @@ describe("makeArtifactExternal (web artifact of tasks/plugins/task-detail)", () 
   });
 });
 
-// The bug this file's rule was rewritten for: a `fixtures` artifact hashes
-// `fixtures/` + `shared/`, so anything it inlines from its own `web/` would be
+// The bug this file's rule was rewritten for: a leaf-folder artifact (then the
+// layout harness's `fixtures/`, now gone — `prewarm/` stands in) hashes its own
+// folder + `shared/`, so anything it inlined from its own `web/` would be
 // served forever against sibling code its address never saw.
 describe("makeArtifactExternal is per KIND, not a fixed own-core carve-out", () => {
   const own = "primitives/plugins/adaptive-bar";
 
-  test("a fixtures artifact externalises its own web AND core", () => {
-    const external = makeArtifactExternal(own, "fixtures");
+  test("a prewarm artifact externalises its own web AND core", () => {
+    const external = makeArtifactExternal(own, "prewarm");
     expect(external(`@plugins/${own}/web`)).toBe(true);
     expect(external(`@plugins/${own}/web/internal/bar`)).toBe(true);
     expect(external(`@plugins/${own}/core`)).toBe(true);
   });
 
-  test("a fixtures artifact inlines its own fixtures + shared", () => {
-    const external = makeArtifactExternal(own, "fixtures");
-    expect(external(`@plugins/${own}/fixtures/internal/x`)).toBe(false);
+  test("a prewarm artifact inlines its own prewarm + shared", () => {
+    const external = makeArtifactExternal(own, "prewarm");
+    expect(external(`@plugins/${own}/prewarm/internal/x`)).toBe(false);
     expect(external(`@plugins/${own}/shared/x`)).toBe(false);
   });
 
@@ -94,7 +95,7 @@ describe("makeArtifactExternal is per KIND, not a fixed own-core carve-out", () 
   });
 
   test("sub-plugins stay external for every kind", () => {
-    for (const kind of ["web", "core", "fixtures", "prewarm"]) {
+    for (const kind of ["web", "core", "prewarm"]) {
       expect(
         makeArtifactExternal(
           own,

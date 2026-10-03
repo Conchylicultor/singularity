@@ -9,7 +9,7 @@ import { hashedRootsFor, isHashedFile, listOwnFiles } from "./own-files";
 const dir = mkdtempSync(join(tmpdir(), "own-files-test-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-for (const folder of ["web", "shared", "core", "fixtures"]) {
+for (const folder of ["web", "shared", "core", "prewarm", "exhibits"]) {
   mkdirSync(join(dir, folder), { recursive: true });
   writeFileSync(join(dir, folder, "index.ts"), `export const ${folder} = 1;\n`);
 }
@@ -21,18 +21,19 @@ const rel = async (kind: string): Promise<string[]> =>
     .sort();
 
 describe("listOwnFiles walks exactly inlinedRootsFor(kind)", () => {
-  test("fixtures: its own folder + shared + package.json — never web or core", async () => {
-    expect(await rel("fixtures")).toEqual([
-      "fixtures/index.ts",
+  test("prewarm: its own folder + shared + package.json — never web or core", async () => {
+    expect(await rel("prewarm")).toEqual([
       "package.json",
+      "prewarm/index.ts",
       "shared/index.ts",
     ]);
   });
 
   // The `web` hash NARROWS here: own-core is rewritten to the external barrel,
   // so it never enters the bytes and hashing it only forced spurious rebuilds.
-  test("web: web + shared + package.json — NOT core", async () => {
+  test("web: web + shared + its co-built exhibits + package.json — NOT core", async () => {
     expect(await rel("web")).toEqual([
+      "exhibits/index.ts",
       "package.json",
       "shared/index.ts",
       "web/index.ts",
@@ -54,8 +55,8 @@ describe("hashedRootsFor", () => {
   });
 
   test("a plugin kind hashes its own folder plus shared", () => {
-    expect(hashedRootsFor(dir, "fixtures")).toEqual([
-      join(dir, "fixtures"),
+    expect(hashedRootsFor(dir, "prewarm")).toEqual([
+      join(dir, "prewarm"),
       join(dir, "shared"),
     ]);
   });

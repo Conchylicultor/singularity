@@ -1,27 +1,34 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildImportMap } from "../import-map";
 import {
   artifactUrl,
   closureSpecsOf,
+  coEntriesFor,
   composeMapEntries,
   eagerWebTargets,
+  hostSpecOf,
   planFleet,
   pluginIdOf,
+  resolveBarrelClosure,
+  servedSpecsOf,
   type PlannedTarget,
 } from "./plan";
 import type { ArtifactMeta } from "./store";
 import type { VendorSetMeta } from "./vendors";
 
-function target(partial: Pick<PlannedTarget, "dirName" | "specifier">): PlannedTarget {
+function target(
+  partial: Pick<PlannedTarget, "dirName" | "specifier">,
+): PlannedTarget {
   return {
     ...partial,
     kind: "web",
     pluginPath: "x",
     entryFile: "/x/web/index.ts",
     inputsHash: "0".repeat(64),
+    coEntries: [],
     needsBuild: false,
   };
 }
@@ -45,7 +52,8 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
     });
     const map = buildImportMap(entries).imports;
     expect(map).toEqual({
-      "@composition-web-registry": "/artifacts/composition-web-registry.registry.999/index.js",
+      "@composition-web-registry":
+        "/artifacts/composition-web-registry.registry.999/index.js",
       "@plugins/tasks/core": "/artifacts/tasks.core.def/index.js",
       "@plugins/tasks/web": "/artifacts/tasks.web.abc/index.js",
       react: `/artifacts/set.${"f".repeat(16)}/react.js`,
@@ -53,11 +61,40 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
     });
   });
 
+  test("one artifact serves its co-entries from their own files", () => {
+    const web = {
+      ...target({ dirName: "tasks.web.abc", specifier: "@plugins/tasks/web" }),
+      coEntries: [
+        {
+          folder: "exhibits",
+          entryFile: "/x/exhibits/index.ts",
+          specifier: "@plugins/tasks/exhibits",
+        },
+      ],
+    };
+    const map = buildImportMap(
+      composeMapEntries({
+        targets: [web],
+        registryDirName: "composition-web-registry.registry.999",
+        vendorMeta,
+      }),
+    ).imports;
+    expect(map["@plugins/tasks/web"]).toBe("/artifacts/tasks.web.abc/index.js");
+    expect(map["@plugins/tasks/exhibits"]).toBe(
+      "/artifacts/tasks.web.abc/exhibits.js",
+    );
+    expect(servedSpecsOf([web])).toEqual(
+      new Set(["@plugins/tasks/web", "@plugins/tasks/exhibits"]),
+    );
+  });
+
   test("map recompute is a pure function of targets — same input, same map", () => {
     const make = () =>
       buildImportMap(
         composeMapEntries({
-          targets: [target({ dirName: "a.web.1", specifier: "@plugins/a/web" })],
+          targets: [
+            target({ dirName: "a.web.1", specifier: "@plugins/a/web" }),
+          ],
           registryDirName: "composition-web-registry.registry.2",
           vendorMeta,
         }),
@@ -82,7 +119,9 @@ describe("closureSpecsOf (which emitted imports extend the barrel closure)", () 
     expect(
       closureSpecsOf(
         meta({
-          staticImportsByFile: { "index.js": ["@plugins/a/core", "@plugins/b/prewarm"] },
+          staticImportsByFile: {
+            "index.js": ["@plugins/a/core", "@plugins/b/prewarm"],
+          },
           dynamicImports: [],
         }),
       ),
@@ -110,13 +149,13 @@ describe("closureSpecsOf (which emitted imports extend the barrel closure)", () 
           staticImportsByFile: {},
           dynamicImports: [
             "@plugins/primitives/plugins/icon-picker/core",
-            "@plugins/primitives/plugins/css/plugins/pin/fixtures",
+            "@plugins/primitives/plugins/css/plugins/pin/core",
           ],
         }),
       ),
     ).toEqual([
       "@plugins/primitives/plugins/icon-picker/core",
-      "@plugins/primitives/plugins/css/plugins/pin/fixtures",
+      "@plugins/primitives/plugins/css/plugins/pin/core",
     ]);
   });
 
@@ -124,7 +163,9 @@ describe("closureSpecsOf (which emitted imports extend the barrel closure)", () 
     expect(
       closureSpecsOf(
         meta({
-          staticImportsByFile: { "index.js": ["@plugins/infra/plugins/asset-mirror/core"] },
+          staticImportsByFile: {
+            "index.js": ["@plugins/infra/plugins/asset-mirror/core"],
+          },
           dynamicImports: [
             "@plugins/apps/plugins/sonata/plugins/audio/plugins/piano/prewarm",
             "@plugins/primitives/plugins/icon-picker/core",
@@ -145,18 +186,19 @@ describe("eagerWebTargets (the preload-seed selection, a pure membership test)",
   ].map((t, i) => ({ ...t, pluginPath: i === 0 ? "shell" : "tasks" }));
 
   test("filters the deferred paths out of the entry set", () => {
-    expect(eagerWebTargets(targets, new Set(["tasks"])).map((t) => t.pluginPath)).toEqual([
-      "shell",
-    ]);
+    expect(
+      eagerWebTargets(targets, new Set(["tasks"])).map((t) => t.pluginPath),
+    ).toEqual(["shell"]);
   });
 
   test("a deferred superset is exact on the filtered entries (composition source)", () => {
     // The full DEFERRED_PLUGIN_PATHS may name plugins outside a composition's
     // filtered registry — membership filtering must not care.
     expect(
-      eagerWebTargets(targets, new Set(["tasks", "not-in-this-composition"])).map(
-        (t) => t.pluginPath,
-      ),
+      eagerWebTargets(
+        targets,
+        new Set(["tasks", "not-in-this-composition"]),
+      ).map((t) => t.pluginPath),
     ).toEqual(["shell"]);
   });
 });
@@ -183,8 +225,12 @@ describe("planFleet with an injected fleet source", () => {
       },
     });
 
-    expect(plan.webTargets.map((t) => t.specifier)).toEqual(["@plugins/shell/web"]);
-    expect(plan.registryTarget.dirName.startsWith("web-registry-testcomp.registry.")).toBe(true);
+    expect(plan.webTargets.map((t) => t.specifier)).toEqual([
+      "@plugins/shell/web",
+    ]);
+    expect(
+      plan.registryTarget.dirName.startsWith("web-registry-testcomp.registry."),
+    ).toBe(true);
     expect(plan.registryTarget.registryFile).toBe(registryFile);
     expect(plan.deferredPaths).toBe(deferredPaths);
   });
@@ -203,7 +249,9 @@ describe("planFleet with an injected fleet source", () => {
     const b = await planFleet({ ...opts, cache: { version: 1, records: {} } });
     expect(a.registryTarget.dirName).toBe(b.registryTarget.dirName);
     // Same content as testcomp's registry, different slug ⇒ different store dir.
-    expect(a.registryTarget.dirName.startsWith("web-registry-other.registry.")).toBe(true);
+    expect(
+      a.registryTarget.dirName.startsWith("web-registry-other.registry."),
+    ).toBe(true);
   });
 });
 
@@ -215,6 +263,97 @@ describe("plan identity helpers", () => {
   });
 
   test("artifactUrl shape", () => {
-    expect(artifactUrl("tasks.web.abc")).toBe("/artifacts/tasks.web.abc/index.js");
+    expect(artifactUrl("tasks.web.abc")).toBe(
+      "/artifacts/tasks.web.abc/index.js",
+    );
+  });
+});
+
+describe("co-built folders (exhibits/ is a second entry of the web artifact)", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "cobuilt-test-"));
+  afterAll(() => rmSync(tmp, { recursive: true, force: true }));
+  const barrel = (rel: string, body = "export default 1;\n"): void => {
+    mkdirSync(join(tmp, rel, ".."), { recursive: true });
+    writeFileSync(join(tmp, rel), body);
+  };
+  barrel("both/web/index.ts");
+  barrel("both/exhibits/index.ts");
+  barrel("webonly/web/index.ts");
+  barrel("orphan/exhibits/index.ts");
+
+  test("a web target carries one co-entry per co-built barrel present", () => {
+    expect(coEntriesFor("web", "both", join(tmp, "both"))).toEqual([
+      {
+        folder: "exhibits",
+        entryFile: join(tmp, "both/exhibits/index.ts"),
+        specifier: "@plugins/both/exhibits",
+      },
+    ]);
+    expect(coEntriesFor("web", "webonly", join(tmp, "webonly"))).toEqual([]);
+    // Only the host kind carries them.
+    expect(coEntriesFor("core", "both", join(tmp, "both"))).toEqual([]);
+  });
+
+  test("a co-built specifier names its host's artifact; others name their own", () => {
+    expect(hostSpecOf("@plugins/both/exhibits", tmp)).toBe("@plugins/both/web");
+    expect(hostSpecOf("@plugins/both/core", tmp)).toBe("@plugins/both/core");
+  });
+
+  test("exhibits/ without web/ fails loudly — there is nothing to co-build it into", () => {
+    expect(() => hostSpecOf("@plugins/orphan/exhibits", tmp)).toThrow(
+      "has exhibits/ without web/",
+    );
+  });
+
+  test("the closure plans the host web artifact for a dynamic exhibits import — never an exhibits artifact", async () => {
+    const seed: ArtifactMeta = {
+      specifier: "@plugins/catalog/core",
+      kind: "core",
+      pluginPath: "catalog",
+      inputsHash: "0".repeat(64),
+      builtAtMs: 0,
+      staticImportsByFile: { "index.js": [] },
+      dynamicImports: ["@plugins/both/exhibits"],
+    };
+    const ensured: PlannedTarget[] = [];
+    const closure = await resolveBarrelClosure({
+      pluginsRoot: tmp,
+      identityHash: "1".repeat(64),
+      cache: { version: 1, records: {} },
+      servedSpecs: new Set(),
+      seedMetas: [seed],
+      ensure: (t) => {
+        ensured.push(t);
+        return Promise.resolve(null);
+      },
+    });
+    expect([...closure.keys()]).toEqual(["@plugins/both/web"]);
+    const host = closure.get("@plugins/both/web")!;
+    expect(host.kind).toBe("web");
+    expect(host.coEntries.map((e) => e.specifier)).toEqual([
+      "@plugins/both/exhibits",
+    ]);
+    expect(ensured.map((t) => t.kind)).toEqual(["web"]);
+  });
+
+  test("an exhibits import whose web artifact the fleet already serves adds nothing", async () => {
+    const seed: ArtifactMeta = {
+      specifier: "@plugins/catalog/core",
+      kind: "core",
+      pluginPath: "catalog",
+      inputsHash: "0".repeat(64),
+      builtAtMs: 0,
+      staticImportsByFile: { "index.js": [] },
+      dynamicImports: ["@plugins/both/exhibits"],
+    };
+    const closure = await resolveBarrelClosure({
+      pluginsRoot: tmp,
+      identityHash: "1".repeat(64),
+      cache: { version: 1, records: {} },
+      servedSpecs: new Set(["@plugins/both/web", "@plugins/both/exhibits"]),
+      seedMetas: [seed],
+      ensure: () => Promise.resolve(null),
+    });
+    expect(closure.size).toBe(0);
   });
 });

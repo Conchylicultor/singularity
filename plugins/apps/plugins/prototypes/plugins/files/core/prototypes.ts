@@ -42,7 +42,7 @@ export const PrototypeOptionSchema = z.object({
  *   size preset's name, `window` or `responsive` (see `viewport.ts`). Absent or
  *   unreadable ⇒ window; an unreadable line is also a `problems[]` entry
  * - `mocks` — `<meta name="mocks" content="<kind>:<ref>">`, the real app thing
- *   this prototype is a mockup OF (`fixture:control-panel/setting-rail`,
+ *   this prototype is a mockup OF (`exhibit:task-draft/composer`,
  *   `route:/agents/c/123`), so the Compare stage can show the two side by
  *   side. Parsed by `parseMocks` into a three-way value: `none` (the ordinary
  *   case — most prototypes mock nothing), `malformed` (also a `problems[]`

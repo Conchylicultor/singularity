@@ -53,7 +53,7 @@ render, and in `submitChain`, which sends every registered option.
 
 Submits to `POST /api/tasks/chain` (handler in `plugins/tasks/server`).
 
-## Card vs composer, and the two specimens
+## Card vs composer, and the two exhibits
 
 A card is two layers. `TaskDraftCard` is the chain chrome: only the drag grip,
 pinned to its top-right corner. The grip is the one place a drag starts (so
@@ -75,18 +75,20 @@ label says which action a click will take.
 The footer holds "+ Follow-up task" (appends a card) on the left, then Cancel and
 "Create task" / "Create N tasks" with its ⌘↵ hint.
 
-The composer alone is what the plugin exhibits as a specimen
-(`plugin-meta/specimens`, id `task-draft/composer`): `ComposerSpecimen` holds
-its own text / options / URL state, starting from the same defaults, and never
-submits. A prototype mocking the Improve composer compares against it with
-`<meta name="mocks" content="component:task-draft/composer">`.
+The composer alone is what the plugin exhibits (`exhibits/`, an `appExhibit`
+in the `plugin-meta/exhibits` catalog, id `task-draft/composer` — app, not
+isolated, because its pills and prose actions are slot contributions and its
+URL default is config): `exhibits/internal/composer.tsx` holds its own text /
+options / URL state, starting from the same defaults, and never submits. A
+prototype mocking the Improve composer compares against it with
+`<meta name="mocks" content="exhibit:task-draft/composer">`.
 
-The whole form is the second specimen, id `task-draft/form`: `FormSpecimen`
-renders `TaskDraftForm` (header, chain, connectors, footer) over local card
+The whole form is the second exhibit, id `task-draft/form`:
+`exhibits/internal/form.tsx` renders `TaskDraftForm` (header, chain, connectors, footer) over local card
 state, with the Dependency pill on as when Improve is opened from a task. Add,
 reorder, link and remove all work; Create and Cancel do nothing. A prototype
 mocking the Improve popover compares against it with
-`<meta name="mocks" content="component:task-draft/form">`.
+`<meta name="mocks" content="exhibit:task-draft/form">`.
 
 ## Inserting into a draft
 
@@ -113,17 +115,13 @@ silently destroy work in progress — hence a request type rather than an `initi
 - Description: Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
 - Web:
   - Slots: `TaskDraftFormSlots.Action` ← `improve.element-picker`
-  - Contributes:
-    - `ConfigV2.WebRegister` "config"
-    - `Specimens.Specimen` "task-draft/composer" → `ComposerSpecimen`
-    - `Specimens.Specimen` "task-draft/form" → `FormSpecimen`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
     - `apps-core.useCurrentAppId`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
-    - `plugin-meta/specimens.Specimens`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`

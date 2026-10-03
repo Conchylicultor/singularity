@@ -17,7 +17,11 @@ import {
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { computeInputsHash, sha256Hex } from "../hash";
 import type { ImportMapEntry } from "../import-map";
-import type { ArtifactKind } from "../own-roots";
+import {
+  cobuildHostOf,
+  cobuiltFoldersOf,
+  type ArtifactKind,
+} from "../own-roots";
 import { computeBuilderIdentity, type BuilderIdentity } from "./identity";
 import { ownHashFor } from "./own-files";
 import {
@@ -27,7 +31,11 @@ import {
   type ArtifactMeta,
   type FingerprintCache,
 } from "./store";
-import type { ArtifactBuildTarget } from "./vite-builder";
+import {
+  coEntryFileName,
+  type ArtifactBuildTarget,
+  type CoEntry,
+} from "./vite-builder";
 import {
   vendorSetDirName,
   type VendorSetMeta,
@@ -161,6 +169,37 @@ export function artifactUrl(dirName: string): string {
 }
 
 /**
+ * The co-built entries a `kind` artifact of `pluginPath` carries: one per
+ * co-built folder (`COBUILT_FOLDERS`) whose barrel exists. Derived from the
+ * same files the artifact's address hashes (a host kind inlines its co-built
+ * folders), so adding or removing one re-addresses the artifact.
+ */
+export function coEntriesFor(
+  kind: ArtifactKind,
+  pluginPath: string,
+  pluginDir: string,
+): CoEntry[] {
+  return cobuiltFoldersOf(kind).flatMap((folder) => {
+    const entryFile = join(pluginDir, folder, "index.ts");
+    return existsSync(entryFile)
+      ? [{ folder, entryFile, specifier: `@plugins/${pluginPath}/${folder}` }]
+      : [];
+  });
+}
+
+/** Every import-map specifier `targets` serve: each primary one plus its co-entries'. */
+export function servedSpecsOf(
+  targets: readonly ArtifactBuildTarget[],
+): Set<string | null> {
+  const specs = new Set<string | null>();
+  for (const t of targets) {
+    specs.add(t.specifier);
+    for (const e of t.coEntries) specs.add(e.specifier);
+  }
+  return specs;
+}
+
+/**
  * The eager-tier web targets: the source's (possibly filtered) entries minus
  * the deferred paths. A pure membership test, so a composition source passing
  * the full deferred set gets the exact eager subset of ITS entries.
@@ -227,6 +266,7 @@ export async function planFleet(opts: {
       specifier,
       entryFile,
       inputsHash,
+      coEntries: pluginPath ? coEntriesFor(kind, pluginPath, pluginDir) : [],
       needsBuild: !hasArtifact(dirName),
     };
   };
@@ -300,12 +340,22 @@ export function closureSpecsOf(meta: ArtifactMeta): string[] {
 
 /**
  * Folder-barrel closure: any `@plugins/<path>/<folder>` the EMITTED modules
- * import (core barrels, fixtures, …), iterated to a fixed point (core barrels
+ * import (core barrels, …), iterated to a fixed point (core barrels
  * import other cores). Derived from emitted imports — post-tree-shaking and
  * type-stripped, so `import type` edges never force an artifact. Edges are
  * `closureSpecsOf`: statics always, dynamics unless declared
  * browser-unreachable (prewarm registries — release-runner data the browser
  * never fetches).
+ *
+ * A co-built folder (`COBUILT_FOLDERS`: `@plugins/<p>/exhibits`) is never an
+ * artifact of its own: its specifier resolves to the plugin's HOST-kind
+ * artifact (`web`), planned here when the fleet does not already carry it — a
+ * plugin reached only through a registry's dynamic import still gets its
+ * exhibits served from its web artifact. A co-built folder whose plugin has no
+ * host barrel throws: there is nothing to co-build it into.
+ *
+ * `servedSpecs` is every specifier the seed targets already serve, co-entries
+ * included (`servedSpecsOf`).
  *
  * `ensure` obtains a wave target's meta: the pipeline builds-or-reads; the
  * check reads-or-returns-null, which halts expansion through that node (the
@@ -315,26 +365,22 @@ export async function resolveBarrelClosure(opts: {
   pluginsRoot: string;
   identityHash: string;
   cache: FingerprintCache;
-  webSpecs: ReadonlySet<string | null>;
+  servedSpecs: ReadonlySet<string | null>;
   seedMetas: ArtifactMeta[];
   ensure: (t: PlannedTarget) => Promise<ArtifactMeta | null>;
 }): Promise<Map<string, PlannedTarget>> {
-  const barrelTargets = new Map<string, PlannedTarget>(); // spec → target
+  const barrelTargets = new Map<string, PlannedTarget>(); // primary spec → target
+  const covered = new Set<string | null>(opts.servedSpecs);
   let frontier = [...opts.seedMetas];
   while (frontier.length > 0) {
     const nextSpecs = new Set<string>();
     for (const meta of frontier) {
       for (const spec of closureSpecsOf(meta)) {
-        if (
-          !spec.startsWith("@plugins/") ||
-          barrelTargets.has(spec) ||
-          opts.webSpecs.has(spec)
-        ) {
-          continue;
-        }
-        nextSpecs.add(spec);
+        if (!spec.startsWith("@plugins/") || covered.has(spec)) continue;
+        nextSpecs.add(hostSpecOf(spec, opts.pluginsRoot));
       }
     }
+    for (const spec of nextSpecs) if (covered.has(spec)) nextSpecs.delete(spec);
     // Same bounded-fan-out reasoning as `webTargets` above: `ownHashFor`'s
     // actual disk concurrency is capped by own-files.ts's shared gate, so
     // building every spec in this wave concurrently is safe.
@@ -370,6 +416,7 @@ export async function resolveBarrelClosure(opts: {
           specifier: spec,
           entryFile: barrelFile,
           inputsHash,
+          coEntries: coEntriesFor(kind, pluginPath, pluginDir),
           needsBuild: !hasArtifact(
             artifactDirName(pluginIdOf(pluginPath), kind, inputsHash),
           ),
@@ -380,12 +427,44 @@ export async function resolveBarrelClosure(opts: {
     const wave: PlannedTarget[] = [];
     for (const { spec, t } of built) {
       barrelTargets.set(spec, t);
+      for (const served of servedSpecsOf([t])) covered.add(served);
       wave.push(t);
     }
     const waveMetas = await Promise.all(wave.map(opts.ensure));
     frontier = waveMetas.filter((m): m is ArtifactMeta => m !== null);
   }
   return barrelTargets;
+}
+
+/**
+ * The specifier that actually names an artifact: a co-built folder's
+ * (`@plugins/<p>/exhibits`) is its host's (`@plugins/<p>/web`); every other
+ * specifier is its own. Throws when a co-built folder has no host barrel —
+ * `exhibits/` without `web/` has nothing to be co-built into.
+ */
+export function hostSpecOf(spec: string, pluginsRoot: string): string {
+  const rel = spec.slice("@plugins/".length);
+  const slash = rel.lastIndexOf("/");
+  if (slash <= 0) return spec;
+  const pluginPath = rel.slice(0, slash);
+  const folder = rel.slice(slash + 1);
+  const host = cobuildHostOf(folder);
+  if (host === null) return spec;
+  const hostBarrel = join(pluginsRoot, pluginPath, host, "index.ts");
+  if (!existsSync(hostBarrel)) {
+    throw new Error(
+      `artifact closure: "${spec}" is imported, but plugins/${pluginPath} has ${folder}/ ` +
+        `without ${host}/ (expected ${hostBarrel}). ${folder}/ is built as a second entry ` +
+        `of its plugin's ${host} artifact, so a plugin contributing one must have a ${host}/ barrel.`,
+    );
+  }
+  if (!existsSync(join(pluginsRoot, pluginPath, folder, "index.ts"))) {
+    throw new Error(
+      `artifact closure: emitted import "${spec}" is not a folder barrel ` +
+        `(expected ${join(pluginsRoot, pluginPath, folder, "index.ts")}).`,
+    );
+  }
+  return `@plugins/${pluginPath}/${host}`;
 }
 
 /**
@@ -448,6 +527,14 @@ export function composeMapEntries(opts: {
   for (const t of opts.targets) {
     if (t.specifier !== null)
       entries.push({ specifier: t.specifier, url: artifactUrl(t.dirName) });
+    // One artifact, several specifiers: each co-entry is served from its own
+    // emitted file inside the host artifact (`exhibits.js` beside `index.js`).
+    for (const e of t.coEntries) {
+      entries.push({
+        specifier: e.specifier,
+        url: `/artifacts/${t.dirName}/${coEntryFileName(e)}`,
+      });
+    }
   }
   entries.push({
     specifier: "@composition-web-registry",

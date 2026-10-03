@@ -19,8 +19,8 @@ action cluster), or of how a theme reads across chrome and surface together.
 Everything else about the two — resolution, widths, framing rules — is one code
 path, parameterized by the embed mode.
 
-A whole screen cannot be a fixture: a fixture is a real component with
-hand-written props and no routing, live data or pane chrome, so a fixture of a
+A whole screen cannot be an exhibit: an exhibit is one real component with
+its own local state and no routing or pane chrome, so an exhibit of a
 full screen would be a second implementation that drifts from the real one —
 and drift is the very thing the side-by-side exists to catch. So the reference
 for a screen is the app as this branch renders it, in an iframe on this

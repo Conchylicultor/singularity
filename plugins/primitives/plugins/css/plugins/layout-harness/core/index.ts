@@ -1,5 +1,3 @@
-export { fixturesCollectedDir } from "./collected";
-export { loadFixtures } from "./load-fixtures";
 export {
   checkNoOverlap,
   checkNoClip,
@@ -19,15 +17,4 @@ export {
   FIXTURE_PAGE_ERROR_MARKER,
   FATAL_MARKERS,
 } from "./failure-markers";
-export { isLayoutFixture, isRegionFixture, HOST_MARKER_ATTR } from "./types";
-export type {
-  FixtureState,
-  FixtureDims,
-  MeasuredBox,
-  MeasuredFixture,
-  GeometryInvariant,
-  FixtureMutation,
-  LayoutFixture,
-  RegionFixture,
-  HarnessFixture,
-} from "./types";
+export type { MeasuredBox, MeasuredFixture } from "./types";

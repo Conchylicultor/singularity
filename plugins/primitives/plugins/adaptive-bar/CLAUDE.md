@@ -190,7 +190,7 @@ built web artifact (`ARTIFACT_DEFINE` in
 [`web-artifacts`](../../../framework/plugins/tooling/plugins/web-artifacts/core/internal/vite-builder.ts))
 and in the layout-harness measurer page, which is a production Vite build too.
 So the throw exists under vitest and nowhere else — in the deployed app, in the
-Layout Lab and in the geometry gate a fault is silent: `reportFault` plus
+Debug Exhibits gallery and in the geometry gate a fault is silent: `reportFault` plus
 whichever layout the remedy commits.
 
 The six faults:
@@ -598,7 +598,7 @@ Four kinds of suite, because no one of them can carry the whole thing:
 |---|---|
 | `core/*.test.ts` (bun) | the fit math, without a layout engine |
 | `web/__tests__/` (jsdom) | React never unmounted the subtree; the pins; the panel's dock survives a close |
-| `fixtures/index.ts` → `./singularity check layout-geometry` | the boxes do not collide and nothing spills, under a real layout engine, across a width sweep |
+| `exhibits/index.ts` → `./singularity check layout-geometry` | the boxes do not collide and nothing spills, under a real layout engine, across a width sweep |
 | `e2e/adaptive-bar-relocate.ts` (manual) | **a relocated slider still drags**, and comes back as the same instance |
 | `e2e/adaptive-bar-hidden-host.ts` (manual) | a bar hidden with `display: none` and shown again is **still deciding** |
 | `e2e/adaptive-bar-overfull-row.ts` (manual) | a bar whose row is over-filled until its cell resolves to 0px is **still deciding** once the row has room again |
@@ -671,7 +671,7 @@ declaration into the panel's column too, where `flex-shrink` is about height —
 harmless there, since the panel is content-height and has no deficit to take.
 
 Proven under a real engine by `adaptive-bar/squeezable-occupants` in
-`fixtures/`, whose occupants opt back into wrapping precisely so they CAN be
+`exhibits/`, whose occupants opt back into wrapping precisely so they CAN be
 squeezed — remove the declaration and all four collapse 186px → 83px.
 
 **Only an inline item is measurable.** A width read while the widget sits in the

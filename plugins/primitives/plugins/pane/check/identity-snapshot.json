@@ -343,6 +343,12 @@
       "parent": null
     },
     {
+      "paneId": "exhibits",
+      "segment": "exhibits",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "explorer",
       "segment": "explorer",
       "appIndex": false,
@@ -393,12 +399,6 @@
     {
       "paneId": "graph",
       "segment": "graph",
-      "appIndex": false,
-      "parent": null
-    },
-    {
-      "paneId": "layout-lab",
-      "segment": "layout-lab",
       "appIndex": false,
       "parent": null
     },

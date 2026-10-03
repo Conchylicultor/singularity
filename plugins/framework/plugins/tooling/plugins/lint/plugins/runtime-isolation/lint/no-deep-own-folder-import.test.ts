@@ -1,7 +1,7 @@
 /**
  * Tests for the `no-deep-own-folder-import` lint rule.
  *
- * A browser-built file (web/, core/, shared/, fixtures/) reaches a sibling
+ * A browser-built file (web/, core/, shared/, exhibits/) reaches a sibling
  * folder of its own plugin only through that folder's barrel. The file under
  * lint is given by the RuleTester `filename` option.
  */
@@ -21,6 +21,7 @@ const PLUGIN = "/repo/plugins/ui/plugins/theme-engine";
 const WEB_FILE = `${PLUGIN}/web/components/theme-injector.tsx`;
 const SHARED_FILE = `${PLUGIN}/shared/resources.ts`;
 const SERVER_FILE = `${PLUGIN}/server/internal/handler.ts`;
+const EXHIBIT_FILE = `${PLUGIN}/exhibits/internal/composer.tsx`;
 
 ruleTester.run(
   "no-deep-own-folder-import",
@@ -61,6 +62,16 @@ ruleTester.run(
       },
       // npm packages.
       { code: `import { z } from "zod";`, filename: WEB_FILE },
+      // exhibits/ is co-built INTO the web artifact, so its own web/ is inlined
+      // beside it: a deep import means the file, in the browser and to tsc.
+      {
+        code: `import { Composer } from "../../web/components/composer";`,
+        filename: EXHIBIT_FILE,
+      },
+      {
+        code: `import { Composer } from "@plugins/ui/plugins/theme-engine/web/components/composer";`,
+        filename: EXHIBIT_FILE,
+      },
     ],
     invalid: [
       // The outage: a deep relative import from web/ into its own core/.
@@ -97,6 +108,21 @@ ruleTester.run(
         filename: `${PLUGIN}/core/lazy.ts`,
         errors: [{ messageId: "deepImport" }],
         output: `const m = import("../web");`,
+      },
+      // The exemption is exhibits → web ONLY: exhibits/ into its own core/ is
+      // routed to the core barrel like any other folder.
+      {
+        code: `import { a } from "../../core/internal/x";`,
+        filename: EXHIBIT_FILE,
+        errors: [{ messageId: "deepImport" }],
+        output: `import { a } from "../../core";`,
+      },
+      // …and web/ gains nothing from it: web/ into exhibits/ is still deep.
+      {
+        code: `import { a } from "../../exhibits/internal/x";`,
+        filename: WEB_FILE,
+        errors: [{ messageId: "deepImport" }],
+        output: `import { a } from "../../exhibits";`,
       },
       // `export *` from the barrel re-exports a different set — no autofix.
       {

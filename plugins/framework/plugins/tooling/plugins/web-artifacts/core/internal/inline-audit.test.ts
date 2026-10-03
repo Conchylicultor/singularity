@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createInlineAudit } from "./inline-audit";
 
-const ROOTS = ["/repo/plugins/x/fixtures", "/repo/plugins/x/shared"];
+const ROOTS = ["/repo/plugins/x/prewarm", "/repo/plugins/x/shared"];
 
 /**
  * Drive the REAL `generateBundle` hook with a synthetic bundle, so the test
@@ -12,9 +12,9 @@ const ROOTS = ["/repo/plugins/x/fixtures", "/repo/plugins/x/shared"];
  */
 function auditOf(moduleIds: string[]) {
   const audit = createInlineAudit({
-    dirName: "x.fixtures.abc123",
+    dirName: "x.prewarm.abc123",
     hashedRoots: ROOTS,
-    kind: "fixtures",
+    kind: "prewarm",
   });
   const bundle = {
     "index.js": {
@@ -35,8 +35,8 @@ describe("createInlineAudit", () => {
   test("passes when every first-party module is inside the hashed roots", () => {
     expect(() =>
       auditOf([
-        "/repo/plugins/x/fixtures/index.ts",
-        "/repo/plugins/x/fixtures/internal/cases.tsx",
+        "/repo/plugins/x/prewarm/index.ts",
+        "/repo/plugins/x/prewarm/internal/cases.tsx",
         "/repo/plugins/x/shared/util.ts",
       ]).verify(),
     ).not.toThrow();
@@ -50,14 +50,14 @@ describe("createInlineAudit", () => {
         "/repo/node_modules/some-pkg/dist/index.mjs",
         "/repo/plugins/x/node_modules/some-dep/index.js",
         "virtual:some-plugin",
-        "/repo/plugins/x/fixtures/index.ts",
+        "/repo/plugins/x/prewarm/index.ts",
       ]).verify(),
     ).not.toThrow();
   });
 
   test("query suffixes are stripped before the containment check", () => {
     expect(() =>
-      auditOf(["/repo/plugins/x/fixtures/a.css?used"]).verify(),
+      auditOf(["/repo/plugins/x/prewarm/a.css?used"]).verify(),
     ).not.toThrow();
     expect(() => auditOf(["/repo/plugins/x/web/a.css?used"]).verify()).toThrow(
       "/repo/plugins/x/web/a.css",
@@ -66,12 +66,12 @@ describe("createInlineAudit", () => {
 
   test("test code inside a hashed root is not hashed, so inlining it throws", () => {
     for (const id of [
-      "/repo/plugins/x/fixtures/testing/index.ts",
-      "/repo/plugins/x/fixtures/__tests__/helper.tsx",
+      "/repo/plugins/x/prewarm/testing/index.ts",
+      "/repo/plugins/x/prewarm/__tests__/helper.tsx",
       "/repo/plugins/x/shared/util.test.ts",
     ]) {
       expect(() =>
-        auditOf(["/repo/plugins/x/fixtures/index.ts", id]).verify(),
+        auditOf(["/repo/plugins/x/prewarm/index.ts", id]).verify(),
       ).toThrow(id);
     }
   });
@@ -80,22 +80,22 @@ describe("createInlineAudit", () => {
     let message = "";
     try {
       auditOf([
-        "/repo/plugins/x/fixtures/index.ts",
+        "/repo/plugins/x/prewarm/index.ts",
         "/repo/plugins/x/web/internal/bar.tsx",
       ]).verify();
     } catch (err) {
       message = err instanceof Error ? err.message : String(err);
     }
-    expect(message).toContain("x.fixtures.abc123");
+    expect(message).toContain("x.prewarm.abc123");
     expect(message).toContain("/repo/plugins/x/web/internal/bar.tsx");
-    expect(message).not.toContain("/repo/plugins/x/fixtures/index.ts");
+    expect(message).not.toContain("/repo/plugins/x/prewarm/index.ts");
     expect(message).toContain("inlinedRootsFor()");
   });
 
   test("a sibling dir sharing a root's prefix is NOT inside it", () => {
     expect(() =>
-      auditOf(["/repo/plugins/x/fixtures-extra/a.ts"]).verify(),
-    ).toThrow("/repo/plugins/x/fixtures-extra/a.ts");
+      auditOf(["/repo/plugins/x/prewarm-extra/a.ts"]).verify(),
+    ).toThrow("/repo/plugins/x/prewarm-extra/a.ts");
   });
 
   test("caps the listed paths and summarizes the rest", () => {

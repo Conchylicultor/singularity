@@ -326,6 +326,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `page/read-only-view`
     - `page/sub-page`
     - `page/table`
+    - `plugin-meta/exhibits`
     - `plugin-meta/facets/contributions/render-detail`
     - `plugin-meta/facets/cross-refs/render-detail`
     - `plugin-meta/facets/db-schema/render-detail`
@@ -347,7 +348,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/css/cluster`
     - `primitives/css/control-panel`
     - `primitives/css/inline`
-    - `primitives/css/layout-harness`
     - `primitives/css/radio-group`
     - `primitives/cursor-pagination`
     - `primitives/data-table`

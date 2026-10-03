@@ -66,7 +66,7 @@ This pattern applies to *genuinely open* sets — ones where future plugins must
 
 Two checks split the work. `boundary-rules` answers *which folder may import which*, from one table (`folders` in `plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts`); `plugin-boundaries` owns the import grammar, barrels and cycles (rules R1–R13). Details: [`boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/boundaries/CLAUDE.md) and [`plugin-boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/CLAUDE.md).
 
-- **Every file sits in a known folder.** A plugin contains only the folders in the vocabulary in `plugins/framework/plugins/plugin-id/core` — barrel folders (`RUNTIME_FOLDERS`: `web`, `server`, `central`, `core`, `shared`, `e2e`, `provision`, `data-dirs`, `cli`, `deps`) and leaf folders (`LEAF_FOLDERS`: `check`, `lint`, `facet`, `bin`, `scripts`, `fixtures`, `vite`, `prewarm`) — plus `plugins/` for child plugins. A loose `.ts` at the plugin root, a folder outside the vocabulary, or a file under `plugins/` that no child plugin claims is a violation. A new kind of folder is one entry in that vocabulary plus its row in the table (tsc enforces the row).
+- **Every file sits in a known folder.** A plugin contains only the folders in the vocabulary in `plugins/framework/plugins/plugin-id/core` — barrel folders (`RUNTIME_FOLDERS`: `web`, `server`, `central`, `core`, `shared`, `e2e`, `provision`, `data-dirs`, `cli`, `deps`) and leaf folders (`LEAF_FOLDERS`: `check`, `lint`, `facet`, `bin`, `scripts`, `exhibits`, `vite`, `prewarm`, `python`) — plus `plugins/` for child plugins. A loose `.ts` at the plugin root, a folder outside the vocabulary, or a file under `plugins/` that no child plugin claims is a violation. A new kind of folder is one entry in that vocabulary plus its row in the table (tsc enforces the row).
 - **One import table, inside and across plugins.** Each folder's row lists the barrel folders it may import (e.g. `core` → `core` only; `web` → `web`, `core`, `shared`; `e2e` → `e2e`, `core`, `data-dirs`). It applies to relative imports inside your own plugin exactly as to `@plugins/…` imports of another: `core/` importing its own `../server/x` fails like importing `@plugins/other/server`. A leaf folder (`check/`, `lint/`, `bin/`, …) is never an import target. The channels between folders are `core/` (public) and `shared/` (plugin-private).
 - **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point. No `api.ts`, no deep paths.
 - **Cross-plugin import grammar.** A specifier must end at a barrel folder: `@plugins/<name>/<runtime>` for top-level plugins, or `@plugins/<name>/plugins/.../.../<runtime>` for any nesting depth — or at `<runtime>/testing`, a plugin's published test helpers. `shared/` is plugin-private — cross-plugin imports from `shared/` are forbidden (R10), and your own `shared/` is imported by relative path. Forbidden: paths that go *inside* a barrel (`/web/components/`, `/server/internal/`, etc.), workspace-name imports (`@singularity/plugin-shell`), and relative `../` escapes into another plugin's tree.
@@ -91,7 +91,8 @@ Two checks split the work. `boundary-rules` answers *which folder may import whi
 │       ├── cli/, e2e/, provision/, data-dirs/, deps/   # other barrel folders (CLI verbs, Playwright scripts, install steps, data-dir declarations, on-demand dependency declarations)
 │       ├── lint/     # ESLint rules contributed by this plugin (optional)
 │       ├── check/    # Custom Check[] enforced by ./singularity check (optional)
-│       ├── bin/, scripts/, facet/, fixtures/, vite/, prewarm/   # other leaf folders — discovered or run by path, never imported
+│       ├── exhibits/ # Real components shown standalone — the `plugin-meta/exhibits` catalog (optional)
+│       ├── bin/, scripts/, facet/, vite/, prewarm/   # other leaf folders — discovered or run by path, never imported
 │       └── plugins/  # child plugins
 ├── web/              # Frontend bootstrap (SPA shell, plugin registry)
 ├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
@@ -218,7 +219,8 @@ the escape hatch for a deploy it did not build — and the one form that skips t
 check that the app answering is the build you just made.
 
 To **compare a prototype mock against the real app** it declares it mocks
-(`<meta name="mocks">`), run
+(`<meta name="mocks">` — a route, the whole app, or one component by its
+exhibit id, `exhibit:<id>`), run
 [`compare-diff.ts`](plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts).
 It opens the prototype's canvas beside the Real app frame, photographs both
 frames at one size and 100% zoom, and writes the two captures, a red-on-grey diff and a side-by-side sheet, logging the

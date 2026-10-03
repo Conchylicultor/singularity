@@ -16,9 +16,10 @@ It owns two things and names no kind of counterpart:
 2. **Dispatching on the kind** (`RealAppSource`, `web/components/real-app-source.tsx`).
    `Counterpart.Kind` (`web/slots.tsx`) is a dispatch slot keyed on the tag. A
    kind is a child plugin under `plugins/` contributing `{ match: "<tag>",
-   label, example, component }`. Shipped kinds: `fixture` (a layout-harness
-   fixture), `component` (a real component a plugin exhibits as a specimen,
-   rendered inline in the app), and `route` / `app` (the running app at a path —
+   label, example, component }`. Shipped kinds: `exhibit` (one real component
+   from the exhibit catalog, `plugin-meta/exhibits`, rendered inline in the app;
+   `fixture` and `component` are aliases of it, kept for prototypes written
+   before the catalog unified) and `route` / `app` (the running app at a path —
    the screen alone, or the whole app with its rail and tab bar; one plugin,
    two contributions). Another kind is a new folder here and no edit to this
    plugin.
@@ -27,7 +28,7 @@ It owns two things and names no kind of counterpart:
 
 A kind contributes a **component whose only output is `children(resolution)`**
 (`CounterpartKindProps` / `CounterpartResolution`, `web/types.ts`). It is a
-real component — it may run hooks (the fixture kind loads a catalog, the route
+real component — it may run hooks (the exhibit kind loads a catalog, the route
 kind reads the app registry) and it mounts inside the dispatch middleware's
 error boundary — but it paints no layout of its own, so the frame is always
 the canvas's size.
@@ -37,7 +38,7 @@ The resolution has three arms, and every one is a state the frame renders:
 - `loading` — the kind does not know yet. Never the "no counterpart" copy,
   which would be a claim about the user's file that reverses itself.
 - `unresolved { title, detail }` — the kind understands the tag but cannot
-  resolve the ref here (no such fixture on this branch; no pane at that path).
+  resolve the ref here (no such exhibit on this branch; no pane at that path).
 - `found { title, subtitle?, badge?, href?, render(width, height) }` — how to
   paint it at the canvas's logical size, what the frame's tag says ("/agents ·
   App screen"), and, for a counterpart that is a page, the URL that opens it on
@@ -55,7 +56,7 @@ the first colon; it is not named `ref` because that collides with React's
 | no tag | the parser | "does not say what it is a mockup of" + every declarable kind's example line |
 | malformed | the parser (also a `problems[]` entry on the card and the pane's banner) | the raw line, the reason, the syntax, the known kinds |
 | unknown kind | the dispatch fallback (`UnknownKind`, in `slots.tsx`) | "nothing in this worktree shows a `<tag>:` counterpart" + the known kinds |
-| unresolvable ref | the kind itself | the kind's own sentence (fixture: missing / region; route: no app / no pane) |
+| unresolvable ref | the kind itself | the kind's own sentence (exhibit: missing / ambiguous; route: no app / no pane) |
 
 The example lines come from the registry (`useCounterpartKinds()`), never from
 a hardcoded pair, so a new kind documents its own syntax by existing. The
@@ -129,9 +130,9 @@ canvas redesign `research/2026-09-23-apps-prototypes-frame-canvas.md`.
 
 ## Plugin reference
 
-- Description: The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and contributed as a FrameSource, so the canvas shows it beside the prototype at the canvas's size. Each kind of counterpart (a layout-harness fixture, a live component specimen, the running app at a route) is a child plugin.
+- Description: The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and contributed as a FrameSource, so the canvas shows it beside the prototype at the canvas's size. Each kind of counterpart (an exhibit from the exhibit catalog, the running app at a route) is a child plugin.
 - Web:
-  - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.component`, `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`
+  - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.exhibit`, `apps.prototypes.compare.route`
   - Contributes: `FrameSource` "Real app" → `RealAppSource`
   - Uses:
     - `apps/prototypes/canvas.FrameSource`
@@ -148,16 +149,14 @@ canvas redesign `research/2026-09-23-apps-prototypes-frame-canvas.md`.
     - `useCounterpartKinds`
 - Cross-plugin:
   - Imported by:
-    - `apps/prototypes/compare/component`
-    - `apps/prototypes/compare/fixture`
+    - `apps/prototypes/compare/exhibit`
     - `apps/prototypes/compare/route`
 - Core:
   - Exports (values):
     - `REAL_APP_LABEL`
     - `REAL_APP_SOURCE`
 - Sub-plugins:
-  - **`component`** — The component: counterpart kind for the prototype canvas's Real app frame: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the canvas's size.
-  - **`fixture`** — The fixture: counterpart kind for the prototype canvas's Real app frame: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the canvas's size. The only place prototypes are tied to app internals.
+  - **`exhibit`** — The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size. fixture: and component: are aliases of it, kept so prototypes written before the catalog unified still resolve.
   - **`route`** — The route: and app: counterpart kinds for the prototype canvas's Real app frame: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
 
 <!-- AUTOGENERATED:END -->

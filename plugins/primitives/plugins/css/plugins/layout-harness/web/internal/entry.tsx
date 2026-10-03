@@ -3,22 +3,26 @@ import { flushSync } from "react-dom";
 import { createElement } from "react";
 import {
   HOST_MARKER_ATTR,
-  loadFixtures,
   type FixtureMutation,
-  type LayoutFixture,
-  type MeasuredBox,
-  type MeasuredFixture,
+} from "@plugins/primitives/plugins/css/plugins/layout-harness/plugins/geometry/core";
+import type {
+  MeasuredBox,
+  MeasuredFixture,
 } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
-import { expandRegionFixtures } from "./expand-region-fixtures";
+import { loadExhibits } from "@plugins/plugin-meta/plugins/exhibits/core";
+import {
+  measurableExhibits,
+  type MeasurableExhibit,
+} from "./measurable-exhibits";
 import { RAIL_MARKER_ATTR } from "./region-children";
-// The ONLY place the real Tailwind stylesheet is imported — the fixtures
+// The ONLY place the real Tailwind stylesheet is imported — the exhibits
 // themselves never import it (so they stay Bun-safe). Bundling it here means the
 // measured page paints with the exact tokens/utilities the live app uses.
 import "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
 
 // ── The browser side of the geometry harness ────────────────────────
 //
-// This module is bundled by `build-fixtures-page.ts` (Vite + React + Tailwind)
+// This module is bundled by `build-measurer-page.ts` (Vite + React + Tailwind)
 // into a static page loaded by Playwright. It exposes two globals the measure
 // driver calls per (fixture, width):
 //
@@ -32,7 +36,7 @@ import "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
 
 const container = document.getElementById("root")!;
 let root: Root | null = null;
-let byId: Map<string, LayoutFixture> = new Map();
+let byId: Map<string, MeasurableExhibit> = new Map();
 
 function ensureRoot(): Root {
   if (!root) root = createRoot(container);
@@ -570,16 +574,17 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
   }
 }
 
-void loadFixtures().then((loaded) => {
-  // Region fixtures collapse into ordinary layout fixtures here, so everything
-  // below — render, measure, mutate — deals in one fixture shape.
-  const fixtures = expandRegionFixtures(loaded);
-  byId = new Map(fixtures.map((f) => [f.id, f]));
+void loadExhibits().then((loaded) => {
+  // The geometry-gated exhibits (and regions, filled with the kit) become one
+  // measurable shape here, so everything below — render, measure, mutate —
+  // deals in one shape. App exhibits are dropped without being loaded.
+  const exhibits = measurableExhibits(loaded);
+  byId = new Map(exhibits.map((f) => [f.id, f]));
 
   window.__renderFixture = (id, width, falsify) => {
     const fixture = byId.get(id);
     if (!fixture)
-      throw new Error(`__renderFixture: unknown fixture id "${id}"`);
+      throw new Error(`__renderFixture: unknown exhibit id "${id}"`);
     // The harness wrapper itself carries `data-geo="container"` (the width box).
     // A fixture that authors its OWN inner `[data-geo="container"]` is honored by
     // __measure's innermost-container precedence.

@@ -9,7 +9,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 //
 // This kit is NOT authorable by the fixture, and that is the entire mechanism.
 //
-// Every `LayoutFixture` renders children it wrote itself, so a container is only
+// Every geometry-gated `isolated` exhibit renders children it wrote itself, so a container is only
 // ever measured against the child kind it already handles. `control-panel` shows
 // what that costs: five fixtures, all green, all rendering `Row`s — while a raw
 // `<Input>` dropped into a panel sat ~50px left of every label around it. Three

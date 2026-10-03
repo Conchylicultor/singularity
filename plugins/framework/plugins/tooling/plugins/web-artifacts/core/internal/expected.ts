@@ -15,6 +15,7 @@ import {
   composeMapEntries,
   planFleet,
   resolveBarrelClosure,
+  servedSpecsOf,
   type FleetSource,
   type PlannedTarget,
 } from "./plan";
@@ -78,7 +79,7 @@ export async function planExpectedFleet(opts: {
     pluginsRoot,
     identityHash: plan.identity.identityHash,
     cache,
-    webSpecs: new Set(plan.webTargets.map((t) => t.specifier)),
+    servedSpecs: servedSpecsOf(plan.webTargets),
     seedMetas: [...metas.values()],
     ensure: async (t) => read(t.dirName),
   });

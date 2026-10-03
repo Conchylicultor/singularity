@@ -20,6 +20,7 @@ import {
   eagerWebTargets,
   planFleet,
   resolveBarrelClosure,
+  servedSpecsOf,
   WEB_CORE_REL,
   type FleetSource,
   type PlannedTarget,
@@ -205,7 +206,7 @@ export async function runWebArtifactsPipeline(
         pluginsRoot,
         identityHash: plan.identity.identityHash,
         cache,
-        webSpecs: new Set(plan.webTargets.map((t) => t.specifier)),
+        servedSpecs: servedSpecsOf(plan.webTargets),
         seedMetas: [...metas.values()],
         ensure,
       });

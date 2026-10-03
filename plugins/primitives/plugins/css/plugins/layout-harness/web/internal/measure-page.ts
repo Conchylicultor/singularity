@@ -6,10 +6,8 @@ import {
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 import { readBrowserExecutables } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
-import type {
-  FixtureMutation,
-  MeasuredFixture,
-} from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
+import type { FixtureMutation } from "@plugins/primitives/plugins/css/plugins/layout-harness/plugins/geometry/core";
+import type { MeasuredFixture } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
 
 // The browser-side globals the measurer page (`entry.tsx`) installs on `window`
 // and this driver reads. Declared in this module (not a bare ambient `.d.ts`) so
@@ -18,7 +16,7 @@ import type {
 // test tsconfig program (which only sees this file transitively via the suite).
 declare global {
   interface Window {
-    /** True once `loadFixtures()` resolved and the globals below are installed. */
+    /** True once `loadExhibits()` resolved and the globals below are installed. */
     __fixturesReady: boolean;
     /** Mount a fixture at `width`, optionally applying a falsification mutation. */
     __renderFixture: (
@@ -179,7 +177,7 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
   });
 
   await page.goto(`${srv.origin}/entry.html`);
-  // The entry sets `window.__fixturesReady` after loadFixtures() resolves and the
+  // The entry sets `window.__fixturesReady` after loadExhibits() resolves and the
   // globals are installed; wait for it rather than the bare function existence so
   // we never race the async fixture load.
   await page.waitForFunction(() => window.__fixturesReady === true, undefined, {

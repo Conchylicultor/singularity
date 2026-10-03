@@ -8,8 +8,8 @@
  * pointer drag after being re-parented across the document" is a question only
  * a real browser answers.
  *
- * It drives the `adaptive-bar/rich-widgets` fixture in the live Layout Lab
- * (Debug → Layout Lab). The gallery renders that fixture once per swept width,
+ * It drives the `adaptive-bar/rich-widgets` exhibit in the live Exhibits gallery
+ * (Debug → Exhibits). The gallery renders that fixture once per swept width,
  * so the script takes ONE card and resizes it: five side-by-side widths would
  * be five different instances, and the whole claim is about one.
  *
@@ -33,7 +33,7 @@ await withBrowser(async (h) => {
   const { page, captured } = await h.session();
   const r = report("adaptive-bar — relocate & keep dragging");
 
-  await page.goto(pathUrl("/debug/layout-lab"));
+  await page.goto(pathUrl("/debug/exhibits"));
   await page.waitForSelector(FIXTURE, { timeout: 20_000 });
   await page.waitForTimeout(500);
 
@@ -42,7 +42,7 @@ await withBrowser(async (h) => {
 
   /**
    * The width box the gallery wraps each fixture card in. Resizing it is the
-   * closest thing to a user dragging a pane divider that the Lab offers, and it
+   * closest thing to a user dragging a pane divider that the gallery offers, and it
    * drives the bar's own ResizeObserver exactly as a real resize would.
    */
   async function setCardWidth(px: number): Promise<void> {

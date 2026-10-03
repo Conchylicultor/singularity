@@ -1,4 +1,5 @@
-import type { GeometryInvariant, MeasuredFixture } from "./types";
+import type { GeometryInvariant } from "@plugins/primitives/plugins/css/plugins/layout-harness/plugins/geometry/core";
+import type { MeasuredFixture } from "./types";
 
 // The generic, PURE geometry oracle. One function per invariant kind, each
 // consuming the per-width measurement map and returning a debuggable result.

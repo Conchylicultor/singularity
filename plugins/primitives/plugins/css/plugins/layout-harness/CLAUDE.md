@@ -2,31 +2,47 @@
 
 A **layout-primitive geometry regression harness**. Layout overlap/clip bugs (the
 `CollapsibleCard` badge-over-path class) used to be caught only by eyeball. This
-plugin standardizes one harness: a declarative **fixtures catalog** spanning all
-css primitives, rendered with the real React components + real Tailwind, measured
-by a **generic geometry oracle**, and (eventually) wired into
-`./singularity check layout-geometry` so any reappearing overlap fails the gate.
+plugin standardizes one harness: the geometry-gated exhibits of the **exhibit
+catalog** (`plugin-meta/exhibits`) spanning all css primitives, rendered with the
+real React components + real Tailwind, measured by a **generic geometry oracle**,
+and wired into `./singularity check layout-geometry` so any reappearing overlap
+fails the gate.
 
-## How fixtures are contributed
+## How measured exhibits are contributed
 
-Each primitive drops a `fixtures/index.ts` (default-export `HarnessFixture[]` —
-`LayoutFixture` and/or `RegionFixture`, see below), exactly mirroring how each
-check is `<plugin>/check/index.ts`. `fixtures` is a
-**collected-dir** runtime (marked by `defineCollectedDir("fixtures")` in
-`core/collected.ts`); codegen auto-discovers it and emits `core/fixtures.generated.ts`
-with zero codegen edits when a new primitive contributes. A fixture is pure data
-plus `render: () => ReactElement` — author `data-geo="<slot>"` on the boxes you
-want measured.
+The harness owns no catalog: it is a pure CONSUMER of the one exhibit catalog
+(see [`plugin-meta/exhibits`](../../../../../plugin-meta/plugins/exhibits/CLAUDE.md)).
+A primitive drops an `exhibits/index.ts` whose default export is one exhibit or
+an array of them, and two arms are measured:
 
-## Region fixtures: the harness supplies the children
+- **`isolatedExhibit({ id, label, widths, render, geometry: { dims, invariants } })`**
+  — authors its own children; `geometry` (`GeometrySpec`, from the
+  [`geometry`](plugins/geometry/CLAUDE.md) leaf) is what makes the harness
+  measure it. An isolated exhibit without `geometry` is gallery-only.
+- **`regionExhibit({ id, label, widths, render: (children) => … })`** — a region,
+  see below. Always measured.
 
-A `LayoutFixture` authors its own children. A **`RegionFixture`** authors a
+`app` exhibits (`appExhibit`) are never measured, and never loaded: their
+component sits behind `load()`, which the harness does not call, so the bare
+measurer page evaluates no app-runtime code. An `appExhibit` cannot even carry a
+`geometry` — it is a tsc error.
+
+`render` returns the REAL component — author `data-geo="<slot>"` on the boxes you
+want measured. The id is `<group>/<scenario>` (the group is the primitive), and
+the catalog is a collected dir, so a new contributor needs no registry edit.
+[`measurable-exhibits.ts`](web/internal/measurable-exhibits.ts) turns the loaded
+catalog into the one `MeasurableExhibit` shape every consumer below measures, and
+fails loudly on two measured exhibits sharing an id.
+
+## Region exhibits: the harness supplies the children
+
+An `isolated` exhibit authors its own children. A **region exhibit** authors a
 **hole** — `render: (children) => ReactElement` — and the harness fills it with
 `REGION_CHILDREN`, the one kit in
 [`web/internal/region-children.tsx`](web/internal/region-children.tsx). The
 author says "this box opens a region"; the harness says what goes in it.
 
-**Why the kit is not authorable, at all.** A fixture that writes its own children
+**Why the kit is not authorable, at all.** An exhibit that writes its own children
 only ever measures the child kind its primitive already handles. `control-panel`
 is the worked example: five fixtures, all green, every one rendering `Row`s —
 while a raw `<Input>` dropped into a panel sat ~50px left of every label around
@@ -53,11 +69,11 @@ follow-it-yourself shapes satisfy when correct. The kit, not the oracle, is what
 makes the second shape present at all.
 
 A region cannot pick its invariants either.
-[`expand-region-fixtures.ts`](web/internal/expand-region-fixtures.ts) supplies
+[`measurable-exhibits.ts`](web/internal/measurable-exhibits.ts) supplies
 them — `railAlignment`, `noClip`, and a `railOverride` falsification — and
-rewrites each region into an ordinary `LayoutFixture`. That expansion is pure
-sugar: all three consumers below keep consuming `LayoutFixture`, and neither the
-suite, the check nor the gallery knows a second fixture kind exists.
+rewrites each region into an ordinary `MeasurableExhibit`. That expansion is pure
+sugar: the suite and the measurer page consume one shape, and neither knows a
+region is a second kind.
 
 ### How the rail is measured
 
@@ -149,15 +165,15 @@ outer one as publisher. Nesting is shadowing, so a correct inner region uses a
 different step; a fixture that genuinely needs identical nested rails is not
 expressible today.
 
-## The three consumers (one catalog, generic collection)
+## The consumers (one catalog, generic collection)
 
-Per the collection-consumer separation rule, every consumer reads fixtures only
-through the generic `loadFixtures()`:
+Per the collection-consumer separation rule, every consumer reads exhibits only
+through the catalog's generic `loadExhibits()`, filtered by `measurableExhibits()`:
 
 1. **the geometry `bun:test`** (`web/internal/layout-geometry.test.ts`) — builds
-   the measurer page ONCE (`build-fixtures-page.ts`: Vite + React + real
-   Tailwind), opens ONE headless Chromium (`measure-page.ts`), sweeps the catalog
-   across each fixture's `widths`, and calls `evaluateInvariant` per invariant. A
+   the measurer page ONCE (`build-measurer-page.ts`: Vite + React + real
+   Tailwind), opens ONE headless Chromium (`measure-page.ts`), sweeps every
+   measured exhibit across its `widths`, and calls `evaluateInvariant` per invariant. A
    `falsification` invariant is re-measured with its mutation applied and asserted
    VIOLATED (proof the gate bites). jsdom can't lay out grid/overflow, so this
    drives a real browser. It also fails on a **page error** — see below.
@@ -178,7 +194,8 @@ through the generic `loadFixtures()`:
 2. **the contributed check** (`check/index.ts`, id `layout-geometry`) — shells out
    to (1), gated by a sidecar marker keyed on a sha256 of the WORKING-TREE
    content (tracked + untracked-not-ignored) of the css subtree, ui-kit
-   `app.css`, and **every fixture contributor's whole plugin subtree**. An
+   `app.css`, the catalog's own `core/`, and **every exhibit contributor's whole
+   plugin subtree**. An
    unchanged input set ⇒ ZERO browser launches; a touched css primitive re-runs.
    It folds the same sig into `cacheSignature()` so the runner's own cache also
    short-circuits identical full-tree reruns. Fails loudly (no auto-install) if
@@ -242,19 +259,21 @@ through the generic `loadFixtures()`:
      reason: a crashing fixture usually times out as well, so the two co-occur and
      the crash must win — classified environmental it would be non-fatal AND
      uncached, i.e. silently retried forever.
-3. **the live Layout Lab gallery** (`web/index.ts` → Debug sidebar) — renders the
-   catalog in-app (the human-eyeball complement; no measurement). Each (fixture,
-   width) card is wrapped in `PluginErrorBoundary`, so a fixture that throws
-   costs its own cell and not the catalog. The slot middleware's boundary cannot
-   do this — its granularity is the whole pane.
 
-### The signature covers the primitive, not just the fixture
+The human-eyeball complement (no measurement) is not here: it is the catalog's
+**Debug → Exhibits** gallery (`plugin-meta/exhibits`), which renders every
+exhibit — measured ones included — at each of its widths, each (exhibit, width)
+cell inside its own error boundary.
 
-A fixture is a few lines of JSX; what it measures is the primitive it renders.
-So `check/index.ts` derives each contributor's plugin root from the
-`plugins/**/fixtures/**` matches (`<root>/fixtures/…` ⇒ `<root>`) and hashes
-that whole subtree. Derived, not listed, so a plugin that starts contributing
-fixtures is covered the day it does. Keep `computeSig` sync and cheap —
+### The signature covers the primitive, not just the exhibit
+
+An exhibit is a few lines of JSX; what it measures is the primitive it renders.
+So `check/index.ts` derives each contributor's plugin root from its
+`exhibits/` leaf folder (`<root>/exhibits/…` ⇒ `<root>`, matched only as a
+plugin's own leaf folder — so neither the catalog plugin `plugin-meta/exhibits`
+nor a test's `fixtures/` directory counts) and hashes that whole subtree.
+Derived, not listed, so a plugin that starts contributing exhibits is covered
+the day it does. Keep `computeSig` sync and cheap —
 `cacheSignature()` calls it on every check run.
 
 ### How the measurer page is served
@@ -325,7 +344,7 @@ measurer page mounts no error boundary, so React funnels every uncaught
 render/commit error through `reportError` and into `pageerror` anyway.
 
 **The gate does not see a primitive's dev-only assertions — but only because
-`build-fixtures-page.ts` now pins it.** A primitive that reports loudly in dev
+`build-measurer-page.ts` now pins it.** A primitive that reports loudly in dev
 and degrades quietly in prod reaches this gate through its *quiet* branch, so a
 fixture must assert the degraded shape as geometry (adaptive-bar's strip
 fixtures use `rigidIntegrity` for exactly this: occupants floored into the panel
@@ -409,7 +428,7 @@ under it, which is what makes a red `opticalCenter` mean this and nothing else.
 
 ## Wiring footgun
 
-`fixtures/index.ts` is **web React/JSX**, and it used to need its own glob in the
+`exhibits/index.ts` is **web React/JSX**, and it used to need its own glob in the
 web tsconfig, separate from the node one where `check`/`facet` lived. That
 footgun is gone: there is one TypeScript program for the whole repo, whose
 `include` is `plugins` — so any folder under a plugin is covered with no
@@ -420,45 +439,18 @@ somehow is not.
 
 ## Plugin reference
 
-- Description: Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
+- Description: Layout-primitive geometry harness, web half: the bare measurer page and the bun:test geometry suite that measure every geometry-gated exhibit across its width sweep.
 - Web:
-  - Slots: `layoutLabPane.Actions` ← `primitives.pane`
-  - Contributes:
-    - `Pane.Register` "layout-lab"
-    - `DebugApp.Sidebar` "Layout Lab"
   - Uses:
-    - `apps/debug/shell.DebugApp`
-    - `primitives/css/card.Card`
-    - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
-    - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-  - Exports (values): `layoutLabPane`
 - Core:
-  - Uses:
-    - `framework/tooling/collected-dir.defineCollectedDir`
-    - `framework/tooling/collected-dir.loadCollectedDir`
   - Exports (types):
-    - `FixtureDims`
-    - `FixtureMutation`
-    - `FixtureState`
-    - `GeometryInvariant`
-    - `HarnessFixture`
-    - `LayoutFixture`
     - `MeasuredBox`
     - `MeasuredFixture`
     - `OracleResult`
-    - `RegionFixture`
   - Exports (values):
     - `checkLeftPack`
     - `checkNeverTruncatesWhenRoomy`
@@ -473,11 +465,8 @@ somehow is not.
     - `FALSIFICATION_NOT_BITING_MARKER`
     - `FATAL_MARKERS`
     - `FIXTURE_PAGE_ERROR_MARKER`
-    - `fixturesCollectedDir`
     - `GEOMETRY_VIOLATION_MARKER`
-    - `HOST_MARKER_ATTR`
-    - `isLayoutFixture`
-    - `isRegionFixture`
-    - `loadFixtures`
+- Sub-plugins:
+  - **`geometry`** — Geometry vocabulary of the layout harness, as a types-only leaf: FixtureDims, GeometryInvariant, FixtureMutation, HOST_MARKER_ATTR and GeometrySpec (what an exhibit declares to be geometry-gated). Split out so the exhibit catalog can carry geometry without depending on the harness.
 
 <!-- AUTOGENERATED:END -->

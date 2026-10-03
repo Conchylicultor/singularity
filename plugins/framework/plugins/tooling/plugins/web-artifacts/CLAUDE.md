@@ -1,7 +1,8 @@
 # web-artifacts
 
-Per-plugin web build artifacts: each plugin's `web/` barrel (and every imported
-folder barrel — `core`, `fixtures`, …) builds into an independent,
+Per-plugin web build artifacts: each plugin's `web/` barrel (with its
+`exhibits/` as a second entry, when it has one) and every imported
+folder barrel — `core`, `prewarm`, … — builds into an independent,
 content-addressed vite lib-mode artifact under `~/.singularity/cache/web-artifacts/`;
 the compose step assembles `dist/` (inline import map + entry + preloads +
 links into the store). This is the ONLY frontend build — the monolithic vite
@@ -59,13 +60,32 @@ Key invariants:
   not export passed every check and failed ~5 minutes later at compose. The
   `runtime-isolation/no-deep-own-folder-import` lint rule rejects the same
   import in the editor for every browser-built folder (`web`, `core`,
-  `shared`, `fixtures`); the throw covers what lint cannot see.
+  `shared`, `exhibits`); the throw covers what lint cannot see.
+  The one exception is a co-built folder reaching its host (below).
+- **A co-built folder is a second entry of its host artifact, never an
+  artifact of its own.** `COBUILT_FOLDERS` (`core/own-roots.ts`) maps
+  `exhibits` → `web`: a plugin with `exhibits/index.ts` gets its web artifact
+  built multi-entry (`index` = `web/index.ts`, `exhibits` =
+  `exhibits/index.ts`), so rollup puts every module both reach into a common
+  chunk and an exhibit shares ONE instance of its plugin's web modules — which
+  is why `exhibits/` may deep-import its own `web/`. The target carries the
+  extra entry as `coEntries`; `composeMapEntries` maps `@plugins/<p>/exhibits`
+  to the host artifact's `exhibits.js` (one artifact, two specifiers — compose's
+  every-URL-is-a-file gate and `scanStagedModules` then verify it like any other
+  entry), and the barrel closure resolves an `@plugins/<p>/exhibits` import to
+  the HOST artifact (`hostSpecOf`), planning it when the fleet lacks it and
+  throwing when the plugin has no `web/`. Extracted CSS of a multi-entry build
+  goes into one `__artifact-styles.js` every entry imports. `exhibits.js` is
+  reached only through the exhibits registry's dynamic import, so it never
+  joins the modulepreload closure — asserted per build by
+  `assertCoEntriesOffHostPath` (`index.js` must not statically reach a
+  co-entry file).
 - **An artifact's address covers exactly what its bytes inline.** The store
   reuses an artifact whenever its address matches, so any source file whose
   content reaches the bundle but not the hash fossilises the artifact: it is
   served forever against sibling code it was never built with. The inlined-folder
   set is therefore ONE list (`inlinedRootsFor` in `core/own-roots.ts`, `[kind,
-  "shared"]`), read by both the address side (`listOwnFiles`) and the content
+  "shared", …its co-built folders]` — `web` also inlines `exhibits`), read by both the address side (`listOwnFiles`) and the content
   side (the externals predicate + the own-folder-barrel rewrite); every other own
   folder is external, routed to its own barrel. Backed by an assert that trusts
   neither: `createInlineAudit` reads the module ids rollup actually emitted
@@ -75,8 +95,9 @@ Key invariants:
   (`web/testing/`, `__tests__/`, `*.test.ts`) sits inside `web/` but is never
   hashed, so a shipping file that reached it would bake unhashed bytes into the
   bundle. The boundary check already bans that import; the audit catches it
-  when the check was skipped. Before this, a `fixtures` barrel inlined its plugin's whole `web/` while
-  hashing only `fixtures/` — moving an export out of a sibling plugin surfaced as
+  when the check was skipped. Before this, a `fixtures` barrel (the layout
+  harness's former leaf folder, now `exhibits/`) inlined its plugin's whole
+  `web/` while hashing only `fixtures/` — moving an export out of a sibling plugin surfaced as
   a compose link failure against an hour-old fossil, and the `prewarm` barrels
   inlined an unhashed `shared/` (`…/mirror`) the same way.
   (`research/2026-08-17-global-artifact-address-covers-content.md`)

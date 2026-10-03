@@ -1,4 +1,4 @@
-// @hash 8d1442de96c1
+// @hash a4818cecb937
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -30,6 +30,6 @@
     "debug.worktree-cleanup:worktree-cleanup",
     "infra.background.catalog:background",
     "infra.events-test:events-test",
-    "primitives.css.layout-harness:layout-lab"
+    "plugin-meta.exhibits:exhibits"
   ]
 }

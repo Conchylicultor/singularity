@@ -88,8 +88,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `apps/mail/search`
     - `apps/prototypes/canvas`
     - `apps/prototypes/compare`
-    - `apps/prototypes/compare/component`
-    - `apps/prototypes/compare/fixture`
+    - `apps/prototypes/compare/exhibit`
     - `apps/prototypes/compare/route`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
@@ -179,6 +178,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `infra/events-test`
     - `page/annotations/instructions/instructions-page`
     - `page/editor`
+    - `plugin-meta/exhibits`
     - `plugin-meta/facets/exports/render-contributions`
     - `plugin-meta/facets/exports/render-detail`
     - `plugin-meta/facets/structure/render-detail`

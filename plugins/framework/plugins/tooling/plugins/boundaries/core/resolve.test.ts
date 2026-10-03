@@ -206,12 +206,12 @@ describe("test code", () => {
 describe("the folder table", () => {
   test("a leaf folder may import its row", () => {
     expect(checkRuntime(boundaryConfig.folders, "check", "server")).toBe(true);
-    expect(checkRuntime(boundaryConfig.folders, "fixtures", "web")).toBe(true);
+    expect(checkRuntime(boundaryConfig.folders, "exhibits", "web")).toBe(true);
   });
 
   test("a leaf folder is denied what its row omits", () => {
     expect(checkRuntime(boundaryConfig.folders, "check", "web")).toBe(false);
-    expect(checkRuntime(boundaryConfig.folders, "fixtures", "server")).toBe(
+    expect(checkRuntime(boundaryConfig.folders, "exhibits", "server")).toBe(
       false,
     );
   });

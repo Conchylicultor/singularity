@@ -432,7 +432,7 @@ async function computeDirScan(
  * `dataDirs`, so the emitted registry const is `dataDirsEntries`.
  *
  * Interpolating the folder name raw was fine only because every collected dir
- * happened to be one lowercase word (`check`, `facet`, `fixtures`). The first
+ * happened to be one lowercase word (`check`, `facet`, `exhibits`). The first
  * hyphenated one emitted `export const data-dirsEntries`, which is not a legal
  * identifier — so the generated file failed to PARSE, and the failure surfaced
  * far from here, as a facet-extraction `AggregateError` during doc generation.

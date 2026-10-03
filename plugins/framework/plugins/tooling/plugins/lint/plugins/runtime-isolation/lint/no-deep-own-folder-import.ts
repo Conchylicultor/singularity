@@ -22,10 +22,16 @@ import { locate, ownTargetOf, toPosix } from "./own-tree";
  * ordinary type error in the editor.
  *
  * Scope:
- *   - Importers: `web/`, `core/`, `shared/`, `fixtures/` — the folders that end
- *     up in browser artifacts (`shared/` is inlined into each). A `server/` or
- *     `check/` file runs under Bun, which loads the file itself, so its deep
- *     imports mean what they say.
+ *   - Importers: `web/`, `core/`, `shared/`, `exhibits/` — the folders that
+ *     end up in browser artifacts (`shared/` is inlined into each). A
+ *     `server/` or `check/` file runs under Bun, which loads the file
+ *     itself, so its deep imports mean what they say.
+ *   - The one exemption: `exhibits/` may deep-import its own `web/`. It is not
+ *     an artifact of its own but a second entry of the plugin's web artifact
+ *     (`COBUILT_FOLDERS` in web-artifacts `core/own-roots.ts`), so `web/` is
+ *     inlined into the same build and the deep path means the file in the
+ *     browser exactly as it does to `tsc`. Every other deep import from
+ *     `exhibits/` (`../core/x`) is still routed to a barrel and still rejected.
  *   - Targets: any other top-level folder of the same plugin, except `shared/`
  *     (inlined into every artifact, usually barrel-less), `plugins/` (other
  *     plugins — the boundary check's business) and `node_modules/`. CSS and
@@ -43,7 +49,14 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /** Top-level plugin folders whose files are bundled into browser artifacts. */
-const BROWSER_BUILT = new Set(["web", "core", "shared", "fixtures"]);
+const BROWSER_BUILT = new Set(["web", "core", "shared", "exhibits"]);
+
+/**
+ * Importer folder → the own folder it is co-built with, which it may therefore
+ * enter deeply. Mirrors web-artifacts' `COBUILT_FOLDERS` (lint rules import no
+ * plugin runtime code).
+ */
+const CO_BUILT_WITH: Readonly<Record<string, string>> = { exhibits: "web" };
 
 /** Own folders a deep import may enter: not routed to a barrel by the builder. */
 const OPEN_FOLDERS = new Set(["shared", "plugins", "node_modules"]);
@@ -78,7 +91,7 @@ export default createRule({
     fixable: "code",
     docs: {
       description:
-        "In browser-built folders (web/, core/, shared/, fixtures/), import a sibling " +
+        "In browser-built folders (web/, core/, shared/, exhibits/), import a sibling " +
         "folder of the same plugin through its barrel, never a file inside it — the " +
         "web-artifact build rewrites the deep import to the barrel, so a symbol the " +
         "barrel does not export type-checks and then fails the build.",
@@ -109,6 +122,7 @@ export default createRule({
       const target = ownTargetOf(specifier, file, source);
       if (target === null) return;
       if (target.folder === source.folder) return;
+      if (CO_BUILT_WITH[source.folder] === target.folder) return;
       if (OPEN_FOLDERS.has(target.folder)) return;
       if (isBarrel(target.rest)) return;
       const barrel = barrelSpecifier(specifier, target.rest);

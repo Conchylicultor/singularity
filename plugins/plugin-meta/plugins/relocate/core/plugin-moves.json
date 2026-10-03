@@ -3,5 +3,10 @@
     "at": "2026-10-02T02:28:13.149Z",
     "from": "apps.website.pages.apps",
     "to": "apps.website.pages.vision"
+  },
+  {
+    "at": "2026-10-02T13:38:28.892Z",
+    "from": "plugin-meta.specimens",
+    "to": "plugin-meta.exhibits"
   }
 ]

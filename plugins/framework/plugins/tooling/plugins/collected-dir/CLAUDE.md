@@ -67,8 +67,8 @@ paths itself and uses throw-on-failure semantics.
     - `infra/asset-mirror`
     - `infra/deps`
     - `infra/paths`
+    - `plugin-meta/exhibits`
     - `plugin-meta/facets`
-    - `primitives/css/layout-harness`
 - Core:
   - Exports (types):
     - `CollectedDirDef`

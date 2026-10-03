@@ -13,9 +13,9 @@ export type CounterpartResolution =
   | { status: "unresolved"; title: ReactNode; detail: ReactNode }
   | {
       status: "found";
-      /** What it is ("App component" / "App screen"). */
+      /** What it is (an exhibit's label / "App screen"). */
       title: string;
-      /** Caption beside it (fixture dims / the owning app). */
+      /** Caption beside it (an exhibit's description / the owning app). */
       subtitle?: string;
       /** Identifier for the frame's tag (the ref, as declared). */
       badge?: string;
@@ -52,11 +52,11 @@ export interface CounterpartKindProps {
 
 /** The non-render fields every kind declares about itself. */
 export interface CounterpartKindMeta {
-  /** Heading for this kind of counterpart, e.g. "App component". */
+  /** Heading for this kind of counterpart, e.g. "App exhibit". */
   label: string;
   /**
    * A COMPLETE example `content` value, e.g.
-   * `fixture:control-panel/setting-rail`. The "declares nothing" copy lists
+   * `exhibit:task-draft/composer`. The "declares nothing" copy lists
    * every kind's, so the syntax the reader is shown is the registry's, never a
    * hardcoded pair.
    */

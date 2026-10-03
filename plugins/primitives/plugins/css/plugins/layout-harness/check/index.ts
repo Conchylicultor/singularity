@@ -22,17 +22,30 @@ import { classifyFailure } from "./classify";
 // invariants (no track collision / no overlap / truncation-onset) by shelling out
 // to the bun:test geometry suite — but only when the inputs the suite depends on
 // have changed. Steady-state cost is ZERO browser launches via a sidecar marker
-// keyed on a tree hash of the css subtree, app.css, and every fixture
+// keyed on a tree hash of the css subtree, app.css, and every exhibit
 // contributor's whole plugin subtree.
 
 // The seed paths whose content is the suite's real input, expressed as a
 // predicate over the run's own file set (`ctx.repo()`) instead of git
-// pathspecs: every css primitive/fixture subtree, the ui-kit stylesheet, and
-// — repo-wide, not just under css/plugins — every fixture contributor's
-// `fixtures/` path (see `fixtureContributorRoots` below for why "repo-wide"
-// matters: `fixtures/` is a collected dir, so a contributor need not be a css
+// pathspecs: every css primitive subtree, the ui-kit stylesheet, and —
+// repo-wide, not just under css/plugins — every exhibit contributor's
+// `exhibits/` path (see `exhibitContributorRoots` below for why "repo-wide"
+// matters: `exhibits/` is a collected dir, so a contributor need not be a css
 // primitive at all).
+//
+// Every `exhibits/` folder counts, app exhibits included: the suite loads the
+// whole catalog (strict — one broken contribution fails the load), so any
+// exhibit edit can change its verdict, and a contributor's plugin subtree is
+// cheap to hash next to a Chromium launch.
 const CSS_PLUGINS_PREFIX = "plugins/primitives/plugins/css/plugins/";
+// The catalog's own core: the loader and the generated registry the suite
+// reads every exhibit through.
+const CATALOG_CORE_PREFIX = "plugins/plugin-meta/plugins/exhibits/core/";
+// A plugin's own `exhibits/` leaf folder — `plugins/<a>(/plugins/<b>)*/exhibits/`
+// — and nothing else named `exhibits` (the catalog plugin itself is
+// `plugin-meta/plugins/exhibits`, a child plugin, not a leaf folder). Capture
+// group 1 is the contributor's plugin root.
+const EXHIBITS_FOLDER_RE = /^(plugins\/[^/]+(?:\/plugins\/[^/]+)*)\/exhibits\//;
 const APP_CSS_PATH =
   "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
 
@@ -47,32 +60,32 @@ function isSeedPath(path: string): boolean {
   return (
     path.startsWith(CSS_PLUGINS_PREFIX) ||
     path === APP_CSS_PATH ||
-    (path.startsWith("plugins/") && path.includes("/fixtures/"))
+    path.startsWith(CATALOG_CORE_PREFIX) ||
+    EXHIBITS_FOLDER_RE.test(path)
   );
 }
 
 /**
- * The plugin roots of the fixture contributors, derived from the fixture paths
- * themselves — `<root>/fixtures/<anything>` ⇒ `<root>`.
+ * The plugin roots of the exhibit contributors, derived from the exhibit paths
+ * themselves — `<root>/exhibits/<anything>` ⇒ `<root>`.
  *
- * A fixture is not the thing under test. It is a few lines of JSX; what it
- * measures is the PRIMITIVE it renders. Hashing `adaptive-bar/fixtures/**` and
+ * An exhibit is not the thing under test. It is a few lines of JSX; what it
+ * measures is the PRIMITIVE it renders. Hashing `adaptive-bar/exhibits/**` and
  * not `adaptive-bar/web/**` therefore covered the cheap half and missed the
  * expensive one: an edit to the primitive changed every box the gate measures
  * and left the marker valid, so the check answered `ok (cached)` about geometry
  * it had never seen. That is how a primitive whose guard took the Layout Lab
  * down shipped past a green gate.
  *
- * Derived rather than listed, so a plugin that starts contributing fixtures
+ * Derived rather than listed, so a plugin that starts contributing exhibits
  * tomorrow is covered the day it does — with no glob to remember to add, which
  * is the maintenance failure that opened the hole the first time.
  */
-function fixtureContributorRoots(fixturePaths: readonly string[]): string[] {
+function exhibitContributorRoots(exhibitPaths: readonly string[]): string[] {
   const roots = new Set<string>();
-  for (const rel of fixturePaths) {
-    const at = rel.lastIndexOf("/fixtures/");
-    if (at < 0) continue;
-    roots.add(rel.slice(0, at));
+  for (const rel of exhibitPaths) {
+    const root = EXHIBITS_FOLDER_RE.exec(rel)?.[1];
+    if (root !== undefined) roots.add(root);
   }
   return [...roots].sort();
 }
@@ -108,14 +121,14 @@ function sha256(s: string): string {
 }
 
 // Two passes, because the second root set is not knowable up front: filter the
-// seed from the run's already-loaded file set, read the fixture contributors
+// seed from the run's already-loaded file set, read the exhibit contributors
 // OUT of what came back, then pull their whole plugin subtrees too via
 // `repo.under()`. Pure lookups over `RepoFiles` — no git spawn, no I/O of its
 // own — so this can run on every check run for free.
 function listFiles(repo: RepoFiles): string[] {
   const seed = repo.all().filter(isSeedPath);
   const set = new Set(seed);
-  for (const root of fixtureContributorRoots(seed)) {
+  for (const root of exhibitContributorRoots(seed)) {
     for (const rel of repo.under(root)) set.add(rel);
   }
   return [...set].sort();
@@ -246,7 +259,7 @@ const check: Check = {
         return {
           ok: false,
           message: `layout geometry suite failed (exit ${exitCode}):\n${combined}`,
-          hint: `A layout primitive geometry invariant regressed — run \`bun test --timeout 120000 ${SUITE_REL}\` to see which fixture/slot collided.`,
+          hint: `A layout primitive geometry invariant regressed — run \`bun test --timeout 120000 ${SUITE_REL}\` to see which exhibit/slot collided.`,
         };
       }),
     );

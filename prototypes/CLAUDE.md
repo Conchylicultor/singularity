@@ -106,7 +106,7 @@ The gallery reads these out of your HTML — there is no metadata file.
 <title>Your prototype</title>
 <meta name="description" content="A sentence about what this explores." />
 <meta name="prototype-viewport" content="window" />
-<meta name="mocks" content="fixture:control-panel/setting-rail" />
+<meta name="mocks" content="exhibit:task-draft/composer" />
 ```
 
 - `<title>` is the card's name — the prototype's ONLY human name, since the
@@ -124,14 +124,15 @@ The gallery reads these out of your HTML — there is no metadata file.
   turn it into a fixed width in your CSS (see below).
 - `<meta name="mocks">` names the real app thing this prototype is a mockup
   of, as `<kind>:<ref>`, so the canvas can put the two side by side (its Real app frame):
-  - `fixture:control-panel/setting-rail` — an app **component**, by its Layout
-    Lab fixture id.
+  - `exhibit:task-draft/composer` — one real app **component**, by its exhibit
+    id: any plugin's `exhibits/` folder (the `plugin-meta/exhibits` catalog,
+    browsable in Debug). An `isolated` exhibit renders anywhere from plain
+    props; an `app` one as the running app renders it (real slots, config,
+    data) — the way to reach an element that lives inside a popover or deep in
+    a screen, which `route:` cannot. `fixture:<id>` and `component:<id>` are
+    older spellings, kept as aliases of `exhibit:`; write `exhibit:`.
   - `route:/agents/c/123` — a whole app **screen**: the running app itself,
     framed at that in-app path (no rail, no tab bar).
-  - `component:task-draft/composer` — one real app **component** as the
-    running app renders it (real slots, config, data), by the id its owning
-    plugin exhibits it under (`plugin-meta/specimens`). For an element that
-    lives inside a popover or deep in a screen, which `route:` cannot reach.
   - `app:/agents` — the **whole app**, chrome included: the running app at that
     path with its rail, tab bar and action bar, as a person sees it in their own
     tab. For a mock of the chrome itself, or of a theme across chrome and screen.

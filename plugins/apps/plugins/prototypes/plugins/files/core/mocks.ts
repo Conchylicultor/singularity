@@ -2,7 +2,7 @@
  * The `<meta name="mocks">` declaration, parsed.
  *
  * A prototype names the real app thing it is a mockup OF as `<kind>:<ref>` —
- * `fixture:control-panel/setting-rail` (a layout-harness fixture),
+ * `exhibit:task-draft/composer` (one real component from the exhibit catalog),
  * `route:/agents/c/123` (the running app at a route). The kind decides which
  * surface can put the two side by side, and the ref is that surface's own
  * business.

@@ -282,15 +282,15 @@ Metadata is therefore read out of the HTML, not a sidecar file:
   default read off `<html data-<name>>` → `options` (default: `[]`)
 
 `mocks` is the real app thing this prototype is a mockup OF — the pairing the
-canvas's Real app frame reads: `fixture:control-panel/setting-rail` (a layout-harness
-fixture), `route:/agents/c/123` (the running app at a path). `core/mocks.ts`
+canvas's Real app frame reads: `exhibit:task-draft/composer` (one real component
+from the exhibit catalog), `route:/agents/c/123` (the running app at a path). `core/mocks.ts`
 parses it (`parseMocks`, pinned by `mocks.test.ts`) into a three-way value on
 the wire: `none`, `malformed { raw, reason }`, or `declared { tag, ref }` — split
 at the FIRST colon, so a ref may carry its own.
 
 Syntax is all that is judged here. The kind set is open (each kind is a web
 plugin contributed into the compare plugin's registry) and the ref is resolved
-only there — fixtures and panes are per-worktree code while prototypes are
+only there — exhibits and panes are per-worktree code while prototypes are
 host-global and outside git, so the pairing can only ever be a runtime lookup,
 and a prototype naming a kind or a ref this worktree does not have is a thing
 that surface renders, not a problem with the folder.

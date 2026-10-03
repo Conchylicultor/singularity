@@ -520,6 +520,7 @@ to reconcile them; they never needed reconciling.
     - `page/read-only-view`
     - `page/sub-page`
     - `page/table`
+    - `plugin-meta/exhibits`
     - `plugin-meta/facets/contributions/render-detail`
     - `plugin-meta/facets/cross-refs/render-detail`
     - `plugin-meta/facets/db-schema/render-detail`
