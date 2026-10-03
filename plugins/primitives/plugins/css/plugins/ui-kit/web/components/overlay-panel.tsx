@@ -18,6 +18,10 @@ import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/ove
 import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/use-scroll-fade";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 
+/** Pins the sticky header at the panel's true top edge, through its block
+ *  padding (see the header below). */
+const HEADER_PIN_STYLE = { top: "calc(-1 * var(--rail-block-start, 0px))" };
+
 /**
  * THE floating panel — the one definition of the box every overlay surface
  * contains.
@@ -169,8 +173,15 @@ export function OverlayPanel({
             // `-mt-1` stays hardcoded because there is no block bleed in the
             // contract: `--rail-block-*` is published for `scroll-fade` to read,
             // and the escape is inline-only by design.
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- -mt-1 bleeds the header through the panel's block padding; the contract has no block escape and no named negative-margin utility
-            <div className="sticky top-0 z-raised rail-bleed -mt-1 mb-xs border-b bg-popover py-xs">
+            // The pin offset is that published block rail, negated: a sticky
+            // box pins at its scroller's PADDING edge, so `top: 0` here left a
+            // strip of the panel's block padding above the pinned header where
+            // the scrolled items showed through.
+            <div
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- -mt-1 bleeds the header through the panel's block padding; the contract has no block escape and no named negative-margin utility
+              className="sticky z-raised rail-bleed -mt-1 mb-xs border-b bg-popover py-xs"
+              style={HEADER_PIN_STYLE}
+            >
               {header}
             </div>
           )}

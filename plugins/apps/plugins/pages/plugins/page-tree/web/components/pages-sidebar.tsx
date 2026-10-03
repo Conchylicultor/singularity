@@ -186,116 +186,123 @@ export function PagesSidebar() {
   return (
     // `pt-2xs`: with the section heads' own top padding (the theme's
     // `sectionHeadPadTop`), the first head sits where the mockup's does under
-    // the search field.
-    <Scroll fill className="pt-2xs pb-xs">
-      <DataView<PageRow>
-        rows={rows}
-        readiness={result}
-        fields={[
-          {
-            id: "title",
-            label: "Title",
-            primary: true,
-            value: (b) => pageData(b).title,
-            onEdit: async (b, next) => {
-              await fetchEndpoint(
-                updateBlock,
-                { id: b.id },
+    // the search field. The padding sits on an inner box, never on the
+    // `Scroll`: a sticky header pins at its scroller's PADDING edge, so padding
+    // on the scroller leaves a see-through strip above the pinned head where
+    // the scrolled rows show.
+    <Scroll fill>
+      <div className="pt-2xs pb-xs">
+        <DataView<PageRow>
+          rows={rows}
+          readiness={result}
+          fields={[
+            {
+              id: "title",
+              label: "Title",
+              primary: true,
+              value: (b) => pageData(b).title,
+              onEdit: async (b, next) => {
+                await fetchEndpoint(
+                  updateBlock,
+                  { id: b.id },
+                  {
+                    body: {
+                      data: {
+                        ...pageData(b),
+                        title: String(next ?? "").trim() || "Untitled",
+                      },
+                    },
+                  },
+                );
+              },
+            },
+          ]}
+          rowKey={(b) => b.id}
+          views={["tree", "list"]}
+          storageKey={PAGES_SIDEBAR_VIEW}
+          toolbar={SECTIONS}
+          searchPlaceholder="Search pages…"
+          fieldExtensions={PageTree.Fields}
+          creators={creators}
+          selectedRowId={selectedId}
+          onRowActivate={(b) =>
+            openPane(pageDetailPane, { pageId: b.id }, { mode: openMode })
+          }
+          hierarchy={{
+            // The page hierarchy is `pageId` (the denormalized nearest PAGE
+            // ancestor), NOT the raw block-forest `parentId`: a sub-page's direct
+            // parent may be a content block (nested under a text line, a toggle,
+            // …), which would orphan it to the sidebar's root. `pageId` is also
+            // invariant under intra-page block moves — indenting a sub-page block
+            // inside its page never changes which page it belongs to.
+            getParentId: (b) => b.pageId,
+            // Pages a page links to (page-link blocks, inline [[links]]) appear
+            // as read-only reference children of the linking page.
+            getAliasParents: (b) =>
+              linkSourcesByTarget.get(b.id) ?? NO_LINK_PARENTS,
+            // `docRank`, NOT the storage `rank`: a `rank` is comparable only
+            // within one `(parent_id, rank)` space, and this sibling group (pages
+            // sharing a `pageId`) can span several — some sub-pages are direct
+            // children of the page, others sit under a text line / toggle. The
+            // server mints `docRank` per group from true document order, so
+            // display order, array order, and `computeFlatReorder`'s rank-sorted
+            // neighbourhood are now ONE order. They silently disagreed before:
+            // display followed the array (a global rank sort), the DnD arithmetic
+            // re-sorted the sibling set — so a drop resolved against neighbours
+            // the user never saw, or hit a cross-space duplicate rank and aborted.
+            getRank: (b) => b.docRank,
+            // No expand hooks — the sidebar chevron and the in-document sub-page
+            // arrow are deliberately decoupled. This chevron is device-local view
+            // state owned by the data-view primitive (per surface + view
+            // instance); `page_blocks.expanded` stays genuine DOCUMENT content,
+            // written only by the in-document arrow, which mounts the child
+            // page's full content inline in its parent's body. Coupling them
+            // meant a nav gesture embedded a child page in its parent's
+            // document, stamped `updatedAt`, and fanned out `blocksChanged` (a
+            // search reindex plus a history snapshot). Matches Notion, whose
+            // sidebar arrow only reveals nav children.
+            // Sibling drops resolve against the TARGET's physical parent: the
+            // display parent (`dest.parentId`) is the page-level `pageId`
+            // relation, while `moveBlock` validates `targetId` against the raw
+            // block forest — and the target block may physically sit under a
+            // content block within that page. A child drop (`targetId: null`)
+            // parents directly under the destination page block.
+            onMove: (id, dest) => {
+              const target =
+                dest.targetId === null
+                  ? undefined
+                  : pagesById.get(dest.targetId);
+              void fetchEndpoint(
+                moveBlock,
+                { id },
                 {
                   body: {
-                    data: {
-                      ...pageData(b),
-                      title: String(next ?? "").trim() || "Untitled",
-                    },
+                    parentId: target ? target.parentId : dest.parentId,
+                    targetId: dest.targetId,
+                    zone: dest.zone,
                   },
                 },
               );
             },
-          },
-        ]}
-        rowKey={(b) => b.id}
-        views={["tree", "list"]}
-        storageKey={PAGES_SIDEBAR_VIEW}
-        toolbar={SECTIONS}
-        searchPlaceholder="Search pages…"
-        fieldExtensions={PageTree.Fields}
-        creators={creators}
-        selectedRowId={selectedId}
-        onRowActivate={(b) =>
-          openPane(pageDetailPane, { pageId: b.id }, { mode: openMode })
-        }
-        hierarchy={{
-          // The page hierarchy is `pageId` (the denormalized nearest PAGE
-          // ancestor), NOT the raw block-forest `parentId`: a sub-page's direct
-          // parent may be a content block (nested under a text line, a toggle,
-          // …), which would orphan it to the sidebar's root. `pageId` is also
-          // invariant under intra-page block moves — indenting a sub-page block
-          // inside its page never changes which page it belongs to.
-          getParentId: (b) => b.pageId,
-          // Pages a page links to (page-link blocks, inline [[links]]) appear
-          // as read-only reference children of the linking page.
-          getAliasParents: (b) =>
-            linkSourcesByTarget.get(b.id) ?? NO_LINK_PARENTS,
-          // `docRank`, NOT the storage `rank`: a `rank` is comparable only
-          // within one `(parent_id, rank)` space, and this sibling group (pages
-          // sharing a `pageId`) can span several — some sub-pages are direct
-          // children of the page, others sit under a text line / toggle. The
-          // server mints `docRank` per group from true document order, so
-          // display order, array order, and `computeFlatReorder`'s rank-sorted
-          // neighbourhood are now ONE order. They silently disagreed before:
-          // display followed the array (a global rank sort), the DnD arithmetic
-          // re-sorted the sibling set — so a drop resolved against neighbours
-          // the user never saw, or hit a cross-space duplicate rank and aborted.
-          getRank: (b) => b.docRank,
-          // No expand hooks — the sidebar chevron and the in-document sub-page
-          // arrow are deliberately decoupled. This chevron is device-local view
-          // state owned by the data-view primitive (per surface + view
-          // instance); `page_blocks.expanded` stays genuine DOCUMENT content,
-          // written only by the in-document arrow, which mounts the child
-          // page's full content inline in its parent's body. Coupling them
-          // meant a nav gesture embedded a child page in its parent's
-          // document, stamped `updatedAt`, and fanned out `blocksChanged` (a
-          // search reindex plus a history snapshot). Matches Notion, whose
-          // sidebar arrow only reveals nav children.
-          // Sibling drops resolve against the TARGET's physical parent: the
-          // display parent (`dest.parentId`) is the page-level `pageId`
-          // relation, while `moveBlock` validates `targetId` against the raw
-          // block forest — and the target block may physically sit under a
-          // content block within that page. A child drop (`targetId: null`)
-          // parents directly under the destination page block.
-          onMove: (id, dest) => {
-            const target =
-              dest.targetId === null ? undefined : pagesById.get(dest.targetId);
-            void fetchEndpoint(
-              moveBlock,
-              { id },
-              {
-                body: {
-                  parentId: target ? target.parentId : dest.parentId,
-                  targetId: dest.targetId,
-                  zone: dest.zone,
-                },
-              },
-            );
-          },
-          // Same physical-parent resolution for "Add page below": the new page
-          // must be a sibling of `afterId`'s BLOCK, wherever it physically sits.
-          onCreate: (args) => {
-            const after =
-              args.afterId === undefined
-                ? undefined
-                : pagesById.get(args.afterId);
-            return after
-              ? createPageWithSeed({
-                  parentId: after.parentId,
-                  afterId: after.id,
-                })
-              : createPageWithSeed({ parentId: args.parentId });
-          },
-        }}
-        viewOptions={viewOptions}
-        itemActions={PageTree.RowActions}
-      />
+            // Same physical-parent resolution for "Add page below": the new page
+            // must be a sibling of `afterId`'s BLOCK, wherever it physically sits.
+            onCreate: (args) => {
+              const after =
+                args.afterId === undefined
+                  ? undefined
+                  : pagesById.get(args.afterId);
+              return after
+                ? createPageWithSeed({
+                    parentId: after.parentId,
+                    afterId: after.id,
+                  })
+                : createPageWithSeed({ parentId: args.parentId });
+            },
+          }}
+          viewOptions={viewOptions}
+          itemActions={PageTree.RowActions}
+        />
+      </div>
     </Scroll>
   );
 }

@@ -160,24 +160,29 @@ function PlacesList({
   }, [rows, location.dir, home]);
 
   return (
-    <Scroll fill className="py-xs">
-      <DataView<PlaceRow>
-        rows={rows}
-        readiness={readiness}
-        fields={fields}
-        rowKey={(r) => r.id}
-        views={["list"]}
-        storageKey={PLACES_VIEW}
-        toolbar={SECTIONS}
-        density="compact"
-        selectedRowId={activeId}
-        rowActivation={(r) => {
-          const { path } = r;
-          return path === null ? undefined : () => openFolder(path);
-        }}
-        rowTone={(r) => (r.path === null ? "muted" : "default")}
-        viewOptions={viewOptions}
-      />
+    // The block padding sits on an inner box, never on the `Scroll`: a sticky
+    // section header pins at its scroller's PADDING edge, so padding there
+    // leaves a see-through strip above the pinned head.
+    <Scroll fill>
+      <div className="py-xs">
+        <DataView<PlaceRow>
+          rows={rows}
+          readiness={readiness}
+          fields={fields}
+          rowKey={(r) => r.id}
+          views={["list"]}
+          storageKey={PLACES_VIEW}
+          toolbar={SECTIONS}
+          density="compact"
+          selectedRowId={activeId}
+          rowActivation={(r) => {
+            const { path } = r;
+            return path === null ? undefined : () => openFolder(path);
+          }}
+          rowTone={(r) => (r.path === null ? "muted" : "default")}
+          viewOptions={viewOptions}
+        />
+      </div>
     </Scroll>
   );
 }
