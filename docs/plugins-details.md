@@ -7121,13 +7121,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2/settings`
       - `shell/global-action-bar`
       - `tasks/task-draft-form`
-      - `ui/segmented-progress-bar`
       - `ui/theme-engine`
       - `ui/theme-engine/quick-theme`
       - `ui/theme-engine/theme-customizer`
       - `ui/theme-engine/theme-gallery`
       - `ui/tokens/icons`
-      - `ui/variant-region`
   - Core:
     - Exports (types):
       - `Placement`
@@ -7639,19 +7637,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications`
           - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
-    - **`theme-scope`** — Theme-scope helper: the single definition of the focused full-surface app's theme scope, which decides the :root token layer.
+    - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer, and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
       - Web:
         - Uses:
           - `apps-core.useActiveApp`
+          - `apps-core.useCurrentAppId`
           - `apps-core/tabs.placementHasAppThemeScope`
           - `apps-core/tabs.usePlacementCapabilities`
           - `apps-core/tabs.useSurfaceMode`
+          - `primitives/css/theme-boundary.useEnclosingAppThemeScope`
           - `primitives/css/ui-kit.appThemeScope`
-        - Exports (values): `useRootThemeScope`
+        - Exports (values):
+          - `useAppSettingsScope`
+          - `useRootThemeScope`
       - Cross-plugin:
         - Imported by:
+          - `ui/segmented-progress-bar`
           - `ui/theme-engine`
           - `ui/tokens/icons`
+          - `ui/variant-region`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
@@ -30026,19 +30030,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.isAppThemeScope`
               - `primitives/css/ui-kit.PortalThemeScopeProvider`
               - `primitives/css/ui-kit.SURFACE_LEVELS`
               - `ui/icons.IconScopeProvider`
             - Exports (types):
               - `ThemeProps`
               - `ThemeSurface`
-            - Exports (values): `Theme`
+            - Exports (values):
+              - `Theme`
+              - `useEnclosingAppThemeScope`
           - Cross-plugin:
             - Imported by:
               - `apps-core/app-rail`
               - `apps-core/surface`
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
+              - `apps-core/theme-scope`
               - `apps/website/shell`
               - `layouts/miller`
               - `primitives/pane`
@@ -30175,6 +30183,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fixedThemeScope`
               - `iconSizeFor`
               - `Input`
+              - `isAppThemeScope`
               - `isSubThemeScope`
               - `OverlayPanel`
               - `Popover`
@@ -39656,7 +39665,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DynamicEnum.Options` "Progress bar variant"
           - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
         - Uses:
-          - `apps-core.useCurrentAppId`
+          - `apps-core/theme-scope.useAppSettingsScope`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
@@ -40700,7 +40709,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`variant-region`** — Factory for pluggable chrome regions with per-app switchable variants. Collapses the config + slot + host + picker + registrations boilerplate into defineVariantRegion (core) and defineVariantRegionWeb (web).
       - Web:
         - Uses:
-          - `apps-core.useCurrentAppId`
+          - `apps-core/theme-scope.useAppSettingsScope`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`

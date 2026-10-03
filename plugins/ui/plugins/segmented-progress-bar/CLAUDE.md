@@ -12,7 +12,7 @@
     - `DynamicEnum.Options` "Progress bar variant"
     - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
   - Uses:
-    - `apps-core.useCurrentAppId`
+    - `apps-core/theme-scope.useAppSettingsScope`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`

@@ -7,7 +7,7 @@
 - Description: Factory for pluggable chrome regions with per-app switchable variants. Collapses the config + slot + host + picker + registrations boilerplate into defineVariantRegion (core) and defineVariantRegionWeb (web).
 - Web:
   - Uses:
-    - `apps-core.useCurrentAppId`
+    - `apps-core/theme-scope.useAppSettingsScope`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`

@@ -64,6 +64,16 @@ primitive with a **required** `surface`, not a note in a doc.
   primitive **is**, and a spread scope token would retarget the boundary to a
   theme its paint and its portal forward do not agree with.
 
+### The app scope, for settings read in JS
+
+An `app:<id>` boundary also publishes its token as React context
+(`useEnclosingAppThemeScope`); fixed and sub-theme boundaries leave it alone.
+Some theme settings are not CSS tokens — which variant a region renders, the
+progress-bar style — and are read in JS from the app's `app:<id>` config scope.
+Reading them from the nearest app boundary (via `apps-core/theme-scope`'s
+`useAppSettingsScope`) makes them follow the same region the colours do: a pane
+wears its home app's settings in whichever app hosts it.
+
 ### The four surfaces
 
 | `surface` | paints | for |
@@ -156,19 +166,23 @@ the code:
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.isAppThemeScope`
     - `primitives/css/ui-kit.PortalThemeScopeProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `ui/icons.IconScopeProvider`
   - Exports (types):
     - `ThemeProps`
     - `ThemeSurface`
-  - Exports (values): `Theme`
+  - Exports (values):
+    - `Theme`
+    - `useEnclosingAppThemeScope`
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-rail`
     - `apps-core/surface`
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
+    - `apps-core/theme-scope`
     - `apps/website/shell`
     - `layouts/miller`
     - `primitives/pane`

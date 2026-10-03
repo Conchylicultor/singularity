@@ -64,6 +64,7 @@ export {
   appThemeScope,
   subThemeScope,
   fixedThemeScope,
+  isAppThemeScope,
   isSubThemeScope,
   themeScopeSelectors,
 } from "./components/portal-theme-scope";

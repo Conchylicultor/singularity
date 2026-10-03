@@ -6,6 +6,7 @@ import {
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { IconScopeProvider } from "@plugins/ui/plugins/icons/web";
 import type React from "react";
+import { AppThemeScopeProvider } from "./app-theme-scope";
 
 /**
  * What a boundary PAINTS. Custom properties cascade *down* but paint does not
@@ -118,7 +119,9 @@ export interface ThemeProps extends Passthrough {
  * It also tells the icons inside which scope they are in (`IconScopeProvider`):
  * an icon's style is which sprite symbol it draws, which CSS cannot choose, so
  * `<Icon>` reads its scope from React context — the same token, crossing
- * portals the way the theme does.
+ * portals the way the theme does. An APP boundary likewise publishes its app
+ * scope (`useEnclosingAppThemeScope`), so an app's per-app settings read in JS
+ * (variants) follow the same region its tokens do.
  *
  * Miss (3) and you get the failure this was found by: `PaneBox` shipped with the
  * attribute and the portal forward but no paint, so a Pages pane hosted in the
@@ -172,7 +175,9 @@ export function Theme({
       className={cn(THEME_SURFACES[surface], className)}
     >
       <PortalThemeScopeProvider scope={name}>
-        <IconScopeProvider scope={name}>{children}</IconScopeProvider>
+        <IconScopeProvider scope={name}>
+          <AppThemeScopeProvider scope={name}>{children}</AppThemeScopeProvider>
+        </IconScopeProvider>
       </PortalThemeScopeProvider>
     </Comp>
   );

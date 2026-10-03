@@ -8,7 +8,12 @@ import {
  *  (this file), so it owns the token strings too — both producers (theme-engine's
  *  GroupStyle) and consumers (the chrome surfaces, the desktop window frames)
  *  reference these instead of duplicating literals. */
-export const appThemeScope = (appId: string) => `app:${appId}`;
+const APP_PREFIX = "app:";
+export const appThemeScope = (appId: string) => `${APP_PREFIX}${appId}`;
+
+/** Whether a scope token names an app's theme (`app:<id>`) — the scope an app's
+ *  own settings are read in — rather than a sub-theme or a fixed theme. */
+export const isAppThemeScope = (token: string) => token.startsWith(APP_PREFIX);
 
 /** The prefix only {@link subThemeScope} mints. */
 const SUB_THEME_PREFIX = "sub:";

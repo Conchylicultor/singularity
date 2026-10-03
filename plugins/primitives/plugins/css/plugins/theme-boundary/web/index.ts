@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Theme, type ThemeProps, type ThemeSurface } from "./internal/theme";
+export { useEnclosingAppThemeScope } from "./internal/app-theme-scope";
 
 export default {
   description:

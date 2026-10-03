@@ -409,6 +409,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `fixedThemeScope`
     - `iconSizeFor`
     - `Input`
+    - `isAppThemeScope`
     - `isSubThemeScope`
     - `OverlayPanel`
     - `Popover`
