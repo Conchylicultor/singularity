@@ -21,6 +21,7 @@ export type {
 } from "./transport-types";
 export { fetchWithRetry } from "./fetch-with-retry";
 export type { FetchWithRetryOptions } from "./fetch-with-retry";
+export { probeUrlStatus, type UrlStatus } from "./probe-url-status";
 export { publishWsStatus, subscribeWsStatus } from "./ws-status-bus";
 export type { WsStatus, WsStatusEvent } from "./ws-status-bus";
 export { publishNetDiag, subscribeNetDiag } from "./net-diag-bus";

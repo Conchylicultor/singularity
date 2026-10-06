@@ -313,3 +313,25 @@ export function thumbnailShape(size: Size): ThumbnailShape {
   if (size.width <= TINY_MAX && size.height <= TINY_MAX) return "tiny";
   return "normal";
 }
+
+/** The length of `name`'s extension, dot included (`.png` → 4); 0 when it has
+ *  none worth keeping (no dot, a leading dot, or longer than 6). */
+export function extensionLength(name: string): number {
+  const dot = name.lastIndexOf(".");
+  const length = name.length - dot;
+  return dot > 0 && length <= 6 ? length : 0;
+}
+
+/**
+ * A file name cut for middle truncation: `head` may lose its end to an
+ * ellipsis, `tail` — the last `tailLength` characters, the extension and the
+ * part that tells `v2-…-before.png` from `v2-…-after.png` — always shows.
+ * A name no longer than the tail is all tail.
+ */
+export function splitForMiddleTruncate(
+  name: string,
+  tailLength = 10,
+): { head: string; tail: string } {
+  const cut = Math.max(0, name.length - tailLength);
+  return { head: name.slice(0, cut), tail: name.slice(cut) };
+}

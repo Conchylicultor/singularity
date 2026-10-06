@@ -25021,6 +25021,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/overlay/image-viewer.ImageGallery`
+          - `primitives/overlay/image-viewer.MissingImage`
+          - `primitives/overlay/image-viewer.useImageLoad`
           - `primitives/overlay/image-viewer.useImageViewerTrigger`
           - `primitives/text-editor/paste-images.attachmentUrl`
           - `ui/icons.Icon`
@@ -28942,6 +28944,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/view-core`
               - `primitives/graph-canvas`
               - `primitives/loading`
+              - `primitives/overlay/image-viewer`
               - `primitives/path-bar`
               - `primitives/search`
               - `primitives/text-editor/composer`
@@ -33760,12 +33763,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReconnectingWsHandle`
           - `ReconnectingWsOptions`
           - `SharedWebSocketHooks`
+          - `UrlStatus`
           - `WebSocketLike`
           - `WsStatus`
           - `WsStatusEvent`
         - Exports (values):
           - `CrossTabElection`
           - `fetchWithRetry`
+          - `probeUrlStatus`
           - `publishNetDiag`
           - `publishWsStatus`
           - `ReconnectingEventSource`
@@ -33783,6 +33788,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state`
           - `primitives/log-channels`
           - `primitives/optimistic-mutation`
+          - `primitives/overlay/image-viewer`
           - `primitives/terminal`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/networking/web/testing`
@@ -33947,7 +33953,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `HoverIntent`
               - `HoverIntentOptions`
             - Exports (values): `createHoverIntent`
-        - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+        - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
             - Uses:
               - `primitives/announce.announce`
@@ -33962,6 +33968,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/rigid.Rigid`
               - `primitives/css/spacing.selfClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -33978,19 +33985,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/loading.Loading`
+              - `primitives/networking.probeUrlStatus`
               - `primitives/overlay/tooltip.Kbd`
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/shortcuts.formatShortcutLabel`
               - `ui/icons.Icon`
             - Exports (types):
+              - `ImageFailure`
+              - `ImageLoad`
+              - `ImageLoadState`
               - `ImageViewerProps`
               - `ImageViewerTrigger`
+              - `MissingImageProps`
               - `ViewerImage`
               - `ViewerThumbnailProps`
             - Exports (values):
               - `ImageGallery`
               - `ImageViewer`
+              - `MissingImage`
+              - `useImageLoad`
               - `useImageViewerTrigger`
               - `ViewerThumbnail`
           - Cross-plugin:
@@ -34027,6 +34041,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `dataUriToBlob`
               - `dataUriType`
               - `DRAG_THRESHOLD`
+              - `extensionLength`
               - `fitScale`
               - `fitView`
               - `imageCapabilities`
@@ -34038,6 +34053,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `minimapRect`
               - `overflows`
               - `panView`
+              - `splitForMiddleTruncate`
               - `stepScale`
               - `thumbnailShape`
               - `VIEWER_GESTURES`

@@ -3,12 +3,14 @@ import {
   MAX_SCALE,
   centerOn,
   clampView,
+  extensionLength,
   fitScale,
   fitView,
   isZoomed,
   minimapRect,
   overflows,
   panView,
+  splitForMiddleTruncate,
   stepScale,
   thumbnailShape,
   viewerArea,
@@ -266,5 +268,31 @@ describe("thumbnailShape", () => {
     expect(thumbnailShape({ width: 60, height: 400 })).toBe("normal");
     expect(thumbnailShape({ width: 1000, height: 2200 })).toBe("normal");
     expect(thumbnailShape({ width: 2560, height: 1600 })).toBe("normal");
+  });
+});
+
+describe("splitForMiddleTruncate", () => {
+  it("keeps the last characters whole", () => {
+    expect(splitForMiddleTruncate("v2-atlas-vp-before.png")).toEqual({
+      head: "v2-atlas-vp-",
+      tail: "before.png",
+    });
+  });
+  it("puts a short name entirely in the tail", () => {
+    expect(splitForMiddleTruncate("a.png")).toEqual({
+      head: "",
+      tail: "a.png",
+    });
+  });
+});
+
+describe("extensionLength", () => {
+  it("counts the dot and the extension", () => {
+    expect(extensionLength("v2-atlas-vp-before.png")).toBe(4);
+  });
+  it("is 0 with no extension worth keeping", () => {
+    expect(extensionLength("Makefile")).toBe(0);
+    expect(extensionLength(".env")).toBe(0);
+    expect(extensionLength("a.tar-archive")).toBe(0);
   });
 });

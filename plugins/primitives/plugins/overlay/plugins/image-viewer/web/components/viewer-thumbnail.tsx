@@ -1,4 +1,4 @@
-import { useContext, useState, type ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -9,7 +9,9 @@ import {
 import { thumbnailShape, type Size, type ThumbnailShape } from "../../core";
 import { GalleryContext } from "../internal/gallery-store";
 import { useViewerMember } from "../internal/use-image-viewer-trigger";
+import { useImageLoad } from "../internal/use-image-load";
 import { ImageGallery } from "./image-gallery";
+import { MissingImage } from "./missing-image";
 import type { ViewerImage } from "../internal/types";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -33,10 +35,6 @@ export interface ViewerThumbnailProps {
    */
   children?: ReactNode;
 }
-
-/** The natural size, as far as the thumbnail knows it. */
-type Measure =
-  { kind: "pending" } | { kind: "loaded"; size: Size } | { kind: "failed" };
 
 /** How the `<img>` is sized, per shape. */
 const IMG_CLASS: Record<ThumbnailShape | "chip", string> = {
@@ -78,15 +76,37 @@ export function ViewerThumbnail(props: ViewerThumbnailProps) {
 
 function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
   const { attach, open } = useViewerMember<HTMLImageElement>(image);
-  const [measure, setMeasure] = useState<Measure>({ kind: "pending" });
+  const { load, imgKey, imgProps, retry } = useImageLoad(image.src);
   const known: Size | null =
     image.width && image.height
       ? { width: image.width, height: image.height }
-      : measure.kind === "loaded"
-        ? measure.size
+      : load.kind === "loaded"
+        ? load.size
         : null;
   const shape: ThumbnailShape = known ? thumbnailShape(known) : "normal";
   const chip = size === "chip";
+
+  if (load.kind === "failed") {
+    // No <img>, so `attach` is handed null and the image leaves its gallery:
+    // ← / → skip it, and there is nothing to open.
+    return (
+      <span
+        className={cn(
+          hoverRevealGroup,
+          "relative inline-block max-w-full align-top",
+        )}
+      >
+        <MissingImage
+          name={image.name}
+          title={image.alt}
+          reason={load.reason}
+          onRetry={retry}
+          size={size}
+        />
+        {children}
+      </span>
+    );
+  }
 
   return (
     <span
@@ -107,27 +127,19 @@ function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
         )}
       >
         <img
+          key={imgKey}
           ref={attach}
           src={image.src}
           alt={image.alt ?? image.name}
           draggable={false}
-          onLoad={(e) =>
-            setMeasure({
-              kind: "loaded",
-              size: {
-                width: e.currentTarget.naturalWidth,
-                height: e.currentTarget.naturalHeight,
-              },
-            })
-          }
-          onError={() => setMeasure({ kind: "failed" })}
+          {...imgProps}
           className={cn(
             "block",
             chip ? IMG_CLASS.chip : IMG_CLASS[shape],
             chip && shape === "tiny" && IMG_CLASS.tiny,
             // Until the size is known the shape is not: keep the image unpainted
             // rather than flash it in the wrong frame.
-            known === null && measure.kind === "pending" && "opacity-0",
+            known === null && "opacity-0",
           )}
         />
         {!chip && known && (

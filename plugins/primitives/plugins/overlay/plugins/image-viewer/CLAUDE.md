@@ -13,6 +13,15 @@ other images, Esc to close. Design and decisions: `research/2026-09-11-primitive
 | Your own `<img>` that must stay yours (a resizable page image block) | `useImageViewerTrigger(image)`, spread onto that `<img>`, inside an `<ImageGallery>` you render (it throws outside one) |
 | Images with no thumbnails of your own (mail HTML) | `<ImageViewer images index onIndexChange onClose originOf>`, controlled |
 | A region whose images belong together (a conversation transcript) | wrap it in `<ImageGallery>` |
+| Your own `<img>` that should fail the way a thumbnail does | `useImageLoad(src)` for its state, `<MissingImage>` while it is `failed` |
+
+An image that does not load is never the browser's broken-image glyph. `ViewerThumbnail`
+renders `<MissingImage>` instead: a fixed box (the thumbnail's size, not the alt text's)
+with the name middle-truncated and the reason. An `<img>`'s error event cannot say why,
+so `useImageLoad` asks the source once (`probeUrlStatus`, networking): 404 or 410 is
+**gone** ("No longer available" — an agent's screenshot in a cleaned-up temp dir, an
+attachment whose file left the disk), anything else is **unreadable** ("Couldn't load ·
+Retry"). With no `<img>` mounted the image also leaves its gallery, so ← / → skip it.
 
 `ViewerImage` is `{ src, name, sourceLabel?, alt?, width?, height? }`. `name` is the
 top-bar title and the download's file name; `sourceLabel` is the small chip before
@@ -66,7 +75,7 @@ handler, the `?` sheet and the button tooltips all read.
 
 ## Plugin reference
 
-- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
 - Web:
   - Uses:
     - `primitives/announce.announce`
@@ -81,6 +90,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.Rigid`
     - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -97,19 +107,26 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
+    - `primitives/networking.probeUrlStatus`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/shortcuts.formatShortcutLabel`
     - `ui/icons.Icon`
   - Exports (types):
+    - `ImageFailure`
+    - `ImageLoad`
+    - `ImageLoadState`
     - `ImageViewerProps`
     - `ImageViewerTrigger`
+    - `MissingImageProps`
     - `ViewerImage`
     - `ViewerThumbnailProps`
   - Exports (values):
     - `ImageGallery`
     - `ImageViewer`
+    - `MissingImage`
+    - `useImageLoad`
     - `useImageViewerTrigger`
     - `ViewerThumbnail`
 - Cross-plugin:
@@ -146,6 +163,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `dataUriToBlob`
     - `dataUriType`
     - `DRAG_THRESHOLD`
+    - `extensionLength`
     - `fitScale`
     - `fitView`
     - `imageCapabilities`
@@ -157,6 +175,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `minimapRect`
     - `overflows`
     - `panView`
+    - `splitForMiddleTruncate`
     - `stepScale`
     - `thumbnailShape`
     - `VIEWER_GESTURES`

@@ -51,12 +51,14 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
     - `ReconnectingWsHandle`
     - `ReconnectingWsOptions`
     - `SharedWebSocketHooks`
+    - `UrlStatus`
     - `WebSocketLike`
     - `WsStatus`
     - `WsStatusEvent`
   - Exports (values):
     - `CrossTabElection`
     - `fetchWithRetry`
+    - `probeUrlStatus`
     - `publishNetDiag`
     - `publishWsStatus`
     - `ReconnectingEventSource`
@@ -74,6 +76,7 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
     - `primitives/live-state`
     - `primitives/log-channels`
     - `primitives/optimistic-mutation`
+    - `primitives/overlay/image-viewer`
     - `primitives/terminal`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/networking/web/testing`

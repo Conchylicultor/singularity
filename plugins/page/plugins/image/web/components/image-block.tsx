@@ -3,6 +3,8 @@ import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import {
   ImageGallery,
+  MissingImage,
+  useImageLoad,
   useImageViewerTrigger,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -79,6 +81,9 @@ function FilledImageBlock({
     alt: alt || undefined,
   });
 
+  const { load, imgKey, imgProps, retry } = useImageLoad(src);
+  const failed = load.kind === "failed";
+
   const displayWidth = liveWidth ?? width;
 
   function onResizePointerDown(e: React.PointerEvent) {
@@ -112,14 +117,25 @@ function FilledImageBlock({
       <div
         ref={wrapperRef}
         className={cn(hoverRevealGroup, "relative inline-block max-w-full")}
-        style={{ width: displayWidth }}
+        // A missing image keeps the placeholder's own size, not the image's.
+        style={failed ? undefined : { width: displayWidth }}
       >
-        <img
-          src={src}
-          alt={alt ?? ""}
-          {...viewerTrigger}
-          className="block w-full cursor-zoom-in rounded-md"
-        />
+        {failed ? (
+          <MissingImage
+            name={alt || "Image"}
+            reason={load.reason}
+            onRetry={retry}
+          />
+        ) : (
+          <img
+            key={imgKey}
+            src={src}
+            alt={alt ?? ""}
+            {...viewerTrigger}
+            {...imgProps}
+            className="block w-full cursor-zoom-in rounded-md"
+          />
+        )}
         <Pin to="top-right" offset="xs">
           <button
             type="button"
@@ -135,17 +151,19 @@ function FilledImageBlock({
             </Center>
           </button>
         </Pin>
-        <Pin
-          to="right"
-          stretch
-          aria-label="Resize image"
-          role="slider"
-          onPointerDown={onResizePointerDown}
-          className="w-2 cursor-ew-resize"
-        >
-          {/* eslint-disable-next-line layout/no-adhoc-layout -- fractional right-0.5 inset + vertical-center on the drag-grip bar is off the spacing ramp */}
-          <div className="pointer-events-none absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover/hover-reveal:opacity-100" />
-        </Pin>
+        {!failed && (
+          <Pin
+            to="right"
+            stretch
+            aria-label="Resize image"
+            role="slider"
+            onPointerDown={onResizePointerDown}
+            className="w-2 cursor-ew-resize"
+          >
+            {/* eslint-disable-next-line layout/no-adhoc-layout -- fractional right-0.5 inset + vertical-center on the drag-grip bar is off the spacing ramp */}
+            <div className="pointer-events-none absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover/hover-reveal:opacity-100" />
+          </Pin>
+        )}
       </div>
     </Inset>
   );

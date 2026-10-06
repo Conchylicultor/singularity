@@ -154,3 +154,49 @@ describe("useImageViewerTrigger", () => {
     }
   });
 });
+
+describe("an image that does not load", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const fail = (name: string) =>
+    fireEvent.error(
+      screen
+        .getByRole("button", { name: `View image ${name}` })
+        .querySelector("img")!,
+    );
+  const answering = (status: number) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(null, { status }))),
+    );
+
+  it("says the file is gone when its server answers 404, and opens nothing", async () => {
+    answering(404);
+    render(<ViewerThumbnail image={{ src: "/api/x.png", name: "x.png" }} />);
+    fail("x.png");
+    await screen.findByText("No longer available");
+    expect(screen.getByRole("img", { name: "Image unavailable: x.png" }));
+    expect(
+      screen.queryByRole("button", { name: "View image x.png" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  it("offers Retry for any other failure, which loads the image again", async () => {
+    answering(500);
+    render(<ViewerThumbnail image={{ src: "/api/x.png", name: "x.png" }} />);
+    fail("x.png");
+    fireEvent.click(await screen.findByRole("button", { name: "Retry" }));
+    expect(screen.getByRole("button", { name: "View image x.png" }));
+  });
+
+  it("leaves its gallery, so ← / → step over it", async () => {
+    render(<Transcript names={["a", "b", "c"]} />);
+    // A data: URI has no server to ask: unreadable at once.
+    fail("b");
+    await screen.findByRole("img", { name: "Image unavailable: b" });
+    open("a");
+    press("ArrowRight");
+    showing("c");
+  });
+});

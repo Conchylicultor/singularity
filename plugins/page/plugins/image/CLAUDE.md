@@ -27,6 +27,8 @@ gallery of one) around the image.
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/overlay/image-viewer.ImageGallery`
+    - `primitives/overlay/image-viewer.MissingImage`
+    - `primitives/overlay/image-viewer.useImageLoad`
     - `primitives/overlay/image-viewer.useImageViewerTrigger`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `ui/icons.Icon`
