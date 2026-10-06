@@ -101,7 +101,6 @@ offsets expressible on the semantic ramp.
     - `pinClasses`
 - Cross-plugin:
   - Imported by:
-    - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/surface/floating/wallpaper`
     - `apps/browser/webview`
@@ -135,6 +134,7 @@ offsets expressible on the semantic ramp.
     - `page/video`
     - `primitives/app-shell`
     - `primitives/data-view/gallery`
+    - `primitives/data-view/icons`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
     - `primitives/icon-picker`

@@ -1,9 +1,10 @@
-import { type ReactNode } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
   Avatar,
   AvatarPresentationProvider,
@@ -28,6 +29,7 @@ import {
   useResolveOperatorSet,
   type DataViewRenderProps,
   type DataViewRowEntry,
+  type DataViewDensity,
   type DataViewSection,
   type FieldDef,
   type ManualOrderConfig,
@@ -39,19 +41,100 @@ import { useIconColumns } from "./use-icon-columns";
 const VIRTUALIZE_THRESHOLD = 120;
 
 /**
- * The grid's geometry, on every grid (and the probe) rather than the view root:
- * a container query styles the container's DESCENDANTS, never the container.
- * Wide: 116px columns, 72px tiles, `lg` column gap. Under 760px of view
- * width: 92px columns, 60px tiles, `sm` column gap. The row gap is the grid's
- * own `gap` (`2xl`); `gap-x-*` refines only the column axis. The view starts
- * flush: space above the first row belongs to whatever sits there (a toolbar
- * arrangement's `spaceBelow`).
+ * The grid's geometry per density, on every grid (and the probe) rather than
+ * the view root: a container query styles the container's DESCENDANTS, never
+ * the container. The view starts flush: space above the first row belongs to
+ * whatever sits there (a toolbar arrangement's `spaceBelow`).
+ *
+ * - comfortable (a page): 116px columns, 72px tiles, `lg` column gap; under
+ *   760px of view width 92px columns, 60px tiles, `sm` column gap. Rows `2xl`
+ *   apart.
+ * - compact (a popover): 72px columns, 36px tiles, `2xs` column gap, rows `xs`
+ *   apart, at any width — four columns fit a `picker` popover.
+ *
+ * `gap` is the grid's own (row) gap; `gap-x-*` in `classes` refines only the
+ * column axis. `tileGap` / `tilePad` space the tile and its caption.
  */
-const GRID_GEOMETRY = cn(
-  "gap-x-lg [--icons-cell:116px] [--icons-tile:72px]",
-  "@max-[760px]/icons:gap-x-sm @max-[760px]/icons:[--icons-cell:92px] @max-[760px]/icons:[--icons-tile:60px]",
-);
+const GEOMETRY = {
+  comfortable: {
+    classes: cn(
+      "gap-x-lg [--icons-cell:116px] [--icons-tile:72px]",
+      "@max-[760px]/icons:gap-x-sm @max-[760px]/icons:[--icons-cell:92px] @max-[760px]/icons:[--icons-tile:60px]",
+    ),
+    gap: "2xl",
+    tileGap: "md",
+    tilePad: "rounded-xl px-xs pt-md pb-sm",
+    laneEstimate: 152,
+    lanePad: "pb-2xl",
+  },
+  compact: {
+    classes: "gap-x-2xs [--icons-cell:72px] [--icons-tile:36px]",
+    gap: "xs",
+    tileGap: "xs",
+    tilePad: "rounded-lg px-2xs py-sm",
+    laneEstimate: 84,
+    lanePad: "pb-xs",
+  },
+} as const satisfies Record<
+  DataViewDensity,
+  {
+    classes: string;
+    gap: "2xl" | "xs";
+    tileGap: "md" | "xs";
+    tilePad: string;
+    laneEstimate: number;
+    /** A windowed lane's bottom padding — the row gap between lanes. */
+    lanePad: string;
+  }
+>;
 const CELL_WIDTH = "var(--icons-cell)";
+
+/** The tiles a keyboard user moves between: activating tiles, in render order. */
+const TILE_SELECTOR = '[data-row-key][role="button"]';
+
+/**
+ * Where an arrow key moves focus from `at`: Left/Right to the previous/next
+ * tile in render order; Up/Down to the tile in the previous/next VISUAL row
+ * whose centre is closest horizontally — read from the laid-out boxes, so it
+ * holds for any auto-fill column count and across group sections; Home/End to
+ * the ends. `undefined` for any other key, or when there is nowhere to go.
+ */
+function nextTile(
+  tiles: HTMLElement[],
+  at: number,
+  key: string,
+): HTMLElement | undefined {
+  if (key === "ArrowLeft") return tiles[at - 1];
+  if (key === "ArrowRight") return tiles[at + 1];
+  if (key === "Home") return tiles[0];
+  if (key === "End") return tiles[tiles.length - 1];
+  if (key !== "ArrowUp" && key !== "ArrowDown") return undefined;
+  const from = tiles[at]!.getBoundingClientRect();
+  const fromX = from.left + from.width / 2;
+  const down = key === "ArrowDown";
+  // The nearest row in that direction: the closest top past this tile's.
+  let rowTop: number | undefined;
+  for (const t of tiles) {
+    const top = t.getBoundingClientRect().top;
+    const past = down ? top > from.top + 1 : top < from.top - 1;
+    if (!past) continue;
+    if (rowTop === undefined || (down ? top < rowTop : top > rowTop))
+      rowTop = top;
+  }
+  if (rowTop === undefined) return undefined;
+  let best: HTMLElement | undefined;
+  let bestDx = Infinity;
+  for (const t of tiles) {
+    const r = t.getBoundingClientRect();
+    if (Math.abs(r.top - rowTop) > 1) continue;
+    const dx = Math.abs(r.left + r.width / 2 - fromX);
+    if (dx < bestDx) {
+      best = t;
+      bestDx = dx;
+    }
+  }
+  return best;
+}
 
 /** Split a flat list into lanes of `size` (the column count). */
 function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -80,13 +163,9 @@ function ManualOrderTile({
 }): ReactNode {
   // Destructured so render never reads a member off the hook output
   // (react-hooks/refs), mirroring the list view.
-  const { ref, attributes, listeners, style } = useRankSortableItem(
-    id,
-    rank,
-    group,
-  );
+  const { ref, listeners, style } = useRankSortableItem(id, rank, group);
   return (
-    <div ref={ref} style={style} {...attributes} {...listeners}>
+    <div ref={ref} style={style} {...listeners}>
       {children}
     </div>
   );
@@ -132,7 +211,11 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
     },
   );
   const { probeRef, columns } = useIconColumns();
+  // The roving tab stop: the tile the keyboard user last focused. Absent (or no
+  // longer an activating tile) → the selected row's tile, else the first.
+  const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const vis = resolveBodyFields(props.fields, props.state.visibleFields);
+  const geometry = GEOMETRY[props.density ?? "comfortable"];
 
   const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
@@ -144,6 +227,16 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       </Center>
     );
   }
+
+  const activatingKeys = sections.flatMap((s) =>
+    s.entries
+      .filter((e) => props.rowActivation?.(e.row) !== undefined)
+      .map((e) => e.key),
+  );
+  const tabStop =
+    [focusedKey, props.selectedRowId].find(
+      (k) => k != null && activatingKeys.includes(k),
+    ) ?? activatingKeys[0];
 
   const leadingField = pickLeadingField(vis);
   const titleField = pickPrimaryField(vis.filter((f) => f !== leadingField));
@@ -161,12 +254,17 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
 
   const renderTile = (row: unknown, key: string): ReactNode => {
     const activate = props.rowActivation?.(row);
+    const selected = key === props.selectedRowId;
     return (
       <Stack
-        gap="md"
+        gap={geometry.tileGap}
         align="center"
         role={activate ? "button" : undefined}
-        tabIndex={activate ? 0 : undefined}
+        // Roving focus: one tile is the grid's tab stop, the arrow keys move
+        // between the rest (the root's onKeyDown).
+        tabIndex={activate ? (key === tabStop ? 0 : -1) : undefined}
+        aria-current={selected ? "true" : undefined}
+        onFocus={activate ? () => setFocusedKey(key) : undefined}
         // Straight through, `undefined` and all: a non-activating tile is a
         // plain container, not a button that does nothing.
         onClick={activate}
@@ -182,7 +280,8 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
         }
         data-row-key={key}
         className={cn(
-          "group/icon focus-ring rounded-xl px-xs pt-md pb-sm",
+          "group/icon focus-ring relative",
+          geometry.tilePad,
           activate && "cursor-pointer",
         )}
       >
@@ -216,10 +315,19 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
         <Text
           as="div"
           variant="caption"
-          className="max-w-full truncate text-center text-muted-foreground transition-colors group-hover/icon:text-foreground group-focus-visible/icon:text-foreground"
+          className={cn(
+            "max-w-full truncate text-center transition-colors group-hover/icon:text-foreground group-focus-visible/icon:text-foreground",
+            selected ? "text-foreground" : "text-muted-foreground",
+          )}
         >
           {renderName(row)}
         </Text>
+        {/* The selected row (a launcher's current app): a dot under its name. */}
+        {selected && (
+          <Pin to="bottom" offset="2xs" decorative>
+            <span className="block size-1 rounded-full bg-foreground" />
+          </Pin>
+        )}
       </Stack>
     );
   };
@@ -250,7 +358,11 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
     if (entries.length === 0) return null;
     if (entries.length <= VIRTUALIZE_THRESHOLD) {
       return (
-        <Grid cellWidth={CELL_WIDTH} gap="2xl" className={GRID_GEOMETRY}>
+        <Grid
+          cellWidth={CELL_WIDTH}
+          gap={geometry.gap}
+          className={geometry.classes}
+        >
           {entries.map((entry) => renderEntry(entry, group))}
         </Grid>
       );
@@ -270,13 +382,13 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
           ref={probeRef}
           aria-hidden
           cellWidth={CELL_WIDTH}
-          gap="2xl"
-          className={cn(GRID_GEOMETRY, "h-0")}
+          gap={geometry.gap}
+          className={cn(geometry.classes, "h-0")}
         />
         {columns > 0 ? (
           <VirtualRows<DataViewRowEntry<unknown>[]>
             items={lanes}
-            estimateSize={152}
+            estimateSize={geometry.laneEstimate}
             getKey={laneKey}
             keepMounted={activeLane ? [laneKey(activeLane)] : undefined}
             raisedKey={activeLane ? laneKey(activeLane) : undefined}
@@ -284,8 +396,8 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
             {(lane) => (
               <Grid
                 cellWidth={CELL_WIDTH}
-                gap="2xl"
-                className={cn(GRID_GEOMETRY, "pb-2xl")}
+                gap={geometry.gap}
+                className={cn(geometry.classes, geometry.lanePad)}
               >
                 {lane.map((entry) => renderEntry(entry, group))}
               </Grid>
@@ -326,9 +438,24 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
     );
 
   // The container the grid geometry's queries read: the view's own width, not
-  // the viewport's, so a narrow pane gets the compact tiles too.
+  // the viewport's, so a narrow pane gets the compact tiles too. It also owns
+  // the arrow keys, reading the tiles off its own DOM in render order.
+  // (A windowed section only has its mounted lanes to move between.)
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const tiles = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>(TILE_SELECTOR),
+    );
+    const at = tiles.findIndex((t) => t === document.activeElement);
+    if (at < 0) return;
+    const next = nextTile(tiles, at, e.key);
+    if (!next) return;
+    e.preventDefault();
+    next.focus();
+  };
   const root = (activeId: string | null): ReactNode => (
-    <div className="@container/icons">{renderBody(activeId)}</div>
+    <div className="@container/icons" onKeyDown={onKeyDown}>
+      {renderBody(activeId)}
+    </div>
   );
 
   if (!manualOrder) return root(null);

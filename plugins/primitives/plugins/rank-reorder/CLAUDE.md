@@ -26,8 +26,11 @@ rank model:
   real (non-no-op) moves. Its `children` may be a render-prop receiving the
   active drag id.
 - **`useRankSortableItem(id, rank, group?)`** — per-row `useSortable`. Returns
-  `{ ref, attributes, listeners, style, isDragging }`; put all four on the ONE
-  element that is the row. `style` is `CSS.Translate` + the sortable
+  `{ ref, listeners, style, isDragging }`; put `ref`, `listeners` and `style`
+  on the ONE element that is the row. dnd-kit's `attributes` are deliberately
+  not returned: they make the element a focusable `role="button"` sortable,
+  promising a keyboard drag the pointer-only provider does not have, and steal
+  the row's own tab stop. `style` is `CSS.Translate` + the sortable
   `transition`, plus `position: relative` and the `raised` z-layer while
   dragging. A `null` rank disables the item (callers that must call the hook
   unconditionally never attach the ref). Data: `{ id, rank, group }`.

@@ -7,7 +7,7 @@ import {
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
 import { capsuleToolbar } from "@plugins/primitives/plugins/data-view/plugins/capsule-toolbar/web";
-import { avatarFieldDef } from "@plugins/fields/plugins/avatar/plugins/table/web";
+import { appFields } from "@plugins/apps-core/plugins/app-launcher/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
 import { APPS_CATEGORY_ID } from "@plugins/apps/plugins/home/core";
@@ -141,23 +141,8 @@ export function AppGrid() {
     <DataView<ActiveApp>
       rows={launchable}
       rowKey={(a) => a.id}
-      fields={[
-        // The app's icon is its tile: a squircle in the app's declared colour,
-        // or one derived from its id when it declares none.
-        avatarFieldDef<ActiveApp>({
-          id: "icon",
-          label: "Icon",
-          leading: true,
-          avatar: (a) => ({
-            icon: null,
-            symbol: a.icon.symbol,
-            color: a.icon.color ?? null,
-            shape: "squircle",
-            fallbackKey: a.id,
-          }),
-        }),
-        { id: "name", label: "Name", type: "text", value: (a) => a.app.name },
-      ]}
+      // The same tile and name the app launcher draws.
+      fields={appFields}
       views={["icons"]}
       defaultView="icons"
       toolbar={capsuleToolbar}

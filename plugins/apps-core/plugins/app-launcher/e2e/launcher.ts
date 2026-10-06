@@ -5,8 +5,9 @@
 //     does not.
 //  2. The pointer crossing from the mark into the panel keeps it open; leaving
 //     both closes it.
-//  3. ArrowDown on the focused mark opens it with focus on the first tile;
-//     ArrowRight moves along the grid; Esc closes and returns focus.
+//  3. ArrowDown on the focused mark opens it with focus on the current app's
+//     tile (marked aria-current); Home / ArrowRight / ArrowDown move through
+//     the grid; Esc closes and returns focus.
 //  4. Clicking the app name on a sub-route goes to the app's base path.
 //  5. Clicking a tile switches to that app; clicking the mark goes to the
 //     gallery.
@@ -30,8 +31,10 @@ await withBrowser(async (h) => {
   await page.goto(pathUrl("/agents"));
   const mark = page.getByRole("button", { name: "All apps" }).first();
   await mark.waitFor();
-  const menu = page.getByRole("menu");
-  const tiles = menu.getByRole("menuitem");
+  // The popover panel (HoverPopover labels it), and its tiles — the icons
+  // DataView's activating tiles.
+  const menu = page.locator('[aria-label="Apps"]');
+  const tiles = menu.locator('[data-row-key][role="button"]');
 
   // 1. Hover the name: nothing opens.
   // The name button sits right after the mark in the header row (the rail's
@@ -74,15 +77,35 @@ await withBrowser(async (h) => {
   await mark.focus();
   await page.keyboard.press("ArrowDown");
   await menu.waitFor({ timeout: 2000 });
-  const firstFocused = await tiles
-    .first()
-    .evaluate((el) => el === document.activeElement);
-  r.ok("ArrowDown focuses the first tile", firstFocused);
+  const focusedKey = () =>
+    page.evaluate(() => document.activeElement?.getAttribute("data-row-key"));
+  // The popover moves focus in once it has opened — wait for it to land.
+  await page.waitForFunction(
+    () => document.activeElement?.hasAttribute("data-row-key") === true,
+    undefined,
+    { timeout: 2000 },
+  );
+  const current = menu.locator('[aria-current="true"]');
+  r.eq("the current app's tile is marked", await current.count(), 1);
+  r.eq(
+    "ArrowDown focuses the current app's tile",
+    await focusedKey(),
+    await current.getAttribute("data-row-key"),
+  );
+  const keys = await tiles.evaluateAll((els) =>
+    els.map((el) => el.getAttribute("data-row-key")),
+  );
+  await page.keyboard.press("Home");
+  r.eq("Home moves to the first tile", await focusedKey(), keys[0]);
   await page.keyboard.press("ArrowRight");
-  const secondFocused = await tiles
-    .nth(1)
-    .evaluate((el) => el === document.activeElement);
-  r.ok("ArrowRight moves to the next tile", secondFocused);
+  r.eq("ArrowRight moves to the next tile", await focusedKey(), keys[1]);
+  // The popover holds four tiles a row: ArrowDown from the second lands on
+  // the sixth (when there is one).
+  if (keys.length > 5) {
+    await page.keyboard.press("ArrowDown");
+    r.eq("ArrowDown moves one row down", await focusedKey(), keys[5]);
+  }
+  await snap(page, OUT, "3-keyboard");
   await page.keyboard.press("Escape");
   await page.waitForTimeout(300);
   r.ok("Esc closes", !(await menu.isVisible()));

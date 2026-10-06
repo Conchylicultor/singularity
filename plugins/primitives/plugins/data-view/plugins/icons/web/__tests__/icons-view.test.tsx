@@ -118,6 +118,54 @@ describe("data-view icons view", () => {
     expect(opened).toEqual(["a", "a"]);
   });
 
+  it("is one tab stop: arrows, Home and End move focus between the tiles", () => {
+    const rows: Row[] = [...ROWS, { id: "c", name: "gamma", glyph: "●" }];
+    const { container } = renderIcons([avatar, name], {
+      rows,
+      rowActivation: () => () => {},
+    });
+    const tiles = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-row-key]"),
+    );
+    const stops = () => tiles.map((t) => t.getAttribute("tabindex"));
+    expect(stops()).toEqual(["0", "-1", "-1"]);
+
+    tiles[0]!.focus();
+    fireEvent.keyDown(tiles[0]!, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(tiles[1]);
+    // The tab stop follows focus, so Tab back in lands where the user was.
+    expect(stops()).toEqual(["-1", "0", "-1"]);
+    fireEvent.keyDown(tiles[1]!, { key: "End" });
+    expect(document.activeElement).toBe(tiles[2]);
+    fireEvent.keyDown(tiles[2]!, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(tiles[2]);
+    fireEvent.keyDown(tiles[2]!, { key: "Home" });
+    expect(document.activeElement).toBe(tiles[0]);
+    fireEvent.keyDown(tiles[0]!, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(tiles[0]);
+  });
+
+  it("marks the selected row as current, and makes it the tab stop", () => {
+    const { container } = renderIcons([avatar, name], {
+      selectedRowId: "b",
+      rowActivation: () => () => {},
+    });
+    const [a, b] = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-row-key]"),
+    );
+    expect(a!.getAttribute("aria-current")).toBeNull();
+    expect(b!.getAttribute("aria-current")).toBe("true");
+    expect(b!.getAttribute("tabindex")).toBe("0");
+    expect(a!.getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("draws the compact geometry under density=compact", () => {
+    const { container } = renderIcons([avatar, name], { density: "compact" });
+    const html = container.innerHTML;
+    expect(html).toContain("[--icons-cell:72px]");
+    expect(html).not.toContain("[--icons-cell:116px]");
+  });
+
   it("draws a letter tile from the name when the schema has no leading field", () => {
     const { container, queryAllByTestId } = renderIcons([name]);
     expect(queryAllByTestId("spec-cell")).toHaveLength(0);

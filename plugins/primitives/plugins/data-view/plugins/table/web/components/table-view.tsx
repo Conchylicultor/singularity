@@ -122,7 +122,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     const rank = manualOrder!.getRank(row);
     // Destructured so render never reads a member off the hook output
     // (react-hooks/refs flags member access on it, not destructuring).
-    const { ref, attributes, listeners, style } = useRankSortableItem(
+    const { ref, listeners, style } = useRankSortableItem(
       id,
       rank,
       sectionKeyByRowKey.get(id) ?? null,
@@ -131,7 +131,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // but we return no decoration so its ref attaches to nothing — the row is
     // neither a drag source nor a drop target.
     if (rank == null) return undefined;
-    return { ref, props: { ...attributes, ...listeners }, style };
+    return { ref, props: { ...listeners }, style };
   }
 
   // The host owns loading→empty precedence (it skips this view while loading),

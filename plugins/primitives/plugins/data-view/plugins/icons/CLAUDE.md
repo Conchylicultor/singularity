@@ -19,9 +19,22 @@ phone home screen. Contributes one `DataViewSlots.View("icons")` entry.
 - **The name** is the primary field (`pickPrimaryField`, the leading field
   excluded), one truncating caption line, muted until the tile is hovered or
   keyboard-focused.
+- **Density**: `density="compact"` (a popover — the app launcher) swaps in a
+  fixed small geometry at any width: 72px cells, 36px tiles, `2xs` column / `xs`
+  row gaps, tighter tile padding. Both geometries live in one `GEOMETRY` record
+  that every grid and the column probe read.
+- **Selected row**: the `selectedRowId` tile is `aria-current="true"`, its name
+  in the foreground colour with a dot under it (a launcher's current app).
 - **Activation**: `props.rowActivation?.(row)` passed straight through. A tile
-  with an activation is `role="button"` + a tab stop + Enter/Space; one without
-  is a plain container.
+  with an activation is `role="button"` + Enter/Space; one without is a plain
+  container and not focusable.
+- **Roving focus**: the activating tiles are ONE tab stop — the last-focused
+  tile, else the selected one, else the first. The view root owns the keys:
+  ArrowLeft/Right step in render order, ArrowUp/Down go to the nearest tile
+  (by centre x) in the previous/next visual row, read from the laid-out boxes
+  so it holds for any column count and across group sections; Home/End go to
+  the ends. In a windowed section only mounted lanes are reachable by
+  ArrowUp/Down.
 - Hover / keyboard focus lifts the tile 2px; press sinks it to 96%.
 - **Not rendered**: item actions, selection, aggregation — a launcher has none.
 
@@ -55,9 +68,11 @@ drag is in flight the lane holding the drag source is kept mounted.
     - `primitives/avatar.AvatarPresentationProvider`
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
+    - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/data-view.DataViewDensity`
     - `primitives/data-view.DataViewRenderProps`
     - `primitives/data-view.DataViewRowEntry`
     - `primitives/data-view.DataViewSection`

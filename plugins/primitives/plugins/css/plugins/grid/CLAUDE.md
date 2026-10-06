@@ -72,7 +72,6 @@ Shared (both paths):
   - Exports (values): `Grid`
 - Cross-plugin:
   - Imported by:
-    - `apps-core/app-launcher`
     - `apps-core/surface/floating/wallpaper`
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`

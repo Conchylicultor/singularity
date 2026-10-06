@@ -1,8 +1,5 @@
 import { useMemo, type CSSProperties } from "react";
-import type {
-  DraggableAttributes,
-  DraggableSyntheticListeners,
-} from "@dnd-kit/core";
+import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -11,9 +8,12 @@ export interface RankSortableItemControls {
   /** The whole row is the drag source (Notion-style: no separate grip handle).
    *  Merge `ref` onto the row element. */
   ref: (el: HTMLElement | null) => void;
-  /** Spread onto the same element as `ref`. */
-  attributes: DraggableAttributes;
-  /** Spread onto the same element as `ref`. */
+  /** Spread onto the same element as `ref`. The pointer listeners only:
+   *  dnd-kit's `attributes` (`role="button"`, `tabIndex=0`,
+   *  `aria-roledescription="sortable"`) are NOT handed out — they advertise a
+   *  keyboard drag the provider never wires (its only sensor is the
+   *  `PointerSensor`), and spread on a row they make it (or a wrapper around
+   *  it) a focusable fake button that steals the row's own tab stop. */
   listeners: DraggableSyntheticListeners;
   /** Put on the same element as `ref`: the slide (and, while dragging, the
    *  follow-the-pointer offset plus a raised stacking layer). */
@@ -51,14 +51,8 @@ export function useRankSortableItem(
     () => ({ id, rank, group: group ?? null }),
     [id, rank, group],
   );
-  const {
-    setNodeRef,
-    attributes,
-    listeners,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id, data, disabled: rank == null });
+  const { setNodeRef, listeners, transform, transition, isDragging } =
+    useSortable({ id, data, disabled: rank == null });
 
   const style: CSSProperties = {
     // Translate, NEVER `CSS.Transform`: without a DragOverlay dnd-kit scales the
@@ -72,5 +66,5 @@ export function useRankSortableItem(
       : {}),
   };
 
-  return { ref: setNodeRef, attributes, listeners, style, isDragging };
+  return { ref: setNodeRef, listeners, style, isDragging };
 }

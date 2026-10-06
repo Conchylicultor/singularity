@@ -26,11 +26,11 @@ create-app flow is designed.
     - `apps-core.ActiveApp`
     - `apps-core.Apps`
     - `apps-core.useCurrentAppId`
+    - `apps-core/app-launcher.appFields`
     - `apps-core/tabs.useActivateApp`
     - `apps/home/shell.Home`
     - `apps/prototypes/gallery.mintPrototypeFolder`
     - `apps/prototypes/gallery.newPrototypePrompt`
-    - `fields/avatar/table.avatarFieldDef`
     - `primitives/css/ui-kit.Button`
     - `primitives/data-view.CreateOption`
     - `primitives/data-view.DataView`

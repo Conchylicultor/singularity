@@ -63,19 +63,9 @@ function ManualOrderRow({
 }): ReactNode {
   // Destructured so render never reads a member off the hook output
   // (react-hooks/refs flags member access on it, not destructuring).
-  const { ref, attributes, listeners, style } = useRankSortableItem(
-    id,
-    rank,
-    group,
-  );
+  const { ref, listeners, style } = useRankSortableItem(id, rank, group);
   return (
-    <div
-      ref={ref}
-      style={style}
-      data-row-key={id}
-      {...attributes}
-      {...listeners}
-    >
+    <div ref={ref} style={style} data-row-key={id} {...listeners}>
       {children}
     </div>
   );

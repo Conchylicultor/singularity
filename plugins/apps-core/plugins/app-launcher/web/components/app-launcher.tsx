@@ -1,4 +1,4 @@
-import { useMemo, type KeyboardEvent } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   Apps,
@@ -11,52 +11,57 @@ import {
   appLinkProps,
   useActivateApp,
 } from "@plugins/apps-core/plugins/tabs/web";
-import {
-  AppIconTile,
-  AppIconView,
-} from "@plugins/apps-core/plugins/app-icon/web";
+import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
+import { appFields } from "./app-fields";
 import { HoverPopover } from "@plugins/primitives/plugins/overlay/plugins/hover-popover/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
+import type {
+  HostedToolbar,
+  HostedToolbarParts,
+} from "@plugins/primitives/plugins/data-view/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AppShellBrandForm } from "@plugins/primitives/plugins/app-shell/web";
 
 const allAppsIcon = symbol("apps");
 
-/** Tiles per row of the launcher grid — also the ArrowUp/ArrowDown stride. */
-const COLS = 4;
+const LAUNCHER_VIEW = defineDataView("apps-core.launcher");
 
-const STEP: Record<string, number> = {
-  ArrowRight: 1,
-  ArrowLeft: -1,
-  ArrowDown: COLS,
-  ArrowUp: -COLS,
-};
+/** The popover's footer link ("All apps"), handed to the hosted frame — a
+ *  frame is a module-level component, so what it needs from this render
+ *  arrives by context. */
+const FooterContext = createContext<ReactNode>(null);
 
 /**
- * Arrow keys move between the tiles as a grid (left/right one tile, up/down one
- * row), Home/End to the ends. The tiles are read off the menu's own DOM, in
- * render order.
+ * The popover is the DataView's frame: no toolbar band, just the grid, then a
+ * footer line with "All apps" and — revealed on hover — the options trigger
+ * (search: type to narrow the grid).
  */
-function onMenuKeyDown(e: KeyboardEvent<HTMLElement>) {
-  const items = Array.from(
-    e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+function LauncherFrame({ body, options }: HostedToolbarParts) {
+  const footer = useContext(FooterContext);
+  return (
+    <Stack gap="xs">
+      {body}
+      <Line className="border-t pt-xs">
+        {footer}
+        <Fill />
+        {options}
+      </Line>
+    </Stack>
   );
-  const at = items.findIndex((el) => el === document.activeElement);
-  if (at < 0) return;
-  let next: number;
-  if (e.key === "Home") next = 0;
-  else if (e.key === "End") next = items.length - 1;
-  else if (e.key in STEP) next = at + STEP[e.key]!;
-  else return;
-  e.preventDefault();
-  items[Math.max(0, Math.min(items.length - 1, next))]?.focus();
 }
+
+const LAUNCHER_TOOLBAR: HostedToolbar = {
+  kind: "hosted",
+  frame: LauncherFrame,
+};
 
 /**
  * Every installed app but the gallery, in the order the app rail shows them
@@ -103,8 +108,9 @@ function LauncherMark({
  * The launcher: the current app's mark as an icon button. A click goes to the app
  * gallery — the `Apps.App` entry flagged `default`, found generically, never
  * named — and hovering it (or ArrowDown) reveals every other installed app as
- * a grid of tiles, the current one marked. Picking a tile switches app exactly
- * as the rail does (`useActivateApp`).
+ * the compact icons DataView (the tile Home draws), the current one marked as
+ * the selected row. Picking a tile switches app exactly as the rail does
+ * (`useActivateApp`).
  */
 export function AppLauncher({ form }: { form: AppShellBrandForm }) {
   const apps = Apps.App.useContributions();
@@ -142,49 +148,8 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
         </Button>
       }
       content={({ close }) => (
-        <Stack gap="xs">
-          <Grid cols={COLS} gap="2xs" role="menu" onKeyDown={onMenuKeyDown}>
-            {launchable.map((entry) => {
-              const current = entry.id === activeId;
-              return (
-                <Stack
-                  key={entry.id}
-                  as="button"
-                  role="menuitem"
-                  aria-current={current ? "page" : undefined}
-                  gap="xs"
-                  align="center"
-                  onClick={() => {
-                    close();
-                    activate(entry);
-                  }}
-                  className="focus-ring relative rounded-lg px-2xs py-sm hover:bg-hover-fill"
-                >
-                  <AppIconTile
-                    icon={entry.icon}
-                    appId={entry.id}
-                    className="size-9"
-                  />
-                  <Line className="max-w-full">
-                    <Text
-                      variant="caption"
-                      className={cn(
-                        current ? "text-foreground" : "text-muted-foreground",
-                      )}
-                    >
-                      {entry.app.name}
-                    </Text>
-                  </Line>
-                  {current && (
-                    <Pin to="bottom" offset="2xs" decorative>
-                      <span className="block size-1 rounded-full bg-foreground" />
-                    </Pin>
-                  )}
-                </Stack>
-              );
-            })}
-          </Grid>
-          <Line className="border-t pt-xs">
+        <FooterContext.Provider
+          value={
             <Button
               variant="ghost"
               {...galleryLink}
@@ -196,8 +161,26 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
               <Icon icon={allAppsIcon} />
               All apps
             </Button>
-          </Line>
-        </Stack>
+          }
+        >
+          <DataView<ActiveApp>
+            rows={launchable}
+            rowKey={(a) => a.id}
+            fields={appFields}
+            views={["icons"]}
+            defaultView="icons"
+            density="compact"
+            toolbar={LAUNCHER_TOOLBAR}
+            searchPlaceholder="Search apps"
+            storageKey={LAUNCHER_VIEW}
+            selectedRowId={activeId}
+            onRowActivate={(entry) => {
+              close();
+              activate(entry);
+            }}
+            emptyState="No app matches."
+          />
+        </FooterContext.Provider>
       )}
     />
   );

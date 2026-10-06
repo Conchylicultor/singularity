@@ -3028,11 +3028,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.ActiveApp`
               - `apps-core.Apps`
               - `apps-core.useCurrentAppId`
+              - `apps-core/app-launcher.appFields`
               - `apps-core/tabs.useActivateApp`
               - `apps/home/shell.Home`
               - `apps/prototypes/gallery.mintPrototypeFolder`
               - `apps/prototypes/gallery.newPrototypePrompt`
-              - `fields/avatar/table.avatarFieldDef`
               - `primitives/css/ui-kit.Button`
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
@@ -7212,15 +7212,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.useTabs`
           - `primitives/app-shell.AppShell`
           - `primitives/app-shell.useBrandDrawnOn`
+          - `primitives/css/fill.Fill`
           - `primitives/css/fill.fillClasses`
-          - `primitives/css/grid.Grid`
           - `primitives/css/line.Line`
-          - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/data-view.DataView`
+          - `primitives/data-view.defineDataView`
           - `primitives/embed.isChromelessDocument`
           - `primitives/link-gesture.linkGestureProps`
           - `primitives/overlay/hover-popover.HoverPopover`
@@ -7228,6 +7229,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder.isNodeData`
           - `reorder.useReorderedEntries`
           - `ui/icons.Icon`
+        - Exports (values): `appFields`
+      - Cross-plugin:
+        - Imported by: `apps/home/app-cards`
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
       - Web:
         - Uses:
@@ -16720,9 +16724,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `AvatarCellDataError`
               - `avatarFieldDef`
           - Cross-plugin:
-            - Imported by:
-              - `apps/home/app-cards`
-              - `conversations/agents`
+            - Imported by: `conversations/agents`
     - **`bool`** — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "bool"
@@ -28410,7 +28412,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `Grid`
           - Cross-plugin:
             - Imported by:
-              - `apps-core/app-launcher`
               - `apps-core/surface/floating/wallpaper`
               - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
@@ -28798,7 +28799,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `pinClasses`
           - Cross-plugin:
             - Imported by:
-              - `apps-core/app-launcher`
               - `apps-core/app-rail`
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
@@ -28832,6 +28832,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/video`
               - `primitives/app-shell`
               - `primitives/data-view/gallery`
+              - `primitives/data-view/icons`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
@@ -30989,7 +30990,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
-          - `ConfigV2.WebRegister` ×43: "agent-launches", "agents-list", "all-conversations", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+          - `ConfigV2.WebRegister` ×44: "agent-launches", "agents-list", "all-conversations", "apps-core.launcher", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
           - `DataViewSlots.Setting` "data-view.fold" → `FoldControl`
@@ -31199,7 +31200,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: `ConfigV2.Register` ×43: "agent-launches", "agents-list", "all-conversations", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+        - Contributes: `ConfigV2.Register` ×44: "agent-launches", "agents-list", "all-conversations", "apps-core.launcher", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
         - Uses:
           - `config_v2.getConfig`
           - `config_v2.watchConfig`
@@ -31210,6 +31211,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `watchDataViewConfigDoc`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-launcher`
           - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/servers`
@@ -31539,9 +31541,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/avatar.AvatarPresentationProvider`
               - `primitives/css/center.Center`
               - `primitives/css/grid.Grid`
+              - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/data-view.DataViewDensity`
               - `primitives/data-view.DataViewRenderProps`
               - `primitives/data-view.DataViewRowEntry`
               - `primitives/data-view.DataViewSection`
