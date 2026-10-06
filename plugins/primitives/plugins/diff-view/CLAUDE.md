@@ -19,8 +19,14 @@ Generic side-by-side / text diff renderer. The domain-agnostic diff-rendering cl
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/dom/dom-selection.selectionRange`
     - `primitives/loading.Loading`
+    - `primitives/overlay/image-viewer.ImageLoad`
+    - `primitives/overlay/image-viewer.ImageProbeState`
+    - `primitives/overlay/image-viewer.MissingImage`
+    - `primitives/overlay/image-viewer.useImageLoad`
+    - `primitives/overlay/image-viewer.useImageProbe`
     - `primitives/syntax-highlight.getHighlighter`
     - `primitives/syntax-highlight.languageForPath`
     - `primitives/syntax-highlight.SHIKI_LANGS`

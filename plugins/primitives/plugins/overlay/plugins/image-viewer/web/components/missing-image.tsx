@@ -25,8 +25,10 @@ export interface MissingImageProps {
   /** Offered while `reason` is `unreadable`: a gone file stays gone. */
   onRetry?: () => void;
   /** `inline` — a transcript image's box; `chip` — the 64px attachment chip,
-   *  without the reason line. Matches `ViewerThumbnail`'s sizes. */
-  size?: "inline" | "chip";
+   *  without the reason line. Matches `ViewerThumbnail`'s sizes. `fill` — the
+   *  whole of its parent's box, for an image that is cropped to one (a page
+   *  cover). */
+  size?: "inline" | "chip" | "fill";
 }
 
 /** A fixed box per size, so a set of missing images keeps the grid an image
@@ -34,6 +36,7 @@ export interface MissingImageProps {
 const BOX: Record<NonNullable<MissingImageProps["size"]>, string> = {
   inline: "h-32 w-56 p-sm",
   chip: "h-16 w-24 p-xs",
+  fill: "size-full p-sm",
 };
 
 /**

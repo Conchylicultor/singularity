@@ -28,6 +28,7 @@
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/loading.Loading`
+    - `primitives/overlay/image-viewer.useImageLoad`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `primitives/undo-redo.localUndoProps`
     - `ui/icons.Icon`

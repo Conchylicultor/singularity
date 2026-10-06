@@ -14,6 +14,8 @@ other images, Esc to close. Design and decisions: `research/2026-09-11-primitive
 | Images with no thumbnails of your own (mail HTML) | `<ImageViewer images index onIndexChange onClose originOf>`, controlled |
 | A region whose images belong together (a conversation transcript) | wrap it in `<ImageGallery>` |
 | Your own `<img>` that should fail the way a thumbnail does | `useImageLoad(src)` for its state, `<MissingImage>` while it is `failed` |
+| An image cropped to fill a box (a page cover) | the same, with `<MissingImage size="fill">` |
+| The outcome before you choose a layout (an image diff: added / deleted / side by side) | `useImageProbe(src)` — the same states, loaded off-DOM |
 
 An image that does not load is never the browser's broken-image glyph. `ViewerThumbnail`
 renders `<MissingImage>` instead: a fixed box (the thumbnail's size, not the alt text's)
@@ -75,7 +77,7 @@ handler, the `?` sheet and the button tooltips all read.
 
 ## Plugin reference
 
-- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
 - Web:
   - Uses:
     - `primitives/announce.announce`
@@ -117,6 +119,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `ImageFailure`
     - `ImageLoad`
     - `ImageLoadState`
+    - `ImageProbeState`
     - `ImageViewerProps`
     - `ImageViewerTrigger`
     - `MissingImageProps`
@@ -127,10 +130,12 @@ handler, the `?` sheet and the button tooltips all read.
     - `ImageViewer`
     - `MissingImage`
     - `useImageLoad`
+    - `useImageProbe`
     - `useImageViewerTrigger`
     - `ViewerThumbnail`
 - Cross-plugin:
   - Imported by:
+    - `apps/pages/page-tree`
     - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
@@ -138,9 +143,13 @@ handler, the `?` sheet and the button tooltips all read.
     - `conversations/conversation-view/jsonl-viewer/user-image`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/markdown-extensions`
+    - `page/bookmark`
     - `page/image`
+    - `page/read-only-view`
+    - `primitives/diff-view`
     - `primitives/file-viewer/image`
     - `primitives/text-editor/paste-images`
+    - `tasks/task-attachments`
 - Core:
   - Exports (types):
     - `Area`

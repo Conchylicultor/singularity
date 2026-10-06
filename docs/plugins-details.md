@@ -3778,6 +3778,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.ResourceView`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/overlay/image-viewer.ImageLoadState`
+              - `primitives/overlay/image-viewer.MissingImage`
+              - `primitives/overlay/image-viewer.useImageLoad`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.PaneIconAction`
@@ -24088,6 +24091,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/loading.Loading`
+          - `primitives/overlay/image-viewer.useImageLoad`
           - `primitives/text-editor/paste-images.attachmentUrl`
           - `primitives/undo-redo.localUndoProps`
           - `ui/icons.Icon`
@@ -25827,6 +25831,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/text.TextVariant`
           - `primitives/css/ui-kit.cn`
+          - `primitives/overlay/image-viewer.ImageGallery`
+          - `primitives/overlay/image-viewer.MissingImage`
+          - `primitives/overlay/image-viewer.useImageLoad`
+          - `primitives/overlay/image-viewer.useImageViewerTrigger`
           - `primitives/syntax-highlight.HighlightedCode`
           - `primitives/text-editor/paste-images.attachmentUrl`
           - `ui/icons.Icon`
@@ -30677,6 +30685,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
               - `primitives/date-picker`
+              - `primitives/diff-view`
               - `primitives/dom/auto-scroll`
               - `primitives/file-viewer`
               - `primitives/folder-picker`
@@ -31870,8 +31879,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/dom/dom-selection.selectionRange`
           - `primitives/loading.Loading`
+          - `primitives/overlay/image-viewer.ImageLoad`
+          - `primitives/overlay/image-viewer.ImageProbeState`
+          - `primitives/overlay/image-viewer.MissingImage`
+          - `primitives/overlay/image-viewer.useImageLoad`
+          - `primitives/overlay/image-viewer.useImageProbe`
           - `primitives/syntax-highlight.getHighlighter`
           - `primitives/syntax-highlight.languageForPath`
           - `primitives/syntax-highlight.SHIKI_LANGS`
@@ -32285,6 +32300,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/center.Center`
               - `primitives/file-viewer.FileViewer`
               - `primitives/overlay/image-viewer.ImageViewer`
+              - `primitives/overlay/image-viewer.MissingImage`
+              - `primitives/overlay/image-viewer.useImageLoad`
         - **`markdown`** — Rendered markdown preview for .md and .mdx files.
           - Web:
             - Contributes: `FileViewer.Renderer` "Markdown" → `MarkdownView`
@@ -33940,7 +33957,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `HoverIntent`
               - `HoverIntentOptions`
             - Exports (values): `createHoverIntent`
-        - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+        - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
             - Uses:
               - `primitives/announce.announce`
@@ -33982,6 +33999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ImageFailure`
               - `ImageLoad`
               - `ImageLoadState`
+              - `ImageProbeState`
               - `ImageViewerProps`
               - `ImageViewerTrigger`
               - `MissingImageProps`
@@ -33992,10 +34010,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ImageViewer`
               - `MissingImage`
               - `useImageLoad`
+              - `useImageProbe`
               - `useImageViewerTrigger`
               - `ViewerThumbnail`
           - Cross-plugin:
             - Imported by:
+              - `apps/pages/page-tree`
               - `conversations/conversation-view/artifacts/screenshot`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
@@ -34003,9 +34023,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/markdown-extensions`
+              - `page/bookmark`
               - `page/image`
+              - `page/read-only-view`
+              - `primitives/diff-view`
               - `primitives/file-viewer/image`
               - `primitives/text-editor/paste-images`
+              - `tasks/task-attachments`
           - Core:
             - Exports (types):
               - `Area`
@@ -38183,6 +38207,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/overlay/image-viewer.ImageGallery`
+          - `primitives/overlay/image-viewer.ViewerThumbnail`
           - `tasks/task-detail.TaskDetailSlots`
     - **`task-category`** — Per-task category (registry-driven, system-set only): contributes the `category` enum field into the tasks DataView so the task list can group by it. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its keyed live resource, and the category-list endpoint.
       - Web:

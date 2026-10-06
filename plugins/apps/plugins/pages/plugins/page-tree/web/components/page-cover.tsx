@@ -21,6 +21,11 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import {
+  MissingImage,
+  useImageLoad,
+  type ImageLoadState,
+} from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { gradientCss } from "./cover-presets";
 import { ChangeCoverPopover } from "./change-cover-popover";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -62,20 +67,59 @@ function PageCoverInner({ page, pageId }: { page: Block; pageId: string }) {
   };
 
   if (!cover) return null;
-
-  return <FilledCover cover={cover} onPick={saveCover} onSave={saveCover} />;
+  if (cover.type === "image") {
+    return <ImageCover cover={cover} onPick={saveCover} onSave={saveCover} />;
+  }
+  return (
+    <FilledCover
+      band={{ kind: "gradient", cover }}
+      onPick={saveCover}
+      onSave={saveCover}
+    />
+  );
 }
 
-function FilledCover({
+/** An image cover: its load state decides whether it can be repositioned. */
+function ImageCover({
   cover,
   onPick,
   onSave,
 }: {
-  cover: PageCover;
+  cover: ImageCoverValue;
+  onPick: (cover: PageCover) => void;
+  onSave: (cover: PageCover | null) => Promise<void>;
+}) {
+  const image = useImageLoad(attachmentUrl(cover.attachmentId));
+  return (
+    <FilledCover
+      band={{ kind: "image", cover, image }}
+      onPick={onPick}
+      onSave={onSave}
+    />
+  );
+}
+
+type ImageCoverValue = Extract<PageCover, { type: "image" }>;
+
+/** What the band paints: a gradient, or an image cover with its load state. */
+type CoverBand =
+  | { kind: "gradient"; cover: Exclude<PageCover, ImageCoverValue> }
+  | { kind: "image"; cover: ImageCoverValue; image: ImageLoadState };
+
+function FilledCover({
+  band,
+  onPick,
+  onSave,
+}: {
+  band: CoverBand;
   onPick: (cover: PageCover) => void;
   onSave: (cover: PageCover | null) => Promise<void>;
 }) {
   const [repositioning, setRepositioning] = useState(false);
+  const { cover } = band;
+  // A cover whose file no longer loads has nothing to reposition; it can still
+  // be changed or removed.
+  const failed = band.kind === "image" && band.image.load.kind === "failed";
 
   return (
     <Clip
@@ -84,14 +128,22 @@ function FilledCover({
         "group/cover relative h-[30vh] max-h-64 w-full select-none",
       )}
     >
-      {cover.type === "gradient" ? (
+      {band.kind === "gradient" ? (
         <div
           className="size-full"
-          style={{ background: gradientCss(cover.preset) }}
+          style={{ background: gradientCss(band.cover.preset) }}
+        />
+      ) : band.image.load.kind === "failed" ? (
+        <MissingImage
+          name="Cover image"
+          reason={band.image.load.reason}
+          onRetry={band.image.retry}
+          size="fill"
         />
       ) : (
         <CoverImage
-          cover={cover}
+          cover={band.cover}
+          image={band.image}
           repositioning={repositioning}
           onSave={onSave}
           onDone={() => setRepositioning(false)}
@@ -111,7 +163,7 @@ function FilledCover({
                 </Button>
               }
             />
-            {cover.type === "image" && (
+            {band.kind === "image" && !failed && (
               <Button
                 variant="secondary"
                 onClick={() => setRepositioning(true)}
@@ -142,11 +194,13 @@ function FilledCover({
  */
 function CoverImage({
   cover,
+  image,
   repositioning,
   onSave,
   onDone,
 }: {
-  cover: Extract<PageCover, { type: "image" }>;
+  cover: ImageCoverValue;
+  image: ImageLoadState;
   repositioning: boolean;
   onSave: (cover: PageCover | null) => Promise<void>;
   onDone: () => void;
@@ -211,8 +265,10 @@ function CoverImage({
         )}
       >
         <img
+          key={image.imgKey}
           src={attachmentUrl(cover.attachmentId)}
           alt=""
+          {...image.imgProps}
           draggable={false}
           className="pointer-events-none size-full object-cover"
           style={{ objectPosition: `50% ${positionY}%` }}

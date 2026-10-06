@@ -758,6 +758,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
     - `primitives/date-picker`
+    - `primitives/diff-view`
     - `primitives/dom/auto-scroll`
     - `primitives/file-viewer`
     - `primitives/folder-picker`

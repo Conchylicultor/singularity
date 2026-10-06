@@ -24,6 +24,7 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
+import { useImageLoad } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import {
   useBlockActivate,
   type BlockRendererProps,
@@ -194,6 +195,26 @@ function FetchingBookmarkBlock({
   );
 }
 
+/**
+ * The link's cached favicon or preview image. Both are decoration of a card
+ * whose click opens the link, so one that no longer loads is dropped: the card
+ * reads exactly as a link that never had one, never the broken-image glyph.
+ */
+function PreviewImage({
+  attachmentId,
+  className,
+}: {
+  attachmentId: string;
+  className: string;
+}) {
+  const src = attachmentUrl(attachmentId);
+  const { load, imgKey, imgProps } = useImageLoad(src);
+  if (load.kind === "failed") return null;
+  return (
+    <img key={imgKey} src={src} alt="" {...imgProps} className={className} />
+  );
+}
+
 function FilledBookmarkBlock({
   url,
   title,
@@ -236,9 +257,8 @@ function FilledBookmarkBlock({
               <Stack as={Fill} gap="2xs" className="p-md">
                 <Stack direction="row" gap="2xs" align="center">
                   {faviconId ? (
-                    <img
-                      src={attachmentUrl(faviconId)}
-                      alt=""
+                    <PreviewImage
+                      attachmentId={faviconId}
                       className="size-4 rounded-sm"
                     />
                   ) : null}
@@ -261,9 +281,8 @@ function FilledBookmarkBlock({
                 </Text>
               </Stack>
               {imageId ? (
-                <img
-                  src={attachmentUrl(imageId)}
-                  alt=""
+                <PreviewImage
+                  attachmentId={imageId}
                   className="h-auto w-32 object-cover"
                 />
               ) : null}

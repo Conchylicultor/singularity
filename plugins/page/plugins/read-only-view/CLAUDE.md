@@ -135,6 +135,10 @@ declares the token. This plugin renders chips; it owns none.
     - `primitives/css/text.Text`
     - `primitives/css/text.TextVariant`
     - `primitives/css/ui-kit.cn`
+    - `primitives/overlay/image-viewer.ImageGallery`
+    - `primitives/overlay/image-viewer.MissingImage`
+    - `primitives/overlay/image-viewer.useImageLoad`
+    - `primitives/overlay/image-viewer.useImageViewerTrigger`
     - `primitives/syntax-highlight.HighlightedCode`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `ui/icons.Icon`

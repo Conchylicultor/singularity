@@ -68,7 +68,7 @@ It takes `name`, `reason`, `onRetry?` and `size: "inline" | "chip"`.
 
 ### Out of scope (listed, not done)
 
-- **Raw `<img>` sites that bypass the viewer.** These are task attachments, read-only page blocks, the file-viewer image tab and image diffs. Moving them onto `ViewerThumbnail` is a separate migration (task).
+- **Raw `<img>` sites that bypass the viewer.** These are task attachments, read-only page blocks, the file-viewer image tab and image diffs. Done in `research/2026-10-06-primitives-raw-img-missing-image.md`.
 - **The root cause:** temp screenshots being read from a temp dir. The fix is to copy Read-tool images into attachments when the transcript records them (task).
 
 ## Files

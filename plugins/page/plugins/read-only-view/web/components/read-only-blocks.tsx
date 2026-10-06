@@ -17,6 +17,12 @@ import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selec
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import {
+  ImageGallery,
+  MissingImage,
+  useImageLoad,
+  useImageViewerTrigger,
+} from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import {
   Editor,
   PageIcon,
   TextBlockLayout,
@@ -237,25 +243,66 @@ function MediaBlock({
         <PlaceholderCard label="Image" icon={imageIcon} caption="No image" />
       );
     }
-    const style: CSSProperties = {
-      width: width ? `${width}px` : undefined,
-      maxWidth: "100%",
-    };
     return (
-      <Inset x={BLOCK_INSET} y="xs">
-        <div className="inline-block max-w-full" style={style}>
-          {/* `rounded-md` matches the editor's image chrome. */}
-          <img
-            src={attachmentUrl(attachmentId)}
-            alt={alt}
-            className="block w-full rounded-md"
-          />
-        </div>
-      </Inset>
+      // The image keeps its own <img> (it honours the stored width), so it
+      // renders the gallery its viewer trigger needs: a gallery of one.
+      <ImageGallery>
+        <ReadOnlyImage attachmentId={attachmentId} alt={alt} width={width} />
+      </ImageGallery>
     );
   }
 
   return null;
+}
+
+/**
+ * A filled image block: a click opens the full-window viewer, as on the
+ * editable surface, and a file that no longer loads shows the missing-image box
+ * at its own size rather than the browser's broken-image glyph.
+ */
+function ReadOnlyImage({
+  attachmentId,
+  alt,
+  width,
+}: {
+  attachmentId: string;
+  alt: string;
+  width: number | undefined;
+}) {
+  const src = attachmentUrl(attachmentId);
+  const name = alt || "Image";
+  const viewerTrigger = useImageViewerTrigger<HTMLImageElement>({
+    src,
+    name,
+    alt: alt || undefined,
+  });
+  const { load, imgKey, imgProps, retry } = useImageLoad(src);
+  if (load.kind === "failed") {
+    return (
+      <Inset x={BLOCK_INSET} y="xs">
+        <MissingImage name={name} reason={load.reason} onRetry={retry} />
+      </Inset>
+    );
+  }
+  const style: CSSProperties = {
+    width: width ? `${width}px` : undefined,
+    maxWidth: "100%",
+  };
+  return (
+    <Inset x={BLOCK_INSET} y="xs">
+      <div className="inline-block max-w-full" style={style}>
+        {/* `rounded-md` matches the editor's image chrome. */}
+        <img
+          key={imgKey}
+          src={src}
+          alt={alt}
+          {...viewerTrigger}
+          {...imgProps}
+          className="block w-full cursor-zoom-in rounded-md"
+        />
+      </div>
+    </Inset>
+  );
 }
 
 /**

@@ -6,7 +6,12 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { ImageGallery, ViewerThumbnail, useImageViewerTrigger } from "../index";
+import {
+  ImageGallery,
+  ViewerThumbnail,
+  useImageProbe,
+  useImageViewerTrigger,
+} from "../index";
 
 afterEach(cleanup);
 
@@ -198,5 +203,50 @@ describe("an image that does not load", () => {
     open("a");
     press("ArrowRight");
     showing("c");
+  });
+});
+
+describe("useImageProbe", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** jsdom never loads images: every off-DOM image fails. */
+  class FailingImage {
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    naturalWidth = 0;
+    naturalHeight = 0;
+    set src(_: string) {
+      queueMicrotask(() => this.onerror?.());
+    }
+  }
+
+  function Probe({ src }: { src: string }) {
+    const { load, retry } = useImageProbe(src);
+    return (
+      <button type="button" onClick={retry}>
+        {load.kind === "failed" ? load.reason : load.kind}
+      </button>
+    );
+  }
+
+  const answering = (status: number) => {
+    const fetch = vi.fn(() => Promise.resolve(new Response(null, { status })));
+    vi.stubGlobal("fetch", fetch);
+    return fetch;
+  };
+
+  it("classifies a failure the way useImageLoad does: 404 is gone", async () => {
+    vi.stubGlobal("Image", FailingImage);
+    answering(404);
+    render(<Probe src="/api/x.png" />);
+    await screen.findByText("gone");
+  });
+
+  it("calls any other failure unreadable, and loads again on retry", async () => {
+    vi.stubGlobal("Image", FailingImage);
+    const fetch = answering(500);
+    render(<Probe src="/api/x.png" />);
+    fireEvent.click(await screen.findByText("unreadable"));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   });
 });

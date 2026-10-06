@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 import { probeUrlStatus } from "@plugins/primitives/plugins/networking/web";
 import type { Size } from "../../core";
 
@@ -90,6 +90,54 @@ export function useImageLoad(src: string): ImageLoadState {
         );
       },
     },
+    retry: () => setState({ src, attempt: attempt + 1, load: PENDING }),
+  };
+}
+
+export interface ImageProbeState {
+  load: ImageLoad;
+  /** Load the image again. */
+  retry: () => void;
+}
+
+/**
+ * `useImageLoad` for an image that is not on the page yet: loads `src`
+ * off-DOM and answers with the same states, failures classified the same way.
+ * For a caller that must know the outcome before it chooses what to render —
+ * an image diff deciding between added, deleted and side by side.
+ */
+export function useImageProbe(src: string): ImageProbeState {
+  const [state, setState] = useState<State>({ src, attempt: 0, load: PENDING });
+  // Derived, not synced in an effect: a new src is pending from its first render.
+  const current: State =
+    state.src === src ? state : { src, attempt: 0, load: PENDING };
+  const { attempt } = current;
+
+  useEffect(() => {
+    let live = true;
+    const settle = (load: ImageLoad) => {
+      if (live) setState({ src, attempt, load });
+    };
+    const img = new Image();
+    img.onload = () =>
+      settle({
+        kind: "loaded",
+        size: { width: img.naturalWidth, height: img.naturalHeight },
+      });
+    img.onerror = () => {
+      settle({ kind: "failed", reason: "probing" });
+      void failureOf(src).then((reason) => settle({ kind: "failed", reason }));
+    };
+    img.src = src;
+    return () => {
+      live = false;
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [src, attempt]);
+
+  return {
+    load: current.load,
     retry: () => setState({ src, attempt: attempt + 1, load: PENDING }),
   };
 }

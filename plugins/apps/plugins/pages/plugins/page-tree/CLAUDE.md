@@ -221,6 +221,9 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/image-viewer.ImageLoadState`
+    - `primitives/overlay/image-viewer.MissingImage`
+    - `primitives/overlay/image-viewer.useImageLoad`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneIconAction`
