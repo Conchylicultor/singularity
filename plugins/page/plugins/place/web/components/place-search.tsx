@@ -59,8 +59,10 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // An empty place block is a PROMPT — it is asking which place — so Enter on
-  // the block's caret host puts the caret in the search box.
-  useBlockActivate(() => inputRef.current?.focus());
+  // the block's caret host puts the caret in the search box — and so does the
+  // block arriving under the caret (`/place`), where the next keystroke is the
+  // query.
+  useBlockActivate(() => inputRef.current?.focus(), { onArrival: true });
   const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
 
   const { data, error, isFetching } = useEndpoint(

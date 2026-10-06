@@ -105,6 +105,18 @@ await withBrowser(async (h) => {
     );
   }
 
+  // A freshly created place block is asking which place: the next keystroke
+  // belongs in its search box, not on the block.
+  if (hasSearch) {
+    const focused = await searchBox.evaluate(
+      (el) => el === document.activeElement,
+    );
+    console.log(`[4b] search box focused after creation: ${focused}`);
+    if (!focused) {
+      throw new Error("the new place block did not focus its search box");
+    }
+  }
+
   // 4) The conversion must SURVIVE a reload. This is the step worth having:
   //    the optimistic overlay renders a converted block whether or not the row
   //    write landed, so "it looks right" proves nothing until the page is read

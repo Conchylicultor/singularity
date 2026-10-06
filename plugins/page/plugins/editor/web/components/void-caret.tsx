@@ -157,7 +157,23 @@ export function useCaretEscape(
  * Registering an activation returns the unregister; `null` registers nothing.
  * The host supplies a stable one, so a block may call the hook unconditionally.
  */
-type RegisterActivate = (activate: (() => void) | null) => () => void;
+type RegisterActivate = (
+  activate: (() => void) | null,
+  opts: BlockActivateOptions,
+) => () => void;
+
+export interface BlockActivateOptions {
+  /**
+   * Also run the activation when the block ARRIVES under the caret — the host
+   * mounted with the editor's caret already on it, which is what a `/place`,
+   * a gutter-`+` pick or a Turn-into produces. For a prompt whose payload is
+   * typed (a search box, a URL field) that is where the user's next keystroke
+   * belongs. Leave it off for an activation that would surprise on arrival (a
+   * native file dialog). Arriving by ↑/↓ never runs it: the host was already
+   * mounted.
+   */
+  onArrival?: boolean;
+}
 
 const BlockActivateContext = createContext<RegisterActivate | null>(null);
 
@@ -182,7 +198,10 @@ const BlockActivateContext = createContext<RegisterActivate | null>(null);
  * deliberate: `AttachmentUpload` is a shared component and its callers should
  * not have to know which surface they are on.
  */
-export function useBlockActivate(activate: (() => void) | null): void {
+export function useBlockActivate(
+  activate: (() => void) | null,
+  { onArrival = false }: BlockActivateOptions = {},
+): void {
   const register = useContext(BlockActivateContext);
   const run = useEventCallback(() => activate?.());
   // The IDENTITY of the registration must depend only on whether there is one,
@@ -190,8 +209,8 @@ export function useBlockActivate(activate: (() => void) | null): void {
   const enabled = activate !== null;
   useEffect(() => {
     if (!register) return;
-    return register(enabled ? run : null);
-  }, [register, enabled, run]);
+    return register(enabled ? run : null, { onArrival });
+  }, [register, enabled, run, onArrival]);
 }
 
 export interface BlockCaretHostProps {
@@ -289,13 +308,27 @@ export function BlockCaretHost({
 }: BlockCaretHostProps) {
   const ref = useRef<HTMLDivElement>(null);
   const activateRef = useRef<(() => void) | null>(null);
+  // Mounted with the caret already here = the block just became this type under
+  // the caret (see `BlockActivateOptions.onArrival`). Pending until the first
+  // arrival activation consumes it, or the caret leaves — the block's prompt may
+  // register a render or two late (its provider still loading).
+  const arrivalPendingRef = useRef(isFocused);
+  useEffect(() => {
+    if (!isFocused) arrivalPendingRef.current = false;
+  }, [isFocused]);
   const insertParagraphBelow = useInsertParagraphBelow();
   const selection = useSelectionControl();
 
   // Stable for the lifetime of the host — `no-unstable-context-value`, and more
   // to the point a fresh identity would re-run every consumer's effect.
-  const register = useCallback<RegisterActivate>((activate) => {
+  const register = useCallback<RegisterActivate>((activate, { onArrival }) => {
     activateRef.current = activate;
+    if (activate && onArrival && arrivalPendingRef.current) {
+      arrivalPendingRef.current = false;
+      // Runs in the block's effect, ahead of this host's own pull-focus effect —
+      // which then declines, focus being inside the block (rule 1).
+      activate();
+    }
     return () => {
       // Only clear what THIS registration installed: a state flip can mount the
       // next arm's registration before the previous one's cleanup runs.
