@@ -122,6 +122,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/markdown-extensions`
     - `page/image`
+    - `primitives/file-viewer/image`
     - `primitives/text-editor/paste-images`
 - Core:
   - Exports (types):

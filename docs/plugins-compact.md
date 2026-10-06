@@ -57,7 +57,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`build`** [12 sub-plugins] — Trigger `./singularity build` from the toolbar.
 
-- **`code-explorer`** — Worktree-scoped file reads: raw/diff/image content by attempt id or the reserved `main` sentinel.
+- **`code-explorer`** — Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.
   - Plugins:
     - **`code-api`** — Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.

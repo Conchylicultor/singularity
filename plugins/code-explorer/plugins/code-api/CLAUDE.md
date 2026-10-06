@@ -29,6 +29,7 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
     - `infra/endpoints.interpolatePath`
     - `primitives/commit-list.CommitRowSchema`
     - `primitives/live-state.resolvableSchema`
+  - Exports (types): `CodeDirEntry`
   - Exports (values):
     - `codeImageUrl`
     - `getCommitFiles`
@@ -37,6 +38,7 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
     - `getFileDiff`
     - `getImageContent`
     - `getPushFiles`
+    - `listCodeDir`
 - Cross-plugin:
   - Imported by: `primitives/file-viewer`
 

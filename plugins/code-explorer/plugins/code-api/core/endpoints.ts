@@ -24,6 +24,34 @@ export const getFileDiff = defineEndpoint({
   response: z.object({ diff: z.string() }),
 });
 
+export const CodeDirEntrySchema = z.object({
+  name: z.string(),
+  /** `other`: a symlink, submodule or anything else that is neither. */
+  kind: z.enum(["file", "dir", "other"]),
+});
+export type CodeDirEntry = z.infer<typeof CodeDirEntrySchema>;
+
+/**
+ * One directory of a checkout: as it is on disk, or AS OF `ref` (from git's
+ * tree). `dir` is checkout-relative; `""` is the checkout root. A directory
+ * that does not exist (or is not one) is the `missing` answer, not an error.
+ */
+export const listCodeDir = defineEndpoint({
+  route: "GET /api/code/:worktree/list",
+  query: z.object({
+    dir: z.string(),
+    ref: z.string().optional(),
+  }),
+  response: z.discriminatedUnion("kind", [
+    z.object({
+      kind: z.literal("ok"),
+      /** Sorted by name. */
+      entries: z.array(CodeDirEntrySchema),
+    }),
+    z.object({ kind: z.literal("missing") }),
+  ]),
+});
+
 // Returns binary image data — not wrapped with implement()
 export const getImageContent = defineEndpoint({
   route: "GET /api/code/:worktree/image",

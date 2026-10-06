@@ -13,7 +13,7 @@ commit-diff pane in `commit-detail`, fuzzy path resolution in `file-resolve`.
 
 ## Plugin reference
 
-- Description: Worktree-scoped file reads: raw/diff/image content by attempt id or the reserved `main` sentinel.
+- Description: Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`

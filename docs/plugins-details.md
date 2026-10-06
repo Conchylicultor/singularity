@@ -8849,7 +8849,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports`
           - `reports/crash`
 
-- **`code-explorer`** — Worktree-scoped file reads: raw/diff/image content by attempt id or the reserved `main` sentinel.
+- **`code-explorer`** — Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.
   - Server:
     - Uses:
       - `infra/endpoints.HttpError`
@@ -8883,6 +8883,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.interpolatePath`
           - `primitives/commit-list.CommitRowSchema`
           - `primitives/live-state.resolvableSchema`
+        - Exports (types): `CodeDirEntry`
         - Exports (values):
           - `codeImageUrl`
           - `getCommitFiles`
@@ -8891,6 +8892,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getFileDiff`
           - `getImageContent`
           - `getPushFiles`
+          - `listCodeDir`
       - Cross-plugin:
         - Imported by: `primitives/file-viewer`
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.
@@ -20481,6 +20483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/view-order`
           - `primitives/diff-view`
           - `primitives/file-viewer`
+          - `primitives/file-viewer/image`
           - `primitives/folder-picker`
           - `primitives/launch`
           - `primitives/live-state`
@@ -32273,8 +32276,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `FileViewer.Renderer` "Image" → `ImageView`
             - Uses:
+              - `infra/endpoints.useEndpoint`
               - `primitives/css/center.Center`
               - `primitives/file-viewer.FileViewer`
+              - `primitives/overlay/image-viewer.ImageViewer`
         - **`markdown`** — Rendered markdown preview for .md and .mdx files.
           - Web:
             - Contributes: `FileViewer.Renderer` "Markdown" → `MarkdownView`
@@ -33998,6 +34003,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/markdown-extensions`
               - `page/image`
+              - `primitives/file-viewer/image`
               - `primitives/text-editor/paste-images`
           - Core:
             - Exports (types):

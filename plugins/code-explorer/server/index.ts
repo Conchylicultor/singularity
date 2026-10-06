@@ -4,6 +4,7 @@ import { handleCommitInfo } from "./internal/commit-info-handler";
 import { handleFileContent } from "./internal/file-content-handler";
 import { handleFileDiff } from "./internal/file-diff-handler";
 import { handleImageContent } from "./internal/image-handler";
+import { handleListDir } from "./internal/list-dir-handler";
 import { handlePushFiles } from "./internal/push-handler";
 import {
   getFileContent,
@@ -12,6 +13,7 @@ import {
   getPushFiles,
   getCommitFiles,
   getCommitInfo,
+  listCodeDir,
 } from "@plugins/code-explorer/plugins/code-api/core";
 
 export { resolveWorktreePath } from "./internal/resolve-worktree-path";
@@ -19,7 +21,7 @@ export { resolveParentSha, getRangeFiles } from "./internal/get-push-files";
 
 export default {
   description:
-    "Worktree-scoped file reads: raw/diff/image content by attempt id or the reserved `main` sentinel.",
+    "Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.",
   httpRoutes: {
     [getFileContent.route]: handleFileContent,
     [getFileDiff.route]: handleFileDiff,
@@ -27,5 +29,6 @@ export default {
     [getPushFiles.route]: handlePushFiles,
     [getCommitFiles.route]: handleCommitFiles,
     [getCommitInfo.route]: handleCommitInfo,
+    [listCodeDir.route]: handleListDir,
   },
 } satisfies ServerPluginDefinition;
