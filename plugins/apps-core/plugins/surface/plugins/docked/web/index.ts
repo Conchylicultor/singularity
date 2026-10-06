@@ -4,6 +4,6 @@ import { dockedDef } from "./docked-placement";
 
 export default {
   description:
-    "Docked surface placement — the default full-area tab that fills the surface below the tab strip.",
+    "Docked surface placement — the full-area tab that fills the surface below the tab strip.",
   contributions: [Surface.Placement(dockedDef)],
 } satisfies PluginDefinition;

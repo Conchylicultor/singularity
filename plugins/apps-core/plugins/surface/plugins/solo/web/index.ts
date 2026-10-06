@@ -9,7 +9,7 @@ import { soloDef } from "./solo-placement";
 
 export default {
   description:
-    "Solo (fullscreen) surface mode — only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.",
+    "Solo (fullscreen) surface mode — the default boot mode: only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.",
   contributions: [
     Surface.Placement(soloDef),
     // Esc exits solo (fullscreen) back to the mode it was entered from. The

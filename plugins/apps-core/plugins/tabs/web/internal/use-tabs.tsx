@@ -37,6 +37,7 @@ import {
 } from "./shell-history-adapter";
 import {
   peekDefaultPlacement,
+  peekExitPlacement,
   usePlacementCapabilities,
 } from "./placement-registry";
 import {
@@ -920,11 +921,16 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   );
 
   // Return to the mode in effect before the current one (solo's exit). Falls
-  // back to the registry default if the previous mode is unknown or equals the
-  // current (defensive: never leave the surface stuck in solo).
+  // back to another registered mode if the previous one is unknown or equals
+  // the current — always the case when the surface booted into solo as its
+  // default — so the surface is never left stuck in solo.
   const exitToPreviousMode = useCallback(() => {
     const prev = previousModeRef.current;
-    setMode(prev && prev !== modeRef.current ? prev : peekDefaultPlacement());
+    setMode(
+      prev && prev !== modeRef.current
+        ? prev
+        : peekExitPlacement(modeRef.current),
+    );
   }, [setMode]);
 
   // Install the shell (app-aware) history adapter so the pane store's push/

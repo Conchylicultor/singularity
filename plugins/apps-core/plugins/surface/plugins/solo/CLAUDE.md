@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Solo (fullscreen) surface mode — only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.
+- Description: Solo (fullscreen) surface mode — the default boot mode: only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.
 - Web:
   - Contributes:
     - `Surface.Placement`

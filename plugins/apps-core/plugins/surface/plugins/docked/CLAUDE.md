@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Docked surface placement — the default full-area tab that fills the surface below the tab strip.
+- Description: Docked surface placement — the full-area tab that fills the surface below the tab strip.
 - Web:
   - Contributes: `Surface.Placement`
   - Uses: `apps-core/surface.Surface`

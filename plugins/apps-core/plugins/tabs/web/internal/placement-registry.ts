@@ -56,13 +56,28 @@ export function registerPlacementCapabilities(
 
 /**
  * One-shot read of the default placement id — for event handlers and effect
- * cleanups (`useTabs`'s solo-exit fallback, the surface-mode teardown), which
+ * cleanups (the surface-mode teardown), which
  * run after registration and re-run on every invocation. Returns `""` until
  * `surface` registers. NEVER from a render path: use {@link useDefaultPlacement}
  * there, or the pre-registration `""` is cached for the component's life.
  */
 export function peekDefaultPlacement(): string {
   return placementSink.peek()?.defaultId ?? "";
+}
+
+/**
+ * One-shot read of where to land when LEAVING `current` with nowhere recorded
+ * to go back to (solo's exit on a fresh boot): the default placement, unless
+ * that IS `current` — then the first other registered placement in control
+ * order. Without the second arm a surface that boots into its default solo
+ * mode could never be exited. Returns `""` until `surface` registers.
+ */
+export function peekExitPlacement(current: string): string {
+  const caps = placementSink.peek();
+  if (caps === null) return "";
+  if (caps.defaultId !== current) return caps.defaultId;
+  for (const id of caps.ids) if (id !== current) return id;
+  return caps.defaultId;
 }
 
 /**

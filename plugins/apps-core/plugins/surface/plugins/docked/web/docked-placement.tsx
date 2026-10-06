@@ -4,7 +4,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const viewSidebarIcon = symbol("view-sidebar");
 
 /**
- * The docked placement: the default, full-area surface — the tab "fills" the
+ * The docked placement: the full-area surface — the tab "fills" the
  * surface below the tab strip and shows only when focused. No chrome, no backdrop,
  * no dynamic style, and no frame chrome either; the `pane` frame is all it needs.
  *
@@ -19,7 +19,6 @@ export const dockedDef: PlacementDef = {
   label: "Dock in tab strip",
   icon: viewSidebarIcon,
   order: 0,
-  default: true,
   themeScope: "app",
   frame: "pane",
 };

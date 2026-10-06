@@ -7343,7 +7343,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating`
           - `apps-core/surface/solo`
       - Plugins:
-        - **`docked`** — Docked surface placement — the default full-area tab that fills the surface below the tab strip.
+        - **`docked`** — Docked surface placement — the full-area tab that fills the surface below the tab strip.
           - Web:
             - Contributes: `Surface.Placement`
             - Uses: `apps-core/surface.Surface`
@@ -7535,7 +7535,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.Button`
                       - `ui/icons.Icon`
-        - **`solo`** — Solo (fullscreen) surface mode — only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.
+        - **`solo`** — Solo (fullscreen) surface mode — the default boot mode: only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.
           - Web:
             - Contributes:
               - `Surface.Placement`

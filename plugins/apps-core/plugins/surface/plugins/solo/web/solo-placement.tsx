@@ -25,6 +25,9 @@ export const soloDef: PlacementDef = {
   label: "Fullscreen (solo)",
   icon: fullscreenIcon,
   order: 2,
+  // The boot mode: a fresh session opens one app edge to edge. Esc (or the
+  // mode control) leaves it for the previous mode, else the first other one.
+  default: true,
   frame: "viewport",
   // A single app fills the viewport, so `:root` carries the app's theme (like
   // docked, unlike floating's multi-window backdrop) — see useRootThemeScope.
