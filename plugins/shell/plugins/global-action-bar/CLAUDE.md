@@ -10,12 +10,14 @@ tab modes dock it expanded in the tab bar; fullscreen (solo), which hides the
 tab bar and app rail, floats it over the app. Owns the `enabled` config.
 
 Collapsed, the floating bar hides every item — so it folds what they would say
-onto the dot (`CollapsedMark`). Each `ActionBar.Activity` contribution's hook
+onto the dot (`FloatingTrigger`, which `FloatingAction` hands its open state). Each `ActionBar.Activity` contribution's hook
 (the build, …) is read by its own probe (`internal/use-bar-activities.tsx`) and
 passed to `HealthReportButton`, which rings the dot (`primitives/css/activity-ring`:
 any running spins it, else any failed breaks it) and adds the labels to its
-tooltip. `ActionBar.Glance` chips (Reload) sit after the dot and hide while the
-bar is open, since the expanded row carries the same actions. The docked strip
+tooltip. `ActionBar.Glance` chips (Reload) sit after the dot. Expanded, the dot
+is the plain health button again — no ring, no activity labels, no glance chips
+— since the row's own items (the Build button and its Reload segment) show
+that information. The docked strip
 renders neither: its items are always visible. The bar names no contributor.
 
 One gear button (`ViewOptionsButton`) opens a control-panel popover: the

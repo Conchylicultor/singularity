@@ -30,23 +30,24 @@ function HealthItem({ activities }: { activities?: readonly Activity[] }) {
 }
 
 /**
- * The COLLAPSED floating bar's mark: everything the bar hides while closed,
- * folded onto the one thing it still shows. Background work (`ActionBar.Activity`)
- * rings the health dot; things to act on (`ActionBar.Glance`, e.g. Reload) sit
- * beside it. The glance chips hide while the bar is open — the expanded row
- * shows the full items, which carry the same actions — so nothing shows twice.
- * The docked strip has none of this: its items are always visible.
+ * The floating bar's trigger. COLLAPSED, it is the unified mark: everything the
+ * bar hides while closed, folded onto the one thing it still shows — background
+ * work (`ActionBar.Activity`) rings the health dot and joins its tooltip, things
+ * to act on (`ActionBar.Glance`, e.g. Reload) sit beside it. EXPANDED, it is the
+ * plain health button again: the open row's items (the Build button, its Reload
+ * segment, …) show that information themselves, so nothing shows twice. The
+ * docked strip has none of this: its items are always visible.
+ *
+ * The probes stay mounted either way, so collapsing shows the current answer at
+ * once.
  */
-function CollapsedMark() {
+function FloatingTrigger({ open }: { open: boolean }) {
   const { probes, activities } = useBarActivities();
   return (
     <Stack direction="row" gap="2xs" align="center">
       {probes}
-      <HealthItem activities={activities} />
-      {/* Collapsed-only: the expanded row carries the same actions. */}
-      <div className="contents group-data-open/fa:hidden">
-        <ActionBar.Glance.Render />
-      </div>
+      <HealthItem activities={open ? undefined : activities} />
+      {open ? null : <ActionBar.Glance.Render />}
     </Stack>
   );
 }
@@ -114,7 +115,7 @@ export function FloatingActionBarHost() {
           // The collapsed mark and the action row are different heights; centering
           // them keeps the dot on the row's centre line as the panel widens.
           align="center"
-          trigger={<CollapsedMark />}
+          trigger={(open) => <FloatingTrigger open={open} />}
         >
           {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
           <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">

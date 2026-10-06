@@ -83,8 +83,12 @@ export interface FloatingActionProps extends Omit<
    * own, rigid wrapper that **never flex-shrinks**, so it can never collapse to
    * 0 even when `children` are a tall/wide sibling under a clamped panel.
    * Declare the role here; `children` hold the expanding content.
+   *
+   * A function receives whether the panel is open, for a trigger that says
+   * something different collapsed than expanded (a collapsed mark summarising
+   * what the open panel's items then show for themselves).
    */
-  trigger: ReactNode;
+  trigger: ReactNode | ((open: boolean) => ReactNode);
   /**
    * The accessible name of the control. It lands on the stable wrapper — the
    * element that takes focus and carries `aria-expanded` — not on the panel,
@@ -235,7 +239,7 @@ function FloatingActionPanel({
               a tall/wide `children` sibling under a clamped panel. It is also
               the box whose resizes re-size the hover hitbox above. */}
           <div ref={triggerRef} className="shrink-0">
-            {trigger}
+            {typeof trigger === "function" ? trigger(open) : trigger}
           </div>
           {children}
         </div>

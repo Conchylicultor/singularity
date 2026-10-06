@@ -1,11 +1,12 @@
 // The collapsed floating bar's mark: the health dot, ringed while a background
 // activity runs (`ActionBar.Activity`), with glance chips (`ActionBar.Glance`,
-// e.g. Reload) beside it that hide while the bar is open.
+// e.g. Reload) beside it. Open, the dot is the plain health button again: no
+// ring, no glance chip — the expanded row's items say it themselves.
 //
 // Opens the app, switches to Fullscreen (solo) so the bar floats collapsed, and
 // photographs the mark at rest. With `--wait-ring <s>` it then waits that long
 // for a ring to appear (start a build in parallel) and photographs it. Last it
-// hovers the bar open and checks no glance chip is visible while it is.
+// hovers the bar open and checks the dot lost its ring and no glance chip shows.
 // Writes `<out>-rest.png`, `<out>-ring.png`, `<out>-open.png` (cropped to the
 // bar's corner).
 //
@@ -44,7 +45,13 @@ await withBrowser(async (h) => {
   const gear = page
     .getByRole("button", { name: "View options", exact: true })
     .first();
-  await gear.waitFor();
+  // Solo is the boot mode, where the gear sits inside the collapsed floating
+  // bar: open it first (a real pointer move, see below).
+  await health(page).waitFor();
+  const dot = await health(page).boundingBox();
+  if (!dot) throw new Error("health button has no box");
+  await page.mouse.move(dot.x + dot.width / 2, dot.y + dot.height / 2);
+  await page.waitForTimeout(600);
   await gear.click();
   await page
     .getByRole("radio", { name: "Fullscreen (solo)", exact: true })
@@ -73,22 +80,26 @@ await withBrowser(async (h) => {
     }
   }
 
-  // Open the bar: the glance chips must hide (the row carries the same actions).
+  // Open the bar: the dot reverts to the plain health button (no ring, no
+  // glance chip — the row carries the same information).
   // A real pointer move, not locator.hover(): the floating panel's own layer
   // sits over the trigger and would make hover() wait forever.
   const box = await health(page).boundingBox();
   if (!box) throw new Error("health button has no box");
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.waitForTimeout(600);
-  const visibleGlance = await page
-    .locator(".group-data-open\\/fa\\:hidden")
-    .evaluateAll((els) =>
-      // The wrapper is `display: contents` (no box of its own): measure its chips.
-      els.some((el) =>
-        [...el.children].some((c) => c.getBoundingClientRect().width > 0),
-      ),
+  t.note(`open: ${await health(page).getAttribute("aria-label")}`);
+  t.ok(
+    "open: the health dot has no ring",
+    (await health(page).locator("svg circle").count()) === 0,
+  );
+  // At most one Reload: the row's own segment, never the glance chip beside it.
+  const reloads = await page
+    .getByRole("button", { name: /reload/i })
+    .evaluateAll(
+      (els) => els.filter((el) => el.getBoundingClientRect().width > 0).length,
     );
-  t.ok("open: no glance chip is visible", !visibleGlance);
+  t.ok("open: no glance chip is visible", reloads <= 1);
   await corner(page, "open");
   await t.finish();
 });

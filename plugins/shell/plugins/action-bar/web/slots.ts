@@ -34,7 +34,8 @@ export const ActionBar = {
    * each contribution's hook answers what its work is doing right now (`null`
    * when nothing). The bar merges them into the ring around its health dot —
    * any `running` spins it, else any `failed` breaks it — and appends the
-   * labels to the dot's tooltip. A plain `defineSlot`: the bar owns the merge,
+   * labels to the dot's tooltip — only while collapsed: open, the row's own
+   * items show the work, and the dot is plain health again. A plain `defineSlot`: the bar owns the merge,
    * so there is no order for a user to curate.
    *
    * ```ts
@@ -48,7 +49,7 @@ export const ActionBar = {
   /**
    * Compact chips shown beside the COLLAPSED bar's health dot — something the
    * user should act on even while the bar is closed (Reload). A contribution
-   * renders `null` when it has nothing to say. Hidden while the bar is open:
+   * renders `null` when it has nothing to say. Unmounted while the bar is open:
    * the expanded row shows the full items, which carry the same action.
    */
   Glance: defineRenderSlot<{ component: ComponentType }>({
