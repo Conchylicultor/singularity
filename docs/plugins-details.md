@@ -4772,6 +4772,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/midi`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transpose`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by the columns other plugins contribute). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
@@ -4926,6 +4927,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/midi/folders`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
               - `apps/sonata/transpose`
@@ -4937,6 +4939,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/playback-history` (table `sonata_songs_ext_playback`)
               - `apps/sonata/rich/rhythm-controls` (table `sonata_songs_ext_rhythm`)
               - `apps/sonata/transpose` (table `sonata_songs_ext_transpose`)
+              - `apps/sonata/sources/ultimate-guitar/alignment` (table `sonata_songs_ext_ug_alignment`)
               - `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)
         - **`look`** — Web registration of the Sonata look config (flat / realistic / sketch) plus its View-popover switch — the app's single appearance choice. The palette itself is plain data in core/. Server registration of the Sonata look config (flat / realistic / sketch).
           - Web:
@@ -5828,10 +5831,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata.TransportEdge` ← `apps.sonata.progress.loop`
               - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
               - `Sonata.Home` ← `apps.sonata.library`
-              - `Sonata.Effect` ← `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`
+              - `Sonata.Effect` ← `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.sources.ultimate-guitar.alignment`
               - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
               - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`
-              - `Sonata.Section` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
+              - `Sonata.Section` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.sources.ultimate-guitar.alignment`, `apps.sonata.track-mixer`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses:
               - `apps-core.Apps`
@@ -5881,6 +5884,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/chord-grid`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
               - `apps/sonata/view-options`
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
@@ -6071,7 +6075,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `defineJob('sonata.midi.import')`
                       - `defineWarmup('sonata.midi-folders.reconcile')`
                       - `defineFileWatcher('sonata-midi-folders.folders')`
-            - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section. Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration).
+            - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section. Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), announcing sonata.ug.tabSaved when a song's sheet content changes.
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "Ultimate Guitar"
@@ -6113,35 +6117,143 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/endpoints.HttpError`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
+                  - `infra/events.defineTriggerEvent`
                   - `infra/safe-fetch.safeFetch`
                   - `infra/safe-fetch.SsrfError`
-                - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables.ts`
+                - DB schema:
+                  - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables-tab-saved.ts`
+                  - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_ultimate_guitar`)
+                - Exports (types): `UgTabSavedPayload`
                 - Exports (values):
                   - `fetchUgTabContent`
                   - `songUltimateGuitar`
+                  - `ugTabSaved`
+                - Register: `defineTriggerEvent('sonata.ug.tabSaved')`
                 - Routes:
                   - `POST /api/sonata/sources/ultimate-guitar/fetch`
                   - `POST /api/sonata/sources/ultimate-guitar/search`
                   - `POST /api/sonata/songs/ultimate-guitar`
                   - `GET /api/sonata/songs/:id/ultimate-guitar`
                   - `PUT /api/sonata/songs/:id/ultimate-guitar`
+              - Cross-plugin:
+                - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
               - Core:
                 - Exports (types):
-                  - `ParsedLine`
-                  - `ParsedTab`
                   - `UgFetchErrorKind`
-                  - `UgParseErrorKind`
                   - `UgSearchResult`
-                  - `UgTab`
                 - Exports (values):
                   - `extractUgTabId`
-                  - `parseUgContent`
-                  - `parseUgTab`
                   - `UgFetchError`
-                  - `UgParseError`
                   - `UgSearchResultSchema`
-                  - `UgTabSchema`
+              - Plugins:
+                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section to paste a song's YouTube link and follow its alignment (aligning, aligned with score and transpose, weak match, failed, out of date), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, status, record) served as a lookup-only live collection, the sonata.ug-alignment.align supervised job (beat features → alignChords → record), the set-video / re-align / get endpoints, and a trigger re-aligning a song when its UG sheet changes.
+                  - Web:
+                    - Contributes:
+                      - `Sonata.Section` "Recording" → `RecordingSection`
+                      - `Sonata.Effect` "ug-alignment-sync" → `UgAlignmentSync`
+                    - Uses:
+                      - `apps/sonata/document.useSongDocument`
+                      - `apps/sonata/shell.Sonata`
+                      - `infra/endpoints.EndpointError`
+                      - `infra/endpoints.getEndpointErrorMessage`
+                      - `infra/endpoints.useEndpointMutation`
+                      - `network/live.LiveRowResult`
+                      - `network/live.useLiveRow`
+                      - `primitives/css/fill.Fill`
+                      - `primitives/css/inline.Inline`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/css/ui-kit.Button`
+                      - `primitives/css/ui-kit.Input`
+                      - `primitives/loading.Loading`
+                  - Server:
+                    - Contributes:
+                      - `resource.declare` "sonata-ug-alignment:rows"
+                      - `trigger` "sonata.ug-alignment.on-tab-saved"
+                    - Uses:
+                      - `apps/sonata/library._songs`
+                      - `apps/sonata/sources/ultimate-guitar.songUltimateGuitar`
+                      - `apps/sonata/sources/ultimate-guitar.ugTabSaved`
+                      - `infra/audio-analysis.ensureBeatFeatures`
+                      - `infra/endpoints.HttpError`
+                      - `infra/endpoints.implement`
+                      - `infra/entity-extensions.defineExtension`
+                      - `infra/events.Trigger`
+                      - `infra/jobs.defineJob`
+                      - `infra/jobs.isNonRetryableError`
+                      - `infra/jobs/supervised-job.defineSupervisedJob`
+                      - `network/live.serveCollection`
+                      - `primitives/log-channels.defineLogSink`
+                    - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/server/internal/tables.ts`
+                    - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_ug_alignment`)
+                    - Register:
+                      - `defineSupervisedJob('sonata.ug-alignment.align')`
+                      - `defineJob('sonata.ug-alignment.on-tab-saved')`
+                    - Resources: `sonata-ug-alignment:rows` (keyed, point)
+                    - Routes:
+                      - `GET /api/sonata/songs/:id/ultimate-guitar/alignment`
+                      - `PUT /api/sonata/songs/:id/ultimate-guitar/alignment/video`
+                      - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign`
+                  - Core:
+                    - Uses:
+                      - `apps/sonata/sources/ultimate-guitar/tab.UgTabSchema`
+                      - `apps/sonata/theory.parseChordSymbol`
+                      - `apps/sonata/theory.parseKeySignature`
+                      - `apps/sonata/theory.qualityToIntervals`
+                      - `apps/sonata/theory.transposeKey`
+                      - `apps/sonata/theory.transposeScore`
+                      - `fields.nullable`
+                      - `fields/bool/config.boolField`
+                      - `fields/json/config.jsonField`
+                      - `fields/text/config.parsedTextField`
+                      - `fields/text/config.textField`
+                      - `infra/endpoints.defineEndpoint`
+                      - `infra/entity-extensions.defineExtensionShape`
+                    - Exports (types):
+                      - `AlignmentPhase`
+                      - `AlignmentSegment`
+                      - `AlignmentStatus`
+                      - `UgAlignmentRow`
+                      - `UgSourceRaw`
+                    - Exports (values):
+                      - `alignChords`
+                      - `alignedScore`
+                      - `ALIGNER_VERSION`
+                      - `AlignmentPhaseSchema`
+                      - `AlignmentRecordSchema`
+                      - `AlignmentSegmentSchema`
+                      - `AlignmentStatusSchema`
+                      - `appliedAlignment`
+                      - `getUgAlignment`
+                      - `isApplicable`
+                      - `realignUg`
+                      - `setUgAlignmentVideo`
+                      - `sheetHash`
+                      - `UgAlignmentRowSchema`
+                      - `ugAlignmentShape`
+                      - `UgSourceRawSchema`
+                      - `WEAK_MATCH_THRESHOLD`
+                  - Test helpers:
+                    - Core: `@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core/testing`
+                      - `parsedSheet` — A `ParsedTab` from a terse spelling: one entry per section, each line a space-separated chord row ("C G Am F") placed over an empty lyric, or a `{ lyric }` for a lyric-only line.
+                      - `synthFeatures` — Synthetic beat features from one chord symbol per beat (`null` = silence: pure noise at low rms; a symbol theory cannot read throws).
+                      - Types: `SynthFeaturesOptions`
+                - **`tab`** — The Ultimate Guitar tab model: the normalized raw tab schema and the chord/lyric markup parser.
+                  - Cross-plugin:
+                    - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
+                  - Core:
+                    - Exports (types):
+                      - `ParsedLine`
+                      - `ParsedTab`
+                      - `UgParseErrorKind`
+                      - `UgTab`
+                    - Exports (values):
+                      - `parseUgContent`
+                      - `parseUgTab`
+                      - `UG_SOURCE_ID`
+                      - `UgParseError`
+                      - `UgTabSchema`
         - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.
           - Core:
             - Uses:
@@ -6190,6 +6302,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/chord/vocabulary`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/voicing`
         - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the song document as a per-song setting (SonataDocument.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / instrument / muted / hidden / volume) and serves them per song, consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
           - Web:
@@ -16903,6 +17016,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/events/sources/url-extract`
       - `apps/mail/mail-core`
       - `apps/sonata/library`
+      - `apps/sonata/sources/ultimate-guitar/alignment`
       - `apps/sonata/track-mixer`
       - `config_v2`
       - `conversations/summary`
@@ -17075,6 +17189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating`
               - `apps/events/events-core`
               - `apps/mail/mail-core`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
               - `apps/sonata/voicing`
               - `conversations`
@@ -17688,6 +17803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/events/events-core`
               - `apps/mail/mail-core`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `debug/boot-profile`
               - `debug/slow-ops`
               - `debug/trace/engine`
@@ -18234,6 +18350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/url-extract`
               - `apps/mail/mail-core`
               - `apps/sonata/library`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
               - `conversations/summary`
               - `debug/boot-profile`
@@ -20053,6 +20170,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/deps.defineDep`
           - `infra/deps/python.pythonEnv`
         - Exports (values): `audioPythonDep`
+      - Cross-plugin:
+        - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
     - **`background`** — Umbrella for what the app runs on its own: the catalog every background mechanism reports into, and the page that lists it.
       - Plugins:
         - **`catalog`** — Debug → Background activity: a DataView over the pushed background.catalog — everything this backend runs on its own, grouped by kind, with a status dot, the trigger in words and its next run, and the last run — and a detail pane per entry with its scope, declaring plugin, recent runs and Run now. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
@@ -20365,7 +20484,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/sonata/sources/midi/folders`
           - `stats/cost`
-    - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request, the pushed deps.states live value says absent / installing / ready / failed for every declared dependency, the install/remove endpoints back Settings → Dependencies, and a daily deps.sweep removes identities no checkout declares that sat unused for 14 days.
+    - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request, the pushed deps.states live value says absent / installing / ready / failed for every declared dependency, the install/remove endpoints back Settings → Dependencies. The daily deps.sweep is its sweep sub-plugin.
       - Web:
         - Slots:
           - `item-actions` ← `infra.deps`
@@ -20398,18 +20517,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/file-watcher.defineFileWatcher`
-          - `infra/jobs.defineJob`
           - `infra/jobs/supervised-job.defineSupervisedJob`
-          - `infra/worktree.listWorktreePaths`
           - `network/live.serveValue`
           - `primitives/log-channels.defineLogSink`
-          - `primitives/log-channels.Log`
         - Exports (values):
           - `onDepInstallSettled`
           - `requestDep`
         - Register:
           - `defineSupervisedJob('deps.install')`
-          - `defineJob('deps.sweep')`
           - `defineFileWatcher('deps.cache')`
         - Resources: `deps.states` (push)
         - Routes:
@@ -20459,6 +20574,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReadyNow`
           - `RemoveOutcome`
           - `SealOutcome`
+          - `SweepReport`
           - `TargetedSource`
         - Exports (values):
           - `declaredDep`
@@ -20473,6 +20589,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `removeDep`
           - `sealDep`
           - `SEALED_MANIFEST`
+          - `sweepUnusedDeps`
           - `UnknownDepError`
       - Test helpers:
         - Deps: `@plugins/infra/plugins/deps/deps/testing`
@@ -20547,10 +20664,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `launchChromium`
               - `playwrightBrowser`
-        - **`python`** — The python installer kind of infra/deps: pythonEnv({ project }) (its deps barrel) declares a dependency on one uv project (a plugin's `python/` folder) — identity = hash of pyproject.toml + uv.lock + .python-version + the uv version, installed with `uv sync --frozen` into its own env with a uv-downloaded CPython (never the system Python) — and runPython(ready, { module, input, output }) runs one of its modules with JSON in and one JSON document out. Contributes the `uv` updater, which moves every python/ project's uv.lock and its exact .python-version pin (the CPython release) under a 3-day release cooldown.
-          - Server:
-            - Contributes: `updater` "uv"
-            - Uses: `infra/deps/updates.UpdaterDeclare`
+        - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current.
           - Cross-plugin:
             - Imported by:
               - `infra/audio-analysis`
@@ -20563,6 +20677,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PythonEntryError`
               - `pythonEnv`
               - `runPython`
+              - `uvEnv`
+          - Plugins:
+            - **`uv-updater`** — The `uv` updater: moves every python/ project's uv.lock and its exact .python-version pin (the CPython release) under a 3-day release cooldown, contributed to the infra/deps updater registry.
+              - Server:
+                - Contributes: `updater` "uv"
+                - Uses: `infra/deps/updates.UpdaterDeclare`
+        - **`sweep`** — The daily deps.sweep job: removes installed optional-dependency identities that no checkout of this repo declares and that sat unused for 14 days (sweepUnusedDeps over the git worktree list).
+          - Server:
+            - Uses:
+              - `infra/jobs.defineJob`
+              - `infra/worktree.listWorktreePaths`
+              - `primitives/log-channels.Log`
+            - Register: `defineJob('deps.sweep')`
         - **`updates`** — Registers the dependency-upgrade schedule (the deps.detect-outdated cron, weekly by default) for Settings → Config. The updater registry (UpdaterDeclare) and the scheduled deps.detect-outdated job (weekly by default, a cron in config): when any updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and pushes on an `upgraded` verdict.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -20592,7 +20719,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `infra/deps`
               - `infra/deps/mise`
-              - `infra/deps/python`
+              - `infra/deps/python/uv-updater`
               - `toolchain`
           - Core:
             - Exports (types):
@@ -20696,6 +20823,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/sources/chord-grid`
           - `apps/sonata/sources/midi`
           - `apps/sonata/sources/ultimate-guitar`
+          - `apps/sonata/sources/ultimate-guitar/alignment`
           - `apps/sonata/track-mixer`
           - `apps/sonata/transpose`
           - `apps/studio/compositions/closure-tree`
@@ -20972,6 +21100,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/sources/chord-grid`
           - `apps/sonata/sources/midi`
           - `apps/sonata/sources/ultimate-guitar`
+          - `apps/sonata/sources/ultimate-guitar/alignment`
           - `apps/sonata/transpose`
           - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
@@ -21084,6 +21213,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/content-search`
           - `apps/pages/history`
           - `apps/prototypes/checkpoints`
+          - `apps/sonata/sources/ultimate-guitar`
+          - `apps/sonata/sources/ultimate-guitar/alignment`
           - `build`
           - `conversations`
           - `conversations/conversation-category`
@@ -21806,6 +21937,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/checkpoints`
           - `apps/prototypes/thumbnails`
           - `apps/sonata/sources/midi/folders`
+          - `apps/sonata/sources/ultimate-guitar/alignment`
           - `build`
           - `conversations`
           - `conversations/conversation-category`
@@ -21834,7 +21966,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `improve`
           - `infra/attachments`
           - `infra/audio-analysis`
-          - `infra/deps`
+          - `infra/deps/sweep`
           - `infra/deps/updates`
           - `infra/events`
           - `infra/events-test`
@@ -21973,6 +22105,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/chord/song-index`
               - `apps/deploy/deployments`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `backup`
               - `build`
               - `database/fork`
@@ -22951,7 +23084,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling/op-log`
           - `debug/profiling/op-log/op-store`
           - `debug/worktree-cleanup`
-          - `infra/deps`
+          - `infra/deps/sweep`
           - `infra/git/git-watcher`
           - `infra/launcher`
           - `infra/worktree/reclaim`
@@ -23635,6 +23768,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/rich/key-mode`
           - `apps/sonata/rich/rhythm-controls`
           - `apps/sonata/sources/midi`
+          - `apps/sonata/sources/ultimate-guitar/alignment`
           - `apps/sonata/track-mixer`
           - `apps/sonata/transpose`
           - `apps/studio/compositions/release/release-artifact`
@@ -28618,6 +28752,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/release/release-logs`
@@ -28814,6 +28949,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/trash`
               - `apps/sonata/progress/loop`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
               - `apps/website/landing/hero`
@@ -29719,6 +29855,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/midi`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
               - `apps/sonata/transpose`
@@ -30266,6 +30403,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/midi`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
               - `apps/sonata/transpose`
@@ -30846,6 +30984,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/midi`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
               - `apps/sonata/transpose`
@@ -33578,6 +33717,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/songsheet`
           - `apps/sonata/sources/midi/file-preview`
           - `apps/sonata/sources/ultimate-guitar`
+          - `apps/sonata/sources/ultimate-guitar/alignment`
           - `apps/sonata/track-mixer`
           - `apps/sonata/transpose`
           - `apps/studio/compositions`
@@ -33775,6 +33915,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/refresh`
           - `apps/mail/sync`
           - `apps/sonata/piano-roll`
+          - `apps/sonata/sources/ultimate-guitar/alignment`
           - `apps/studio/compositions/release/release-logs`
           - `backup`
           - `build`
@@ -33804,6 +33945,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/attachments`
           - `infra/audio-analysis`
           - `infra/deps`
+          - `infra/deps/sweep`
           - `infra/deps/updates`
           - `infra/events-test`
           - `infra/host/duress`

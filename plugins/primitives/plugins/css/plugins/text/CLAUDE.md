@@ -343,6 +343,7 @@ to reconcile them; they never needed reconciling.
     - `apps/sonata/sources/midi`
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transport-bar`
     - `apps/sonata/transpose`

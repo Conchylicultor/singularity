@@ -104,6 +104,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transpose`
     - `apps/studio/compositions`

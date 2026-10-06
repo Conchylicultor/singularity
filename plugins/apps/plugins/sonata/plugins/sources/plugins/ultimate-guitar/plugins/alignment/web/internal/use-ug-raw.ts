@@ -23,7 +23,10 @@ import { ugAlignmentRows } from "../../shared/resources";
  * no alignment row). The Recording section's gate and its body both read this,
  * so the two can never disagree.
  */
-export function useUgLibrarySong(): { songId: string; raw: UgSourceRaw } | null {
+export function useUgLibrarySong(): {
+  songId: string;
+  raw: UgSourceRaw;
+} | null {
   // The document's own identity, loaded WITH the raw, so a raw is never paired
   // with another song's id.
   const { sourceRaw, identity } = useSongDocument();

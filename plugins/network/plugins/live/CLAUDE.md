@@ -928,6 +928,7 @@ for a new reader of the two page resources.
     - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/sources/midi`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transpose`
     - `apps/studio/compositions/release/release-artifact`
