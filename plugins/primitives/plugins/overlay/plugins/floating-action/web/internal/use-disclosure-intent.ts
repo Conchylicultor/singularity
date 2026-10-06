@@ -43,9 +43,15 @@ export interface DisclosureIntent {
  *                move re-checks containment, which catches that removal.
  *   - focus    — opens while KEYBOARD focus (`:focus-visible`) is anywhere
  *                inside the subtree, so the control is reachable by Tab, not
- *                mouse-only. A mouse click leaves its button focused (and a
- *                closing popover restores focus to it); counting that would
- *                pin the panel open long after the pointer left.
+ *                mouse-only. A mouse click leaves its button focused; counting
+ *                that would pin the panel open long after the pointer left.
+ *                `:focus-visible` alone is not enough: a popover closed after
+ *                any key (typing in it, Escape, a submit shortcut) hands focus
+ *                back to its trigger, and Chrome marks that restored focus
+ *                visible too. So the pointer outranks focus: a pointer moving
+ *                outside the control ends a focus open exactly as it ends a
+ *                hover open. Keyboard focus reopens it on the next focus
+ *                event (a Tab).
  *   - latch    — a pointer-press while fully closed (the touch path, where
  *                there is no hover) pins it open until Esc or an outside press.
  *                Presses while already open are left to bubble to the content,
@@ -87,6 +93,9 @@ export function useDisclosureIntent(
     closeTimer.current = setTimeout(() => {
       closeTimer.current = undefined;
       setHovered(false);
+      // The pointer is elsewhere: focus left behind inside (a popover's
+      // restored focus) no longer speaks for the user's intent.
+      setFocused(false);
     }, closeDelay);
   }, [closeDelay]);
 
@@ -106,16 +115,18 @@ export function useDisclosureIntent(
   }, [rootRef, cancelClose, scheduleClose]);
 
   // An element removed from under the cursor (a portaled overlay closing)
-  // fires no leave on the root, so while hovered, re-check containment on
-  // every move: the first move that lands outside the root starts the close.
+  // fires no leave on the root, and focus restored to the trigger by a closing
+  // popover arrives with the pointer already outside — so while open by hover
+  // or focus, re-check containment on every move: the first move that lands
+  // outside the root starts the close (which ends both).
   useEffect(() => {
-    if (!hovered) return;
+    if (!hovered && !focused) return;
     const onDocPointerMove = (e: PointerEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) scheduleClose();
     };
     document.addEventListener("pointermove", onDocPointerMove);
     return () => document.removeEventListener("pointermove", onDocPointerMove);
-  }, [hovered, rootRef, scheduleClose]);
+  }, [hovered, focused, rootRef, scheduleClose]);
 
   const onPointerDown = useCallback(() => {
     // Touch has no hover: the first press on a closed control opens it. While
