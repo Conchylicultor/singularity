@@ -12,6 +12,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -59,6 +60,7 @@ import {
   type ExplorerNavigator,
 } from "../internal/navigator";
 import { WithLenses, type ComposedLens } from "../internal/lenses";
+import { ExplorerControlsSlot } from "../internal/controls-slot";
 import { FileTree, type EntryFilter } from "./file-tree";
 import { PreviewPane } from "./preview-pane";
 
@@ -145,22 +147,24 @@ function FileBrowserReady({
   const listing = (
     <WithLenses dir={absolutePath(dir, home)}>
       {(lens) => (
-        <Listing
-          key={dir}
-          nav={nav}
-          home={home}
-          root={root}
-          onOpenFile={onOpenFile}
-          lens={lens}
-          showHidden={showHidden}
-          onToggleHidden={() => setShowHidden(!showHidden)}
-          lensShown={lensShown}
-          onToggleLens={(id) =>
-            setLensShown({ ...lensShown, [id]: lensShown[id] !== true })
-          }
-          leading={atTopEdge ? leadingControl : undefined}
-          endSafeArea={atTopEdge && open === null}
-        />
+        <ExplorerControlsSlot.Provider>
+          <Listing
+            key={dir}
+            nav={nav}
+            home={home}
+            root={root}
+            onOpenFile={onOpenFile}
+            lens={lens}
+            showHidden={showHidden}
+            onToggleHidden={() => setShowHidden(!showHidden)}
+            lensShown={lensShown}
+            onToggleLens={(id) =>
+              setLensShown({ ...lensShown, [id]: lensShown[id] !== true })
+            }
+            leading={atTopEdge ? leadingControl : undefined}
+            endSafeArea={atTopEdge && open === null}
+          />
+        </ExplorerControlsSlot.Provider>
       )}
     </WithLenses>
   );
@@ -235,6 +239,7 @@ function Listing({
     [home, rootName, root],
   );
   const { listings, request } = useListings(dir);
+  const publishControls = ExplorerControlsSlot.usePublishRef();
 
   // Show hidden files, then every lens hide rule that is not switched to show.
   const activeHides = useMemo(
@@ -410,6 +415,13 @@ function Listing({
               onToggle={() => onToggleLens(rule.id)}
             />
           ))}
+          {/* The folder view's own controls (view switcher, creators, sort /
+              filter / fields), portaled in by the tree's hosted frame. Empty —
+              and collapsed — while no tree is mounted. */}
+          <Line
+            ref={publishControls}
+            className={cn(rigidClass(), "gap-sm empty:hidden")}
+          />
         </Bar>
       }
       body={

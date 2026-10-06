@@ -2855,6 +2855,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -2882,6 +2883,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/path-bar.PathBar`
               - `primitives/path-bar.PathTarget`
               - `primitives/persistent-draft.useDraft`
+              - `primitives/scope/dom-scope.defineDomScope`
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
@@ -28874,6 +28876,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/piano`
               - `apps/chord/shell`
               - `apps/chord/trainer`
+              - `apps/file-explorer/browser`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/canvas`
               - `apps/sonata/sources/midi`
@@ -34988,6 +34991,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `defineDomScope`
           - Cross-plugin:
             - Imported by:
+              - `apps/file-explorer/browser`
               - `conversations/conversation-view/jsonl-viewer`
               - `page/editor`
         - **`install-sink`** — Installed-sink primitive: defineInstallSink declares the module-level slot a higher layer installs an implementation into and a lower layer calls (the navigator, the history adapter, the overlay fallback). Presence is answerable from render ONLY through the subscribed useInstalled(), so a late install re-renders whoever asked early; the imperative sample is named peek… so install-sink/no-render-phase-peek can keep it out of render.

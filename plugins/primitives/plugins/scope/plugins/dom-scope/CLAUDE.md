@@ -116,6 +116,7 @@ an allowlist of correct code — enforcing less than it looks.
   - Exports (values): `defineDomScope`
 - Cross-plugin:
   - Imported by:
+    - `apps/file-explorer/browser`
     - `conversations/conversation-view/jsonl-viewer`
     - `page/editor`
 

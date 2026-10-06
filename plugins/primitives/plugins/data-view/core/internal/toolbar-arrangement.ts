@@ -82,8 +82,10 @@ export interface HostedToolbarParts {
    * button that shows a count badge while anything narrows the list. It is the
    * ONLY way to reach them, so render it — in the frame's own header, where the
    * user looks for the surface's controls. Hover-revealed off the DataView
-   * root (which the frame renders inside), and pinned visible while a search
-   * query is typed. `null` while the surface has no active view (its config
+   * root (which the frame renders inside) unless `forms.options` is
+   * `visible`, and pinned visible while a search query is typed. A frame may
+   * portal it (and the switcher / creators) into chrome outside the DataView —
+   * a surface's own toolbar — since a portal keeps the controls' context. `null` while the surface has no active view (its config
    * is loading, or authors no view).
    */
   options: ReactNode;
@@ -124,6 +126,13 @@ export interface HostedToolbarForms {
    * switcher reads as the list's own heading line. Same menu either way.
    */
   switcher: "chip" | "row";
+  /**
+   * `revealed` (default): the options trigger is hover-revealed off the
+   * DataView root, so a small card at rest shows only its rows. `visible`: the
+   * trigger shows at rest — for a frame that places it among always-visible
+   * buttons (a surface's own toolbar), where a hidden one reads as missing.
+   */
+  options?: "revealed" | "visible";
 }
 
 /**
@@ -143,7 +152,8 @@ export interface HostedToolbarForms {
 export interface HostedToolbar {
   kind: "hosted";
   frame: ComponentType<HostedToolbarParts>;
-  /** The shape of each part the host builds; absent ⇒ `{ switcher: "chip" }`. */
+  /** The shape of each part the host builds; absent ⇒ `{ switcher: "chip",
+   *  options: "revealed" }`. */
   forms?: HostedToolbarForms;
 }
 

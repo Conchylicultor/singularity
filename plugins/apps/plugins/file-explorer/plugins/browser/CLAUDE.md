@@ -25,6 +25,7 @@
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -52,6 +53,7 @@
     - `primitives/path-bar.PathBar`
     - `primitives/path-bar.PathTarget`
     - `primitives/persistent-draft.useDraft`
+    - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`

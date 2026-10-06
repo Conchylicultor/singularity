@@ -959,6 +959,10 @@ function DataViewBodyInner<TRow>(
                     query={activeState.query}
                     onQueryChange={onQueryChange}
                     searchPlaceholder={chrome.searchPlaceholder}
+                    revealOnHover={
+                      (chrome.toolbar.forms?.options ?? "revealed") ===
+                      "revealed"
+                    }
                   />
                 </DataViewControlsProvider>
               }

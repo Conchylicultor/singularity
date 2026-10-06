@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   DataView,
@@ -15,8 +16,6 @@ import type { TreeChildrenState } from "@plugins/primitives/plugins/tree/core";
 import type { HostFsEntry } from "@plugins/infra/plugins/host-fs/core";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   formatCount,
   formatModified,
@@ -27,6 +26,7 @@ import {
 } from "../../core";
 import type { Listing, Listings } from "../internal/listings";
 import { FileBrowserSlots } from "../slots";
+import { ExplorerControlsSlot } from "../internal/controls-slot";
 
 const FILE_TREE_VIEW = defineDataView("file-explorer.tree");
 
@@ -132,22 +132,42 @@ function childrenState(listings: Listings, path: string): TreeChildrenState {
 }
 
 /**
- * No band — the explorer's own toolbar owns the name filter. The options
- * trigger (sort, and filter on any field, a contributed one like git's
- * "Changed vs main" included) is still the only way to reach those controls,
- * so it sits at the listing's top-right edge, beside the column header,
- * hover-revealed.
+ * No band: the explorer's own toolbar is the folder view's header. It owns the
+ * name filter, and the parts the DataView hands this frame (the view switcher
+ * once a second view is authored, any creators, and the options trigger —
+ * sort, and filter on any field, a contributed one like git's "Changed vs
+ * main" included, and fields — the only way to reach those controls) portal
+ * into the toolbar cell it publishes, visible at rest like the buttons beside
+ * them.
  */
-function FileTreeFrame({ options, body }: HostedToolbarParts): ReactNode {
+function FileTreeFrame({
+  switcher,
+  creators,
+  options,
+  body,
+}: HostedToolbarParts): ReactNode {
+  const cell = ExplorerControlsSlot.useRoot();
   return (
-    <Stack direction="row" gap="xs" align="start">
-      <Fill>{body}</Fill>
-      {options}
-    </Stack>
+    <>
+      {cell.attached &&
+        createPortal(
+          <>
+            {switcher}
+            {creators}
+            {options}
+          </>,
+          cell.root,
+        )}
+      {body}
+    </>
   );
 }
 
-const HOSTED: HostedToolbar = { kind: "hosted", frame: FileTreeFrame };
+const HOSTED: HostedToolbar = {
+  kind: "hosted",
+  frame: FileTreeFrame,
+  forms: { switcher: "chip", options: "visible" },
+};
 
 export interface FileTreeProps {
   root: string;
