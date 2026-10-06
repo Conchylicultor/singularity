@@ -5,6 +5,7 @@ import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useTokenGroupEditor } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import {
+  ICON_FAMILIES,
   ICON_FILLS,
   ICON_SHAPES,
   ICON_WEIGHTS,
@@ -22,6 +23,7 @@ const TOKENS: readonly {
   label: string;
   options: readonly string[];
 }[] = [
+  { token: "iconFamily", label: "Family", options: ICON_FAMILIES },
   { token: "iconShape", label: "Shape", options: ICON_SHAPES },
   { token: "iconFill", label: "Fill", options: ICON_FILLS },
   { token: "iconActiveFill", label: "Fill when active", options: ICON_FILLS },

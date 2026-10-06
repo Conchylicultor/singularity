@@ -7,15 +7,22 @@ export type {
   SetiRef,
   SymbolRef,
 } from "./icon-ref";
-export type { BrandName, SymbolName } from "./symbol-names.generated";
+export type {
+  BrandName,
+  LucideName,
+  SymbolName,
+} from "./symbol-names.generated";
 export type { SetiName } from "./seti-names.generated";
 export { coveredStyles, resolveSymbolStyle } from "./fallback";
+export { LUCIDE_MAP, lucideNameOf } from "./lucide-map";
 export {
   ALL_STYLE_KEYS,
   BRANDS_SPRITE,
+  LUCIDE_SPRITE,
   SETI_SPRITE,
   DEFAULT_ICON_STYLE,
   DEFAULT_STYLE_KEYS,
+  ICON_FAMILIES,
   ICON_FILLS,
   ICON_SHAPES,
   ICON_WEIGHTS,
@@ -23,6 +30,7 @@ export {
   iconifyName,
   isSpriteKey,
   isStyleKey,
+  lucideId,
   parseStyleKey,
   runtimeSymbolId,
   setiId,
@@ -30,6 +38,7 @@ export {
   symbolId,
 } from "./style";
 export type {
+  IconFamily,
   IconFill,
   IconShape,
   IconStyle,

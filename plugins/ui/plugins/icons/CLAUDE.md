@@ -1,7 +1,8 @@
 # icons
 
 Every icon in code is a **Material Symbols** glyph, named as data and drawn in
-the style its theme scope picks. Plan and rationale:
+the style its theme scope picks — or, in a scope whose icon family is Lucide,
+as that symbol's Lucide counterpart (see "Lucide family"). Plan and rationale:
 [`research/2026-09-27-global-material-symbols-icons.md`](../../../../research/2026-09-27-global-material-symbols-icons.md).
 
 ```ts
@@ -33,7 +34,8 @@ const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescrip
   **weight**, then the **shape** (the requested one, else `default`). The
   sprite builder applies it, so `ms-<K>-<name>` in sprite K is already the
   resolved drawing and `<Icon>` has no fallback of its own; `symbolBody` (the
-  release CLI's app icon) applies the same rule. `BrandName` is a Simple Icons slug. Both are generated into
+  release CLI's app icon) applies the same rule. `BrandName` is a Simple Icons slug;
+  `LucideName` is a visible Lucide icon or alias. All three are generated into
   `core/symbol-names.generated.ts` by `scripts/gen-symbol-names.ts`; rerun it
   after upgrading an `@iconify-json/*` package (`icons:symbol-names-in-sync`).
 - **Literal names only.** `symbol("…")` / `brand("…")` / `seti("…")` take a string literal,
@@ -53,7 +55,8 @@ const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescrip
 ## How a style is chosen
 
 The style axes are the `icons` token group
-(`plugins/ui/plugins/tokens/plugins/icons`): `iconShape` (default | rounded |
+(`plugins/ui/plugins/tokens/plugins/icons`): `iconFamily` (material | lucide —
+see "Lucide family"), `iconShape` (default | rounded |
 sharp), `iconFill` (outline | filled), `iconActiveFill` (filled | outline),
 `iconStroke` (regular = Material Symbols 400 | light = Material Symbols Light
 300; not `iconWeight`, which `type-scale:closed-role-ladder` reads as a type
@@ -102,6 +105,35 @@ default sprites are resident from first paint.
   never answered with bytes the URL does not name. A failed fetch is
   thrown into the host's error boundary.
 
+## Lucide family
+
+A theme scope whose `iconFamily` is `lucide` (`IconStyle.family`) draws every
+`symbol("…")` as its Lucide counterpart. Names stay Material: code never writes
+a Lucide name, so the shared chrome (ui-kit close buttons, the sidebar toggle,
+the path bar, a search field) follows the scope it is drawn in.
+
+- **The map** — `core/lucide-map.ts`, `LUCIDE_MAP`: every manifest symbol →
+  its Lucide name (a `LucideName`, so a typo is a tsc error) or
+  `MATERIAL_ONLY`. `icons:lucide-coverage` FAILS while any `symbol("…")` in the
+  repo has no entry, so adding a symbol means deciding what it is in Lucide.
+  `lucideNameOf(name)` is the one reader.
+- **The sprite** — one sprite key, `lucide` (`LUCIDE_SPRITE`; Lucide has no
+  shape, fill or weight, and `active` draws the same), holding
+  `<symbol id="lucide-<material name>">` for every mapped manifest symbol.
+  Built from `@iconify-json/lucide` (embedded like the Material sets) and
+  **tuned at build** (`plugins/sprites/server/internal/lucide.ts`): the glyph is
+  scaled to 7/8 of its box about the centre
+  (`translate(1.5 1.5) scale(0.875)` in the 24-unit box) and every stroke is
+  `stroke-width="1.2"` with `vector-effect="non-scaling-stroke"` — a ~1.2px
+  line at any icon size. `LUCIDE_TUNING_VERSION` and the map are folded into
+  the sprite hash. Never resident: the first icon in a Lucide scope with a
+  mapped name calls `wantSprite("lucide")`.
+- **Fallbacks** — while the sprite loads, and always for a `MATERIAL_ONLY`
+  (or not-yet-mapped) symbol, `<Icon>` draws the Material symbol in the
+  scope's Material style (`styleKeyOf` still names one: the Material axes keep
+  applying in a Lucide scope). Saved (runtime) symbols are user-picked
+  Material names and stay Material in every family.
+
 ## Seti file-type glyphs
 
 `seti("…")` names a glyph of the Seti file-icon set (jesseweed/seti-ui, MIT —
@@ -112,8 +144,13 @@ glyph a file gets and its colour; a direct `seti()` elsewhere is rare.
 - **Vendored, pinned.** `scripts/vendor-seti.ts` fetches the commit pinned in
   `shared/seti.ts` (`SETI_SOURCE`), refuses if the license is no longer MIT,
   reduces every `icons/*.svg` to ONE colour (`normalizeSetiSvg`: every paint
-  `currentColor`, gradients and `<style>` dropped, ids namespaced, viewBox
-  origin moved to 0,0; an unknown element or attribute throws) and writes
+  `currentColor`, gradients and `<style>` dropped, ids namespaced; an unknown
+  element or attribute throws), **crops it to what it paints** — the smallest
+  square around the painted bounding box (`shared/seti-bbox.ts`: geometry
+  flattened through every transform, curves and arcs sampled, strokes grown by
+  half their width, unpainted shapes ignored), centred, with a 1/32 margin a
+  side (`SETI_CROP_MARGIN`) — so every glyph fills the icon box it is drawn in
+  instead of sitting in Seti's wide, uneven margins; and writes
   `server/internal/seti/seti.json` (Iconify JSON), the upstream
   `LICENSE.txt` beside it, and `core/seti-names.generated.ts` (`SetiName`).
   To upgrade: bump the commit, rerun; `icons:seti-in-sync` fails until you do.
@@ -185,6 +222,13 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   `iconStroke`, not `iconWeight` (a `-weight` var is a type metric).
 - On-demand sprites use the path `/:hash/:key`, not `?v=`, so the typed
   endpoint (`spriteEndpoint`, a blob) carries the version as a param.
+- Lucide (plan `research/2026-10-06-apps-files-match-prototype.md` §1): the
+  plan had `styleKeyOf` return `lucide` for a Lucide style. It still returns a
+  Material `StyleKey` — the Material drawing a Lucide scope falls back to (and
+  the key runtime symbols use) — and `<Icon>` picks the `lucide` sprite itself
+  for a mapped name, so `StyleKey` stays the closed Material set and only
+  `SpriteKey` widens. An unmapped name falls back to the scope's Material style
+  rather than to a Material drawing baked into the Lucide sprite.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -217,6 +261,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/file-explorer/places`
+    - `apps/file-explorer/shell`
     - `apps/home/app-cards`
     - `apps/mail/attachments`
     - `apps/mail/reading-pane`
@@ -517,11 +562,13 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Exports (types):
     - `BrandName`
     - `BrandRef`
+    - `IconFamily`
     - `IconFill`
     - `IconRef`
     - `IconShape`
     - `IconStyle`
     - `IconWeight`
+    - `LucideName`
     - `RuntimeSymbolRef`
     - `SavedSymbolName`
     - `SetiName`
@@ -538,12 +585,17 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `coveredStyles`
     - `DEFAULT_ICON_STYLE`
     - `DEFAULT_STYLE_KEYS`
+    - `ICON_FAMILIES`
     - `ICON_FILLS`
     - `ICON_SHAPES`
     - `ICON_WEIGHTS`
     - `iconifyName`
     - `isSpriteKey`
     - `isStyleKey`
+    - `LUCIDE_MAP`
+    - `LUCIDE_SPRITE`
+    - `lucideId`
+    - `lucideNameOf`
     - `parseStyleKey`
     - `resolveSymbolStyle`
     - `runtimeSymbol`
@@ -561,6 +613,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `buildSetiSet`
     - `ICON_SET_PACKAGES`
     - `installedSetVersions`
+    - `lucideNames`
     - `normalizeSetiSvg`
     - `readIconSet`
     - `readInputsHash`

@@ -1,0 +1,14 @@
+// @hash 229102bb7c88
+{
+  // Files paints its own designed theme, `files` (prototype
+  // proto-1790864772-0r54: zinc greys, a blue accent, Lucide icons tuned
+  // light), contributed by the Files shell
+  // (`plugins/apps/plugins/file-explorer/plugins/shell/web/internal/theme.ts`)
+  // — never the desktop's runtime choice. This one selection is the whole
+  // per-app theme: a group `files` does not mention paints its schema defaults.
+  //
+  // `colorMode` is deliberately absent: light/dark is a single global setting
+  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts`), so a
+  // value here would claim something that is not true.
+  "theme": "files"
+}

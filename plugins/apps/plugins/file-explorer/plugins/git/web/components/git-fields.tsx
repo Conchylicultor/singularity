@@ -117,8 +117,10 @@ function GitBadgeCell({ badge }: { badge: GitBadge }): ReactNode {
  * The tree's git fields, for the folder the browser shows: `git` (the status
  * badge — M / A / D / R / C / ?, a dot on a folder holding changes) and
  * `changed` ("Changed vs main", the Filter pill that narrows the tree to a
- * branch's work). Outside a checkout both are empty; while the status is not
- * known yet the badge cell says so rather than showing the file clean.
+ * branch's work). Outside a checkout there are none — no empty badge column
+ * taking room from the names; while the status (or whether this is a checkout
+ * at all) is not known yet the badge cell says so rather than showing the
+ * file clean.
  */
 export function GitFields({
   render,
@@ -129,6 +131,7 @@ export function GitFields({
   const view = useGitView(dir);
 
   const fields = useMemo<FieldDef<EntryRow>[]>(() => {
+    if (view.kind === "none") return [];
     const pending = view.kind === "loading";
     return [
       {

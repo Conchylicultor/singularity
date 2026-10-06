@@ -1,4 +1,5 @@
 import type { IconifyJSON } from "@iconify/types";
+import { paintedBox } from "./seti-bbox";
 
 /**
  * The Seti file-type glyphs, vendored as an Iconify set.
@@ -23,7 +24,14 @@ export const SETI_SOURCE = {
 
 // Bump when {@link normalizeSetiSvg} changes what it emits, so the in-sync
 // check asks for a re-vendor even though the commit did not move.
-export const SETI_NORMALIZER_VERSION = 2;
+export const SETI_NORMALIZER_VERSION = 3;
+
+/**
+ * The margin a cropped glyph keeps on each side of its square box, as a
+ * fraction of the side: enough that an antialiased edge is never cut, small
+ * enough that the glyph fills its icon box like a Material symbol does.
+ */
+export const SETI_CROP_MARGIN = 1 / 32;
 
 /** What the vendored set is a function of: the source commit and the normalizer. */
 export function setiIdentity(): string {
@@ -208,7 +216,7 @@ function classRules(svg: XmlElement): Map<string, [string, string][]> {
 
 /** An element's attributes after CSS: presentation attributes, then class rules, then `style=""`. */
 function effectiveAttrs(
-  el: XmlElement,
+  el: { readonly attrs: ReadonlyMap<string, string> },
   rules: Map<string, [string, string][]>,
 ): [string, string][] {
   const merged = new Map(el.attrs);
@@ -225,10 +233,19 @@ function escapeAttr(value: string): string {
   return value.replace(/"/g, "&quot;");
 }
 
+/** Rounded to 1/1000 of a unit, so the vendored JSON is stable and short. */
+function round(n: number): number {
+  return Math.round(n * 1000) / 1000 + 0;
+}
+
 /**
  * One glyph's normalized body: every paint `currentColor` (`none` kept),
  * gradients and styles dropped, ids namespaced to the icon (a sprite holds every
- * glyph in one document), the viewBox origin moved to 0,0.
+ * glyph in one document), and the box CROPPED to what the glyph paints: the
+ * smallest square around its painted bounding box (within the source viewBox),
+ * centred on it, with a {@link SETI_CROP_MARGIN} margin, its origin moved to
+ * 0,0. Seti's own boxes leave wide, uneven margins (a glyph may cover half its
+ * box), so cropping is what lets every glyph fill the icon box it is drawn in.
  */
 export function normalizeSetiSvg(
   name: string,
@@ -293,7 +310,7 @@ export function normalizeSetiSvg(
     return inner === "" ? `<${head}/>` : `<${head}>${inner}</${el.tag}>`;
   };
 
-  // The box: the viewBox, else width × height.
+  // The source box: the viewBox, else width × height.
   const viewBox = svg.attrs.get("viewBox");
   let [minX, minY, width, height] = viewBox
     ? viewBox
@@ -314,7 +331,7 @@ export function normalizeSetiSvg(
   minY ??= 0;
 
   // The root's own presentation attributes (fill-rule, stroke-linejoin, …)
-  // move onto a wrapper group, with the origin shift.
+  // move onto a wrapper group, with the crop's origin shift.
   const rootAttrs = attrsOf({
     ...svg,
     attrs: new Map(
@@ -323,14 +340,34 @@ export function normalizeSetiSvg(
       ),
     ),
   });
-  if (minX !== 0 || minY !== 0) {
-    rootAttrs.push(`transform="translate(${-minX} ${-minY})"`);
-  }
   const inner = svg.children.map(render).join("");
   if (inner === "") throw new Error(`[seti] ${name}: draws nothing`);
-  const body =
+
+  // What the glyph paints, clipped to the source box (as the source renders).
+  // Measured after rendering, which rejects what it does not know.
+  const painted = paintedBox(svg, (el) => new Map(effectiveAttrs(el, rules)));
+  if (painted === undefined) throw new Error(`[seti] ${name}: paints nothing`);
+  const x0 = Math.max(painted.minX, minX);
+  const y0 = Math.max(painted.minY, minY);
+  const x1 = Math.min(painted.maxX, minX + width!);
+  const y1 = Math.min(painted.maxY, minY + height!);
+  if (x1 <= x0 || y1 <= y0) {
+    throw new Error(`[seti] ${name}: paints nothing inside its box`);
+  }
+  const side = round(Math.max(x1 - x0, y1 - y0) / (1 - 2 * SETI_CROP_MARGIN));
+  const originX = round((x0 + x1) / 2 - side / 2);
+  const originY = round((y0 + y1) / 2 - side / 2);
+
+  const shift =
+    originX !== 0 || originY !== 0
+      ? `transform="translate(${round(-originX)} ${round(-originY)})"`
+      : undefined;
+  const ownTransform = rootAttrs.some((a) => a.startsWith("transform="));
+  if (shift !== undefined && !ownTransform) rootAttrs.push(shift);
+  let body =
     rootAttrs.length === 0 ? inner : `<g ${rootAttrs.join(" ")}>${inner}</g>`;
-  return { body, width: width!, height: height! };
+  if (shift !== undefined && ownTransform) body = `<g ${shift}>${body}</g>`;
+  return { body, width: side, height: side };
 }
 
 /** The vendored Iconify JSON for `icons` (name → source SVG). */

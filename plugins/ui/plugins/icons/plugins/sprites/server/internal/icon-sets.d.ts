@@ -11,4 +11,5 @@ export declare const ICON_SETS: {
   readonly regular: IconSetSource;
   readonly light: IconSetSource;
   readonly brands: IconSetSource;
+  readonly lucide: IconSetSource;
 };

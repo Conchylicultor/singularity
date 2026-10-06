@@ -4,7 +4,9 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { relativeTo } from "../../shared/status-index";
 import { useGitView } from "./use-git";
 
-const ignoredIcon = symbol("visibility-off");
+// A git glyph, not a second eye: beside Show hidden files it must read as a
+// different toggle.
+const ignoredIcon = symbol("commit");
 
 /** Outside a checkout, or before its status is known, git says nothing. */
 const NO_LENS: ExplorerLens = {};

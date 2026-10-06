@@ -14,6 +14,13 @@
 //  5. Click `blob.xyz`: the preview says it has no preview.
 //  6. Double-click `sub`: it becomes the listing; Back returns.
 //
+// Along the way it checks the Files look (prototype proto-1790864772-0r54) at
+// 1440×900: the brand reads "Files", the sidebar is 224px, the toolbar 48px
+// and a tree row 30px, Modified is left-aligned, a selected row's name takes
+// the accent text colour, an expanded folder's children draw indent guides,
+// the status bar says nothing about free space, and the path bar shows every
+// ancestor of a short path (no "…" fold) when it has the room.
+//
 // Usage:
 //   ./singularity run plugins/apps/plugins/file-explorer/e2e/explorer-verify.ts \
 //     [--out /tmp/explorer] [--headed]
@@ -41,6 +48,11 @@ writeFileSync(
 writeFileSync(join(fixture, "blob.xyz"), Buffer.from([0, 1, 2, 0, 255, 0]));
 mkdirSync(join(fixture, "sub"));
 writeFileSync(join(fixture, "sub", "inner.txt"), "inner\n");
+
+/** An element's rendered box. */
+async function box(page: Page, selector: string) {
+  return page.locator(selector).first().boundingBox();
+}
 
 /** A tree row by its label. */
 function row(page: Page, name: string) {
@@ -73,6 +85,53 @@ try {
     );
     await snap(page, out, "1-home");
 
+    // The Files look.
+    r.ok(
+      "the sidebar brand reads Files",
+      await page
+        .locator("[data-slot=sidebar-inner]")
+        .getByRole("button", { name: "Files", exact: true })
+        .isVisible(),
+    );
+    const sidebar = await box(page, "[data-slot=sidebar-container]");
+    r.ok(
+      "the sidebar is 224px wide",
+      sidebar !== null && Math.round(sidebar.width) === 224,
+      `width ${sidebar?.width}`,
+    );
+    const toolbar = await page
+      .getByRole("button", { name: "Enclosing folder" })
+      .first()
+      .evaluate((el) => {
+        const bar = el.closest(".h-chrome-pane");
+        return bar === null ? null : bar.getBoundingClientRect().height;
+      });
+    r.ok("the toolbar is 48px tall", toolbar === 48, `height ${toolbar}`);
+    const rowBox = await box(page, "[data-tree-row]");
+    r.ok(
+      "a tree row is 30px tall",
+      rowBox !== null && Math.round(rowBox.height) === 30,
+      `height ${rowBox?.height}`,
+    );
+    const modifiedAlign = await page
+      .locator("[data-aligned-cell=modified]")
+      .first()
+      .evaluate((el) => getComputedStyle(el).textAlign);
+    r.ok(
+      "Modified is left-aligned",
+      modifiedAlign === "left" || modifiedAlign === "start",
+      modifiedAlign,
+    );
+    const status = await page
+      .locator("text=/^\\d+ items?/")
+      .first()
+      .evaluate((el) => el.closest(".border-t")?.textContent ?? "");
+    r.ok(
+      "the status bar says nothing about free space",
+      status !== "" && !status.includes("available"),
+      status,
+    );
+
     // 2. ⌘L → type a prefix → Tab → Enter.
     await page.keyboard.press("ControlOrMeta+l");
     const field = page
@@ -104,11 +163,21 @@ try {
     );
     r.ok("its subfolder is listed", await waitRow(page, "sub"));
     await snap(page, out, "2-listing");
+    // The fixture's path is short enough to show whole at 1440px: no "…"
+    // holding folded ancestors.
+    const folded = await page
+      .getByRole("button", { name: /^Show the \d+ levels above this one$/ })
+      .count();
+    r.ok("the path bar shows every ancestor (no fold)", folded === 0);
 
     // 3. Expand `sub` lazily.
     await row(page, "sub").hover();
     await row(page, "sub").locator("button[aria-label='Expand']").click();
     r.ok("expanding lists the subfolder", await waitRow(page, "inner.txt"));
+    r.ok(
+      "the expanded folder's children draw indent guides",
+      (await row(page, "inner.txt").locator("[data-tree-guides]").count()) > 0,
+    );
     await snap(page, out, "3-expanded");
 
     // 4. Markdown preview.
@@ -122,6 +191,28 @@ try {
       rendered = false;
     }
     r.ok("a .md file renders as Markdown", rendered);
+    const colors = await row(page, "notes.md").evaluate((el) => {
+      const name = Array.from(el.querySelectorAll("span")).find(
+        (s) => s.textContent?.trim() === "notes.md",
+      );
+      const probe = document.createElement("span");
+      probe.className = "text-primary";
+      el.appendChild(probe);
+      const accent = getComputedStyle(probe).color;
+      probe.remove();
+      return {
+        name: name ? getComputedStyle(name).color : null,
+        accent,
+        bg: getComputedStyle(el).backgroundColor,
+      };
+    });
+    r.ok(
+      "the selected row's name takes the accent text colour",
+      colors.name !== null &&
+        colors.name !== "rgb(24, 24, 27)" &&
+        colors.bg !== "rgba(0, 0, 0, 0)",
+      JSON.stringify(colors),
+    );
     await snap(page, out, "4-markdown");
 
     // 5. Unknown binary → fallback.

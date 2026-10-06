@@ -2,12 +2,14 @@ import { existsSync, readFileSync } from "fs";
 import { join, relative } from "path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import {
+  collectIconManifest,
   formatGenerated,
   iconManifestPath,
   renderIconManifest,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { IconifyJSON } from "@iconify/types";
+import { LUCIDE_MAP } from "../core";
 import {
   SETI_JSON_REL_PATH,
   SETI_LICENSE_REL_PATH,
@@ -139,4 +141,32 @@ const setiInSync: Check = {
   },
 };
 
-export default [symbolNamesInSync, manifestInSync, setiInSync];
+const lucideCoverage: Check = {
+  id: "icons:lucide-coverage",
+  description:
+    'every symbol("…") the repo draws has an entry in icons/core/lucide-map.ts — its Lucide counterpart, or MATERIAL_ONLY',
+  async run() {
+    const root = await getWorktreeRoot();
+    let symbols: readonly string[];
+    try {
+      ({ symbols } = await collectIconManifest(root));
+    } catch (err) {
+      return {
+        ok: false,
+        message: `the icon manifest cannot be built: ${err instanceof Error ? err.message : String(err)}`,
+        hint: "Pass a string literal to symbol() / brand() / seti().",
+      };
+    }
+    const unmapped = symbols.filter((name) => !Object.hasOwn(LUCIDE_MAP, name));
+    if (unmapped.length > 0) {
+      return {
+        ok: false,
+        message: `${unmapped.length} symbol(s) have no entry in LUCIDE_MAP: ${unmapped.join(", ")}`,
+        hint: "Add each to plugins/ui/plugins/icons/core/lucide-map.ts — the Lucide icon a Lucide-themed scope draws for it (lucide.dev/icons), or MATERIAL_ONLY when Lucide has none.",
+      };
+    }
+    return { ok: true };
+  },
+};
+
+export default [symbolNamesInSync, manifestInSync, setiInSync, lucideCoverage];

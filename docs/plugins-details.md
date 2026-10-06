@@ -2828,7 +2828,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `urlSourceConfigFields`
     - **`file-explorer`** — File explorer app.
       - Plugins:
-        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to onOpenFile; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history.
+        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to onOpenFile; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
               - `filesHomePane.Actions` ← `primitives.pane`
@@ -2838,6 +2838,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `Pane.Register` "files-home"
               - `Pane.Register` "files-at"
+              - `ThemeEngine.SubTheme` "Files document"
             - Uses:
               - `infra/endpoints.endpointQueryKey`
               - `infra/endpoints.fetchEndpoint`
@@ -2853,11 +2854,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/theme-boundary.Theme`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.ResizableHandle`
               - `primitives/css/ui-kit.ResizablePanel`
               - `primitives/css/ui-kit.ResizablePanelGroup`
+              - `primitives/css/ui-kit.subThemeScope`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineFieldExtensions`
@@ -2881,6 +2885,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
+              - `ui/theme-engine.ThemeEngine`
             - Exports (types):
               - `ExplorerLensItem`
               - `ExplorerNavigator`
@@ -2981,6 +2986,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
@@ -2991,18 +2998,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`
             - Exports (values): `fileExplorerCheckout`
-        - **`shell`** — App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
+        - **`shell`** — App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
           - Web:
             - Slots:
               - `FileExplorer.Sidebar` ← `apps.file-explorer.places`
               - `FileExplorer.Toolbar`
               - `FileExplorer.Places` ← `apps.file-explorer.places`
-            - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
+            - Contributes:
+              - `Apps.App` "Files" → `FileExplorerLayout`
+              - `ThemeEngine.Theme` "Files"
             - Uses:
               - `apps-core.Apps`
               - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/icons.Icon`
+              - `ui/theme-engine.ThemeEngine`
             - Exports (types):
               - `Place`
               - `PlaceGroup`
@@ -19123,6 +19134,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `collectedDirRegistryPath`
               - `collectEntriesWithDeps`
               - `collectFieldEagerBarrels`
+              - `collectIconManifest`
               - `collectImportGraph`
               - `collectTokenGroupVars`
               - `compositionRegistryFileName`
@@ -19347,6 +19359,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/networking`
               - `primitives/overlay/image-viewer`
               - `primitives/pane`
+              - `primitives/path-bar`
               - `primitives/row-actions`
               - `primitives/shortcuts`
               - `primitives/text-editor/caret-trigger`
@@ -28448,6 +28461,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/graph-canvas`
               - `primitives/metrics/chart-kit`
               - `primitives/overlay/image-viewer`
+              - `primitives/tree`
               - `primitives/ui-context/element-picker`
               - `primitives/virtual-rows`
               - `screenshot`
@@ -30443,6 +30457,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
+              - `apps/file-explorer/browser`
               - `apps/website/pages/apps`
               - `apps/website/shell`
               - `layouts/miller`
@@ -30692,6 +30707,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources`
               - `apps/events/sources/source-detail/schedule`
               - `apps/file-explorer/browser`
+              - `apps/file-explorer/places`
               - `apps/home/app-cards`
               - `apps/mail/reading-pane`
               - `apps/mail/sync-status`
@@ -34943,6 +34959,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/breadcrumb.Breadcrumb`
+          - `primitives/breadcrumb.BreadcrumbProps`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -36003,6 +36020,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/collapsible.ExpandAllButton`
           - `primitives/css/center.Center`
+          - `primitives/css/coords.Placed`
           - `primitives/css/fill.Fill`
           - `primitives/css/layer.layerClasses`
           - `primitives/css/pin.Pin`
@@ -39565,6 +39583,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/file-explorer/places`
+          - `apps/file-explorer/shell`
           - `apps/home/app-cards`
           - `apps/mail/attachments`
           - `apps/mail/reading-pane`
@@ -39865,11 +39884,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `BrandName`
           - `BrandRef`
+          - `IconFamily`
           - `IconFill`
           - `IconRef`
           - `IconShape`
           - `IconStyle`
           - `IconWeight`
+          - `LucideName`
           - `RuntimeSymbolRef`
           - `SavedSymbolName`
           - `SetiName`
@@ -39886,12 +39907,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `coveredStyles`
           - `DEFAULT_ICON_STYLE`
           - `DEFAULT_STYLE_KEYS`
+          - `ICON_FAMILIES`
           - `ICON_FILLS`
           - `ICON_SHAPES`
           - `ICON_WEIGHTS`
           - `iconifyName`
           - `isSpriteKey`
           - `isStyleKey`
+          - `LUCIDE_MAP`
+          - `LUCIDE_SPRITE`
+          - `lucideId`
+          - `lucideNameOf`
           - `parseStyleKey`
           - `resolveSymbolStyle`
           - `runtimeSymbol`
@@ -39909,6 +39935,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `buildSetiSet`
           - `ICON_SET_PACKAGES`
           - `installedSetVersions`
+          - `lucideNames`
           - `normalizeSetiSvg`
           - `readIconSet`
           - `readInputsHash`
@@ -39991,6 +40018,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `resource.declare` "icons.saved-sprites"
             - Uses:
               - `network/live.serveValue`
+              - `ui/icons.IconBody`
               - `ui/icons.readSetiSet`
               - `ui/icons.resolveIcon`
               - `ui/icons.resolveSymbol`
@@ -40264,8 +40292,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
-          - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.pages.shell`, `apps.website.shell`, `ui.theme-engine`
-          - `ThemeEngine.SubTheme` ← `apps.website.pages.apps`, `apps.website.shell`
+          - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.pages.shell`, `apps.website.shell`, `ui.theme-engine`
+          - `ThemeEngine.SubTheme` ← `apps.file-explorer.browser`, `apps.website.pages.apps`, `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
           - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
         - Contributes:
@@ -40369,6 +40397,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating`
           - `apps/agent-manager/shell`
           - `apps/chord/shell`
+          - `apps/file-explorer/browser`
+          - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/pages/shell`
           - `apps/website/pages/apps`
@@ -40777,7 +40807,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `ui/theme-engine.ThemeEngine`
                   - `ui/theme-engine.useThemes`
                   - `ui/theme-engine.useThemeSelections`
-        - **`icons`** — Icons token group (shape, fill, active fill and stroke of the Material Symbols a scope draws; outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.
+        - **`icons`** — Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.
           - Web:
             - Contributes:
               - `ThemeEngine.TokenGroup` "Icons"
@@ -40806,6 +40836,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses:
               - `ui/icons.DEFAULT_ICON_STYLE`
+              - `ui/icons.ICON_FAMILIES`
               - `ui/icons.ICON_FILLS`
               - `ui/icons.ICON_SHAPES`
               - `ui/icons.ICON_WEIGHTS`

@@ -3,8 +3,12 @@ import type { IconifyJSON } from "@iconify/types";
 import {
   ALL_STYLE_KEYS,
   BRANDS_SPRITE,
+  LUCIDE_MAP,
+  LUCIDE_SPRITE,
   SETI_SPRITE,
   brandId,
+  lucideId,
+  lucideNameOf,
   setiId,
   symbolId,
   type SpriteKey,
@@ -17,25 +21,33 @@ import {
 } from "@plugins/ui/plugins/icons/server";
 import { buildSprite } from "./build-sprite";
 import { ICON_MANIFEST } from "./icon-manifest.generated";
+import { LUCIDE_TUNING_VERSION, tuneLucideBody } from "./lucide";
 import { PACKAGE, setIdentity, readSet, withSymbolSets } from "./symbol-sets";
 
 /**
  * Where each sprite's glyphs come from. Every symbol sprite is built from BOTH
  * Material Symbols sets: a style that lacks a name draws the nearest style that
- * has it, which may be the other weight. Brands and Seti are one sprite each.
+ * has it, which may be the other weight. Brands, Seti and Lucide are one
+ * sprite each.
  */
-type SetKey = "symbols" | typeof BRANDS_SPRITE | typeof SETI_SPRITE;
+type SetKey =
+  "symbols" | typeof BRANDS_SPRITE | typeof SETI_SPRITE | typeof LUCIDE_SPRITE;
 
 function setOf(key: SpriteKey): SetKey {
-  return key === BRANDS_SPRITE || key === SETI_SPRITE ? key : "symbols";
+  return key === BRANDS_SPRITE || key === SETI_SPRITE || key === LUCIDE_SPRITE
+    ? key
+    : "symbols";
 }
 
 /**
- * What every sprite is a function of — the manifest and the installed sets'
- * versions — so a URL carrying it can be cached forever.
+ * What every sprite is a function of — the manifest, the installed sets'
+ * versions, the Lucide map and its tuning — so a URL carrying it can be cached
+ * forever.
  */
 export const manifestHash: string = createHash("sha256")
   .update(JSON.stringify(ICON_MANIFEST))
+  .update(JSON.stringify(LUCIDE_MAP))
+  .update(LUCIDE_TUNING_VERSION)
   .update([...Object.values(PACKAGE), SETI_SET].map(setIdentity).join("\n"))
   .digest("hex")
   .slice(0, 16);
@@ -78,6 +90,36 @@ async function setiSprite(): Promise<Map<SpriteKey, string>> {
 }
 
 /**
+ * The Lucide sprite: under `lucide-<material name>`, the tuned Lucide drawing
+ * of every manifest symbol `LUCIDE_MAP` gives one. A symbol it does not is
+ * left out — `<Icon>` draws its Material symbol instead. Never resident:
+ * fetched the first time an icon in a Lucide scope mounts.
+ */
+async function lucideSprite(): Promise<Map<SpriteKey, string>> {
+  const set = await readSet(PACKAGE.lucide);
+  return new Map([
+    [
+      LUCIDE_SPRITE,
+      buildSprite(
+        ICON_MANIFEST.symbols.flatMap((name) => {
+          const lucide = lucideNameOf(name);
+          return lucide === undefined
+            ? []
+            : [
+                {
+                  id: lucideId(name),
+                  set,
+                  iconifyName: lucide,
+                  tune: tuneLucideBody,
+                },
+              ];
+        }),
+      ),
+    ],
+  ]);
+}
+
+/**
  * All 12 symbol sprites, for the manifest's names. Under `ms-<K>-<name>` each
  * holds the drawing `resolveSymbol` picks for style K — the style's own, or
  * its nearest fallback — so `<Icon>` needs no fallback of its own.
@@ -113,6 +155,7 @@ async function loadSet(key: SetKey): Promise<Map<SpriteKey, string>> {
     return brandSprite(await readSet(PACKAGE.brands));
   }
   if (key === SETI_SPRITE) return await setiSprite();
+  if (key === LUCIDE_SPRITE) return await lucideSprite();
   return await withSymbolSets(symbolSprites);
 }
 

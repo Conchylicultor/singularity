@@ -115,6 +115,7 @@
     - `collectedDirRegistryPath`
     - `collectEntriesWithDeps`
     - `collectFieldEagerBarrels`
+    - `collectIconManifest`
     - `collectImportGraph`
     - `collectTokenGroupVars`
     - `compositionRegistryFileName`

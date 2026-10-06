@@ -214,6 +214,14 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   measuring rows; a row with a multi-select checkbox or a wider leading slot
   shifts its label, not its cells.
 
+- `guides?: boolean` — indent guides (the tree primitive's
+  `TreeListProps.guides`): a hairline per ancestor level in `--tree-guide`. They
+  sit in the indent padding, so the aligned header geometry is unchanged.
+
+The aligned cells read `text-row-meta` (muted, or the selected row's
+`selectedMetaForeground`), and the selected row's name `selectedForeground` —
+see the tree primitive's CLAUDE.md "Opt-in looks".
+
 Two more inputs come from outside `options`:
 
 - **Lazy children** — `HierarchyConfig.lazyChildren` is the tree primitive's

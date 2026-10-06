@@ -3,12 +3,18 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { hostFsVolume } from "@plugins/infra/plugins/host-fs/core";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { formatSize } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 
+/** On the places' icon column: the sidebar's rail plus a row's own padding. */
+const METER_INSET = {
+  paddingInline: "calc(var(--sidebar-rail) + var(--sidebar-row-pad-x))",
+};
+
 /**
  * The startup volume's storage, at the foot of the Places sidebar: its name,
- * a used/total bar, and "X GB of Y GB used". Renders nothing until the volume
+ * a bar filled to the used fraction, and "X GB free of Y GB". Renders nothing until the volume
  * has answered — a meter at zero would claim an empty disk.
  */
 export function StorageMeter(): ReactNode {
@@ -18,26 +24,31 @@ export function StorageMeter(): ReactNode {
   const used = Math.max(0, total - free);
   const fraction = total > 0 ? used / total : 0;
   return (
-    <Stack gap="xs" className="rail-follow px-sm pt-sm pb-md">
-      <Text variant="caption" className="text-muted-foreground">
-        {name}
-      </Text>
-      <Clip
-        role="meter"
-        aria-label={`${name} storage used`}
-        aria-valuemin={0}
-        aria-valuemax={total}
-        aria-valuenow={used}
-        className="h-1 rounded-full bg-border"
-      >
-        <div
-          className="h-full rounded-full bg-primary"
-          style={{ width: `${(fraction * 100).toFixed(1)}%` }}
-        />
-      </Clip>
-      <Text variant="caption" className="text-muted-foreground">
-        {formatSize(used)} of {formatSize(total)} used
-      </Text>
-    </Stack>
+    // A compact region: its captions take the small rung (`2xs`).
+    <ControlSizeProvider size="xs">
+      <Stack gap="none" className="pt-sm pb-lg" style={METER_INSET}>
+        <Text variant="caption" tone="faint">
+          {name}
+        </Text>
+        <div className="py-xs">
+          <Clip
+            role="meter"
+            aria-label={`${name} storage used`}
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={used}
+            className="h-1 rounded-full bg-input"
+          >
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${(fraction * 100).toFixed(1)}%` }}
+            />
+          </Clip>
+        </div>
+        <Text variant="caption" tone="faint">
+          {formatSize(free)} free of {formatSize(total)}
+        </Text>
+      </Stack>
+    </ControlSizeProvider>
   );
 }

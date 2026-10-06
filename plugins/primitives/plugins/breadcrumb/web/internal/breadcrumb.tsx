@@ -30,10 +30,12 @@ export interface BreadcrumbProps {
   actions?: ReactNode;
   /**
    * The weight the current page's name is set in. `medium` (the default) lets
-   * weight alone single the leaf out; `normal` leaves that to its colour — the
-   * strong tier against muted ancestors — for a trail drawn in one weight.
+   * weight alone single the leaf out; `semibold` makes it read as the title of
+   * the place (a file browser's current folder); `normal` leaves that to its
+   * colour — the strong tier against muted ancestors — for a trail drawn in one
+   * weight.
    */
-  leafWeight?: "medium" | "normal";
+  leafWeight?: "medium" | "semibold" | "normal";
   /**
    * The current page's name's colour. `inherit` (the default) takes the colour
    * of whatever hosts the trail; `strong` sets it in the strong text tier, so a
@@ -60,6 +62,7 @@ const LEAF_WEIGHT: Record<
   string
 > = {
   medium: "font-medium",
+  semibold: "font-semibold",
   normal: "font-normal",
 };
 
@@ -247,6 +250,7 @@ export function Breadcrumb({
       )}
       <span
         ref={leafRef}
+        data-breadcrumb-leaf
         className={cn("truncate", LEAF_WEIGHT[leafWeight], LEAF_TONE[leafTone])}
       >
         {active.label}

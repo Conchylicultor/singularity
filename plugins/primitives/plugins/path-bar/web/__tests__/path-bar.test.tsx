@@ -115,6 +115,25 @@ describe("PathBar", () => {
     expect(source.complete).toHaveBeenCalledWith("/vol/me/");
   });
 
+  it("forwards the trail's type role and leaf weight to the crumbs", () => {
+    const source = fakeSource();
+    const { container } = render(
+      <PluginProvider plugins={[plugin]}>
+        <PathBar
+          path="/vol/me"
+          source={source}
+          onNavigate={() => {}}
+          text="body"
+          leafWeight="semibold"
+        />
+      </PluginProvider>,
+    );
+    const leaf = container.querySelector("[data-breadcrumb-leaf]")!;
+    expect(leaf.textContent).toBe("me");
+    expect(leaf.className).toContain("font-semibold");
+    expect(leaf.parentElement!.className).toContain("text-body");
+  });
+
   it("the pencil opens the field too", async () => {
     const { field } = setup();
     fireEvent.click(screen.getByRole("button", { name: "Edit the path" }));

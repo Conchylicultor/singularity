@@ -5,6 +5,7 @@ export {
   renderSymbolNameList,
   readListInputsHash,
   brandNames,
+  lucideNames,
   symbolBaseNames,
   installedSetVersions,
   readIconSet,

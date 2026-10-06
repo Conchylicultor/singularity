@@ -40,6 +40,7 @@ function Publish({
 }
 
 const rounded: IconStyle = {
+  family: "material",
   shape: "rounded",
   fill: "filled",
   activeFill: "outline",
@@ -172,5 +173,43 @@ describe("<Icon> on a runtime (saved) symbol", () => {
       ]),
     );
     expect(hrefOf(container)).toBe("#msr-rounded-filled-300-home");
+  });
+});
+
+describe("<Icon> in a Lucide scope", () => {
+  const lucide: IconStyle = { ...rounded, family: "lucide" };
+
+  function Wanted() {
+    return <span data-testid="wanted">{useWantedSprites().join(",")}</span>;
+  }
+
+  it("draws a mapped symbol's Lucide drawing once the lucide sprite lands, its Material drawing until then", () => {
+    act(() => provideSprite("rounded-filled-300", "<svg></svg>"));
+    const { container, getByTestId } = render(
+      <>
+        <Wanted />
+        <Publish scope="app:lucide" style={lucide} />
+        <IconScopeProvider scope="app:lucide">
+          <Icon icon={symbol("folder")} />
+        </IconScopeProvider>
+      </>,
+    );
+    expect(getByTestId("wanted").textContent).toContain("lucide");
+    expect(hrefOf(container)).toBe("#ms-rounded-filled-300-folder");
+    act(() => provideSprite("lucide", "<svg></svg>"));
+    expect(hrefOf(container)).toBe("#lucide-folder");
+  });
+
+  it("keeps the Material drawing, in the scope's style, for a material-only symbol", () => {
+    act(() => provideSprite("lucide", "<svg></svg>"));
+    const { container } = render(
+      <>
+        <Publish scope="app:lucide-only" style={lucide} />
+        <IconScopeProvider scope="app:lucide-only">
+          <Icon icon={symbol("grain")} />
+        </IconScopeProvider>
+      </>,
+    );
+    expect(hrefOf(container)).toBe("#ms-rounded-filled-300-grain");
   });
 });

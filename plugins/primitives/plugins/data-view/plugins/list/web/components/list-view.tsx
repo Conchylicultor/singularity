@@ -525,7 +525,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         className={
           windowed || options.rowChrome === "tree"
             ? undefined
-            : cn("py-sm", quietGroup && "pt-none")
+            : // The top gap is the theme's (density `sectionBodyPadTop`,
+              // default the `sm` step of the bottom one).
+              cn("pt-section-body pb-sm", quietGroup && "pt-none")
         }
       >
         {/* A section whose rows are all folded draws no rows — its header and

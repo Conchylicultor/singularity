@@ -19,6 +19,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   Button,
   cn,
+  ControlSizeProvider,
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
@@ -33,15 +34,12 @@ import {
 import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { hostFsVolume } from "@plugins/infra/plugins/host-fs/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { HostFsEntry } from "@plugins/infra/plugins/host-fs/core";
 import {
   absolutePath,
   baseName,
   formatCount,
-  formatSize,
   HOME,
   isWithin,
   joinPath,
@@ -61,11 +59,12 @@ import {
 } from "../internal/navigator";
 import { WithLenses, type ComposedLens } from "../internal/lenses";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
+import { useViewportAtMost } from "../internal/use-viewport-at-most";
 import { FileTree, type EntryFilter } from "./file-tree";
 import { PreviewPane } from "./preview-pane";
 
-const backIcon = symbol("arrow-back");
-const forwardIcon = symbol("arrow-forward");
+const backIcon = symbol("chevron-left");
+const forwardIcon = symbol("chevron-right");
 const upIcon = symbol("arrow-upward");
 const hiddenOnIcon = symbol("visibility");
 const hiddenOffIcon = symbol("visibility-off");
@@ -131,6 +130,8 @@ function FileBrowserReady({
   const { contentOwnsTopChrome, leadingControl } =
     useContext(SurfaceChromeContext);
   const atTopEdge = navigator !== undefined && contentOwnsTopChrome;
+  const phone = useViewportAtMost(640);
+  const narrow = useViewportAtMost(900);
 
   // A device preference, kept like Finder keeps it — so a long TTL.
   const [showHidden, setShowHidden] = useDraft<boolean>(
@@ -172,27 +173,46 @@ function FileBrowserReady({
   // A consumer bringing its own preview gets the listing alone.
   if (onOpenFile !== undefined) return listing;
 
+  const preview =
+    open === null ? null : (
+      <WithLenses dir={absolutePath(parentPath(open, home) ?? "/", home)}>
+        {(lens) => (
+          <PreviewPane
+            key={open}
+            path={open}
+            home={home}
+            git={lens.fileGit(absolutePath(open, home))}
+            onClose={() => nav.openFile(null)}
+            endSafeArea={atTopEdge}
+          />
+        )}
+      </WithLenses>
+    );
+
+  // At 640px and under an open file replaces the listing.
+  if (preview !== null && phone) return preview;
+
   return (
-    <ResizablePanelGroup orientation="horizontal" id="file-explorer-split">
-      <ResizablePanel id="listing" minSize="320px">
+    // The mockup's split: listing and preview at 1 : 1.1, or 1 : 1.2 at 900px
+    // and under (where the listing may also shrink further). Re-keyed at the
+    // breakpoint so the default split applies anew.
+    <ResizablePanelGroup
+      key={narrow ? "narrow" : "wide"}
+      orientation="horizontal"
+      id="file-explorer-split"
+    >
+      <ResizablePanel id="listing" minSize={narrow ? "240px" : "320px"}>
         {listing}
       </ResizablePanel>
       {open !== null && (
         <>
           <ResizableHandle />
-          <ResizablePanel id="preview" minSize="360px" defaultSize="52%">
-            <WithLenses dir={absolutePath(parentPath(open, home) ?? "/", home)}>
-              {(lens) => (
-                <PreviewPane
-                  key={open}
-                  path={open}
-                  home={home}
-                  git={lens.fileGit(absolutePath(open, home))}
-                  onClose={() => nav.openFile(null)}
-                  endSafeArea={atTopEdge}
-                />
-              )}
-            </WithLenses>
+          <ResizablePanel
+            id="preview"
+            minSize={narrow ? "320px" : "360px"}
+            defaultSize={narrow ? "54.55%" : "52.38%"}
+          >
+            {preview}
           </ResizablePanel>
         </>
       )}
@@ -360,7 +380,8 @@ function Listing({
       className="h-full"
       scrollBody={false}
       header={
-        <Bar tier="pane" endSafeArea={endSafeArea}>
+        // The mockup's tight 4px toolbar rhythm.
+        <Bar tier="pane" endSafeArea={endSafeArea} className="gap-xs">
           {leading}
           <IconButton
             icon={backIcon}
@@ -385,8 +406,14 @@ function Listing({
               if (up !== null) nav.navigate(up, open);
             }}
           />
-          <Fill>
-            <PathBar path={dir} source={source} onNavigate={goTo} />
+          <Fill className="px-xs">
+            <PathBar
+              path={dir}
+              source={source}
+              onNavigate={goTo}
+              text="body"
+              leafWeight="semibold"
+            />
           </Fill>
           <SearchInput
             value={query}
@@ -399,7 +426,13 @@ function Listing({
             }}
             placeholder="Filter"
             aria-label="Filter this folder"
-            wrapperClassName={cn(open === null ? "w-44" : "w-32")}
+            appearance="filled"
+            // 180px, or 132px beside an open file; 130px at 1100px and under,
+            // and gone at 900px and under.
+            wrapperClassName={cn(
+              open === null ? "w-[180px]" : "w-[132px]",
+              "max-[1100px]:w-[130px] max-[900px]:hidden",
+            )}
           />
           <IconButton
             icon={showHidden ? hiddenOnIcon : hiddenOffIcon}
@@ -425,7 +458,7 @@ function Listing({
         </Bar>
       }
       body={
-        <Scroll ref={treeRef} className="h-full rail-x-xs">
+        <Scroll ref={treeRef} className="h-full rail-x-sm">
           {body}
         </Scroll>
       }
@@ -484,7 +517,7 @@ function ListingProblem({
   );
 }
 
-/** "N items · “name” selected" on the left; the volume's free space on the right. */
+/** "N items · “name” selected", in the faint small type. */
 function StatusBar({
   dir,
   count,
@@ -494,7 +527,6 @@ function StatusBar({
   count: number | null;
   selected: string | null;
 }): ReactNode {
-  const volume = useEndpoint(hostFsVolume, {}, { query: { path: dir } });
   const left = [
     count === null ? null : formatCount(count),
     selected !== null && isWithin(selected, dir)
@@ -504,18 +536,17 @@ function StatusBar({
     .filter((s) => s !== null)
     .join(" · ");
   return (
-    <Text
-      as={Line}
-      variant="caption"
-      className="h-7 gap-md border-t px-md text-muted-foreground"
-    >
-      <Fill>
+    // A compact region: the caption takes its small rung (`2xs`).
+    <ControlSizeProvider size="xs">
+      <Text
+        as={Line}
+        variant="caption"
+        tone="faint"
+        className="h-7 gap-md border-t px-lg"
+      >
         <Text variant="caption">{left}</Text>
-      </Fill>
-      {volume.data?.kind === "ok" && (
-        <Text variant="caption">{formatSize(volume.data.free)} available</Text>
-      )}
-    </Text>
+      </Text>
+    </ControlSizeProvider>
   );
 }
 

@@ -186,6 +186,7 @@ default is stated twice and can therefore drift.
     - `primitives/graph-canvas`
     - `primitives/metrics/chart-kit`
     - `primitives/overlay/image-viewer`
+    - `primitives/tree`
     - `primitives/ui-context/element-picker`
     - `primitives/virtual-rows`
     - `screenshot`

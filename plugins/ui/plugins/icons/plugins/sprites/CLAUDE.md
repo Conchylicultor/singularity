@@ -10,11 +10,15 @@ is in the parent's [`CLAUDE.md`](../../CLAUDE.md) (section "Sprites").
   and the sprite route — a raw handler for its immutable cache header; a stale
   hash → 409. The `seti` sprite is built from the icons plugin's vendored set
   (`SETI_SET`, its identity folded into `manifestHash`) and served only by the
-  route, never in the resident value.
+  route, never in the resident value. So is the `lucide` sprite: every mapped
+  manifest symbol's Lucide drawing (`@iconify-json/lucide`, embedded in
+  `icon-sets.js`), tuned by `lucide.ts` (7/8 box, 1.2px non-scaling stroke);
+  the set's identity, `LUCIDE_MAP` and `LUCIDE_TUNING_VERSION` are folded into
+  `manifestHash`.
 - `web/`: `IconSpriteHost` (`Core.Root`) provides the resident sprites in a
   layout effect (so they are on screen at first paint), fetches every other
   style key a scope wants and every sprite a mounted icon asked for
-  (`useWantedSprites` — the never-resident `seti` sprite), and renders the
+  (`useWantedSprites` — the never-resident `seti` and `lucide` sprites), and renders the
   icons plugin's `IconSpriteSheet`.
   It also provides the resident saved-icon symbols and installs the runtime
   symbol loader (`createRuntimeSymbolLoader`: one fetch per style key per
@@ -57,6 +61,7 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `resource.declare` "icons.saved-sprites"
   - Uses:
     - `network/live.serveValue`
+    - `ui/icons.IconBody`
     - `ui/icons.readSetiSet`
     - `ui/icons.resolveIcon`
     - `ui/icons.resolveSymbol`

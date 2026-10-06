@@ -213,6 +213,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
             onSelect={select}
             onOpen={open}
             clickOpens={clickOpens}
+            guides={ctx.guides}
             rowRef={rowRef}
             dragAttributes={canReorder ? dragAttributes : undefined}
             dragListeners={canReorder ? dragListeners : undefined}
@@ -289,7 +290,11 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
             />
           ))}
           {placeholder && (
-            <TreeChildPlaceholder placeholder={placeholder} depth={depth + 1} />
+            <TreeChildPlaceholder
+              placeholder={placeholder}
+              depth={depth + 1}
+              guides={ctx.guides}
+            />
           )}
         </div>
       )}

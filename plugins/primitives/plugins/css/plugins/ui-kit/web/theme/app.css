@@ -89,6 +89,11 @@
     --color-code-border: var(--code-border);
     --color-toolbar-foreground: var(--toolbar-foreground);
     --color-selected: var(--selected);
+    --color-selected-foreground: var(--selected-foreground);
+    /* A row's secondary text (`text-row-meta`): muted, unless the row publishes
+       `--row-meta` — a selected tree row publishes `--selected-meta-foreground`,
+       whose default is that same muted tier. */
+    --color-row-meta: var(--row-meta, var(--muted-foreground));
     --color-group-foreground: var(--group-foreground);
     --color-popover-border: var(--popover-border);
     /* The sticky-chrome mask color — the background a pinned bar paints to hide
@@ -559,6 +564,11 @@
 @utility size-sidebar-icon { width: var(--sidebar-icon-size); height: var(--sidebar-icon-size); } /* twmerge: extend size */
 @utility gap-sidebar-icon { gap: var(--sidebar-icon-gap); } /* twmerge: extend gap */
 @utility h-sidebar-end { height: var(--sidebar-end-pad); } /* twmerge: extend h */
+/* The sidebar brand (app-launcher's header form): mark size, the gap after the
+ * launcher, the name button's inline padding. */
+@utility size-sidebar-brand-mark { width: var(--sidebar-brand-mark-size); height: var(--sidebar-brand-mark-size); } /* twmerge: extend size */
+@utility gap-sidebar-brand { gap: var(--sidebar-brand-gap); } /* twmerge: extend gap */
+@utility px-sidebar-brand-name { padding-inline: var(--sidebar-brand-name-pad-x); } /* twmerge: extend px */
 
 /* Control height utilities — the single source of truth for interactive-control
  * heights (Button, ToggleChip, ButtonGroup, …). Values come from the density
@@ -663,6 +673,8 @@
  * stays row-sized: the ROW keeps at most a row's own padding (`*-section-head`),
  * and whatever a theme adds beyond it goes on the BAND around the row
  * (`*-section-head-band`), outside the fill. The two always sum to the token. */
+/* A DataView list section body's top padding (density `sectionBodyPadTop`). */
+@utility pt-section-body { padding-top: var(--section-body-pad-top); } /* twmerge: extend pt */
 @utility pt-section-head { padding-top: min(var(--section-head-pad-top), var(--pad-row-y)); } /* twmerge: extend pt */
 @utility pb-section-head { padding-bottom: min(var(--section-head-pad-bottom), var(--pad-row-y)); } /* twmerge: extend pb */
 @utility pt-section-head-band { padding-top: max(0px, calc(var(--section-head-pad-top) - var(--pad-row-y))); } /* twmerge: extend pt */
@@ -799,6 +811,10 @@
 @utility rail-owe-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-owe-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-owe-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+/* The app-shell sidebar's rail: `rail-owe-sm` at the sidebar-metrics
+ * `sidebarRail` token (default the `sm` step), so a theme moves the sidebar's
+ * pills and band inset together. */
+@utility rail-owe-sidebar { --rail-start: var(--sidebar-rail); --rail-end: var(--sidebar-rail); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-owe-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 
 /* The block axis on its own. It is published for the same reason the inline

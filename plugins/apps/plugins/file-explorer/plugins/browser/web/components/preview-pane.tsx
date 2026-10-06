@@ -5,6 +5,11 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  ControlSizeProvider,
+  subThemeScope,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { hostFsStat } from "@plugins/infra/plugins/host-fs/core";
@@ -17,6 +22,7 @@ import {
 } from "@plugins/primitives/plugins/file-viewer/web";
 import type { FileViewerGit } from "@plugins/primitives/plugins/file-viewer/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { filesDocumentTheme } from "../internal/theme";
 import { baseName, formatModified, formatSize, parentPath } from "../../core";
 
 const openIcon = symbol("open-in-new");
@@ -55,12 +61,25 @@ export function PreviewPane({
       fill
       className="h-full"
       scrollBody={false}
+      // The Files layout hides its sidebar beside an open file on a narrow
+      // window, keyed on this mark.
+      data-files-preview=""
       header={
-        <Bar tier="pane" endSafeArea={endSafeArea}>
+        <Bar
+          tier="pane"
+          endSafeArea={endSafeArea}
+          // The mockup's header: 16px in from the pane's edge, 10px between
+          // its parts (off the spacing ramp, one step past `sm`).
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's 10px header gap, between the ramp's 8px and 12px
+          className="gap-[10px] pl-lg"
+        >
           <FileTypeIcon name={name} className="size-5" />
           <Fill>
             <Stack gap="none">
-              <Text variant="label" className="font-semibold">
+              <Text
+                variant="label"
+                className="truncate font-semibold text-foreground"
+              >
                 {name}
               </Text>
               <PreviewMeta path={path} home={home} />
@@ -83,10 +102,12 @@ export function PreviewPane({
       }
       body={
         <Scroll axis="both" className="h-full">
-          <FileContent
-            file={{ source: "host", path }}
-            active={renderers.active}
-          />
+          <Theme name={subThemeScope(filesDocumentTheme)} surface="none">
+            <FileContent
+              file={{ source: "host", path }}
+              active={renderers.active}
+            />
+          </Theme>
         </Scroll>
       }
     />
@@ -116,8 +137,11 @@ function PreviewMeta({
     parts.push("permission denied");
   }
   return (
-    <Text variant="caption" className="text-muted-foreground">
-      {parts.join(" · ")}
-    </Text>
+    // The small caption rung (`2xs`), faint.
+    <ControlSizeProvider size="xs">
+      <Text variant="caption" tone="faint" className="truncate">
+        {parts.join(" · ")}
+      </Text>
+    </ControlSizeProvider>
   );
 }

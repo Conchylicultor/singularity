@@ -2,9 +2,8 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  BRANDS_SPRITE,
-  SETI_SPRITE,
   isSpriteKey,
+  isStyleKey,
   type SpriteKey,
   type StyleKey,
 } from "@plugins/ui/plugins/icons/core";
@@ -92,7 +91,8 @@ function useSavedSymbols(saved: SavedIconSprites, fail: (err: Error) => void) {
   useLayoutEffect(() => {
     for (const [key, markup] of Object.entries(saved.sprites)) {
       const styleKey = spriteKey(key);
-      if (styleKey === BRANDS_SPRITE || styleKey === SETI_SPRITE) {
+      // Saved icons are Material names: only a Material style key holds them.
+      if (!isStyleKey(styleKey)) {
         throw new Error(
           `[icons] the saved-icon sprites hold no "${styleKey}" sprite`,
         );
@@ -121,7 +121,8 @@ function useSavedSymbols(saved: SavedIconSprites, fail: (err: Error) => void) {
 /**
  * Provides the resident sprites and fetches, on demand, the sprite of every
  * style some theme scope wants that is not resident — and every sprite some
- * mounted icon asked for (the Seti file-type glyphs, never resident).
+ * mounted icon asked for (the Seti file-type glyphs and a Lucide scope's
+ * glyphs, never resident).
  *
  * A failed fetch is thrown from render, into this contribution's error
  * boundary, rather than leaving that style's icons on the default glyphs with

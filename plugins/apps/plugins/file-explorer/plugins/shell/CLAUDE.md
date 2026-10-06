@@ -4,18 +4,22 @@
 
 ## Plugin reference
 
-- Description: App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
+- Description: App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
 - Web:
   - Slots:
     - `FileExplorer.Sidebar` ← `apps.file-explorer.places`
     - `FileExplorer.Toolbar`
     - `FileExplorer.Places` ← `apps.file-explorer.places`
-  - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
+  - Contributes:
+    - `Apps.App` "Files" → `FileExplorerLayout`
+    - `ThemeEngine.Theme` "Files"
   - Uses:
     - `apps-core.Apps`
     - `layouts/full-pane.FullPane`
     - `primitives/app-shell.AppShellLayout`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `Place`
     - `PlaceGroup`

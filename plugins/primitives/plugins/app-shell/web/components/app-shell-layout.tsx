@@ -326,7 +326,8 @@ export function AppShellLayout({
     // highlight identically by construction instead of one silently landing on
     // the page-canvas `--muted`, which sits on top of `--sidebar` and reads as
     // no hover at all.
-    // `rail-owe-sm` sets the sidebar's rail to its own `--space-sm` instead of
+    // `rail-owe-sidebar` sets the sidebar's rail to its own sidebar-metrics
+    // `sidebarRail` (default `--space-sm`) instead of
     // the `rail-follow` fallback (the pane-header `--chrome-pad-x`), so any
     // DataView rendered in a sidebar sits on the sidebar's pill rail: band
     // chrome (toolbar, section headers) at the rail, row pills inset by it —
@@ -339,7 +340,7 @@ export function AppShellLayout({
     // rules still reach the sidebar's edge. `rail-sm` would pad here too, and
     // every band would then inset twice.
     <div
-      className="rail-owe-sm"
+      className="rail-owe-sidebar"
       style={
         {
           display: "contents",

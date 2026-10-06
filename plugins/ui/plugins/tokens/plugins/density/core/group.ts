@@ -61,6 +61,15 @@ export const densityGroup = defineTokenGroup("density", {
   controlIconSm: { default: "1rem", label: "Control icon SM" },
   controlIconMd: { default: "1rem", label: "Control icon MD" },
   controlIconLg: { default: "1rem", label: "Control icon LG" },
+  // A rendered document's reading inset (the file viewer's Markdown body).
+  // Defaults = the `py-md` / `px-lg` it always had; a theme (or a document
+  // sub-theme) sets them to give the page its own margins.
+  documentPadTop: { default: "var(--space-md)", label: "Document padding top" },
+  documentPadX: { default: "var(--space-lg)", label: "Document padding X" },
+  documentPadBottom: {
+    default: "var(--space-md)",
+    label: "Document padding bottom",
+  },
   chromeBarH: { default: "3rem", label: "Chrome bar height" },
   chromePaneH: { default: "2.5rem", label: "Chrome pane header height" },
   chromePadX: { default: "0.75rem", label: "Chrome padding X" },
@@ -72,6 +81,12 @@ export const densityGroup = defineTokenGroup("density", {
   // e2e reads it back as a number.
   treeRowH: { default: "1.75rem", label: "Tree row height" },
   treeIndent: { default: "16px", label: "Tree indent" },
+  // Where an indent guide's hairline sits inside its indent step (its centre,
+  // from the step's start). Default = the step's middle.
+  treeGuideX: {
+    default: "calc(var(--tree-indent) / 2)",
+    label: "Tree guide offset",
+  },
   // The gap between a tree's top-level rows (`TreeList`'s root stack).
   // Default = the `2xs` step it always had; `0px` packs root rows like
   // nested ones.
@@ -102,6 +117,13 @@ export const densityGroup = defineTokenGroup("density", {
   // `ViewSection`): above and below its label row. Defaults = the row padding
   // (`padRowY`) every `Row` has. A theme that spaces its sections apart puts
   // that space ABOVE each header (so a section's rows sit right under it).
+  // The gap between a DataView list section's header and its first row (the
+  // section body's top padding). Default = the `sm` step it always had; a
+  // theme whose section heads sit tight on their rows sets less.
+  sectionBodyPadTop: {
+    default: "var(--space-sm)",
+    label: "Section body padding top",
+  },
   sectionHeadPadTop: {
     default: "var(--pad-row-y)",
     label: "Section header padding top",

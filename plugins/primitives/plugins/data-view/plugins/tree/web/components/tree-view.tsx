@@ -723,6 +723,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       openOnActivate={optOpenOnActivate ? wrappedOpenOnActivate : undefined}
       lazyChildren={lazyChildren}
       onOpen={onOpen}
+      guides={options.guides}
       multiSelect={
         props.selection ? { actions: props.selection.bulkActions } : undefined
       }

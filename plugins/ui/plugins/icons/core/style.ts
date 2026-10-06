@@ -1,6 +1,6 @@
 /**
- * The icon style vocabulary: the axes a theme picks (shape × fill × weight) and
- * the sprite key a combination is served under. Pure data, so the token group,
+ * The icon style vocabulary: the axes a theme picks (family, and Material's
+ * shape × fill × weight) and the sprite key a combination is served under. Pure data, so the token group,
  * the sprite server and `<Icon>` agree on one spelling.
  */
 
@@ -17,8 +17,18 @@ export type IconWeight = (typeof ICON_WEIGHTS)[number];
 const WEIGHT_NUMBER = { regular: 400, light: 300 } as const;
 type WeightNumber = (typeof WEIGHT_NUMBER)[IconWeight];
 
+/**
+ * Which drawing a `symbol("…")` gets. `material` draws the Material Symbols
+ * glyph in the style the other axes pick; `lucide` draws the symbol's Lucide
+ * counterpart (`LUCIDE_MAP`) from the one `lucide` sprite, and keeps the
+ * Material drawing — in the other axes' style — for a symbol with none.
+ */
+export const ICON_FAMILIES = ["material", "lucide"] as const;
+export type IconFamily = (typeof ICON_FAMILIES)[number];
+
 /** What one theme scope says about its icons. */
 export interface IconStyle {
+  family: IconFamily;
   shape: IconShape;
   /** The fill of an icon at rest. */
   fill: IconFill;
@@ -27,18 +37,24 @@ export interface IconStyle {
   weight: IconWeight;
 }
 
-/** The global default: outline, filled when active, regular weight, default shape. */
+/** The global default: Material, outline, filled when active, regular weight, default shape. */
 export const DEFAULT_ICON_STYLE: IconStyle = {
+  family: "material",
   shape: "default",
   fill: "outline",
   activeFill: "filled",
   weight: "regular",
 };
 
-/** One sprite: every manifest symbol drawn in one shape × fill × weight (e.g. `default-outline-400`). */
+/**
+ * One Material sprite: every manifest symbol drawn in one shape × fill ×
+ * weight (e.g. `default-outline-400`). A Lucide scope still has one — the
+ * drawing of its symbols with no Lucide counterpart, and the fallback while
+ * the `lucide` sprite loads.
+ */
 export type StyleKey = `${IconShape}-${IconFill}-${WeightNumber}`;
 
-/** The sprite key an icon in `style` draws from, at rest or `active`. */
+/** The Material sprite key an icon in `style` draws from, at rest or `active`. */
 export function styleKeyOf(style: IconStyle, active: boolean): StyleKey {
   const fill = active ? style.activeFill : style.fill;
   return `${style.shape}-${fill}-${WEIGHT_NUMBER[style.weight]}`;
@@ -99,6 +115,14 @@ export function runtimeSymbolId(styleKey: StyleKey, name: string): string {
   return `msr-${styleKey}-${name}`;
 }
 
+/**
+ * The sprite `<symbol>` id of a symbol's Lucide drawing. Keyed by the
+ * MATERIAL name: the sprite builder maps it, so `<Icon>` translates nothing.
+ */
+export function lucideId(name: string): string {
+  return `lucide-${name}`;
+}
+
 /** The sprite `<symbol>` id of a brand mark. */
 export function brandId(name: string): string {
   return `si-${name}`;
@@ -118,8 +142,22 @@ export const BRANDS_SPRITE = "brands";
  */
 export const SETI_SPRITE = "seti";
 
-export type SpriteKey = StyleKey | typeof BRANDS_SPRITE | typeof SETI_SPRITE;
+/**
+ * The sprite that holds the Lucide drawing of every manifest symbol that has
+ * one (one style: Lucide has no shape, fill or weight, and `active` draws the
+ * same). Never resident: fetched the first time an icon in a Lucide scope
+ * mounts.
+ */
+export const LUCIDE_SPRITE = "lucide";
+
+export type SpriteKey =
+  StyleKey | typeof BRANDS_SPRITE | typeof SETI_SPRITE | typeof LUCIDE_SPRITE;
 
 export function isSpriteKey(key: string): key is SpriteKey {
-  return key === BRANDS_SPRITE || key === SETI_SPRITE || isStyleKey(key);
+  return (
+    key === BRANDS_SPRITE ||
+    key === SETI_SPRITE ||
+    key === LUCIDE_SPRITE ||
+    isStyleKey(key)
+  );
 }

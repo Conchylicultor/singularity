@@ -149,6 +149,22 @@ any menu open inside it. Consequences to keep in mind:
 - Every row tint must co-publish `--scrim` (hover, `selected`, `RowChrome`'s
   `isOverChild`), or that scrim paints the untinted background.
 
+## Opt-in looks: indent guides, selected text
+
+- **`TreeListProps.guides`** (default false) draws `TreeGuides` on every row and
+  placeholder row: ONE decorative `Placed` box per row over its indent padding
+  (after the 4px lead, `depth × --tree-indent` wide), its background a repeating
+  1px line centred in each indent step, in `--tree-guide` (color-palette,
+  default `var(--border)`). It lives in the padding, so no label, icon or
+  aligned column moves.
+- **A selected row's text** wears `text-selected-foreground` (color-palette
+  `selectedForeground`, default `currentColor` = unchanged) and publishes
+  `--row-meta: var(--selected-meta-foreground)` (default the muted tier) for its
+  secondary cells, which read `text-row-meta` (= `--row-meta`, else muted). A
+  theme that sets neither token sees no change.
+- The placeholder row indents by the `--tree-indent` token like its siblings
+  (it used to hard-code 16px, the token's default).
+
 ## Context access
 
 `useTreeListContext()` **throws** outside a `TreeList`. Use
@@ -178,6 +194,7 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.ExpandAllButton`
     - `primitives/css/center.Center`
+    - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/layer.layerClasses`
     - `primitives/css/pin.Pin`

@@ -11,7 +11,7 @@ import { IconThemeBridge } from "./components/icon-theme-bridge";
 
 export default {
   description:
-    "Icons token group (shape, fill, active fill and stroke of the Material Symbols a scope draws; outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.",
+    "Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.",
   contributions: [
     ThemeEngine.TokenGroup({
       id: "icons",

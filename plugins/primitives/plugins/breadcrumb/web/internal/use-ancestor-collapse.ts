@@ -58,11 +58,27 @@ export interface AncestorCollapseInput {
  * their order and their leaf. Sharing the ledger would mean teaching it all of
  * that; the decision here is one boolean.
  *
+ * **It re-decides whenever any input moves, not only the room.** It observes
+ * the trail, the ancestor run AND the leaf: the decision reads all three, and
+ * each can change size with the trail's own width standing still — a web font
+ * landing after the first measure, a theme's type step, the separator variant
+ * arriving with a deferred plugin tier, a label re-rendering. Watching the
+ * trail alone left a fold taken on such a transient (a wider fallback font, a
+ * crumb drawn before its theme) in place for good: nothing ever asked again,
+ * so the ancestors sat behind "…" with the room to show them. Observing the
+ * leaf cannot loop: a fold only comes back out when the cached open width says
+ * it fits, and a stale cache is corrected by the very open pass it triggers.
+ *
+ * **Every width is in layout pixels.** The open width is cached across frames,
+ * so it must not depend on a CSS transform that can change between them (a
+ * scaled exhibit or canvas frame zooming): visual widths from
+ * `getBoundingClientRect` are divided back by the trail's own scale, the same
+ * space `scrollWidth` / `clientWidth` already report in.
+ *
  * **What it needs from the layout**: the trail must be given a definite width
  * (it takes the row's slack, so it is, wherever the row itself has one). Inside
  * a parent that shrink-wraps its content instead, the room around the trail is
- * invisible to it, and a folded trail stays folded until something else
- * re-renders it — it never mis-folds, it just doesn't notice new room.
+ * invisible to it — it never mis-folds, it just doesn't notice new room.
  */
 export function useAncestorCollapse({
   rootRef,
@@ -76,11 +92,20 @@ export function useAncestorCollapse({
   const openWidth = useRef<OpenWidth | null>(null);
 
   useResizeObserver(
-    rootRef,
+    [rootRef, prefixRef, leafRef],
     () => {
       const root = rootRef.current;
       const leaf = leafRef.current;
       if (root === null || leaf === null || !foldable) return;
+      const rootRect = root.getBoundingClientRect();
+      // Visual px per layout px (a CSS transform on an ancestor); 1 when the
+      // trail is not laid out at all, so nothing divides by zero.
+      const scale =
+        root.offsetWidth > 0 && rootRect.width > 0
+          ? rootRect.width / root.offsetWidth
+          : 1;
+      const layoutWidth = (el: Element) =>
+        el.getBoundingClientRect().width / scale;
 
       const leafDeficit = leaf.scrollWidth - leaf.clientWidth;
 
@@ -91,7 +116,7 @@ export function useAncestorCollapse({
         if (prefix !== null) {
           openWidth.current = {
             trailKey,
-            px: prefix.getBoundingClientRect().width,
+            px: layoutWidth(prefix),
           };
         }
         if (leafDeficit > SUBPIXEL_PX) setFolded(true);
@@ -114,8 +139,9 @@ export function useAncestorCollapse({
       const last = root.lastElementChild;
       if (last === null) return;
       const free =
-        root.getBoundingClientRect().right - last.getBoundingClientRect().right;
-      const foldedWidth = prefixRef.current?.getBoundingClientRect().width ?? 0;
+        (rootRect.right - last.getBoundingClientRect().right) / scale;
+      const foldedWidth =
+        prefixRef.current === null ? 0 : layoutWidth(prefixRef.current);
       if (free >= open.px - foldedWidth + EXPAND_MARGIN_PX) setFolded(false);
     },
     { deps: [trailKey, folded, foldable] },

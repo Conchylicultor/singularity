@@ -154,6 +154,27 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "var(--accent)",
     label: "Selected row",
   },
+  // A selected tree row's text: its name. Default `currentColor` = the colour
+  // the row's text always inherited, so a theme that leaves it out changes
+  // nothing; a theme sets it to tint the selection's name (a file browser's
+  // accent-blue selection).
+  selectedForeground: {
+    default: "currentColor",
+    label: "Selected row text",
+  },
+  // A selected tree row's secondary cells (an aligned date / size column).
+  // Default = the muted text they always wore; set apart from
+  // `selectedForeground` because the two default to different tiers.
+  selectedMetaForeground: {
+    default: "var(--muted-foreground)",
+    label: "Selected row meta text",
+  },
+  // A tree's indent guides (`TreeListProps.guides`): the hairline per
+  // ancestor level. Default = the border colour; a theme sets a softer rule.
+  treeGuide: {
+    default: "var(--border)",
+    label: "Tree indent guide",
+  },
   // A quiet group head's text (`SectionHeaderRow`'s `group` form, a control
   // panel's group heading). Default = the muted text it always wore.
   groupForeground: {

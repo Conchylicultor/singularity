@@ -79,4 +79,11 @@ export interface TreeViewOptions<TRow> {
    *   Name / Modified / Size.
    */
   columns?: "chips" | "aligned";
+  /**
+   * Indent guides: one hairline per ancestor level in each row's indent, in
+   * the theme's `--tree-guide` colour (the tree primitive's
+   * `TreeListProps.guides`). They sit in the indent padding, so the label and
+   * any aligned columns do not move. Default false.
+   */
+  guides?: boolean;
 }

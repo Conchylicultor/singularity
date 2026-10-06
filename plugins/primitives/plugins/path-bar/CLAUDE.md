@@ -42,6 +42,15 @@ second bar.
 The transitions are a pure reducer (`internal/path-bar-machine.ts`, bun-tested);
 `web/__tests__/path-bar.test.tsx` drives the DOM.
 
+## Look
+
+`text` and `leafWeight` are forwarded to the trail (`Breadcrumb.text` /
+`.leafWeight`): a file browser asks for `text="body" leafWeight="semibold"`
+(13px crumbs, a semibold current folder). The fold itself is the breadcrumb's
+(see its CLAUDE.md); `e2e/fold-verify.ts` drives it in the File Explorer
+(wide → narrow → wide, a cold boot onto a deep folder, a file preview opening
+and closing), optionally `--dir <path> --file <name>` for a real folder.
+
 ## Combobox
 
 No combobox exists in ui-kit, so this one is built inline. Extract it into a
@@ -55,6 +64,7 @@ primitive when a second consumer appears.
 - Web:
   - Uses:
     - `primitives/breadcrumb.Breadcrumb`
+    - `primitives/breadcrumb.BreadcrumbProps`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

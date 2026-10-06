@@ -12,11 +12,16 @@ import { FileExplorer } from "../slots";
  */
 export function FileExplorerLayout() {
   return (
-    <AppShellLayout
-      sidebarSlot={FileExplorer.Sidebar}
-      toolbarSlot={FileExplorer.Toolbar}
-    >
-      <FullPane />
-    </AppShellLayout>
+    // At 1100px and under the sidebar narrows to 200px (the theme's 224px is
+    // the wide layout's); at 900px and under it gives way to an open file
+    // (the browser marks its preview `data-files-preview`).
+    <div className="contents max-[1100px]:[--sidebar-panel-width:12.5rem] max-[900px]:has-data-files-preview:[--sidebar-panel-width:0px] max-[900px]:has-data-files-preview:[&_[data-slot=sidebar-container]]:hidden">
+      <AppShellLayout
+        sidebarSlot={FileExplorer.Sidebar}
+        toolbarSlot={FileExplorer.Toolbar}
+      >
+        <FullPane />
+      </AppShellLayout>
+    </div>
   );
 }

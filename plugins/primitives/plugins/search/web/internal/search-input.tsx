@@ -26,8 +26,16 @@ const searchIcon = symbol("search");
  *   already draws the border) with a leading icon, a borderless input and a
  *   trailing `/` key hint, its icon and placeholder in the faint text tier.
  *   Escape clears the query and leaves the field.
+ * - `filled` — the `field` box drawn as a quiet grey well: the muted fill, no
+ *   visible border, the theme radius, its icon and placeholder in the faint
+ *   tier. Focus lifts it onto the surface colour with a primary border instead
+ *   of the ring — a toolbar filter that should recede until it is used.
  */
-export type SearchInputAppearance = "field" | "bare";
+export type SearchInputAppearance = "field" | "bare" | "filled";
+
+/** What `filled` changes on the `field` box: the well, and how focus shows. */
+const FILLED_INPUT =
+  "border-transparent bg-muted dark:bg-muted placeholder:text-faint-foreground focus:border-primary focus:bg-background dark:focus:bg-background focus-visible:ring-0";
 
 // The `field` appearance is a compact field by construction: it declares the
 // `sm` control size itself (as `Bar` does), so its height still follows the
@@ -108,6 +116,7 @@ export function SearchInput({
     );
   }
 
+  const filled = appearance === "filled";
   return (
     <div className={cn("relative", wrapperClassName)}>
       {/* off-ramp inset: left-2 (0.5rem) is not on the semantic spacing ramp */}
@@ -115,13 +124,18 @@ export function SearchInput({
         to="left"
         decorative
         style={{ left: "0.5rem" }}
-        className="text-muted-foreground"
+        className={filled ? "text-faint-foreground" : "text-muted-foreground"}
       >
         <Icon icon={searchIcon} className="size-3.5" />
       </Pin>
       <ControlSizeProvider size="sm">
         <Input
-          className={cn("pl-xl", hasValue && "pr-xl", className)}
+          className={cn(
+            "pl-xl",
+            hasValue && "pr-xl",
+            filled && FILLED_INPUT,
+            className,
+          )}
           {...props}
         />
       </ControlSizeProvider>

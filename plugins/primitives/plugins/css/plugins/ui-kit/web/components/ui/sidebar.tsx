@@ -544,7 +544,7 @@ function SidebarGroupContent({
 
 /**
  * `rail-follow`: the menu applies the rail inset its sidebar region still owes
- * (the app shell publishes `rail-owe-sm`), so every menu lands on the sidebar's
+ * (the app shell publishes `rail-owe-sidebar`), so every menu lands on the sidebar's
  * rail without the caller writing a padding class — and cannot forget one.
  */
 function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {

@@ -150,6 +150,12 @@ export type TreeListProps<T extends TreeItem> = {
    * the file. Absent → double-click and Enter do nothing beyond the click.
    */
   onOpen?: (id: string) => void;
+  /**
+   * Indent guides: a hairline per ancestor level, centred in each
+   * `--tree-indent` step, in `--tree-guide` — so a deep listing reads which
+   * folder a row belongs to. Default false.
+   */
+  guides?: boolean;
 };
 
 /** One painted line of the flattened tree: a node, or the placeholder child row
@@ -182,6 +188,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     multiSelect,
     lazyChildren,
     onOpen,
+    guides = false,
   } = props;
 
   // The row whose name input should take focus once it appears: set by a create
@@ -441,6 +448,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       canCreate: canCreate && !!onCreate,
       canReorder: !!onMove,
       windowed,
+      guides,
     }),
     [
       rows,
@@ -463,6 +471,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       canCreate,
       onMove,
       windowed,
+      guides,
     ],
   );
 
@@ -544,6 +553,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                       <TreeChildPlaceholder
                         placeholder={item.placeholder}
                         depth={item.depth}
+                        guides={guides}
                       />
                     )
                   }

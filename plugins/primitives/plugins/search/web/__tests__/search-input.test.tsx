@@ -7,11 +7,17 @@ import {
   render,
   screen,
 } from "@testing-library/react";
-import { SearchInput } from "../internal/search-input";
+import {
+  SearchInput,
+  type SearchInputAppearance,
+} from "../internal/search-input";
 
 afterEach(cleanup);
 
-function Controlled(props: { appearance?: "field" | "bare"; initial: string }) {
+function Controlled(props: {
+  appearance?: SearchInputAppearance;
+  initial: string;
+}) {
   const [value, setValue] = useState(props.initial);
   return (
     <SearchInput
@@ -56,5 +62,31 @@ describe("SearchInput appearance", () => {
     const input = screen.getByPlaceholderText("Search") as HTMLInputElement;
     fireEvent.keyDown(input, { key: "Escape" });
     expect(input.value).toBe("abc");
+  });
+
+  it("field (default) keeps the bordered box", () => {
+    render(<Controlled initial="" />);
+    const input = screen.getByPlaceholderText("Search");
+    expect(input.className).toContain("border-input");
+    expect(input.className).not.toContain("bg-muted");
+  });
+
+  it("filled draws the muted well, a primary border on focus, no ring", () => {
+    render(<Controlled appearance="filled" initial="" />);
+    const input = screen.getByPlaceholderText("Search");
+    const cls = input.className.split(/\s+/);
+    expect(cls).toContain("bg-muted");
+    expect(cls).toContain("border-transparent");
+    expect(cls).not.toContain("border-input");
+    expect(cls).toContain("focus:border-primary");
+    expect(cls).toContain("focus:bg-background");
+    expect(cls).toContain("focus-visible:ring-0");
+    // Still the field shape: a leading icon box, the input itself the box.
+    expect(screen.queryByText("/")).toBeNull();
+  });
+
+  it("filled keeps the clear button while it holds a query", () => {
+    render(<Controlled appearance="filled" initial="abc" />);
+    expect(screen.getByRole("button", { name: "Clear filter" })).toBeTruthy();
   });
 });

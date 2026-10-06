@@ -1,8 +1,11 @@
 import { useEffect, type ComponentPropsWithRef } from "react";
 import {
   DEFAULT_ICON_STYLE,
+  LUCIDE_SPRITE,
   SETI_SPRITE,
   brandId,
+  lucideId,
+  lucideNameOf,
   runtimeSymbolId,
   setiId,
   styleKeyOf,
@@ -47,6 +50,11 @@ export function useIconStyle(): IconStyle {
  * the first Seti icon to mount asks the sprite host for it, and until it lands
  * the icon is an empty box at its final size (a loading state).
  *
+ * In a scope whose icon family is Lucide, a symbol with a Lucide counterpart
+ * draws it from the `lucide` sprite — never resident: the first such icon to
+ * mount asks for it, and until it lands the icon draws its Material symbol as
+ * above. A symbol with no counterpart keeps its Material drawing.
+ *
  * A runtime (saved) symbol draws from the runtime symbol store the same way:
  * its style's symbol once held, the default style's while that one loads, and
  * — only for a name no chunk holds in either — an empty box at its final size
@@ -62,6 +70,14 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   useEffect(() => {
     if (isSeti) wantSprite(SETI_SPRITE);
   }, [isSeti]);
+  const isLucide =
+    style.family === "lucide" &&
+    icon.kind === "symbol" &&
+    lucideNameOf(icon.name) !== undefined;
+  const lucideLoaded = useSpriteLoaded(LUCIDE_SPRITE);
+  useEffect(() => {
+    if (isLucide) wantSprite(LUCIDE_SPRITE);
+  }, [isLucide]);
   const runtimeKey = useRuntimeSymbolKey(
     icon.kind === "runtime-symbol" ? icon.name : null,
     key,
@@ -79,7 +95,10 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
       id = runtimeKey === null ? null : runtimeSymbolId(runtimeKey, icon.name);
       break;
     case "symbol":
-      id = symbolId(loaded ? key : defaultKey, icon.name);
+      id =
+        isLucide && lucideLoaded
+          ? lucideId(icon.name)
+          : symbolId(loaded ? key : defaultKey, icon.name);
       break;
   }
   const named =

@@ -384,6 +384,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `primitives/networking`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
+    - `primitives/path-bar`
     - `primitives/row-actions`
     - `primitives/shortcuts`
     - `primitives/text-editor/caret-trigger`

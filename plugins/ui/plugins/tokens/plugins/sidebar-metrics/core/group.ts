@@ -34,6 +34,21 @@ export const sidebarMetricsGroup = defineTokenGroup("sidebar-metrics", {
   // The inset under the sidebar's last item (`h-sidebar-end`). Default 0:
   // the last item sits on the sidebar's bottom edge, as it always did.
   sidebarEndPad: { default: "0px", label: "Sidebar bottom inset" },
+  // The sidebar's rail: the inset its bands (section heads, the brand-free
+  // content) pay and its row pills sit in by (`rail-owe-sidebar`). Default =
+  // the `sm` step it always was.
+  sidebarRail: { default: "var(--space-sm)", label: "Sidebar rail" },
+  // The brand heading the sidebar (`AppShell.Brand`'s header form): the
+  // launcher mark's size, the gap after the launcher, and the app name
+  // button's inline padding. Defaults = the 24px mark, `2xs` gap and `md`
+  // control padding it always had; a theme that wants the name tight to a
+  // smaller mark (a 16px glyph, 8px to its name) sets them.
+  sidebarBrandMarkSize: { default: "1.5rem", label: "Sidebar brand mark size" },
+  sidebarBrandGap: { default: "var(--space-2xs)", label: "Sidebar brand gap" },
+  sidebarBrandNamePadX: {
+    default: "var(--control-pad-md)",
+    label: "Sidebar brand name padding X",
+  },
 });
 
 export type SidebarMetricsTokenValues = {

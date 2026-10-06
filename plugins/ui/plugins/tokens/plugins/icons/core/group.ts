@@ -1,6 +1,7 @@
 import { defineTokenGroup } from "@plugins/ui/plugins/theme-engine/core";
 import {
   DEFAULT_ICON_STYLE,
+  ICON_FAMILIES,
   ICON_FILLS,
   ICON_SHAPES,
   ICON_WEIGHTS,
@@ -10,15 +11,22 @@ import {
 const choices = (values: readonly string[]) => values.join(" | ");
 
 /**
- * How a theme scope draws its icons: which Material Symbols style `<Icon>` picks
+ * How a theme scope draws its icons: which family (Material Symbols, or each
+ * symbol's Lucide counterpart) and which Material Symbols style `<Icon>` picks
  * a glyph from. Not CSS — an icon's style is WHICH sprite symbol it uses, so
  * the icons token bridge reads the resolved values and publishes them to the
  * icons primitive. The CSS variables are painted like every group's, and read
  * by nothing.
  *
- * Defaults: outline at rest, filled when active, regular stroke, default shape.
+ * Defaults: Material, outline at rest, filled when active, regular stroke,
+ * default shape. The Material axes still matter in a Lucide scope: they style
+ * the symbols with no Lucide counterpart.
  */
 export const iconsGroup = defineTokenGroup("icons", {
+  iconFamily: {
+    default: DEFAULT_ICON_STYLE.family,
+    label: `Icon family (${choices(ICON_FAMILIES)})`,
+  },
   iconShape: {
     default: DEFAULT_ICON_STYLE.shape,
     label: `Icon shape (${choices(ICON_SHAPES)})`,
@@ -66,6 +74,7 @@ export function readIconTokens(
   values: Readonly<Record<string, string | undefined>>,
 ): IconStyle {
   return {
+    family: oneOf("iconFamily", values.iconFamily, ICON_FAMILIES),
     shape: oneOf("iconShape", values.iconShape, ICON_SHAPES),
     fill: oneOf("iconFill", values.iconFill, ICON_FILLS),
     activeFill: oneOf("iconActiveFill", values.iconActiveFill, ICON_FILLS),

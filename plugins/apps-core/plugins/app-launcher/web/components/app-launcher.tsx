@@ -141,7 +141,7 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
           <LauncherMark
             app={active}
             className={cn(
-              form === "header" ? "size-6" : "size-5",
+              form === "header" ? "size-sidebar-brand-mark" : "size-5",
               "transition-transform duration-200 ease-[cubic-bezier(.34,1.56,.64,1)] motion-safe:group-hover/button:scale-110 motion-safe:group-aria-expanded/button:scale-110 motion-safe:group-active/button:scale-95",
             )}
           />

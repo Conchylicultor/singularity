@@ -141,11 +141,17 @@ try {
     await page.getByRole("button", { name: "Hide ignored files" }).click();
     r.ok("node_modules hides again", await hidden(row(page, "node_modules")));
 
-    // 4. Changed vs main, through the tree's options trigger (the second
-    //    "View options": the first is the global action bar's).
+    // 4. Changed vs main, through the tree's options trigger — the "View
+    //    options" in the explorer's own toolbar (the global action bar has one
+    //    too, and which comes first in the DOM depends on the surface mode).
     const before = await page.locator("[data-tree-row]").count();
     await page.locator("[data-tree-row]").first().hover();
-    await page.getByRole("button", { name: "View options" }).last().click();
+    await page
+      .getByRole("button", { name: "Enclosing folder" })
+      .first()
+      .locator("xpath=..")
+      .getByRole("button", { name: "View options" })
+      .click();
     const panel = page.getByRole("dialog");
     await panel.getByText("Filter", { exact: true }).click();
     await panel.getByRole("button", { name: "Changed vs main" }).click();
@@ -166,6 +172,10 @@ try {
     );
     await panel.getByText("Clear filter").click();
     await page.keyboard.press("Escape");
+    // The view's config write-back is debounced: let it land before leaving,
+    // or the filter outlives this step (the Studio Files section in 7b shares
+    // the explorer tree's views).
+    await page.waitForTimeout(1500);
 
     // 2. A file modified vs main, opened.
     await page.goto(filesAt(join(root, MODIFIED_DIR)));

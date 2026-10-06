@@ -62,6 +62,7 @@ import type { Frame, Locator, Page } from "playwright";
 import {
   agentFetch,
   arg,
+  clearToasts,
   colorReport,
   colorReportText,
   detectOsColorScheme,
@@ -207,6 +208,9 @@ const appSelector = (status?: CanvasFrameStatus) =>
 
 /** Pick a size row (a preset's name, or `Responsive`), and set the zoom to 100%. */
 async function pickSizeAtActual(page: Page, size: string): Promise<void> {
+  // A toast (a slow-op notice on a loaded host) sits over the canvas's size
+  // chip in the bottom-right corner and swallows the click.
+  await clearToasts(page);
   await openSizeMenu(page);
   await page.getByRole("radio", { name: new RegExp(`^${size}`) }).click();
   await page.getByRole("button", { name: "Actual size" }).click();

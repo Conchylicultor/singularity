@@ -22,6 +22,7 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { TreeDisclosureProps } from "../../core";
 import { Tree } from "../slots";
 import { TreeDisclosureToggle } from "./tree-disclosure-toggle";
+import { TreeGuides } from "./tree-guides";
 
 export type TreeRowChromeProps = {
   /**
@@ -84,6 +85,11 @@ export type TreeRowChromeProps = {
    * a leaf can never gain children pass false to render only alignment space.
    */
   leafChevron?: boolean;
+  /**
+   * Draw indent guides: one hairline per ancestor level in the row's indent
+   * (`TreeGuides`). Default false — a tree opts in (`TreeListProps.guides`).
+   */
+  guides?: boolean;
 };
 
 /**
@@ -168,6 +174,7 @@ export function TreeRowChrome({
   dragAttributes,
   dragListeners,
   leafChevron = true,
+  guides = false,
 }: TreeRowChromeProps) {
   const expandable = hasChildren || leafChevron;
   // A UI plugin can contribute the icon-bearing leading disclosure (merged /
@@ -248,14 +255,18 @@ export function TreeRowChrome({
         // ambient `--chrome-mask`, i.e. the untinted background, and a hovered
         // row reads as a hole. Same contract as the `Row` primitive.
         // Selected is its own tier (`--selected`, default = the accent hover
-        // fill), so a selected row does not hover to a different tone.
+        // fill), so a selected row does not hover to a different tone. Its
+        // text takes `--selected-foreground` (default `currentColor`, i.e.
+        // unchanged) and it publishes `--row-meta` for its secondary cells
+        // (`text-row-meta`, default the muted tier they always wore).
         selected
-          ? "bg-selected [--scrim:var(--selected)]"
+          ? "bg-selected text-selected-foreground [--scrim:var(--selected)] [--row-meta:var(--selected-meta-foreground)]"
           : "hover:bg-accent hover:[--scrim:var(--accent)]",
         className,
       )}
       style={{ paddingLeft: `calc(${depth} * var(--tree-indent) + 4px)` }}
     >
+      {guides && <TreeGuides depth={depth} />}
       {icon != null ? (
         // useContributions() seals the `component` field, so the disclosure
         // can't be rendered as <Disclosure/>; route it through renderIsolated

@@ -71,6 +71,8 @@ export type TreeListContextValue<T extends TreeItem> = {
   canReorder: boolean;
   /** True when TreeList renders rows through VirtualRows; RowChrome then skips its own child recursion. */
   windowed: boolean;
+  /** Draw indent guides on every row (see `TreeListProps.guides`). */
+  guides: boolean;
 };
 
 // The context is invariant in T at the React level; we cast through `unknown`

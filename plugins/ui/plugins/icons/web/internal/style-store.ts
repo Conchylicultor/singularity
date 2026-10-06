@@ -45,20 +45,20 @@ export function usePublishIconStyle(
   style: IconStyle,
 ): void {
   const key = scope ?? ROOT;
-  const { shape, fill, activeFill, weight } = style;
+  const { family, shape, fill, activeFill, weight } = style;
   useLayoutEffect(() => {
     if (styles.has(key)) {
       throw new Error(
         `[icons] two publishers claim the icon style of scope "${key || "root"}"`,
       );
     }
-    styles.set(key, { shape, fill, activeFill, weight });
+    styles.set(key, { family, shape, fill, activeFill, weight });
     emit();
     return () => {
       styles.delete(key);
       emit();
     };
-  }, [key, shape, fill, activeFill, weight]);
+  }, [key, family, shape, fill, activeFill, weight]);
 }
 
 /** The icon style of `scope`: its own, else the root's, else the global default. */

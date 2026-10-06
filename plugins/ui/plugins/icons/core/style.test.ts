@@ -3,7 +3,10 @@ import {
   ALL_STYLE_KEYS,
   DEFAULT_ICON_STYLE,
   DEFAULT_STYLE_KEYS,
+  LUCIDE_SPRITE,
   iconifyName,
+  isSpriteKey,
+  lucideId,
   parseStyleKey,
   styleKeyOf,
 } from "./style";
@@ -21,9 +24,12 @@ describe("icon style keys", () => {
     expect(ALL_STYLE_KEYS).toHaveLength(12);
     for (const key of ALL_STYLE_KEYS) {
       const { shape, fill, weight } = parseStyleKey(key);
-      expect(styleKeyOf({ shape, fill, activeFill: fill, weight }, false)).toBe(
-        key,
-      );
+      expect(
+        styleKeyOf(
+          { family: "material", shape, fill, activeFill: fill, weight },
+          false,
+        ),
+      ).toBe(key);
     }
   });
 
@@ -37,5 +43,19 @@ describe("icon style keys", () => {
     expect(iconifyName("forum", "sharp", "outline")).toBe(
       "forum-outline-sharp",
     );
+  });
+});
+
+describe("icon families", () => {
+  it("defaults to Material, and a Lucide style still has a Material key for its fallback", () => {
+    expect(DEFAULT_ICON_STYLE.family).toBe("material");
+    expect(styleKeyOf({ ...DEFAULT_ICON_STYLE, family: "lucide" }, false)).toBe(
+      "default-outline-400",
+    );
+  });
+
+  it("serves the lucide sprite under its own key", () => {
+    expect(isSpriteKey(LUCIDE_SPRITE)).toBe(true);
+    expect(lucideId("folder")).toBe("lucide-folder");
   });
 });

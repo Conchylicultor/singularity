@@ -93,7 +93,8 @@ export function scanIconNames(src: string, displayPath: string): IconManifest {
   return out;
 }
 
-async function collectIconManifest(root: string): Promise<IconManifest> {
+/** Every icon name the repo draws, scanned from source now (not read from the generated file). */
+export async function collectIconManifest(root: string): Promise<IconManifest> {
   const symbols = new Set<string>();
   const brands = new Set<string>();
   const seti = new Set<string>();

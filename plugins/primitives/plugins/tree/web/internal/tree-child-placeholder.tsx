@@ -6,6 +6,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { LazyChildren, TreeChildrenState } from "../../core";
 import type { TreeItem } from "./types";
+import { TreeGuides } from "./tree-guides";
 
 /**
  * What an expanded, lazily-listed node shows beneath it in place of children it
@@ -65,12 +66,13 @@ export function childPlaceholder<T extends TreeItem>(
 export function TreeChildPlaceholder({
   placeholder,
   depth,
-  indentStep = 16,
+  guides = false,
 }: {
   placeholder: ChildPlaceholder;
   /** The depth of the CHILD row (parent depth + 1). */
   depth: number;
-  indentStep?: number;
+  /** Draw the indent guides its sibling rows draw (`TreeListProps.guides`). */
+  guides?: boolean;
 }): ReactNode {
   return (
     <Stack
@@ -80,9 +82,13 @@ export function TreeChildPlaceholder({
       // The loading state carries its own `status` role.
       role={placeholder.kind === "failed" ? "alert" : undefined}
       data-tree-placeholder={placeholder.kind}
-      className="min-h-7 px-xs py-xs text-body"
-      style={{ paddingLeft: depth * indentStep + 4 }}
+      // `relative`: the positioning context the guides are placed in.
+      className="relative min-h-7 px-xs py-xs text-body"
+      // The same indent as `TreeRowChrome` — the density token, so a theme's
+      // wider step moves the placeholder with its siblings.
+      style={{ paddingLeft: `calc(${depth} * var(--tree-indent) + 4px)` }}
     >
+      {guides && <TreeGuides depth={depth} />}
       {/* The chevron slot's width, so the text starts on the label column. */}
       <span className="size-5" aria-hidden />
       {placeholder.kind === "loading" ? (

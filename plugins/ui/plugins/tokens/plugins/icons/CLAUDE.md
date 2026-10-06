@@ -1,10 +1,19 @@
 # icons (token group)
 
-How a theme scope draws its icons: `iconShape` (default | rounded | sharp),
+How a theme scope draws its icons: `iconFamily` (material | lucide),
+`iconShape` (default | rounded | sharp),
 `iconFill` (outline | filled), `iconActiveFill` (filled | outline) and
 `iconStroke` (regular | light — named so because a `-weight` var is a type
-metric only the type-scale ladder may declare). Defaults: outline, filled when active, regular,
+metric only the type-scale ladder may declare). Defaults: material, outline, filled when active, regular,
 default shape.
+
+`iconFamily: "lucide"` makes every `symbol("…")` in the scope draw its Lucide
+counterpart (`LUCIDE_MAP`, icons core); the Material axes still style the
+symbols with none. A theme sets it in its icons fragment:
+
+```ts
+const icons = iconsGroup.fragment(both({ iconFamily: "lucide" }));
+```
 
 These are not CSS. An icon's style is WHICH sprite symbol `<Icon>` uses, which
 no stylesheet can choose, so the values reach the icons primitive through
@@ -25,7 +34,7 @@ primitive.
 
 ## Plugin reference
 
-- Description: Icons token group (shape, fill, active fill and stroke of the Material Symbols a scope draws; outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.
+- Description: Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.
 - Web:
   - Contributes:
     - `ThemeEngine.TokenGroup` "Icons"
@@ -54,6 +63,7 @@ primitive.
 - Core:
   - Uses:
     - `ui/icons.DEFAULT_ICON_STYLE`
+    - `ui/icons.ICON_FAMILIES`
     - `ui/icons.ICON_FILLS`
     - `ui/icons.ICON_SHAPES`
     - `ui/icons.ICON_WEIGHTS`

@@ -18,7 +18,10 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
+import {
+  Breadcrumb,
+  type BreadcrumbProps,
+} from "@plugins/primitives/plugins/breadcrumb/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
 import {
@@ -64,6 +67,10 @@ export interface PathBarProps {
    * one of them.
    */
   shortcut?: boolean;
+  /** The crumbs' type role, forwarded to the trail (`Breadcrumb.text`). */
+  text?: BreadcrumbProps["text"];
+  /** The current place's weight, forwarded to the trail (`Breadcrumb.leafWeight`). */
+  leafWeight?: BreadcrumbProps["leafWeight"];
   className?: string;
 }
 
@@ -87,6 +94,8 @@ export function PathBar({
   source,
   onNavigate,
   shortcut = true,
+  text: trailText,
+  leafWeight,
   className,
 }: PathBarProps): ReactNode {
   const separator = source.separator ?? "/";
@@ -251,6 +260,8 @@ export function PathBar({
       >
         <Breadcrumb
           segments={segments}
+          text={trailText}
+          leafWeight={leafWeight}
           onNavigate={(i) => {
             const seg = segments[i];
             if (seg) onNavigate({ kind: "dir", path: seg.path });

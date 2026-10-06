@@ -164,7 +164,11 @@ export {
   type RampDecl,
 } from "./space-ramp-gen";
 
-export { iconManifestPath, renderIconManifest } from "./icon-manifest-gen";
+export {
+  collectIconManifest,
+  iconManifestPath,
+  renderIconManifest,
+} from "./icon-manifest-gen";
 
 // Single source of truth for the ordered, non-migration repo-tree codegen
 // pipeline shared by `./singularity build` and the push-time `regen-generated`

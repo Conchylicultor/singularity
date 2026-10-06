@@ -3,7 +3,10 @@ import { Apps } from "@plugins/apps-core/web";
 
 import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { fileExplorerApp } from "../core";
+import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { FileExplorerLayout } from "./components/file-explorer-layout";
+import { FilesMark } from "./components/files-mark";
+import { filesTheme } from "./internal/theme";
 import { FileExplorer } from "./slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -17,13 +20,15 @@ export {
 
 export default {
   description:
-    "App shell for the file explorer: registers the /files app entry, lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.",
+    "App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.",
   contributions: [
     Apps.App({
       app: fileExplorerApp,
       icon: appIcon(symbol("folder")),
+      mark: FilesMark,
       component: FileExplorerLayout,
     }),
+    ThemeEngine.Theme(filesTheme),
   ],
   slots: FileExplorer,
 } satisfies PluginDefinition;

@@ -77,7 +77,9 @@ export function AlignedCells<TRow>({
           // inside its own width, so every row's column lines up.
           className={cn(
             rigidClass(),
-            "truncate text-caption text-muted-foreground",
+            // `text-row-meta`: muted, or the selected row's meta colour when
+            // the row is selected and the theme sets one.
+            "truncate text-caption text-row-meta",
             alignClass(f as FieldDef<unknown>),
           )}
           style={columnStyle(f as FieldDef<unknown>)}
@@ -91,8 +93,18 @@ export function AlignedCells<TRow>({
           />
         </span>
       ))}
+      <AlignedEndInset />
     </>
   );
+}
+
+/**
+ * The last column's end inset: the cells (and their titles) stop a step in from
+ * the row's edge rather than on its padding, so the row's fill reaches past
+ * them. Rigid, so it survives the label's truncation.
+ */
+function AlignedEndInset(): ReactNode {
+  return <span aria-hidden className={cn(rigidClass(), "pl-xs")} />;
 }
 
 /**
@@ -182,15 +194,16 @@ export function AlignedHeader({
       mask
       data-tree-column-header
       style={{ top: `var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)` }}
-      className="border-b border-border/40"
     >
       <Stack
         direction="row"
         align="center"
         gap="xs"
         role="row"
-        className="min-h-7 px-xs text-3xs font-medium text-muted-foreground"
-        // Depth 0's indent in `TreeRowChrome` (`depth * indentStep + 4`).
+        // A row tall, its rule inside; the titles in the small caption rung,
+        // faint.
+        className="min-h-tree-row border-b border-border px-xs text-caption-compact font-medium text-faint-foreground"
+        // Depth 0's indent in `TreeRowChrome` (`depth * --tree-indent + 4px`).
         style={{ paddingLeft: 4 }}
       >
         {/* The chevron / icon slot's width, so the Name title sits on the label. */}
@@ -215,7 +228,10 @@ export function AlignedHeader({
             style={columnStyle(f)}
           />
         ))}
+        <AlignedEndInset />
       </Stack>
+      {/* A 4px breath under the rule before the first row. */}
+      <div aria-hidden className="pt-xs" />
     </Sticky>
   );
 }

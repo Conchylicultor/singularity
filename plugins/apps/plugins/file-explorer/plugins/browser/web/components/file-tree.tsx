@@ -27,6 +27,7 @@ import {
 import type { Listing, Listings } from "../internal/listings";
 import { FileBrowserSlots } from "../slots";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
+import { useViewportAtMost } from "../internal/use-viewport-at-most";
 
 const FILE_TREE_VIEW = defineDataView("file-explorer.tree");
 
@@ -169,6 +170,26 @@ const HOSTED: HostedToolbar = {
   forms: { switcher: "chip", options: "visible" },
 };
 
+/**
+ * The Modified column: the short date, left-aligned, the full one on hover.
+ * 92px: the mockup's 96px track less the row's 4px gap between cells.
+ */
+function modifiedField(now: number): FieldDef<EntryRow> {
+  return {
+    id: "modified",
+    label: "Modified",
+    type: "number",
+    width: "96px",
+    align: "start",
+    value: (r) => r.mtimeMs,
+    cell: (r) => (
+      <span title={formatModifiedFull(r.mtimeMs)}>
+        {formatModified(r.mtimeMs, now)}
+      </span>
+    ),
+  };
+}
+
 export interface FileTreeProps {
   root: string;
   /** The listings of the root and of every folder opened so far. */
@@ -225,21 +246,12 @@ export function FileTree({
     [listings, request],
   );
 
+  // At 900px and under the Modified column gives its room to the names.
+  const narrow = useViewportAtMost(900);
   const fields = useMemo<FieldDef<EntryRow>[]>(
     () => [
       { id: "name", label: "Name", primary: true, value: (r) => r.name },
-      {
-        id: "modified",
-        label: "Modified",
-        type: "number",
-        width: "96px",
-        value: (r) => r.mtimeMs,
-        cell: (r) => (
-          <span title={formatModifiedFull(r.mtimeMs)}>
-            {formatModified(r.mtimeMs, now)}
-          </span>
-        ),
-      },
+      ...(narrow ? [] : [modifiedField(now)]),
       {
         id: "size",
         label: "Size",
@@ -253,12 +265,13 @@ export function FileTree({
         },
       },
     ],
-    [now, shows, listings],
+    [now, shows, listings, narrow],
   );
 
   const treeOptions = useMemo<TreeViewOptions<EntryRow>>(
     () => ({
       columns: "aligned",
+      guides: true,
       addLabel: null,
       leadingIcon: (r) => (
         <FileTypeIcon

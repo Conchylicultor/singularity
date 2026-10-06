@@ -20,7 +20,7 @@ export function AppBrand({ form }: { form: AppShellBrandForm }) {
   if (form === "icon" || !active) return <AppLauncher form={form} />;
   const home = active.app.basePath;
   return (
-    <Line className="gap-2xs">
+    <Line className="gap-sidebar-brand">
       <AppLauncher form={form} />
       <Button
         variant="ghost"
@@ -31,9 +31,9 @@ export function AppBrand({ form }: { form: AppShellBrandForm }) {
         })}
         // The name is the row's one flexible cell (it takes the slack and
         // truncates; the launcher stays rigid), its text at the leading edge
-        // of that cell.
+        // of that cell, padded by the theme's sidebar-metrics brand tokens.
         // eslint-disable-next-line layout/no-adhoc-layout -- justify-start re-anchors Button's own centred content to the leading edge of the fill cell
-        className={cn(fillClasses("x"), "justify-start")}
+        className={cn(fillClasses("x"), "justify-start px-sidebar-brand-name")}
       >
         {/* The label rung, bold and tight, in the sidebar's emphasised text: a
             brand in the sidebar chrome, not a heading of the page. */}

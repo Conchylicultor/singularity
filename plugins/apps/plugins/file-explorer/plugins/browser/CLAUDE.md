@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to onOpenFile; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history.
+- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to onOpenFile; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
 - Web:
   - Slots:
     - `filesHomePane.Actions` ← `primitives.pane`
@@ -14,6 +14,7 @@
   - Contributes:
     - `Pane.Register` "files-home"
     - `Pane.Register` "files-at"
+    - `ThemeEngine.SubTheme` "Files document"
   - Uses:
     - `infra/endpoints.endpointQueryKey`
     - `infra/endpoints.fetchEndpoint`
@@ -29,11 +30,14 @@
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.ResizableHandle`
     - `primitives/css/ui-kit.ResizablePanel`
     - `primitives/css/ui-kit.ResizablePanelGroup`
+    - `primitives/css/ui-kit.subThemeScope`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineFieldExtensions`
@@ -57,6 +61,7 @@
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `ExplorerLensItem`
     - `ExplorerNavigator`

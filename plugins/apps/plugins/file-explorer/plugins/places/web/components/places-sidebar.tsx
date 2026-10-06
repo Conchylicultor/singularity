@@ -1,4 +1,5 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   DataView,
   defineDataView,
@@ -26,9 +27,13 @@ const PLACES_VIEW = defineDataView("file-explorer.places");
 
 /**
  * Every authored section (Favorites, Worktrees, Locations) at once, each under
- * its header.
+ * its quiet group heading (sentence case, the `group` role in the theme's
+ * group tone).
  */
-const SECTIONS: SectionsToolbar = { kind: "sections" };
+const SECTIONS: SectionsToolbar = {
+  kind: "sections",
+  forms: { header: "group" },
+};
 
 /** One place as a row: resolved, or a failed source (listed, saying why). */
 interface PlaceRow {
@@ -57,17 +62,58 @@ const fields: FieldDef<PlaceRow>[] = [
   },
 ];
 
-const viewOptions = {
-  list: {
-    // A failed source's row says why on hover; its muted tone says it is not
-    // a place to go.
-    leading: (r: PlaceRow) => (
-      <span title={r.message ?? undefined}>
-        <Icon icon={r.icon} className="size-4" />
-      </span>
-    ),
-  },
-};
+/**
+ * The list's options for the place showing now (`activeId`). A place reads in
+ * the sidebar's muted text at the regular weight, its icon in the same tone,
+ * and comes up to full text on hover; the active place is full text at medium
+ * weight with its icon in the accent. A failed source's row says why on hover
+ * (its muted tone says it is not a place to go).
+ */
+function listOptions(activeId: string | undefined) {
+  const tone = (r: PlaceRow) =>
+    r.id === activeId
+      ? "text-sidebar-accent-foreground"
+      : // The row's own hover group (`Row`'s action anchor), never a bare
+        // `group` an outer surface may also carry.
+        "text-sidebar-foreground group-hover/row-actions:text-sidebar-accent-foreground";
+  return {
+    list: {
+      leading: (r: PlaceRow) => (
+        <span
+          title={r.message ?? undefined}
+          className={cn(r.id === activeId ? "text-sidebar-primary" : tone(r))}
+          style={NAV_ICON_GAP}
+        >
+          <Icon icon={r.icon} className="size-4" />
+        </span>
+      ),
+      // The label role at its full size (the list is compact, which would
+      // step it down to the caption rung).
+      labelClassName: (r: PlaceRow) =>
+        cn(
+          "text-label",
+          r.id === activeId ? "font-medium" : "font-normal",
+          tone(r),
+        ),
+    },
+  };
+}
+
+/**
+ * The places' icon-to-label gap is the sidebar nav rows' (sidebar-metrics
+ * `sidebarIconGap`): the row's own `xs` gap plus the rest as the icon's margin.
+ */
+const NAV_ICON_GAP = {
+  marginInlineEnd: "calc(var(--sidebar-icon-gap) - var(--space-xs))",
+} as CSSProperties;
+
+/**
+ * The active place wears the sidebar's hover wash, not the app's selection
+ * fill (that is the tree's accent-soft blue).
+ */
+const SIDEBAR_SELECTION = {
+  "--selected": "var(--sidebar-accent)",
+} as CSSProperties;
 
 /**
  * The Places sidebar: the places of every `FileExplorer.Places` source as a
@@ -199,7 +245,7 @@ function PlacesList({
     // section header pins at its scroller's PADDING edge, so padding there
     // leaves a see-through strip above the pinned head.
     <Scroll fill>
-      <div className="py-xs">
+      <div className="pb-xs" style={SIDEBAR_SELECTION}>
         <DataView<PlaceRow>
           rows={rows}
           readiness={readiness}
@@ -215,7 +261,7 @@ function PlacesList({
             return path === null ? undefined : () => openFolder(path);
           }}
           rowTone={(r) => (r.path === null ? "muted" : "default")}
-          viewOptions={viewOptions}
+          viewOptions={listOptions(activeId)}
         />
       </div>
     </Scroll>

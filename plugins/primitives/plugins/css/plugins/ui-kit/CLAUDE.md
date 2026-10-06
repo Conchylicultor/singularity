@@ -521,6 +521,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/events/sources`
     - `apps/events/sources/source-detail/schedule`
     - `apps/file-explorer/browser`
+    - `apps/file-explorer/places`
     - `apps/home/app-cards`
     - `apps/mail/reading-pane`
     - `apps/mail/sync-status`
