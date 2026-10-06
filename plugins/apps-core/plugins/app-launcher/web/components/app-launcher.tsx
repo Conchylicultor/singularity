@@ -136,7 +136,7 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
             app={active}
             className={cn(
               form === "header" ? "size-6" : "size-5",
-              "transition-transform motion-safe:group-hover/button:-rotate-12 motion-safe:group-aria-expanded/button:-rotate-12",
+              "transition-transform duration-200 ease-[cubic-bezier(.34,1.56,.64,1)] motion-safe:group-hover/button:scale-110 motion-safe:group-aria-expanded/button:scale-110 motion-safe:group-active/button:scale-95",
             )}
           />
         </Button>
