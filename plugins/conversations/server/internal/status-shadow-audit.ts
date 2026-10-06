@@ -5,6 +5,7 @@ import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { listConversationsForInfra } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { planConversationUpdate, type UpdatePlan } from "./plan-update";
+import { readQuestionHolds } from "./question-hold";
 import {
   collectLive,
   lastSignalReconcileAt,
@@ -80,8 +81,10 @@ async function shadowAuditTick(): Promise<void> {
     row: Conversation | null;
     plan: UpdatePlan;
   }> = [];
+  // A pure read: the audit never reaps (it writes nothing).
+  const holds = await readQuestionHolds(rows.map((r) => r.id));
   for (const row of rows) {
-    const { plan } = await planFor(row, live);
+    const { plan } = await planFor(row, live, holds);
     verdicts.push({ id: row.id, row, plan });
   }
   for (const id of await orphansOf(live, new Set(rows.map((r) => r.id)))) {
@@ -91,7 +94,7 @@ async function shadowAuditTick(): Promise<void> {
       plan: planConversationUpdate(
         null,
         { kind: "live", info: live.next.get(id)! },
-        { onMain: true, now, sessionAccepted: false },
+        { onMain: true, now, sessionAccepted: false, questionHold: null },
       ),
     });
   }

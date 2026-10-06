@@ -118,6 +118,8 @@
     - `ConversationTurnCompletedPayload`
     - `IfAlreadyStarted`
     - `LaunchTaskNowResult`
+    - `QuestionHold`
+    - `QuestionHoldSource`
     - `RuntimeInfo`
     - `RuntimeSignal`
     - `Turn`
@@ -136,7 +138,9 @@
     - `launchTaskNow`
     - `maybeLaunchTaskJob`
     - `previewRewind`
+    - `QuestionHolds`
     - `readConversationTurns`
+    - `requestStatusReconcile`
     - `ResumeBlockedError`
     - `resumeConversation`
     - `rewindConversationAt`
@@ -266,6 +270,7 @@
     - `conversations/conversation-view/vscode`
     - `conversations/conversations-view/queue`
     - `conversations/hibernation`
+    - `conversations/question-relay`
     - `conversations/recover`
     - `conversations/runtime-api`
     - `conversations/runtime-tmux`
@@ -386,6 +391,7 @@
       - **`catalog`** — The host-global model catalog: getModelCatalog() (catalog.json in memory, re-read by a file watcher, the baseline until the first discovery), the model-provider.catalog live value, and the models.discover job — daily and on every new Claude CLI version, it reads the CLI's model menu (the Agent SDK `initialize` control request, answered locally: no model call), makes each family run what its alias resolves to (with a bell line when that moves), appends new versions, retires versions the menu no longer offers, and files model-unrecognized for an entry it cannot place.
   - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
   - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
+  - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form (answered as the tool's real result) with an Answer in terminal release, falling back to the Answer here flush when nothing is held. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | released | abandoned), the register / await (a push-woken long-poll) / answer / release / abandon endpoints, the open-questions live collection, the question-hold source that tells the status reconciler a held question is waiting (and retires holds whose relay died), and a 7-day retention sweep of resolved rows.
   - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
   - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
   - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.

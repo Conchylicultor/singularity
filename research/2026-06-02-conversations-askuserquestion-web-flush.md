@@ -1,5 +1,7 @@
 # AskUserQuestion: render & answer in the web UI via on-demand cancel-to-flush
 
+> **Superseded as the primary path (2026-10-06):** questions are now answered through a PreToolUse hook relay (`research/2026-10-06-conversations-askuserquestion-hook-relay.md`, plugin `conversations/question-relay`). The flush path below remains the fallback for sessions without the hook and for questions released to the terminal.
+
 ## Context
 
 When an agent calls the built-in `AskUserQuestion` tool inside its tmux Claude CLI

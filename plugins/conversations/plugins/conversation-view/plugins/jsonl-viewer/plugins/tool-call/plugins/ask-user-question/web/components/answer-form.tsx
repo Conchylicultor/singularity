@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Button,
   ControlSizeProvider,
@@ -6,14 +7,14 @@ import {
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
-import { ANSWER_MARKER } from "../../shared";
-import { answerQuestionDelivery } from "../internal/delivery";
 import { OptionBody, OptionRow } from "./option-row";
-import { type Question } from "./answer-model";
+import {
+  type AnswerSelections,
+  type Question,
+  type QuestionSelection,
+} from "./answer-model";
 import {
   ANSWER_DRAFT_KEY,
-  answerDraftScope,
   emptyAnswers,
   type QuestionAnswer,
 } from "./answer-draft";
@@ -46,40 +47,52 @@ function isAnswered(answer: QuestionAnswer, question: Question): boolean {
     : answer.selected.length > 0;
 }
 
-function serializeAnswers(
+/**
+ * The form state as the answer it stands for, one selection per question
+ * text. Single-select keeps only the ACTIVE buffer (a preset, or the typed
+ * text) — the inactive one is a draft convenience, not part of the answer.
+ * Multi-select is additive: every picked preset plus any typed text.
+ */
+function selectionsOf(
   questions: Question[],
   answers: QuestionAnswer[],
-): string {
-  const lines = questions.map((q, qi) => {
+): AnswerSelections {
+  const selections: AnswerSelections = {};
+  questions.forEach((q, qi) => {
     const answer = answers[qi]!;
-    const trimmed = answer.otherText.trim();
-    let parts: string[];
-    if (q.multiSelect) {
-      // Additive: every selected preset, plus the freeform if present.
-      parts = [...answer.selected];
-      if (trimmed.length > 0) parts.push(trimmed);
-    } else {
-      // Single-select: emit only the active choice; the inactive buffer is a
-      // draft convenience, not part of the answer.
-      parts = answer.otherActive
-        ? trimmed.length > 0
-          ? [trimmed]
-          : []
-        : [...answer.selected];
-    }
-    return `- ${q.header}: ${parts.join(", ")}`;
+    const typed = answer.otherText.trim() || null;
+    const selection: QuestionSelection =
+      q.multiSelect || !answer.otherActive
+        ? {
+            selected: [...answer.selected],
+            other: q.multiSelect ? typed : null,
+          }
+        : { selected: [], other: typed };
+    selections[q.question] = selection;
   });
-  return `${ANSWER_MARKER}\n\n${lines.join("\n")}`;
+  return selections;
 }
 
+/**
+ * The interactive answer form for one AskUserQuestion call — presentational:
+ * it owns the in-progress draft and hands the finished answer to `onSubmit`,
+ * which decides how it reaches the agent (a relay answer, or the legacy
+ * pasted turn — see marker-answer-form.tsx). `onSubmit` says whether the
+ * answer was accepted; only then is the draft cleared, so a failed send keeps
+ * what the user picked.
+ */
 export function AnswerForm({
   questions,
-  convId,
-  toolUseId,
+  draftScope,
+  onSubmit,
+  secondaryAction,
 }: {
   questions: Question[];
-  convId: string;
-  toolUseId: string;
+  /** Scopes the persisted draft — `answerDraftScope(convId, toolUseId)`. */
+  draftScope: string;
+  onSubmit: (selections: AnswerSelections) => boolean | Promise<boolean>;
+  /** A secondary action shown beside Submit. */
+  secondaryAction?: ReactNode;
 }) {
   // Persist the in-progress answer like the prompt draft (see answer-draft.ts
   // for the scope). A rewind from the answered card writes this same draft, so
@@ -87,7 +100,7 @@ export function AnswerForm({
   const [answers, setAnswers, clearDraft] = useDraft<QuestionAnswer[]>(
     ANSWER_DRAFT_KEY,
     () => emptyAnswers(questions),
-    { scope: answerDraftScope(convId, toolUseId) },
+    { scope: draftScope },
   );
 
   const updateAnswer = (qi: number, next: QuestionAnswer) => {
@@ -132,20 +145,8 @@ export function AnswerForm({
 
   const canSubmit = answers.every((a, qi) => isAnswered(a, questions[qi]!));
 
-  // An answer is a turn: it reaches the agent through the same tmux paste and
-  // can be lost the same way, so it goes through the one send entry point and
-  // inherits the confirmation deadline, the unconfirmed report and Retry.
-  // `echo: false` — the question card is this send's in-flight display, and the
-  // delivered turn is hidden from the transcript by our own EventFilter.
-  const handleSubmit = () => {
-    const text = serializeAnswers(questions, answers);
-    clearDraft();
-    sendConversationTurn(convId, {
-      text,
-      echo: false,
-      delivery: answerQuestionDelivery,
-      payload: { text },
-    });
+  const handleSubmit = async () => {
+    if (await onSubmit(selectionsOf(questions, answers))) clearDraft();
   };
 
   // Enter submits once every question is answered, from anywhere in the form
@@ -155,7 +156,7 @@ export function AnswerForm({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey && canSubmit) {
       e.preventDefault();
-      handleSubmit();
+      void handleSubmit();
     }
   };
 
@@ -216,10 +217,8 @@ export function AnswerForm({
           </div>
         );
       })}
-      <Stack direction="row" gap="none" justify="end">
-        {/* No `loading` state: the send returns synchronously and this form is
-            replaced by the card's answered view as soon as the transcript
-            confirms — a spinner here would race that hand-off. */}
+      <Stack direction="row" gap="sm" justify="end">
+        {secondaryAction}
         <Button disabled={!canSubmit} onClick={handleSubmit}>
           Submit
         </Button>

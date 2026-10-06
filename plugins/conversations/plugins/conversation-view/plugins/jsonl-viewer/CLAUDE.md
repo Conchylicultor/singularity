@@ -116,7 +116,7 @@ back.
 - Web:
   - Slots:
     - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
-    - `JsonlViewer.PendingPrompt` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
+    - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
     - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
     - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.outline`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`
     - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
@@ -231,6 +231,7 @@ back.
     - `conversations/conversation-view/jsonl-viewer/user-image`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/terminal-pane`
+    - `conversations/question-relay`
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.

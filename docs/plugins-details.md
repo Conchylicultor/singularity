@@ -9793,6 +9793,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConversationTurnCompletedPayload`
       - `IfAlreadyStarted`
       - `LaunchTaskNowResult`
+      - `QuestionHold`
+      - `QuestionHoldSource`
       - `RuntimeInfo`
       - `RuntimeSignal`
       - `Turn`
@@ -9811,7 +9813,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `launchTaskNow`
       - `maybeLaunchTaskJob`
       - `previewRewind`
+      - `QuestionHolds`
       - `readConversationTurns`
+      - `requestStatusReconcile`
       - `ResumeBlockedError`
       - `resumeConversation`
       - `rewindConversationAt`
@@ -9941,6 +9945,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/vscode`
       - `conversations/conversations-view/queue`
       - `conversations/hibernation`
+      - `conversations/question-relay`
       - `conversations/recover`
       - `conversations/runtime-api`
       - `conversations/runtime-tmux`
@@ -11103,7 +11108,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
-              - `JsonlViewer.PendingPrompt` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
+              - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
               - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
               - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.outline`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
@@ -11218,6 +11223,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/terminal-pane`
+              - `conversations/question-relay`
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Web:
@@ -12074,7 +12080,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
-                      - `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
                     - Uses:
@@ -12111,7 +12116,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/persistent-draft.writeDraft`
                       - `shell/notifications.toast`
                       - `ui/icons.Icon`
-                    - Exports (values): `answerQuestionDelivery`
+                    - Exports (types):
+                      - `AnswerSelections`
+                      - `Question`
+                      - `QuestionSelection`
+                    - Exports (values):
+                      - `answerDraftScope`
+                      - `AnswerForm`
+                      - `AnswerHereButton`
+                      - `answerQuestionDelivery`
                   - Server:
                     - Uses:
                       - `conversations.answerPrompt`
@@ -12121,6 +12134,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Routes:
                       - `POST /api/conversations/:id/answer-question`
                       - `POST /api/conversations/:id/flush-question`
+                  - Cross-plugin:
+                    - Imported by: `conversations/question-relay`
                   - Shared:
                     - Exports (values):
                       - `ANSWER_MARKER`
@@ -13422,6 +13437,89 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-preprompt`
       - Shared:
         - Exports (values): `prepromptsConfig`
+    - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form (answered as the tool's real result) with an Answer in terminal release, falling back to the Answer here flush when nothing is held. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | released | abandoned), the register / await (a push-woken long-poll) / answer / release / abandon endpoints, the open-questions live collection, the question-hold source that tells the status reconciler a held question is waiting (and retires holds whose relay died), and a 7-day retention sweep of resolved rows.
+      - Web:
+        - Contributes: `JsonlViewer.PendingPrompt` "question" → `RelayQuestionCard`
+        - Uses:
+          - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.answerDraftScope`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerForm`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerHereButton`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerSelections`
+          - `infra/endpoints.useEndpointMutation`
+          - `network/live.useLive`
+          - `primitives/css/card.Card`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
+      - Server:
+        - Contributes:
+          - `resource.declare` "question-relay.pending"
+          - `resource.declare` "question-relay.pending:rows"
+          - `resource.declare` "question-relay.pending:groups"
+        - Uses:
+          - `conversations.QuestionHold`
+          - `conversations.QuestionHolds`
+          - `conversations.requestStatusReconcile`
+          - `database.db`
+          - `database/sql-column.parsedJson`
+          - `database/sql-column.parsedText`
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `infra/retention.defineRetention`
+          - `network/live.serveCollection`
+          - `tasks/tasks-core._conversations`
+        - DB schema: `plugins/conversations/plugins/question-relay/server/internal/tables.ts`
+        - Exports (values): `relayHookEntry`
+        - Register: `defineJob('retention.pending_questions')`
+        - Resources:
+          - `question-relay.pending` (keyed, window)
+          - `question-relay.pending:groups` (push)
+          - `question-relay.pending:rows` (keyed, point)
+        - Routes:
+          - `POST /api/conversations/:id/questions`
+          - `GET /api/conversations/:id/questions/:toolUseId/await`
+          - `POST /api/conversations/:id/questions/:toolUseId/answer`
+          - `POST /api/conversations/:id/questions/:toolUseId/release`
+          - `POST /api/conversations/:id/questions/:toolUseId/abandon`
+      - Core:
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveCollection`
+          - `network/live/filter.liveText`
+        - Exports (types):
+          - `AnswerQuestionBody`
+          - `CliAnswer`
+          - `PendingQuestion`
+          - `QuestionSelection`
+          - `RegisterQuestionBody`
+          - `RelayHookEntry`
+          - `RelayQuestion`
+          - `RelayResolution`
+          - `RelayState`
+        - Exports (values):
+          - `abandonRelayQuestion`
+          - `AnswerQuestionBodySchema`
+          - `answerRelayQuestion`
+          - `AWAIT_HOLD_MS`
+          - `awaitRelayQuestion`
+          - `CliAnswerSchema`
+          - `pendingQuestions`
+          - `PendingQuestionSchema`
+          - `QuestionSelectionSchema`
+          - `RegisterQuestionBodySchema`
+          - `registerRelayQuestion`
+          - `RELAY_HOOK_TIMEOUT_S`
+          - `RELAY_STATUS_MESSAGE`
+          - `RelayQuestionSchema`
+          - `RelayQuestionsSchema`
+          - `RelayResolutionSchema`
+          - `RelayStateSchema`
+          - `releaseRelayQuestion`
+      - Cross-plugin:
+        - Imported by: `conversations/runtime-tmux`
     - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
       - Web:
         - Slots: `recoveryPane.Actions` ← `primitives.pane`
@@ -13464,6 +13562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `conversations.Runtime`
+          - `conversations/question-relay.relayHookEntry`
           - `infra/claude-cli/availability.requireClaudeBin`
           - `infra/file-watcher.defineFileWatcher`
           - `infra/file-watcher.FileChangeEvent`
@@ -13743,6 +13842,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-progress`
       - `conversations/conversations-view/grouped`
       - `conversations/conversations-view/queue`
+      - `conversations/question-relay`
       - `conversations/session-chain`
       - `conversations/summary`
       - `database/change-feed`
@@ -14371,6 +14471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `backup`
           - `conversations/agents`
           - `conversations/conversation-category`
+          - `conversations/question-relay`
           - `debug/latency-ledger`
           - `debug/profiling/op-log/op-store`
           - `fields/json/storage`
@@ -20650,6 +20751,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
           - `conversations/model-provider`
+          - `conversations/question-relay`
           - `conversations/recover`
           - `conversations/summary`
           - `conversations/transcript-api`
@@ -22375,6 +22477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/deployments`
           - `apps/events/refresh`
           - `apps/pages/agent-origin`
+          - `conversations/question-relay`
           - `debug/boot-profile`
           - `debug/latency-ledger`
           - `debug/profiling/op-log/op-store`
@@ -23575,6 +23678,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `conversations/model-provider`
           - `conversations/model-provider/catalog`
+          - `conversations/question-relay`
           - `conversations/summary`
           - `database/query-deadline`
           - `debug/claude-cli-calls`
@@ -23652,6 +23756,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `backup/runs-arm`
               - `build/runs-arm`
               - `conversations/all-conversations`
+              - `conversations/question-relay`
               - `conversations/summary`
               - `debug/profiling/op-log/op-store`
               - `infra/claude-cli`
@@ -28028,6 +28133,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/pages/download`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+              - `conversations/question-relay`
               - `debug/trace/contention`
               - `page/bookmark`
               - `page/file`
@@ -29708,6 +29814,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/turn-summary`
               - `conversations/conversations-view`
               - `conversations/conversations-view/data-view`
+              - `conversations/question-relay`
               - `conversations/recover`
               - `conversations/summary`
               - `debug/boot-profile`
@@ -30264,6 +30371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/tasks-panel`
               - `conversations/conversation-view/turn-summary`
+              - `conversations/question-relay`
               - `conversations/recover`
               - `conversations/summary`
               - `debug/boot-profile`
@@ -30818,6 +30926,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/effort-provider`
               - `conversations/model-provider`
               - `conversations/preprompts`
+              - `conversations/question-relay`
               - `conversations/recover`
               - `conversations/summary`
               - `debug/boot-profile`
@@ -33289,6 +33398,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/data-view/queue`
           - `conversations/effort-provider`
           - `conversations/model-provider`
+          - `conversations/question-relay`
           - `conversations/recover`
           - `conversations/summary`
           - `debug/boot-profile`
@@ -33506,6 +33616,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/track`
+          - `conversations/question-relay`
           - `conversations/recover`
           - `conversations/summary`
           - `debug/boot-profile`
@@ -39437,6 +39548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/grouped`
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
+          - `conversations/question-relay`
           - `conversations/summary`
           - `conversations/transcript-api`
           - `conversations/transcript-retention`

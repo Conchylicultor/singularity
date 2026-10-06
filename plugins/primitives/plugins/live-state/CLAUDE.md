@@ -1030,6 +1030,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/conversations-view/data-view/queue`
     - `conversations/effort-provider`
     - `conversations/model-provider`
+    - `conversations/question-relay`
     - `conversations/recover`
     - `conversations/summary`
     - `debug/boot-profile`

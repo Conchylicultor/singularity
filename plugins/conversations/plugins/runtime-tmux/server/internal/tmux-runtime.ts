@@ -19,6 +19,7 @@ import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
+import { relayHookEntry } from "@plugins/conversations/plugins/question-relay/server";
 import { tmuxSignalsDir } from "../../data-dirs";
 import { AGENT_SESSION_WRAPPER } from "./agent-session-env";
 import {
@@ -31,7 +32,7 @@ import { asLaunchMessage } from "./launch-message";
 import {
   mergeLaunchSettings,
   settingsFlag,
-  signalHookSettings,
+  launchHookSettings,
 } from "./launch-settings";
 import { classifyPaneText, type PaneMenu } from "./pane-menu";
 import { resolvePaneStatus } from "./pane-status";
@@ -584,7 +585,10 @@ export const tmuxRuntime: ConversationRuntime = {
     // session gets the hooks as well.
     const settings = mergeLaunchSettings(
       opts?.effort ? resolveEffortSettings(opts.effort) : undefined,
-      signalHookSettings(tmuxSignalsDir.ensure()),
+      launchHookSettings({
+        signalDir: tmuxSignalsDir.ensure(),
+        relay: relayHookEntry(),
+      }),
     );
     const claudeBase = [
       // Single-quoted: the path is spliced into the pane's shell command.

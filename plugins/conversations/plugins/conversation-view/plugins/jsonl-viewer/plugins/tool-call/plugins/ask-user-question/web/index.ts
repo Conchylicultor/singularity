@@ -4,7 +4,6 @@ import { JsonlRowActions } from "@plugins/conversations/plugins/conversation-vie
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { AskUserQuestionToolView } from "./components/ask-user-question-tool-view";
-import { AnswerHereButton } from "./components/answer-here-button";
 import { ChangeAnswersAction } from "./components/change-answers-action";
 import { ANSWER_MARKER } from "../shared";
 
@@ -13,6 +12,19 @@ import { ANSWER_MARKER } from "../shared";
 // delivery in the registry after a reload, when the question is long gone and
 // the form no longer renders. See pending-turn/web/internal/delivery.ts.
 export { answerQuestionDelivery } from "./internal/delivery";
+
+// The answer surfaces another plugin composes: the question relay
+// (conversations/question-relay) owns the `"question"` pending prompt, renders
+// its held question through `AnswerForm`, and falls back to `AnswerHereButton`
+// (the flush path) when nothing is held.
+export { AnswerForm } from "./components/answer-form";
+export { AnswerHereButton } from "./components/answer-here-button";
+export { answerDraftScope } from "./components/answer-draft";
+export type {
+  AnswerSelections,
+  Question,
+  QuestionSelection,
+} from "./components/answer-model";
 
 export default {
   description:
@@ -25,10 +37,6 @@ export default {
     JsonlRowActions.Item({
       id: "change-answers",
       component: ChangeAnswersAction,
-    }),
-    JsonlViewer.PendingPrompt({
-      match: "question",
-      component: AnswerHereButton,
     }),
     JsonlViewer.EventFilter({
       id: "ask-user-question:suppress-answer-turn",

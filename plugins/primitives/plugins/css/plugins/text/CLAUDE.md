@@ -448,6 +448,7 @@ to reconcile them; they never needed reconciling.
     - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/turn-summary`
+    - `conversations/question-relay`
     - `conversations/recover`
     - `conversations/summary`
     - `debug/boot-profile`

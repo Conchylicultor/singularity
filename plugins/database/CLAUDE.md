@@ -296,6 +296,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `conversations/conversation-progress`
     - `conversations/conversations-view/grouped`
     - `conversations/conversations-view/queue`
+    - `conversations/question-relay`
     - `conversations/session-chain`
     - `conversations/summary`
     - `database/change-feed`

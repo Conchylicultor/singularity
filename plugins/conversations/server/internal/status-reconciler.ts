@@ -34,6 +34,11 @@ import { autoAnswerConfig } from "../../shared/config";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { conversationCreated } from "./tables-created-event";
 import {
+  readQuestionHolds,
+  reapQuestionHolds,
+  type QuestionHold,
+} from "./question-hold";
+import {
   planConversationUpdate,
   sessionCandidate,
   UNINFORMATIVE_TITLES,
@@ -189,6 +194,7 @@ function livenessOf(row: Conversation, live: LiveSnapshot): Liveness {
 export async function planFor(
   row: Conversation,
   live: LiveSnapshot,
+  holds: ReadonlyMap<string, QuestionHold>,
 ): Promise<{ plan: UpdatePlan; liveness: Liveness }> {
   const liveness = livenessOf(row, live);
   const candidate = sessionCandidate(row, liveness);
@@ -200,6 +206,7 @@ export async function planFor(
       onMain: isMain(),
       now: Date.now(),
       sessionAccepted,
+      questionHold: holds.get(row.id) ?? null,
     }),
     liveness,
   };
@@ -351,7 +358,7 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
   // Fire-and-forget — the self-healing Escape loop must not hold the reconcile
   // gate. On failure the row stays at "question" and the manual "Answer here"
   // button remains as the fallback.
-  if (plan.questionOpened && getConfig(autoAnswerConfig).enabled) {
+  if (plan.menuOpened && getConfig(autoAnswerConfig).enabled) {
     void runTracked("conversations:flush-interactive-prompt", () =>
       flushInteractivePrompt(id).catch((err) => {
         void recordReport({
@@ -384,12 +391,23 @@ async function reconcileRows(
     const plan = planConversationUpdate(
       null,
       { kind: "live", info },
-      { onMain: true, now: Date.now(), sessionAccepted: false },
+      {
+        onMain: true,
+        now: Date.now(),
+        sessionAccepted: false,
+        questionHold: null,
+      },
     );
     if (plan.kind === "adopt") await adopt(id, info, plan);
   }
+  // Held questions first retire the ones whose holder died (Escape in the
+  // terminal SIGTERMs the hook, the agent or pane can die), then are read once
+  // for the whole batch.
+  const ids = rows.map((r) => r.id);
+  await reapQuestionHolds(ids);
+  const holds = await readQuestionHolds(ids);
   for (const row of rows) {
-    const { plan } = await planFor(row, live);
+    const { plan } = await planFor(row, live, holds);
     await apply(row, plan);
   }
 }
@@ -435,6 +453,15 @@ const pendingIds = new Set<string>();
 const pendingWorktrees = new Set<string>();
 let pendingAll = false;
 let draining = false;
+
+/**
+ * Ask for `conversationIds` to be reconciled now — the same wake a runtime
+ * signal is, for a state change the runtime cannot see (a question hold opened,
+ * answered or released). Joins the pending batch; never waits.
+ */
+export function requestStatusReconcile(conversationIds: string[]): void {
+  onSignal({ conversationIds });
+}
 
 function onSignal(signal: RuntimeSignal): void {
   if ("conversationIds" in signal) {

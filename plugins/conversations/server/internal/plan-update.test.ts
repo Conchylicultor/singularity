@@ -45,7 +45,13 @@ const ABSENT: Liveness = { kind: "absent" };
 const UNKNOWN: Liveness = { kind: "unknown" };
 
 function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
-  return { onMain: true, now: NOW, sessionAccepted: false, ...overrides };
+  return {
+    onMain: true,
+    now: NOW,
+    sessionAccepted: false,
+    questionHold: null,
+    ...overrides,
+  };
 }
 
 describe("planConversationUpdate — orphans (no row in any status)", () => {
@@ -120,7 +126,7 @@ describe("planConversationUpdate — live session", () => {
       patch: { status: "waiting", waitingFor: "permission prompt" },
       adoptedSessionId: null,
       taskTitle: null,
-      questionOpened: false,
+      menuOpened: false,
     });
   });
 
@@ -134,7 +140,7 @@ describe("planConversationUpdate — live session", () => {
     ).toMatchObject({
       kind: "patch",
       patch: { status: "working", waitingFor: null },
-      questionOpened: false,
+      menuOpened: false,
     });
   });
 
@@ -144,7 +150,7 @@ describe("planConversationUpdate — live session", () => {
     ).toMatchObject({
       kind: "patch",
       patch: { waitingFor: "question" },
-      questionOpened: true,
+      menuOpened: true,
     });
     // Already open: nothing to write, nothing to re-open.
     expect(
@@ -154,6 +160,90 @@ describe("planConversationUpdate — live session", () => {
         ctx(),
       ),
     ).toEqual({ kind: "noop" });
+  });
+
+  test("a held question waits on a question with no menu — and never flushes", () => {
+    // The relay holds the call: no menu, so the pane reads idle (or busy).
+    for (const pane of [live(), live({ working: true })]) {
+      expect(
+        planConversationUpdate(
+          row({ status: "working" }),
+          pane,
+          ctx({ questionHold: "open" }),
+        ),
+      ).toEqual({
+        kind: "patch",
+        patch: { status: "waiting", waitingFor: "question" },
+        adoptedSessionId: null,
+        taskTitle: null,
+        menuOpened: false,
+      });
+    }
+    // Already showing the held question: nothing to write.
+    expect(
+      planConversationUpdate(
+        row({ waitingFor: "question" }),
+        live(),
+        ctx({ questionHold: "open" }),
+      ),
+    ).toEqual({ kind: "noop" });
+  });
+
+  test("a held question resolving hands the status back to the pane", () => {
+    expect(
+      planConversationUpdate(
+        row({ waitingFor: "question" }),
+        live({ working: true }),
+        ctx(),
+      ),
+    ).toMatchObject({
+      kind: "patch",
+      patch: { status: "working", waitingFor: null },
+      menuOpened: false,
+    });
+  });
+
+  test("the menu of a released question is shown, never auto-flushed", () => {
+    // The user picked "Answer in terminal": the menu that opens is the one
+    // they asked for, so auto-open must leave it alone.
+    expect(
+      planConversationUpdate(
+        row(),
+        live({ waitingFor: "question" }),
+        ctx({ questionHold: "released" }),
+      ),
+    ).toMatchObject({
+      kind: "patch",
+      patch: { waitingFor: "question" },
+      menuOpened: false,
+    });
+    // Released and the menu not drawn yet: the pane decides (nothing waits).
+    expect(
+      planConversationUpdate(
+        row({ waitingFor: "question" }),
+        live(),
+        ctx({ questionHold: "released" }),
+      ),
+    ).toMatchObject({ kind: "patch", patch: { waitingFor: null } });
+  });
+
+  test("only the pane's own menu opening triggers the flush", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working" }),
+        live({ waitingFor: "question" }),
+        ctx(),
+      ),
+    ).toMatchObject({ kind: "patch", menuOpened: true });
+    // A menu while a held question is still open (cannot normally happen —
+    // the hold suppresses it): the hold wins, nothing flushes.
+    expect(
+      planConversationUpdate(
+        row({ status: "working" }),
+        live({ waitingFor: "question" }),
+        ctx({ questionHold: "open" }),
+      ),
+    ).toMatchObject({ kind: "patch", menuOpened: false });
   });
 
   test("an informative title is written and carried onto the task", () => {

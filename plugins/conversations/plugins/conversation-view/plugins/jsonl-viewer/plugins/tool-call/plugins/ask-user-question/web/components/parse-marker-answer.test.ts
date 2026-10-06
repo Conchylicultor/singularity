@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { ANSWER_MARKER } from "../../shared";
-import { parseMarkerAnswer, type Question } from "./answer-model";
+import {
+  parseMarkerAnswer,
+  serializeMarkerAnswer,
+  type Question,
+} from "./answer-model";
 
 function q(partial: Partial<Question> & { header: string }): Question {
   return {
@@ -22,7 +26,9 @@ describe("parseMarkerAnswer", () => {
     const answers = parseMarkerAnswer(text, questions);
 
     expect(answers["Fix the CLI trigger?"]?.answer).toBe("Both (Recommended)");
-    expect(answers["Harden the kill path?"]?.answer).toBe("Include (Recommended)");
+    expect(answers["Harden the kill path?"]?.answer).toBe(
+      "Include (Recommended)",
+    );
   });
 
   it("parses simple single-colon headers", () => {
@@ -54,5 +60,42 @@ describe("parseMarkerAnswer", () => {
 
     expect(answers["Q1"]?.answer).toBe("first");
     expect(answers["Q2"]?.answer).toBe("second");
+  });
+});
+
+describe("serializeMarkerAnswer", () => {
+  const questions: Question[] = [
+    {
+      question: "Which scope?",
+      header: "Scope: CLI fix",
+      options: [
+        { label: "A", description: "" },
+        { label: "B", description: "" },
+      ],
+      multiSelect: false,
+    },
+    {
+      question: "Which extras?",
+      header: "Extras",
+      options: [
+        { label: "X", description: "" },
+        { label: "Y", description: "" },
+      ],
+      multiSelect: true,
+    },
+  ];
+
+  it("writes the marker turn parseMarkerAnswer reads back", () => {
+    const text = serializeMarkerAnswer(questions, {
+      "Which scope?": { selected: ["B"], other: null },
+      "Which extras?": { selected: ["X", "Y"], other: "Z" },
+    });
+    expect(text).toBe(
+      `${ANSWER_MARKER}\n\n- Scope: CLI fix: B\n- Extras: X, Y, Z`,
+    );
+    expect(parseMarkerAnswer(text, questions)).toEqual({
+      "Which scope?": { answer: "B", notes: null },
+      "Which extras?": { answer: "X, Y, Z", notes: null },
+    });
   });
 });

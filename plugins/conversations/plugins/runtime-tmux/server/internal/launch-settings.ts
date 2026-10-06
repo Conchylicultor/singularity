@@ -1,3 +1,4 @@
+import type { RelayHookEntry } from "@plugins/conversations/plugins/question-relay/core";
 import { signalDirForCommands } from "./tmux-hooks";
 
 // The one `--settings` object a launch hands Claude Code. Two contributors share
@@ -14,27 +15,43 @@ import { signalDirForCommands } from "./tmux-hooks";
 // (`PostToolUse` / `PostToolUseFailure`) or a prompt is submitted
 // (`UserPromptSubmit`). The touch only wakes the reconciler; the pane itself
 // (pane-menu.ts) still decides whether a menu is on screen.
+//
+// The question relay (conversations/question-relay) rides the same PreToolUse
+// matcher: it HOLDS the call while the web shows the question and answers it
+// through `updatedInput`, so the menu is drawn only when the relay lets go.
+// Hooks on one matcher run in parallel, so the touch still wakes the reconciler
+// at once. A `Notification` touch wakes it when the CLI draws a menu after all
+// (a released question) — the one moment nothing else signals.
 
 const QUESTION_TOOL = "AskUserQuestion";
 
 /**
- * The hooks settings fragment for a pane whose signal file lives in `dir`.
+ * The hooks settings fragment for a pane whose signal file lives in
+ * `signalDir`, with the question relay's entry (`relay`, from
+ * `relayHookEntry()`) beside the PreToolUse touch.
  * `$SINGULARITY_CONVERSATION_ID` is expanded by the shell Claude Code runs the
  * hook in — the pane delivers it (see agent-session-env.ts), so the command is
  * the same string for every conversation.
  */
-export function signalHookSettings(dir: string): Record<string, unknown> {
-  const hook = {
+export function launchHookSettings({
+  signalDir,
+  relay,
+}: {
+  signalDir: string;
+  relay: RelayHookEntry;
+}): Record<string, unknown> {
+  const touch = {
     type: "command",
-    command: `touch "${signalDirForCommands(dir)}/$SINGULARITY_CONVERSATION_ID"`,
+    command: `touch "${signalDirForCommands(signalDir)}/$SINGULARITY_CONVERSATION_ID"`,
   };
-  const onQuestion = [{ matcher: QUESTION_TOOL, hooks: [hook] }];
+  const onQuestion = [{ matcher: QUESTION_TOOL, hooks: [touch] }];
   return {
     hooks: {
-      PreToolUse: onQuestion,
+      PreToolUse: [{ matcher: QUESTION_TOOL, hooks: [touch, relay] }],
       PostToolUse: onQuestion,
       PostToolUseFailure: onQuestion,
-      UserPromptSubmit: [{ hooks: [hook] }],
+      UserPromptSubmit: [{ hooks: [touch] }],
+      Notification: [{ hooks: [touch] }],
     },
   };
 }

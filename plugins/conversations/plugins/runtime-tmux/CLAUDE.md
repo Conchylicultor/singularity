@@ -184,6 +184,13 @@ The signal directory is touched by two kinds of hook:
   hooks existed get their questions noticed on their next transition or sweep.
   Measured on 2.1.287: Escape typed on the menu fires NEITHER `PostToolUse` nor
   `PostToolUseFailure`; the clearance arrives through the sessions file instead.
+  A `Notification` touch wakes it when the CLI draws a menu.
+- **The question relay** (`conversations/question-relay`) rides the same
+  `PreToolUse` matcher beside the touch (hooks on one matcher run in parallel):
+  it holds the call while the web shows the question and answers it through
+  `updatedInput`, so the menu appears only when it lets go. Its entry
+  (`relayHookEntry()`, timeout ~23 days, never a timer give-up) is built by that
+  plugin; this one only merges it.
 
 Because a question can now be known before its menu is painted,
 `flushInteractivePrompt` / `answerPrompt` first wait (up to 3 s) for a menu to
@@ -257,6 +264,7 @@ may be a real command (`/compact`).
 - Server:
   - Uses:
     - `conversations.Runtime`
+    - `conversations/question-relay.relayHookEntry`
     - `infra/claude-cli/availability.requireClaudeBin`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileChangeEvent`

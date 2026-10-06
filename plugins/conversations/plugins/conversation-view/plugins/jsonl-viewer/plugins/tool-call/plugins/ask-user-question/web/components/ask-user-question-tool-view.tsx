@@ -11,7 +11,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { AnswerForm } from "./answer-form";
+import { MarkerAnswerForm } from "./marker-answer-form";
 import { OptionBody, OptionRow } from "./option-row";
 import { findAnswerTurn } from "./awaiting";
 import {
@@ -106,7 +106,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
         defaultOpen
         isError={showAsError}
       >
-        <AnswerForm
+        <MarkerAnswerForm
           questions={questions}
           convId={convId}
           toolUseId={event.toolUseId}

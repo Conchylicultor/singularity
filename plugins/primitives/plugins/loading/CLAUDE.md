@@ -142,6 +142,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/track`
+    - `conversations/question-relay`
     - `conversations/recover`
     - `conversations/summary`
     - `debug/boot-profile`

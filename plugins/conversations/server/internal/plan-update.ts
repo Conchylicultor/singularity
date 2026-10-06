@@ -5,6 +5,7 @@ import type {
 import type { UpdateConversationPatch } from "@plugins/tasks/plugins/tasks-core/server";
 import { decideMissingProcessAction } from "./hibernation-decision";
 import type { RuntimeInfo } from "./runtime";
+import type { QuestionHold } from "./question-hold";
 
 // The status reconciler's decision, as a pure function of one conversation row
 // and what its runtime says about it. Everything with an effect — the DB writes,
@@ -60,6 +61,15 @@ export interface PlanContext {
    * shell runs only when {@link sessionCandidate} names one.
    */
   sessionAccepted: boolean;
+  /**
+   * The conversation's question held outside the pane (question-hold.ts), or
+   * null when nothing holds one. Kept apart from the pane's own verdict
+   * (`RuntimeInfo.waitingFor`): an `open` hold says a question is waiting
+   * while NO menu is on screen, so it may set `waitingFor` but must never
+   * trigger the auto-open flush — that sends Escape, which would cancel the
+   * held call.
+   */
+  questionHold: QuestionHold | null;
 }
 
 export type UpdatePlan =
@@ -80,8 +90,12 @@ export type UpdatePlan =
       adoptedSessionId: string | null;
       /** An informative new title to carry onto the task. */
       taskTitle: string | null;
-      /** waitingFor just became "question" — the auto-open trigger. */
-      questionOpened: boolean;
+      /**
+       * The pane's own menu just turned into a question that nothing holds —
+       * the auto-open trigger. Never set by a held question: a held question
+       * has no menu, and a released one is the menu the user asked for.
+       */
+      menuOpened: boolean;
     };
 
 export function liveStatusFor(info: RuntimeInfo): ConversationStatus {
@@ -161,7 +175,10 @@ function planLive(
   const informativeNew =
     info.title && !UNINFORMATIVE_TITLES.includes(info.title);
   const desiredTitle = informativeNew ? info.title : row.title;
-  const desiredStatus = liveStatusFor(info);
+  // A held question: the agent is blocked on it, and the pane — showing no
+  // menu — reads as an ordinary idle prompt (or, mid-hook, as busy).
+  const heldOpen = ctx.questionHold === "open";
+  const desiredStatus = heldOpen ? "waiting" : liveStatusFor(info);
   const titleChanged = desiredTitle !== row.title;
   // Only adopt a new claudeSessionId once the shell's gate accepted it (a
   // transcript exists, in THIS conversation's own projects directory).
@@ -170,8 +187,11 @@ function planLive(
     candidate && ctx.sessionAccepted ? candidate : row.claudeSessionId;
   const sessionChanged = desiredSessionId !== row.claudeSessionId;
   const statusChanged = desiredStatus !== row.status;
-  const desiredWaitingFor =
-    desiredStatus === "waiting" ? (info.waitingFor ?? null) : null;
+  const desiredWaitingFor = heldOpen
+    ? "question"
+    : desiredStatus === "waiting"
+      ? (info.waitingFor ?? null)
+      : null;
   const waitingForChanged =
     (desiredWaitingFor ?? null) !== (row.waitingFor ?? null);
   if (!titleChanged && !sessionChanged && !statusChanged && !waitingForChanged)
@@ -194,7 +214,11 @@ function planLive(
       !UNINFORMATIVE_TITLES.includes(desiredTitle)
         ? desiredTitle
         : null,
-    questionOpened: waitingForChanged && desiredWaitingFor === "question",
+    // `desiredWaitingFor` is the pane's verdict whenever nothing holds.
+    menuOpened:
+      ctx.questionHold === null &&
+      waitingForChanged &&
+      desiredWaitingFor === "question",
   };
 }
 

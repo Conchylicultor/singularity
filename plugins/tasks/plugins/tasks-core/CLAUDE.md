@@ -495,6 +495,7 @@ serves them.
     - `conversations/conversations-view/grouped`
     - `conversations/conversations-view/queue`
     - `conversations/hibernation`
+    - `conversations/question-relay`
     - `conversations/summary`
     - `conversations/transcript-api`
     - `conversations/transcript-retention`

@@ -971,6 +971,7 @@ for a new reader of the two page resources.
     - `conversations/conversations-view/queue`
     - `conversations/model-provider`
     - `conversations/model-provider/catalog`
+    - `conversations/question-relay`
     - `conversations/summary`
     - `database/query-deadline`
     - `debug/claude-cli-calls`

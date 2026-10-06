@@ -24,6 +24,19 @@ export interface AskUserQuestionInput {
   questions: Question[];
 }
 
+/**
+ * One question's answer as the form gives it: the picked option labels, and
+ * the free text typed into "Other" (null when none — or, for a single-select,
+ * when a preset is the active choice).
+ */
+export interface QuestionSelection {
+  selected: string[];
+  other: string | null;
+}
+
+/** A whole answer: one selection per question text. */
+export type AnswerSelections = Record<string, QuestionSelection>;
+
 export interface ParsedAnswer {
   /** Answer value for option matching, or null when no option was selected. */
   answer: string | null;
@@ -143,6 +156,23 @@ export function parseAnswerMap(
   }
 
   return answers;
+}
+
+/**
+ * The legacy answer text: `ANSWER_MARKER` then one `- <header>: <value>` line
+ * per question, the value being the picked labels and any typed text joined
+ * with ", ". The inverse is `parseMarkerAnswer`.
+ */
+export function serializeMarkerAnswer(
+  questions: Question[],
+  selections: AnswerSelections,
+): string {
+  const lines = questions.map((q) => {
+    const s = selections[q.question];
+    const parts = s ? [...s.selected, ...(s.other ? [s.other] : [])] : [];
+    return `- ${q.header}: ${parts.join(", ")}`;
+  });
+  return `${ANSWER_MARKER}\n\n${lines.join("\n")}`;
 }
 
 /**

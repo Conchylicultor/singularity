@@ -627,6 +627,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/effort-provider`
     - `conversations/model-provider`
     - `conversations/preprompts`
+    - `conversations/question-relay`
     - `conversations/recover`
     - `conversations/summary`
     - `debug/boot-profile`

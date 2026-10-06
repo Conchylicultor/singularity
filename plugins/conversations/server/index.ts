@@ -85,6 +85,12 @@ export type {
   RuntimeSignal,
   ConversationRuntime,
 } from "./internal/runtime";
+export { requestStatusReconcile } from "./internal/status-reconciler";
+export { QuestionHolds } from "./internal/question-hold";
+export type {
+  QuestionHold,
+  QuestionHoldSource,
+} from "./internal/question-hold";
 export { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-completed-event";
 export { afterTurn } from "./internal/after-turn";
