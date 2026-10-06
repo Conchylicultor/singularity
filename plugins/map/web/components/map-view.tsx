@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -46,13 +46,6 @@ export function MapView({
 }: MapViewProps) {
   const renderer = GeoMap.Renderer.useContributions()[0];
 
-  const renderPin = useCallback(
-    (pin: MapPin, active: boolean) => (
-      <GeoMap.Pin.Dispatch pin={pin} active={active} />
-    ),
-    [],
-  );
-
   if (renderer === undefined) {
     return (
       <Center className="size-full">
@@ -68,6 +61,10 @@ export function MapView({
     return <Center className="size-full">{empty}</Center>;
   }
 
+  const tiles = renderer.tiles;
+  const renderPin = (pin: MapPin, active: boolean) => (
+    <GeoMap.Pin.Dispatch pin={pin} active={active} tiles={tiles} />
+  );
   const props: MapRendererProps = {
     overlays,
     renderPin,

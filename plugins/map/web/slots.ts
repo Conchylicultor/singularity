@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
-import type { MapOverlay, MapPin } from "../core";
+import type { MapOverlay, MapPin, MapTileScheme } from "../core";
 import { DefaultPin } from "./components/default-pin";
 
 /** What a renderer is handed. Pins arrive pre-rendered through {@link MapRendererProps.renderPin}. */
@@ -41,6 +41,13 @@ export interface MapRendererContribution {
   /** Human name of the engine. */
   label: string;
   component: ComponentType<MapRendererProps>;
+  /**
+   * The scheme the engine draws its tiles in. Required: every pin's label ink
+   * is chosen from it, and a renderer that left it out would silently hand pins
+   * the app theme's ink instead — light text on light tiles under a dark theme.
+   * The renderer must also make it TRUE (pin the engine's own colour scheme).
+   */
+  tiles: MapTileScheme;
   /** Rendered in place of the map while {@link useReadiness} says `blocked`. */
   AccessAction?: ComponentType;
   /**
@@ -58,6 +65,8 @@ export interface MapPinProps {
   pin: MapPin;
   /** The pin is the selected one — grow and raise it. */
   active: boolean;
+  /** The scheme of the tiles the pin is drawn on — draw its name with {@link MapLabel}. */
+  tiles: MapTileScheme;
 }
 
 export const GeoMap = {

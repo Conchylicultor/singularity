@@ -497,6 +497,7 @@ to reconcile them; they never needed reconciling.
     - `integrations/gmail`
     - `integrations/google-maps`
     - `layouts/route-fallback`
+    - `map`
     - `map/google`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
@@ -514,7 +515,6 @@ to reconcile them; they never needed reconciling.
     - `page/math/inline`
     - `page/page-link`
     - `page/place`
-    - `page/place/map-layer`
     - `page/prompt/block`
     - `page/read-only-view`
     - `page/sub-page`

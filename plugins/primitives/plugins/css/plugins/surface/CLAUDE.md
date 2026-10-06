@@ -136,7 +136,6 @@ never be clobbered.
     - `page/editor`
     - `page/map`
     - `page/place`
-    - `page/place/map-layer`
     - `page/read-only-view`
     - `primitives/collapsible-wrap`
     - `primitives/css/card`

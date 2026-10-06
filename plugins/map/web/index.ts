@@ -9,6 +9,7 @@ export type {
   MapPinProps,
 } from "./slots";
 export { MapView } from "./components/map-view";
+export { MapLabel, type MapLabelProps } from "./components/map-label";
 export type { MapViewProps } from "./components/map-view";
 
 export default {

@@ -3,6 +3,7 @@ import { GeoMap } from "@plugins/map/web";
 import { MapsMapAccessAction } from "@plugins/integrations/plugins/google-maps/web";
 import { GoogleMapRenderer } from "./components/google-map-renderer";
 import { useGoogleMapReadiness } from "./internal/readiness";
+import { GOOGLE_TILES } from "./internal/tiles";
 
 export default {
   description:
@@ -12,6 +13,7 @@ export default {
       id: "google",
       label: "Google Maps",
       component: GoogleMapRenderer,
+      tiles: GOOGLE_TILES,
       // Rendered by the host in place of the map while no browser key is set —
       // the host never learns that the blocker is a key.
       AccessAction: MapsMapAccessAction,

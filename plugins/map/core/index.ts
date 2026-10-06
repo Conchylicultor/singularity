@@ -7,6 +7,7 @@ export {
   type MapPath,
   type MapArea,
   type MapOverlay,
+  type MapTileScheme,
 } from "./overlays";
 export {
   SINGLE_POINT_ZOOM,

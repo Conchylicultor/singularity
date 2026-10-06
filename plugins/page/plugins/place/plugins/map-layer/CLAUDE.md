@@ -4,19 +4,21 @@
 
 ## Plugin reference
 
-- Description: Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not dropped), and the place pin itself — a bubble with the location icon and the truncated name that grows and takes the primary tone when active.
+- Description: Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not dropped), and the place pin itself — a teardrop in the place card's kind colour and glyph, with the name beside it as a haloed map label, that lifts on hover and grows from its tip when active.
 - Web:
   - Contributes:
     - `PageMap.Layer` "place"
     - `GeoMap.Pin` → `PlacePin`
   - Uses:
     - `map.GeoMap`
+    - `map.MapLabel`
+    - `map.MapPinProps`
     - `page/map.PageMap`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
-    - `primitives/css/rigid.rigidClass`
-    - `primitives/css/surface.Surface`
-    - `primitives/css/text.Text`
+    - `page/place.placeKindGlyph`
+    - `primitives/avatar.avatarFlatClass`
+    - `primitives/css/center.Center`
+    - `primitives/css/coords.Placed`
+    - `primitives/css/layer.Layer`
     - `primitives/css/ui-kit.cn`
     - `ui/icons.Icon`
 

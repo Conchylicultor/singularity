@@ -93,6 +93,7 @@ has the vocabulary for it.
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/scrubber`
     - `page/code-block`
+    - `page/place/map-layer`
     - `primitives/overlay/image-viewer`
     - `primitives/tree`
 

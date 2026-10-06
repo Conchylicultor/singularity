@@ -19128,6 +19128,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/map`
               - `page/page-reference`
               - `page/place`
+              - `page/place/map-layer`
               - `page/prompt/block`
               - `page/quote`
               - `page/table`
@@ -23050,12 +23051,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `GeoMap.Pin` ← `page.place.map-layer`
     - Uses:
       - `primitives/css/center.Center`
+      - `primitives/css/line.Line`
       - `primitives/css/placeholder.Placeholder`
+      - `primitives/css/text.Text`
       - `primitives/css/ui-kit.cn`
       - `primitives/loading.Loading`
       - `primitives/slot-render.defineDispatchSlot`
       - `primitives/slot-render.renderIsolated`
     - Exports (types):
+      - `MapLabelProps`
       - `MapPinProps`
       - `MapRendererContribution`
       - `MapRendererProps`
@@ -23063,6 +23067,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `MapViewProps`
     - Exports (values):
       - `GeoMap`
+      - `MapLabel`
       - `MapView`
   - Cross-plugin:
     - Imported by:
@@ -23079,6 +23084,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `MapPath`
       - `MapPin`
       - `MapStrokeStyle`
+      - `MapTileScheme`
       - `MapTone`
     - Exports (values):
       - `cameraFor`
@@ -25630,6 +25636,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Place`
           - `PLACE_TYPE`
           - `placeBlock`
+          - `placeKindGlyph`
           - `usePlaceProviders`
       - Server:
         - Contributes: `page.block-data` "place"
@@ -25662,6 +25669,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `placeDataFromSnapshot`
           - `PlaceDataSchema`
           - `placeKindColor`
+          - `PlaceKindSchema`
           - `placeNeedsResolve`
           - `placeResolveEndpoint`
           - `placeSearchEndpoint`
@@ -25669,7 +25677,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `placeSnapshotState`
           - `PlaceSuggestionSchema`
       - Cross-plugin:
-        - Imported by: `page/place/google`
+        - Imported by:
+          - `page/place/google`
+          - `page/place/map-layer`
       - Plugins:
         - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration.
           - Web:
@@ -25687,19 +25697,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Register: `definePlaceProvider('google')`
           - Shared:
             - Exports (values): `GOOGLE_PLACE_PROVIDER_ID`
-        - **`map-layer`** — Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not dropped), and the place pin itself — a bubble with the location icon and the truncated name that grows and takes the primary tone when active.
+        - **`map-layer`** — Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not dropped), and the place pin itself — a teardrop in the place card's kind colour and glyph, with the name beside it as a haloed map label, that lifts on hover and grows from its tip when active.
           - Web:
             - Contributes:
               - `PageMap.Layer` "place"
               - `GeoMap.Pin` → `PlacePin`
             - Uses:
               - `map.GeoMap`
+              - `map.MapLabel`
+              - `map.MapPinProps`
               - `page/map.PageMap`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/surface.Surface`
-              - `primitives/css/text.Text`
+              - `page/place.placeKindGlyph`
+              - `primitives/avatar.avatarFlatClass`
+              - `primitives/css/center.Center`
+              - `primitives/css/coords.Placed`
+              - `primitives/css/layer.Layer`
               - `primitives/css/ui-kit.cn`
               - `ui/icons.Icon`
     - **`prompt`** — Umbrella for the `/prompt` page block: the task↔block link data layer and the block type that launches agents from a page.
@@ -27293,6 +27305,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `Avatar`
           - `AVATAR_COLOR_KEYS`
+          - `avatarFlatClass`
           - `AvatarPicker`
           - `AvatarPresentationProvider`
           - `avatarSoftClass`
@@ -27309,6 +27322,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/avatar/config`
           - `fields/avatar/table`
           - `page/place`
+          - `page/place/map-layer`
           - `primitives/data-view/icons`
       - Core:
         - Exports (types):
@@ -27883,6 +27897,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/math/inline`
               - `page/page-link`
               - `page/place`
+              - `page/place/map-layer`
               - `page/sub-page`
               - `page/video`
               - `plugin-meta/plugin-view`
@@ -28228,6 +28243,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling/ops/op-gantt`
               - `debug/timeline`
               - `page/editor`
+              - `page/place/map-layer`
               - `primitives/graph-canvas`
               - `primitives/metrics/chart-kit`
               - `primitives/overlay/image-viewer`
@@ -28338,7 +28354,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-date`
               - `page/links`
               - `page/place`
-              - `page/place/map-layer`
               - `page/prompt/block`
               - `plugin-meta/facets/registrations/render-detail`
               - `plugin-meta/facets/resources/render-detail`
@@ -28567,6 +28582,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
               - `page/code-block`
+              - `page/place/map-layer`
               - `primitives/overlay/image-viewer`
               - `primitives/tree`
         - **`layout-harness`** — Layout-primitive geometry harness, web half: the bare measurer page and the bun:test geometry suite that measure every geometry-gated exhibit across its width sweep.
@@ -28661,12 +28677,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/sentinel`
               - `debug/timeline`
               - `infra/background/catalog`
+              - `map`
               - `page/annotations/todo/task-link`
               - `page/formatting/link`
               - `page/inline-date`
               - `page/links`
               - `page/place`
-              - `page/place/map-layer`
               - `page/prompt/block`
               - `plugin-meta/facets/db-schema/render-detail`
               - `plugin-meta/facets/registrations/render-detail`
@@ -29026,7 +29042,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/file`
               - `page/formatting/link`
               - `page/place`
-              - `page/place/map-layer`
               - `plugin-meta/facets/db-schema/render-detail`
               - `plugin-meta/facets/registrations/render-detail`
               - `plugin-meta/facets/resources/render-detail`
@@ -29811,7 +29826,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `page/map`
               - `page/place`
-              - `page/place/map-layer`
               - `page/read-only-view`
               - `primitives/collapsible-wrap`
               - `primitives/css/card`
@@ -30076,6 +30090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `integrations/gmail`
               - `integrations/google-maps`
               - `layouts/route-fallback`
+              - `map`
               - `map/google`
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
@@ -30093,7 +30108,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/math/inline`
               - `page/page-link`
               - `page/place`
-              - `page/place/map-layer`
               - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`

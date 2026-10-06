@@ -10,7 +10,7 @@ import {
 
 export default {
   description:
-    "Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not dropped), and the place pin itself — a bubble with the location icon and the truncated name that grows and takes the primary tone when active.",
+    "Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not dropped), and the place pin itself — a teardrop in the place card's kind colour and glyph, with the name beside it as a haloed map label, that lifts on hover and grows from its tip when active.",
   contributions: [
     PageMap.Layer({
       id: "place",

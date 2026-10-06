@@ -78,12 +78,12 @@ attribute type carries.
     - `debug/sentinel`
     - `debug/timeline`
     - `infra/background/catalog`
+    - `map`
     - `page/annotations/todo/task-link`
     - `page/formatting/link`
     - `page/inline-date`
     - `page/links`
     - `page/place`
-    - `page/place/map-layer`
     - `page/prompt/block`
     - `plugin-meta/facets/db-schema/render-detail`
     - `plugin-meta/facets/registrations/render-detail`

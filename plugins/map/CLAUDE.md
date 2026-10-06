@@ -54,12 +54,15 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `GeoMap.Pin` ← `page.place.map-layer`
   - Uses:
     - `primitives/css/center.Center`
+    - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.renderIsolated`
   - Exports (types):
+    - `MapLabelProps`
     - `MapPinProps`
     - `MapRendererContribution`
     - `MapRendererProps`
@@ -67,6 +70,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapViewProps`
   - Exports (values):
     - `GeoMap`
+    - `MapLabel`
     - `MapView`
 - Cross-plugin:
   - Imported by:
@@ -83,6 +87,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapPath`
     - `MapPin`
     - `MapStrokeStyle`
+    - `MapTileScheme`
     - `MapTone`
   - Exports (values):
     - `cameraFor`

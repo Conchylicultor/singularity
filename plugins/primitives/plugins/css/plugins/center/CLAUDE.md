@@ -107,6 +107,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `page/math/inline`
     - `page/page-link`
     - `page/place`
+    - `page/place/map-layer`
     - `page/sub-page`
     - `page/video`
     - `plugin-meta/plugin-view`

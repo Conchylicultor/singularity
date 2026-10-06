@@ -31,6 +31,7 @@ import {
   type ToneColors,
 } from "../internal/tone-colors";
 import { MapErrorCard } from "./map-error-card";
+import { GOOGLE_COLOR_SCHEME, GOOGLE_TILES } from "../internal/tiles";
 
 /**
  * Google's shared demo style: Advanced Markers need SOME map id, and this one
@@ -121,6 +122,7 @@ function GoogleMapCanvas({
       >
         <GoogleMap
           mapId={mapId ?? DEMO_MAP_ID}
+          colorScheme={GOOGLE_COLOR_SCHEME[GOOGLE_TILES]}
           defaultCenter={center}
           defaultZoom={initial.kind === "point" ? initial.zoom : 2}
           // A map inside a scrolling page: a plain wheel scrolls the page, and

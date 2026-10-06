@@ -182,6 +182,7 @@ default is stated twice and can therefore drift.
     - `debug/profiling/ops/op-gantt`
     - `debug/timeline`
     - `page/editor`
+    - `page/place/map-layer`
     - `primitives/graph-canvas`
     - `primitives/metrics/chart-kit`
     - `primitives/overlay/image-viewer`

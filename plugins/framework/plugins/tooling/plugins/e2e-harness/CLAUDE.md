@@ -361,6 +361,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `page/map`
     - `page/page-reference`
     - `page/place`
+    - `page/place/map-layer`
     - `page/prompt/block`
     - `page/quote`
     - `page/table`

@@ -73,3 +73,10 @@ export const MAP_TONE_TOKEN: Record<MapTone, string> = {
   warning: "--warning",
   info: "--info",
 };
+
+/**
+ * Whether a renderer's tiles are drawn light or dark. Pins sit ON the tiles, not
+ * on the app's surface, so what reads on them follows the tiles — a dark app
+ * theme over light Google tiles still wants dark label ink.
+ */
+export type MapTileScheme = "light" | "dark";

@@ -170,7 +170,6 @@ primitive exists to name.
     - `page/inline-date`
     - `page/links`
     - `page/place`
-    - `page/place/map-layer`
     - `page/prompt/block`
     - `plugin-meta/facets/registrations/render-detail`
     - `plugin-meta/facets/resources/render-detail`

@@ -132,6 +132,7 @@ color palette.
   - Exports (values):
     - `Avatar`
     - `AVATAR_COLOR_KEYS`
+    - `avatarFlatClass`
     - `AvatarPicker`
     - `AvatarPresentationProvider`
     - `avatarSoftClass`
@@ -148,6 +149,7 @@ color palette.
     - `fields/avatar/config`
     - `fields/avatar/table`
     - `page/place`
+    - `page/place/map-layer`
     - `primitives/data-view/icons`
 - Core:
   - Exports (types):

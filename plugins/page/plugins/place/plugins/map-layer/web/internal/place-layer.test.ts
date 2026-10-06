@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Block } from "@plugins/page/plugins/editor/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { PLACE_PIN_TYPE, placeOverlays } from "./place-layer";
+import { PLACE_PIN_TYPE, placeOverlays, placePinKind } from "./place-layer";
 
 function block(id: string, type: string, data: unknown): Block {
   const at = new Date("2026-01-01T00:00:00.000Z");
@@ -38,12 +38,34 @@ describe("placeOverlays", () => {
             pinType: PLACE_PIN_TYPE,
             position: { lat: 48.8584, lng: 2.2945 },
             label: "Eiffel Tower",
+            data: { kind: undefined },
           },
           blockId: "b1",
         },
       ],
       unplaced: 0,
     });
+  });
+
+  test("the pin carries the place's kind, read back by placePinKind", () => {
+    const [entry] = placeOverlays([
+      block("b1", "place", { ...eiffel, kind: "attraction" }),
+    ]).overlays;
+    expect(entry?.overlay.kind).toBe("pin");
+    if (entry?.overlay.kind !== "pin") return;
+    expect(placePinKind(entry.overlay)).toBe("attraction");
+  });
+
+  test("placePinKind refuses a pin it did not make", () => {
+    expect(() =>
+      placePinKind({
+        kind: "pin",
+        id: "x",
+        pinType: PLACE_PIN_TYPE,
+        position: { lat: 0, lng: 0 },
+        data: { kind: "volcano" },
+      }),
+    ).toThrow();
   });
 
   test("a picked place without coordinates is counted, not drawn", () => {
