@@ -14,16 +14,40 @@ import { HealthReportButton } from "@plugins/shell/plugins/health-report/web";
 import { actionBarConfig } from "../../shared/config";
 import { useActionBarPinned } from "../internal/use-action-bar-pinned";
 import { useFloatingBarSafeArea } from "../internal/use-floating-bar-safe-area";
+import { useBarActivities } from "../internal/use-bar-activities";
+import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
 
 /**
  * The always-visible leading item: the health report's dot, at the bar's `sm`
  * density (the density `ActionBar.Item` gives every other button in the bar).
  */
-function HealthItem() {
+function HealthItem({ activities }: { activities?: readonly Activity[] }) {
   return (
     <ControlSizeProvider size="sm">
-      <HealthReportButton />
+      <HealthReportButton activities={activities} />
     </ControlSizeProvider>
+  );
+}
+
+/**
+ * The COLLAPSED floating bar's mark: everything the bar hides while closed,
+ * folded onto the one thing it still shows. Background work (`ActionBar.Activity`)
+ * rings the health dot; things to act on (`ActionBar.Glance`, e.g. Reload) sit
+ * beside it. The glance chips hide while the bar is open — the expanded row
+ * shows the full items, which carry the same actions — so nothing shows twice.
+ * The docked strip has none of this: its items are always visible.
+ */
+function CollapsedMark() {
+  const { probes, activities } = useBarActivities();
+  return (
+    <Stack direction="row" gap="2xs" align="center">
+      {probes}
+      <HealthItem activities={activities} />
+      {/* Collapsed-only: the expanded row carries the same actions. */}
+      <div className="contents group-data-open/fa:hidden">
+        <ActionBar.Glance.Render />
+      </div>
+    </Stack>
   );
 }
 
@@ -87,10 +111,10 @@ export function FloatingActionBarHost() {
           className="relative my-auto shrink-0"
           anchor="top-right"
           variant="ghost"
-          // The health dot and the action row are different heights; centering
+          // The collapsed mark and the action row are different heights; centering
           // them keeps the dot on the row's centre line as the panel widens.
           align="center"
-          trigger={<HealthItem />}
+          trigger={<CollapsedMark />}
         >
           {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
           <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">

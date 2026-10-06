@@ -222,6 +222,8 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `buildDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `ActionBar.Item` → `BuildButton`
+    - `ActionBar.Activity` "build"
+    - `ActionBar.Glance` → `ReloadChip`
     - `Pane.Register` "build"
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds"

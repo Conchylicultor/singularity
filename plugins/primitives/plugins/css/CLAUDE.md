@@ -94,6 +94,7 @@ code is gated immediately, and a genuine one-off escapes per-site via
 
 - Description: Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
 - Sub-plugins:
+  - **`activity-ring`** — Activity ring around a status dot: <ActivityRing state> draws a spinning arc on a faint track while background work runs and a broken destructive ring when it failed; null renders the child alone with no reserved box. Sized from the ambient ControlSize's status-dot token, so it scales with the dot it wraps.
   - **`badge`** — The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size, and an optional monospace label. The label is the chip's baseline, so a chip dropped in a sentence sits on the same line as the words beside it instead of on its icon's bottom edge. LinkChip and ToggleChip compose it.
   - **`bouncing-dots`** — Three-dot bouncing activity indicator for 'working'/'pending' states. Renders three animate-bounce dots with staggered delays; size sm (size-1) or md (size-1.5, default).
   - **`card`** — Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.

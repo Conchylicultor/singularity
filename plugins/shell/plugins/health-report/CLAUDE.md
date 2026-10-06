@@ -110,6 +110,9 @@ detail is rendered through `renderIsolated`.
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.useCollapsibleContext`
+    - `primitives/css/activity-ring.Activity`
+    - `primitives/css/activity-ring.ActivityRing`
+    - `primitives/css/activity-ring.ActivityState`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

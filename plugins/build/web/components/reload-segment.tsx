@@ -1,24 +1,11 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { ReloadAdvice } from "../hooks/use-reload-advice";
+import { reloadIsFailing, reloadMessageFor } from "../internal/reload-copy";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const refreshIcon = symbol("refresh");
-
-type ShownAdvice = Exclude<ReloadAdvice, { kind: "none" }>;
-
-function messageFor(advice: ShownAdvice): string {
-  if (advice.kind === "stale") {
-    return "Server was rebuilt — click to reload this tab";
-  }
-  if (advice.kind === "outdated") {
-    return "This tab is out of date and can't load some data — reload to fix";
-  }
-  return advice.stale
-    ? "This tab is out of date and part of the app didn't load — reload to fix"
-    : "Part of the app didn't load — reload to fix";
-}
 
 /**
  * The Reload segment of the Build pill: shown when the tab is stale, cannot
@@ -35,8 +22,8 @@ function messageFor(advice: ShownAdvice): string {
  */
 export function ReloadSegment({ advice }: { advice: ReloadAdvice }) {
   if (advice.kind === "none") return null;
-  const message = messageFor(advice);
-  const failing = advice.kind === "broken" || advice.kind === "outdated";
+  const message = reloadMessageFor(advice);
+  const failing = reloadIsFailing(advice);
   return (
     <WithTooltip content={message}>
       <Button

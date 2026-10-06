@@ -78,6 +78,7 @@ barrel.
     - `primitives/text-editor/inline-chip`
     - `reports/crash`
     - `reports/launch-fix`
+    - `shell/global-action-bar`
     - `shell/health-report`
     - `tasks/launch-options`
 

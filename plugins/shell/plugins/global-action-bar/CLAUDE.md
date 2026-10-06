@@ -9,6 +9,15 @@ bar is pinned is not a preference — it follows the surface mode: desktop and
 tab modes dock it expanded in the tab bar; fullscreen (solo), which hides the
 tab bar and app rail, floats it over the app. Owns the `enabled` config.
 
+Collapsed, the floating bar hides every item — so it folds what they would say
+onto the dot (`CollapsedMark`). Each `ActionBar.Activity` contribution's hook
+(the build, …) is read by its own probe (`internal/use-bar-activities.tsx`) and
+passed to `HealthReportButton`, which rings the dot (`primitives/css/activity-ring`:
+any running spins it, else any failed breaks it) and adds the labels to its
+tooltip. `ActionBar.Glance` chips (Reload) sit after the dot and hide while the
+bar is open, since the expanded row carries the same actions. The docked strip
+renders neither: its items are always visible. The bar names no contributor.
+
 One gear button (`ViewOptionsButton`) opens a control-panel popover: the
 `ActionBar.ViewOption` rows (surface mode, browser fullscreen, edit layout —
 whatever is contributed).
@@ -51,6 +60,7 @@ tab bar, which an embed does not paint.
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/embed.isChromelessDocument`
+    - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/floating-action.FloatingAction`
     - `primitives/overlay/floating-action.FloatingActionFadeIn`

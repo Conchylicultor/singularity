@@ -299,7 +299,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
     - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat parsers, the runGit invocation and commit row types for reuse across plugins.
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
-    - **`css`** [48 sub-plugins] — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
+    - **`css`** [49 sub-plugins] — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
     - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), the useCursorPagination keyset wrapper (frozen-cursor + useInfiniteQuery), and the ScrollSentinel component.
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
     - **`data-view`** [test helpers] — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
@@ -473,7 +473,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`shell`** [load-bearing] — Foundational app layout; defines the slots and commands most other plugins extend.
   - Plugins:
-    - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout editing) folded behind the bar's gear popover; the global-action-bar plugin renders both.
+    - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout editing) folded behind the bar's gear popover; the global-action-bar plugin renders both. ActionBar.Activity (background work as a ring around the collapsed bar's health dot) and ActionBar.Glance (compact chips beside it) keep that work visible while the floating bar is collapsed.
     - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the surface mode: a docked right-aligned strip in the tab bar (Apps.TabBarActions) in desktop and tab modes, and a floating top-right overlay (Core.Root) in fullscreen (solo), where the tab bar is hidden. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
     - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
     - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.

@@ -713,6 +713,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/copy-to-clipboard`
+    - `primitives/css/activity-ring`
     - `primitives/css/badge`
     - `primitives/css/bouncing-dots`
     - `primitives/css/card`

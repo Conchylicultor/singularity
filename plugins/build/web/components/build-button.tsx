@@ -18,10 +18,10 @@ import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popov
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildHistory, buildRoute } from "@plugins/build/core";
-import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import { isMainCompositionBuild, type BuildRun } from "../../shared";
 import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
 import { ReloadSegment } from "./reload-segment";
+import { latestRunState } from "../internal/latest-run-state";
 import { BuildPopoverContent } from "./build-popover-content";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -46,10 +46,11 @@ function BuildButtonInner({
   historyData: BuildRun[];
 }) {
   const latestRun = historyData[0];
-  const building = latestRun?.finishedAt === null;
   // Only a real verdict turns the toolbar red: a superseded / interrupted /
   // externally-killed run reports no defect, so it must not read "Build failed".
-  const failed = latestRun != null && buildStatusOf(latestRun) === "failed";
+  const runState = latestRunState(latestRun);
+  const building = runState === "running";
+  const failed = runState === "failed";
   const staleTab =
     advice.kind === "stale" ||
     advice.kind === "outdated" ||

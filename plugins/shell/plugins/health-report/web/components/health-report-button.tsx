@@ -4,6 +4,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import {
+  ActivityRing,
+  type Activity,
+  type ActivityState,
+} from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
+import {
   mergeHealth,
   verdictOf,
   type HealthMerge,
@@ -30,13 +35,24 @@ function sameView(a: DotView, b: DotView): boolean {
   );
 }
 
+/** The one ring for many activities: anything running spins it, else anything failed breaks it. */
+function ringOf(activities: readonly Activity[]): ActivityState | null {
+  if (activities.some((a) => a.state === "running")) return "running";
+  if (activities.some((a) => a.state === "failed")) return "failed";
+  return null;
+}
+
 /**
  * The dot itself, and the popover it opens.
  *
  * Reads the merge through a selector, so the button re-renders only when what
  * it shows changes — not on every status a probe republishes.
  */
-function HealthReportTrigger() {
+function HealthReportTrigger({
+  activities,
+}: {
+  activities: readonly Activity[];
+}) {
   const rows = HealthReport.Row.useContributions();
   const ids = rows.flatMap((row) => (row.kind === "status" ? [row.id] : []));
   const idsKey = ids.join("\n");
@@ -56,27 +72,32 @@ function HealthReportTrigger() {
       ? BUTTON_TINT_CLASS[view.state]
       : undefined;
   const needsLook = tint !== undefined;
+  // The activity labels ride along in the tooltip / accessible name: the ring
+  // alone says "something is running", the words say what.
+  const label = [view.verdict, ...activities.map((a) => a.label)].join(" · ");
 
   return (
     <InlinePopover
       align="end"
       width="2xl"
       padding="none"
-      tooltip={view.verdict}
+      tooltip={label}
       trigger={
         <Button
           variant="ghost"
           shape="pill"
           aspect={needsLook ? "text" : "icon"}
-          aria-label={view.verdict}
+          aria-label={label}
           data-health={view.state}
           className={tint}
         >
           <ControlSizeProvider size="md">
-            <HealthDot
-              level={view.state}
-              pulsing={view.pending || view.transitioning}
-            />
+            <ActivityRing state={ringOf(activities)}>
+              <HealthDot
+                level={view.state}
+                pulsing={view.pending || view.transitioning}
+              />
+            </ActivityRing>
           </ControlSizeProvider>
           {needsLook ? (
             <span className="font-semibold tabular-nums">{view.count}</span>
@@ -101,12 +122,20 @@ function HealthReportTrigger() {
  * one probe per status row, so the dot is coloured whether or not the report is
  * open — mount exactly one of these per page. Its density is the ambient
  * `ControlSize` of wherever it is placed.
+ *
+ * `activities` — background work the host wants shown with the dot (the
+ * collapsed floating bar's build, …) — draws a ring around the dot and joins
+ * the tooltip. The button names no source; the host gathers them.
  */
-export function HealthReportButton() {
+export function HealthReportButton({
+  activities = [],
+}: {
+  activities?: readonly Activity[];
+}) {
   return (
     <HealthStore.Provider>
       <StatusProbes />
-      <HealthReportTrigger />
+      <HealthReportTrigger activities={activities} />
     </HealthStore.Provider>
   );
 }

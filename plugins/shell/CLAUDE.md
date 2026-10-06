@@ -21,7 +21,7 @@
     - `stats`
     - `tasks/task-detail`
 - Sub-plugins:
-  - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout editing) folded behind the bar's gear popover; the global-action-bar plugin renders both.
+  - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout editing) folded behind the bar's gear popover; the global-action-bar plugin renders both. ActionBar.Activity (background work as a ring around the collapsed bar's health dot) and ActionBar.Glance (compact chips beside it) keep that work visible while the floating bar is collapsed.
   - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the surface mode: a docked right-aligned strip in the tab bar (Apps.TabBarActions) in desktop and tab modes, and a floating top-right overlay (Core.Root) in fullscreen (solo), where the tab bar is hidden. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
   - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
   - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.

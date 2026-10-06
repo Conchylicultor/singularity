@@ -93,6 +93,7 @@ const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
   "space-ramp":
     "a token standard (the spacing ramp's steps and the class each names, generated from app.css) — the scale Stack/Inset/Grid draw their gap and pad from, not a box to reach for. The boxes are Stack and Inset, which the message already names.",
   spinner: "loading indicator — a leaf",
+  "activity-ring": "status glyph around a status dot — a leaf",
   "status-dot": "status glyph — a leaf",
   surface: "elevation chrome (bg/border/shadow), orthogonal to arrangement",
   switch: "a form control (track + knob) — a leaf",

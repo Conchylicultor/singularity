@@ -4246,6 +4246,10 @@
       "name": "@singularity/plugin-primitives-css",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/activity-ring": {
+      "name": "@singularity/plugin-primitives-css-activity-ring",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/badge": {
       "name": "@singularity/plugin-primitives-css-badge",
       "version": "0.0.1",
@@ -8165,6 +8169,8 @@
     "@singularity/plugin-primitives-copy-to-clipboard": ["@singularity/plugin-primitives-copy-to-clipboard@workspace:plugins/primitives/plugins/copy-to-clipboard"],
 
     "@singularity/plugin-primitives-css": ["@singularity/plugin-primitives-css@workspace:plugins/primitives/plugins/css"],
+
+    "@singularity/plugin-primitives-css-activity-ring": ["@singularity/plugin-primitives-css-activity-ring@workspace:plugins/primitives/plugins/css/plugins/activity-ring"],
 
     "@singularity/plugin-primitives-css-badge": ["@singularity/plugin-primitives-css-badge@workspace:plugins/primitives/plugins/css/plugins/badge"],
 

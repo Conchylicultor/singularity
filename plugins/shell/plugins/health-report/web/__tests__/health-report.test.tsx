@@ -28,6 +28,7 @@ import type { HealthReportRow, HealthStatus, StatusRow } from "../../core";
 import { HealthReport } from "../slots";
 import { HealthReportButton } from "../components/health-report-button";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
 
 const accountTreeIcon = symbol("account-tree");
 
@@ -38,7 +39,7 @@ afterEach(() => {
   console.error = consoleError;
 });
 
-function renderReport(rows: HealthReportRow[]) {
+function renderReport(rows: HealthReportRow[], activities?: Activity[]) {
   const plugin = {
     id: "shell.health-report",
     description: "health report fixture",
@@ -49,7 +50,7 @@ function renderReport(rows: HealthReportRow[]) {
   } as unknown as LoadedPlugin;
   return render(
     <PluginProvider plugins={[plugin]}>
-      <HealthReportButton />
+      <HealthReportButton activities={activities} />
     </PluginProvider>,
   );
 }
@@ -209,6 +210,36 @@ describe("the health dot", () => {
     await openReport();
     expect(summary("Server connected")).toBeTruthy();
     expect(summary("This check crashed")).toBeTruthy();
+  });
+});
+
+describe("activities", () => {
+  const ok = status("a", { state: "ok", summary: "fine" });
+
+  it("draw no ring when there are none", () => {
+    renderReport([ok]);
+    expect(button().querySelector("svg circle")).toBeNull();
+  });
+
+  it("ring the dot and join its name; running wins over failed", () => {
+    renderReport(
+      [ok],
+      [
+        { state: "failed", label: "Sync failed" },
+        { state: "running", label: "Building" },
+      ],
+    );
+    expect(button().getAttribute("aria-label")).toBe(
+      "All systems normal · Sync failed · Building",
+    );
+    expect(button().querySelector("svg.animate-spin")).not.toBeNull();
+    expect(dotClass()).toContain("bg-success");
+  });
+
+  it("a failed one alone breaks the ring, without spinning", () => {
+    renderReport([ok], [{ state: "failed", label: "Build failed" }]);
+    expect(button().querySelector("svg .stroke-destructive")).not.toBeNull();
+    expect(button().querySelector("svg.animate-spin")).toBeNull();
   });
 });
 
