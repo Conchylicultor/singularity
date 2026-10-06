@@ -8,7 +8,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
-export type ToggleChipVariant = "solid" | "ghost" | "tinted";
+export type ToggleChipVariant = "solid" | "ghost" | "tinted" | "outline";
 export type ToggleChipSize = "sm" | "md";
 
 // The chip's two-level scale sits one notch under the control scale by design
@@ -50,6 +50,15 @@ const VARIANT_CLASS: Record<
     active: "border border-primary/40 bg-primary/10 text-primary",
     inactive: BORDERED_OFF,
   },
+  // pill-row look: a hairline-outlined pill on whatever is behind it when off,
+  // the inverted fill (`secondary`) when on — a row of category pills on a
+  // designed page, where the selected one reads as the solid one. Both states
+  // carry one `border`, so switching cannot move the neighbours.
+  outline: {
+    active: "border border-secondary bg-secondary text-secondary-foreground",
+    inactive:
+      "border border-foreground/16 text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+  },
 };
 
 /**
@@ -64,7 +73,8 @@ export interface ToggleChipProps extends DensityControlled, Passthrough {
    * Color treatment. "solid" = filled-primary when on, bordered when off
    * (controls); "ghost" = accent fill when on, transparent when off (filters);
    * "tinted" = accent wash + accent line + accent label when on, bordered when
-   * off (attach toggles). Default "solid".
+   * off (attach toggles); "outline" = inverted fill when on, a transparent
+   * outlined pill when off (category pills on a designed page). Default "solid".
    */
   variant?: ToggleChipVariant;
   /** Leading icon, rendered before children. */

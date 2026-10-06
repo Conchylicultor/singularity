@@ -19,7 +19,7 @@ would follow the theme's type scale while the box stays fixed, so no role is
 used — and because the class-token lint walk follows a helper's return value
 (`geometryFor` → `SIZE_MAP`), a raw `text-*` size in a bundle is reported.
 
-## Presentation: badge or tile (from context)
+## Presentation: badge, tile or gradient tile (from context)
 
 How an avatar draws is also a region property —
 `<AvatarPresentationProvider value>` / `useAvatarPresentation()`, modelled on
@@ -31,11 +31,15 @@ How an avatar draws is also a region property —
   ignored), the FLAT paint (the solid colour under the `categorical-foreground` glyph token, white by default), the glyph at
   46% of the box (svg by `size-[46%]`, a fallback letter by a `cqh` font size, as
   every presentation does), and the status dot has no ring.
+- **`gradient-tile`**: the tile's box, the GRADIENT paint (the slot darkened
+  0.28 in OKLCH lightness — `categorical-N-deep` — into the slot at 140°), the
+  glyph at 54%, and an inset top highlight plus a drop shadow: an app icon shown
+  as an object (the website's app gallery).
 
 A field renders its avatar without knowing which one it is in; the launcher view
 declares `tile` once around its items.
 
-## Colour: one pick, two paints
+## Colour: one pick, three paints
 
 `avatarColorPick(color, fallbackKey) → { slot, shade } | null` is the one rule:
 an explicit known colour wins (shade 0); otherwise the key hashes to one of the
@@ -46,7 +50,8 @@ it was before shades existed; `colors.test.ts` pins that for a fixed key set) an
 `avatarFlatClass(pick)` the tile paint (10 slots × 2 shades, shade 1 =
 `bg-categorical-N-lift`, the slot lifted 0.13 in OKLCH lightness, derived once in
 ui-kit's `app.css` `@theme inline` block). `avatarColorClass` is
-`avatarSoftClass(avatarColorPick(…))`.
+`avatarSoftClass(avatarColorPick(…))`. `avatarGradientClass(pick)` is the gradient-tile paint (one
+per slot, the shade ignored).
 
 The closed colour list (`AVATAR_COLOR_NAMES`, `AvatarColor`) and `AvatarShape`
 live in `core/`, so a non-web descriptor (an app icon's declared colour) can type

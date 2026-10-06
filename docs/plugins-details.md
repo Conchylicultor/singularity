@@ -6841,6 +6841,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes:
                   - `Pane.Register` "website-apps"
                   - `WebsiteHeader` "apps" → `AppsNavItem`
+                  - `ThemeEngine.SubTheme` "equin gallery"
+                  - `ThemeEngine.SubTheme` "equin closing"
                 - Uses:
                   - `apps/website/pages/download.downloadPane`
                   - `apps/website/pages/foundations.foundationsPane`
@@ -6860,9 +6862,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/surface.Surface`
                   - `primitives/css/text.Text`
+                  - `primitives/css/theme-boundary.Theme`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/css/ui-kit.ControlSizeProvider`
                   - `primitives/css/ui-kit.Input`
+                  - `primitives/css/ui-kit.subThemeScope`
                   - `primitives/filter-chips.FilterChip`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
@@ -6870,6 +6875,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/pane.useOpenPane`
                   - `primitives/search.SearchInput`
                   - `primitives/shortcuts.useSurfaceShortcuts`
+                  - `ui/theme-engine.ThemeEngine`
                 - Exports (values): `appsPane`
               - Cross-plugin:
                 - Imported by: `apps/website/landing/layers`
@@ -7000,7 +7006,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `apps/website/landing/layers`
                   - `apps/website/pages/apps`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears.
+        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears.
           - Web:
             - Slots:
               - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.hero`, `apps.website.landing.layers`, `apps.website.landing.screenshot`, `apps.website.landing.story-link`
@@ -7012,6 +7018,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "website-landing"
               - `ThemeEngine.Theme` "equin"
               - `ThemeEngine.SubTheme` "equin document"
+              - `ThemeEngine.SubTheme` "equin page heading"
             - Uses:
               - `apps-core.Apps`
               - `apps/deploy/analytics/collect.AnalyticsTracker`
@@ -19072,6 +19079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release`
               - `apps/website`
               - `apps/website/improve`
+              - `apps/website/pages/apps`
               - `apps/website/shell`
               - `build`
               - `config_v2`
@@ -30200,6 +30208,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
+              - `apps/website/pages/apps`
               - `apps/website/shell`
               - `layouts/miller`
               - `primitives/pane`
@@ -39992,7 +40001,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.pages.shell`, `apps.website.shell`, `ui.theme-engine`
-          - `ThemeEngine.SubTheme` ← `apps.website.shell`
+          - `ThemeEngine.SubTheme` ← `apps.website.pages.apps`, `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
           - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
         - Contributes:
@@ -40085,6 +40094,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `NEUTRAL_COLOR_ADJUSTMENT`
           - `resolveFixedTheme`
           - `resolveTheme`
+          - `subThemeBlockValues`
           - `themeSelectionConfig`
           - `TokenGroupFragmentSchema`
           - `TokenGroupFragmentsSchema`
@@ -40097,6 +40107,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/chord/shell`
           - `apps/home/shell`
           - `apps/pages/shell`
+          - `apps/website/pages/apps`
           - `apps/website/shell`
           - `reports/theme-resolution`
           - `ui/segmented-progress-bar`

@@ -8,14 +8,16 @@ and the three chrome pieces a page is built out of.
   so every band on every page lines up on the same left and right edges. A band
   that pads and centres itself will drift. Its block padding is a named `rhythm`
   (`hero` / `page-hero` / `section` / `interlude` / `closing` / `footer` /
-  `page`) from
+  `page` / `page-body`) from
   the same file: the page's vertical score is a designed scale of its own, above
   what the density spacing ramp can say, so a band names its role and never
   writes a number.
 - **`WebsiteHero`** — the heading every page opens with: a centred sentence
   with its accent half painted through the azure→cyan gradient, the lede under
   it, and the ambient glow behind both (`website-hero.css`). `kind="home"` is
-  the homepage's title page, `kind="page"` an inner page's heading.
+  the homepage's title page (78px). `kind="page"` is an inner page's heading:
+  smaller (58px headline, 18px lede capped at 640px) through its own sub-theme,
+  `equinPageHeroTheme`.
 - **`WebsiteSoon`** — the one "more details soon" note a placeholder page shows
   under its heading.
 - **`WebsiteChrome`** — what a pane renders instead of `PaneChrome`: the header,
@@ -33,7 +35,7 @@ The wordmark's full stop is the only place the brand colour appears as identity
 rather than as an affordance. That is what lets a link, a button and the hero's
 gradient all read as things you can act on.
 
-**The site's theme lives here, in two parts** (`web/internal/theme.ts`):
+**The site's theme lives here** (`web/internal/theme.ts`):
 
 - `equinTheme` — the look: palette, chart ramp, font. Contributed through
   `ThemeEngine.Theme` and selected for the website app by
@@ -44,11 +46,17 @@ gradient all read as things you can act on.
   sub-theme (`ThemeEngine.SubTheme`), worn by every page because
   `WebsiteChrome` wraps the whole pane, header included, in it. It sets no
   colours, so the page always takes the app's.
+- `equinPageHeroTheme` — an inner page's heading sizes, worn by
+  `WebsiteHero kind="page"` over the document's. A page region that reads in
+  other sizes (the Apps gallery) declares its own sub-theme the same way, in its
+  own plugin.
 
-A size a page needs goes in the sub-theme; a colour goes in the theme. Two
+A size a page needs goes in a sub-theme; a colour goes in the theme. Two
 values in the density fragment are the header's: `chromePaneH` is the 72px site header, and
 `chromePadX` is a gutter computed from `--website-measure`, which is how the pane
-header's wordmark and nav land on the same edges as every band in the body. The
+header's wordmark and nav land on the same edges as every band in the body (the
+pane header's own insets derive from it and are re-derived inside the
+sub-theme). The
 site's filled control is the foreground inverted (a white pill with dark type),
 carried by `secondary`; `primary` is the azure accent and stays for identity and
 hover.
@@ -57,7 +65,7 @@ hover.
 
 ## Plugin reference
 
-- Description: App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears.
+- Description: App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears.
 - Web:
   - Slots:
     - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.hero`, `apps.website.landing.layers`, `apps.website.landing.screenshot`, `apps.website.landing.story-link`
@@ -69,6 +77,7 @@ hover.
     - `Pane.Register` "website-landing"
     - `ThemeEngine.Theme` "equin"
     - `ThemeEngine.SubTheme` "equin document"
+    - `ThemeEngine.SubTheme` "equin page heading"
   - Uses:
     - `apps-core.Apps`
     - `apps/deploy/analytics/collect.AnalyticsTracker`

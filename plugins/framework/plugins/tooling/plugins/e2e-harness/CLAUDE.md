@@ -315,6 +315,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/studio/compositions/release`
     - `apps/website`
     - `apps/website/improve`
+    - `apps/website/pages/apps`
     - `apps/website/shell`
     - `build`
     - `config_v2`

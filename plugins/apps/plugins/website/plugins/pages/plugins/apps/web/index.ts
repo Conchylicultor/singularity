@@ -1,8 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { WebsiteHeader } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { appsPane } from "./panes";
 import { AppsNavItem } from "./components/apps-nav-item";
+import { equinClosingTheme, equinGalleryTheme } from "./internal/theme";
 
 export { appsPane } from "./panes";
 
@@ -15,5 +17,9 @@ export default {
     // `apps.website.shell`.
     Pane.Register({ pane: appsPane }),
     WebsiteHeader({ id: "apps", component: AppsNavItem }),
+    // The gallery's and the page end's sizes, each worn over the site's
+    // equin-document by its own region of the page.
+    ThemeEngine.SubTheme(equinGalleryTheme),
+    ThemeEngine.SubTheme(equinClosingTheme),
   ],
 } satisfies PluginDefinition;

@@ -8,14 +8,31 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
   Button,
+  ControlSizeProvider,
   Input,
+  subThemeScope,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { downloadPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/download/web";
 import { visionPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/vision/web";
 import { foundationsPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/foundations/web";
+import { equinClosingTheme } from "../internal/theme";
+
+/**
+ * The page's end, in its own sizes (`equinClosingTheme`): "Missing an app?",
+ * then the two pages to read next. Its distances from the gallery above and
+ * between its two parts are the gallery's score, in `apps-gallery.css`.
+ */
+export function AppsClosing() {
+  return (
+    <Theme name={subThemeScope(equinClosingTheme)} surface="none">
+      <AppsCompose />
+      <AppsReadNext />
+    </Theme>
+  );
+}
 
 /**
  * "Missing an app?" — the gallery's answer to an app it does not have: install
@@ -23,7 +40,7 @@ import { foundationsPane } from "@plugins/apps/plugins/website/plugins/pages/plu
  * reader can start describing; Build it goes to the download page, because the
  * building happens in equin, not on the site.
  */
-export function AppsCompose() {
+function AppsCompose() {
   const openPane = useOpenPane();
   const [idea, setIdea] = useState("");
   const onSubmit = (e: FormEvent) => {
@@ -31,11 +48,15 @@ export function AppsCompose() {
     openPane(downloadPane, {}, { mode: "root" });
   };
   return (
-    <WebsiteBand rhythm="page">
-      <Card className="border-foreground/20 rounded-2xl border-dashed bg-transparent shadow-none">
-        <Grid minCellWidth="18rem" mode="fit" gap="xl" align="center">
+    <Card className="website-apps-compose border-foreground/20 rounded-3xl border-dashed bg-transparent shadow-none">
+      <Stack direction="row" gap="xl" align="center" wrap>
+        <Fill>
           <Stack gap="2xs">
-            <Text as="h3" variant="heading" className="tracking-tight">
+            <Text
+              as="h3"
+              variant="heading"
+              className="font-semibold tracking-[-0.02em]"
+            >
               Missing an app?
             </Text>
             <Text as="p" variant="body" tone="muted">
@@ -43,22 +64,33 @@ export function AppsCompose() {
               existing plugins and builds what is missing.
             </Text>
           </Stack>
-          <Stack as="form" direction="row" gap="xs" onSubmit={onSubmit}>
-            <Fill>
+        </Fill>
+        <Stack
+          as="form"
+          direction="row"
+          gap="xs"
+          className="website-apps-compose-ask"
+          onSubmit={onSubmit}
+        >
+          <Fill>
+            {/* The field is the small control (42px, 14px text), Build it the
+                regular one beside it. */}
+            <ControlSizeProvider size="sm">
               <Input
+                className="website-apps-compose-field"
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
                 placeholder="A habit tracker that reads my calendar…"
                 aria-label="Describe the app"
               />
-            </Fill>
-            <Button type="submit" variant="secondary" className="font-semibold">
-              Build it
-            </Button>
-          </Stack>
-        </Grid>
-      </Card>
-    </WebsiteBand>
+            </ControlSizeProvider>
+          </Fill>
+          <Button type="submit" variant="secondary" className="font-semibold">
+            Build it
+          </Button>
+        </Stack>
+      </Stack>
+    </Card>
   );
 }
 
@@ -84,40 +116,43 @@ const NEXT: NextPage[] = [
  * likely to have — where the apps are going, and what sets them apart — each
  * as a card that opens the page answering it.
  */
-export function AppsReadNext() {
+function AppsReadNext() {
   const openPane = useOpenPane();
   return (
-    <WebsiteBand rhythm="closing">
-      <Grid
-        as="nav"
-        aria-label="Read next"
-        minCellWidth="18rem"
-        mode="fit"
-        gap="lg"
-      >
-        {NEXT.map((next) => (
-          <Card
-            key={next.answer}
-            as="button"
-            interactive
-            className="website-app-next hover:bg-card rounded-2xl text-left shadow-none"
-            onClick={() => openPane(next.pane, {}, { mode: "root" })}
-          >
-            <Stack gap="md" align="start">
-              <Text as="span" variant="heading" className="tracking-tight">
-                {next.question}
-              </Text>
-              <Text
-                as="span"
-                variant="body"
-                className="website-app-next-go font-semibold"
-              >
-                {next.answer} →
-              </Text>
-            </Stack>
-          </Card>
-        ))}
-      </Grid>
-    </WebsiteBand>
+    <Grid
+      as="nav"
+      aria-label="Read next"
+      minCellWidth="18rem"
+      mode="fit"
+      gap="lg"
+      className="website-apps-next"
+    >
+      {NEXT.map((next) => (
+        <Card
+          key={next.answer}
+          as="button"
+          interactive
+          className="website-app-next hover:bg-card text-left shadow-none"
+          onClick={() => openPane(next.pane, {}, { mode: "root" })}
+        >
+          <Stack gap="sm" align="start">
+            <Text
+              as="span"
+              variant="subheading"
+              className="font-semibold tracking-[-0.02em]"
+            >
+              {next.question}
+            </Text>
+            <Text
+              as="span"
+              variant="body"
+              className="website-app-next-go font-semibold"
+            >
+              {next.answer} →
+            </Text>
+          </Stack>
+        </Card>
+      ))}
+    </Grid>
   );
 }

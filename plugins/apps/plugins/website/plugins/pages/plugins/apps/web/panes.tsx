@@ -2,19 +2,21 @@ import { useState } from "react";
 import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import {
+  WebsiteBand,
   WebsiteChrome,
   WebsiteHeader,
   WebsiteHero,
 } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { AppsSearch } from "./components/apps-search";
 import { AppsGallery, type CategoryFilter } from "./components/apps-gallery";
-import { AppsCompose, AppsReadNext } from "./components/apps-closing";
+import { AppsClosing } from "./components/apps-closing";
 
 /**
  * The apps gallery at `/website/apps` — every app equin ships, searchable and
  * grouped by category. Wears the shared site header (`actions: WebsiteHeader`);
- * the heading with the search under it, the gallery, the "Missing an app?"
- * band, then the two pages to read next, inside `WebsiteChrome`.
+ * the heading with the search under it, then one body band holding the
+ * gallery, the "Missing an app?" card and the two pages to read next, inside
+ * `WebsiteChrome`.
  */
 export const appsPane = Pane.define({
   route: defineRoute({ id: "website-apps", segment: "apps" }),
@@ -36,13 +38,14 @@ function AppsBody() {
       >
         <AppsSearch query={query} onQueryChange={setQuery} />
       </WebsiteHero>
-      <AppsGallery
-        query={query}
-        category={category}
-        onCategoryChange={setCategory}
-      />
-      <AppsCompose />
-      <AppsReadNext />
+      <WebsiteBand rhythm="page-body">
+        <AppsGallery
+          query={query}
+          category={category}
+          onCategoryChange={setCategory}
+        />
+        <AppsClosing />
+      </WebsiteBand>
     </WebsiteChrome>
   );
 }

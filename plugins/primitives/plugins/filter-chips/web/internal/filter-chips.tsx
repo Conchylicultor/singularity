@@ -7,12 +7,23 @@ import type { DensityControlled } from "@plugins/primitives/plugins/css/plugins/
 export interface FilterChipProps extends DensityControlled {
   active: boolean;
   onClick: () => void;
+  /**
+   * `ghost` (default): borderless, an accent fill when on — a filter row in app
+   * chrome. `outline`: an outlined pill, the inverted fill when on — a filter
+   * row on a designed page.
+   */
+  variant?: "ghost" | "outline";
   children: React.ReactNode;
 }
 
-export function FilterChip({ active, onClick, children }: FilterChipProps) {
+export function FilterChip({
+  active,
+  onClick,
+  variant = "ghost",
+  children,
+}: FilterChipProps) {
   return (
-    <ToggleChip variant="ghost" active={active} onClick={onClick}>
+    <ToggleChip variant={variant} active={active} onClick={onClick}>
       {children}
     </ToggleChip>
   );

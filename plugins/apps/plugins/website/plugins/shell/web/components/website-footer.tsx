@@ -30,14 +30,14 @@ export function WebsiteFooter() {
   return (
     <WebsiteBand as="footer" divider rhythm="footer">
       <Cluster justify="between" gap="md">
-        <WordmarkText variant="body" className="text-muted-foreground/60" />
+        <WordmarkText variant="body" className="text-faint-foreground" />
         <Inline gap="lg">
           {/* A real `mailto:` link, so the reader can copy the address or read
-              it off the status bar before committing to anything. Muted like a
-              quiet nav link, and like one it comes up to full foreground. */}
+              it off the status bar before committing to anything. In the small
+              print's grey, coming up to full foreground on hover. */}
           <a
             href={CONTACT_MAILTO}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-faint-foreground hover:text-foreground"
           >
             <Text variant="caption">{CONTACT_EMAIL}</Text>
           </a>

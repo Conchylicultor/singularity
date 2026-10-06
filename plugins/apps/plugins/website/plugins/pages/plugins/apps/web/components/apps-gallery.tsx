@@ -2,13 +2,15 @@ import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   APPS,
   CATEGORIES,
   type AppCategoryId,
   type CatalogApp,
 } from "../internal/catalog";
+import { equinGalleryTheme } from "../internal/theme";
 import { AppCard } from "./app-card";
 import "./apps-gallery.css";
 
@@ -51,57 +53,71 @@ export function AppsGallery({
   ];
 
   return (
-    <WebsiteBand rhythm="page">
-      <Stack gap="2xl">
-        <Stack
-          direction="row"
-          gap="xs"
-          wrap
-          className="border-border pb-lg border-b"
-        >
-          {chips.map((chip) => (
-            <FilterChip
-              key={chip.id}
-              active={category === chip.id}
-              onClick={() => onCategoryChange(chip.id)}
-            >
-              {chip.name} <span className="opacity-55">{chip.count}</span>
-            </FilterChip>
-          ))}
-        </Stack>
-        {hits.length === 0 ? (
-          <Stack gap="xs" align="center" className="py-2xl text-center">
-            <Text as="p" variant="heading">
-              Nothing matches “{query.trim()}”
-            </Text>
-            <Text as="p" variant="body" tone="muted">
-              Ask an agent to build it, just below.
-            </Text>
-          </Stack>
-        ) : (
-          CATEGORIES.map((c) => {
-            const apps = hits.filter((app) => app.category === c.id);
-            if (apps.length === 0) return null;
-            return (
-              <Stack as="section" key={c.id} gap="lg">
-                <Stack direction="row" gap="md" align="baseline" wrap>
-                  <Text as="h3" variant="heading" className="tracking-tight">
-                    {c.name}
-                  </Text>
-                  <Text variant="body" tone="muted">
-                    {c.body}
-                  </Text>
-                </Stack>
-                <Grid minCellWidth="15.5rem" mode="fill" gap="lg">
-                  {apps.map((app) => (
-                    <AppCard key={app.id} app={app} category={c} />
-                  ))}
-                </Grid>
-              </Stack>
-            );
-          })
-        )}
+    // The gallery's own sizes over the site's (`equinGalleryTheme`). Not a
+    // band of its own: it sits in the page body's band with the closing block,
+    // and its vertical score (the chip row's air, each group's) is the
+    // gallery's, declared in `apps-gallery.css`.
+    <Theme name={subThemeScope(equinGalleryTheme)} surface="none">
+      <Stack
+        direction="row"
+        gap="xs"
+        wrap
+        className="website-apps-filters border-border border-b"
+      >
+        {chips.map((chip) => (
+          <FilterChip
+            key={chip.id}
+            variant="outline"
+            active={category === chip.id}
+            onClick={() => onCategoryChange(chip.id)}
+          >
+            {chip.name}
+            <span className="website-apps-chip-count">{chip.count}</span>
+          </FilterChip>
+        ))}
       </Stack>
-    </WebsiteBand>
+      {hits.length === 0 ? (
+        <Stack gap="xs" align="center" className="py-2xl text-center">
+          <Text as="p" variant="heading">
+            Nothing matches “{query.trim()}”
+          </Text>
+          <Text as="p" variant="body" tone="muted">
+            Ask an agent to build it, just below.
+          </Text>
+        </Stack>
+      ) : (
+        CATEGORIES.map((c) => {
+          const apps = hits.filter((app) => app.category === c.id);
+          if (apps.length === 0) return null;
+          return (
+            <Stack
+              as="section"
+              key={c.id}
+              gap="lg"
+              className="website-apps-group"
+            >
+              <Stack direction="row" gap="sm" align="baseline" wrap>
+                <Text
+                  as="h3"
+                  variant="heading"
+                  className="font-semibold tracking-[-0.02em]"
+                >
+                  {c.name}
+                </Text>
+                <Text variant="body" tone="faint">
+                  {c.body}
+                </Text>
+              </Stack>
+              {/* Four to a row on the 1040px measure: 4 × 248px + 3 × 16px. */}
+              <Grid minCellWidth="15rem" mode="fill" gap="lg">
+                {apps.map((app) => (
+                  <AppCard key={app.id} app={app} category={c} />
+                ))}
+              </Grid>
+            </Stack>
+          );
+        })
+      )}
+    </Theme>
   );
 }

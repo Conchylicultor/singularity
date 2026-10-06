@@ -1,4 +1,7 @@
-import type { TokenGroupFragment } from "./define-token-group";
+import type {
+  TokenGroupDescriptor,
+  TokenGroupFragment,
+} from "./define-token-group";
 import { duplicateGroupId } from "./theme";
 
 /**
@@ -80,4 +83,58 @@ function assertSameTokensInBothModes(
       `defineSubTheme("${id}"): group "${fragment.groupId}" names different tokens in light (${light.join(", ")}) and dark (${dark.join(", ")}) — a sub-theme sets each token in both modes.`,
     );
   }
+}
+
+/**
+ * The values a sub-theme block writes for one group in one mode: the tokens the
+ * fragment names, plus every token of the same group whose schema default is
+ * DERIVED from one of them (`chromePanePadStart: var(--chrome-pad-x)`), at that
+ * default.
+ *
+ * Why the extra tokens: a custom property's `var()` is substituted where the
+ * property is declared, and descendants inherit the result. The surrounding
+ * theme declares a derived token at its own scope, so it arrives in the region
+ * already computed from the surrounding base — re-valuing only the base would
+ * reach nothing derived from it (the website header kept the app's 12px pane
+ * inset under a sub-theme that set the gutter). Re-declaring the derived token
+ * inside the region recomputes it there. So inside a sub-theme a group's
+ * derivations follow the sub-theme's values, even where the surrounding theme
+ * had given the derived token a value of its own; to keep a different one, the
+ * sub-theme names it.
+ *
+ * Within one group only: a derivation that crosses groups is not re-declared.
+ */
+export function subThemeBlockValues(
+  group: TokenGroupDescriptor,
+  named: Record<string, string>,
+  mode: "light" | "dark",
+): Record<string, string> {
+  const out = { ...named };
+  const tokens = Object.keys(group.schema);
+  const defaultOf = (token: string) => {
+    const field = group.schema[token]!;
+    return mode === "dark"
+      ? (field.darkDefault ?? field.default)
+      : field.default;
+  };
+  // A fixpoint: a token derived from a re-declared one is re-declared too.
+  let grew = true;
+  while (grew) {
+    grew = false;
+    const changedVars = Object.keys(out).map((token) => group.vars[token]);
+    for (const token of tokens) {
+      if (Object.hasOwn(out, token)) continue;
+      const value = defaultOf(token);
+      if (changedVars.some((v) => v !== undefined && readsVar(value, v))) {
+        out[token] = value;
+        grew = true;
+      }
+    }
+  }
+  return out;
+}
+
+/** Does a CSS value read the custom property `name` (as `var(name)` or `var(name, …)`)? */
+function readsVar(value: string, name: string): boolean {
+  return new RegExp(`var\\(\\s*${name}\\s*[,)]`).test(value);
 }

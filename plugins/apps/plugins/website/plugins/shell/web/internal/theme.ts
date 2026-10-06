@@ -38,6 +38,8 @@ const colorPalette = colorPaletteGroup.fragment({
     muted: "oklch(0.22 0.02 262)",
     // The secondary text tier — a lede, a card's paragraph, a nav link.
     mutedForeground: "oklch(0.7727 0.0127 286.10)",
+    // The third tier — a card's category line, a group's line, small print.
+    faintForeground: "oklch(0.552 0.016 285.94)",
     accent: "oklch(0.22 0.02 262)",
     accentForeground: "oklch(0.9674 0.0013 286.38)",
     destructive: "oklch(0.704 0.191 22.216)",
@@ -66,6 +68,7 @@ const colorPalette = colorPaletteGroup.fragment({
     secondaryForeground: WHITE,
     muted: "oklch(0.95 0.006 265)",
     mutedForeground: "oklch(0.48 0.014 286)",
+    faintForeground: "oklch(0.6 0.012 286)",
     accent: "oklch(0.95 0.006 265)",
     accentForeground: "oklch(0.16 0.012 265)",
     destructive: "oklch(0.577 0.245 27.325)",
@@ -263,4 +266,33 @@ export const equinDocumentTheme = defineSubTheme({
   id: "equin-document",
   label: "equin document",
   fragments: [typeScale, density, shape],
+});
+
+/**
+ * An inner page's heading — the sizes `WebsiteHero kind="page"` wears over
+ * `equinDocumentTheme`: a 58px headline on a 1.04 line, an 18px lede on 1.55,
+ * 18px between them (`space-lg`) and 34px from the lede to what the heading
+ * introduces (`space-2xl`, the Apps page's search). The homepage's title page
+ * keeps the document's 78px display rung: it makes the site's one claim, while
+ * an inner page's heading only names the page.
+ */
+export const equinPageHeroTheme = defineSubTheme({
+  id: "equin-page-hero",
+  label: "equin page heading",
+  fragments: [
+    typeScaleGroup.fragment(
+      both({
+        fontSizeDisplay: "3.625rem",
+        lineHeightDisplay: "3.77rem",
+        fontSizeSubheading: "1.125rem",
+        lineHeightSubheading: "1.74375rem",
+      }),
+    ),
+    densityGroup.fragment(
+      both({
+        "space-lg": "1.125rem",
+        "space-2xl": "2.125rem",
+      }),
+    ),
+  ],
 });

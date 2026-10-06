@@ -21,7 +21,8 @@ export type WebsiteBandRhythm =
   | "interlude"
   | "closing"
   | "footer"
-  | "page";
+  | "page"
+  | "page-body";
 
 const RHYTHM_CLASS: Record<WebsiteBandRhythm, string> = {
   hero: "website-band-hero",
@@ -31,6 +32,7 @@ const RHYTHM_CLASS: Record<WebsiteBandRhythm, string> = {
   closing: "website-band-closing",
   footer: "website-band-footer",
   page: "website-band-page",
+  "page-body": "website-band-page-body",
 };
 
 export interface WebsiteBandProps {

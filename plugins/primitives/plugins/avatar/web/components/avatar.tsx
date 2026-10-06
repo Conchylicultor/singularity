@@ -15,6 +15,7 @@ import type { AvatarShape } from "../../core";
 import {
   avatarColorPick,
   avatarFlatClass,
+  avatarGradientClass,
   avatarSoftClass,
 } from "../internal/colors";
 import {
@@ -108,6 +109,16 @@ const TILE_GEOMETRY: Geometry = {
   ring: "",
 };
 
+/** Gradient-tile geometry: the tile's box with a larger glyph (54%, the
+ *  share an app icon's glyph takes on a store card), and its relief — a 1px
+ *  inset highlight along the top edge and a soft drop shadow. */
+const GRADIENT_TILE_GEOMETRY: Geometry = {
+  ...TILE_GEOMETRY,
+  icon: "size-[54%]",
+};
+const GRADIENT_TILE_RELIEF =
+  "shadow-[inset_0_1px_0_oklch(1_0_0/25%),0_10px_20px_-10px_oklch(0_0_0/80%)]";
+
 const SHAPE_CLASS: Record<AvatarShape, string> = {
   circle: "rounded-full",
   squircle: "rounded-squircle",
@@ -117,7 +128,9 @@ function geometryFor(
   presentation: AvatarPresentation,
   size: ControlSize,
 ): Geometry {
-  return presentation === "tile" ? TILE_GEOMETRY : SIZE_MAP[size];
+  if (presentation === "tile") return TILE_GEOMETRY;
+  if (presentation === "gradient-tile") return GRADIENT_TILE_GEOMETRY;
+  return SIZE_MAP[size];
 }
 
 export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
@@ -147,7 +160,11 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
     ? avatarColorPick(color, fallbackKey ?? icon ?? undefined)
     : null;
   const paint =
-    presentation === "tile" ? avatarFlatClass(pick) : avatarSoftClass(pick);
+    presentation === "tile"
+      ? avatarFlatClass(pick)
+      : presentation === "gradient-tile"
+        ? cn(avatarGradientClass(pick), GRADIENT_TILE_RELIEF)
+        : avatarSoftClass(pick);
   // leading-none keeps the fallback glyph optically centered; its font size is
   // the geometry's share of the box (see Geometry.glyph), not text hierarchy.
   // eslint-disable-next-line text/no-adhoc-typography -- see above

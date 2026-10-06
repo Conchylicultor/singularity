@@ -1,9 +1,11 @@
 import { AVATAR_COLOR_NAMES, type AvatarColor } from "../../core";
 
-// Two paints per colour, both keyed off the categorical palette slot:
+// Three paints per colour, both keyed off the categorical palette slot:
 // - SOFT (badge presentation): a 15% tint of the slot with the slot as text —
 //   light bg + matching dark text in light mode, muted dark bg + light text in
 //   dark mode. Keys align with the conversation-category palette.
+// - GRADIENT (gradient-tile presentation): the slot darkened, running into the
+//   slot — one gradient per slot, no second shade.
 // - FLAT (tile presentation): the solid slot under the `categorical-foreground`
 //   glyph token, in two shades per slot — shade 1 is `bg-categorical-N-lift`,
 //   the slot lifted 0.13 in OKLCH lightness (derived once in ui-kit's app.css) —
@@ -67,6 +69,31 @@ const AVATAR_FLAT_COLORS = {
     "bg-categorical-10-lift text-categorical-foreground",
   ],
 } as const satisfies Record<AvatarColor, readonly [string, string]>;
+
+/**
+ * The gradient tile fill per slot: the slot darkened 0.28 in OKLCH lightness
+ * (`-deep`, derived in ui-kit's app.css) running into the slot at 140°, under
+ * the categorical-foreground glyph. Interpolated in sRGB, like a CSS
+ * `linear-gradient` with no colour space.
+ */
+const AVATAR_GRADIENT_COLORS = {
+  sky: "bg-linear-140/srgb from-categorical-1-deep to-categorical-1 text-categorical-foreground",
+  emerald:
+    "bg-linear-140/srgb from-categorical-2-deep to-categorical-2 text-categorical-foreground",
+  amber:
+    "bg-linear-140/srgb from-categorical-3-deep to-categorical-3 text-categorical-foreground",
+  rose: "bg-linear-140/srgb from-categorical-4-deep to-categorical-4 text-categorical-foreground",
+  violet:
+    "bg-linear-140/srgb from-categorical-5-deep to-categorical-5 text-categorical-foreground",
+  indigo:
+    "bg-linear-140/srgb from-categorical-6-deep to-categorical-6 text-categorical-foreground",
+  teal: "bg-linear-140/srgb from-categorical-7-deep to-categorical-7 text-categorical-foreground",
+  pink: "bg-linear-140/srgb from-categorical-8-deep to-categorical-8 text-categorical-foreground",
+  orange:
+    "bg-linear-140/srgb from-categorical-9-deep to-categorical-9 text-categorical-foreground",
+  slate:
+    "bg-linear-140/srgb from-categorical-10-deep to-categorical-10 text-categorical-foreground",
+} as const satisfies Record<AvatarColor, string>;
 
 export const AVATAR_COLOR_KEYS: readonly AvatarColor[] = AVATAR_COLOR_NAMES;
 
@@ -136,4 +163,9 @@ export function avatarColorClass(
   fallbackKey?: string,
 ): string {
   return avatarSoftClass(avatarColorPick(color, fallbackKey));
+}
+
+/** Gradient tile paint: the deep → slot gradient + categorical-foreground glyph class for a pick. */
+export function avatarGradientClass(pick: AvatarColorPick | null): string {
+  return pick ? AVATAR_GRADIENT_COLORS[pick.slot] : "bg-muted text-foreground";
 }

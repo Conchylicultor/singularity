@@ -184,6 +184,7 @@ the code:
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
+    - `apps/website/pages/apps`
     - `apps/website/shell`
     - `layouts/miller`
     - `primitives/pane`

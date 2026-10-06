@@ -145,6 +145,17 @@
     --color-categorical-8-lift: oklch(from var(--categorical-8) calc(l + 0.13) c h);
     --color-categorical-9-lift: oklch(from var(--categorical-9) calc(l + 0.13) c h);
     --color-categorical-10-lift: oklch(from var(--categorical-10) calc(l + 0.13) c h);
+    /* The slot darkened 0.28 — the dark end of a gradient tile's stops (deep → slot). */
+    --color-categorical-1-deep: oklch(from var(--categorical-1) calc(l - 0.28) c h);
+    --color-categorical-2-deep: oklch(from var(--categorical-2) calc(l - 0.28) c h);
+    --color-categorical-3-deep: oklch(from var(--categorical-3) calc(l - 0.28) c h);
+    --color-categorical-4-deep: oklch(from var(--categorical-4) calc(l - 0.28) c h);
+    --color-categorical-5-deep: oklch(from var(--categorical-5) calc(l - 0.28) c h);
+    --color-categorical-6-deep: oklch(from var(--categorical-6) calc(l - 0.28) c h);
+    --color-categorical-7-deep: oklch(from var(--categorical-7) calc(l - 0.28) c h);
+    --color-categorical-8-deep: oklch(from var(--categorical-8) calc(l - 0.28) c h);
+    --color-categorical-9-deep: oklch(from var(--categorical-9) calc(l - 0.28) c h);
+    --color-categorical-10-deep: oklch(from var(--categorical-10) calc(l - 0.28) c h);
     --tracking-normal: var(--letter-spacing);
     /* The sub-scale follows `--font-scale` like every role utility. */
     --text-2xs: calc(var(--font-size-2xs) * var(--font-scale));

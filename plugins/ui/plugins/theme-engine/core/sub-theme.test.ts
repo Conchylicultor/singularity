@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 
 import { both, defineTokenGroup } from "./define-token-group";
-import { defineSubTheme } from "./sub-theme";
+import { defineSubTheme, subThemeBlockValues } from "./sub-theme";
 
 const type = defineTokenGroup("type", {
   body: { default: "14px" },
@@ -79,5 +79,42 @@ describe("defineSubTheme", () => {
     expect(() =>
       defineSubTheme({ id: "tweakcn:x", label: "x", fragments: [] }),
     ).toThrow(/must be kebab-case/);
+  });
+});
+
+describe("subThemeBlockValues", () => {
+  const density = defineTokenGroup("density", {
+    padX: { default: "12px" },
+    paneStart: { default: "var(--pad-x)" },
+    paneInner: { default: "calc(var(--pane-start) / 2)" },
+    padXWide: { default: "var(--pad-x-wide)" },
+    gap: { default: "4px", darkDefault: "5px" },
+  });
+
+  it("re-declares every token derived from a named one, transitively, at its default", () => {
+    expect(subThemeBlockValues(density, { padX: "40px" }, "light")).toEqual({
+      padX: "40px",
+      paneStart: "var(--pad-x)",
+      paneInner: "calc(var(--pane-start) / 2)",
+    });
+  });
+
+  it("keeps a derived token the sub-theme names itself, and re-derives what reads it", () => {
+    expect(
+      subThemeBlockValues(density, { padX: "40px", paneStart: "8px" }, "dark"),
+    ).toEqual({
+      padX: "40px",
+      paneStart: "8px",
+      paneInner: "calc(var(--pane-start) / 2)",
+    });
+  });
+
+  it("matches the variable name exactly, not a prefix", () => {
+    expect(subThemeBlockValues(density, { gap: "6px" }, "dark")).toEqual({
+      gap: "6px",
+    });
+    expect(
+      subThemeBlockValues(density, { padX: "1px" }, "light"),
+    ).not.toHaveProperty("padXWide");
   });
 });

@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useRef } from "react";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import "./apps-gallery.css";
 
 /**
- * The gallery's search: one pill under the heading, focused by `/`. It filters
+ * The gallery's search: one field under the heading, focused by `/`. It filters
  * by an app's name and what it does.
  */
 export function AppsSearch({
@@ -32,13 +34,13 @@ export function AppsSearch({
   useSurfaceShortcuts(shortcuts);
 
   return (
-    <Surface
-      level="raised"
-      className="focus-within:border-input h-12 w-[min(35rem,100%)] rounded-2xl text-left shadow-none transition-colors"
-    >
+    // Its frame — size, corner, hairline, translucent fill, shadow and the
+    // focus glow — is the gallery's paint, in `apps-gallery.css`.
+    <Surface level="raised" className="website-apps-search text-left">
       <SearchInput
         ref={inputRef}
         appearance="bare"
+        wrapperClassName={cn("website-apps-search-line")}
         placeholder="Search apps"
         aria-label="Search apps"
         value={query}

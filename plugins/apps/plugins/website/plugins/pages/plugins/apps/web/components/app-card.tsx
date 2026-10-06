@@ -19,7 +19,8 @@ import type { AppCategory, CatalogApp } from "../internal/catalog";
  * One app of the gallery: its picture, its tile and name, what it does, and
  * Install — which goes to the download page, because installing happens in
  * equin itself, never on the site. An app not built yet is drawn dashed and
- * faded, with a Soon badge where Install would be.
+ * faded, with a Soon badge where Install would be. Its sizes are the gallery's
+ * (`equinGalleryTheme`, worn by the gallery around it).
  */
 export function AppCard({
   app,
@@ -43,31 +44,45 @@ export function AppCard({
     >
       <Stack gap="lg" className="h-full">
         <AppThumb app={app} />
-        <Stack direction="row" gap="md" align="start">
-          <div className={cn("website-app-tile size-13", rigidClass())}>
-            <AvatarPresentationProvider value="tile">
-              <Avatar symbol={app.icon} color={app.color} shape="squircle" />
-            </AvatarPresentationProvider>
-          </div>
-          <Stack gap="none">
-            <Text as="h4" variant="body" className="font-semibold">
-              {app.name}
-            </Text>
-            <Text variant="caption" tone="muted">
-              {category.name}
+        <Fill>
+          <Stack gap="md">
+            <Stack direction="row" gap="md" align="start">
+              <div className={cn("website-app-tile size-13", rigidClass())}>
+                <AvatarPresentationProvider value="gradient-tile">
+                  <Avatar
+                    symbol={app.icon}
+                    color={app.color}
+                    shape="squircle"
+                  />
+                </AvatarPresentationProvider>
+              </div>
+              <Stack gap="none">
+                <Text
+                  as="h4"
+                  variant="subheading"
+                  className="font-semibold tracking-[-0.01em]"
+                >
+                  {app.name}
+                </Text>
+                <Text
+                  variant="label"
+                  tone="faint"
+                  className="website-app-category font-normal"
+                >
+                  {category.name}
+                </Text>
+              </Stack>
+            </Stack>
+            <Text as="p" variant="body" tone="muted">
+              {app.description}
             </Text>
           </Stack>
-        </Stack>
-        <Fill>
-          <Text as="p" variant="body" tone="muted">
-            {app.description}
-          </Text>
         </Fill>
         <Stack direction="row" gap="none" justify="end">
           {app.soon ? (
             <Badge
               shape="pill"
-              colorClass="border-border text-muted-foreground border font-semibold tracking-wide uppercase"
+              colorClass="border border-foreground/16 text-faint-foreground font-semibold tracking-[0.07em] uppercase"
             >
               Soon
             </Badge>
@@ -75,7 +90,7 @@ export function AppCard({
             <Button
               variant="outline"
               shape="pill"
-              className="font-semibold"
+              className="website-app-install font-semibold"
               onClick={() => openPane(downloadPane, {}, { mode: "root" })}
             >
               Install

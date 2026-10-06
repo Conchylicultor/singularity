@@ -37,6 +37,8 @@ shell never names this page. The homepage's applications layer opens it.
   - Contributes:
     - `Pane.Register` "website-apps"
     - `WebsiteHeader` "apps" → `AppsNavItem`
+    - `ThemeEngine.SubTheme` "equin gallery"
+    - `ThemeEngine.SubTheme` "equin closing"
   - Uses:
     - `apps/website/pages/download.downloadPane`
     - `apps/website/pages/foundations.foundationsPane`
@@ -56,9 +58,12 @@ shell never names this page. The homepage's applications layer opens it.
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Input`
+    - `primitives/css/ui-kit.subThemeScope`
     - `primitives/filter-chips.FilterChip`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
@@ -66,6 +71,7 @@ shell never names this page. The homepage's applications layer opens it.
     - `primitives/pane.useOpenPane`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (values): `appsPane`
 - Cross-plugin:
   - Imported by: `apps/website/landing/layers`

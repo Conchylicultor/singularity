@@ -10,7 +10,11 @@ import { WebsiteWordmark } from "./components/website-wordmark";
 import { WebsiteGithubLink } from "./components/website-github-link";
 import { WebsiteHeader, Website } from "./slots";
 import { landingPane } from "./panes";
-import { equinDocumentTheme, equinTheme } from "./internal/theme";
+import {
+  equinDocumentTheme,
+  equinPageHeroTheme,
+  equinTheme,
+} from "./internal/theme";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { Website, WebsiteHeader } from "./slots";
@@ -25,7 +29,7 @@ export { landingPane } from "./panes";
 
 export default {
   description:
-    "App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears.",
+    "App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears.",
   contributions: [
     Apps.App({
       app: websiteApp,
@@ -44,6 +48,9 @@ export default {
     // The page sizes every page wears inside `WebsiteChrome`, over the site's
     // theme.
     ThemeEngine.SubTheme(equinDocumentTheme),
+    // An inner page's heading sizes, worn by `WebsiteHero kind="page"` over
+    // the document's.
+    ThemeEngine.SubTheme(equinPageHeroTheme),
   ],
   // `header` declares the SHARED site header, which all four pages borrow — so
   // none of them appears in its own plugin's `slots:` record, and the landing

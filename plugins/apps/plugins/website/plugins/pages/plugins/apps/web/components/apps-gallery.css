@@ -24,10 +24,10 @@
   box-shadow: 0 24px 48px -28px oklch(0 0 0 / 90%);
 }
 
-/* A read-next card's link line: underlined in the quiet grey, coming up to the
- * foreground while its card is hovered or keyboard-focused. */
+/* A read-next card's link line: underlined in the small print's grey, coming up
+ * to the foreground while its card is hovered or keyboard-focused. */
 .website-app-next-go {
-  border-bottom: 1px solid var(--muted-foreground);
+  border-bottom: 1px solid var(--faint-foreground);
   transition: border-color 0.2s ease;
 }
 
@@ -36,28 +36,34 @@
   border-color: var(--foreground);
 }
 
-/* A card for an app not built yet: dashed, unfilled, its picture and tile
- * faded — present enough to read, clearly not something to install. */
+/* A card for an app not built yet: dashed, unfilled, its picture faded and its
+ * tile greyed — present enough to read, clearly not something to install. */
 .website-app-card.is-soon {
   background: transparent;
   border-style: dashed;
+  border-color: color-mix(in srgb, var(--foreground) 16%, transparent);
 }
 
-.website-app-card.is-soon .website-app-thumb,
-.website-app-card.is-soon .website-app-tile {
+.website-app-card.is-soon .website-app-thumb {
   opacity: 0.45;
-  filter: saturate(0.3);
+}
+
+.website-app-card.is-soon .website-app-tile {
+  filter: saturate(0.25) brightness(0.8);
 }
 
 /* ---- the drawn picture ---- */
+/* The picture reaches 6px into the card's inset on three sides, so it sits
+ * 12px from the card's edge. */
 .website-app-thumb {
   position: relative;
   display: flex;
   aspect-ratio: 16 / 10;
+  margin: -0.375rem -0.375rem 0;
   overflow: hidden;
   border-radius: 0.75rem;
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--primary) 6%, var(--background));
+  background: color-mix(in srgb, var(--primary) 8%, var(--background));
 }
 
 /* A screenshot fills the frame from its top-left corner — where an app's
@@ -77,13 +83,13 @@
 
 .website-app-thumb-side {
   width: 28%;
-  padding: 0.6rem;
+  padding: 0.625rem;
   border-right: 1px solid var(--border);
 }
 
 .website-app-thumb-main {
   flex: 1;
-  padding: 0.85rem;
+  padding: 0.875rem;
 }
 
 .website-app-thumb-line {
@@ -119,6 +125,120 @@
 
 .website-app-thumb-tiles i:first-child {
   background: color-mix(in srgb, var(--app-tint, var(--primary)) 35%, transparent);
+}
+
+/* ---- the gallery's vertical score ----
+ * Like the site's band rhythms, a measured score above the spacing ramp: the
+ * chip row's air (26px above, 18px below its rule), each group's (34px above,
+ * 8px below), then 40px to "Missing an app?" and 64px to the read-next cards. */
+.website-apps-filters {
+  padding-block: 1.625rem 1.125rem;
+}
+
+.website-apps-group {
+  padding-block: 2.125rem 0.5rem;
+}
+
+/* The category line sits 1px under the app's name. */
+.website-app-category {
+  margin-top: 1px;
+}
+
+/* A chip's count, after its name: 5px off, at half strength. */
+.website-apps-chip-count {
+  margin-left: 0.3125rem;
+  opacity: 0.55;
+}
+
+/* ---- Install: a small quiet pill that fills with the accent on hover ---- */
+.website-app-install {
+  border-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  color: var(--foreground);
+}
+
+.website-app-install:hover {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* ---- the search field ----
+ * 560 × 50, a 14px corner, a 16% hairline over the panel at 85%, a long soft
+ * shadow; on focus the accent line and a 4px glow. */
+.website-apps-search {
+  width: min(35rem, 100%);
+  height: 3.125rem;
+  border-radius: 0.875rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  box-shadow: 0 20px 40px -30px oklch(0 0 0);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.website-apps-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 36%, transparent);
+}
+
+.website-apps-search-line {
+  padding-inline: 1rem;
+}
+
+/* The `/` key: an outlined box, no fill. */
+.website-apps-search [data-slot="kbd"] {
+  height: auto;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.3125rem;
+  border-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+  background: transparent;
+  color: var(--faint-foreground);
+  line-height: 1;
+}
+
+/* ---- the page's end ---- */
+.website-apps-compose {
+  margin-top: 2.5rem;
+  padding: 1.875rem 2.125rem;
+}
+
+/* Build it's field: 16% hairline over the panel. Takes the room the words
+ * leave, up to 420px (less than half the card). */
+.website-apps-compose-ask {
+  flex: none;
+  width: min(26.25rem, 45%);
+  margin-left: auto;
+}
+
+.website-apps-compose-field {
+  border-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+  background: var(--card);
+}
+
+.website-apps-compose-field::placeholder {
+  color: var(--faint-foreground);
+}
+
+.website-apps-compose-field:focus-visible {
+  border-color: var(--primary);
+}
+
+.website-apps-next {
+  margin-top: 4rem;
+}
+
+.website-app-next {
+  padding: 1.625rem 1.75rem;
+  border-radius: 1.25rem;
+}
+
+@media (max-width: 53.75rem) {
+  .website-apps-compose-ask {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

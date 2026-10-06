@@ -22,6 +22,7 @@ import {
 } from "../use-resolved-theme";
 import {
   resolveFixedTheme,
+  subThemeBlockValues,
   themeSelectionConfig,
   type ColorAdjustment,
   type FixedTheme,
@@ -393,7 +394,8 @@ export function AppScopeThemes() {
 /**
  * Every contributed sub-theme's blocks: one `<style>` per fragment, targeting
  * `[data-theme-scope="sub:<id>"]` and holding ONLY the tokens that fragment
- * names. Everything else inside a sub-theme region reads the surrounding theme
+ * names — plus the tokens of the same group derived from them, re-declared so
+ * they recompute inside the region (`subThemeBlockValues`). Everything else inside a sub-theme region reads the surrounding theme
  * by plain CSS inheritance — which is why a sub-theme is resolved against
  * nothing and never needs to know which theme it sits in.
  *
@@ -475,8 +477,16 @@ function SubThemeFragmentStyle({
     () =>
       renderGroupBlock(
         group.descriptor,
-        definedValues(fragment.light),
-        definedValues(fragment.dark),
+        subThemeBlockValues(
+          group.descriptor,
+          definedValues(fragment.light),
+          "light",
+        ),
+        subThemeBlockValues(
+          group.descriptor,
+          definedValues(fragment.dark),
+          "dark",
+        ),
         themeScopeSelectors(scopeToken),
       ),
     [group, fragment, scopeToken],

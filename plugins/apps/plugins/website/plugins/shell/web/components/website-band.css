@@ -25,10 +25,10 @@
   padding-block: 4.5rem;
 }
 
-/* An inner page's heading: 88px above, 48px below — closer to the text it
+/* An inner page's heading: 72px above, 36px below — closer to the text it
  * introduces than the homepage's title page is. */
 .website-band-page-hero {
-  padding-block: 5.5rem 3rem;
+  padding-block: 4.5rem 2.25rem;
 }
 
 /* One quiet line on its own rule: 48px either side. */
@@ -49,4 +49,12 @@
 /* A body band of an inner page: the interlude's rhythm. */
 .website-band-page {
   padding-block: 3rem;
+}
+
+/* An inner page's whole body in one band, right under a heading whose band
+ * already ends with the air above it (the Apps page: chips, groups and its
+ * closing block, which set their own score inside): none above, 64px above the
+ * footer's rule. */
+.website-band-page-body {
+  padding-block: 0 4rem;
 }

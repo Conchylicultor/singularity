@@ -84,6 +84,14 @@ It differs from a theme in three ways:
   by plain CSS inheritance. So a sizes-only sub-theme keeps the app's colours,
   even after the app's theme is switched. Its values are painted as written —
   the surrounding color adjustment does not apply to them.
+- **What derives from a token it names follows it.** A derived default
+  (`chromePanePadStart: var(--chrome-pad-x)`) is computed where it is declared
+  and inherited computed, so re-valuing only the base would not reach it. The
+  block therefore also re-declares every token of the same group whose default
+  reads a named one, transitively (`subThemeBlockValues`). Inside the region,
+  that token is its default over the sub-theme's value, even where the
+  surrounding theme gave it a value of its own. To keep a different value, the
+  sub-theme names it. Derivations that cross groups are not followed.
 - **It is never selected.** No scope picks it, the theme picker never lists it;
   a region opts in by wrapping itself in `<Theme>`.
 - **Popups leave it.** The boundary forwards its token as region-only
@@ -143,7 +151,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
     - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
     - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.pages.shell`, `apps.website.shell`, `ui.theme-engine`
-    - `ThemeEngine.SubTheme` ← `apps.website.shell`
+    - `ThemeEngine.SubTheme` ← `apps.website.pages.apps`, `apps.website.shell`
     - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
     - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
   - Contributes:
@@ -236,6 +244,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `NEUTRAL_COLOR_ADJUSTMENT`
     - `resolveFixedTheme`
     - `resolveTheme`
+    - `subThemeBlockValues`
     - `themeSelectionConfig`
     - `TokenGroupFragmentSchema`
     - `TokenGroupFragmentsSchema`
@@ -248,6 +257,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `apps/chord/shell`
     - `apps/home/shell`
     - `apps/pages/shell`
+    - `apps/website/pages/apps`
     - `apps/website/shell`
     - `reports/theme-resolution`
     - `ui/segmented-progress-bar`
