@@ -2,8 +2,11 @@
 
 App shell for the Prototypes app. Registers the `/prototypes` app entry
 (`Apps.App`) and renders the layout: an `AppShellLayout` (no sidebar/toolbar)
-wrapping `MillerColumns`. The gallery root pane is the app surface; opening a
-prototype pushes the Focus/Compare detail pane beside it.
+wrapping `FullPane`. The gallery root pane is the app surface; opening a
+prototype replaces it with the detail pane (the canvas) full-surface. The
+detail route stays a child of the gallery's, so the full-pane renderer gives its
+header a leading Back button (pane chrome's `ancestorsHidden`) that returns to
+the gallery.
 
 Panes themselves are defined and registered in the sibling `gallery` plugin.
 
@@ -11,12 +14,12 @@ Panes themselves are defined and registered in the sibling `gallery` plugin.
 
 ## Plugin reference
 
-- Description: App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) in a Miller layout.
+- Description: App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) full-surface: opening a prototype replaces the gallery, whose header leads with Back.
 - Web:
   - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
   - Uses:
     - `apps-core.Apps`
-    - `layouts/miller.MillerColumns`
+    - `layouts/full-pane.FullPane`
     - `primitives/app-shell.AppShellLayout`
 - Core:
   - Uses:

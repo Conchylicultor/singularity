@@ -17,6 +17,7 @@ import { SurfaceChromeContext } from "../surface-chrome-context";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
+const arrowBackIcon = symbol("arrow-back");
 const openInFullIcon = symbol("open-in-full");
 
 interface PaneChromeProps {
@@ -92,6 +93,7 @@ export function PaneChrome({
   const { contentOwnsTopChrome, leadingControl } =
     useContext(SurfaceChromeContext);
   const doClose = pane.useClose();
+  const doBack = pane.useBack();
   const promote = pane.usePromote();
   const titleValue = useMemo<PaneTitleValue>(
     () => ({ pane: pane._internal, entry }),
@@ -103,6 +105,14 @@ export function PaneChrome({
   const showLeading =
     contentOwnsTopChrome && layoutCtx?.atSurfaceStart && leadingControl != null;
   const reserveEnd = contentOwnsTopChrome && layoutCtx?.atSurfaceEnd;
+  // Painted alone (full-pane), a child pane's way out is BACK to its parent —
+  // leading, like a browser's — not a × closing a column beside it. And a
+  // same-app promote has nothing on screen to detach from.
+  const ancestorsHidden = layoutCtx?.ancestorsHidden === true;
+  const showPromote =
+    chrome.promote &&
+    promote !== null &&
+    (!ancestorsHidden || promote.kind === "cross-app");
   // `atTop` is only ever true for a floating header resting over the top of the
   // body — nothing below it to separate, so the rule goes.
   const header = (atTop: boolean) => (
@@ -118,6 +128,9 @@ export function PaneChrome({
       {...layoutCtx?.dragHandleProps}
     >
       {showLeading && leadingControl}
+      {ancestorsHidden && chrome.close && doBack && (
+        <PaneIconAction label="Back" icon={arrowBackIcon} onClick={doBack} />
+      )}
       {/* The bar IS the row's grow cell (`min-w-0 flex-1`), which is why
               there is no `Fill` beside it: a second claimant on the same slack
               breaks the one contract the primitive has. Which is also why
@@ -134,7 +147,7 @@ export function PaneChrome({
           </pane.Actions.Render>
         </PaneTitleContext.Provider>
       </AdaptiveBar>
-      {chrome.promote && promote && (
+      {showPromote && promote && (
         <PaneIconAction
           label={
             promote.kind === "cross-app"
@@ -145,7 +158,7 @@ export function PaneChrome({
           {...linkGestureProps(promote.run)}
         />
       )}
-      {chrome.close && doClose && (
+      {!ancestorsHidden && chrome.close && doClose && (
         <PaneIconAction label="Close" icon={closeIcon} onClick={doClose} />
       )}
     </Bar>

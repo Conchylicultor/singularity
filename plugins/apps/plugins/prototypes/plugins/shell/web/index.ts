@@ -8,7 +8,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
-    "App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) in a Miller layout.",
+    "App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) full-surface: opening a prototype replaces the gallery, whose header leads with Back.",
   contributions: [
     Apps.App({
       app: prototypesApp,

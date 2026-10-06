@@ -1943,6 +1943,15 @@ export interface PaneObject<
   /** Hook: returns a bound close function for the current instance, or null if root/not in route. */
   useClose: Hook<() => (() => void) | null>;
   /**
+   * Hook: "go up to my parent", for a layout that paints this pane alone
+   * (full-pane). It is {@link useClose} while a parent slot sits to the left in
+   * the route; otherwise — a deep link parses to the pane alone, since an index
+   * parent's empty segment leaves nothing in the URL — it opens the pane's
+   * DECLARED parent route afresh. Null when there is no parent to go to, or the
+   * parent needs a param this route does not carry.
+   */
+  useBack: Hook<() => (() => void) | null>;
+  /**
    * Hook: returns the bound {@link PromoteAction} for the current instance, or
    * null when there is nowhere to promote to (this pane is already the root of
    * its own app's route, or it is not in the route at all). Pass
@@ -2150,6 +2159,29 @@ function makePaneObject(
     }, [store, instanceId, route]);
   }
 
+  function useBack(): (() => void) | null {
+    const close = useClose();
+    const store = usePaneStore();
+    const instanceId = useContext(PaneInstanceContext);
+    const route = useRouteSlots();
+    return useMemo(() => {
+      if (close) return close;
+      if (instanceId === undefined) return null;
+      const idx = route.findIndex((s) => s.instanceId === instanceId);
+      if (idx !== 0) return null;
+      const parentId = internal.parentPaneIds.at(-1);
+      const parent =
+        parentId === undefined ? undefined : registry.get(parentId);
+      if (!parent) return null;
+      // At the root of the route, this slot's params are everything the URL
+      // carries; a parent needing more cannot be addressed from here.
+      const params = route[0]!.params;
+      const required = segmentRequiredParamNames(parent.segment);
+      if (required.some((name) => !(name in params))) return null;
+      return () => store.openPaneImpl(parent, params, { root: true });
+    }, [close, store, instanceId, route]);
+  }
+
   /**
    * Promote = "show this pane on its own, in the app it belongs to".
    *
@@ -2298,6 +2330,7 @@ function makePaneObject(
     unwrap,
     promote,
     useClose,
+    useBack,
     usePromote,
     useSetParams,
     useToggle,

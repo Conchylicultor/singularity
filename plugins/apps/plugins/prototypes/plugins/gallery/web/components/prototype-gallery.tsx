@@ -99,7 +99,6 @@ export function PrototypeGallery() {
     statuses: useLive(prototypeStatuses),
   });
   const openPane = useOpenPane();
-  const selectedName = prototypeDetailPane.useRouteEntry()?.params.name;
 
   // `title` is what the author named the prototype (its `<title>`), so it is the
   // display field; `name` is the minted id the URL and the row key use — opaque,
@@ -169,7 +168,6 @@ export function PrototypeGallery() {
       defaultView="gallery"
       storageKey={PROTOTYPES_VIEW}
       readiness={result}
-      selectedRowId={selectedName}
       itemActions={PrototypeCardActions}
       rowTone={(p) => (p.done ? "muted" : "default")}
       onRowActivate={(p) =>

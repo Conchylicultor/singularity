@@ -161,7 +161,6 @@ not yet supported — see the open question in
     - `apps/home/shell`
     - `apps/mail/shell`
     - `apps/pages/shell`
-    - `apps/prototypes/shell`
     - `apps/settings/shell`
     - `apps/studio/shell`
     - `layouts/host`

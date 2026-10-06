@@ -4457,12 +4457,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `ui/icons.Icon`
-        - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) in a Miller layout.
+        - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) full-surface: opening a prototype replaces the gallery, whose header leads with Back.
           - Web:
             - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
             - Uses:
               - `apps-core.Apps`
-              - `layouts/miller.MillerColumns`
+              - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
           - Core:
             - Uses:
@@ -19047,6 +19047,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas`
               - `apps/prototypes/compare`
               - `apps/prototypes/present`
+              - `apps/prototypes/shell`
               - `apps/prototypes/thumbnails`
               - `apps/sonata`
               - `apps/sonata/library`
@@ -22930,6 +22931,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/chord/shell`
           - `apps/file-explorer/shell`
+          - `apps/prototypes/shell`
           - `apps/sonata/shell`
           - `apps/website/shell`
           - `layouts/host`
@@ -22982,7 +22984,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/home/shell`
           - `apps/mail/shell`
           - `apps/pages/shell`
-          - `apps/prototypes/shell`
           - `apps/settings/shell`
           - `apps/studio/shell`
           - `layouts/host`

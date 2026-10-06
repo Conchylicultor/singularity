@@ -11,12 +11,14 @@ import { UiRegion } from "@plugins/primitives/plugins/ui-context/web";
 
 // A full-pane surface is the only column, so it IS both the surface start and
 // end edge — a full-surface pane's header hosts the sidebar toggle and reserves
-// the floating-action-bar safe area. There is no maximize/drag in full-pane.
+// the floating-action-bar safe area. There is no maximize/drag in full-pane, and
+// a pane with a parent shows Back rather than × (its ancestors are off screen).
 // Module-level constant so the context value keeps a stable identity.
 const FULL_PANE_LAYOUT_CTX = {
   onDoubleClickHeader: () => {},
   atSurfaceStart: true,
   atSurfaceEnd: true,
+  ancestorsHidden: true,
 } as const;
 
 /**

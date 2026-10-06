@@ -302,6 +302,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/prototypes/canvas`
     - `apps/prototypes/compare`
     - `apps/prototypes/present`
+    - `apps/prototypes/shell`
     - `apps/prototypes/thumbnails`
     - `apps/sonata`
     - `apps/sonata/library`
