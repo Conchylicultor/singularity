@@ -29,6 +29,13 @@ export interface SurfaceContribution {
   component: ComponentType<Record<string, never>>;
 }
 
+/** One piece of floating chrome over the apps surface; see `Apps.Overlay`. */
+export interface OverlayContribution {
+  /** Unique among the overlays; keys the rendered list. */
+  id: string;
+  component: ComponentType<Record<string, never>>;
+}
+
 /** The top tab strip. A single-contribution slot (the `tab-bar` plugin); `apps`
  * renders nothing here when no contributor is present (chrome-less surface). */
 export interface TabBarContribution {
@@ -118,5 +125,12 @@ export const Apps = {
    * stays plugin-owned. */
   TabBarActions: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Tab bar actions",
+  }),
+  /** Chrome mounted once over the whole apps surface, INSIDE the tab state
+   * (`TabsProvider`) — for floating chrome that switches apps or tabs, which
+   * `Core.Root` (outside the tab state) cannot do. Each contribution positions
+   * itself (fixed) and decides when it shows. */
+  Overlay: defineSlot<OverlayContribution>({
+    docLabel: () => "Overlay",
   }),
 };

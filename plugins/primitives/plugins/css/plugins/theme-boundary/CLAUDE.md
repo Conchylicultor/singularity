@@ -178,6 +178,7 @@ the code:
     - `useEnclosingAppThemeScope`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/surface`
     - `apps-core/tab-bar`

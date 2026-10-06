@@ -50,6 +50,7 @@ keeps reading the old location until then.
     - `Apps.Surface` ← `apps-core.surface`
     - `Apps.TabBar` ← `apps-core.tab-bar`
     - `Apps.TabBarActions` ← `shell.global-action-bar`
+    - `Apps.Overlay` ← `apps-core.app-launcher`
   - Uses:
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.stripBasePath`
@@ -59,6 +60,7 @@ keeps reading the old location until then.
   - Exports (types):
     - `ActiveApp`
     - `AppEntry`
+    - `OverlayContribution`
     - `Placement`
     - `RailFramingContribution`
     - `ResolvedApp`
@@ -124,7 +126,7 @@ keeps reading the old location until then.
     - `getFocusedAppId`
 - Sub-plugins:
   - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
-  - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home.
+  - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.
   - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
   - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
   - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.

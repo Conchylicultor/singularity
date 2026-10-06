@@ -7,6 +7,7 @@ export {
   type RailFramingContribution,
   type SurfaceContribution,
   type TabBarContribution,
+  type OverlayContribution,
 } from "./slots";
 export {
   useActiveApp,

@@ -28,6 +28,7 @@ once per surface by `TabSurface`.
     - `conversations/conversation-view`
     - `conversations/conversation-view/jsonl-viewer`
     - `layouts/miller`
+    - `primitives/app-shell`
     - `primitives/pane`
     - `primitives/shortcuts`
 - Web:

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Fragment, useEffect } from "react";
 import {
   useDeferredLoadState,
   useHasLoadErrorUnder,
@@ -184,6 +184,7 @@ export function AppsLayout() {
             )}
           </div>
         </Stack>
+        <OverlayHost />
       </TabsProvider>
     </TooltipProvider>
   );
@@ -262,6 +263,16 @@ function NoSuchRouteSurface({
  * nothing in a chromeless embed (`?embed=1`, see `primitives/embed`): the
  * frame around it is someone else's chrome. An embed that keeps its chrome
  * (`?embed=chrome`) draws it. */
+/** Every `Apps.Overlay` contribution, each isolated in its own boundary. */
+function OverlayHost() {
+  const overlays = Apps.Overlay.useContributions();
+  return overlays.map((overlay) => (
+    <Fragment key={overlay.id}>
+      {renderIsolated(Apps.Overlay, overlay as unknown as Contribution, {})}
+    </Fragment>
+  ));
+}
+
 function TabBarHost() {
   const tabBar = Apps.TabBar.useContributions()[0];
   if (isChromelessDocument()) return null;

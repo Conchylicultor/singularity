@@ -7087,6 +7087,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `Apps.Surface` ← `apps-core.surface`
       - `Apps.TabBar` ← `apps-core.tab-bar`
       - `Apps.TabBarActions` ← `shell.global-action-bar`
+      - `Apps.Overlay` ← `apps-core.app-launcher`
     - Uses:
       - `primitives/pane.currentRoutePath`
       - `primitives/pane.stripBasePath`
@@ -7096,6 +7097,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (types):
       - `ActiveApp`
       - `AppEntry`
+      - `OverlayContribution`
       - `Placement`
       - `RailFramingContribution`
       - `ResolvedApp`
@@ -7185,9 +7187,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `appIcon`
           - `appIconToSvg`
-    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home.
+    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.
       - Web:
-        - Contributes: `AppShell.Brand` "Brand" → `AppBrand`
+        - Contributes:
+          - `AppShell.Brand` "Brand" → `AppBrand`
+          - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
         - Uses:
           - `apps-core.ActiveApp`
           - `apps-core.Apps`
@@ -7195,18 +7199,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.useActiveApp`
           - `apps-core/app-icon.AppIconTile`
           - `apps-core/app-icon.AppIconView`
+          - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core/tabs.appLinkProps`
           - `apps-core/tabs.navigate`
           - `apps-core/tabs.useActivateApp`
+          - `apps-core/tabs.useSurfaceMode`
+          - `apps-core/tabs.useTabs`
           - `primitives/app-shell.AppShell`
+          - `primitives/app-shell.useBrandDrawnOn`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/grid.Grid`
           - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/embed.isChromelessDocument`
           - `primitives/link-gesture.linkGestureProps`
           - `primitives/overlay/hover-popover.HoverPopover`
           - `primitives/pane.currentRoutePath`
@@ -7277,6 +7287,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `chromeThemeScope`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-launcher`
           - `apps-core/app-rail`
           - `apps-core/tab-bar`
           - `shell/global-action-bar`
@@ -27142,6 +27153,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.PaneObject`
           - `primitives/pane.SurfaceChromeContext`
           - `primitives/pane.useRoute`
+          - `primitives/scope/surface-id.useSurfaceTabId`
           - `primitives/slot-render.renderIsolated`
           - `primitives/slot-render.RenderSlot`
           - `ui/icons.Icon`
@@ -27164,6 +27176,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `opensPane`
           - `SidebarItem`
           - `SidebarPaneSection`
+          - `useBrandDrawnOn`
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-launcher`
@@ -30121,6 +30134,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useEnclosingAppThemeScope`
           - Cross-plugin:
             - Imported by:
+              - `apps-core/app-launcher`
               - `apps-core/app-rail`
               - `apps-core/surface`
               - `apps-core/tab-bar`
@@ -32085,6 +32099,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`embed`** — The declared embedded-document signal: embedMode() reads the `?embed=` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read) — `?embed=1` opens one route with no app chrome, `?embed=chrome` opens the whole app, chrome included — and embedUrl(path, mode) builds an in-app URL that opens that way. isChromelessDocument() is read by the apps layout (no tab bar, no rail) and the floating action bar (hidden); isEmbeddedDocument() by the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame in either mode never evicts the host tab's own state.
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-launcher`
           - `apps-core/layout`
           - `apps-core/tabs`
           - `apps/prototypes/canvas`
@@ -35035,6 +35050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view`
               - `conversations/conversation-view/jsonl-viewer`
               - `layouts/miller`
+              - `primitives/app-shell`
               - `primitives/pane`
               - `primitives/shortcuts`
           - Web:

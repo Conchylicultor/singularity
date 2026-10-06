@@ -47,6 +47,7 @@ layout, graphite tone, underline tabs).
     - `chromeThemeScope`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/tab-bar`
     - `shell/global-action-bar`
