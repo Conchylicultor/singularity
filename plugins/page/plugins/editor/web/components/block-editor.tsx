@@ -293,6 +293,36 @@ export interface BlockEditorHandle extends CaretSurface {
    * the page title's Enter key.
    */
   insertFirstBlock(): void;
+  /**
+   * Open the end of the page for typing — the same rule as a click in the
+   * editor's own trailing zone (`openTrailingBlock`). Drives the host's empty
+   * space below the editor, which is outside the block list's pointer surface.
+   */
+  focusEnd(): void;
+}
+
+/**
+ * The trailing-click rule, Notion's: put the caret in the last block when it is
+ * already an empty default-text block, otherwise append a fresh one — never
+ * stack a second blank paragraph under an existing one. Shared by the editor's
+ * own trailing zone (`onEmptyClick`) and the host-facing `focusEnd`.
+ */
+function openTrailingBlock(
+  lastBlock: Block | undefined,
+  fallback: ReturnType<typeof defaultTextHandle>,
+  focusBlockBoundary: (id: string, edge: "start" | "end") => boolean,
+  insert: (type: string, data: unknown) => void,
+): void {
+  if (!fallback) return;
+  if (
+    lastBlock &&
+    lastBlock.type === fallback.type &&
+    textOf(lastBlock) === ""
+  ) {
+    focusBlockBoundary(lastBlock.id, "end");
+    return;
+  }
+  insert(fallback.type, fallback.empty?.() ?? {});
 }
 
 /**
@@ -457,6 +487,7 @@ function BlockEditorInner({
     setRows,
     blocks,
     insertFirst,
+    insert,
     focusBlock,
     focusBlockBoundary,
     scope,
@@ -521,6 +552,14 @@ function BlockEditorInner({
         }
         insertFirst(fallback.type, fallback.empty?.() ?? {});
       },
+      focusEnd() {
+        openTrailingBlock(
+          flat.at(-1)?.block,
+          defaultTextHandle(contributions.map((c) => c.block)),
+          focusBlockBoundary,
+          insert,
+        );
+      },
       focus() {
         const first = flat[0]?.block;
         if (first) focusBlock(first.id);
@@ -536,7 +575,7 @@ function BlockEditorInner({
       // No `focusAtColumn`: an empty page has no block to measure a column
       // against, and a host entering from above wants the body's start anyway.
     }),
-    [contributions, flat, focusBlock, focusBlockBoundary, insertFirst],
+    [contributions, flat, focusBlock, focusBlockBoundary, insert, insertFirst],
   );
 
   if (gone) {
@@ -1061,15 +1100,7 @@ function SelectionLayer({
         return;
       }
       if (y > lastEl.getBoundingClientRect().bottom) {
-        if (
-          fallback &&
-          lastBlock.type === fallback.type &&
-          textOf(lastBlock) === ""
-        ) {
-          focusBlockBoundary(lastBlock.id, "end");
-        } else if (fallback) {
-          insert(fallback.type, fallback.empty?.() ?? {});
-        }
+        openTrailingBlock(lastBlock, fallback, focusBlockBoundary, insert);
         return;
       }
       const row = rowAt(y);

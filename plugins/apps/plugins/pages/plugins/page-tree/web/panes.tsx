@@ -2,7 +2,14 @@ import {
   cn,
   Separator,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useMemo, useRef, type ReactElement, type ReactNode } from "react";
+import {
+  useMemo,
+  useRef,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
 import {
   foldResource,
   useResource,
@@ -363,9 +370,9 @@ function PageBody({
         declaration of where a block's *content* starts. That is the single
         owner of the column geometry: the icon, title, sections, and every block
         land on one left edge, and this file never names the rail width. */}
-      <Stack gap="none">
+      <Stack gap="none" className="min-h-full">
         <PageCover pageId={pageId} />
-        <Stack gap="lg" className="pb-2xl">
+        <Stack gap="lg">
           {/* Title + body form one tight unit (no flex gap between them): the
             only space under the title is the editor's own top padding, which
             is click-to-edit — so there's no dead strip between title and
@@ -400,6 +407,7 @@ function PageBody({
             </PageContentColumn>
           </div>
         </Stack>
+        <TrailingClickZone body={bodyRef} />
       </Stack>
     </PageSurface>
   );
@@ -449,16 +457,43 @@ function BlockBody({
   pageId: string;
   blockId: string;
 }): ReactElement {
+  const bodyRef = useRef<BlockEditorHandle>(null);
   return (
     <PageSurface pane={blockDetailPane}>
-      <div className="pb-2xl">
+      <Stack gap="none" className="min-h-full">
         <BlockEditor
+          ref={bodyRef}
           pageId={pageId}
           rootId={blockId}
           contentClassName={READING_MEASURE}
         />
-      </div>
+        <TrailingClickZone body={bodyRef} />
+      </Stack>
     </PageSurface>
+  );
+}
+
+/**
+ * The empty space below the document, to the bottom of the pane: Notion's
+ * click-below-the-page — the caret goes to the last block when it is an empty
+ * text block, else a fresh one is appended. It grows to fill the scroller (its
+ * parent is `min-h-full`), so a short page is click-to-edit all the way down
+ * rather than only in the editor's own thin trailing padding. The rule itself
+ * is the editor's (`focusEnd`), shared with its in-list trailing zone.
+ */
+function TrailingClickZone({
+  body,
+}: {
+  body: RefObject<BlockEditorHandle | null>;
+}): ReactElement {
+  return (
+    // A pointer-only affordance with no keyboard twin to offer: the keyboard
+    // reaches the page's end through the blocks themselves.
+    <div
+      aria-hidden
+      className={cn(growClass(), "cursor-text pb-2xl")}
+      onClick={() => body.current?.focusEnd()}
+    />
   );
 }
 

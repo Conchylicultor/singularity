@@ -193,6 +193,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/grid.Grid`
+    - `primitives/css/grow.growClass`
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
