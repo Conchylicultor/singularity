@@ -339,6 +339,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`fallback`** — Last-resort renderer for a file no other renderer offers to show (binary formats): a large file icon, "No preview for <kind> files", and Open with default app for a host file.
         - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
         - **`markdown`** — Rendered markdown preview for .md and .mdx files.
+        - **`pdf`** — PDF preview for host .pdf files, in the browser's own PDF viewer (pages, zoom, search, print).
     - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
     - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
     - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory.

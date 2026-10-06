@@ -48,6 +48,11 @@ export function parseRange(header: string | null, size: number): RangeRequest {
  * file cannot read the app's cookies, storage or APIs), and never embeddable
  * by another site (`<script src>` / `<img src>` from a page outside
  * `*.localhost`).
+ *
+ * A PDF is the one exception to `sandbox`: browsers refuse to run their PDF
+ * viewer in a sandboxed document, and that viewer is the only way a PDF is
+ * ever shown — it renders in the browser's own isolated origin, never as a
+ * document on the app's, so the sandbox would protect nothing.
  */
 function inertHeaders(
   path: string,
@@ -57,7 +62,9 @@ function inertHeaders(
     "Content-Type": contentType,
     "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(basename(path))}`,
     "X-Content-Type-Options": "nosniff",
-    "Content-Security-Policy": "sandbox",
+    ...(contentType === "application/pdf"
+      ? {}
+      : { "Content-Security-Policy": "sandbox" }),
     "Cross-Origin-Resource-Policy": "same-site",
     "Accept-Ranges": "bytes",
     "Cache-Control": "no-cache",

@@ -164,7 +164,8 @@ export const hostFsText = defineEndpoint({
  * A host file's bytes, streamed: `Content-Type` from the extension, `Range`
  * honoured (one range; PDF / video seeking), served inline but sandboxed
  * (`Content-Security-Policy: sandbox`, `nosniff`, `Cross-Origin-Resource-Policy:
- * same-site`) so an HTML or SVG file cannot run script on the app's origin.
+ * same-site`) so an HTML or SVG file cannot run script on the app's origin. A PDF
+ * drops `sandbox` (the browser's PDF viewer will not run in a sandboxed document).
  * 404 missing, 403 denied, 400 for a directory. Build URLs with `hostFileUrl`.
  */
 export const hostFsRaw = defineEndpoint({

@@ -14,7 +14,7 @@ import { completeHostDir, splitPrefix } from "./complete";
 import { listHostDir } from "./list";
 import { isAppOrigin, openArgv } from "./open";
 import { classifyFsError, expandTilde, resolveHostPath } from "./path";
-import { parseRange } from "./raw";
+import { parseRange, serveHostFile } from "./raw";
 import { statHostPath } from "./stat";
 import { decodeTextBytes, readHostText } from "./text";
 
@@ -274,6 +274,17 @@ describe("raw", () => {
     expect(parseRange("bytes=100-", 100)).toEqual({ kind: "unsatisfiable" });
     expect(parseRange("bytes=0-1,5-6", 100)).toEqual({ kind: "none" });
     expect(parseRange("items=0-1", 100)).toEqual({ kind: "none" });
+  });
+
+  test("sandboxes every file but a PDF", async () => {
+    writeFileSync(join(root, "page.html"), "<script></script>");
+    writeFileSync(join(root, "doc.pdf"), "%PDF-1.4");
+    const html = await serveHostFile(join(root, "page.html"), null);
+    expect(html.headers.get("content-security-policy")).toBe("sandbox");
+    const pdf = await serveHostFile(join(root, "doc.pdf"), null);
+    expect(pdf.headers.get("content-type")).toBe("application/pdf");
+    expect(pdf.headers.get("content-security-policy")).toBeNull();
+    expect(pdf.headers.get("x-content-type-options")).toBe("nosniff");
   });
 });
 

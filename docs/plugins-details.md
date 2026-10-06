@@ -32468,7 +32468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/file-viewer`
     - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
       - Web:
-        - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`
+        - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`, `primitives.file-viewer.pdf`
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
@@ -32539,6 +32539,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/file-viewer/fallback`
           - `primitives/file-viewer/image`
           - `primitives/file-viewer/markdown`
+          - `primitives/file-viewer/pdf`
       - Plugins:
         - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
           - Web:
@@ -32588,6 +32589,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/file-viewer.useFileText`
               - `primitives/loading.Loading`
               - `primitives/markdown.Markdown`
+        - **`pdf`** — PDF preview for host .pdf files, in the browser's own PDF viewer (pages, zoom, search, print).
+          - Web:
+            - Contributes: `FileViewer.Renderer` "PDF" → `PdfView`
+            - Uses: `primitives/file-viewer.FileViewer`
     - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
       - Web:
         - Uses:
