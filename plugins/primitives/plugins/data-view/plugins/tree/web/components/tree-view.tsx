@@ -606,6 +606,12 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     [optExpandOnActivate],
   );
 
+  const optOpenOnActivate = options.openOnActivate;
+  const wrappedOpenOnActivate = useCallback(
+    (p: Projected<unknown>) => !p.alias && !!optOpenOnActivate?.(p.__row),
+    [optOpenOnActivate],
+  );
+
   // Lazy children, over the projection: an ALIAS node is a reference leaf, so it
   // is never lazy (its row's listing belongs to its canonical node).
   const hierLazy = hierarchy?.lazyChildren;
@@ -714,6 +720,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       expandOnActivate={
         optExpandOnActivate ? wrappedExpandOnActivate : undefined
       }
+      openOnActivate={optOpenOnActivate ? wrappedOpenOnActivate : undefined}
       lazyChildren={lazyChildren}
       onOpen={onOpen}
       multiSelect={

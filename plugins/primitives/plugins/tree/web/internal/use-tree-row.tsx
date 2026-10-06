@@ -52,6 +52,9 @@ export type TreeListContextValue<T extends TreeItem> = {
    *  selecting it (see `TreeListProps.expandOnActivate`). Absent → every row
    *  selects, today's behavior. */
   expandOnActivate?: (row: T) => boolean;
+  /** A single click on a matching row OPENS it (`onOpen`) instead of selecting
+   *  it (see `TreeListProps.openOnActivate`). */
+  openOnActivate?: (row: T) => boolean;
   /** Lazily-listed children (see `TreeListProps.lazyChildren`). */
   lazyChildren?: LazyChildren<T>;
   /** The placeholder child row an open node shows in place of children it does
@@ -146,6 +149,8 @@ export type RowControls = {
   /** The open gesture for this row (double-click / Enter), or `undefined` when
    *  the tree has none — so the row can tell whether to listen at all. */
   open: (() => void) | undefined;
+  /** A single click opens this row instead of selecting it (`openOnActivate`). */
+  clickOpens: boolean;
   toggleExpanded: () => void;
   /** Is this row's whole subtree open? Drives the fold/unfold icon's direction. */
   subtreeAllExpanded: boolean;
@@ -264,6 +269,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
     () => (onOpen ? () => onOpen(node.id) : undefined),
     [onOpen, node.id],
   );
+  const clickOpens = !!onOpen && !!ctx.openOnActivate?.(node);
 
   // Resolved for THIS node, so a row's fold affordance needs nothing but its own
   // controls. The read is a map lookup into the index `TreeList` built for the
@@ -321,6 +327,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
       consumeAutoFocus,
       select,
       open,
+      clickOpens,
       toggleExpanded,
       subtreeAllExpanded,
       toggleSubtreeExpanded,
@@ -343,6 +350,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
       consumeAutoFocus,
       select,
       open,
+      clickOpens,
       toggleExpanded,
       subtreeAllExpanded,
       toggleSubtreeExpanded,

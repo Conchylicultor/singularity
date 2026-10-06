@@ -57,6 +57,12 @@ export interface TreeViewOptions<TRow> {
    * Absent → every row activates, the default. Alias rows never toggle.
    */
   expandOnActivate?: (row: TRow) => boolean;
+  /**
+   * Rows a single click OPENS (`onRowOpen`) instead of activating — a file
+   * browser's folder. Arrow keys still only activate; Enter still opens.
+   * Absent → every click activates. Alias rows never open on click.
+   */
+  openOnActivate?: (row: TRow) => boolean;
   /** Extra content rendered on the left of the tree's own toolbar row. */
   toolbarStart?: ReactNode;
   /** Per-row label className (e.g. done/dropped strikethrough styling). */

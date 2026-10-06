@@ -228,6 +228,39 @@ describe("data-view tree: the open gesture", () => {
     expect(onRowOpen).toHaveBeenCalledTimes(2);
   });
 
+  it("opens an openOnActivate row on a single click, once per double-click", () => {
+    const onRowOpen = vi.fn();
+    const activate = vi.fn();
+    const { getByText } = renderTree({
+      onRowOpen,
+      rowActivation: (r) => () => activate(r),
+      options: { openOnActivate: (r: Row) => r.isDir },
+    });
+    const dir = rowOf(getByText("src"));
+
+    fireEvent.click(dir, { detail: 1 });
+    expect(onRowOpen).toHaveBeenCalledTimes(1);
+    expect(onRowOpen.mock.calls[0]![0]).toBe(DIR);
+    expect(activate).not.toHaveBeenCalled();
+
+    // The rest of a double-click opens nothing more.
+    fireEvent.click(dir, { detail: 2 });
+    fireEvent.doubleClick(dir);
+    expect(onRowOpen).toHaveBeenCalledTimes(1);
+
+    // A double-click whose first click opened another row does not open this one.
+    const file = rowOf(getByText("README.md"));
+    fireEvent.click(dir, { detail: 1 });
+    fireEvent.click(file, { detail: 2 });
+    fireEvent.doubleClick(file);
+    expect(onRowOpen).toHaveBeenCalledTimes(2);
+    expect(onRowOpen.mock.calls[1]![0]).toBe(DIR);
+
+    // Other rows still activate on click.
+    fireEvent.click(file, { detail: 1 });
+    expect(activate).toHaveBeenCalledTimes(1);
+  });
+
   it("leaves rows unfocusable and inert to double-click without it", () => {
     const { getByText } = renderTree();
     expect(getByText("README.md").closest("[tabindex='0']")).toBeNull();

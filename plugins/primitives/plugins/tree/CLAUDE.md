@@ -114,6 +114,13 @@ focusable, and the second click of a double-click (`event.detail > 1`) does not
 select again, so a click-to-toggle folder is not toggled back by the gesture
 that opens it. `RowControls.open` is `undefined` when the tree has no open.
 
+`TreeListProps.openOnActivate(row)` makes a single click on a matching row the
+open (a file browser's folder); `RowControls.clickOpens` carries it to the row.
+Like `expandOnActivate` it routes only the body click — arrow keys still select,
+Enter still opens. A double-click opens only the row its FIRST click landed on,
+so the second click of a gesture that just opened a folder cannot open whatever
+row the new listing put under the pointer.
+
 ## Reveal: a row must never land somewhere invisible
 
 `TreeList` owns three reveal behaviors, so no consumer has to (and so none is

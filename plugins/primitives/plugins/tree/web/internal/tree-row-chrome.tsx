@@ -44,6 +44,12 @@ export type TreeRowChromeProps = {
    * gesture that opens it).
    */
   onOpen?: () => void;
+  /**
+   * A single click OPENS the row (`onOpen`) instead of selecting it — a file
+   * browser's folder. The double-click that may follow is then not a second
+   * open: the gesture already did what it asks for.
+   */
+  clickOpens?: boolean;
   children: ReactNode;
   actions?: ReactNode;
   /**
@@ -140,6 +146,9 @@ function DefaultMergedDisclosure({
  * ancestor also carries a bare `group` (e.g. the shadcn sidebar wrapper) —
  * showing every row's actions at once. Hence the row/no-adhoc-row exception.
  */
+/** The row the latest gesture's first click landed on (see `onDoubleClick`). */
+let firstClickTarget: EventTarget | null = null;
+
 export function TreeRowChrome({
   rowId,
   depth,
@@ -149,6 +158,7 @@ export function TreeRowChrome({
   onToggle,
   onSelect,
   onOpen,
+  clickOpens = false,
   children,
   actions,
   leading,
@@ -182,16 +192,28 @@ export function TreeRowChrome({
       data-tree-row
       data-tree-id={rowId}
       onClick={
-        onOpen && onSelect
+        onOpen
           ? (e: MouseEvent) => {
               // `detail` counts the clicks of one gesture; the second click of
               // a double-click belongs to `onOpen`, not to another select.
               if (e.detail > 1) return;
-              onSelect();
+              firstClickTarget = e.currentTarget;
+              if (clickOpens) onOpen();
+              else onSelect?.();
             }
           : onSelect
       }
-      onDoubleClick={onOpen}
+      onDoubleClick={
+        onOpen && !clickOpens
+          ? (e: MouseEvent) => {
+              // Only a double-click whose FIRST click landed on this row: when
+              // that click opened something and the row under the pointer was
+              // replaced in between, the second click is not this row's.
+              if (e.currentTarget !== firstClickTarget) return;
+              onOpen();
+            }
+          : undefined
+      }
       tabIndex={onOpen ? 0 : undefined}
       onKeyDown={
         onOpen

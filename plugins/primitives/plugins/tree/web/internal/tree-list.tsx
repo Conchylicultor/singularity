@@ -123,6 +123,12 @@ export type TreeListProps<T extends TreeItem> = {
    */
   expandOnActivate?: (row: T) => boolean;
   /**
+   * A single click on a matching row OPENS it (`onOpen`) instead of selecting
+   * it — a file browser's folder. Keyboard moves still only select, and Enter
+   * still opens. Needs `onOpen`; absent → every click selects.
+   */
+  openOnActivate?: (row: T) => boolean;
+  /**
    * Opt-in checkbox multi-select. Present → each row renders a `SelectionCheckbox`
    * and a `SelectionBar` (with optional bulk `actions`) sits above the rows. The
    * select order is derived from the visible tree (DFS, skipping collapsed
@@ -172,6 +178,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     addLabel = "Add",
     canCreate = true,
     expandOnActivate,
+    openOnActivate,
     multiSelect,
     lazyChildren,
     onOpen,
@@ -426,6 +433,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       Row,
       takeInitialReveal,
       expandOnActivate,
+      openOnActivate,
       lazyChildren,
       childPlaceholder: placeholderOf,
       onOpen,
@@ -447,6 +455,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       Row,
       takeInitialReveal,
       expandOnActivate,
+      openOnActivate,
       lazyChildren,
       placeholderOf,
       onOpen,

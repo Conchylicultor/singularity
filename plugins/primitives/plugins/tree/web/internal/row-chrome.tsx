@@ -84,6 +84,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     subtreeAllExpanded,
     toggleSubtreeExpanded,
     open,
+    clickOpens,
   } = controls;
   const {
     ref: dragRef,
@@ -211,6 +212,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
             onToggle={toggleExpanded}
             onSelect={select}
             onOpen={open}
+            clickOpens={clickOpens}
             rowRef={rowRef}
             dragAttributes={canReorder ? dragAttributes : undefined}
             dragListeners={canReorder ? dragListeners : undefined}

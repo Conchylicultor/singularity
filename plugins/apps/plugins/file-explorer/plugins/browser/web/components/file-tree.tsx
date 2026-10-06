@@ -189,8 +189,8 @@ export interface FileTreeProps {
 /**
  * The folder's contents as a DataView tree: Name / Modified / Size in aligned
  * columns plus every `FileBrowserSlots.Fields` contribution, folders first, every folder lazily listed through host-fs on first
- * expand. Click selects (a file opens beside the listing), double-click or
- * Enter opens (a folder becomes the listing).
+ * expand. Clicking a folder makes it the listing; clicking a file selects it
+ * (and opens it beside the listing). Double-click or Enter opens either.
  */
 export function FileTree({
   root,
@@ -267,6 +267,7 @@ export function FileTree({
           className="size-4"
         />
       ),
+      openOnActivate: (r) => r.kind === "dir",
       labelClassName: (r) =>
         r.path === openPath ? cn("font-semibold") : undefined,
     }),
