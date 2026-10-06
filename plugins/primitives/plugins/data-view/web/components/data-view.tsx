@@ -1,6 +1,9 @@
 import { type CSSProperties, type ReactNode, useMemo } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import {
+  Sticky,
+  stickyOffsetPx,
+} from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -355,7 +358,7 @@ export function DataViewShellFrame(props: {
       // own sticky group headers directly below it (see DATA_VIEW_HEADER_OFFSET_VAR).
       style={
         {
-          [DATA_VIEW_HEADER_OFFSET_VAR]: `${Math.round(toolbarHeight)}px`,
+          [DATA_VIEW_HEADER_OFFSET_VAR]: `${stickyOffsetPx(toolbarHeight)}px`,
         } as CSSProperties
       }
     >

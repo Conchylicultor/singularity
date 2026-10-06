@@ -2105,6 +2105,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
+    - `primitives/css/sticky.stickyOffsetPx`
     - `primitives/css/sticky/stack.StickyStack`
     - `primitives/css/sticky/stack.StickyStackItem`
     - `primitives/css/text.SectionLabel`

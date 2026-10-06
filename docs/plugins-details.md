@@ -29619,7 +29619,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shell/health-report`
               - `tasks/attempt-view`
               - `tasks/task-status`
-        - **`sticky`** — Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level.
+        - **`sticky`** — Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level; stickyOffsetPx turns a measured height into the exact offset a box stacked under it pins at.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
@@ -29631,6 +29631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `Sticky`
               - `stickyClasses`
+              - `stickyOffsetPx`
           - Cross-plugin:
             - Imported by:
               - `apps/mail/search`
@@ -29654,6 +29655,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Uses:
                   - `primitives/css/sticky.Sticky`
+                  - `primitives/css/sticky.stickyOffsetPx`
                   - `primitives/css/sticky.StickyProps`
                   - `primitives/dom/element-size.useElementSize`
                 - Exports (types):
@@ -30806,6 +30808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/center.Center`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
+          - `primitives/css/sticky.stickyOffsetPx`
           - `primitives/css/sticky/stack.StickyStack`
           - `primitives/css/sticky/stack.StickyStackItem`
           - `primitives/css/text.Text`
@@ -30882,6 +30885,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
+          - `primitives/css/sticky.stickyOffsetPx`
           - `primitives/css/sticky/stack.StickyStack`
           - `primitives/css/sticky/stack.StickyStackItem`
           - `primitives/css/text.SectionLabel`

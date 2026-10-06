@@ -44,12 +44,15 @@ are siblings in the one shared block.
 
 Each `StickyStackItem` measures its own height (`element-size`, whose initial
 measure is synchronous inside a layout effect) and reports it to the provider,
-which sums the rounded heights of the keys *preceding* an item to derive its
-`top`: `calc(${base} + ${sum}px)`. Heights are rounded once at the source, so
-sub-pixel `getBoundingClientRect` jitter can never re-render the stack, and the
-provider only writes state when a rounded value actually changed — a
-ResizeObserver feeding an unconditional `setState` is an observe→render→observe
-loop. An item whose height hasn't landed yet contributes `0`; the synchronous
+which sums the heights of the keys *preceding* an item to derive its
+`top`: `calc(${base} + ${sum}px)`. Heights are snapped once at the source with
+`stickyOffsetPx` (the `sticky` plugin) — to the layout engine's 1/64 px unit,
+**never to whole pixels**: an item pins at exactly the sum, so rounding a 29.5px
+header to 30 pinned the next one half a pixel low and the rows behind showed
+through that strip as a dotted line. The snap still keeps sub-pixel
+`getBoundingClientRect` jitter from re-rendering the stack, and the provider
+only writes state when a snapped value actually changed — a ResizeObserver
+feeding an unconditional `setState` is an observe→render→observe loop. An item whose height hasn't landed yet contributes `0`; the synchronous
 measure closes that before first paint, so it is not a visible jump.
 
 This is what the `queue-view` hand-rolled with a hardcoded `SECTION_H = 28` — a
@@ -85,6 +88,7 @@ surface's viewport.
 - Web:
   - Uses:
     - `primitives/css/sticky.Sticky`
+    - `primitives/css/sticky.stickyOffsetPx`
     - `primitives/css/sticky.StickyProps`
     - `primitives/dom/element-size.useElementSize`
   - Exports (types):

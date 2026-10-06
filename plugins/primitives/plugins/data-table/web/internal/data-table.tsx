@@ -10,7 +10,10 @@ import {
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
 import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
-import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import {
+  Sticky,
+  stickyOffsetPx,
+} from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import {
   StickyStack,
   StickyStackItem,
@@ -228,7 +231,7 @@ export function DataTable<TRow>({
   // Without a header row (labels on the first group) they pin at the offset.
   const groupHeaderTop = labelsOnFirstGroup
     ? stickyHeaderOffset
-    : `calc(${stickyHeaderOffset} + ${Math.round(headerHeight)}px)`;
+    : `calc(${stickyHeaderOffset} + ${stickyOffsetPx(headerHeight)}px)`;
 
   return (
     <ControlSizeProvider size={controlSize}>

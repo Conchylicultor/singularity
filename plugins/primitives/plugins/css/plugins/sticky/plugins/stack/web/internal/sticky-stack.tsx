@@ -1,5 +1,6 @@
 import {
   Sticky,
+  stickyOffsetPx,
   type StickyProps,
 } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
@@ -26,7 +27,7 @@ interface StickyStackCtx {
   keys: readonly string[];
   base: string;
   stacked: boolean;
-  /** Measured, rounded item heights, keyed by item key. Missing ⇒ not measured yet. */
+  /** Measured item heights (snapped by `stickyOffsetPx`), keyed by item key. Missing ⇒ not measured yet. */
   heights: ReadonlyMap<string, number>;
   /** `null` height removes the entry (unmount). Stable identity. */
   reportHeight: (key: string, height: number | null) => void;
@@ -112,7 +113,7 @@ export function StickyStack({
     () => new Map(),
   );
 
-  // Write only when the rounded value actually moved: each item reports from a
+  // Write only when the snapped value actually moved: each item reports from a
   // layout effect fed by a ResizeObserver, so an unconditional setState here
   // would be an observe→render→observe loop.
   const reportHeight = useCallback((key: string, height: number | null) => {
@@ -173,9 +174,10 @@ export function StickyStackItem({
     [measureRef, ref],
   );
 
-  // Round once, here: the stack sums integers, so sub-pixel jitter from
-  // `getBoundingClientRect` can never re-render the whole stack.
-  const rounded = Math.round(height);
+  // Snap once, here, to the layout unit — never to whole pixels: the next item
+  // pins at exactly this height, so a rounded 29.5 → 30 left a half-pixel strip
+  // between the bands where the rows behind showed through.
+  const rounded = stickyOffsetPx(height);
   // Layout effect, not a plain effect: the corrected offsets must land in the same
   // frame as the measure, so the stack never paints at a stale `top`.
   useLayoutEffect(() => {

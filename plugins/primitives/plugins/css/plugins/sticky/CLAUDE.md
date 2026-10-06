@@ -37,6 +37,16 @@ become a mismatched band in a tinted surface (the sidebar/inset-framing bug).
 tinted surface only has to set `--chrome-mask` alongside its background to get
 matching pinned bars for free.
 
+## Offsets from a measured height — `stickyOffsetPx`, never `Math.round`
+
+A box pinned under another (a group header under a toolbar, the next header in
+a stack) pins at the measured height of what is above it. Turn that height into
+the offset with `stickyOffsetPx(height)`: it snaps to the layout engine's 1/64
+px unit, which keeps sub-pixel jitter from re-rendering without introducing
+error. `Math.round` does introduce it — a 29.5px band rounded to 30 pins the
+next box half a pixel low, and the content scrolling behind shows through that
+strip.
+
 ## Conditional stickiness — toggle, don't swap
 
 To make an element sticky only some of the time, set **`active={false}`** rather
@@ -61,7 +71,7 @@ toggle, silently resetting any child component state (e.g. an inner
 
 ## Plugin reference
 
-- Description: Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level.
+- Description: Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level; stickyOffsetPx turns a measured height into the exact offset a box stacked under it pins at.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
@@ -73,6 +83,7 @@ toggle, silently resetting any child component state (e.g. an inner
   - Exports (values):
     - `Sticky`
     - `stickyClasses`
+    - `stickyOffsetPx`
 - Cross-plugin:
   - Imported by:
     - `apps/mail/search`

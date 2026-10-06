@@ -1,7 +1,10 @@
 import { type CSSProperties, type ReactNode, useState } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import {
+  Sticky,
+  stickyOffsetPx,
+} from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
@@ -165,7 +168,7 @@ export function ViewSection(props: {
         <CollapsibleContent
           style={
             {
-              [DATA_VIEW_HEADER_OFFSET_VAR]: `${Math.round(headerHeight)}px`,
+              [DATA_VIEW_HEADER_OFFSET_VAR]: `${stickyOffsetPx(headerHeight)}px`,
             } as CSSProperties
           }
         >

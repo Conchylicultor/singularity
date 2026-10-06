@@ -103,6 +103,7 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
+    - `primitives/css/sticky.stickyOffsetPx`
     - `primitives/css/sticky/stack.StickyStack`
     - `primitives/css/sticky/stack.StickyStackItem`
     - `primitives/css/text.Text`
