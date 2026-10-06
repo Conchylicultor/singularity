@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import {
-  Sonata,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  PlayerTransport,
+  PlayToggle,
+} from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -11,7 +11,6 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenSong } from "../hooks";
@@ -21,8 +20,6 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const musicNoteIcon = symbol("music-note");
-const pauseIcon = symbol("pause");
-const playArrowIcon = symbol("play-arrow");
 
 /**
  * Compact now-playing bar at the bottom of the library. Shown only while a song
@@ -34,7 +31,6 @@ const playArrowIcon = symbol("play-arrow");
  * row (`useCurrentSong`), never a shell-context mirror.
  */
 export function NowPlayingBar() {
-  const { isPlaying, play, stop } = useSonata();
   const current = useCurrentSong();
   const openSong = useOpenSong();
   // While the open song's row loads — pressing Play on another song mints a
@@ -91,16 +87,10 @@ export function NowPlayingBar() {
               </NowPlayingTitle>
             </div>
           )}
-          <IconButton
-            icon={isPlaying ? pauseIcon : playArrowIcon}
-            label={isPlaying ? "Pause" : "Play"}
-            onClick={() => (isPlaying ? stop() : play())}
-          />
+          <PlayToggle />
           {/* Reuse the shared transport scrubber as the interactive seek bar. */}
           <Fill>
-            <Sonata.Transport.Render>
-              {(t) => <t.component key={t.id} />}
-            </Sonata.Transport.Render>
+            <PlayerTransport />
           </Fill>
         </Stack>
       </Inset>

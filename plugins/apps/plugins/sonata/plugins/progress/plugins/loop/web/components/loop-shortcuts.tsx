@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
-  useSonata,
   useCursorApi,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { toggleLoop } from "../loop-actions";
 
@@ -22,7 +23,8 @@ import { toggleLoop } from "../loop-actions";
  * whole feature stays atomic.
  */
 export function LoopShortcuts() {
-  const { currentSongId, loop, setLoop, seekTo, score } = useSonata();
+  const { currentSongId } = useSonataApp();
+  const { loop, setLoop, seekTo, score } = useSession();
   const cursor = useCursorApi();
 
   const descriptors = useMemo(

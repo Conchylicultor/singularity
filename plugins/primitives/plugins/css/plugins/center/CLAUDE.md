@@ -62,9 +62,10 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/sonata/library`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
+    - `apps/sonata/player`
     - `apps/sonata/rich/rhythm-controls`
-    - `apps/sonata/shell`
     - `apps/sonata/songsheet`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/transport-bar`
     - `apps/studio/contributions`
     - `apps/studio/explorer`

@@ -34,6 +34,7 @@
     - `apps/pages/trash`
     - `apps/sonata/notation`
     - `apps/sonata/songsheet`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/studio/compositions/release`
     - `apps/studio/contributions/tables/columns`

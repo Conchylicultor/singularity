@@ -5,11 +5,12 @@ import {
   targetClaimsKey,
 } from "@plugins/primitives/plugins/shortcuts/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 
 /**
  * Headless ←/→ seek controller (a `Sonata.Effect`, so it mounts once per Sonata
- * surface inside `SonataProvider`). It owns the arrow keys directly rather than
+ * surface inside its player scope). It owns the arrow keys directly rather than
  * going through the keydown-only shortcut registry, because good seek UX needs to
  * tell a *tap* from a *press-and-hold*, which requires both keyup and the OS
  * auto-repeat signal:
@@ -28,7 +29,7 @@ import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
  *    (`getFocusedSurfaceId()`), so an arrow-key hold in a foreground window can't
  *    scrub a background Sonata window (the cross-window bug the transport bus had).
  *  - **Song** — it bails when no song is open (`currentSongId == null`). The old
- *    transport bus was empty on the library; `SonataProvider` now wraps both
+ *    transport bus was empty on the library; the player scope now wraps both
  *    library and player, so this gate is restored explicitly.
  *
  * Plain arrow presses are claimed (and `preventDefault`'d so the page doesn't
@@ -36,13 +37,14 @@ import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
  * the caret as usual.
  */
 export function SeekHoldController() {
-  const { seekBar, startScrub, endScrub, currentSongId } = useSonata();
+  const { seekBar, startScrub, endScrub } = useSession();
+  const { currentSongId } = useSonataApp();
   const surfaceId = useSurfaceTabId();
 
   // The window listeners are installed once; read the live transport verbs,
   // surface id, and song-open gate through refs so the effect closure never goes
   // stale and we never re-install the listeners (which would drop an in-flight
-  // hold). `useSonata()` verbs are referentially stable, but the song-open gate
+  // hold). `useSession()` verbs are referentially stable, but the song-open gate
   // is not — refs keep the single listener correct across opens.
   const seekBarRef = useLatestRef(seekBar);
   const startScrubRef = useLatestRef(startScrub);

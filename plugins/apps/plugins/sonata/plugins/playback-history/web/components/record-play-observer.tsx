@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { recordPlay } from "../../shared/endpoints";
 
@@ -11,7 +12,8 @@ import { recordPlay } from "../../shared/endpoints";
  * does not re-count, but reopening the song — even the same one — re-arms it.
  */
 export function RecordPlayObserver() {
-  const { currentSongId, isPlaying, songOpenEpoch } = useSonata();
+  const { currentSongId, songOpenEpoch } = useSonataApp();
+  const { isPlaying } = useSession();
   const prevPlaying = useRef(false);
   const recordedEpoch = useRef<number | null>(null);
 

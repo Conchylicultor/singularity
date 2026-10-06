@@ -8,7 +8,7 @@ import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/sco
  * builds one stable `LivePlayApi` and publishes it here; the playable keyboard
  * (a sibling in a different slot branch) reads it via `useLivePlay()`. Scoping
  * to the `<Provider>` (folded above the whole Sonata subtree via the
- * `Sonata.SurfaceProvider` wrapper slot) keeps two open Sonata surfaces playing
+ * `SonataSession.Provider` wrapper slot) keeps two open Sonata surfaces playing
  * independently instead of sharing one module-level singleton.
  */
 export interface LivePlayApi {

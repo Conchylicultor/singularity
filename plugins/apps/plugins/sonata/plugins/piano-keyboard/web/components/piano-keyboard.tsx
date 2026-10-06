@@ -18,8 +18,8 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
   useCursorSelector,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useLivePlay } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
 import {
   accidentalColor,
@@ -122,7 +122,7 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
   // Sonata's own look paints its keys: one control, every keyboard in the app.
   const skin = useSonataKeySkin();
   const plane = projection.pitchPlane;
-  const { score } = useSonata();
+  const { score } = useSession();
   const { labelScope } = useConfig(pianoKeyboardConfig);
 
   const speller = useMemo(

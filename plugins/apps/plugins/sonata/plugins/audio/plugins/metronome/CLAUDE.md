@@ -28,7 +28,7 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
 - Description: Sonata metronome: a synthesized click track (continuous + count-in lead-in) scheduled on the engine's audio clock, with a toolbar control and an on-screen countdown. Server registration of the Sonata metronome config.
 - Web:
   - Contributes:
-    - `Sonata.Effect` "metronome" → `MetronomeEngine`
+    - `SonataSession.Effect` "metronome" → `MetronomeEngine`
     - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
     - `Sonata.Hud` "count-in" → `CountInOverlay`
     - `ConfigV2.WebRegister` "sonata.metronome"
@@ -38,9 +38,10 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
     - `apps/sonata/audio/engine.startScheduling`
     - `apps/sonata/audio/engine.useAudioGraph`
     - `apps/sonata/library.sonataPlayerPane`
+    - `apps/sonata/session.SonataSession`
+    - `apps/sonata/session.useCursorApi`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorApi`
-    - `apps/sonata/shell.useSonata`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`

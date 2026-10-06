@@ -6,7 +6,7 @@ Sonata navigation is URL-driven via the pane router — this plugin owns both
 panes (it is the natural owner: it already holds `useOpenSong`, the
 `Library.Source` registry, and contributes `Sonata.Home`; the shell can't own
 them without a `shell → library` import that would cycle with the existing
-`library → shell` dependency on `useSonata`).
+`library → shell` dependency on `useSonataApp`).
 
 - `sonataLibraryPane` — index pane at bare `/sonata` (`appIndex: true`,
   standard chrome titled "Library"). Renders the gallery via
@@ -24,10 +24,11 @@ them without a `shell → library` import that would cycle with the existing
   contribution.
   Carries the optimistic title in `input`; its `resolve` hook
   (`useSonataPlayerResolve`) hydrates every `Library.Source`'s raw for the song
-  (so direct nav / reload restores it) and gates on the song existing. The
-  surface marks the song open on mount (`setCurrentSong`, once per open since
-  each open is a fresh `mode:"root"` instance) and publishes the transport to
-  the global bus while mounted.
+  and loads it (`useLoadDocument({ kind: "library", songId }, rawMap)`) — so
+  direct nav / reload restores it — and gates on the song existing. The surface
+  marks the song open on mount (`setCurrentSong`, once per open since each open
+  is a fresh `mode:"root"` instance) and composes the player parts
+  (`PlayerTransport`, `PlayerDisplay`) with the `SectionPane`.
 
 `useOpenSong` opens the player with `openPane(sonataPlayerPane, { songId },
 { mode: "root", hint: { title } })`. The ← Library button calls `clearRoute()`
@@ -166,10 +167,18 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
   - Uses:
+    - `apps/sonata/document.SonataDocument`
+    - `apps/sonata/document.useLoadDocument`
+    - `apps/sonata/document.useSongDocument`
+    - `apps/sonata/player.PlayerDisplay`
+    - `apps/sonata/player.PlayerTransport`
+    - `apps/sonata/player.PlayToggle`
+    - `apps/sonata/player.SonataPlayer`
+    - `apps/sonata/player.usePlayerView`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.SonataSectionItem`
-    - `apps/sonata/shell.TEMPO_MATH_FLOOR`
-    - `apps/sonata/shell.useSonata`
+    - `apps/sonata/shell.useSonataApp`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveRowResult`
     - `network/live.mapRow`
@@ -177,7 +186,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `network/live.useLiveRow`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
-    - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
@@ -202,6 +210,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
@@ -223,6 +232,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `openSongImperative`
     - `sonataLibraryPane`
     - `sonataPlayerPane`
+    - `sonataSongLink`
     - `useCurrentSong`
     - `useOpenSong`
 - Server:
@@ -289,6 +299,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/midi`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/midi/folders`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`

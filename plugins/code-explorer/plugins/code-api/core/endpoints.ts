@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { EditedFileSchema } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { CommitRowSchema } from "@plugins/primitives/plugins/commit-list/core";
 import { resolvableSchema } from "@plugins/primitives/plugins/live-state/core";
@@ -52,9 +52,14 @@ export const listCodeDir = defineEndpoint({
   ]),
 });
 
-// Returns binary image data — not wrapped with implement()
+// Returns a checkout file's raw bytes (image formats only today; 415 for any
+// other) — served outside implement(), so the declared query and blob response
+// type the client side only: `codeImageUrl` builds the address an `<img>` reads,
+// and `fetchEndpoint` reads the bytes as a Blob.
 export const getImageContent = defineEndpoint({
   route: "GET /api/code/:worktree/image",
+  query: z.object({ path: z.string(), ref: z.string().optional() }),
+  response: blob(),
 });
 
 export const getPushFiles = defineEndpoint({

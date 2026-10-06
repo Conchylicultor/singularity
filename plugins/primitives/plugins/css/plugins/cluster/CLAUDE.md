@@ -48,6 +48,7 @@ defined in exactly one place. The distinct export buys two things:
     - `apps/mail/search`
     - `apps/pages/prompt-origin`
     - `apps/prototypes/canvas`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/studio/compositions`
     - `apps/studio/compositions/entry-points`
     - `apps/studio/compositions/membership-summary`

@@ -4,12 +4,12 @@ import {
   useFailSongSetting,
   useMountedSongId,
   useWriteSongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { keyAutoDetects } from "../../shared/resources";
 
 /**
- * Headless observer of the `keyAutoDetectSetting` (`Sonata.SongSetting`,
+ * Headless observer of the `keyAutoDetectSetting` (`SonataDocument.SongSetting`,
  * mounted afresh for each loaded song): syncs that song's persisted
  * key-auto-detect setting into the loaded song, whose score pipeline reads it
  * to decide whether to override the authored key with inference.

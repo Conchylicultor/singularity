@@ -9,7 +9,7 @@ import type { WallpaperCandidate } from "../core";
  * tabbed Panel that produces a {@link WallpaperCandidate}. The picker reads
  * `Wallpaper.Provider.useContributions()` and renders one tab per provider,
  * never naming a specific one — a future provider drops in with zero picker
- * edits. Pattern mirrors `Sonata.Source`.
+ * edits. Pattern mirrors `SonataDocument.Source`.
  */
 export const Wallpaper = {
   Provider: defineSlot<{

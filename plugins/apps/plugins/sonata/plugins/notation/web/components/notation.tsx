@@ -8,10 +8,11 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig } from "@plugins/config_v2/web";
 import {
-  Sonata,
   useCursorApi,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   useHiddenTrackIds,
   useTrackMixerEntries,
@@ -40,7 +41,7 @@ import {
 import { NotationSystem } from "./notation-system";
 import { notationConfig } from "../../shared/config";
 
-/** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. The
+/** Props the player's `SonataPlayer.Display.Dispatch` passes to the chosen display. The
  *  playback cursor is NOT a prop — it's read imperatively (playhead/highlight,
  *  zero re-render) and via `useCursorSelector` (auto-scroll, per-system). */
 export interface NotationProps {
@@ -125,7 +126,10 @@ function systemForBeat(systems: SystemPlan[], beat: number): number {
 function NotationInner({ score }: NotationProps) {
   const { showChordSymbols, splitPitch, staffLayout, separateVoices } =
     useConfig(notationConfig);
-  const { seekTo, isPlaying, scorePending, scoreFailure } = useSonata();
+  const { seekTo, isPlaying } = useSession();
+  const { content } = useSongDocument();
+  const scorePending = content.kind === "pending";
+  const scoreFailure = content.kind === "failed" ? content.failure : null;
   const cursor = useCursorApi();
 
   // Drop hidden tracks (track-mixer) before engraving, and pass the visible

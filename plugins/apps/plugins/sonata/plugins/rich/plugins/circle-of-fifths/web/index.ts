@@ -1,14 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import {
-  Sonata,
-  useHasChords,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useHasChords } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { CircleOfFifths } from "./components/circle-of-fifths";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
-    "Sonata Section: a small circle-of-fifths wheel — major keys on the outer ring, their relative minors on the inner ring — that highlights the chord under the playback cursor, reading the shared Score + cursor from useSonata().",
+    "Sonata Section: a small circle-of-fifths wheel — major keys on the outer ring, their relative minors on the inner ring — that highlights the chord under the playback cursor, reading the session's Score + cursor (useSession).",
   contributions: [
     Sonata.Section({
       id: "circle-of-fifths",

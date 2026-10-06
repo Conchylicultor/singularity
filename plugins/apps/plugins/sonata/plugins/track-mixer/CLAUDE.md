@@ -51,7 +51,7 @@ plus a per-song reset.
   the loaded song, `trackViewSetting` (`web/track-view-setting.ts`, a
   `defineSongSetting` key: pending until the rows are read, pending again
   whenever another song is loaded), and registers it with the shell
-  (`Sonata.SongSetting`, with the headless `TrackViewObserver`, mounted afresh
+  (`SonataDocument.SongSetting`, with the headless `TrackViewObserver`, mounted afresh
   for each loaded song), which reads the rows for that song and writes them once
   settled. The shell never reads the value — it only waits, generically, on
   every registered setting — so no frame draws or plays the song with default
@@ -98,21 +98,23 @@ plus a per-song reset.
 
 ## Plugin reference
 
-- Description: Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the shell as a per-song setting (Sonata.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / instrument / muted / hidden / volume) and serves them per song, consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
+- Description: Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the song document as a per-song setting (SonataDocument.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / instrument / muted / hidden / volume) and serves them per song, consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
 - Web:
   - Contributes:
-    - `Sonata.SongSetting` "track-view-sync" → `TrackViewObserver`
+    - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
     - `Sonata.Section` "Tracks" → `TrackMixerPanel`
   - Uses:
     - `apps/sonata/audio/instruments.SonataAudio`
-    - `apps/sonata/shell.defineSongSetting`
+    - `apps/sonata/document.defineSongSetting`
+    - `apps/sonata/document.SonataDocument`
+    - `apps/sonata/document.SongSetting`
+    - `apps/sonata/document.useFailSongSetting`
+    - `apps/sonata/document.useLibrarySong`
+    - `apps/sonata/document.useMountedSongId`
+    - `apps/sonata/document.useSongSetting`
+    - `apps/sonata/document.useWriteSongSetting`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.SongSetting`
-    - `apps/sonata/shell.useFailSongSetting`
-    - `apps/sonata/shell.useMountedSongId`
-    - `apps/sonata/shell.useSonata`
-    - `apps/sonata/shell.useSongSetting`
-    - `apps/sonata/shell.useWriteSongSetting`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/color-picker.SwatchGrid`

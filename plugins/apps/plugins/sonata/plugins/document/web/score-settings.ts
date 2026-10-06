@@ -3,16 +3,16 @@ import { defineSongSetting, type SongSetting } from "./song-setting";
 import { useSettledSongSettings } from "./loaded-song";
 
 /**
- * The per-song settings the score pipeline (`SonataProvider`'s `baseScore`)
- * transforms the loaded content with. Each is persisted by a feature plugin the
- * load-bearing shell cannot import (cycle), so the shell DEFINES the setting —
- * its identity, value type and `absent` value — and the feature plugin
- * registers it (`Sonata.SongSetting`) with the observer that settles it; its
+ * The per-song settings the document's score pipeline transforms the loaded
+ * content with. Each is persisted by a feature plugin the document cannot
+ * import (cycle), so the document DEFINES the setting — its identity, value
+ * type and `absent` value — and the feature plugin registers it
+ * (`SonataDocument.SongSetting`) with the observer that settles it; its
  * controls read and write it through `useSongSetting` / `useWriteSongSetting`.
- * Feature plugins depend on the shell, never the reverse.
+ * Feature plugins depend on the document, never the reverse.
  *
- * This is the only place the shell names them, and only because the pipeline
- * reads their VALUES. What the score waits for is not this list: it is every
+ * This is the only place the document names them, and only because the
+ * pipeline reads their VALUES. What the score waits for is not this list: it is every
  * setting the composition registers (`useSettledSongSettings`), so a
  * composition without one of these features loads without hanging, and the
  * pipeline reads that setting's `absent` value — the identity transform.
@@ -75,7 +75,7 @@ const SCORE_SETTINGS = {
 };
 
 /**
- * The loaded song's score settings — pending until every per-song setting the
+ * The loaded document's score settings — pending until every per-song setting the
  * composition registers has settled (the track view included, which the
  * pipeline does not read: that is what keeps every display and the audio engine
  * from showing or playing the song with default track views while they load).

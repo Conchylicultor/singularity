@@ -4,17 +4,17 @@
 
 ## Plugin reference
 
-- Description: Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().
+- Description: Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the session's Score + cursor (useSession).
 - Web:
   - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
   - Uses:
+    - `apps/sonata/document.useHasChords`
     - `apps/sonata/pitch-layout.usePitchGeometry`
     - `apps/sonata/primitives/keyboard.Keyboard`
     - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+    - `apps/sonata/session.useCursorSelector`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorSelector`
-    - `apps/sonata/shell.useHasChords`
-    - `apps/sonata/shell.useSonata`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`

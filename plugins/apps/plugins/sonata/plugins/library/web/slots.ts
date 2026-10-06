@@ -38,7 +38,7 @@ import type { Song } from "../core";
  */
 export const Library = {
   Source: defineSlot<{
-    /** Stable id of the source (matches its `Sonata.Source` id / `rawById` key). */
+    /** Stable id of the source (matches its `SonataDocument.Source` id / `rawById` key). */
     sourceId: string;
     /** This source's client raw for `songId`, or `undefined` if it has none. */
     hydrate: (songId: string) => Promise<unknown | undefined>;

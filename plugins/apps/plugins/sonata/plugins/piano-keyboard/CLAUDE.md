@@ -15,9 +15,9 @@
     - `apps/sonata/primitives/keyboard.Keyboard`
     - `apps/sonata/primitives/keyboard.LabelTone`
     - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+    - `apps/sonata/session.useCursorSelector`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorSelector`
-    - `apps/sonata/shell.useSonata`
     - `apps/sonata/track-mixer.accidentalColor`
     - `apps/sonata/track-mixer.useHiddenTrackIds`
     - `apps/sonata/track-mixer.useMutedTrackIds`

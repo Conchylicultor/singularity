@@ -6,14 +6,14 @@ import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/sco
  * crosses the engine ↔ control boundary.
  *
  * The Web Audio graph lives in the headless, always-mounted `AudioEngine`
- * (a `Sonata.Effect`) so no piece of mountable UI can tear the `AudioContext`
+ * (a `SonataSession.Effect`) so no piece of mountable UI can tear the `AudioContext`
  * down. The `VolumeControl` (a player-header widget) is therefore decoupled
  * from the graph: the slider *writes* `volume` here and the engine reads it to
  * drive master gain; the engine *writes* `status` / `loadError` here. Either
  * component can mount, unmount, or remount independently.
  *
  * State is scoped per `<AudioStoreProvider>` (folded above both consumers via the
- * `Sonata.SurfaceProvider` wrapper slot) so two open Sonata surfaces have
+ * `SonataSession.Provider` wrapper slot) so two open Sonata surfaces have
  * independent volume/status — a module-level singleton would bleed across them.
  */
 

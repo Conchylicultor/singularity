@@ -4,12 +4,12 @@ import {
   useFailSongSetting,
   useMountedSongId,
   useWriteSongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { transposes } from "../../shared/resources";
 
 /**
- * Headless observer of the `transposeSetting` (`Sonata.SongSetting`, mounted
+ * Headless observer of the `transposeSetting` (`SonataDocument.SongSetting`, mounted
  * afresh for each loaded song): syncs that song's persisted transpose offset
  * into the loaded song, whose score pipeline reads it to shift the whole song.
  *

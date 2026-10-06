@@ -4570,17 +4570,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header.
               - Web:
                 - Contributes:
-                  - `Sonata.SurfaceProvider` → `AudioProvider`
-                  - `Sonata.Effect` "audio-engine" → `AudioEngine`
+                  - `SonataSession.Provider` → `AudioProvider`
+                  - `SonataSession.Effect` "audio-engine" → `AudioEngine`
                   - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
                 - Uses:
                   - `apps/sonata/audio/instruments.InstrumentVoices`
                   - `apps/sonata/audio/instruments.SonataAudio`
                   - `apps/sonata/library.sonataPlayerPane`
-                  - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.SongSetting`
-                  - `apps/sonata/shell.useCursorApi`
-                  - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/session.SonataSession`
+                  - `apps/sonata/session.useCursorApi`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/track-mixer.useMutedTrackIds`
                   - `apps/sonata/track-mixer.useTrackInstrumentMap`
                   - `apps/sonata/track-mixer.useTrackVolumeMap`
@@ -4618,13 +4617,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`live-play`** — Sonata live interactive player: a headless effect that turns hand-played key presses into sustaining note-on/note-off voices, routed through the engine's shared context + master gain and the default instrument.
               - Web:
                 - Contributes:
-                  - `Sonata.SurfaceProvider` → `LivePlayProvider`
-                  - `Sonata.Effect` "live-play" → `LivePlayEngine`
+                  - `SonataSession.Provider` → `LivePlayProvider`
+                  - `SonataSession.Effect` "live-play" → `LivePlayEngine`
                 - Uses:
                   - `apps/sonata/audio/engine.useAudioGraph`
                   - `apps/sonata/audio/instruments.InstrumentVoices`
                   - `apps/sonata/audio/instruments.SonataAudio`
-                  - `apps/sonata/shell.Sonata`
+                  - `apps/sonata/session.SonataSession`
                   - `primitives/latest-ref.useLatestRef`
                   - `primitives/scope/scoped-store.defineScopedStore`
                 - Exports (types): `LivePlayApi`
@@ -4636,7 +4635,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`metronome`** — Sonata metronome: a synthesized click track (continuous + count-in lead-in) scheduled on the engine's audio clock, with a toolbar control and an on-screen countdown. Server registration of the Sonata metronome config.
               - Web:
                 - Contributes:
-                  - `Sonata.Effect` "metronome" → `MetronomeEngine`
+                  - `SonataSession.Effect` "metronome" → `MetronomeEngine`
                   - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
                   - `Sonata.Hud` "count-in" → `CountInOverlay`
                   - `ConfigV2.WebRegister` "sonata.metronome"
@@ -4646,9 +4645,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/audio/engine.startScheduling`
                   - `apps/sonata/audio/engine.useAudioGraph`
                   - `apps/sonata/library.sonataPlayerPane`
+                  - `apps/sonata/session.SonataSession`
+                  - `apps/sonata/session.useCursorApi`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useCursorApi`
-                  - `apps/sonata/shell.useSonata`
                   - `config_v2.ConfigV2`
                   - `config_v2.useConfig`
                   - `config_v2.useSetConfig`
@@ -4692,13 +4692,75 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata.Effect` "transport-shortcuts" → `TransportShortcuts`
               - `Sonata.Effect` "seek-hold" → `SeekHoldController`
             - Uses:
+              - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useSonata`
+              - `apps/sonata/shell.useSonataApp`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/shortcuts.getFocusedSurfaceId`
               - `primitives/shortcuts.targetClaimsKey`
               - `primitives/shortcuts.useSurfaceShortcuts`
+        - **`document`** — Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.
+          - Web:
+            - Slots:
+              - `SonataDocument.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
+              - `SonataDocument.Analyzer` ← `apps.sonata.rich.chord-analyzer`
+              - `SonataDocument.SongSetting` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.track-mixer`, `apps.sonata.transpose`
+            - Uses:
+              - `config_v2.useConfig`
+              - `primitives/scope/scoped-store.defineScopedStore`
+              - `primitives/slot-render.defineMountSlot`
+            - Exports (types):
+              - `DocumentContent`
+              - `LibrarySong`
+              - `RhythmGroove`
+              - `SongDocumentValue`
+              - `SongIdentity`
+              - `SongSetting`
+              - `SongSettingFailure`
+              - `SongSettingKey`
+            - Exports (values):
+              - `chordModeSetting`
+              - `defineSongSetting`
+              - `grooveSetting`
+              - `keyAutoDetectSetting`
+              - `sameIdentity`
+              - `SonataDocument`
+              - `SongDocumentProvider`
+              - `SongSettingsMount`
+              - `transposeSetting`
+              - `useFailSongSetting`
+              - `useHasChords`
+              - `useHasDerivedChord`
+              - `useHasVoicedChords`
+              - `useLibrarySong`
+              - `useLoadDocument`
+              - `useMountedSongId`
+              - `useSongDocument`
+              - `useSongSetting`
+              - `useWriteSongSetting`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/library`
+              - `apps/sonata/notation`
+              - `apps/sonata/piano-roll`
+              - `apps/sonata/player`
+              - `apps/sonata/rich/chord-analyzer`
+              - `apps/sonata/rich/chord-mode`
+              - `apps/sonata/rich/chord-progression`
+              - `apps/sonata/rich/chord-readout`
+              - `apps/sonata/rich/circle-of-fifths`
+              - `apps/sonata/rich/key-mode`
+              - `apps/sonata/rich/key-readout`
+              - `apps/sonata/rich/rhythm-controls`
+              - `apps/sonata/rich/voicing-controls`
+              - `apps/sonata/songsheet`
+              - `apps/sonata/sources/chord-grid`
+              - `apps/sonata/sources/midi`
+              - `apps/sonata/sources/midi/file-preview`
+              - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/track-mixer`
+              - `apps/sonata/transpose`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by the columns other plugins contribute). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots:
@@ -4716,10 +4778,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
             - Uses:
+              - `apps/sonata/document.SonataDocument`
+              - `apps/sonata/document.useLoadDocument`
+              - `apps/sonata/document.useSongDocument`
+              - `apps/sonata/player.PlayerDisplay`
+              - `apps/sonata/player.PlayerTransport`
+              - `apps/sonata/player.PlayToggle`
+              - `apps/sonata/player.SonataPlayer`
+              - `apps/sonata/player.usePlayerView`
+              - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.SonataSectionItem`
-              - `apps/sonata/shell.TEMPO_MATH_FLOOR`
-              - `apps/sonata/shell.useSonata`
+              - `apps/sonata/shell.useSonataApp`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.LiveRowResult`
               - `network/live.mapRow`
@@ -4727,7 +4797,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live.useLiveRow`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
-              - `primitives/css/clip.Clip`
               - `primitives/css/column.Column`
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
@@ -4752,6 +4821,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.foldResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
@@ -4773,6 +4843,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `openSongImperative`
               - `sonataLibraryPane`
               - `sonataPlayerPane`
+              - `sonataSongLink`
               - `useCurrentSong`
               - `useOpenSong`
           - Server:
@@ -4839,6 +4910,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/rich/rhythm-controls`
               - `apps/sonata/sources/chord-grid`
               - `apps/sonata/sources/midi`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/midi/folders`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
@@ -4882,13 +4954,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
           - Web:
             - Contributes:
-              - `Sonata.Display` "Notation" → `LazyBoundary`
+              - `SonataPlayer.Display` "Notation" → `LazyBoundary`
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "notation"
             - Uses:
+              - `apps/sonata/document.useSongDocument`
+              - `apps/sonata/player.SonataPlayer`
+              - `apps/sonata/session.useCursorApi`
+              - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useCursorApi`
-              - `apps/sonata/shell.useSonata`
               - `apps/sonata/track-mixer.useHiddenTrackIds`
               - `apps/sonata/track-mixer.useTrackMixerEntries`
               - `config_v2.ConfigV2`
@@ -4916,15 +4990,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `sonataPlayerPane.Actions` "pedal-indicator" → `PedalIndicator`
                 - Uses:
                   - `apps/sonata/library.sonataPlayerPane`
-                  - `apps/sonata/shell.useCursorSelector`
-                  - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/session.useCursorSelector`
+                  - `apps/sonata/session.useSession`
                   - `primitives/css/toggle-chip.ToggleChip`
             - **`lane`** — Sonata piano-roll sustain-pedal lane: a scroll-synced strip marking pedal-down spans along the falling-note timeline.
               - Web:
                 - Contributes: `Sonata.TransportOverlay` "pedal" → `PedalLane`
                 - Uses:
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useSonata`
                   - `primitives/css/coords.Placed`
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
           - Web:
@@ -4937,9 +5011,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/primitives/keyboard.Keyboard`
               - `apps/sonata/primitives/keyboard.LabelTone`
               - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+              - `apps/sonata/session.useCursorSelector`
+              - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useCursorSelector`
-              - `apps/sonata/shell.useSonata`
               - `apps/sonata/track-mixer.accidentalColor`
               - `apps/sonata/track-mixer.useHiddenTrackIds`
               - `apps/sonata/track-mixer.useMutedTrackIds`
@@ -4955,18 +5029,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `PianoRollFx` ← `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`
             - Contributes:
-              - `Sonata.Display` "Piano Roll" → `LazyBoundary`
+              - `SonataPlayer.Display` "Piano Roll" → `LazyBoundary`
               - `sonataPlayerPane.Actions` "spread" → `SpreadWheel`
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "piano-roll"
             - Uses:
+              - `apps/sonata/document.useSongDocument`
               - `apps/sonata/library.sonataPlayerPane`
+              - `apps/sonata/player.SonataPlayer`
+              - `apps/sonata/player.usePlayerView`
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
               - `apps/sonata/primitives/jog-wheel.JogWheel`
+              - `apps/sonata/session.useCursorApi`
+              - `apps/sonata/session.useSession`
               - `apps/sonata/shell.LaneInsetsProvider`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useCursorApi`
-              - `apps/sonata/shell.useSonata`
               - `apps/sonata/track-mixer.accidentalColor`
               - `apps/sonata/track-mixer.useHiddenTrackIds`
               - `apps/sonata/track-mixer.useTrackColorMap`
@@ -5109,8 +5186,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Library.Fields` "playback" → `PlaybackFields`
             - Uses:
               - `apps/sonata/library.Library`
+              - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useSonata`
+              - `apps/sonata/shell.useSonataApp`
               - `infra/endpoints.fetchEndpoint`
               - `primitives/relative-time.formatRelativeTime`
           - Server:
@@ -5133,6 +5211,48 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live/filter.liveInstant`
               - `network/live/filter.liveNumber`
             - Exports (values): `playbackColumns`
+        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport, PlayToggle, PlayerTime. Owns the SonataPlayer.{Display,Transport} slots and the per-player view state (display lens, piano-roll spread).
+          - Web:
+            - Slots:
+              - `SonataPlayer.Display` ← `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
+              - `SonataPlayer.Transport` ← `apps.sonata.progress.scrubber`
+            - Uses:
+              - `apps/sonata/document.SongDocumentProvider`
+              - `apps/sonata/document.SongSettingsMount`
+              - `apps/sonata/document.useSongDocument`
+              - `apps/sonata/session.CursorStoreProvider`
+              - `apps/sonata/session.PlaybackSession`
+              - `apps/sonata/session.SonataSession`
+              - `apps/sonata/session.TEMPO_MATH_FLOOR`
+              - `apps/sonata/session.useCursorSelector`
+              - `apps/sonata/session.useSession`
+              - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/text.Text`
+              - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useLatestRef`
+              - `primitives/relative-time.formatElapsed`
+              - `primitives/slot-render.defineDispatchSlot`
+              - `primitives/slot-render.defineRenderSlot`
+            - Exports (types): `PlayerView`
+            - Exports (values):
+              - `PlayerDisplay`
+              - `PlayerTime`
+              - `PlayerTransport`
+              - `PlayToggle`
+              - `SonataPlayer`
+              - `SonataPlayerScope`
+              - `usePlayerView`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/library`
+              - `apps/sonata/notation`
+              - `apps/sonata/piano-roll`
+              - `apps/sonata/progress/scrubber`
+              - `apps/sonata/shell`
+              - `apps/sonata/songsheet`
+              - `apps/sonata/sources/midi/file-preview`
+              - `apps/sonata/view-options`
         - **`primitives`** — Umbrella for Sonata-local client primitives.
           - Plugins:
             - **`inertial-drag`** — 1-D pointer drag-to-scrub hook with exponential-friction release momentum (flick → coast → settle).
@@ -5248,11 +5368,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
                   - `apps/sonata/progress/scrubber.SonataProgress`
+                  - `apps/sonata/session.useCursorApi`
+                  - `apps/sonata/session.useCursorSelector`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useCursorApi`
-                  - `apps/sonata/shell.useCursorSelector`
                   - `apps/sonata/shell.useLaneInsets`
-                  - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/shell.useSonataApp`
                   - `primitives/css/coords.pct`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/inline.Inline`
@@ -5271,11 +5392,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`scrubber`** — Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).
               - Web:
                 - Slots: `SonataProgress.Marker` ← `apps.sonata.progress.bars`, `apps.sonata.progress.keys`, `apps.sonata.progress.loop`, `apps.sonata.progress.sections`
-                - Contributes: `Sonata.Transport` "progress-bar" → `ProgressBar`
+                - Contributes: `SonataPlayer.Transport` "progress-bar" → `ProgressBar`
                 - Uses:
-                  - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useCursorApi`
-                  - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/player.SonataPlayer`
+                  - `apps/sonata/session.useCursorApi`
+                  - `apps/sonata/session.useSession`
                   - `primitives/css/clip.Clip`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/layer.Layer`
@@ -5297,7 +5418,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `SonataProgress.Marker` "sections" → `SectionBands`
                 - Uses:
                   - `apps/sonata/progress/scrubber.SonataProgress`
-                  - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/session.useSession`
                   - `primitives/css/coords.pct`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/text.Text`
@@ -5329,8 +5450,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`chord-analyzer`** — Sonata Analyzer: derives chord annotations from the score's notes. Slices the score at every onset, runs interval-set chord detection over each window, and emits coalesced source:"derived" chord annotations.
               - Web:
-                - Contributes: `Sonata.Analyzer` "chord-analyzer"
-                - Uses: `apps/sonata/shell.Sonata`
+                - Contributes: `SonataDocument.Analyzer` "chord-analyzer"
+                - Uses: `apps/sonata/document.SonataDocument`
             - **`chord-label`** — Sonata chord-label preference: the single shared symbol/numeral/both display mode that drives the piano-roll overlay and the progression strip in lockstep, surfaced in the View popover. Server registration of the Sonata chord-label config (the shared symbol/numeral/both display mode).
               - Web:
                 - Contributes:
@@ -5348,20 +5469,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`
-            - **`chord-mode`** — Sonata Section: per-song chord mode. One On/Off chip in the 'Chords' card header: on, the shell voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
+            - **`chord-mode`** — Sonata Section: per-song chord mode. One On/Off chip in the 'Chords' card header: on, the song document voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
               - Web:
                 - Contributes:
-                  - `Sonata.SongSetting` "chord-mode-sync" → `ChordModeObserver`
+                  - `SonataDocument.SongSetting` "chord-mode-sync" → `ChordModeObserver`
                   - `Sonata.Section` "Chords"
                 - Uses:
-                  - `apps/sonata/shell.chordModeSetting`
+                  - `apps/sonata/document.chordModeSetting`
+                  - `apps/sonata/document.SonataDocument`
+                  - `apps/sonata/document.useFailSongSetting`
+                  - `apps/sonata/document.useHasDerivedChord`
+                  - `apps/sonata/document.useLibrarySong`
+                  - `apps/sonata/document.useMountedSongId`
+                  - `apps/sonata/document.useSongSetting`
+                  - `apps/sonata/document.useWriteSongSetting`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useFailSongSetting`
-                  - `apps/sonata/shell.useHasDerivedChord`
-                  - `apps/sonata/shell.useMountedSongId`
-                  - `apps/sonata/shell.useSonata`
-                  - `apps/sonata/shell.useSongSetting`
-                  - `apps/sonata/shell.useWriteSongSetting`
                   - `apps/sonata/track-mixer.setTracksActive`
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLiveRow`
@@ -5386,65 +5509,65 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Sonata.Overlay` "chord-overlay" → `ChordOverlay`
                 - Uses:
                   - `apps/sonata/rich/chord-label.useChordDisplayMode`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useSonata`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/pin.Pin`
             - **`chord-progression`** — Sonata Section: a rhythm-aware chord-progression strip of chips, laid out bar-by-bar and sized by duration, highlighting the chord under the playhead and seeking on click.
               - Web:
                 - Contributes: `Sonata.Section` "Progression" → `ChordProgression`
                 - Uses:
+                  - `apps/sonata/document.useHasChords`
                   - `apps/sonata/rich/chord-label.useChordDisplayMode`
+                  - `apps/sonata/session.useCursorSelector`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useCursorSelector`
-                  - `apps/sonata/shell.useHasChords`
-                  - `apps/sonata/shell.useSonata`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/dom/auto-scroll.scrollChildIntoView`
-            - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().
+            - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
                 - Uses:
+                  - `apps/sonata/document.useHasChords`
                   - `apps/sonata/pitch-layout.usePitchGeometry`
                   - `apps/sonata/primitives/keyboard.Keyboard`
                   - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+                  - `apps/sonata/session.useCursorSelector`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useCursorSelector`
-                  - `apps/sonata/shell.useHasChords`
-                  - `apps/sonata/shell.useSonata`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.SectionLabel`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/persistent-draft.useDraft`
-            - **`circle-of-fifths`** — Sonata Section: a small circle-of-fifths wheel — major keys on the outer ring, their relative minors on the inner ring — that highlights the chord under the playback cursor, reading the shared Score + cursor from useSonata().
+            - **`circle-of-fifths`** — Sonata Section: a small circle-of-fifths wheel — major keys on the outer ring, their relative minors on the inner ring — that highlights the chord under the playback cursor, reading the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Section` "Circle of fifths" → `CircleOfFifths`
                 - Uses:
                   - `apps/sonata/audio/live-play.useLivePlay`
+                  - `apps/sonata/document.useHasChords`
+                  - `apps/sonata/session.useCursorSelector`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useCursorSelector`
-                  - `apps/sonata/shell.useHasChords`
-                  - `apps/sonata/shell.useSonata`
-            - **`key-chip`** — Sonata Hud: current-key chip overlaid on the display, tracking the playback cursor. Reads the shared Score + cursor via useSonata().
+            - **`key-chip`** — Sonata Hud: current-key chip overlaid on the display, tracking the playback cursor. Reads the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Hud` "key-chip" → `KeyChip`
                 - Uses:
+                  - `apps/sonata/session.useCursorSelector`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useCursorSelector`
-                  - `apps/sonata/shell.useSonata`
-            - **`key-mode`** — Per-song key-source mode: persists a toggle to override an authored (MIDI) key with auto-detection, and registers it with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_key_auto_detect side-table: per-song toggle to ignore the authored (MIDI) key and auto-detect from notes. Serves it as a per-song lookup collection.
+            - **`key-mode`** — Per-song key-source mode: persists a toggle to override an authored (MIDI) key with auto-detection, and registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_key_auto_detect side-table: per-song toggle to ignore the authored (MIDI) key and auto-detect from notes. Serves it as a per-song lookup collection.
               - Web:
-                - Contributes: `Sonata.SongSetting` "key-mode-sync" → `KeyModeObserver`
+                - Contributes: `SonataDocument.SongSetting` "key-mode-sync" → `KeyModeObserver`
                 - Uses:
-                  - `apps/sonata/shell.keyAutoDetectSetting`
-                  - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useFailSongSetting`
-                  - `apps/sonata/shell.useMountedSongId`
-                  - `apps/sonata/shell.useWriteSongSetting`
+                  - `apps/sonata/document.keyAutoDetectSetting`
+                  - `apps/sonata/document.SonataDocument`
+                  - `apps/sonata/document.useFailSongSetting`
+                  - `apps/sonata/document.useMountedSongId`
+                  - `apps/sonata/document.useWriteSongSetting`
                   - `infra/endpoints.fetchEndpoint`
                   - `network/live.useLiveRow`
                 - Exports (values): `saveKeyAutoDetect`
@@ -5462,44 +5585,48 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Routes: `POST /api/sonata/songs/:id/key-auto-detect`
               - Cross-plugin:
                 - Imported by: `apps/sonata/rich/key-readout`
-            - **`key-readout`** — Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the shared Score + cursor from useSonata().
+            - **`key-readout`** — Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
                 - Uses:
+                  - `apps/sonata/document.keyAutoDetectSetting`
+                  - `apps/sonata/document.useLibrarySong`
+                  - `apps/sonata/document.useSongDocument`
+                  - `apps/sonata/document.useSongSetting`
+                  - `apps/sonata/document.useWriteSongSetting`
                   - `apps/sonata/pitch-layout.usePitchGeometry`
                   - `apps/sonata/primitives/keyboard.Keyboard`
                   - `apps/sonata/primitives/keyboard.useSonataKeySkin`
                   - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
-                  - `apps/sonata/shell.keyAutoDetectSetting`
+                  - `apps/sonata/session.useCursorSelector`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useCursorSelector`
-                  - `apps/sonata/shell.useSonata`
-                  - `apps/sonata/shell.useSongSetting`
-                  - `apps/sonata/shell.useWriteSongSetting`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.SectionLabel`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
-            - **`rhythm-controls`** — Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves it as a per-song lookup collection.
+            - **`rhythm-controls`** — Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Shown only for songs whose chords the song document voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves it as a per-song lookup collection.
               - Web:
                 - Contributes:
-                  - `Sonata.SongSetting` "rhythm-sync" → `RhythmObserver`
+                  - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
                   - `Sonata.Section` "Rhythm" → `RhythmControls`
                 - Uses:
+                  - `apps/sonata/document.grooveSetting`
+                  - `apps/sonata/document.SonataDocument`
+                  - `apps/sonata/document.useFailSongSetting`
+                  - `apps/sonata/document.useHasVoicedChords`
+                  - `apps/sonata/document.useLibrarySong`
+                  - `apps/sonata/document.useMountedSongId`
+                  - `apps/sonata/document.useSongSetting`
+                  - `apps/sonata/document.useWriteSongSetting`
                   - `apps/sonata/primitives/rhythm-circle.RhythmCircle`
                   - `apps/sonata/primitives/rhythm-circle.RhythmCircleHandle`
                   - `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`
-                  - `apps/sonata/shell.grooveSetting`
+                  - `apps/sonata/session.useCursorApi`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useCursorApi`
-                  - `apps/sonata/shell.useFailSongSetting`
-                  - `apps/sonata/shell.useHasVoicedChords`
-                  - `apps/sonata/shell.useMountedSongId`
-                  - `apps/sonata/shell.useSonata`
-                  - `apps/sonata/shell.useSongSetting`
-                  - `apps/sonata/shell.useWriteSongSetting`
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLiveRow`
                   - `primitives/css/center.Center`
@@ -5537,8 +5664,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `Sonata.Section` "Voicing" → `VoicingControls`
                 - Uses:
+                  - `apps/sonata/document.useHasVoicedChords`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useHasVoicedChords`
                   - `config_v2.useConfig`
                   - `config_v2.useSetConfig`
                   - `primitives/css/spacing.Stack`
@@ -5556,6 +5683,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `ActiveNoteIndex`
               - `Annotation`
+              - `BarPosition`
               - `Capability`
               - `ChordAnnotation`
               - `ChordData`
@@ -5588,7 +5716,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `accidentalGlyph`
               - `asKeySignature`
+              - `barPositionAt`
               - `bars`
+              - `barStartBeat`
               - `beatGrid`
               - `beatToSeconds`
               - `buildActiveNoteIndex`
@@ -5616,82 +5746,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `spellScore`
               - `subdivideBars`
               - `tonicFifths`
-        - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Transport,Section} slots.
+        - **`session`** — Sonata playback session: plays a song's composed content — the tempo-scaled score, the rAF transport over a per-surface cursor store, the A–B loop, the count-in, seek / scrub verbs and the play- and seek-on-load intents. Mountable by any host (useSession); defines the per-session SonataSession.{Provider,Effect} slots the audio plugins contribute to.
           - Web:
             - Slots:
-              - `Sonata.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
-              - `Sonata.Display` ← `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
-              - `Sonata.Analyzer` ← `apps.sonata.rich.chord-analyzer`
-              - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
-              - `Sonata.TransportOverlay` ← `apps.sonata.pedal.lane`, `apps.sonata.progress.loop`
-              - `Sonata.TransportEdge` ← `apps.sonata.progress.loop`
-              - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
-              - `Sonata.Home` ← `apps.sonata.library`
-              - `Sonata.SurfaceProvider` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`
-              - `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`
-              - `Sonata.SongSetting` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.track-mixer`, `apps.sonata.transpose`
-              - `Sonata.Transport` ← `apps.sonata.progress.scrubber`
-              - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
-              - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`
-              - `Sonata.Section` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
-            - Contributes: `Apps.App` "Sonata" → `SonataLayout`
+              - `SonataSession.Provider` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`
+              - `SonataSession.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`
             - Uses:
-              - `apps-core.Apps`
-              - `config_v2.useConfig`
-              - `layouts/full-pane.FullPane`
-              - `primitives/app-shell.AppShellLayout`
-              - `primitives/css/center.Center`
-              - `primitives/css/text.Text`
-              - `primitives/detail-sections.defineDetailSections`
-              - `primitives/detail-sections.DetailSection`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/scope/scoped-store.ScopedStore`
-              - `primitives/slot-render.defineDispatchSlot`
               - `primitives/slot-render.defineMountSlot`
-              - `primitives/slot-render.defineRenderSlot`
               - `primitives/slot-render.defineWrapperSlot`
             - Exports (types):
               - `CountInState`
               - `CursorApi`
               - `CursorStore`
-              - `LaneInsets`
               - `LoopRange`
-              - `RhythmGroove`
-              - `SonataContextValue`
-              - `SonataSection`
-              - `SongSetting`
-              - `SongSettingFailure`
-              - `SongSettingKey`
+              - `SessionContent`
+              - `SessionValue`
               - `TransportClock`
             - Exports (values):
-              - `chordModeSetting`
               - `cursorApiFor`
               - `CursorStoreProvider`
-              - `defineSongSetting`
-              - `grooveSetting`
-              - `keyAutoDetectSetting`
-              - `LaneInsetsProvider`
-              - `Sonata`
-              - `SonataProvider`
-              - `SonataSectionItem`
+              - `PlaybackSession`
+              - `SonataSession`
               - `TEMPO_MATH_FLOOR`
-              - `transposeSetting`
               - `useCursorApi`
-              - `useCursorBeat`
               - `useCursorSelector`
-              - `useFailSongSetting`
-              - `useHasChords`
-              - `useHasDerivedChord`
-              - `useHasVoicedChords`
-              - `useLaneInsets`
-              - `useMountedSongId`
-              - `useSonata`
-              - `useSongSetting`
-              - `useWriteSongSetting`
-          - Core:
-            - Uses: `primitives/pane.defineApp`
-            - Exports (values): `sonataApp`
+              - `useSession`
           - Cross-plugin:
             - Imported by:
               - `apps/sonata/audio/engine`
@@ -5699,18 +5781,77 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/audio/metronome`
               - `apps/sonata/controls`
               - `apps/sonata/library`
-              - `apps/sonata/look`
               - `apps/sonata/notation`
               - `apps/sonata/pedal/indicator`
+              - `apps/sonata/pedal/lane`
+              - `apps/sonata/piano-keyboard`
+              - `apps/sonata/piano-roll`
+              - `apps/sonata/playback-history`
+              - `apps/sonata/player`
+              - `apps/sonata/progress/loop`
+              - `apps/sonata/progress/scrubber`
+              - `apps/sonata/progress/sections`
+              - `apps/sonata/rich/chord-mode`
+              - `apps/sonata/rich/chord-overlay`
+              - `apps/sonata/rich/chord-progression`
+              - `apps/sonata/rich/chord-readout`
+              - `apps/sonata/rich/circle-of-fifths`
+              - `apps/sonata/rich/key-chip`
+              - `apps/sonata/rich/key-readout`
+              - `apps/sonata/rich/rhythm-controls`
+              - `apps/sonata/songsheet`
+              - `apps/sonata/sources/midi/file-preview`
+              - `apps/sonata/track-mixer`
+              - `apps/sonata/transport-bar`
+              - `apps/sonata/transpose`
+        - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), owns the app state — the open song (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
+          - Web:
+            - Slots:
+              - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
+              - `Sonata.TransportOverlay` ← `apps.sonata.pedal.lane`, `apps.sonata.progress.loop`
+              - `Sonata.TransportEdge` ← `apps.sonata.progress.loop`
+              - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
+              - `Sonata.Home` ← `apps.sonata.library`
+              - `Sonata.Effect` ← `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`
+              - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
+              - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`
+              - `Sonata.Section` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
+            - Contributes: `Apps.App` "Sonata" → `SonataLayout`
+            - Uses:
+              - `apps-core.Apps`
+              - `apps/sonata/player.SonataPlayerScope`
+              - `layouts/full-pane.FullPane`
+              - `primitives/app-shell.AppShellLayout`
+              - `primitives/detail-sections.defineDetailSections`
+              - `primitives/detail-sections.DetailSection`
+              - `primitives/slot-render.defineMountSlot`
+              - `primitives/slot-render.defineRenderSlot`
+            - Exports (types):
+              - `LaneInsets`
+              - `SonataAppValue`
+              - `SonataSection`
+            - Exports (values):
+              - `LaneInsetsProvider`
+              - `Sonata`
+              - `SonataSectionItem`
+              - `useLaneInsets`
+              - `useSonataApp`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports (values): `sonataApp`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/audio/metronome`
+              - `apps/sonata/controls`
+              - `apps/sonata/library`
+              - `apps/sonata/look`
+              - `apps/sonata/notation`
               - `apps/sonata/pedal/lane`
               - `apps/sonata/piano-keyboard`
               - `apps/sonata/piano-roll`
               - `apps/sonata/pitch-layout`
               - `apps/sonata/playback-history`
               - `apps/sonata/progress/loop`
-              - `apps/sonata/progress/scrubber`
-              - `apps/sonata/progress/sections`
-              - `apps/sonata/rich/chord-analyzer`
               - `apps/sonata/rich/chord-label`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/chord-overlay`
@@ -5718,25 +5859,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/rich/chord-readout`
               - `apps/sonata/rich/circle-of-fifths`
               - `apps/sonata/rich/key-chip`
-              - `apps/sonata/rich/key-mode`
               - `apps/sonata/rich/key-readout`
               - `apps/sonata/rich/rhythm-controls`
               - `apps/sonata/rich/voicing-controls`
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/chord-grid`
-              - `apps/sonata/sources/midi`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
-              - `apps/sonata/transport-bar`
-              - `apps/sonata/transpose`
               - `apps/sonata/view-options`
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
-            - Contributes: `Sonata.Display` "Songsheet" → `Songsheet`
+            - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
             - Uses:
+              - `apps/sonata/document.useSongDocument`
+              - `apps/sonata/player.SonataPlayer`
+              - `apps/sonata/session.useCursorSelector`
+              - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useCursorSelector`
-              - `apps/sonata/shell.useSonata`
               - `primitives/css/center.Center`
               - `primitives/css/coords.Placed`
               - `primitives/css/pin.Pin`
@@ -5754,15 +5893,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`chord-grid`** — Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
               - Web:
                 - Contributes:
-                  - `Sonata.Source` "Chord Grid"
+                  - `SonataDocument.Source` "Chord Grid"
                   - `Library.Source` "chord-grid"
                   - `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
                   - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
                 - Uses:
+                  - `apps/sonata/document.SonataDocument`
+                  - `apps/sonata/document.useSongDocument`
                   - `apps/sonata/library.Library`
                   - `apps/sonata/library.openSongImperative`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/shell.useSonataApp`
                   - `infra/endpoints.fetchEndpoint`
                   - `infra/endpoints.useEndpointMutation`
                   - `primitives/css/spacing.Stack`
@@ -5785,13 +5926,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and the Tracks field. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the song library's `midi` columns (track count, file-missing), and seeds the bundled public-domain MIDI starters at boot.
               - Web:
                 - Contributes:
-                  - `Sonata.Source` "MIDI File"
+                  - `SonataDocument.Source` "MIDI File"
                   - `Library.Source` "midi"
                   - `Library.Fields` "midi" → `MidiFields`
                 - Uses:
+                  - `apps/sonata/document.SonataDocument`
                   - `apps/sonata/library.Library`
                   - `apps/sonata/library.openSongImperative`
-                  - `apps/sonata/shell.Sonata`
                   - `infra/attachments.getAttachmentFile`
                   - `infra/attachments.uploadAttachment`
                   - `infra/endpoints.fetchEndpoint`
@@ -5801,7 +5942,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
                   - `ui/icons.Icon`
-                - Exports (values): `MIDI_SOURCE_ID`
+                - Exports (types):
+                  - `ImportedMidiSong`
+                  - `MidiSongMeta`
+                - Exports (values):
+                  - `deriveMidiSongMeta`
+                  - `importMidiBytes`
+                  - `MIDI_SOURCE_ID`
               - Server:
                 - Contributes: `live.columns.serve` "sonata.songs ← midi"
                 - Uses:
@@ -5836,8 +5983,48 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `network/live/filter.liveNumber`
                 - Exports (values): `midiColumns`
               - Cross-plugin:
-                - Imported by: `apps/sonata/sources/midi/folders`
+                - Imported by:
+                  - `apps/sonata/sources/midi/file-preview`
+                  - `apps/sonata/sources/midi/folders`
               - Plugins:
+                - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi host files) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
+                  - Web:
+                    - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
+                    - Uses:
+                      - `apps-core/tabs.navigate`
+                      - `apps/sonata/document.useLoadDocument`
+                      - `apps/sonata/document.useSongDocument`
+                      - `apps/sonata/library.sonataSongLink`
+                      - `apps/sonata/player.PlayerDisplay`
+                      - `apps/sonata/player.PlayerTransport`
+                      - `apps/sonata/player.PlayToggle`
+                      - `apps/sonata/player.SonataPlayerScope`
+                      - `apps/sonata/session.useCursorApi`
+                      - `apps/sonata/session.useSession`
+                      - `apps/sonata/sources/midi.deriveMidiSongMeta`
+                      - `apps/sonata/sources/midi.importMidiBytes`
+                      - `apps/sonata/sources/midi.MIDI_SOURCE_ID`
+                      - `apps/sonata/sources/midi.MidiSongMeta`
+                      - `primitives/css/center.Center`
+                      - `primitives/css/clip.Clip`
+                      - `primitives/css/cluster.Cluster`
+                      - `primitives/css/column.Column`
+                      - `primitives/css/fill.Fill`
+                      - `primitives/css/placeholder.Placeholder`
+                      - `primitives/css/rigid.rigidClass`
+                      - `primitives/css/spacing.Inset`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/css/ui-kit.Button`
+                      - `primitives/css/ui-kit.cn`
+                      - `primitives/file-viewer.fileBytesUnavailableMessage`
+                      - `primitives/file-viewer.FileRendererProps`
+                      - `primitives/file-viewer.FileViewer`
+                      - `primitives/file-viewer.useFileBytes`
+                      - `primitives/loading.Loading`
+                      - `primitives/relative-time.formatElapsed`
+                      - `shell/toast.showToast`
+                      - `ui/icons.Icon`
                 - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and contributes the Source field (Library.Fields) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField rendered for free in the settings pane.
                   - Web:
                     - Contributes:
@@ -5871,15 +6058,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section. Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration).
               - Web:
                 - Contributes:
-                  - `Sonata.Source` "Ultimate Guitar"
+                  - `SonataDocument.Source` "Ultimate Guitar"
                   - `Library.Source` "ultimate-guitar"
                   - `Sonata.Section` "Ultimate Guitar" → `UltimateGuitarEditorSection`
                   - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
                 - Uses:
+                  - `apps/sonata/document.SonataDocument`
+                  - `apps/sonata/document.useSongDocument`
                   - `apps/sonata/library.Library`
                   - `apps/sonata/library.openSongImperative`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/shell.useSonataApp`
                   - `infra/endpoints.fetchEndpoint`
                   - `infra/endpoints.useEndpointMutation`
                   - `primitives/css/badge.Badge`
@@ -5986,21 +6175,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/chord/vocabulary`
               - `apps/sonata/voicing`
-        - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the shell as a per-song setting (Sonata.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / instrument / muted / hidden / volume) and serves them per song, consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
+        - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the song document as a per-song setting (SonataDocument.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / instrument / muted / hidden / volume) and serves them per song, consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
           - Web:
             - Contributes:
-              - `Sonata.SongSetting` "track-view-sync" → `TrackViewObserver`
+              - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
               - `Sonata.Section` "Tracks" → `TrackMixerPanel`
             - Uses:
               - `apps/sonata/audio/instruments.SonataAudio`
-              - `apps/sonata/shell.defineSongSetting`
+              - `apps/sonata/document.defineSongSetting`
+              - `apps/sonata/document.SonataDocument`
+              - `apps/sonata/document.SongSetting`
+              - `apps/sonata/document.useFailSongSetting`
+              - `apps/sonata/document.useLibrarySong`
+              - `apps/sonata/document.useMountedSongId`
+              - `apps/sonata/document.useSongSetting`
+              - `apps/sonata/document.useWriteSongSetting`
+              - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.SongSetting`
-              - `apps/sonata/shell.useFailSongSetting`
-              - `apps/sonata/shell.useMountedSongId`
-              - `apps/sonata/shell.useSonata`
-              - `apps/sonata/shell.useSongSetting`
-              - `apps/sonata/shell.useWriteSongSetting`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
               - `primitives/css/color-picker.SwatchGrid`
@@ -6078,29 +6269,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
               - `apps/sonata/primitives/jog-wheel.JogWheel`
-              - `apps/sonata/shell.useCursorSelector`
-              - `apps/sonata/shell.useSonata`
+              - `apps/sonata/session.useCursorSelector`
+              - `apps/sonata/session.useSession`
               - `primitives/css/center.Center`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
               - `ui/icons.Icon`
-        - **`transpose`** — Per-song global transpose offset: persists a semitone shift, registers it with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
+        - **`transpose`** — Per-song global transpose offset: persists a semitone shift, registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
           - Web:
             - Contributes:
-              - `Sonata.SongSetting` "transpose-sync" → `TransposeObserver`
+              - `SonataDocument.SongSetting` "transpose-sync" → `TransposeObserver`
               - `sonataPlayerPane.Actions` "transpose" → `TransposeControl`
             - Uses:
+              - `apps/sonata/document.SonataDocument`
+              - `apps/sonata/document.transposeSetting`
+              - `apps/sonata/document.useFailSongSetting`
+              - `apps/sonata/document.useLibrarySong`
+              - `apps/sonata/document.useMountedSongId`
+              - `apps/sonata/document.useSongSetting`
+              - `apps/sonata/document.useWriteSongSetting`
               - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/primitives/toolbar-control.ToolbarControl`
-              - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.transposeSetting`
-              - `apps/sonata/shell.useFailSongSetting`
-              - `apps/sonata/shell.useMountedSongId`
-              - `apps/sonata/shell.useSonata`
-              - `apps/sonata/shell.useSongSetting`
-              - `apps/sonata/shell.useWriteSongSetting`
+              - `apps/sonata/session.useSession`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLiveRow`
               - `primitives/css/spacing.Inset`
@@ -6127,8 +6319,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `Sonata.Hud` "view-options" → `ViewOptionsToggle`
             - Uses:
+              - `apps/sonata/player.usePlayerView`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useSonata`
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
               - `config_v2/fields.FieldRenderer`
@@ -7700,6 +7892,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/shell`
           - `apps/prototypes/canvas`
           - `apps/prototypes/present`
+          - `apps/sonata/sources/midi/file-preview`
           - `build`
           - `config_v2/config-link`
           - `debug/config-orphans`
@@ -8908,6 +9101,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `conversations/conversation-view/code.EditedFileSchema`
+          - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
           - `infra/endpoints.interpolatePath`
           - `primitives/commit-list.CommitRowSchema`
@@ -9140,6 +9334,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/chord/song-index`
       - `apps/deploy/deployments`
       - `apps/sonata/audio/metronome`
+      - `apps/sonata/document`
       - `apps/sonata/look`
       - `apps/sonata/notation`
       - `apps/sonata/piano-keyboard`
@@ -9152,7 +9347,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/sonata/primitives/keyboard`
       - `apps/sonata/rich/chord-label`
       - `apps/sonata/rich/voicing-controls`
-      - `apps/sonata/shell`
       - `apps/sonata/sources/midi/folders`
       - `apps/sonata/view-options`
       - `apps/sonata/voicing`
@@ -19079,6 +19273,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/piano-roll`
               - `apps/sonata/pitch-layout`
               - `apps/sonata/progress/loop`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/track-mixer`
               - `apps/sonata/view-options`
               - `apps/studio/compositions/release`
@@ -27854,9 +28049,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
+              - `apps/sonata/player`
               - `apps/sonata/rich/rhythm-controls`
-              - `apps/sonata/shell`
               - `apps/sonata/songsheet`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/transport-bar`
               - `apps/studio/contributions`
               - `apps/studio/explorer`
@@ -27958,11 +28154,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/file-explorer/places`
               - `apps/pages/page-tree`
               - `apps/pages/welcome/recent-pages`
-              - `apps/sonata/library`
               - `apps/sonata/piano-roll`
+              - `apps/sonata/player`
               - `apps/sonata/primitives/jog-wheel`
               - `apps/sonata/primitives/keyboard`
               - `apps/sonata/progress/scrubber`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/studio/graph`
               - `build/build-logs`
               - `config_v2/settings`
@@ -28017,6 +28214,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/search`
               - `apps/pages/prompt-origin`
               - `apps/prototypes/canvas`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/studio/compositions`
               - `apps/studio/compositions/entry-points`
               - `apps/studio/compositions/membership-summary`
@@ -28112,6 +28310,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/shell`
               - `apps/prototypes/canvas`
               - `apps/sonata/library`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/studio/contributions`
               - `apps/studio/graph`
               - `code-explorer/commit-detail`
@@ -28292,6 +28491,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas`
               - `apps/prototypes/present`
               - `apps/sonata/library`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/contributors`
@@ -28884,6 +29084,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/trash`
               - `apps/sonata/notation`
               - `apps/sonata/songsheet`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/compositions/release`
               - `apps/studio/contributions/tables/columns`
@@ -28994,6 +29195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/canvas`
               - `apps/sonata/sources/midi`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/track-mixer`
               - `apps/website/landing/layers`
               - `apps/website/pages/apps`
@@ -29390,6 +29592,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/chord-grid`
               - `apps/sonata/sources/midi`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
@@ -29924,6 +30127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/present`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
+              - `apps/sonata/player`
               - `apps/sonata/primitives/jog-wheel`
               - `apps/sonata/progress/scrubber`
               - `apps/sonata/progress/sections`
@@ -29932,9 +30136,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/rich/key-readout`
               - `apps/sonata/rich/rhythm-controls`
               - `apps/sonata/rich/voicing-controls`
-              - `apps/sonata/shell`
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/midi`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
@@ -30511,6 +30715,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/chord-grid`
               - `apps/sonata/sources/midi`
+              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
@@ -32245,11 +32450,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/file-explorer/browser`
           - `primitives/file-viewer`
-    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText reading a FileRef from the host (infra/host-fs) or a git checkout (code-api).
+    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
       - Web:
-        - Slots: `FileViewer.Renderer` ← `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`
+        - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`
         - Uses:
           - `infra/endpoints.EndpointError`
+          - `infra/endpoints.fetchEndpoint`
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
           - `primitives/css/center.Center`
@@ -32269,6 +32475,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/toast.showToast`
           - `ui/icons.Icon`
         - Exports (types):
+          - `FileBytesState`
+          - `FileBytesUnavailable`
           - `FileRendererContribution`
           - `FileRendererProps`
           - `FileRenderersHandle`
@@ -32278,6 +32486,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RendererMatch`
           - `ResolvedRenderer`
         - Exports (values):
+          - `fileBytesUnavailableMessage`
           - `FileContent`
           - `FileTabs`
           - `fileTextUnavailableMessage`
@@ -32285,6 +32494,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FileViewer`
           - `NoPreview`
           - `resolveRenderers`
+          - `useFileBytes`
           - `useFileRenderers`
           - `useFileText`
           - `useOpenHostFile`
@@ -32306,6 +32516,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/file-explorer/browser`
+          - `apps/sonata/sources/midi/file-preview`
           - `conversations/conversation-view/code/file-pane`
           - `primitives/file-viewer/code`
           - `primitives/file-viewer/diff`
@@ -32534,6 +32745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/audio/engine`
           - `apps/sonata/audio/metronome`
           - `apps/sonata/library`
+          - `apps/sonata/player`
           - `apps/sonata/progress/loop`
           - `apps/sonata/progress/sections`
           - `apps/sonata/rich/rhythm-controls`
@@ -32691,10 +32903,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/library`
           - `apps/sonata/notation`
           - `apps/sonata/piano-roll`
+          - `apps/sonata/player`
           - `apps/sonata/primitives/inertial-drag`
           - `apps/sonata/primitives/keyboard`
           - `apps/sonata/progress/loop`
-          - `apps/sonata/shell`
+          - `apps/sonata/session`
           - `apps/sonata/track-mixer`
           - `build/serve-composition`
           - `conversations/conversation-view/prompt-input`
@@ -33227,6 +33440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/rich/key-readout`
           - `apps/sonata/rich/rhythm-controls`
           - `apps/sonata/songsheet`
+          - `apps/sonata/sources/midi/file-preview`
           - `apps/sonata/sources/ultimate-guitar`
           - `apps/sonata/track-mixer`
           - `apps/sonata/transpose`
@@ -34934,6 +35148,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/canvas`
           - `apps/sonata/library`
           - `apps/sonata/playback-history`
+          - `apps/sonata/player`
+          - `apps/sonata/sources/midi/file-preview`
           - `apps/studio/compositions/release`
           - `apps/studio/compositions/release/release-info`
           - `build`
@@ -35075,7 +35291,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/shell`
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/live-play`
-              - `apps/sonata/shell`
+              - `apps/sonata/document`
+              - `apps/sonata/session`
               - `page/editor`
               - `primitives/overlay/image-viewer`
               - `primitives/scope/dom-scope`
@@ -35314,8 +35531,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/canvas`
           - `apps/prototypes/compare`
           - `apps/settings/shell`
+          - `apps/sonata/document`
           - `apps/sonata/piano-roll`
+          - `apps/sonata/player`
           - `apps/sonata/progress/scrubber`
+          - `apps/sonata/session`
           - `apps/sonata/shell`
           - `apps/studio/explorer`
           - `apps/studio/shell`
@@ -37597,6 +37817,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources/refresh-all`
           - `apps/pages/page-tree`
           - `apps/prototypes/canvas`
+          - `apps/sonata/sources/midi/file-preview`
           - `build/serve-composition`
           - `config_v2/settings`
           - `conversations/conversation-view`
@@ -39368,6 +39589,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/progress/loop`
           - `apps/sonata/sources/chord-grid`
           - `apps/sonata/sources/midi`
+          - `apps/sonata/sources/midi/file-preview`
           - `apps/sonata/sources/ultimate-guitar`
           - `apps/sonata/track-mixer`
           - `apps/sonata/transport-bar`

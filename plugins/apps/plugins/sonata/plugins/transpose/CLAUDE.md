@@ -20,13 +20,14 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
   row with `useLiveRow(transposes, songId)` (`found: false` is the absent row, so
   `0`). A preferred key for a song is a stable property of how the user sings it —
   so it survives reload and differs per song (unlike the ephemeral `tempoScale`).
-- **The shell defines the setting, this plugin registers it.** The score
-  pipeline lives in the load-bearing shell, which can't import a feature plugin
-  (cycle), so the shell defines `transposeSetting` (its `score-settings.ts`; see
-  the shell CLAUDE.md, "Per-song settings"): a per-song setting of the loaded
+- **The document defines the setting, this plugin registers it.** The score
+  pipeline lives in the song document, which can't import a feature plugin
+  (cycle), so the document defines `transposeSetting` (its `score-settings.ts`;
+  see the document CLAUDE.md, "Per-song settings"): a per-song setting of the loaded
   song, pending until its offset is read, and pending again whenever another
-  song is loaded. This plugin registers it — `Sonata.SongSetting({ setting:
-  transposeSetting, component: TransposeObserver })` — so the shell waits for it;
+  song is loaded. This plugin registers it — `SonataDocument.SongSetting({
+  setting: transposeSetting, component: TransposeObserver })` — so the document
+  waits for it;
   the headless `TransposeObserver`, mounted afresh for each loaded song, writes
   that song's settled offset (`useWriteSongSetting`) — never a stand-in `0`
   while the row loads, and never for a song that is no longer loaded (dropped).
@@ -43,21 +44,22 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
 
 ## Plugin reference
 
-- Description: Per-song global transpose offset: persists a semitone shift, registers it with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
+- Description: Per-song global transpose offset: persists a semitone shift, registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
 - Web:
   - Contributes:
-    - `Sonata.SongSetting` "transpose-sync" → `TransposeObserver`
+    - `SonataDocument.SongSetting` "transpose-sync" → `TransposeObserver`
     - `sonataPlayerPane.Actions` "transpose" → `TransposeControl`
   - Uses:
+    - `apps/sonata/document.SonataDocument`
+    - `apps/sonata/document.transposeSetting`
+    - `apps/sonata/document.useFailSongSetting`
+    - `apps/sonata/document.useLibrarySong`
+    - `apps/sonata/document.useMountedSongId`
+    - `apps/sonata/document.useSongSetting`
+    - `apps/sonata/document.useWriteSongSetting`
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/toolbar-control.ToolbarControl`
-    - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.transposeSetting`
-    - `apps/sonata/shell.useFailSongSetting`
-    - `apps/sonata/shell.useMountedSongId`
-    - `apps/sonata/shell.useSonata`
-    - `apps/sonata/shell.useSongSetting`
-    - `apps/sonata/shell.useWriteSongSetting`
+    - `apps/sonata/session.useSession`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLiveRow`
     - `primitives/css/spacing.Inset`

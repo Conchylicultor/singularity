@@ -1,4 +1,4 @@
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useLibrarySong } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
@@ -14,15 +14,15 @@ const restartAltIcon = symbol("restart-alt");
  * / mute / hide) back to defaults; disabled when nothing is customized. The host
  * (SectionCard) renders this in the card header, so it stays reachable while the
  * card is collapsed — the reason the reset lives here rather than in the panel
- * body. Renders nothing when no song is open, and a loading placeholder while the
+ * body. Renders nothing without a loaded library song, and a loading placeholder while the
  * song's track views are (whether anything is customized is not known yet). No
  * `ControlSizeProvider` here: the SectionCard already renders `actions` at `sm`
  * control density.
  */
 export function TrackMixerActions() {
-  const { currentSongId } = useSonata();
+  const song = useLibrarySong();
   const entries = useTrackMixerEntries();
-  if (!currentSongId) return null;
+  if (song.kind === "none") return null;
   if (entries.kind === "pending") return <Loading variant="spinner" />;
   if (entries.kind === "failed")
     return (
@@ -40,7 +40,7 @@ export function TrackMixerActions() {
       icon={restartAltIcon}
       label="Reset tracks to defaults"
       disabled={!anyCustomized}
-      onClick={() => resetTrackViews(currentSongId)}
+      onClick={() => resetTrackViews(song.songId)}
     />
   );
 }

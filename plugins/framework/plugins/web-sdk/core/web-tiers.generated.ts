@@ -20,6 +20,9 @@
 //   - apps/plugins/pages/plugins/auto-icon: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/canvas: dependency closure (imported by an eager plugin)
+//   - apps/plugins/sonata/plugins/document: dependency closure (imported by an eager plugin)
+//   - apps/plugins/sonata/plugins/player: dependency closure (imported by an eager plugin)
+//   - apps/plugins/sonata/plugins/session: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/compositions: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/compositions/plugins/release: dependency closure (imported by an eager plugin)
@@ -150,6 +153,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/sonata/plugins/songsheet",
   "apps/plugins/sonata/plugins/sources/plugins/chord-grid",
   "apps/plugins/sonata/plugins/sources/plugins/midi",
+  "apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview",
   "apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders",
   "apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar",
   "apps/plugins/sonata/plugins/track-mixer",

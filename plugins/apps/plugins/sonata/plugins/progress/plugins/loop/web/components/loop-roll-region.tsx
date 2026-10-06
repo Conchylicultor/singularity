@@ -5,8 +5,8 @@ import { useRef } from "react";
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   useCursorApi,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEdgeAutoScroll } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
@@ -63,7 +63,7 @@ type BoundaryDragProps = {
  * layer's own top edge — the content origin, wherever the scroll has put it.
  */
 export function LoopRollRegion({ projection }: { projection: Projection }) {
-  const { loop, setLoop, score, seekTo, isPlaying, play, stop } = useSonata();
+  const { loop, setLoop, score, seekTo, isPlaying, play, stop } = useSession();
   const cursor = useCursorApi();
   const rootRef = useRef<HTMLDivElement | null>(null);
   // The boundary being dragged (and whether Alt is held for off-grid placement),

@@ -32,6 +32,8 @@ dense-list spelling for a trailing time column, where "ago" is implied.
     - `apps/prototypes/canvas`
     - `apps/sonata/library`
     - `apps/sonata/playback-history`
+    - `apps/sonata/player`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/studio/compositions/release`
     - `apps/studio/compositions/release/release-info`
     - `build`

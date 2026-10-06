@@ -2,7 +2,7 @@ import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 
 /**
  * One per-song setting — transpose, key mode, chord mode, groove, track view —
- * as a Sonata surface holds it for the loaded song: `pending` until the feature
+ * as a song document holds it for the loaded song: `pending` until the feature
  * plugin that persists it has read that song's value, then `settled` with the
  * value — or `failed` when that read failed with no last-known value to settle
  * from, so a surface renders the failure (with Retry) instead of waiting on a
@@ -11,9 +11,9 @@ import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
  * Not known yet is a STATE here, never a stand-in. The two stand-ins it
  * replaces were each wrong for a round trip: the setting's default (a muted
  * track sounds, a transposed song plays in its original key) and the previous
- * song's value (song B plays in song A's key). `SonataProvider` shows and plays
- * nothing of a song until every per-song setting registered in the running
- * composition has settled.
+ * song's value (song B plays in song A's key). The document composes (so
+ * nothing shows or plays) no score until every per-song setting registered in
+ * the running composition has settled.
  */
 export type SongSetting<T> =
   | { kind: "pending" }
@@ -28,14 +28,14 @@ export interface SongSettingFailure {
 
 /**
  * A per-song setting's identity and value type. Its value lives in the loaded
- * song (`loaded-song.ts`), keyed by THIS OBJECT — so two settings can never
- * collide on a name. Defined once, by the plugin that reads it: the shell for
- * the settings its score pipeline transforms with, a feature plugin for one
- * only it reads (the track-mixer's track view).
+ * document (`loaded-song.tsx`), keyed by THIS OBJECT — so two settings can
+ * never collide on a name. Defined once, by the plugin that reads it: the
+ * document for the settings its score pipeline transforms with, a feature
+ * plugin for one only it reads (the track-mixer's track view).
  *
  * A setting is only waited on when the running composition registers it — a
- * `Sonata.SongSetting` contribution pairing it with the observer that settles
- * it for the loaded song.
+ * `SonataDocument.SongSetting` contribution pairing it with the observer that
+ * settles it for the loaded library song.
  */
 export interface SongSettingKey<T> {
   /** For messages only — identity is the object. */
@@ -43,8 +43,10 @@ export interface SongSettingKey<T> {
   /**
    * The song's value in a composition WITHOUT the feature that persists this
    * setting: the truth there, not a stand-in — with no transpose feature, no
-   * song is transposed. A reader gets it only while nothing registers the
-   * setting; a registered setting is pending until its observer settles it.
+   * song is transposed. A reader gets it while nothing registers the
+   * setting, and always for a file document (which has no persisted
+   * settings); a registered setting of a library song is pending until its
+   * observer settles it. Required, so every setting has a default to settle to.
    */
   readonly absent: T;
 }

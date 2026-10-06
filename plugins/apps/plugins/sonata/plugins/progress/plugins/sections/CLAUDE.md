@@ -9,7 +9,7 @@
   - Contributes: `SonataProgress.Marker` "sections" → `SectionBands`
   - Uses:
     - `apps/sonata/progress/scrubber.SonataProgress`
-    - `apps/sonata/shell.useSonata`
+    - `apps/sonata/session.useSession`
     - `primitives/css/coords.pct`
     - `primitives/css/coords.Placed`
     - `primitives/css/text.Text`

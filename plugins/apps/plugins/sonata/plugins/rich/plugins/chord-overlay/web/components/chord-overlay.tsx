@@ -7,7 +7,7 @@ import {
   type Projection,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { formatChordLabel } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useChordDisplayMode } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
@@ -35,7 +35,7 @@ export function ChordOverlay({
   projection: Projection;
   annotations: Annotation[];
 }) {
-  const { score } = useSonata();
+  const { score } = useSession();
   const mode = useChordDisplayMode();
   const beatToY = projection.beatToY;
 

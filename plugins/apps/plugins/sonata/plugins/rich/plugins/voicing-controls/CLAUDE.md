@@ -8,8 +8,8 @@
 - Web:
   - Contributes: `Sonata.Section` "Voicing" → `VoicingControls`
   - Uses:
+    - `apps/sonata/document.useHasVoicedChords`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useHasVoicedChords`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `primitives/css/spacing.Stack`

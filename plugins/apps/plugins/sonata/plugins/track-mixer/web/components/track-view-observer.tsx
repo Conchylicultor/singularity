@@ -3,14 +3,14 @@ import {
   useFailSongSetting,
   useMountedSongId,
   useWriteSongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { trackViews } from "../../shared/resources";
 import { trackViewSetting } from "../track-view-setting";
 
 /**
- * Headless observer of the `trackViewSetting` (`Sonata.SongSetting`, mounted
+ * Headless observer of the `trackViewSetting` (`SonataDocument.SongSetting`, mounted
  * afresh for each loaded song, so a song switch starts from that song's own
  * read): syncs the song's persisted track-view overrides into the loaded song,
  * where every track-mixer hook reads them and the shell's score gate waits for

@@ -20,7 +20,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`pages`** [15 sub-plugins] — Notion-like pages app.
     - **`prototypes`** [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
-    - **`sonata`** [63 sub-plugins] — Sonata — extensible piano and music app.
+    - **`sonata`** [67 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
     - **`website`** [15 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
 
@@ -332,7 +332,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
     - **`file-type`** — <FileTypeIcon name isDir? open?/>: a directory as the Material folder in the --folder colour, a file as its Seti glyph tinted by its file-type tone.
-    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText reading a FileRef from the host (infra/host-fs) or a git checkout (code-api).
+    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
       - Plugins:
         - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
         - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's bytes are read from.

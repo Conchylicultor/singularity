@@ -21,7 +21,7 @@ inferred key.
   feature plugin, so the shell defines `keyAutoDetectSetting` (its
   `score-settings.ts`): a per-song setting of the loaded song, pending until its
   flag is read, and pending again whenever another song is loaded. This plugin
-  registers it (`Sonata.SongSetting`, with `KeyModeObserver`), so the shell waits
+  registers it (`SonataDocument.SongSetting`, with `KeyModeObserver`), so the document waits
   for it; the headless observer, mounted afresh for each loaded song, writes that
   song's settled flag — never a stand-in "off" while the row loads. Dependency
   arrow stays feature → shell.
@@ -37,15 +37,15 @@ inferred key.
 
 ## Plugin reference
 
-- Description: Per-song key-source mode: persists a toggle to override an authored (MIDI) key with auto-detection, and registers it with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_key_auto_detect side-table: per-song toggle to ignore the authored (MIDI) key and auto-detect from notes. Serves it as a per-song lookup collection.
+- Description: Per-song key-source mode: persists a toggle to override an authored (MIDI) key with auto-detection, and registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_key_auto_detect side-table: per-song toggle to ignore the authored (MIDI) key and auto-detect from notes. Serves it as a per-song lookup collection.
 - Web:
-  - Contributes: `Sonata.SongSetting` "key-mode-sync" → `KeyModeObserver`
+  - Contributes: `SonataDocument.SongSetting` "key-mode-sync" → `KeyModeObserver`
   - Uses:
-    - `apps/sonata/shell.keyAutoDetectSetting`
-    - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useFailSongSetting`
-    - `apps/sonata/shell.useMountedSongId`
-    - `apps/sonata/shell.useWriteSongSetting`
+    - `apps/sonata/document.keyAutoDetectSetting`
+    - `apps/sonata/document.SonataDocument`
+    - `apps/sonata/document.useFailSongSetting`
+    - `apps/sonata/document.useMountedSongId`
+    - `apps/sonata/document.useWriteSongSetting`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLiveRow`
   - Exports (values): `saveKeyAutoDetect`

@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import {
   useCursorSelector,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
   SectionLabel,
   Text,
@@ -92,7 +92,7 @@ function fitToWindow(voicings: number[][]): {
 /**
  * The "current chord" readout — the BODY of a `Sonata.Section` card whose chrome
  * (Card + collapsible "Current chord" title) the host paints (NOT a
- * geometry-anchored overlay). Reads the shared Score + cursor from `useSonata()`
+ * geometry-anchored overlay). Reads the session's Score + cursor (`useSession()`)
  * and shows the chord annotation covering the playhead, tracking it as the
  * transport advances. Below the symbol, a mini keyboard lights up the chord's
  * notes; an "Inversions" toggle stacks one mini keyboard per inversion.
@@ -111,7 +111,7 @@ function fitToWindow(voicings: number[][]): {
 export function ChordReadout() {
   // Sonata's own look paints its keys: one control, every keyboard in the app.
   const skin = useSonataKeySkin();
-  const { score } = useSonata();
+  const { score } = useSession();
   const [showInversions, setShowInversions] = useDraft<boolean>(
     "sonata:chord-readout:inversions",
     false,

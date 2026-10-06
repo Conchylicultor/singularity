@@ -330,6 +330,7 @@ to reconcile them; they never needed reconciling.
     - `apps/prototypes/present`
     - `apps/sonata/library`
     - `apps/sonata/piano-roll`
+    - `apps/sonata/player`
     - `apps/sonata/primitives/jog-wheel`
     - `apps/sonata/progress/scrubber`
     - `apps/sonata/progress/sections`
@@ -338,9 +339,9 @@ to reconcile them; they never needed reconciling.
     - `apps/sonata/rich/key-readout`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/rich/voicing-controls`
-    - `apps/sonata/shell`
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/midi`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transport-bar`

@@ -4,7 +4,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useLibrarySong } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -452,12 +452,12 @@ function TrackRow({
  * The host (SectionCard) paints the card chrome, title, and collapse; the
  * per-song reset is the section's header-right `actions` (`TrackMixerActions`).
  * Visibility is gated by the contribution's `useAvailable`
- * (`useTrackMixerAvailable`), so this body renders only with an open, tracked
- * song — `currentSongId` is therefore guaranteed non-null here. While the song's
+ * (`useTrackMixerAvailable`), so this body renders only with a loaded, tracked
+ * library song — `useLibrarySong()` is therefore guaranteed a song here. While the song's
  * track views are loading it renders a loading state, never default rows.
  */
 export function TrackMixerPanel() {
-  const { currentSongId } = useSonata();
+  const song = useLibrarySong();
   const entries = useTrackMixerEntries();
 
   // Registered timbres, read generically (never names a contributor). Mapped to
@@ -474,9 +474,9 @@ export function TrackMixerPanel() {
     [instruments],
   );
 
-  if (!currentSongId) {
+  if (song.kind === "none") {
     throw new Error(
-      "TrackMixerPanel rendered without an open song — the section gate (useTrackMixerAvailable) should prevent this.",
+      "TrackMixerPanel rendered without a loaded library song — the section gate (useTrackMixerAvailable) should prevent this.",
     );
   }
   if (entries.kind === "pending") return <Loading variant="rows" count={3} />;
@@ -495,7 +495,7 @@ export function TrackMixerPanel() {
       {entries.value.map((entry) => (
         <TrackRow
           key={entry.trackId}
-          songId={currentSongId}
+          songId={song.songId}
           options={options}
           entry={entry}
         />

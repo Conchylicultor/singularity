@@ -487,6 +487,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `apps/chord/song-index`
     - `apps/deploy/deployments`
     - `apps/sonata/audio/metronome`
+    - `apps/sonata/document`
     - `apps/sonata/look`
     - `apps/sonata/notation`
     - `apps/sonata/piano-keyboard`
@@ -499,7 +500,6 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `apps/sonata/primitives/keyboard`
     - `apps/sonata/rich/chord-label`
     - `apps/sonata/rich/voicing-controls`
-    - `apps/sonata/shell`
     - `apps/sonata/sources/midi/folders`
     - `apps/sonata/view-options`
     - `apps/sonata/voicing`

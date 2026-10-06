@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
-import { Sonata } from "./slots";
+import { SonataDocument } from "./slots";
+import { sameIdentity, type SongIdentity } from "./identity";
 import type {
   SongSetting,
   SongSettingFailure,
@@ -8,17 +9,18 @@ import type {
 } from "./song-setting";
 
 /**
- * The song a Sonata surface has loaded — its id, its content (every source's
- * raw input) and its per-song settings — as ONE state under ONE id. There is no
- * way to hold one song's content with another song's settings: loading a
- * different song replaces all three at once, its settings starting empty
- * (pending), and a setting can only be written for the song held.
+ * The song document a surface has loaded — its identity, its content (every
+ * source's raw input) and its per-song settings — as ONE state under ONE
+ * identity. There is no way to hold one song's content with another song's
+ * settings: loading a different document replaces all three at once, its
+ * settings starting empty (pending), and a setting can only be written for the
+ * library song held.
  */
 interface LoadedSong {
-  songId: string;
+  identity: SongIdentity;
   /**
-   * Bumped whenever a DIFFERENT song is loaded — never by a reload of the same
-   * song, which keeps its settings. The settings' observers mount keyed on it
+   * Bumped whenever a DIFFERENT document is loaded — never by a reload of the
+   * same one, which keeps its settings. The settings' observers mount keyed on it
    * (`SongSettingsMount`), so whenever a song's settings start empty its
    * observers mount afresh and settle them: even a song loaded again after
    * another one in the same tick (A → B → A), whose id alone would not change.
@@ -26,7 +28,11 @@ interface LoadedSong {
   generation: number;
   /** Each source's raw input, by source id. */
   rawById: Readonly<Record<string, unknown>>;
-  /** The song's settled settings — a setting not in here is pending (or failed). */
+  /**
+   * The song's settled settings — a setting not in here is pending (or
+   * failed). Always empty for a file document, whose settings all read their
+   * `absent` value (see {@link readSetting}).
+   */
   settings: ReadonlyMap<SongSettingKey<unknown>, unknown>;
   /**
    * Settings whose observer's read FAILED with no last-known value to settle
@@ -43,51 +49,60 @@ const NO_FAILURES: ReadonlyMap<
   SongSettingKey<unknown>,
   SongSettingFailure
 > = new Map();
+const NO_REGISTERED: ReadonlySet<SongSettingKey<unknown>> = new Set();
 /** The one pending value, shared, so a still-pending read changes nothing a reader sees. */
 const PENDING: { kind: "pending" } = { kind: "pending" };
 
 /**
- * Provides one Sonata surface's loaded song. Mounted in `SonataLayout` ABOVE
- * `SonataProvider`, whose own body loads songs and reads the content and the
- * settings (a component cannot use a store its own JSX provides).
+ * Provides one surface's loaded document. Mounted by `SongDocumentProvider`
+ * ABOVE the component that composes the document's content (a component
+ * cannot use a store its own JSX provides).
  */
 export function LoadedSongProvider({ children }: { children: ReactNode }) {
   return <loadedSongStore.Provider>{children}</loadedSongStore.Provider>;
 }
 
-// --- Content — the shell's own (`SonataProvider`). --------------------------
+// --- Content. ---------------------------------------------------------------
 
 /**
- * Load `songId` with its content. The same song as the one held keeps its
- * settings (a reload of its sources); any other song replaces the song, its
- * content AND its settings in one write — pending until its observers settle
- * them.
+ * Load the document `identity` with its content — the full `{ sourceId: raw }`
+ * map, REPLACING the current inputs (not merging), so opening a song never
+ * leaves a previously-opened song's source inputs lingering.
+ *
+ * The identity comes WITH the content because the content, the song and its
+ * per-song settings are one state: the same document as the one held keeps
+ * its settings (a reload of its sources); any other replaces the identity, the
+ * content AND the settings in one write — a library song's pending until its
+ * observers settle them. So no render can pair one song's content with another
+ * song's settings, whatever song the app shows as open at that moment (a song
+ * played in the background, a player not mounted yet).
  */
-export function useLoadSong(): (
-  songId: string,
+export function useLoadDocument(): (
+  identity: SongIdentity,
   rawById: Readonly<Record<string, unknown>>,
 ) => void {
   const api = loadedSongStore.useStoreApi();
   return useMemo(
-    () => (songId: string, rawById: Readonly<Record<string, unknown>>) =>
-      api.setState((prev) =>
-        prev !== null && prev.songId === songId
-          ? { ...prev, rawById }
-          : {
-              songId,
-              generation: (prev?.generation ?? 0) + 1,
-              rawById,
-              settings: NO_SETTINGS,
-              failures: NO_FAILURES,
-            },
-      ),
+    () =>
+      (identity: SongIdentity, rawById: Readonly<Record<string, unknown>>) =>
+        api.setState((prev) =>
+          prev !== null && sameIdentity(prev.identity, identity)
+            ? { ...prev, rawById }
+            : {
+                identity,
+                generation: (prev?.generation ?? 0) + 1,
+                rawById,
+                settings: NO_SETTINGS,
+                failures: NO_FAILURES,
+              },
+        ),
     [api],
   );
 }
 
 /**
- * Write one source's raw input into the loaded song — a source editor's edit.
- * Throws when no song is loaded: an editor only exists inside a loaded song's
+ * Write one source's raw input into the loaded document — a source editor's
+ * edit. Throws when no document is loaded: an editor only exists inside a loaded song's
  * player, so an edit with none is a broken assumption, not a case to absorb.
  */
 export function useEditLoadedRaw(): (sourceId: string, raw: unknown) => void {
@@ -106,22 +121,64 @@ export function useEditLoadedRaw(): (sourceId: string, raw: unknown) => void {
   );
 }
 
-/** The loaded song's raw inputs by source id — none before a song is loaded. */
+/** The loaded document's raw inputs by source id — none before a load. */
 export function useLoadedRaw(): Readonly<Record<string, unknown>> {
   return loadedSongStore.useSelector((s) => s?.rawById ?? NO_RAW, []);
 }
 
-/** Which song is loaded, and which load of it (see `LoadedSong.generation`). */
-export interface LoadedSongIdentity {
-  songId: string;
+/** Which document is loaded, and which load of it (see `LoadedSong.generation`). */
+export interface LoadedDocument {
+  identity: SongIdentity;
   generation: number;
 }
 
-export function useLoadedSongIdentity(): LoadedSongIdentity | null {
-  return loadedSongStore.useSelector<LoadedSongIdentity | null>(
-    (s) => (s === null ? null : { songId: s.songId, generation: s.generation }),
+/** The loaded document, or `null` before any load. */
+export function useLoadedDocument(): LoadedDocument | null {
+  return loadedSongStore.useSelector<LoadedDocument | null>(
+    (s) =>
+      s === null ? null : { identity: s.identity, generation: s.generation },
     [],
-    (a, b) => a?.generation === b?.generation && a?.songId === b?.songId,
+    (a, b) =>
+      a === null || b === null
+        ? a === b
+        : a.generation === b.generation && sameIdentity(a.identity, b.identity),
+  );
+}
+
+/** The library song held, as a setting writer needs it (see `useLibrarySong`). */
+export type LibrarySong =
+  { kind: "library"; songId: string } | { kind: "none" };
+
+const NO_LIBRARY_SONG: LibrarySong = { kind: "none" };
+
+/**
+ * The library song this surface has loaded — `none` before any load and for a
+ * file document. Every per-song setting WRITER takes its song id from here:
+ * the song whose settings it reads, never the song the app shows as open
+ * (which can lag the load by a render). A writer renders nothing for `none`,
+ * so a file document — whose settings are read-only defaults — shows no
+ * setting editor.
+ */
+export function useLibrarySong(): LibrarySong {
+  return loadedSongStore.useSelector<LibrarySong>(
+    (s) =>
+      s !== null && s.identity.kind === "library"
+        ? { kind: "library", songId: s.identity.songId }
+        : NO_LIBRARY_SONG,
+    [],
+    (a, b) =>
+      a.kind === "library"
+        ? b.kind === "library" && a.songId === b.songId
+        : b.kind === "none",
+  );
+}
+
+/** Whether `loaded` is the library song `songId` — the only song a setting is written for. */
+function holdsLibrarySong(loaded: LoadedSong | null, songId: string): boolean {
+  return (
+    loaded !== null &&
+    loaded.identity.kind === "library" &&
+    loaded.identity.songId === songId
   );
 }
 
@@ -129,12 +186,12 @@ export function useLoadedSongIdentity(): LoadedSongIdentity | null {
 
 /**
  * The per-song settings the running composition registers: one per
- * `Sonata.SongSetting` contribution, each paired with the observer that
- * settles it. Read from the slot, so the shell names no feature, and a setting
- * whose feature plugin is absent is never waited on.
+ * `SonataDocument.SongSetting` contribution, each paired with the observer
+ * that settles it. Read from the slot, so the document names no feature, and a
+ * setting whose feature plugin is absent is never waited on.
  */
 function useRegisteredSettings(): ReadonlySet<SongSettingKey<unknown>> {
-  const contributions = Sonata.SongSetting.useContributions();
+  const contributions = SonataDocument.SongSetting.useContributions();
   return useMemo(
     () => new Set(contributions.map((c) => c.setting)),
     [contributions],
@@ -142,16 +199,21 @@ function useRegisteredSettings(): ReadonlySet<SongSettingKey<unknown>> {
 }
 
 /**
- * `key`'s state in `loaded`: its value once written; else its failure, when its
- * observer reported one; else pending while the composition registers it;
- * else — nothing in this composition persists it — its `absent` value, which
- * is then the truth.
+ * `key`'s state in `loaded`: for a file document, its `absent` value — a file
+ * has no persisted settings, so the default is the truth and nothing settles
+ * it. Otherwise its value once written; else its failure, when its observer
+ * reported one; else pending while the composition registers it; else —
+ * nothing in this composition persists it — its `absent` value, which is then
+ * the truth.
  */
 function readSetting<T>(
   loaded: LoadedSong | null,
   key: SongSettingKey<T>,
   registered: ReadonlySet<SongSettingKey<unknown>>,
 ): SongSetting<T> {
+  if (loaded?.identity.kind === "file") {
+    return { kind: "settled", value: key.absent };
+  }
   if (loaded !== null && loaded.settings.has(key)) {
     // The value was written through `useWriteSongSetting(key)`, typed `T`.
     return { kind: "settled", value: loaded.settings.get(key) as T };
@@ -178,7 +240,7 @@ function sameSetting<T>(a: SongSetting<T>, b: SongSetting<T>): boolean {
 }
 
 /**
- * Reactive read of one setting for the loaded song — pending until its
+ * Reactive read of one setting for the loaded document — pending until its
  * observer has settled it (see {@link readSetting}).
  */
 export function useSongSetting<T>(key: SongSettingKey<T>): SongSetting<T> {
@@ -193,8 +255,9 @@ export function useSongSetting<T>(key: SongSettingKey<T>): SongSetting<T> {
 /**
  * Set `songId`'s value of one setting — its observer syncing the persisted
  * value, or a control setting it optimistically. Dropped unless `songId` is
- * the loaded song, so a late push for a song that is no longer loaded can never
- * land on the next one. Bails on an unchanged value (no listener fan-out).
+ * the loaded library song, so a late push for a song that is no longer loaded
+ * can never land on the next one (nor on a file document). Bails on an
+ * unchanged value (no listener fan-out).
  */
 export function useWriteSongSetting<T>(
   key: SongSettingKey<T>,
@@ -203,7 +266,7 @@ export function useWriteSongSetting<T>(
   return useMemo(
     () => (songId: string, value: T) =>
       api.setState((prev) => {
-        if (prev === null || prev.songId !== songId) return prev;
+        if (prev === null || !holdsLibrarySong(prev, songId)) return prev;
         if (
           prev.settings.has(key) &&
           Object.is(prev.settings.get(key), value)
@@ -225,7 +288,7 @@ export function useWriteSongSetting<T>(
  * Report that `songId`'s value of one setting could not be read — its
  * observer's read failed with no last-known value to settle from. The setting
  * then reads `failed` (and so does every gate waiting on it) until a value is
- * written. Dropped unless `songId` is the loaded song, and ignored once the
+ * written. Dropped unless `songId` is the loaded library song, and ignored once the
  * setting holds a value: a settled value is never un-settled by a failure.
  */
 export function useFailSongSetting<T>(
@@ -235,7 +298,7 @@ export function useFailSongSetting<T>(
   return useMemo(
     () => (songId: string, failure: SongSettingFailure) =>
       api.setState((prev) => {
-        if (prev === null || prev.songId !== songId) return prev;
+        if (prev === null || !holdsLibrarySong(prev, songId)) return prev;
         if (prev.settings.has(key)) return prev;
         const held = prev.failures.get(key);
         if (
@@ -269,7 +332,8 @@ function sameValues<V extends object>(
 }
 
 /**
- * The loaded song's values of `keys` — pending until EVERY setting the
+ * The loaded document's values of `keys` — for a file document, at once, every
+ * one its `absent` value; for a library song, pending until EVERY setting the
  * composition registers has settled for it, not only these: nothing of the
  * song may render or play while any of its settings is still loading (a muted
  * track audible). A registered setting whose read FAILED makes the whole gate
@@ -288,7 +352,10 @@ export function useSettledSongSettings<
     (loaded): SongSetting<SongSettingValues<K>> => {
       if (loaded === null) return PENDING;
       let unsettled = false;
-      for (const key of registered) {
+      // A file document has nothing to settle: every setting is its default.
+      const waitedOn =
+        loaded.identity.kind === "file" ? NO_REGISTERED : registered;
+      for (const key of waitedOn) {
         if (loaded.settings.has(key)) continue;
         const failure = loaded.failures.get(key);
         if (failure !== undefined) return { kind: "failed", ...failure };

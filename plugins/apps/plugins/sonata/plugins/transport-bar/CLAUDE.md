@@ -11,8 +11,8 @@
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
     - `apps/sonata/primitives/jog-wheel.JogWheel`
-    - `apps/sonata/shell.useCursorSelector`
-    - `apps/sonata/shell.useSonata`
+    - `apps/sonata/session.useCursorSelector`
+    - `apps/sonata/session.useSession`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

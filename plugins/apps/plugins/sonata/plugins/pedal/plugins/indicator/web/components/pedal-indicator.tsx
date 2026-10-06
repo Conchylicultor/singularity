@@ -1,8 +1,8 @@
 import { isPedalDownAt } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   useCursorSelector,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 
 /**
@@ -17,7 +17,7 @@ import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/
  * clean for unpedalled content.
  */
 export function PedalIndicator() {
-  const { score } = useSonata();
+  const { score } = useSession();
   const down = useCursorSelector(
     (beat) => isPedalDownAt(score.pedalEvents, beat),
     [score.pedalEvents],

@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { SonataSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { sonataPlayerPane } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
@@ -13,7 +14,7 @@ export default {
   contributions: [
     // Headless audio behaviour: the count-in provider, count-in clicks, and the
     // continuous click track (the engine scheduler reused with a click voice).
-    Sonata.Effect({ id: "metronome", component: MetronomeEngine }),
+    SonataSession.Effect({ id: "metronome", component: MetronomeEngine }),
     // Header control: click-track toggle + a settings popover.
     sonataPlayerPane.Actions({ id: "metronome", component: MetronomeButton }),
     // The on-screen count-in countdown.

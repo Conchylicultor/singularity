@@ -93,6 +93,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/library`
+    - `apps/sonata/player`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/sections`
     - `apps/sonata/rich/rhythm-controls`

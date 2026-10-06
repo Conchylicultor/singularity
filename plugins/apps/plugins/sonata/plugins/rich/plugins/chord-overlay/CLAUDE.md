@@ -9,8 +9,8 @@
   - Contributes: `Sonata.Overlay` "chord-overlay" → `ChordOverlay`
   - Uses:
     - `apps/sonata/rich/chord-label.useChordDisplayMode`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSonata`
     - `primitives/css/coords.Placed`
     - `primitives/css/pin.Pin`
 

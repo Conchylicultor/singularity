@@ -32,8 +32,9 @@ table is built from it).
     - `Library.Fields` "playback" → `PlaybackFields`
   - Uses:
     - `apps/sonata/library.Library`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSonata`
+    - `apps/sonata/shell.useSonataApp`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/relative-time.formatRelativeTime`
 - Server:

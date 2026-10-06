@@ -4,7 +4,7 @@ import { getSongUltimateGuitar } from "../shared/endpoints";
 
 /**
  * Hydrate a song's UG source: fetch the persisted `UgTab` and hand it back for
- * `setRawMap` (keyed under `"ultimate-guitar"`). Returns `undefined` for a song
+ * `useLoadDocument` (keyed under `"ultimate-guitar"`). Returns `undefined` for a song
  * that carries no UG tab, so it's skipped in the library's generic collection —
  * and the UG editor section stays hidden for such songs.
  */

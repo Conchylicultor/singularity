@@ -3,8 +3,9 @@
 ## Keyboard transport (per-surface, focus-scoped)
 
 Sonata's keyboard transport is **per-surface and focus-scoped** — there is no
-module-level command bus. Both pieces mount as `Sonata.Effect`s inside
-`SonataProvider` (so they read `useSonata()` and the surface id), and both are
+module-level command bus. Both pieces mount as `Sonata.Effect`s inside the
+app's player scope (so they read `useSession()`, `useSonataApp()` and the
+surface id), and both are
 gated on a song being open (`currentSongId != null`) so they are inert on the
 library:
 
@@ -33,8 +34,9 @@ publisher ignored focus (Space in one window toggled the other).
     - `Sonata.Effect` "transport-shortcuts" → `TransportShortcuts`
     - `Sonata.Effect` "seek-hold" → `SeekHoldController`
   - Uses:
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSonata`
+    - `apps/sonata/shell.useSonataApp`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/shortcuts.getFocusedSurfaceId`

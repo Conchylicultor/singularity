@@ -47,6 +47,8 @@ export {
   mergeAnnotations,
 } from "./helpers";
 
+export { barStartBeat, barPositionAt, type BarPosition } from "./bar-position";
+
 export type {
   PitchLayoutId,
   PitchKey,

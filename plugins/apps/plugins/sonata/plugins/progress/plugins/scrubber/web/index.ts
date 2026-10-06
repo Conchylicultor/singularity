@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { SonataPlayer } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { ProgressBar } from "./components/progress-bar";
 import { SonataProgress } from "./slots";
 
@@ -10,7 +10,7 @@ export default {
   description:
     "Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).",
   contributions: [
-    Sonata.Transport({ id: "progress-bar", component: ProgressBar }),
+    SonataPlayer.Transport({ id: "progress-bar", component: ProgressBar }),
   ],
   slots: SonataProgress,
 } satisfies PluginDefinition;

@@ -1,5 +1,5 @@
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
@@ -46,7 +46,7 @@ const SUBDIVISION_OPTIONS = [
  * rather than whatever the widest segmented control happened to measure.
  */
 export function MetronomeButton() {
-  const { score } = useSonata();
+  const { score } = useSession();
   const { continuous, countInBars, volume, accentDownbeat, subdivision } =
     useConfig(metronomeConfig);
   const setConfig = useSetConfig(metronomeConfig);

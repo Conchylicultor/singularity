@@ -1,9 +1,9 @@
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   useCursorSelector,
-  useLaneInsets,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useLaneInsets } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 
 /** Which loop boundary an edge indicator stands for: A = start, B = end. */
 export type LoopEdgeLetter = "A" | "B";
@@ -24,7 +24,9 @@ export interface LoopEdgeBuckets {
 /** Value-equality over the ordered bucket arrays, so the cursor selector bails
  *  out every frame the bucketing is unchanged (it builds a fresh object). */
 function isEqualBuckets(a: LoopEdgeBuckets, b: LoopEdgeBuckets): boolean {
-  return a.top.join("") === b.top.join("") && a.bottom.join("") === b.bottom.join("");
+  return (
+    a.top.join("") === b.top.join("") && a.bottom.join("") === b.bottom.join("")
+  );
 }
 
 /**
@@ -46,7 +48,7 @@ function isEqualBuckets(a: LoopEdgeBuckets, b: LoopEdgeBuckets): boolean {
  * maps the now-line to the lane bottom).
  */
 export function useLoopEdgeBuckets(projection: Projection): LoopEdgeBuckets {
-  const { loop } = useSonata();
+  const { loop } = useSession();
   const { top: topInset } = useLaneInsets();
   const beatToY = projection.beatToY;
   const H = projection.viewport.height;

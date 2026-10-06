@@ -3,15 +3,15 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import {
-  Sonata,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  SonataPlayer,
+  usePlayerView,
+} from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { Picker } from "./display-picker";
 
 /**
  * The player header's own contributions (`sonataPlayerPane.Actions`). Each is a
- * self-contained, zero-prop component that reads the open-song / display state
- * from `useSonata()` and the display registry from `Sonata.Display` — so they
+ * self-contained, zero-prop component that reads the display state from
+ * `usePlayerView()` and the display registry from `SonataPlayer.Display` — so they
  * drop straight into the slot (no hand-rolled bar). Registered in the plugin
  * barrel; rendered by `PaneChrome` as the player pane's header.
  *
@@ -30,13 +30,13 @@ export function BackToLibrary() {
 }
 
 /**
- * Display selector: the "Display" eyebrow + the picker over the `Sonata.Display`
+ * Display selector: the "Display" eyebrow + the picker over the `SonataPlayer.Display`
  * contributions. Collection-consumer clean — enumerates the dispatch slot's
  * metadata, never naming a contributor.
  */
 export function DisplayPicker() {
-  const { effectiveDisplayId, setActiveDisplay } = useSonata();
-  const displays = Sonata.Display.useContributions();
+  const { displayId, setDisplay } = usePlayerView();
+  const displays = SonataPlayer.Display.useContributions();
   // A plain row, with no bar of its own: this component IS one occupant of the
   // pane header's `AdaptiveBar` (`PaneChrome` wraps every header contribution in
   // an `AdaptiveBar.Item`), and one adaptive bar per row is the primitive's own
@@ -51,8 +51,8 @@ export function DisplayPicker() {
           label: d.label,
           icon: d.icon,
         }))}
-        activeId={effectiveDisplayId}
-        onSelect={setActiveDisplay}
+        activeId={displayId}
+        onSelect={setDisplay}
         empty="No displays"
       />
     </Stack>

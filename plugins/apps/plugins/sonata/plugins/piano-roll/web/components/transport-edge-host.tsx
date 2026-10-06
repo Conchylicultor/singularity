@@ -13,7 +13,7 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
  * `projection` as a PROP rather than reading the scroll-layer's projection
  * context. Like the overlay host it is NOT annotation-gated: it filters on the
  * generic `requires` field only and each chip reads its own transport state via
- * `useSonata()` plus the live cursor via `useCursorSelector()`.
+ * `useSession()` plus the live cursor via `useCursorSelector()`.
  *
  * Collection-consumer clean: never names a specific edge indicator. Adding or
  * removing a transport-edge plugin changes the rendered set automatically.

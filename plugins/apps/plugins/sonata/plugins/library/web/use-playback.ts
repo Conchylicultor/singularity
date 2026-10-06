@@ -1,14 +1,16 @@
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useLoadDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Library } from "./slots";
 
 /**
  * Background playback for the library: play a song in place (no navigation) by
- * hydrating every registered source's raw, loading it into the shared transport
- * (`setRawMap` + `setCurrentSong`), then arming `requestPlayOnLoad` so playback
- * starts as soon as the recomposed score is ready. Because `SonataProvider` and
- * the audio engine are mounted above the pane router, the song keeps playing
- * while the user stays on the gallery/table.
+ * hydrating every registered source's raw, loading it into the surface's player
+ * (`useLoadDocument` + `setCurrentSong`), then arming `requestPlayOnLoad` so
+ * playback starts as soon as the recomposed score is ready. Because the player
+ * scope (and with it the audio engine) is mounted above the pane router, the
+ * song keeps playing while the user stays on the gallery/table.
  *
  * `togglePlaySong` is play/pause-aware: clicking the already-current song
  * toggles it (resume/pause from the live cursor, no reload); clicking a
@@ -21,15 +23,9 @@ export function useSonataPlayback(): {
   currentSongId: string | null;
   isPlaying: boolean;
 } {
-  const {
-    currentSongId,
-    isPlaying,
-    setRawMap,
-    setCurrentSong,
-    requestPlayOnLoad,
-    play,
-    stop,
-  } = useSonata();
+  const { currentSongId, setCurrentSong } = useSonataApp();
+  const { isPlaying, requestPlayOnLoad, play, stop } = useSession();
+  const loadDocument = useLoadDocument();
   const sources = Library.Source.useContributions();
 
   const togglePlaySong = useEventCallback(
@@ -47,7 +43,7 @@ export function useSonataPlayback(): {
             if (raw !== undefined) rawMap[s.sourceId] = raw;
           }),
         );
-        setRawMap(song.id, rawMap);
+        loadDocument({ kind: "library", songId: song.id }, rawMap);
         setCurrentSong(song.id);
         requestPlayOnLoad();
       })();

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   beatToSeconds,
   scoreEndBeat,
@@ -31,7 +32,8 @@ const SAVE_DEBOUNCE_MS = 500;
  * `PATCH /api/sonata/songs/:id`); this save carries only the grid.
  */
 export function ChordGridPersistObserver() {
-  const { sourceRaw, currentSongId, songOpenEpoch } = useSonata();
+  const { sourceRaw } = useSongDocument();
+  const { currentSongId, songOpenEpoch } = useSonataApp();
   const saveGrid = useSaveChordGrid();
 
   const rawValue = sourceRaw(CHORD_GRID_SOURCE_ID);

@@ -32,10 +32,8 @@ import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  Sonata,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { usePlayerView } from "@plugins/apps/plugins/sonata/plugins/player/web";
+import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -47,7 +45,7 @@ type ViewOptionItem = ReturnType<
 
 export function ViewOptionsToggle() {
   const options = Sonata.ViewOption.useContributions();
-  const { effectiveDisplayId } = useSonata();
+  const { displayId: effectiveDisplayId } = usePlayerView();
   const [open, setOpen] = useState(false);
 
   // Scope options to the active lens: show only the current display's options

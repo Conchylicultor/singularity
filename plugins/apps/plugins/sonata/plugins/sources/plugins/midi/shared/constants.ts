@@ -1,6 +1,6 @@
 /**
  * Stable id of the MIDI source — the key under which its raw lives in `rawById`,
- * the `sourceId` of its `Library.Source` / `Sonata.Source` contributions, and the
+ * the `sourceId` of its `Library.Source` / `SonataDocument.Source` contributions, and the
  * opaque `source` discriminator stamped onto the `sonata_songs` row at creation.
  * Lives in `shared/` (not `web/`) so the server-side create path can stamp the
  * same id without a web import. The library never references this: it collects

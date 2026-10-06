@@ -729,6 +729,10 @@
       "name": "@singularity/plugin-apps-sonata-controls",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/document": {
+      "name": "@singularity/plugin-apps-sonata-document",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/library": {
       "name": "@singularity/plugin-apps-sonata-library",
       "version": "0.0.1",
@@ -801,6 +805,10 @@
     },
     "plugins/apps/plugins/sonata/plugins/playback-history": {
       "name": "@singularity/plugin-apps-sonata-playback-history",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/player": {
+      "name": "@singularity/plugin-apps-sonata-player",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/sonata/plugins/primitives": {
@@ -911,6 +919,10 @@
       "name": "@singularity/plugin-apps-sonata-score",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/session": {
+      "name": "@singularity/plugin-apps-sonata-session",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/shell": {
       "name": "@singularity/plugin-apps-sonata-shell",
       "version": "0.0.1",
@@ -933,6 +945,10 @@
       "dependencies": {
         "@tonejs/midi": "^2.0.28",
       },
+    },
+    "plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview": {
+      "name": "@singularity/plugin-apps-sonata-sources-midi-file-preview",
+      "version": "0.0.1",
     },
     "plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders": {
       "name": "@singularity/plugin-apps-sonata-sources-midi-folders",
@@ -6498,6 +6514,8 @@
 
     "@singularity/plugin-apps-sonata-controls": ["@singularity/plugin-apps-sonata-controls@workspace:plugins/apps/plugins/sonata/plugins/controls"],
 
+    "@singularity/plugin-apps-sonata-document": ["@singularity/plugin-apps-sonata-document@workspace:plugins/apps/plugins/sonata/plugins/document"],
+
     "@singularity/plugin-apps-sonata-library": ["@singularity/plugin-apps-sonata-library@workspace:plugins/apps/plugins/sonata/plugins/library"],
 
     "@singularity/plugin-apps-sonata-look": ["@singularity/plugin-apps-sonata-look@workspace:plugins/apps/plugins/sonata/plugins/look"],
@@ -6525,6 +6543,8 @@
     "@singularity/plugin-apps-sonata-pitch-layout": ["@singularity/plugin-apps-sonata-pitch-layout@workspace:plugins/apps/plugins/sonata/plugins/pitch-layout"],
 
     "@singularity/plugin-apps-sonata-playback-history": ["@singularity/plugin-apps-sonata-playback-history@workspace:plugins/apps/plugins/sonata/plugins/playback-history"],
+
+    "@singularity/plugin-apps-sonata-player": ["@singularity/plugin-apps-sonata-player@workspace:plugins/apps/plugins/sonata/plugins/player"],
 
     "@singularity/plugin-apps-sonata-primitives": ["@singularity/plugin-apps-sonata-primitives@workspace:plugins/apps/plugins/sonata/plugins/primitives"],
 
@@ -6580,6 +6600,8 @@
 
     "@singularity/plugin-apps-sonata-score": ["@singularity/plugin-apps-sonata-score@workspace:plugins/apps/plugins/sonata/plugins/score"],
 
+    "@singularity/plugin-apps-sonata-session": ["@singularity/plugin-apps-sonata-session@workspace:plugins/apps/plugins/sonata/plugins/session"],
+
     "@singularity/plugin-apps-sonata-shell": ["@singularity/plugin-apps-sonata-shell@workspace:plugins/apps/plugins/sonata/plugins/shell"],
 
     "@singularity/plugin-apps-sonata-songsheet": ["@singularity/plugin-apps-sonata-songsheet@workspace:plugins/apps/plugins/sonata/plugins/songsheet"],
@@ -6589,6 +6611,8 @@
     "@singularity/plugin-apps-sonata-sources-chord-grid": ["@singularity/plugin-apps-sonata-sources-chord-grid@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid"],
 
     "@singularity/plugin-apps-sonata-sources-midi": ["@singularity/plugin-apps-sonata-sources-midi@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/midi"],
+
+    "@singularity/plugin-apps-sonata-sources-midi-file-preview": ["@singularity/plugin-apps-sonata-sources-midi-file-preview@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview"],
 
     "@singularity/plugin-apps-sonata-sources-midi-folders": ["@singularity/plugin-apps-sonata-sources-midi-folders@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders"],
 

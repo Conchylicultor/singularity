@@ -23,10 +23,16 @@ export {
   type FileTextState,
   type FileTextUnavailable,
 } from "./internal/use-file-text";
+export {
+  useFileBytes,
+  fileBytesUnavailableMessage,
+  type FileBytesState,
+  type FileBytesUnavailable,
+} from "./internal/use-file-bytes";
 
 export default {
   description:
-    "Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText reading a FileRef from the host (infra/host-fs) or a git checkout (code-api).",
+    "Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).",
   contributions: [],
   slots: { ...FileViewerSlots },
 } satisfies PluginDefinition;

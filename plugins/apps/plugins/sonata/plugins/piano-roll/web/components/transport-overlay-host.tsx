@@ -10,7 +10,7 @@ import { useProjection } from "./projection-context";
  * the note grid, so each anchors via the published projection and scrolls with
  * the content. Unlike {@link OverlayHost} it is NOT annotation-gated — it
  * filters on the generic `requires` field only and each overlay reads its own
- * state via `useSonata()`.
+ * state via `useSession()`.
  *
  * Collection-consumer clean: never names a specific overlay. Adding or removing
  * a transport-overlay plugin changes the rendered set automatically.

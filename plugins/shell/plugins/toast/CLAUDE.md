@@ -27,6 +27,7 @@
     - `apps/events/sources/refresh-all`
     - `apps/pages/page-tree`
     - `apps/prototypes/canvas`
+    - `apps/sonata/sources/midi/file-preview`
     - `build/serve-composition`
     - `config_v2/settings`
     - `conversations/conversation-view`

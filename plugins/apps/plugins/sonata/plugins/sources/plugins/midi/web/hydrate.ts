@@ -4,12 +4,16 @@ import { getSongMidi } from "../shared/endpoints";
 
 /**
  * Hydrate a song's MIDI source: resolve its stored attachment, fetch the bytes,
- * and hand back the ArrayBuffer for `setRawMap`. Returns `undefined` for a song
+ * and hand back the ArrayBuffer for `useLoadDocument`. Returns `undefined` for a song
  * that carries no MIDI (so it's skipped in the library's generic collection).
  */
-export async function hydrate(songId: string): Promise<ArrayBuffer | undefined> {
+export async function hydrate(
+  songId: string,
+): Promise<ArrayBuffer | undefined> {
   const midi = await fetchEndpoint(getSongMidi, { id: songId });
   if (!midi) return undefined;
-  const blob = await fetchEndpoint(getAttachmentFile, { id: midi.attachmentId });
+  const blob = await fetchEndpoint(getAttachmentFile, {
+    id: midi.attachmentId,
+  });
   return blob.arrayBuffer();
 }

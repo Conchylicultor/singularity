@@ -6,7 +6,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
-    "Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the shared Score + cursor from useSonata().",
+    "Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the session's Score + cursor (useSession).",
   contributions: [
     Sonata.Section({
       id: "key-readout",

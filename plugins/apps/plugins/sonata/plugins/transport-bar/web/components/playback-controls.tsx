@@ -8,8 +8,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {
   useCursorSelector,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
   beatToSeconds,
   scoreEndBeat,
@@ -66,7 +66,7 @@ function SeekButton({
   shortcut: string;
   disabled: boolean;
 }) {
-  const { seekBar, startScrub, endScrub } = useSonata();
+  const { seekBar, startScrub, endScrub } = useSession();
   // Pending hold timer + whether this press has escalated to the held repeat.
   const holdTimer = useRef<number | null>(null);
   const scrubbing = useRef(false);
@@ -131,12 +131,12 @@ function SeekButton({
 /**
  * Sonata toolbar transport: a play/pause button and a jog-wheel speed control
  * (`[wheel | xx%]`, matching the piano-roll zoom wheel) with the live BPM beside
- * it. All drive the shared transport (`useSonata`) — the single owner of play
+ * it. All drive the shared transport (`useSession`) — the single owner of play
  * state and tempo — so they stay in lock-step with the keyboard controls
  * (Space, ↑/↓).
  */
 export function PlaybackControls() {
-  const { isPlaying, countIn, togglePlay, tempoScale, score } = useSonata();
+  const { isPlaying, countIn, togglePlay, tempoScale, score } = useSession();
   // A pending count-in reads as "playing" on the button: it shows Pause and a
   // click cancels the lead-in (togglePlay stops it).
   const active = isPlaying || countIn !== null;

@@ -2,7 +2,7 @@ import {
   chordModeSetting,
   useHasDerivedChord,
   useSongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 
 /**
  * The "Chords" card is offered when the song has detected chords to voice — or

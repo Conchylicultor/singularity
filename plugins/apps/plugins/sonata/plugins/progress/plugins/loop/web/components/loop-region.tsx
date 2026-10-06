@@ -5,7 +5,7 @@ import {
   scoreEndBeat,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { RAIL_BAND_Y } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
 import {
   pct,
@@ -50,7 +50,7 @@ export function LoopRegion({
   score: Score;
   beatToFraction: (beat: number) => number;
 }) {
-  const { loop, setLoop } = useSonata();
+  const { loop, setLoop } = useSession();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const { revealed, groupProps } = useHoverReveal();
 

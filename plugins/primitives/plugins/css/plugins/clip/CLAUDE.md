@@ -43,11 +43,12 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `apps/file-explorer/places`
     - `apps/pages/page-tree`
     - `apps/pages/welcome/recent-pages`
-    - `apps/sonata/library`
     - `apps/sonata/piano-roll`
+    - `apps/sonata/player`
     - `apps/sonata/primitives/jog-wheel`
     - `apps/sonata/primitives/keyboard`
     - `apps/sonata/progress/scrubber`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/studio/graph`
     - `build/build-logs`
     - `config_v2/settings`

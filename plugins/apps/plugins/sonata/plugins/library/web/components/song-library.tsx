@@ -13,10 +13,8 @@ import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/we
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import {
-  Sonata,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { SonataDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songLibrary, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
@@ -69,7 +67,7 @@ export function SongLibrary() {
   const openSong = useOpenSong();
   // The background-playing song (if any) — highlights its table row and feeds
   // the now-playing footer below.
-  const { currentSongId } = useSonata();
+  const { currentSongId } = useSonataApp();
   // Write-back for inline cell editing (title / composer) in the table view.
   // Fire-and-forget: the server's `updateSongMeta` write refills that song in
   // the live collection, so the edited cell settles from server truth; a failed
@@ -80,7 +78,7 @@ export function SongLibrary() {
   // (the `Library.Source` registry above is id-only). Its ids match the opaque
   // `source` stamped on each song, so it doubles as the "Source" column's option
   // set — the library never hard-codes a source name.
-  const sonataSources = Sonata.Source.useContributions();
+  const sonataSources = SonataDocument.Source.useContributions();
   const sourceOptions = useMemo(
     () => sonataSources.map((s) => ({ value: s.id, label: s.label })),
     [sonataSources],

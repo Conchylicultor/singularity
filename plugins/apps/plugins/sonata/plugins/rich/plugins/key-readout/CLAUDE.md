@@ -4,20 +4,22 @@
 
 ## Plugin reference
 
-- Description: Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the shared Score + cursor from useSonata().
+- Description: Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the session's Score + cursor (useSession).
 - Web:
   - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
   - Uses:
+    - `apps/sonata/document.keyAutoDetectSetting`
+    - `apps/sonata/document.useLibrarySong`
+    - `apps/sonata/document.useSongDocument`
+    - `apps/sonata/document.useSongSetting`
+    - `apps/sonata/document.useWriteSongSetting`
     - `apps/sonata/pitch-layout.usePitchGeometry`
     - `apps/sonata/primitives/keyboard.Keyboard`
     - `apps/sonata/primitives/keyboard.useSonataKeySkin`
     - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
-    - `apps/sonata/shell.keyAutoDetectSetting`
+    - `apps/sonata/session.useCursorSelector`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorSelector`
-    - `apps/sonata/shell.useSonata`
-    - `apps/sonata/shell.useSongSetting`
-    - `apps/sonata/shell.useWriteSongSetting`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`

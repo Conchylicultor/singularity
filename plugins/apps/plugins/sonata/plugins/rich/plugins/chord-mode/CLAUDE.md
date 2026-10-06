@@ -36,7 +36,7 @@ uses, while its original tracks stay individually selectable.
   lookup-only collection: `chordModes = liveCollection("sonata-chord-mode",
   { row, id: "songId" })` + `serveCollection(chordModes, { from: songChordMode })`
   (minting `sonata-chord-mode:rows` alone). This plugin registers the shell's
-  `chordModeSetting` (`Sonata.SongSetting`, with the headless
+  `chordModeSetting` (`SonataDocument.SongSetting`, with the headless
   `ChordModeObserver`, mounted afresh for each loaded song), which reads that
   song's row with `useLiveRow(chordModes, songId)` and writes its settled mode —
   a per-song setting of the loaded song, pending until then and pending again
@@ -61,20 +61,22 @@ remove the overwrite trade-off.
 
 ## Plugin reference
 
-- Description: Sonata Section: per-song chord mode. One On/Off chip in the 'Chords' card header: on, the shell voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
+- Description: Sonata Section: per-song chord mode. One On/Off chip in the 'Chords' card header: on, the song document voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
 - Web:
   - Contributes:
-    - `Sonata.SongSetting` "chord-mode-sync" → `ChordModeObserver`
+    - `SonataDocument.SongSetting` "chord-mode-sync" → `ChordModeObserver`
     - `Sonata.Section` "Chords"
   - Uses:
-    - `apps/sonata/shell.chordModeSetting`
+    - `apps/sonata/document.chordModeSetting`
+    - `apps/sonata/document.SonataDocument`
+    - `apps/sonata/document.useFailSongSetting`
+    - `apps/sonata/document.useHasDerivedChord`
+    - `apps/sonata/document.useLibrarySong`
+    - `apps/sonata/document.useMountedSongId`
+    - `apps/sonata/document.useSongSetting`
+    - `apps/sonata/document.useWriteSongSetting`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useFailSongSetting`
-    - `apps/sonata/shell.useHasDerivedChord`
-    - `apps/sonata/shell.useMountedSongId`
-    - `apps/sonata/shell.useSonata`
-    - `apps/sonata/shell.useSongSetting`
-    - `apps/sonata/shell.useWriteSongSetting`
     - `apps/sonata/track-mixer.setTracksActive`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLiveRow`

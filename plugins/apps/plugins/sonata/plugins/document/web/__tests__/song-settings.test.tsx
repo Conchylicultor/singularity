@@ -16,10 +16,11 @@ import {
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
-import { Sonata } from "../slots";
+import { SonataDocument } from "../slots";
 import {
   LoadedSongProvider,
-  useLoadSong,
+  useLibrarySong,
+  useLoadDocument,
   useLoadedRaw,
   useSettledSongSettings,
   useFailSongSetting,
@@ -37,10 +38,14 @@ import {
   transposeSetting,
   useScoreSettings,
 } from "../score-settings";
-import { SonataProvider, useSonata, type SonataContextValue } from "../context";
-import { CursorStoreProvider } from "../cursor-store";
+import {
+  SongDocumentProvider,
+  useSongDocument,
+  type SongDocumentValue,
+} from "../document";
+import type { SongIdentity } from "../identity";
 
-// `SonataProvider` reads the global voicing config; its defaults stand for it
+// The document composer reads the global voicing config; its defaults stand for it
 // here (no config server in jsdom).
 vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -55,7 +60,7 @@ afterEach(cleanup);
  *    different song replaces both in one write (the settings pending), even
  *    while the player still shows the song that played in the background;
  *  - the score waits on exactly the settings the composition registers
- *    (`Sonata.SongSetting`): a composition without a feature never hangs, and
+ *    (`SonataDocument.SongSetting`): a composition without a feature never hangs, and
  *    reads that setting's `absent` value;
  *  - a setting cannot be left pending while its observer stays mounted: its
  *    observers mount afresh whenever a different song is loaded (A → B → A in
@@ -121,20 +126,20 @@ function register<T>(
   key: SongSettingKey<T>,
   observer: () => null,
 ): Contribution {
-  return Sonata.SongSetting({
+  return SonataDocument.SongSetting({
     id: key.name,
     setting: key,
     component: observer,
   });
 }
 
-/** The shell declaring the Sonata slots; `contributions` are the composition. */
+/** The document declaring its slots; `contributions` are the composition. */
 function shellPlugin(contributions: Contribution[]): LoadedPlugin[] {
   return [
     {
-      id: "apps.sonata.shell",
-      description: "sonata shell fixture",
-      slots: Sonata,
+      id: "apps.sonata.document",
+      description: "sonata document fixture",
+      slots: SonataDocument,
       contributions,
     } as unknown as LoadedPlugin,
   ];
@@ -153,7 +158,12 @@ function renderSurface(plugins: LoadedPlugin[], children: ReactNode) {
 
 /** Imperative handles on the loaded song, captured from inside the surface. */
 interface Handles {
+  /** Load library song `songId`. */
   load: (songId: string, rawById: Record<string, unknown>) => void;
+  loadDocument: (
+    identity: SongIdentity,
+    rawById: Record<string, unknown>,
+  ) => void;
   writeTranspose: (songId: string, value: number) => void;
 }
 
@@ -162,12 +172,18 @@ function captureHandles(): { handles: Handles; Capture: ComponentType } {
     load: () => {
       throw new Error("surface not rendered");
     },
+    loadDocument: () => {
+      throw new Error("surface not rendered");
+    },
     writeTranspose: () => {
       throw new Error("surface not rendered");
     },
   };
   function Capture() {
-    handles.load = useLoadSong();
+    const loadDocument = useLoadDocument();
+    handles.loadDocument = loadDocument;
+    handles.load = (songId, rawById) =>
+      loadDocument({ kind: "library", songId }, rawById);
     handles.writeTranspose = useWriteSongSetting(transposeSetting);
     return null;
   }
@@ -452,7 +468,7 @@ describe("the score gate waits on the registered settings, and only on them", ()
   });
 });
 
-// --- SonataProvider: the reported song switch --------------------------------
+// --- The composed document: the reported song switch -------------------------
 
 /** A one-note score at `pitch` — so a rendered score shows the transpose applied. */
 function oneNote(pitch: number): Score {
@@ -467,70 +483,81 @@ function oneNote(pitch: number): Score {
   };
 }
 
-describe("SonataProvider: a song's content only ever renders with its own settings", () => {
+const fixtureSource = SonataDocument.Source({
+  id: "fixture",
+  label: "Fixture",
+  LoaderComponent: () => null,
+  compile: (raw) => oneNote(raw as number),
+});
+
+/** Render a composed document; returns a live getter on it. */
+function renderDocument(plugins: LoadedPlugin[]): {
+  doc: () => SongDocumentValue;
+  load: (identity: SongIdentity, rawById: Record<string, unknown>) => void;
+  pitches: number[][];
+} {
+  let ctx: SongDocumentValue | null = null;
+  let loadDocument: Handles["loadDocument"] | null = null;
+  const pitches: number[][] = [];
+  function Probe() {
+    ctx = useSongDocument();
+    loadDocument = useLoadDocument();
+    const { content } = ctx;
+    pitches.push(
+      content.kind === "ready" ? content.score.notes.map((n) => n.pitch) : [],
+    );
+    return null;
+  }
+  render(
+    <PluginProvider plugins={plugins}>
+      <SongDocumentProvider>
+        <Probe />
+        <SongSettingsMount />
+      </SongDocumentProvider>
+    </PluginProvider>,
+  );
+  return {
+    doc: () => {
+      if (ctx === null) throw new Error("document not rendered");
+      return ctx;
+    },
+    load: (identity, rawById) => {
+      if (loadDocument === null) throw new Error("document not rendered");
+      loadDocument(identity, rawById);
+    },
+    pitches,
+  };
+}
+
+describe("the composed document: a song's content only ever renders with its own settings", () => {
   it("background-playing A, then opening B: B never renders with A's settings, nor A with B's", () => {
     const transposes = fixtureServer<number>();
     transposes.settle("A", 1);
-    const plugins = shellPlugin([
-      Sonata.Source({
-        id: "fixture",
-        label: "Fixture",
-        LoaderComponent: () => null,
-        compile: (raw) => oneNote(raw as number),
-      }),
-      register(transposeSetting, observerOf(transposeSetting, transposes)),
-    ]);
-    let ctx: SonataContextValue | null = null;
-    const pitches: number[][] = [];
-    function Probe() {
-      ctx = useSonata();
-      pitches.push(ctx.score.notes.map((n) => n.pitch));
-      return null;
-    }
-    const sonata = (): SonataContextValue => {
-      if (ctx === null) throw new Error("SonataProvider not rendered");
-      return ctx;
-    };
-    render(
-      <PluginProvider plugins={plugins}>
-        <CursorStoreProvider>
-          <LoadedSongProvider>
-            <SonataProvider>
-              <Probe />
-              <SongSettingsMount />
-            </SonataProvider>
-          </LoadedSongProvider>
-        </CursorStoreProvider>
-      </PluginProvider>,
+    const { doc, load, pitches } = renderDocument(
+      shellPlugin([
+        fixtureSource,
+        register(transposeSetting, observerOf(transposeSetting, transposes)),
+      ]),
     );
+    const A: SongIdentity = { kind: "library", songId: "A" };
+    const B: SongIdentity = { kind: "library", songId: "B" };
 
-    // The library's background play of A: load it, mark it open.
-    act(() => {
-      sonata().setRawMap("A", { fixture: 60 });
-      sonata().setCurrentSong("A");
-    });
+    // The library's background play of A.
+    act(() => load(A, { fixture: 60 }));
     expect(last(pitches)).toEqual([61]);
 
-    // B's card: the player pane loads B while A is still the open song (it
-    // marks B open only once it mounts, after the load).
-    act(() => sonata().setRawMap("B", { fixture: 70 }));
-    expect(sonata().currentSongId).toBe("A");
-    expect(sonata().scorePending).toBe(true);
+    // B's card: the player pane loads B — its settings pending meanwhile.
+    act(() => load(B, { fixture: 70 }));
+    expect(doc().content.kind).toBe("pending");
     expect(last(pitches)).toEqual([]);
     act(() => transposes.settle("B", 5));
     expect(last(pitches)).toEqual([75]);
-    act(() => sonata().setCurrentSong("B"));
-    expect(last(pitches)).toEqual([75]);
 
-    // Once more from the library: close the player, background-play A again,
-    // then open B's card — B's settings are already known this time.
-    act(() => sonata().clearCurrentSong());
-    act(() => {
-      sonata().setRawMap("A", { fixture: 60 });
-      sonata().setCurrentSong("A");
-    });
+    // Once more: background-play A again, then open B — B's settings are
+    // already known this time.
+    act(() => load(A, { fixture: 60 }));
     expect(last(pitches)).toEqual([61]);
-    act(() => sonata().setRawMap("B", { fixture: 70 }));
+    act(() => load(B, { fixture: 70 }));
     expect(last(pitches)).toEqual([75]);
 
     // No render ever composed B's content under A's offset (71), nor A's under
@@ -538,5 +565,74 @@ describe("SonataProvider: a song's content only ever renders with its own settin
     const all = pitches.flat();
     expect(all).not.toContain(71);
     expect(all).not.toContain(65);
+  });
+
+  it("a view transform keeps the content key; new content moves it", () => {
+    const transposes = fixtureServer<number>();
+    transposes.settle("A", 0);
+    const { doc, load } = renderDocument(
+      shellPlugin([
+        fixtureSource,
+        register(transposeSetting, observerOf(transposeSetting, transposes)),
+      ]),
+    );
+    act(() => load({ kind: "library", songId: "A" }, { fixture: 60 }));
+    const key = doc().content.contentKey;
+    act(() => transposes.settle("A", 2));
+    expect(doc().content.kind).toBe("ready");
+    expect(doc().content.contentKey).toBe(key);
+    act(() => load({ kind: "library", songId: "A" }, { fixture: 62 }));
+    expect(doc().content.contentKey).not.toBe(key);
+  });
+});
+
+// --- File documents -----------------------------------------------------------
+
+describe("a file document: its settings are its defaults, read-only", () => {
+  it("settles every registered setting to its default at load, mounting no observer", () => {
+    const transposes = fixtureServer<number>();
+    transposes.settle("song", 7);
+    const mounts = { count: 0 };
+    const plugins = shellPlugin([
+      fixtureSource,
+      register(
+        transposeSetting,
+        observerOf(transposeSetting, transposes, mounts),
+      ),
+      register(chordModeSetting, observerOf(chordModeSetting, fixtureServer())),
+    ]);
+    const { doc, load, pitches } = renderDocument(plugins);
+
+    act(() => load({ kind: "file", key: "song" }, { fixture: 60 }));
+    expect(mounts.count).toBe(0);
+    expect(doc().content.kind).toBe("ready");
+    // The transpose default (0) — never the library song "song"'s 7.
+    expect(last(pitches)).toEqual([60]);
+  });
+
+  it("drops every setting write, and useLibrarySong reads none", () => {
+    const plugins = shellPlugin([
+      register(transposeSetting, observerOf(transposeSetting, fixtureServer())),
+    ]);
+    const { handles, Capture } = captureHandles();
+    const seen: SongSetting<number>[] = [];
+    const songs: ReturnType<typeof useLibrarySong>[] = [];
+    function Probe() {
+      seen.push(useSongSetting(transposeSetting));
+      songs.push(useLibrarySong());
+      return null;
+    }
+    renderSurface(plugins, [<Capture key="c" />, <Probe key="p" />]);
+    expect(last(songs)).toEqual({ kind: "none" });
+
+    act(() => handles.loadDocument({ kind: "file", key: "x" }, {}));
+    expect(last(seen)).toEqual({ kind: "settled", value: 0 });
+    expect(last(songs)).toEqual({ kind: "none" });
+    // A write naming the file's key as a song id is not a library song's.
+    act(() => handles.writeTranspose("x", 4));
+    expect(last(seen)).toEqual({ kind: "settled", value: 0 });
+
+    act(() => handles.load("A", {}));
+    expect(last(songs)).toEqual({ kind: "library", songId: "A" });
   });
 });

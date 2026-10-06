@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   useCursorApi,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import {
   beatToSeconds,
@@ -23,8 +23,8 @@ import { computeCountInPlan, meterAt } from "../count-in";
 import { ACCENT_PITCH, CLICK_DURATION_BEATS, NORMAL_PITCH } from "../constants";
 
 /**
- * The headless metronome — a `Sonata.Effect`, mounted once inside
- * `SonataProvider` so it is always live while the Sonata app is open. It renders
+ * The headless metronome — a `SonataSession.Effect`, mounted once per playback
+ * session so it is always live while a song can play. It renders
  * nothing; it owns the click voice and three audio behaviours:
  *
  *  1. **Count-in provider** — registers the lead-in length (in quarter-beats) the
@@ -55,7 +55,7 @@ export function MetronomeEngine() {
     countIn,
     registerCountIn,
     finishCountIn,
-  } = useSonata();
+  } = useSession();
 
   const { continuous, countInBars, volume, accentDownbeat, subdivision } =
     useConfig(metronomeConfig);

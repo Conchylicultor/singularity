@@ -1,4 +1,4 @@
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { ChordGridLoader } from "../loader";
 import { CHORD_GRID_SOURCE_ID } from "../constants";
 
@@ -20,7 +20,7 @@ import { CHORD_GRID_SOURCE_ID } from "../constants";
  * paper over it with a non-null assertion or a silent `null`.
  */
 export function ChordGridEditorSection() {
-  const { sourceRaw, setSourceRaw } = useSonata();
+  const { sourceRaw, setSourceRaw } = useSongDocument();
 
   const rawValue = sourceRaw(CHORD_GRID_SOURCE_ID);
   if (rawValue === undefined) {

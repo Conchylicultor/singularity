@@ -4,12 +4,13 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
   transposeSetting,
+  useLibrarySong,
   useSongSetting,
-  useSonata,
   useWriteSongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { ToolbarControl } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/toolbar-control/web";
 import { saveTranspose } from "../actions";
@@ -35,7 +36,7 @@ function formatOffset(semitones: number): string {
  * (`sonataPlayerPane.Actions`),
  * beside the speed wheel: a compact `[ ⇅ − ±N st + ]` semitone stepper. Like
  * `transport-bar`'s controls it owns no score state — it reads the loaded song's
- * `transposeSetting` + the open song from `useSonata`, writes the setting
+ * `transposeSetting` + the loaded library song from `useLibrarySong`, writes the setting
  * optimistically for instant re-render, and persists via `saveTranspose`. The whole control dims
  * when there is no song (no score span), mirroring `PlaybackControls`' `hasScore`
  * gate. The live transposed key is already shown by the key chip/readout, so this
@@ -46,9 +47,12 @@ function formatOffset(semitones: number): string {
  * the song.
  */
 export function TransposeControl() {
+  const song = useLibrarySong();
   const transpose = useSongSetting(transposeSetting);
-  const { score } = useSonata();
+  const { score } = useSession();
   const hasScore = scoreEndBeat(score) > 0;
+  // A file document's transpose is its read-only default: no control.
+  if (song.kind === "none") return null;
 
   return (
     <ToolbarControl
@@ -69,7 +73,11 @@ export function TransposeControl() {
           refetch={transpose.refetch}
         />
       ) : (
-        <TransposeStepper semitones={transpose.value} disabled={!hasScore} />
+        <TransposeStepper
+          songId={song.songId}
+          semitones={transpose.value}
+          disabled={!hasScore}
+        />
       )}
     </ToolbarControl>
   );
@@ -77,22 +85,22 @@ export function TransposeControl() {
 
 /** The stepper's three segments over a KNOWN offset. */
 function TransposeStepper({
+  songId,
   semitones,
   disabled,
 }: {
+  songId: string;
   semitones: number;
   disabled: boolean;
 }) {
   const setStore = useWriteSongSetting(transposeSetting);
-  const { currentSongId } = useSonata();
 
   // Write the loaded song's setting optimistically (instant re-render of every
   // lens + audio), then persist for this song. Clamp to the octave range.
   const setTranspose = (next: number) => {
-    if (currentSongId === null) return;
     const clamped = Math.max(MIN_SEMITONES, Math.min(MAX_SEMITONES, next));
-    setStore(currentSongId, clamped);
-    saveTranspose(currentSongId, clamped);
+    setStore(songId, clamped);
+    saveTranspose(songId, clamped);
   };
 
   return (

@@ -25,6 +25,7 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
 - Core:
   - Uses:
     - `conversations/conversation-view/code.EditedFileSchema`
+    - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `infra/endpoints.interpolatePath`
     - `primitives/commit-list.CommitRowSchema`

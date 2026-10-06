@@ -202,7 +202,23 @@ export const compositionsConfig = defineConfig({
         // disjointness. Rolling the same excludes out to the other served apps is
         // a follow-up. The guard mechanism is live; see
         // plugins/.../checks/.../composition-closure.
-        app("sonata", "apps.sonata", ["data-views"], ["agent-runtime", "auth"]),
+        //
+        // Its one negative: the MIDI file preview is Sonata's adapter INTO the
+        // file viewer, which a standalone Sonata has no host for — and the file
+        // viewer reads checkout files through code-api, which drags the
+        // agent-runtime bundle in.
+        {
+          ...app(
+            "sonata",
+            "apps.sonata",
+            ["data-views"],
+            ["agent-runtime", "auth"],
+          ),
+          entryPoints: [
+            "apps.sonata.**",
+            "!apps.sonata.sources.midi.file-preview.**",
+          ],
+        },
         app("debug", "apps.debug"),
         app("deploy", "apps.deploy"),
         app("file-explorer", "apps.file-explorer"),

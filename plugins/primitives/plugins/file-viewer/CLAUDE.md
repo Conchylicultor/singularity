@@ -3,14 +3,19 @@
 A file viewer that knows nothing about where its file comes from. The target is a
 `FileRef` (core): `{ source: "host", path }` for any file on the machine, or
 `{ source: "git", worktree, ref?, path }` for a file in a checkout. Renderers
-receive the `FileRef` and read it through `useFileText(file)` / `fileUrl(file)`,
-which dispatch to infra/host-fs or code-api — a renderer never branches on the
-source to read.
+receive the `FileRef` and read it through `useFileText(file)` /
+`useFileBytes(file)` (the raw bytes, for a renderer that decodes its format
+itself) / `fileUrl(file)`, which dispatch to infra/host-fs or code-api — a
+renderer never branches on the source to read. A checkout's raw route serves
+image formats only today, so `useFileBytes` answers `unsupported` for any other
+checkout file.
 
 - `FileViewer.Renderer` is the tiered registry: each renderer's `supports({ file,
   gitStatus? })` answers `native` / `contextual` / `fallback` / `last-resort` / `false`, and every
   offered renderer is a tab, best tier first. Each renderer is one sub-plugin
-  under `plugins/` (code, markdown, image, diff, fallback).
+  under `plugins/` (code, markdown, image, diff, fallback); a domain renderer
+  lives with its domain (Sonata's MIDI preview under
+  `apps/sonata/plugins/sources/plugins/midi/plugins/file-preview`).
 - `FileView` is the self-contained viewer (breadcrumb + tabs over the body).
   Hosts that put the tabs in their own chrome (the conversation file-peek pane)
   compose `useFileRenderers` + `FileTabs` + `FileContent`.
@@ -21,11 +26,12 @@ source to read.
 
 ## Plugin reference
 
-- Description: Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText reading a FileRef from the host (infra/host-fs) or a git checkout (code-api).
+- Description: Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
 - Web:
-  - Slots: `FileViewer.Renderer` ← `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`
+  - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`
   - Uses:
     - `infra/endpoints.EndpointError`
+    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/center.Center`
@@ -45,6 +51,8 @@ source to read.
     - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types):
+    - `FileBytesState`
+    - `FileBytesUnavailable`
     - `FileRendererContribution`
     - `FileRendererProps`
     - `FileRenderersHandle`
@@ -54,6 +62,7 @@ source to read.
     - `RendererMatch`
     - `ResolvedRenderer`
   - Exports (values):
+    - `fileBytesUnavailableMessage`
     - `FileContent`
     - `FileTabs`
     - `fileTextUnavailableMessage`
@@ -61,6 +70,7 @@ source to read.
     - `FileViewer`
     - `NoPreview`
     - `resolveRenderers`
+    - `useFileBytes`
     - `useFileRenderers`
     - `useFileText`
     - `useOpenHostFile`
@@ -82,6 +92,7 @@ source to read.
 - Cross-plugin:
   - Imported by:
     - `apps/file-explorer/browser`
+    - `apps/sonata/sources/midi/file-preview`
     - `conversations/conversation-view/code/file-pane`
     - `primitives/file-viewer/code`
     - `primitives/file-viewer/diff`

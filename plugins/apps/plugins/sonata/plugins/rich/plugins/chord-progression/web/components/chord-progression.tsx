@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   useCursorSelector,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { scrollChildIntoView } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import {
   bars,
@@ -94,7 +94,7 @@ function buildBars(score: Score, chords: ChordAnn[]): BarLine[] {
  * is not painted at all for a chordless song, so this body never renders empty.
  */
 export function ChordProgression() {
-  const { score, seekTo } = useSonata();
+  const { score, seekTo } = useSession();
   const mode = useChordDisplayMode();
 
   const chords = useMemo(

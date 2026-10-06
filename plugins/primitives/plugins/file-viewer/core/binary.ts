@@ -64,6 +64,8 @@ const BINARY_EXTENSIONS = new Set([
   "webm",
   "mkv",
   "avi",
+  "mid",
+  "midi",
   // fonts
   "ttf",
   "otf",

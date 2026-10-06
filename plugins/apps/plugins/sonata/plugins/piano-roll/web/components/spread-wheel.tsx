@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useSetConfig } from "@plugins/config_v2/web";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { usePlayerView } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
 import { JogWheel } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/jog-wheel/web";
 import { pianoRollConfig } from "../../shared/config";
@@ -40,7 +40,7 @@ const asZoom = (spread: number) =>
  * (the `spread` float field) and from pinch / Ctrl+scroll over the roll.
  */
 export function SpreadWheel() {
-  const { spread, spreadMin, spreadMax, setSpread } = useSonata();
+  const { spread, spreadMin, spreadMax, setSpread } = usePlayerView();
   const setConfig = useSetConfig(pianoRollConfig);
   // The last scrubbed value, captured so the (value-less) settle callback
   // commits exactly where the fling came to rest.

@@ -1,6 +1,6 @@
 # notation
 
-A third `Sonata.Display` lens (beside `piano-roll` and `songsheet`): standard
+A third `SonataPlayer.Display` lens (beside `piano-roll` and `songsheet`): standard
 **sheet-music notation**. It engraves the fully-composed `Score` (transpose,
 key inference and spelling already applied by the shell) as a **part → staff →
 voice** system — clefs, key/time signatures, barlines, accidentals, rests and
@@ -203,13 +203,15 @@ instrument grouping — while `convert` itself stays pure.
 - Description: Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
 - Web:
   - Contributes:
-    - `Sonata.Display` "Notation" → `LazyBoundary`
+    - `SonataPlayer.Display` "Notation" → `LazyBoundary`
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "notation"
   - Uses:
+    - `apps/sonata/document.useSongDocument`
+    - `apps/sonata/player.SonataPlayer`
+    - `apps/sonata/session.useCursorApi`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorApi`
-    - `apps/sonata/shell.useSonata`
     - `apps/sonata/track-mixer.useHiddenTrackIds`
     - `apps/sonata/track-mixer.useTrackMixerEntries`
     - `config_v2.ConfigV2`

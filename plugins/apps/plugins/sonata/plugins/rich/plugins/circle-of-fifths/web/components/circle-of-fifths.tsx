@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   useCursorSelector,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useLivePlay } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
 import type {
   Annotation,
@@ -110,7 +110,7 @@ function sector(rIn: number, rOut: number, a0: number, a1: number): string {
 /**
  * The circle-of-fifths panel — the BODY of a `Sonata.Section` card whose chrome
  * (Card + collapsible "Circle of fifths" title) the host paints; sibling to the
- * chord and key readouts. Reads the shared Score + cursor from `useSonata()` and
+ * chord and key readouts. Reads the session's Score + cursor (`useSession()`) and
  * highlights the wedge for the chord under the playhead: a major-ish chord lights
  * its major key on the outer ring, a minor-ish chord lights its tonic on the
  * inner ring. Tracks the cursor as the transport advances.
@@ -125,7 +125,7 @@ function sector(rIn: number, rOut: number, a0: number, a1: number): string {
  * "no chords" empty state.
  */
 export function CircleOfFifths() {
-  const { score } = useSonata();
+  const { score } = useSession();
   const live = useLivePlay();
 
   // Pending note-off timers, cleared on unmount so a clicked chord never fires

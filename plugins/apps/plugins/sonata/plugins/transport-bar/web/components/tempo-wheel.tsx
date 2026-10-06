@@ -1,4 +1,4 @@
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
 import { JogWheel } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/jog-wheel/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -33,7 +33,7 @@ const asPercent = (scale: number) => `${Math.round(scale * 100)}%`;
  * for a physical-wheel feel.
  */
 export function TempoWheel() {
-  const { tempoScale, setTempoScale } = useSonata();
+  const { tempoScale, setTempoScale } = useSession();
 
   const drag = useInertialDrag({
     axis: "x",

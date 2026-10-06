@@ -237,6 +237,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps/mail/shell`
     - `apps/prototypes/canvas`
     - `apps/prototypes/present`
+    - `apps/sonata/sources/midi/file-preview`
     - `build`
     - `config_v2/config-link`
     - `debug/config-orphans`

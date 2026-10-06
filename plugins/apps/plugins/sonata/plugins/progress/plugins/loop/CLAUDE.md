@@ -55,11 +55,12 @@ plain wrap; tempo changes follow the existing loop-aware `retime` path.
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
     - `apps/sonata/progress/scrubber.SonataProgress`
+    - `apps/sonata/session.useCursorApi`
+    - `apps/sonata/session.useCursorSelector`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorApi`
-    - `apps/sonata/shell.useCursorSelector`
     - `apps/sonata/shell.useLaneInsets`
-    - `apps/sonata/shell.useSonata`
+    - `apps/sonata/shell.useSonataApp`
     - `primitives/css/coords.pct`
     - `primitives/css/coords.Placed`
     - `primitives/css/inline.Inline`

@@ -25,7 +25,7 @@ one rail, one row height, and no UA-drawn checkbox or radio in either.
 
 Each `Sonata.ViewOption` declares `displays` — the lens id(s) it belongs to, or
 `"global"` for options that apply everywhere. The popover reads the active lens
-(`useSonata().activeDisplayId`) and renders only that lens's options plus
+(`usePlayerView().displayId`) and renders only that lens's options plus
 globals, so Notation never shows piano-roll-only controls (key style, note
 names, key labels) and vice-versa. When no option applies to the active lens the
 chip hides entirely (e.g. the songsheet lens, which ships no options today).
@@ -40,8 +40,8 @@ into every lens — the scoping is enforced at the type level, not by this filte
 - Web:
   - Contributes: `Sonata.Hud` "view-options" → `ViewOptionsToggle`
   - Uses:
+    - `apps/sonata/player.usePlayerView`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSonata`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `config_v2/fields.FieldRenderer`

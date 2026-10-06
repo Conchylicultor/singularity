@@ -10,9 +10,9 @@ notes against the audio clock in a bounded, timer-free look-ahead window.
 The graph is split across two contributions so the volume control's visibility
 never touches playback:
 
-- **`AudioEngine`** (`Sonata.Effect`, `components/audio-engine.tsx`) — headless,
-  mounted **once** inside `SonataProvider` (in `SonataLayout`) and therefore
-  always mounted while the Sonata app is open. Owns the `AudioContext`, master
+- **`AudioEngine`** (`SonataSession.Effect`, `components/audio-engine.tsx`) —
+  headless, mounted **once** per playback session (`SonataPlayerScope`) and
+  therefore always mounted while a song can play. Owns the `AudioContext`, master
   gain, the per-track channel strips, the `registerClock` registration, and all
   scheduling.
 - **`VolumeControl`** (`sonataPlayerPane.Actions`, `components/volume-control.tsx`)
@@ -23,7 +23,7 @@ They communicate through a **per-surface** `audio-store` (`audio-store.ts`, buil
 on the `scoped-store` primitive): the control writes `volume`, the engine reads
 it to drive master gain; the engine also publishes `status` / `loadError` here.
 The store's `<Provider>` (`components/audio-provider.tsx`) is folded above the
-whole Sonata subtree via the `Sonata.SurfaceProvider` wrapper slot — an ancestor
+whole session subtree via the `SonataSession.Provider` wrapper slot — an ancestor
 of both the effect and the toolbar control, which live in different slot branches
 — so two open Sonata surfaces have independent volume/status/mute instead of one
 module-level singleton bleeding across them.
@@ -109,17 +109,16 @@ change when the strips did.
 - Description: Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header.
 - Web:
   - Contributes:
-    - `Sonata.SurfaceProvider` → `AudioProvider`
-    - `Sonata.Effect` "audio-engine" → `AudioEngine`
+    - `SonataSession.Provider` → `AudioProvider`
+    - `SonataSession.Effect` "audio-engine" → `AudioEngine`
     - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
   - Uses:
     - `apps/sonata/audio/instruments.InstrumentVoices`
     - `apps/sonata/audio/instruments.SonataAudio`
     - `apps/sonata/library.sonataPlayerPane`
-    - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.SongSetting`
-    - `apps/sonata/shell.useCursorApi`
-    - `apps/sonata/shell.useSonata`
+    - `apps/sonata/session.SonataSession`
+    - `apps/sonata/session.useCursorApi`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/track-mixer.useMutedTrackIds`
     - `apps/sonata/track-mixer.useTrackInstrumentMap`
     - `apps/sonata/track-mixer.useTrackVolumeMap`

@@ -122,15 +122,17 @@ directives establish); the selected voicing strategy from the shared
 - Description: Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
 - Web:
   - Contributes:
-    - `Sonata.Source` "Chord Grid"
+    - `SonataDocument.Source` "Chord Grid"
     - `Library.Source` "chord-grid"
     - `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
     - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
   - Uses:
+    - `apps/sonata/document.SonataDocument`
+    - `apps/sonata/document.useSongDocument`
     - `apps/sonata/library.Library`
     - `apps/sonata/library.openSongImperative`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSonata`
+    - `apps/sonata/shell.useSonataApp`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/spacing.Stack`

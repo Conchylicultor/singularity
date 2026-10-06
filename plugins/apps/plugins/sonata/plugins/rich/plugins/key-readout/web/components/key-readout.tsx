@@ -2,8 +2,9 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { useMemo } from "react";
 import {
   useCursorSelector,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   SectionLabel,
   Text,
@@ -57,7 +58,7 @@ const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
 /**
  * The "current key" readout — the BODY of a `Sonata.Section` card whose chrome
  * (Card + collapsible "Current key" title) the host paints; sibling to the chord
- * readout. Reads the shared Score + cursor from `useSonata()` and shows the key
+ * readout. Reads the session's Score + cursor (`useSession()`) and shows the key
  * in force at the playhead (the song's `meta.key` plus mid-song `key`
  * annotations, reconciled by `effectiveKeyAt`). Where the chord readout lights a
  * chord's notes, this lights the key's *scale* notes — the tonic in the full
@@ -72,7 +73,10 @@ const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
 export function KeyReadout() {
   // Sonata's own look paints its keys: one control, every keyboard in the app.
   const skin = useSonataKeySkin();
-  const { score, scorePending, scoreFailure } = useSonata();
+  const { score } = useSession();
+  const { content } = useSongDocument();
+  const scorePending = content.kind === "pending";
+  const scoreFailure = content.kind === "failed" ? content.failure : null;
 
   // Beat-indexed key entries — recomputed only when the Score changes. Walking
   // the memoized list (rather than `effectiveKeyAt`, which rebuilds it each call)

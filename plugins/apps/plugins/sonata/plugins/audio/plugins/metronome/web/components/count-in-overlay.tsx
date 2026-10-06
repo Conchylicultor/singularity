@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useAudioGraph } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/engine/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
@@ -20,7 +20,7 @@ import "./count-in-overlay.css";
  * the numeral on `remaining` replays the per-beat pop animation.
  */
 export function CountInOverlay() {
-  const { countIn } = useSonata();
+  const { countIn } = useSession();
   const graph = useAudioGraph();
   const ctx = graph?.ctx ?? null;
 

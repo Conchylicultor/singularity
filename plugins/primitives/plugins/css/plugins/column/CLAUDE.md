@@ -64,6 +64,7 @@ Only present slots render — an absent slot produces no region and no phantom g
     - `apps/mail/shell`
     - `apps/prototypes/canvas`
     - `apps/sonata/library`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/studio/contributions`
     - `apps/studio/graph`
     - `code-explorer/commit-detail`

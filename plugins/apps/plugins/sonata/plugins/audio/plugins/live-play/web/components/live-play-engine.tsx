@@ -10,9 +10,9 @@ import { useLivePlayControls, type LivePlayApi } from "../live-store";
 const DEFAULT_VELOCITY = 90;
 
 /**
- * The headless Sonata live interactive player — a `Sonata.Effect`, mounted once
- * inside `SonataProvider` and therefore always mounted while the Sonata app is
- * open; it renders nothing.
+ * The headless Sonata live interactive player — a `SonataSession.Effect`,
+ * mounted once per playback session and therefore always mounted while a song
+ * can play; it renders nothing.
  *
  * It turns hand-played key presses (from the playable keyboard) into sustaining
  * note-on/note-off voices, REUSING the engine's shared graph: it routes voices

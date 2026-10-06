@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { SonataDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { TrackMixerPanel } from "./components/track-mixer-panel";
 import { TrackMixerActions } from "./components/track-mixer-actions";
@@ -21,9 +22,9 @@ export { setTracksActive } from "./actions";
 
 export default {
   description:
-    "Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the shell as a per-song setting (Sonata.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine.",
+    "Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the song document as a per-song setting (SonataDocument.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine.",
   contributions: [
-    Sonata.SongSetting({
+    SonataDocument.SongSetting({
       id: "track-view-sync",
       setting: trackViewSetting,
       component: TrackViewObserver,

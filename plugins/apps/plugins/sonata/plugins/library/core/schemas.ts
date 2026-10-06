@@ -23,8 +23,8 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
  * `source` is the opaque id of the input source that created the song (MIDI,
  * chord-grid, …), stamped once at creation and never changed. The library treats
  * it as an opaque tag — it never enumerates or interprets source ids; the value
- * always equals the creating source's `Library.Source` / `Sonata.Source` id, and
- * display labels are resolved through the generic `Sonata.Source` registry.
+ * always equals the creating source's `Library.Source` / `SonataDocument.Source` id, and
+ * display labels are resolved through the generic `SonataDocument.Source` registry.
  */
 export const songFields = {
   id: textField(),

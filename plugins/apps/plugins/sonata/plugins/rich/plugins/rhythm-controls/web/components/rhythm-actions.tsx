@@ -2,6 +2,7 @@ import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useGroove } from "../use-groove";
+import { useLibrarySong } from "@plugins/apps/plugins/sonata/plugins/document/web";
 
 /**
  * Header-right control for the "Rhythm" section card: the On/Off groove toggle.
@@ -12,7 +13,10 @@ import { useGroove } from "../use-groove";
  * about the song.
  */
 export function RhythmActions() {
+  const song = useLibrarySong();
   const groove = useGroove();
+  // Only a library song's groove persists: a file document shows no editor.
+  if (song.kind === "none") return null;
   if (groove.status === "loading") return <Loading variant="spinner" />;
   if (groove.status === "error") {
     return (

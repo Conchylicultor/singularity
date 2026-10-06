@@ -1,9 +1,10 @@
 import { useMemo } from "react";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
-  useSongSetting,
-  useSonata,
   type SongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useLibrarySong,
+  useSongSetting,
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import type { TrackViewRow } from "../core";
 import { defaultTrackColor } from "./palette";
@@ -102,7 +103,7 @@ function useCurrentSongOverrides(): SongSetting<Map<string, TrackViewRow>> {
  * audio engine, the panel) handles that state itself.
  */
 export function useTrackMixerEntries(): SongSetting<TrackMixerEntry[]> {
-  const { score } = useSonata();
+  const { score } = useSession();
   const overrides = useCurrentSongOverrides();
 
   // Registered timbres, read generically — never names a contributor. The
@@ -177,8 +178,8 @@ export function useTrackMixerEntries(): SongSetting<TrackMixerEntry[]> {
 }
 
 /**
- * Whether the Tracks section has anything to show: a song is open and it carries
- * at least one track. Drives the `Sonata.Section` `useAvailable` gate so the card
+ * Whether the Tracks section has anything to show: a library song is loaded
+ * (the only kind whose track views persist) and it carries at least one track. Drives the `Sonata.Section` `useAvailable` gate so the card
  * (title + chrome) renders nothing for closed / trackless states — replacing the
  * panel's old `return null`. Safe to call alongside the panel body:
  * `useTrackMixerEntries` is a memoized store/context read, not expensive per
@@ -187,17 +188,18 @@ export function useTrackMixerEntries(): SongSetting<TrackMixerEntry[]> {
  * score is empty and there is no card to offer yet.
  */
 export function useTrackMixerAvailable(): boolean {
-  const { currentSongId } = useSonata();
+  const song = useLibrarySong();
   const entries = useTrackMixerEntries();
+  if (song.kind === "none") return false;
   switch (entries.kind) {
     case "pending":
       return false;
     // A failed read keeps the card: its body is where the failure (with
     // Retry) is shown.
     case "failed":
-      return currentSongId != null;
+      return true;
     case "settled":
-      return currentSongId != null && entries.value.length > 0;
+      return entries.value.length > 0;
   }
 }
 

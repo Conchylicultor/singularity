@@ -1,8 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import {
-  Sonata,
-  useHasVoicedChords,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useHasVoicedChords } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { VoicingControls } from "./components/voicing-controls";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 

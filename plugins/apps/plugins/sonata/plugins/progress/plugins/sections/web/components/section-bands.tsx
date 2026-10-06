@@ -6,7 +6,7 @@ import type {
   Score,
   SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   cn,
@@ -55,7 +55,7 @@ export function SectionBands({
   beatToFraction: (beat: number) => number;
 }) {
   // The quick-loop affordance drives the shared A–B loop straight onto a section.
-  const { setLoop, seekTo } = useSonata();
+  const { setLoop, seekTo } = useSession();
 
   // Narrow to the section annotations — they're the only structure we draw.
   const sections = score.annotations.filter(

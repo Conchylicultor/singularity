@@ -14,6 +14,7 @@
   - Exports (types):
     - `ActiveNoteIndex`
     - `Annotation`
+    - `BarPosition`
     - `Capability`
     - `ChordAnnotation`
     - `ChordData`
@@ -46,7 +47,9 @@
   - Exports (values):
     - `accidentalGlyph`
     - `asKeySignature`
+    - `barPositionAt`
     - `bars`
+    - `barStartBeat`
     - `beatGrid`
     - `beatToSeconds`
     - `buildActiveNoteIndex`

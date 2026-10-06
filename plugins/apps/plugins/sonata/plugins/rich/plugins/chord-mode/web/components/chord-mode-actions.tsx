@@ -1,11 +1,12 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useState } from "react";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
   chordModeSetting,
+  useLibrarySong,
   useSongSetting,
-  useSonata,
   useWriteSongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   CHORD_BASS_TRACK,
   CHORD_TRACK,
@@ -36,7 +37,8 @@ import { useSaveChordMode } from "../actions";
  * would be a claim about the song, and a flip needs a known base.
  */
 export function ChordModeActions() {
-  const { score, currentSongId } = useSonata();
+  const { score } = useSession();
+  const song = useLibrarySong();
   const mode = useSongSetting(chordModeSetting);
   const setChordMode = useWriteSongSetting(chordModeSetting);
   const saveChordMode = useSaveChordMode();
@@ -44,8 +46,8 @@ export function ChordModeActions() {
   // interleave the two directions.
   const [busy, setBusy] = useState(false);
 
-  // The card is a player section, so a song is open whenever it shows.
-  if (currentSongId === null) return null;
+  // Only a library song's chord mode persists; a file document has none to flip.
+  if (song.kind === "none") return null;
   if (mode.kind === "pending") return <Loading variant="spinner" />;
   if (mode.kind === "failed")
     return (
@@ -57,7 +59,7 @@ export function ChordModeActions() {
       />
     );
   const enabled = mode.value;
-  const songId = currentSongId;
+  const songId = song.songId;
 
   const originals = score.tracks
     .filter((t) => t.id !== CHORD_TRACK && t.id !== CHORD_BASS_TRACK)

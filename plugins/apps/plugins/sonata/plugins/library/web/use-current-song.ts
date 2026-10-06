@@ -2,7 +2,7 @@ import {
   useLiveRow,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songLibrary, type Song } from "../core";
 
 /**
@@ -18,6 +18,6 @@ import { songLibrary, type Song } from "../core";
  * ready row.
  */
 export function useCurrentSong(): LiveRowResult<Song> {
-  const { currentSongId } = useSonata();
+  const { currentSongId } = useSonataApp();
   return useLiveRow(songLibrary, currentSongId);
 }

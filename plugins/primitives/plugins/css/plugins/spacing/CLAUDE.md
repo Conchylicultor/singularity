@@ -154,6 +154,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/midi`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transport-bar`

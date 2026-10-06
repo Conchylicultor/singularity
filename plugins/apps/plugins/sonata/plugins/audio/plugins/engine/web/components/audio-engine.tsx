@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   useCursorApi,
-  useSonata,
-  type SongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import type { SongSetting } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   SonataAudio,
@@ -107,9 +107,9 @@ function parseChannelKey(key: string): Map<string, string> {
 }
 
 /**
- * The headless Sonata audio engine — a `Sonata.Effect`, mounted once inside
- * `SonataProvider` (in `SonataLayout`) and therefore **always mounted while the
- * Sonata app is open**, independent of which pane is active or whether the
+ * The headless Sonata audio engine — a `SonataSession.Effect`, mounted once per
+ * playback session (`SonataPlayerScope`) and therefore **always mounted while
+ * a song can play**, independent of which pane is active or whether the
  * player's section column is collapsed. It owns the Web Audio graph
  * (`AudioContext` + master gain), the per-track channel strips, and the
  * scheduling effect; it renders nothing.
@@ -119,7 +119,7 @@ function parseChannelKey(key: string): Map<string, string> {
  * `AudioContext` mid-playback — killing all sound. Splitting the graph into this
  * always-mounted effect makes panel visibility purely cosmetic; the slider and
  * status line now talk to the engine through the per-surface `audio-store`
- * (provided above both via the `Sonata.SurfaceProvider` wrapper slot).
+ * (provided above both via the `SonataSession.Provider` wrapper slot).
  *
  * On each `isPlaying → true` transition it captures one anchor (`ctx.currentTime`
  * + the cursor beat) and hands it to `startScheduling`, which schedules notes
@@ -141,7 +141,7 @@ function parseChannelKey(key: string): Map<string, string> {
  * it, in the same gain node, at the same level.
  */
 export function AudioEngine() {
-  const { score, isPlaying, seekEpoch, registerClock, loop } = useSonata();
+  const { score, isPlaying, seekEpoch, registerClock, loop } = useSession();
 
   // Imperative per-surface cursor facade. Read through a ref inside the
   // scheduling effect so the effect's deps stay unchanged (the cursor is read

@@ -13,7 +13,7 @@ const volumeUpIcon = symbol("volume-up");
  * (`sonataPlayerPane.Actions`): a mute toggle (level-reflecting icon) plus a compact
  * slider. Like `transport-bar`'s controls it owns no audio — it only
  * reads/writes the per-surface `audio-store` (provided via the
- * `Sonata.SurfaceProvider` wrapper slot), which the always-mounted `AudioEngine`
+ * `SonataSession.Provider` wrapper slot), which the always-mounted `AudioEngine`
  * reads to drive master gain. Living in the engine plugin keeps the
  * `audio-store` import plugin-local.
  */

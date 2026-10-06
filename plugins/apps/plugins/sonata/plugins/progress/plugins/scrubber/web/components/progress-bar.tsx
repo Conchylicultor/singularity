@@ -6,8 +6,8 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   useCursorApi,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
   scoreEndBeat,
   buildTempoIndex,
@@ -54,7 +54,7 @@ function formatTime(seconds: number): string {
  * mutations, leaving the context value identity-stable for every other reader.
  */
 export function ProgressBar() {
-  const { score, seekTo } = useSonata();
+  const { score, seekTo } = useSession();
   // Imperative cursor facade — read the live beat in the subscription, never a
   // per-frame React render (see the component doc-comment).
   const cursor = useCursorApi();
@@ -63,7 +63,7 @@ export function ProgressBar() {
   const endBeat = scoreEndBeat(score);
   const ready = endBeat > 0;
 
-  // beat → elapsed wall-clock seconds. The `score` from useSonata() already has
+  // beat → elapsed wall-clock seconds. The `score` from useSession() already has
   // the playback speed (tempoScale) folded into its tempo map, so this readout
   // is a real stopwatch: at 50% speed the elapsed/total times stretch to match.
   const tempo = useMemo(() => buildTempoIndex(score), [score]);

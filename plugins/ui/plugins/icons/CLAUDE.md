@@ -241,6 +241,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `apps/sonata/progress/loop`
     - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/midi`
+    - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transport-bar`

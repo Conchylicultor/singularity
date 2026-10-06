@@ -1,11 +1,12 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useMemo } from "react";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
   keyAutoDetectSetting,
+  useLibrarySong,
   useSongSetting,
-  useSonata,
   useWriteSongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { saveKeyAutoDetect } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -20,7 +21,8 @@ import { collectKeyEntries } from "@plugins/apps/plugins/sonata/plugins/score/co
  * placeholder — "off" would be a claim about the song.
  */
 export function KeyReadoutActions() {
-  const { score, currentSongId } = useSonata();
+  const { score } = useSession();
+  const song = useLibrarySong();
   const keyAutoDetect = useSongSetting(keyAutoDetectSetting);
   const setKeyAutoDetect = useWriteSongSetting(keyAutoDetectSetting);
 
@@ -43,12 +45,13 @@ export function KeyReadoutActions() {
   // from `entries`, so OR the live flag).
   const showToggle = entries.some((e) => e.source === "authored") || autoDetect;
 
-  if (!showToggle || currentSongId === null) return null;
+  if (!showToggle || song.kind === "none") return null;
+  const songId = song.songId;
 
   const toggleAutoDetect = () => {
     const next = !autoDetect;
-    setKeyAutoDetect(currentSongId, next); // optimistic: re-spell/readout update instantly
-    saveKeyAutoDetect(currentSongId, next); // persist per song
+    setKeyAutoDetect(songId, next); // optimistic: re-spell/readout update instantly
+    saveKeyAutoDetect(songId, next); // persist per song
   };
 
   return (

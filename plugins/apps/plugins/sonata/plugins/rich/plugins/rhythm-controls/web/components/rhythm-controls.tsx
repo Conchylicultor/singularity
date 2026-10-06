@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   useCursorApi,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useLibrarySong } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   bars,
   scoreEndBeat,
@@ -50,7 +51,10 @@ const BASS_COLOR = "var(--chart-2)";
  * patterns standing in for the song's own.
  */
 export function RhythmControls() {
+  const song = useLibrarySong();
   const groove = useGroove();
+  // Only a library song's groove persists: a file document shows no editor.
+  if (song.kind === "none") return null;
   switch (groove.status) {
     case "loading":
       return <Loading variant="rows" count={3} />;
@@ -70,7 +74,7 @@ export function RhythmControls() {
 
 /** The circle + per-hand controls over a KNOWN groove. */
 function GrooveEditor({ groove }: { groove: GrooveState }) {
-  const { score } = useSonata();
+  const { score } = useSession();
   const { enabled, bass, chord, bassFigurationId, chordFigurationId, commit } =
     groove;
   const cursor = useCursorApi();

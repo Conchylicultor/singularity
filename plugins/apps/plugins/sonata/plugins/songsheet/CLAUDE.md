@@ -6,11 +6,13 @@
 
 - Description: Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
 - Web:
-  - Contributes: `Sonata.Display` "Songsheet" → `Songsheet`
+  - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
   - Uses:
+    - `apps/sonata/document.useSongDocument`
+    - `apps/sonata/player.SonataPlayer`
+    - `apps/sonata/session.useCursorSelector`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorSelector`
-    - `apps/sonata/shell.useSonata`
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
     - `primitives/css/pin.Pin`

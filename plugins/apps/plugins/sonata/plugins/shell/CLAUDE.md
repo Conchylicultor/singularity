@@ -2,172 +2,85 @@
 
 ## Surface & navigation
 
-`SonataLayout` (the `Apps.App` `component`) is a pure full-surface app: it
-mounts `<FullPane/>` from `@plugins/layouts/plugins/full-pane/web` directly (no
-`PaneLayoutHost`, no `PaneOverlayHost`), which paints the active pane
-full-surface. The panes themselves (library index at `/sonata`, player at
-`/sonata/song/:songId`) live in the **library** plugin — see its `CLAUDE.md` —
-because they reference `Library.Source`, which the shell can't import without a
-cycle.
+`SonataLayout` (the `Apps.App` `component`) is a pure full-surface app: one
+`SonataPlayerScope` (player plugin — cursor, song document, playback session,
+view, per-session effects, setting observers) around `SonataAppProvider` and
+`<FullPane/>`, which paints the active pane full-surface. The panes themselves
+(library index at `/sonata`, player at `/sonata/song/:songId`) live in the
+**library** plugin — see its `CLAUDE.md` — because they reference
+`Library.Source`, which the shell can't import without a cycle.
 
-`SonataProvider` no longer carries a bespoke `view` switch. It keeps the
-open-song **identity** (`currentSongId`/`songOpenEpoch`) — deliberately **not**
-the title, which has a single owner in the library's `songs` value (read it via
-`useCurrentSong`); `setCurrentSong` therefore takes a bare `songId: string`, a
-value that cannot be fabricated. It exposes stable transport verbs (`togglePlay`,
-`nudgeTempo`, `seekBar`, `startScrub`, `endScrub`, `setCurrentSong`,
-`clearCurrentSong`). The player pane marks the song
-open/closed on mount/unmount; keyboard transport is owned by the **controls**
-plugin, which registers Space/↑/↓ as per-surface, focus-scoped shortcuts and runs
-a focus-gated ←/→ seek-hold controller — both gated on `currentSongId`. There is
-no module-level transport bus: each Sonata window drives only its own transport
-(fixing the cross-window Space bug), and the old "player on screen" gate is now
-explicit (`currentSongId != null`) rather than an implicit empty-bus.
+The shell keeps only the APP's state, `useSonataApp()`: the open song's
+**identity** (`currentSongId` / `songOpenEpoch`, `setCurrentSong` /
+`clearCurrentSong`) — deliberately **not** the title, which has a single owner
+in the library's `songs` value (`useCurrentSong`). It touches neither content
+nor settings: those belong to the document the player loaded (a song played in
+the background stays loaded while no player shows it). The transport lives in
+the session (`useSession()`), content and settings in the document
+(`useSongDocument()`), the display lens and spread in the player view
+(`usePlayerView()`).
 
-## Per-song settings — pending is a state
+Keyboard transport is owned by the **controls** plugin (`Sonata.Effect`), which
+registers Space/↑/↓ as per-surface, focus-scoped shortcuts and runs a
+focus-gated ←/→ seek-hold controller — both gated on `currentSongId != null`.
+Each Sonata window drives only its own transport.
 
-Per-song settings transform or accompany the loaded song: transpose, key
-auto-detect, chord mode, groove (rhythm) and track view (the mixer's per-track
-color / instrument / mute / hide / volume). Each is persisted by its feature
-plugin. A setting is a `defineSongSetting(name, absent)` key (`song-setting.ts`)
-defined by the plugin that reads its value — the shell for the four its score
-pipeline transforms with (`score-settings.ts`), the track-mixer for the track
-view, which only it reads. A read is `SongSetting<T>` =
-`{ pending: true } | { pending: false; value }`.
-
-- **One loaded song: id, content and settings in one state.** The per-surface
-  store in `loaded-song.tsx` (provided in `SonataLayout`, above
-  `SonataProvider`) holds the loaded song's id, its sources' raw inputs and its
-  settled settings together. `setRawMap(songId, rawMap)` is the only way to load
-  a song: a different song replaces all three in one write, its settings empty
-  (pending); the same song keeps its settings. So no render can pair one song's
-  content with another song's settings — whatever `currentSongId` says (a song
-  played in the background is the open song while another song's player loads).
-  `setCurrentSong` / `clearCurrentSong` touch no setting.
-- **The composition registers the settings.** A feature plugin contributes
-  `Sonata.SongSetting({ id, setting, component })`: the setting and the headless
-  observer that settles it. `SongSettingsMount` mounts every observer for the
-  LOADED song, keyed on the load's generation, so an observer reads the non-null
-  `useMountedSongId()`, writes that song's persisted value
-  (`useWriteSongSetting(key)`) only once its read settles, and mounts afresh
-  whenever a different song is loaded — even A → B → A in one tick. A setting
-  can only go pending by a different song being loaded, which remounts its
-  observer, so none can stay pending under a mounted observer. A write for a
-  song that is not loaded is dropped.
-- **Nothing renders or plays until every registered setting settles.**
-  `useScoreSettings` → `useSettledSongSettings` waits on exactly the settings
-  the composition registers, read from the slot (the shell names no feature
-  there); a setting nobody registers is not waited on and reads as its `absent`
-  value — the identity transform — so a composition without a feature never
-  hangs. While content is loaded and a registered setting is pending, `baseScore`
-  is empty and `scorePending` is true (displays show a loading state, never
-  their empty-score message); the transport reset + play-on-load for new
-  content wait for the settle; controls reading `useSongSetting(key)` render a
-  loading placeholder (a step or a flip needs a known base); the track-mixer
-  hooks are pending-aware too, so the piano roll, keyboard, notation and audio
-  engine draw / schedule nothing meanwhile. A song switch therefore waits one
-  round trip for its settings, and no frame shows a default or another song's
-  value.
+`Sonata.Effect` is for APP-only effects (shortcuts, play history, source
+persistence); an effect that must run wherever a song plays is a
+`SonataSession.Effect`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Transport,Section} slots.
+- Description: App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), owns the app state — the open song (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
 - Web:
   - Slots:
-    - `Sonata.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
-    - `Sonata.Display` ← `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
-    - `Sonata.Analyzer` ← `apps.sonata.rich.chord-analyzer`
     - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
     - `Sonata.TransportOverlay` ← `apps.sonata.pedal.lane`, `apps.sonata.progress.loop`
     - `Sonata.TransportEdge` ← `apps.sonata.progress.loop`
     - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
     - `Sonata.Home` ← `apps.sonata.library`
-    - `Sonata.SurfaceProvider` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`
-    - `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`
-    - `Sonata.SongSetting` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.track-mixer`, `apps.sonata.transpose`
-    - `Sonata.Transport` ← `apps.sonata.progress.scrubber`
+    - `Sonata.Effect` ← `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`
     - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
     - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`
     - `Sonata.Section` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
   - Uses:
     - `apps-core.Apps`
-    - `config_v2.useConfig`
+    - `apps/sonata/player.SonataPlayerScope`
     - `layouts/full-pane.FullPane`
     - `primitives/app-shell.AppShellLayout`
-    - `primitives/css/center.Center`
-    - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/detail-sections.DetailSection`
-    - `primitives/latest-ref.useLatestRef`
-    - `primitives/scope/scoped-store.defineScopedStore`
-    - `primitives/scope/scoped-store.ScopedStore`
-    - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`
-    - `primitives/slot-render.defineWrapperSlot`
   - Exports (types):
-    - `CountInState`
-    - `CursorApi`
-    - `CursorStore`
     - `LaneInsets`
-    - `LoopRange`
-    - `RhythmGroove`
-    - `SonataContextValue`
+    - `SonataAppValue`
     - `SonataSection`
-    - `SongSetting`
-    - `SongSettingFailure`
-    - `SongSettingKey`
-    - `TransportClock`
   - Exports (values):
-    - `chordModeSetting`
-    - `cursorApiFor`
-    - `CursorStoreProvider`
-    - `defineSongSetting`
-    - `grooveSetting`
-    - `keyAutoDetectSetting`
     - `LaneInsetsProvider`
     - `Sonata`
-    - `SonataProvider`
     - `SonataSectionItem`
-    - `TEMPO_MATH_FLOOR`
-    - `transposeSetting`
-    - `useCursorApi`
-    - `useCursorBeat`
-    - `useCursorSelector`
-    - `useFailSongSetting`
-    - `useHasChords`
-    - `useHasDerivedChord`
-    - `useHasVoicedChords`
     - `useLaneInsets`
-    - `useMountedSongId`
-    - `useSonata`
-    - `useSongSetting`
-    - `useWriteSongSetting`
+    - `useSonataApp`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `sonataApp`
 - Cross-plugin:
   - Imported by:
-    - `apps/sonata/audio/engine`
-    - `apps/sonata/audio/live-play`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/controls`
     - `apps/sonata/library`
     - `apps/sonata/look`
     - `apps/sonata/notation`
-    - `apps/sonata/pedal/indicator`
     - `apps/sonata/pedal/lane`
     - `apps/sonata/piano-keyboard`
     - `apps/sonata/piano-roll`
     - `apps/sonata/pitch-layout`
     - `apps/sonata/playback-history`
     - `apps/sonata/progress/loop`
-    - `apps/sonata/progress/scrubber`
-    - `apps/sonata/progress/sections`
-    - `apps/sonata/rich/chord-analyzer`
     - `apps/sonata/rich/chord-label`
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/chord-overlay`
@@ -175,17 +88,13 @@ view, which only it reads. A read is `SongSetting<T>` =
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/circle-of-fifths`
     - `apps/sonata/rich/key-chip`
-    - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/key-readout`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/rich/voicing-controls`
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/chord-grid`
-    - `apps/sonata/sources/midi`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`
-    - `apps/sonata/transport-bar`
-    - `apps/sonata/transpose`
     - `apps/sonata/view-options`
 
 <!-- AUTOGENERATED:END -->

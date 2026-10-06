@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import {
   grooveSetting,
+  useLibrarySong,
   useSongSetting,
-  useSonata,
   useWriteSongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   defaultBassPattern,
   defaultChordPattern,
@@ -69,7 +69,8 @@ export type Groove = ResourceResult<GrooveState>;
  * groove was never configured: the default patterns ARE its patterns.
  */
 export function useGroove(): Groove {
-  const { currentSongId } = useSonata();
+  const song = useLibrarySong();
+  const currentSongId = song.kind === "library" ? song.songId : null;
   const store = useSongSetting(grooveSetting);
   const setGroove = useWriteSongSetting(grooveSetting);
   const saveRhythm = useSaveRhythm();

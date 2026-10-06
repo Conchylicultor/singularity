@@ -5,7 +5,7 @@ import {
   type PedalEvent,
   type Projection,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 
 /**
  * Merge the per-track pedal lane into unified [downBeat, upBeat] intervals in
@@ -46,7 +46,7 @@ function mergedDownIntervals(
  * — mirroring the loop band's projection idiom.
  */
 export function PedalLane({ projection }: { projection: Projection }) {
-  const { score } = useSonata();
+  const { score } = useSession();
   const beatToY = projection.beatToY;
   if (!beatToY) return null;
 

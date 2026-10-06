@@ -4,7 +4,7 @@ import {
   type Score,
   type SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import type { LoopRange } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import type { LoopRange } from "@plugins/apps/plugins/sonata/plugins/session/web";
 
 /**
  * Pure A–B-loop helpers shared by the toolbar toggle, the keyboard shortcuts,

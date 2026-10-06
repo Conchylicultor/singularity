@@ -7,13 +7,13 @@
 - Description: Sonata live interactive player: a headless effect that turns hand-played key presses into sustaining note-on/note-off voices, routed through the engine's shared context + master gain and the default instrument.
 - Web:
   - Contributes:
-    - `Sonata.SurfaceProvider` → `LivePlayProvider`
-    - `Sonata.Effect` "live-play" → `LivePlayEngine`
+    - `SonataSession.Provider` → `LivePlayProvider`
+    - `SonataSession.Effect` "live-play" → `LivePlayEngine`
   - Uses:
     - `apps/sonata/audio/engine.useAudioGraph`
     - `apps/sonata/audio/instruments.InstrumentVoices`
     - `apps/sonata/audio/instruments.SonataAudio`
-    - `apps/sonata/shell.Sonata`
+    - `apps/sonata/session.SonataSession`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/scoped-store.defineScopedStore`
   - Exports (types): `LivePlayApi`

@@ -1,10 +1,8 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import {
-  useLaneInsets,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useLaneInsets } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -31,7 +29,7 @@ const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
  * loop is defined-but-disabled) so the same loop reads as the same thing.
  */
 export function LoopRollEdge({ projection }: { projection: Projection }) {
-  const { loop } = useSonata();
+  const { loop } = useSession();
   const { top, bottom } = useLoopEdgeBuckets(projection);
   const { top: topInset } = useLaneInsets();
   if (!loop) return null;

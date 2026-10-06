@@ -24,7 +24,7 @@ with the playhead.
   `score-settings.ts`): a per-song setting of the loaded song, pending until its
   groove is read, and pending again whenever another song is loaded, so one
   song's groove never leaks into the next. This plugin registers it
-  (`Sonata.SongSetting`, with the headless `RhythmObserver`, mounted afresh for
+  (`SonataDocument.SongSetting`, with the headless `RhythmObserver`, mounted afresh for
   each loaded song), which writes that song's settled groove: `null` (block
   chords) when the row is absent or `enabled` is false. Dependency arrow stays
   feature → shell.
@@ -77,24 +77,26 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
 
 ## Plugin reference
 
-- Description: Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves it as a per-song lookup collection.
+- Description: Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Shown only for songs whose chords the song document voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves it as a per-song lookup collection.
 - Web:
   - Contributes:
-    - `Sonata.SongSetting` "rhythm-sync" → `RhythmObserver`
+    - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
     - `Sonata.Section` "Rhythm" → `RhythmControls`
   - Uses:
+    - `apps/sonata/document.grooveSetting`
+    - `apps/sonata/document.SonataDocument`
+    - `apps/sonata/document.useFailSongSetting`
+    - `apps/sonata/document.useHasVoicedChords`
+    - `apps/sonata/document.useLibrarySong`
+    - `apps/sonata/document.useMountedSongId`
+    - `apps/sonata/document.useSongSetting`
+    - `apps/sonata/document.useWriteSongSetting`
     - `apps/sonata/primitives/rhythm-circle.RhythmCircle`
     - `apps/sonata/primitives/rhythm-circle.RhythmCircleHandle`
     - `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`
-    - `apps/sonata/shell.grooveSetting`
+    - `apps/sonata/session.useCursorApi`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorApi`
-    - `apps/sonata/shell.useFailSongSetting`
-    - `apps/sonata/shell.useHasVoicedChords`
-    - `apps/sonata/shell.useMountedSongId`
-    - `apps/sonata/shell.useSonata`
-    - `apps/sonata/shell.useSongSetting`
-    - `apps/sonata/shell.useWriteSongSetting`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLiveRow`
     - `primitives/css/center.Center`

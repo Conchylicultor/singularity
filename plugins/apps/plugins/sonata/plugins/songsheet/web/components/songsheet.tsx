@@ -1,10 +1,11 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useEffect, useMemo, useRef } from "react";
 import {
-  Sonata,
   useCursorSelector,
-  useSonata,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import type {
   LyricAnnotation,
   Score,
@@ -23,7 +24,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { SongsheetLine, type ActiveChord } from "./songsheet-line";
 
-/** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. The
+/** Props the player's `SonataPlayer.Display.Dispatch` passes to the chosen display. The
  *  playback cursor is NOT a prop — it's read from the cursor store via
  *  `useCursorSelector` so a per-frame advance only re-renders on a line/chord
  *  boundary, never every frame. `tempoScale` is unused: the songsheet works
@@ -76,7 +77,10 @@ function groupLines(
 }
 
 function SongsheetInner({ score }: SongsheetProps) {
-  const { seekTo, isPlaying, scorePending, scoreFailure } = useSonata();
+  const { seekTo, isPlaying } = useSession();
+  const { content } = useSongDocument();
+  const scorePending = content.kind === "pending";
+  const scoreFailure = content.kind === "failed" ? content.failure : null;
 
   // Lyric lines, sorted by start = the songsheet's rows. Memoized off the Score
   // so the per-frame cursor selectors below only walk this stable array.

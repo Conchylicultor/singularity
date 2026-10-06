@@ -5,7 +5,6 @@ import {
   CursorStoreProvider,
   cursorApiFor,
   useCursorApi,
-  useCursorBeat,
   useCursorSelector,
   type CursorApi,
 } from "../cursor-store";
@@ -17,7 +16,7 @@ afterEach(cleanup);
  * The cursor store is now PER-SURFACE: state lives inside each
  * `<CursorStoreProvider>`. We assert (1) two providers hold independent cursors,
  * (2) the imperative facade's dedup/seek/meta plumbing, and (3) the reactive
- * hooks (`useCursorBeat`, `useCursorSelector`) re-render only when their slice
+ * hook (`useCursorSelector`) re-renders only when their slice
  * moves.
  */
 describe("cursor-store", () => {
@@ -84,16 +83,10 @@ describe("cursor-store", () => {
     expect(seen).toEqual([false, false, true]); // unsubscribed: no further notifications
   });
 
-  it("useCursorBeat is reactive and useCursorSelector bails out off its slice", () => {
+  it("useCursorSelector bails out off its slice", () => {
     let api: CursorApi | null = null;
-    const beatRenders = vi.fn();
     const selRenders = vi.fn();
 
-    function BeatReader() {
-      beatRenders();
-      useCursorBeat();
-      return null;
-    }
     function SelectorReader() {
       selRenders();
       // Selects whether the cursor has passed beat 5 — stable across small moves.
@@ -108,22 +101,18 @@ describe("cursor-store", () => {
     render(
       <CursorStoreProvider>
         <Grabber />
-        <BeatReader />
         <SelectorReader />
       </CursorStoreProvider>,
     );
 
-    expect(beatRenders).toHaveBeenCalledTimes(1);
     expect(selRenders).toHaveBeenCalledTimes(1);
 
-    // A small advance re-renders the raw beat reader but NOT the selector (still < 5).
+    // A small advance does NOT re-render the selector (still < 5).
     act(() => api!.setBeat(1));
-    expect(beatRenders).toHaveBeenCalledTimes(2);
     expect(selRenders).toHaveBeenCalledTimes(1);
 
     // Crossing the threshold flips the selected value → the selector re-renders.
     act(() => api!.setBeat(6));
-    expect(beatRenders).toHaveBeenCalledTimes(3);
     expect(selRenders).toHaveBeenCalledTimes(2);
   });
 });

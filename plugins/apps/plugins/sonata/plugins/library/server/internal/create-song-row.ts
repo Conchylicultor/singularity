@@ -10,7 +10,7 @@ export interface CreateSongRowInput {
   endBeat: number;
   /**
    * Opaque id of the source creating this song (its `Library.Source` /
-   * `Sonata.Source` id, e.g. `"midi"`). Required — every song has exactly one
+   * `SonataDocument.Source` id, e.g. `"midi"`). Required — every song has exactly one
    * immutable source. The library stores it verbatim without interpreting it, so
    * a new source needs no change here.
    */

@@ -1,7 +1,7 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
-/** Fallback rendered by `Sonata.Display.Dispatch` when no display matches. */
+/** Fallback rendered by `SonataPlayer.Display.Dispatch` when no display matches. */
 export function NoDisplay() {
   return (
     <Center axis="both" className="h-full p-2xl">

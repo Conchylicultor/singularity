@@ -7,9 +7,9 @@ export default {
   description:
     "Keyboard transport for Sonata: Space toggles play/pause, ↑/↓ speed up / slow down tempo, and ←/→ seek the playhead — tap to snap to the previous/next note, hold to scrub.",
   contributions: [
-    // Space / ↑ / ↓ register per-surface (focus-scoped) from inside SonataProvider,
-    // so each Sonata window drives only its own transport. A headless effect
-    // because the registration needs `useSonata()` + the surface id in context.
+    // Space / ↑ / ↓ register per-surface (focus-scoped) from inside the Sonata
+    // app, so each Sonata window drives only its own transport. A headless effect
+    // because the registration needs `useSession()` + the surface id in context.
     Sonata.Effect({ id: "transport-shortcuts", component: TransportShortcuts }),
     // ←/→ seek needs keyup + auto-repeat (tap vs. hold), which the keydown-only
     // shortcut registry can't express — so it runs as a headless effect, itself

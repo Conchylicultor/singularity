@@ -1,8 +1,8 @@
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
-  useSonata,
   useCursorApi,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toggleLoop } from "../loop-actions";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -16,7 +16,7 @@ const repeatIcon = symbol("repeat");
  * (see `toggleLoop`). Disabled until a song is loaded.
  */
 export function LoopToggle() {
-  const { loop, setLoop, seekTo, score } = useSonata();
+  const { loop, setLoop, seekTo, score } = useSession();
   const cursor = useCursorApi();
   const hasScore = scoreEndBeat(score) > 0;
 

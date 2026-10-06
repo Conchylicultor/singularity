@@ -1,11 +1,8 @@
-import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  defineDispatchSlot,
   defineMountSlot,
   defineRenderSlot,
-  defineWrapperSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import {
   defineDetailSections,
@@ -16,14 +13,12 @@ import type {
   Annotation,
   Capability,
   Projection,
-  Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { NoDisplay } from "./components/no-display";
-import type { SongSettingKey } from "./song-setting";
 
 /**
  * A Sonata section is scoped to the OPEN SONG, which every contributor already
- * reads from `useSonata()` — so the pane threads no entity props at all.
+ * reads from the player scope (`useSession()` / `useSongDocument()`) — so the
+ * pane threads no entity props at all.
  */
 type SonataSectionProps = Record<string, never>;
 
@@ -47,7 +42,7 @@ export interface SonataSectionArea {
  * `useAvailable` gate all live in the primitive — see
  * `primitives/detail-sections/CLAUDE.md` before adding one, in particular that a
  * collapsed body is genuinely UNMOUNTED, so work that must outlive the panel
- * belongs in a headless `Sonata.Effect`.
+ * belongs in a headless `Sonata.Effect` (or `SonataSession.Effect`).
  */
 export type SonataSection = DetailSection<SonataSectionProps> &
   SonataSectionArea;
@@ -66,78 +61,27 @@ const sonataSections = defineDetailSections<
 export const SonataSectionItem = sonataSections.SectionItem;
 
 /**
- * The Sonata extension axes. Three axes, four contribution slots, plus the
- * existing free-floating `Section` panels:
+ * The Sonata app's extension axes — what a display hosts and what the app
+ * surface shows around a player:
  *
- *  - Source   (input)      — data registry; shell calls `compile()` on the active one.
- *  - Display  (display)    — single-active selector; a display *is* one component.
- *  - Analyzer (rich data)  — pure `(Score) => Annotation[]`; all run, merged in.
  *  - Overlay  (rich visual)— capability-filtered geometry, rendered via `renderIsolated`.
  *  - TransportOverlay (state visual) — capability-filtered, scroll-synced overlays driven by transport state (loop region).
  *  - TransportEdge (state visual) — capability-filtered, screen-anchored edge-clamped overlays for off-screen transport boundaries (loop A/B edge indicator).
- *  - Toolbar               — action widgets on the right of the top toolbar (play/pause, speed, …).
- *  - Transport             — full-width horizontal strip below the toolbar (progress bar, …).
- *  - Section               — pre-existing free-floating panels (current-chord readout, …).
+ *  - PitchAxis             — decorations in a display's pitch-axis gutter (the keyboard).
+ *  - Hud / ViewOption      — screen-anchored chips over a display, and the per-lens prefs they surface.
+ *  - Home                  — the app landing surface (the song library).
+ *  - Effect                — headless app-scoped effects.
+ *  - Section               — the player's free-floating panels (current-chord readout, …).
  *
- * The audio Instrument axis lives in its own leaf (`audio/instruments`,
- * `SonataAudio.Instrument`) — it is an audio contract consumable without the app
- * shell, not an app-surface extension point.
+ * The layers below the app own their own axes: the song document its inputs
+ * (`SonataDocument.Source` / `.Analyzer` / `.SongSetting`), the playback
+ * session its per-session wrappers and effects (`SonataSession.Provider` /
+ * `.Effect`), the player its lenses and transport strip
+ * (`SonataPlayer.Display` / `.Transport`). The player's header bar is the
+ * player pane's own `Actions` slot (library). The audio Instrument axis lives
+ * in its own leaf (`audio/instruments`, `SonataAudio.Instrument`).
  */
 export const Sonata = {
-  // INPUT — data registry. LoaderComponent is the UI to provide input
-  // (dropzone / text editor); compile turns raw input into a Score (pure).
-  // `raw` is the source's currently-loaded input (persisted in the shell across
-  // source switches) so editor loaders can render *controlled* — switching the
-  // visible source never loses what was typed. `onRaw` feeds new input back.
-  Source: defineSlot<{
-    id: string;
-    label: string;
-    icon?: IconRef;
-    LoaderComponent: ComponentType<{
-      raw?: unknown;
-      onRaw: (raw: unknown) => void;
-    }>;
-    compile: (raw: unknown) => Score;
-  }>({ docLabel: (p) => p.label }),
-
-  // DISPLAY — single-active selector. `Extra` carries the metadata the picker
-  // enumerates (collection-consumer clean — never names a contributor). The
-  // dispatch key is the active display id, carried in the render props so the
-  // shell stays the single owner of `activeDisplayId`. The playback cursor is
-  // NOT a prop — displays read it from the cursor store (`useCursorBeat` /
-  // `useCursorApi().subscribe`) so a per-frame advance never re-renders the
-  // dispatch site.
-  Display: defineDispatchSlot<
-    {
-      score: Score;
-      /** Playback tempo multiplier (1 = authored). Displays scale scroll speed by
-       *  this so slowing down slows the scroll instead of stretching notes. */
-      tempoScale: number;
-      activeDisplayId: string;
-    },
-    string,
-    {
-      id: string;
-      label: string;
-      icon?: IconRef;
-      capabilities: Capability[];
-      /** The lens selected when the user hasn't chosen one (exactly one; falls
-       *  back to the first contribution). Collection-consumer clean — consumers
-       *  pick the default-flagged display, never naming a contributor. */
-      default?: boolean;
-    }
-  >({
-    key: (props) => props.activeDisplayId,
-    fallback: NoDisplay,
-    docLabel: (c) => c.label,
-  }),
-
-  // RICH DATA — pure analyzers; emit only source:"derived".
-  Analyzer: defineSlot<{
-    id: string;
-    analyze: (score: Score) => Annotation[];
-  }>({ docLabel: (p) => p.id }),
-
   // RICH VISUAL — geometry-anchored overlays, capability-filtered. The host
   // renders an overlay only when `requires ⊆ display.capabilities` and the Score
   // has annotations of its `annotationType` (filters on generic fields only).
@@ -157,7 +101,7 @@ export const Sonata = {
   // `Overlay` it anchors to the projection's geometry and scrolls WITH the
   // content; unlike `Overlay` it is NOT annotation-gated — the host renders it
   // whenever `requires ⊆ display.capabilities`, and the component reads its own
-  // state via `useSonata()`. Capability-filtered so it only mounts on displays
+  // state via `useSession()`. Capability-filtered so it only mounts on displays
   // that publish the geometry it needs (e.g. `"time-axis"`).
   TransportOverlay: defineSlot<{
     id: string;
@@ -171,7 +115,7 @@ export const Sonata = {
   // they stay pinned at the lane's top/bottom edge — for indicating where an off-screen
   // transport boundary (e.g. an A–B loop edge above/below the lookahead) sits.
   // Capability-filtered like TransportOverlay; the component reads its own transport
-  // state via useSonata() and the live cursor via useCursorSelector().
+  // state via useSession() and the live cursor via useCursorSelector().
   TransportEdge: defineSlot<{
     id: string;
     requires: Capability[];
@@ -189,49 +133,26 @@ export const Sonata = {
   }>({ docLabel: (p) => p.id }),
 
   // HOME — the app landing surface (song library). Single render slot; the
-  // library plugin contributes its gallery here. Shell shows it when view==="library".
+  // library plugin contributes its gallery here and paints it in its index pane.
   Home: defineRenderSlot<{ component: ComponentType }>({
     docLabel: (p) => p.id,
   }),
 
-  // SURFACE PROVIDER — per-surface React context wrappers folded around the
-  // SonataProvider's children (inside SonataContext, so wrappers may
-  // `useSonata()`). Lets a plugin the shell can't import (a cycle) inject ONE
-  // provider above a Sonata surface's whole subtree — so sibling consumers in
-  // different slot branches (e.g. an audio engine and its volume control) share
-  // one per-surface context. Contributions nest outside-in in contribution
-  // order; the slot paints nothing itself.
-  SurfaceProvider: defineWrapperSlot(),
-
-  // EFFECT — headless, always-mounted Sonata-scoped side effects. Components
-  // contributed here render nothing; they observe shared context (current song,
-  // playback state) and run effects (e.g. recording a play, scrobbling). Mounted
-  // once inside SonataProvider so contributors can `useSonata()`.
+  // EFFECT — headless, always-mounted APP-scoped side effects. Components
+  // contributed here render nothing; they observe the open song and the
+  // playback state and run effects (keyboard shortcuts, recording a play,
+  // persisting a source's edits). Mounted once inside the app provider and the
+  // player scope, so contributors may `useSonataApp()` and `useSession()`. An
+  // effect that must run wherever a song plays (audio) is a
+  // `SonataSession.Effect` instead.
   Effect: defineMountSlot({
-    docLabel: (p) => p.id,
-  }),
-
-  // SONG SETTING — the registry of per-song settings: each contribution pairs a
-  // setting (`setting`, a `defineSongSetting` key) with the headless observer
-  // (`component`) that settles it for the loaded song. The shell mounts every
-  // observer while a song is loaded, afresh for each song it loads (keyed on the
-  // load), so an observer reads the non-null `useMountedSongId()` and starts from
-  // that song's own state. The score waits on exactly the settings registered
-  // here — read generically, so the shell names no feature, and a composition
-  // without one of them never waits on it. One contribution per setting.
-  SongSetting: defineMountSlot<{ setting: SongSettingKey<unknown> }>({
-    docLabel: (p) => p.id,
-  }),
-
-  // TRANSPORT — full-width horizontal strip below the toolbar (progress bar, …).
-  Transport: defineRenderSlot<{ component: ComponentType }>({
     docLabel: (p) => p.id,
   }),
 
   // HUD — screen-anchored heads-up overlays painted over a display, pinned to its
   // viewport corner (current-key chip, …). Unlike `Overlay`, which anchors to the
   // projection's geometry and scrolls with the content, a HUD stays fixed and
-  // reads shared cursor/Score context via `useSonata()`. Display-agnostic: any
+  // reads the session's cursor / score via `useSession()`. Display-agnostic: any
   // display hosts it with `.Render`; capability-free since it needs no projection.
   Hud: defineRenderSlot<{ component: ComponentType }>({
     docLabel: (p) => p.id,
@@ -253,9 +174,9 @@ export const Sonata = {
   // that needs one.
   //
   // `displays` scopes an option to its owning lens(es): the View popover shows
-  // ONLY the active `Sonata.Display`'s options plus globals, so a lens never
+  // ONLY the active `SonataPlayer.Display`'s options plus globals, so a lens never
   // surfaces controls that do nothing for it (e.g. the look inside Notation).
-  // It is a list of display ids (matching a `Sonata.Display` `id`) or the
+  // It is a list of display ids (matching a `SonataPlayer.Display` `id`) or the
   // literal `"global"` for options that apply to every lens. REQUIRED — forcing
   // each option to declare its scope makes "leaks into every lens" impossible by
   // construction rather than a filter a new contributor can forget.

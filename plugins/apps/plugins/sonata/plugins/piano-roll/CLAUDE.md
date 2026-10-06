@@ -8,18 +8,21 @@
 - Web:
   - Slots: `PianoRollFx` ← `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`
   - Contributes:
-    - `Sonata.Display` "Piano Roll" → `LazyBoundary`
+    - `SonataPlayer.Display` "Piano Roll" → `LazyBoundary`
     - `sonataPlayerPane.Actions` "spread" → `SpreadWheel`
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "piano-roll"
   - Uses:
+    - `apps/sonata/document.useSongDocument`
     - `apps/sonata/library.sonataPlayerPane`
+    - `apps/sonata/player.SonataPlayer`
+    - `apps/sonata/player.usePlayerView`
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
     - `apps/sonata/primitives/jog-wheel.JogWheel`
+    - `apps/sonata/session.useCursorApi`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.LaneInsetsProvider`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorApi`
-    - `apps/sonata/shell.useSonata`
     - `apps/sonata/track-mixer.accidentalColor`
     - `apps/sonata/track-mixer.useHiddenTrackIds`
     - `apps/sonata/track-mixer.useTrackColorMap`

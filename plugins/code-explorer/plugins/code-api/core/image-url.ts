@@ -4,10 +4,9 @@ import { getImageContent } from "./endpoints";
 /**
  * The URL an `<img>` reads one of a worktree's image files from.
  *
- * A URL rather than a typed fetch, because the endpoint answers with the raw
- * bytes: the consumer is the browser's own image loader, which is handed an
- * address and never a parsed body — which is why `getImageContent` declares no
- * response and is served outside `implement()`.
+ * A URL rather than a typed fetch, because the consumer is the browser's own
+ * image loader, which is handed an address and never a parsed body. (A caller
+ * that wants the bytes themselves reads `getImageContent` with `fetchEndpoint`.)
  *
  * Built from that endpoint's own route rather than from a second spelling of
  * `/api/code/:worktree/image`, so the four surfaces that show a worktree image

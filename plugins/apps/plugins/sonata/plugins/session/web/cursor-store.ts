@@ -9,25 +9,23 @@ import {
  * PER-SURFACE scoped store rather than a module singleton.
  *
  * The transport advances the cursor ~60×/sec from a `requestAnimationFrame`
- * loop. Holding it in `SonataContextValue` would mint a new context object every
- * frame and re-render EVERY `useSonata()` consumer — including ones that only
+ * loop. Holding it in the session context would mint a new context object every
+ * frame and re-render EVERY `useSession()` consumer — including ones that only
  * forward the cursor to an imperative handle (the Pixi piano-roll scene, the
  * audio scheduler) or whose output changes only at region boundaries (the
  * key/chord HUD). Keeping it in an external store lets each consumer opt into
  * exactly the read path it needs and leaves the context value identity-stable
  * during playback (so non-readers stop re-rendering entirely).
  *
- * Scoping it to the `<CursorStoreProvider>` (mounted in `SonataLayout`, wrapping
- * `SonataProvider`) gives every Sonata surface its own isolated cursor — desktop
+ * Scoping it to the `<CursorStoreProvider>` (mounted by the player scope,
+ * wrapping `PlaybackSession`) gives every Sonata surface its own isolated cursor — desktop
  * multi-window / keep-alive tabs mount several surfaces at once, and a module
  * singleton would tear (playback bleeding between windows).
  *
- * Three read paths, mirroring the scoped-store primitive this builds on:
+ * Two read paths, mirroring the scoped-store primitive this builds on:
  *  - {@link useCursorApi} — imperative facade for in-subtree readers (rAF loops,
  *    synchronous reads). Drives a scene handle or DOM transform with ZERO React
  *    renders.
- *  - {@link useCursorBeat} — raw reactive; re-renders the caller every frame
- *    (for consumers whose output genuinely changes per frame).
  *  - {@link useCursorSelector} — derived-with-bailout; re-renders only when the
  *    selected value changes (for frame-invariant HUD/readout consumers).
  */
@@ -80,11 +78,6 @@ export function cursorApiFor(store: CursorStore): CursorApi {
 export function useCursorApi(): CursorApi {
   const store = cursorStore.useStoreApi();
   return useMemo(() => cursorApiFor(store), [store]);
-}
-
-/** Reactive raw read — re-renders the caller on every cursor change. */
-export function useCursorBeat(): number {
-  return cursorStore.useSelector((s) => s.beat, []);
 }
 
 /**

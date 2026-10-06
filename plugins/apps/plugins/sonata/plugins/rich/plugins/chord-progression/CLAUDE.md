@@ -44,11 +44,11 @@ matched to chips by reference equality against the memoized chord array.
 - Web:
   - Contributes: `Sonata.Section` "Progression" → `ChordProgression`
   - Uses:
+    - `apps/sonata/document.useHasChords`
     - `apps/sonata/rich/chord-label.useChordDisplayMode`
+    - `apps/sonata/session.useCursorSelector`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useCursorSelector`
-    - `apps/sonata/shell.useHasChords`
-    - `apps/sonata/shell.useSonata`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`

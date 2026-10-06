@@ -30,10 +30,14 @@ import {
   SONATA_LOOK_STYLES,
 } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import {
+  useCursorApi,
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { usePlayerView } from "@plugins/apps/plugins/sonata/plugins/player/web";
+import {
   LaneInsetsProvider,
   Sonata,
-  useCursorApi,
-  useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
 import {
@@ -72,7 +76,7 @@ import { TransportEdgeHost } from "./transport-edge-host";
 import { FxToggle } from "./fx-toggle";
 import { PitchAxisHost } from "./pitch-axis-host";
 
-/** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. The
+/** Props the player's `SonataPlayer.Display.Dispatch` passes to the chosen display. The
  *  playback cursor is NOT a prop — it's read from the cursor store imperatively
  *  (see `applyCursor`) so a per-frame advance never re-renders this display. */
 export interface PianoRollProps {
@@ -167,7 +171,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // Synthesia-style note-name labels (opt-in). Spelling follows the score's key
   // signature so accidentals read in-key (Eb vs D#), matching the keyboard below.
   // `spread` is the persisted GLOBAL vertical-zoom default; the live value is
-  // ephemeral transport state (`useSonata().spread`) the toolbar wheel + pinch/
+  // ephemeral player view state (`usePlayerView().spread`) the toolbar wheel + pinch/
   // scroll gestures drive.
   const { showNoteNames, spread: persistedSpread } = useConfig(pianoRollConfig);
   const setConfig = useSetConfig(pianoRollConfig);
@@ -179,18 +183,12 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // is not a theme; it only picks WHICH fixed palette the surfaces are pinned to.
   const look = asSonataLook(useConfig(sonataLookConfig).look);
   const lookStyle = SONATA_LOOK_STYLES[look];
-  const {
-    spread,
-    setSpread,
-    setSpreadFloor,
-    seekTo,
-    timelineBeats,
-    isPlaying,
-    play,
-    stop,
-    scorePending,
-    scoreFailure,
-  } = useSonata();
+  const { spread, setSpread, setSpreadFloor } = usePlayerView();
+  const { seekTo, timelineBeats, isPlaying, play, stop } = useSession();
+  const { content: songDocument } = useSongDocument();
+  const scorePending = songDocument.kind === "pending";
+  const scoreFailure =
+    songDocument.kind === "failed" ? songDocument.failure : null;
 
   // Seed the live zoom from the persisted global on load (and reflect a
   // Settings-pane edit live). No loop: only an explicit commit (wheel settle /
@@ -250,7 +248,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // physics (friction, momentum) lives in the reusable inertial-drag primitive;
   // this site only maps pixels↔seconds and bridges the transport (pause on grab,
   // restore the pre-drag play state once motion ends). (`seekTo`/`isPlaying`/
-  // `play`/`stop` come from the single `useSonata()` destructure above.)
+  // `play`/`stop` come from the `useSession()` destructure above.)
   const hasNotes = score.notes.length > 0;
   const pxPerSecond = PX_PER_SECOND * tempoScale * spread;
   // The lane's own seconds-space view of the transport's seekable span. Both ends
@@ -614,7 +612,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
           {/* HUD: screen-anchored heads-up chips (current key, …) pinned to the
               lane's top-right corner — above the scroll layer and now-line, clear
               of the chord overlay that hugs the left edge. Contributors read the
-              shared cursor via useSonata(); collection-consumer clean (renders the
+              session cursor via useSession(); collection-consumer clean (renders the
               generic Sonata.Hud slot, never naming a contributor). The ref feeds
               `topInset` so an edge chip tucks just below this cluster. */}
           <Pin

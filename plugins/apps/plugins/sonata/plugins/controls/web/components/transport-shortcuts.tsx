@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { TEMPO_STEP } from "../shortcuts";
 
 /**
  * Headless transport-shortcut registrar (a `Sonata.Effect`, so it mounts once
- * per Sonata surface inside `SonataProvider`, with `useSonata()` in scope).
+ * per Sonata surface inside its player scope, with `useSession()` in scope).
  *
  * It registers Space / ↑ / ↓ as SURFACE-SCOPED shortcuts via
  * `useSurfaceShortcuts` — each handler closes over THIS surface's own transport
@@ -14,13 +15,14 @@ import { TEMPO_STEP } from "../shortcuts";
  * toggles only that one.
  *
  * The old module-level transport bus gave an implicit "player on screen" gate
- * (it was empty on the library). `SonataProvider` wraps BOTH library and player,
+ * (it was empty on the library). The player scope wraps BOTH library and player,
  * so that gate is gone — we restore it explicitly by registering NO shortcuts
  * (an empty array) until a song is open (`currentSongId != null`), leaving
  * Space/arrows to the rest of the app on the library.
  */
 export function TransportShortcuts() {
-  const { togglePlay, nudgeTempo, currentSongId } = useSonata();
+  const { togglePlay, nudgeTempo } = useSession();
+  const { currentSongId } = useSonataApp();
   const descriptors = useMemo(
     () =>
       currentSongId == null

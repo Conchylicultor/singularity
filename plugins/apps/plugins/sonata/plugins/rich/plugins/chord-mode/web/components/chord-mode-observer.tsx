@@ -4,12 +4,12 @@ import {
   useFailSongSetting,
   useMountedSongId,
   useWriteSongSetting,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { chordModes } from "../../shared/resources";
 
 /**
- * Headless observer of the `chordModeSetting` (`Sonata.SongSetting`, mounted
+ * Headless observer of the `chordModeSetting` (`SonataDocument.SongSetting`, mounted
  * afresh for each loaded song): syncs that song's persisted chord mode into the
  * loaded song, whose score pipeline reads it to decide whether to run the
  * second, all-chords voicing pass.

@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
+import { SonataPlayer } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { sonataPlayerPane } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { SpreadWheel } from "./components/spread-wheel";
@@ -28,9 +29,9 @@ export default {
   description:
     "Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.",
   contributions: [
-    // `match` is the dispatch key the shell selects on (`key: activeDisplayId`).
+    // `match` is the dispatch key the player selects on (`key: activeDisplayId`).
     // It equals `id` here so the picker's id and the dispatch key stay in lockstep.
-    Sonata.Display({
+    SonataPlayer.Display({
       match: "piano-roll",
       id: "piano-roll",
       label: "Piano Roll",
