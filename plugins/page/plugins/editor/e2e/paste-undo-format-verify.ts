@@ -50,19 +50,17 @@ await withBrowser(async (h) => {
   ]);
 
   await page.keyboard.press("ControlOrMeta+z");
-  r.eq(
-    "undo empties the block",
-    await settledRuns(page, pageId, blockId),
-    [],
-  );
+  r.eq("undo empties the block", await settledRuns(page, pageId, blockId), []);
 
   // Past Lexical's 200 ms collapsed-format carry window, so the assertion is
   // about the caret's durable format, not a timing artefact.
   await page.waitForTimeout(500);
   await page.keyboard.type("x");
-  r.eq("text typed after undo is NOT bold", await settledRuns(page, pageId, blockId), [
-    { text: "x", marks: [] },
-  ]);
+  r.eq(
+    "text typed after undo is NOT bold",
+    await settledRuns(page, pageId, blockId),
+    [{ text: "x", marks: [] }],
+  );
 
   await r.finish();
 });
