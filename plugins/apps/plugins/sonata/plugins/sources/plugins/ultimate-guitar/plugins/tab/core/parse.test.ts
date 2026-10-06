@@ -20,7 +20,8 @@ function thrown(fn: () => unknown): unknown {
 describe("parseUgContent — chords above lyrics", () => {
   it("aligns each chord to the column it sits over in the lyric below", () => {
     // "When I find my[s]elf…" — G sits at column 14 ('s' of "myself").
-    const content = "[Verse]\n[ch]C[/ch]              [ch]G[/ch]\nWhen I find myself in times of trouble";
+    const content =
+      "[Verse]\n[ch]C[/ch]              [ch]G[/ch]\nWhen I find myself in times of trouble";
     const sections = parseUgContent(content);
 
     expect(sections).toHaveLength(1);
@@ -218,7 +219,8 @@ describe("parseUgTab", () => {
     capo: 2,
     tuning: "E A D G B E",
     content: "[Verse]\n[ch]C[/ch]\nWhen I find",
-    urlWeb: "https://tabs.ultimate-guitar.com/tab/the-beatles/let-it-be-3250376",
+    urlWeb:
+      "https://tabs.ultimate-guitar.com/tab/the-beatles/let-it-be-3250376",
   };
 
   it("parses content into sections and carries key/capo through from metadata", () => {

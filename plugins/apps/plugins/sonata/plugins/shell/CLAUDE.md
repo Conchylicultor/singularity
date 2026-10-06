@@ -41,10 +41,10 @@ persistence); an effect that must run wherever a song plays is a
     - `Sonata.TransportEdge` ← `apps.sonata.progress.loop`
     - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
     - `Sonata.Home` ← `apps.sonata.library`
-    - `Sonata.Effect` ← `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`
+    - `Sonata.Effect` ← `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.sources.ultimate-guitar.alignment`
     - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
     - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`
-    - `Sonata.Section` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
+    - `Sonata.Section` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.sources.ultimate-guitar.alignment`, `apps.sonata.track-mixer`
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
   - Uses:
     - `apps-core.Apps`
@@ -94,6 +94,7 @@ persistence); an effect that must run wherever a song plays is a
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/track-mixer`
     - `apps/sonata/view-options`
 

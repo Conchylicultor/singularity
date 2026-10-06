@@ -33,7 +33,7 @@
   - Imported by:
     - `infra/deps`
     - `infra/deps/mise`
-    - `infra/deps/python`
+    - `infra/deps/python/uv-updater`
     - `toolchain`
 - Core:
   - Exports (types):

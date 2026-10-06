@@ -4,7 +4,7 @@ import {
   updateSongMeta,
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { UgFetchError } from "../../core";
-import { UG_SOURCE_ID } from "../../shared/constants";
+import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
   fetchUgTab,
   searchUgTabs,
@@ -14,6 +14,7 @@ import {
 } from "../../shared/endpoints";
 import { fetchUgTabContent, searchUgTabContent } from "./ug-client";
 import { songUltimateGuitar } from "./tables";
+import { ugTabSaved } from "./tables-tab-saved";
 
 /** HTTP status for each classified UG fetch failure. */
 function statusForKind(kind: UgFetchError["kind"]): number {
@@ -81,6 +82,7 @@ export const handleCreateUltimateGuitarSong = implement(
       source: UG_SOURCE_ID,
     });
     await songUltimateGuitar.upsert(id, tab);
+    await ugTabSaved.emit({ songId: id });
     return { id, title: tab.songName };
   },
 );
@@ -108,13 +110,18 @@ export const handleGetSongUltimateGuitar = implement(
 /**
  * Persist an edit: upsert the extension row (full UgTab), then sync the parent
  * song's generic metadata (title ← songName, composer ← artistName, recomputed
- * duration/endBeat) via the library helper.
+ * duration/endBeat) via the library helper. Announces `ugTabSaved` only when the
+ * sheet's `content` differs from the stored one.
  */
 export const handleUpdateUltimateGuitarSong = implement(
   updateUltimateGuitarSong,
   async ({ params, body }) => {
     const { durationSec, endBeat, ...tab } = body;
+    const before = await songUltimateGuitar.get(params.id);
     await songUltimateGuitar.upsert(params.id, tab);
+    if (before?.content !== tab.content) {
+      await ugTabSaved.emit({ songId: params.id });
+    }
     await updateSongMeta({
       id: params.id,
       title: tab.songName,

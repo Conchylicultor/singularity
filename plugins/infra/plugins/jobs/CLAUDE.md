@@ -680,6 +680,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `apps/prototypes/checkpoints`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/midi/folders`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `build`
     - `conversations`
     - `conversations/conversation-category`
@@ -708,7 +709,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `improve`
     - `infra/attachments`
     - `infra/audio-analysis`
-    - `infra/deps`
+    - `infra/deps/sweep`
     - `infra/deps/updates`
     - `infra/events`
     - `infra/events-test`

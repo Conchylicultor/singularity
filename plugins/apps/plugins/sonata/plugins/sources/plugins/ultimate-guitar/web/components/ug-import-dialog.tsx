@@ -179,7 +179,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
           {},
           { body: { url: target } },
         );
-        const score = compile(tab);
+        const score = compile({ tab, alignment: null });
         const endBeat = scoreEndBeat(score);
         const song = await fetchEndpoint(
           createUltimateGuitarSong,

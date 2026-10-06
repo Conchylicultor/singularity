@@ -48,11 +48,11 @@ const ready = await ensureDepViaCli(audioPython, { stdio: "inherit" }); // `./si
   `./singularity start` knows the set without booting a backend.
 - **The engine is the `deps/` barrel** (`@plugins/infra/plugins/deps/deps`):
   `defineDep`, `ensureDep`, `readyNow`, `depState`, `removeDep`,
-  `declaredDeps` / `declaredDep`, `ensureDepViaCli`, `sealDep` and `holdDep`
-  (below). The `server/` barrel holds only server work: `requestDep` and the
+  `declaredDeps` / `declaredDep`, `ensureDepViaCli`, `sealDep`, `holdDep` and
+  `sweepUnusedDeps` (below). The `server/` barrel holds only server work: `requestDep` and the
   `deps.install` job (plus `onDepInstallSettled`, called when a run of it
   ends, so a request path that answered "not yet" resumes by push), the
-  `deps.sweep` job, the `deps.states` live value and the endpoints. An installer kind exports from its
+  `deps.states` live value and the endpoints. An installer kind exports from its
   own `deps/` barrel too (`plugins/python/deps`).
 
 - **`ensureDep` demands an `ExecContext`** (`supervised-job/core`). Only a
@@ -107,7 +107,8 @@ held), `failed.json`, `last-used`, `holds/`. The lock is `locks/deps/<id>-<ident
   ask for theirs). Queuing there would hold the op behind the whole background
   lane, and inside a process already holding the host's slots it could wait
   for ever. The reason is required, like `updates.none`.
-- **Sweep.** Daily `deps.sweep` (main-only by its schedule) removes an identity
+- **Sweep.** Daily `deps.sweep` (main-only by its schedule; the `sweep`
+  sub-plugin, so the engine imports no `infra/worktree`) removes an identity
   that is current for no checkout `git worktree list` knows AND unused for 14
   days, never one whose lock is held, and never one that is **held**.
 - **Holds.** `holdDep(ready, holder)` writes `<identity>/holds/<holder>`: a
@@ -257,7 +258,7 @@ torch.
 
 ## Plugin reference
 
-- Description: Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request, the pushed deps.states live value says absent / installing / ready / failed for every declared dependency, the install/remove endpoints back Settings → Dependencies, and a daily deps.sweep removes identities no checkout declares that sat unused for 14 days.
+- Description: Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request, the pushed deps.states live value says absent / installing / ready / failed for every declared dependency, the install/remove endpoints back Settings → Dependencies. The daily deps.sweep is its sweep sub-plugin.
 - Web:
   - Slots:
     - `item-actions` ← `infra.deps`
@@ -290,18 +291,14 @@ torch.
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/file-watcher.defineFileWatcher`
-    - `infra/jobs.defineJob`
     - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `infra/worktree.listWorktreePaths`
     - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
-    - `primitives/log-channels.Log`
   - Exports (values):
     - `onDepInstallSettled`
     - `requestDep`
   - Register:
     - `defineSupervisedJob('deps.install')`
-    - `defineJob('deps.sweep')`
     - `defineFileWatcher('deps.cache')`
   - Resources: `deps.states` (push)
   - Routes:
@@ -351,6 +348,7 @@ torch.
     - `ReadyNow`
     - `RemoveOutcome`
     - `SealOutcome`
+    - `SweepReport`
     - `TargetedSource`
   - Exports (values):
     - `declaredDep`
@@ -365,6 +363,7 @@ torch.
     - `removeDep`
     - `sealDep`
     - `SEALED_MANIFEST`
+    - `sweepUnusedDeps`
     - `UnknownDepError`
 - Test helpers:
   - Deps: `@plugins/infra/plugins/deps/deps/testing`
@@ -374,7 +373,8 @@ torch.
   - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus derive.version — fetched with curl into env/<name>.part (progress in the install log), sha256-checked and renamed, then optionally post-processed in place by derive.run; downloadedFile(ready, name) is the path of one of them.
   - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the scheduled deps.detect-outdated job includes it in the batched upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
   - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
-  - **`python`** — The python installer kind of infra/deps: pythonEnv({ project }) (its deps barrel) declares a dependency on one uv project (a plugin's `python/` folder) — identity = hash of pyproject.toml + uv.lock + .python-version + the uv version, installed with `uv sync --frozen` into its own env with a uv-downloaded CPython (never the system Python) — and runPython(ready, { module, input, output }) runs one of its modules with JSON in and one JSON document out. Contributes the `uv` updater, which moves every python/ project's uv.lock and its exact .python-version pin (the CPython release) under a 3-day release cooldown.
+  - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current.
+  - **`sweep`** — The daily deps.sweep job: removes installed optional-dependency identities that no checkout of this repo declares and that sat unused for 14 days (sweepUnusedDeps over the git worktree list).
   - **`updates`** — Registers the dependency-upgrade schedule (the deps.detect-outdated cron, weekly by default) for Settings → Config. The updater registry (UpdaterDeclare) and the scheduled deps.detect-outdated job (weekly by default, a cron in config): when any updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and pushes on an `upgraded` verdict.
 
 <!-- AUTOGENERATED:END -->

@@ -959,6 +959,14 @@
       "name": "@singularity/plugin-apps-sonata-sources-ultimate-guitar",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment": {
+      "name": "@singularity/plugin-apps-sonata-sources-ultimate-guitar-alignment",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab": {
+      "name": "@singularity/plugin-apps-sonata-sources-ultimate-guitar-tab",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/theory": {
       "name": "@singularity/plugin-apps-sonata-theory",
       "version": "0.0.1",
@@ -3294,6 +3302,14 @@
     },
     "plugins/infra/plugins/deps/plugins/python": {
       "name": "@singularity/plugin-infra-deps-python",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/python/plugins/uv-updater": {
+      "name": "@singularity/plugin-infra-deps-python-uv-updater",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/sweep": {
+      "name": "@singularity/plugin-infra-deps-sweep",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/deps/plugins/updates": {
@@ -6629,6 +6645,10 @@
 
     "@singularity/plugin-apps-sonata-sources-ultimate-guitar": ["@singularity/plugin-apps-sonata-sources-ultimate-guitar@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar"],
 
+    "@singularity/plugin-apps-sonata-sources-ultimate-guitar-alignment": ["@singularity/plugin-apps-sonata-sources-ultimate-guitar-alignment@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment"],
+
+    "@singularity/plugin-apps-sonata-sources-ultimate-guitar-tab": ["@singularity/plugin-apps-sonata-sources-ultimate-guitar-tab@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab"],
+
     "@singularity/plugin-apps-sonata-theory": ["@singularity/plugin-apps-sonata-theory@workspace:plugins/apps/plugins/sonata/plugins/theory"],
 
     "@singularity/plugin-apps-sonata-track-mixer": ["@singularity/plugin-apps-sonata-track-mixer@workspace:plugins/apps/plugins/sonata/plugins/track-mixer"],
@@ -7760,6 +7780,10 @@
     "@singularity/plugin-infra-deps-playwright-browser": ["@singularity/plugin-infra-deps-playwright-browser@workspace:plugins/infra/plugins/deps/plugins/playwright-browser"],
 
     "@singularity/plugin-infra-deps-python": ["@singularity/plugin-infra-deps-python@workspace:plugins/infra/plugins/deps/plugins/python"],
+
+    "@singularity/plugin-infra-deps-python-uv-updater": ["@singularity/plugin-infra-deps-python-uv-updater@workspace:plugins/infra/plugins/deps/plugins/python/plugins/uv-updater"],
+
+    "@singularity/plugin-infra-deps-sweep": ["@singularity/plugin-infra-deps-sweep@workspace:plugins/infra/plugins/deps/plugins/sweep"],
 
     "@singularity/plugin-infra-deps-updates": ["@singularity/plugin-infra-deps-updates@workspace:plugins/infra/plugins/deps/plugins/updates"],
 

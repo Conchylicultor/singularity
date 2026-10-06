@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { UgTabSchema, UgSearchResultSchema } from "../core";
+import { UgTabSchema } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
+import { UgSearchResultSchema } from "../core";
 
 /**
  * Fetch the raw Ultimate Guitar tab for a pasted UG tab URL. The handler

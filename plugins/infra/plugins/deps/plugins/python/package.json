@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-infra-deps-python",
   "version": "0.0.1",
   "private": true,
-  "description": "The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs, and the uv updater that keeps every python/ project's uv.lock and exact .python-version (CPython) current under a 3-day cooldown."
+  "description": "The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current."
 }

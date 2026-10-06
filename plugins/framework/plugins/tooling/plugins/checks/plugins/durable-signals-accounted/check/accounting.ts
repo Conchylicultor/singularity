@@ -132,6 +132,10 @@ export const ACCOUNTING: Record<string, SinkAccounting> = {
     consumer: "internal",
     note: "Detached audio-analysis.beat-features child transcript (infra/audio-analysis): one video's audio download, dependency install and extractor output. Failures surface as the video's `failed` beat-features state (its failed.json, read by GET /api/audio-analysis/beat-features/:videoId) and the job dead-letter.",
   },
+  "sonata-ug-alignment": {
+    consumer: "internal",
+    note: "Detached sonata.ug-alignment.align child transcript (apps/sonata/sources/ultimate-guitar/alignment): one song's beat-features fetch and the aligner's result (transpose, score). Failures surface as the song's alignment row `failed` (served on the sonata-ug-alignment live collection, shown in the player's Recording section) and the job dead-letter.",
+  },
   "chord-video-check": {
     consumer: "internal",
     note: "On-demand oEmbed checks that settled nothing (apps/chord/video-availability): no answer (timeout, network) or a code that says nothing about the video. Forensic only — nothing durable reads it. By design such a check fails open: the video stays `unknown`, the loop is still offered, and the next query or the player's own report settles it, so a stuck YouTube shows as rows that never leave `unknown` in chord_video_status_v, not as a report.",

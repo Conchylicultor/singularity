@@ -2,11 +2,7 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { listWorktreePaths } from "@plugins/infra/plugins/worktree/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
-import { declaredDeps } from "../../deps";
-// The engine's own files, by relative path (inside one plugin): the sweep is
-// this job's alone, so it is not part of the `deps` barrel's API.
-import { defaultStore } from "../../deps/internal/store";
-import { SWEEP_IDLE_MS, sweepDeps } from "../../deps/internal/sweep";
+import { sweepUnusedDeps } from "@plugins/infra/plugins/deps/deps";
 
 const log = Log.channel("deps");
 
@@ -27,12 +23,9 @@ export const depsSweepJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "30 5 * * *" }, // daily at 05:30 UTC
   async run() {
-    const report = await sweepDeps({
-      store: defaultStore(),
-      deps: await declaredDeps(),
+    const report = await sweepUnusedDeps({
       checkouts: await listWorktreePaths(),
       now: new Date(),
-      idleMs: SWEEP_IDLE_MS,
     });
     log.publish(
       `deps sweep: removed ${report.removed.length} (${report.removed.join(", ") || "none"}), kept ${report.kept.length}` +

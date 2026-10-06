@@ -1,14 +1,32 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import type { UgTab } from "../core";
+import {
+  appliedAlignment,
+  getUgAlignment,
+  type UgSourceRaw,
+} from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
 import { getSongUltimateGuitar } from "../shared/endpoints";
 
 /**
- * Hydrate a song's UG source: fetch the persisted `UgTab` and hand it back for
- * `useLoadDocument` (keyed under `"ultimate-guitar"`). Returns `undefined` for a song
- * that carries no UG tab, so it's skipped in the library's generic collection —
- * and the UG editor section stays hidden for such songs.
+ * Hydrate a song's UG source: fetch the persisted `UgTab` and its alignment
+ * together and hand them back for `useLoadDocument` (keyed under `"ultimate-guitar"`),
+ * so an already-aligned song opens aligned — no recompile-and-reset when the
+ * alignment's live row arrives a moment later. The record goes in by the same
+ * rule the alignment child's sync effect applies (`appliedAlignment`: made for
+ * the row's video, applicable to this sheet — never a weak match).
+ *
+ * Returns `undefined` for a song that carries no UG tab, so it's skipped in the
+ * library's generic collection — and the UG editor section stays hidden for it.
  */
-export async function hydrate(songId: string): Promise<UgTab | undefined> {
-  const tab = await fetchEndpoint(getSongUltimateGuitar, { id: songId });
-  return tab ?? undefined;
+export async function hydrate(
+  songId: string,
+): Promise<UgSourceRaw | undefined> {
+  const [tab, alignment] = await Promise.all([
+    fetchEndpoint(getSongUltimateGuitar, { id: songId }),
+    fetchEndpoint(getUgAlignment, { id: songId }),
+  ]);
+  if (tab === null) return undefined;
+  return {
+    tab,
+    alignment: appliedAlignment(alignment, tab.content),
+  };
 }

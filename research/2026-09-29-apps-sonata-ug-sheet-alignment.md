@@ -144,6 +144,39 @@ Per song:
 - a confidence per bar and an overall score (the score is what C compares
   candidates with).
 
+*Contract 2 as built* (`AlignmentRecordSchema` in
+`sonata/sources/ultimate-guitar/plugins/alignment` core, `ALIGNER_VERSION = 1`;
+produced by `alignChords(parsed, features, { capo, sheetHash, settingsKey })`,
+stored per song in `sonata_songs_ext_ug_alignment` with its status, served as
+the `sonata-ug-alignment` live collection; details and calibration in
+[`2026-10-01-apps-sonata-ug-alignment-aligner.md`](2026-10-01-apps-sonata-ug-alignment-aligner.md)):
+
+```ts
+AlignmentRecord = {
+  alignerVersion: number;            // compile() applies only the current version
+  videoId: string;
+  analysisVersion: number; settingsKey: string;   // which beat features it used
+  sheetHash: string;                 // FNV-1a of tab.content: a record applies only to that exact sheet
+  durationSec: number;
+  beats: { t: number; downbeat: boolean }[];      // the grid used
+  transpose: number;                 // 0–11, recording = sheet + transpose (a capo shows here)
+  segments: (                        // performance order, contiguous over beat indices [0, beats.length)
+    | { kind: "chord"; section; line; chord; occurrence; startBeat; endBeat }
+    | { kind: "gap"; startBeat; endBeat }        // a passage the sheet omits
+  )[];
+  barConfidence: number[];           // per bar, 0–1
+  score: number;                     // 0–1 = fit × coverage
+}
+```
+
+`score` is `fit × coverage`: `fit` is the share of the achievable chord fit
+(a free decode where any chord may follow any other) that the sheet's sequence
+explains over an all-filler baseline. `coverage` is the fraction of the sheet's
+chords the path plays. Below `WEAK_MATCH_THRESHOLD = 0.5` a record is stored but
+never applied ("needs a better video"). On the reference songs the right
+recordings score 0.70–0.91 and the wrong ones at most 0.34. The aligned `Score`
+is at sounding pitch, and Score beat 0 is t = 0 s of the video.
+
 ## Tasks
 
 Three sessions, run in order A → B → C. C's player half depends on nothing,

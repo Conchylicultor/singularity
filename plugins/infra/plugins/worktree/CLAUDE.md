@@ -126,7 +126,7 @@ pid liveness.
     - `debug/profiling/op-log`
     - `debug/profiling/op-log/op-store`
     - `debug/worktree-cleanup`
-    - `infra/deps`
+    - `infra/deps/sweep`
     - `infra/git/git-watcher`
     - `infra/launcher`
     - `infra/worktree/reclaim`

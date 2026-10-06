@@ -220,6 +220,7 @@ Never hand-edit the generated SQL to interleave the DML: the push-time hand-edit
     - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/midi`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/transpose`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`

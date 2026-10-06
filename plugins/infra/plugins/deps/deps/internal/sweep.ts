@@ -4,7 +4,13 @@ import { join } from "node:path";
 import type { Dep, DepSource } from "./dep";
 import { isHeld } from "./hold";
 import { releaseLock, tryLock } from "./lock";
-import { currentIdentity, installPaths, type DepStore } from "./store";
+import { declaredDeps } from "./registry";
+import {
+  currentIdentity,
+  defaultStore,
+  installPaths,
+  type DepStore,
+} from "./store";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** An identity no checkout declares is removed once unused for this long. */
@@ -89,4 +95,23 @@ function lastUsedAt(paths: ReturnType<typeof installPaths>): number {
     if (!Number.isNaN(at)) return at;
   }
   return statSync(paths.root).mtimeMs;
+}
+
+/**
+ * The daily sweep over this host's real store and every declared dependency:
+ * `sweepDeps` with the defaults. The caller names the checkouts — listing
+ * them is git worktree knowledge the engine does not carry (see the `sweep`
+ * sub-plugin).
+ */
+export async function sweepUnusedDeps(args: {
+  checkouts: readonly string[];
+  now: Date;
+}): Promise<SweepReport> {
+  return sweepDeps({
+    store: defaultStore(),
+    deps: await declaredDeps(),
+    checkouts: args.checkouts,
+    now: args.now,
+    idleMs: SWEEP_IDLE_MS,
+  });
 }

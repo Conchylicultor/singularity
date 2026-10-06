@@ -51,9 +51,7 @@ import type { UgTab } from "./raw-tab";
 
 /** A distinct, actionable way UG markup can be malformed. */
 export type UgParseErrorKind =
-  | "unbalanced-chord"
-  | "empty-chord"
-  | "unbalanced-tab";
+  "unbalanced-chord" | "empty-chord" | "unbalanced-tab";
 
 /** A controlled, classified failure of the UG markup parser. */
 export class UgParseError extends Error {
@@ -216,7 +214,12 @@ function occurrences(text: string, token: string): number {
  * wrappers are tolerated; chord lines (`[ch]…`) are explicitly not headers.
  */
 function sectionLabel(line: string): string | null {
-  const stripped = line.split(TAB_OPEN).join("").split(TAB_CLOSE).join("").trim();
+  const stripped = line
+    .split(TAB_OPEN)
+    .join("")
+    .split(TAB_CLOSE)
+    .join("")
+    .trim();
   if (stripped.includes(CH_OPEN) || stripped.includes(CH_CLOSE)) return null;
   // The whole line must be exactly one `[…]` token with no nested brackets.
   const m = stripped.match(/^\[([^[\]]+)\]$/);

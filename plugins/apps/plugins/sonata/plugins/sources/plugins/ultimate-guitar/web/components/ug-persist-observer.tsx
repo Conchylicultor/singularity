@@ -5,9 +5,9 @@ import {
   beatToSeconds,
   scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { UgTabSchema } from "../../core";
+import { UgSourceRawSchema } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
 import { compile } from "../compile";
-import { UG_SOURCE_ID } from "../constants";
+import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import { useSaveUltimateGuitar } from "../actions";
 
 const SAVE_DEBOUNCE_MS = 500;
@@ -16,15 +16,16 @@ const SAVE_DEBOUNCE_MS = 500;
  * Headless, always-mounted persistence observer for the Ultimate Guitar source,
  * contributed to `Sonata.Effect`. Treats the context (`rawById`) as the source of
  * truth and debounce-persists a full `UgTab` snapshot (plus derived duration / end
- * beat) to the server whenever the raw changes — never on the fresh load that
- * opening a song triggers (which bumps `songOpenEpoch`), only on edits.
+ * beat) to the server whenever the raw's `tab` changes — never on the fresh load
+ * that opening a song triggers (which bumps `songOpenEpoch`), and never when only
+ * `raw.alignment` changes (an alignment landing is not an edit), only on edits.
  *
  * This lives OUTSIDE the editor section deliberately: a section body is unmounted
  * while its card is collapsed, so an in-body debounced save would silently drop a
  * pending edit (the effect cleanup clears the timer) and stop observing the moment
  * the card is collapsed mid-debounce — data loss. A `Sonata.Effect` is mounted for
  * the whole open song regardless of card state, so no edit is ever lost. Its
- * internal `rawValue === undefined` guard (and the `UgTabSchema` parse) make it a
+ * internal `rawValue === undefined` guard (and the `UgSourceRawSchema` parse) make it a
  * no-op for songs of any other source.
  *
  * The `PUT` persists `title: songName` (the one place a UG song's title is
@@ -39,22 +40,31 @@ export function UltimateGuitarPersistObserver() {
   const rawValue = sourceRaw(UG_SOURCE_ID);
 
   const seededEpoch = useRef(songOpenEpoch);
+  // The tab as last persisted (or as opened), serialized. Only a change of the
+  // TAB is an edit: the alignment child rewrites `raw.alignment` when a job
+  // lands, and that must never read as a sheet edit (nor re-save it).
+  const savedTab = useRef<string | null>(null);
   useEffect(() => {
     if (!currentSongId || rawValue === undefined) return;
-    // Skip the echo right after a song opens (hydrate set raw / bumped epoch).
-    if (seededEpoch.current !== songOpenEpoch) {
+    const parsed = UgSourceRawSchema.safeParse(rawValue);
+    if (!parsed.success) return;
+    const raw = parsed.data;
+    const tabJson = JSON.stringify(raw.tab);
+    // Skip the echo right after a song opens (hydrate set raw / bumped epoch),
+    // and the first raw this observer sees when it mounts on an open song.
+    if (seededEpoch.current !== songOpenEpoch || savedTab.current === null) {
       seededEpoch.current = songOpenEpoch;
+      savedTab.current = tabJson;
       return;
     }
-    const parsed = UgTabSchema.safeParse(rawValue);
-    if (!parsed.success) return;
+    if (tabJson === savedTab.current) return;
     const id = currentSongId;
-    const tab = parsed.data;
     const timer = setTimeout(() => {
-      const score = compile(tab);
+      savedTab.current = tabJson;
+      const score = compile(raw);
       const endBeat = scoreEndBeat(score);
       saveTab(id, {
-        ...tab,
+        ...raw.tab,
         durationSec: beatToSeconds(score, endBeat),
         endBeat,
       });

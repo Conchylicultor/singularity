@@ -13,13 +13,17 @@ import {
   handleGetSongUltimateGuitar,
   handleUpdateUltimateGuitarSong,
 } from "./internal/routes";
+import { ugTabSaved } from "./internal/tables-tab-saved";
 
 export { fetchUgTabContent } from "./internal/ug-client";
 export { songUltimateGuitar } from "./internal/tables";
+export { ugTabSaved } from "./internal/tables-tab-saved";
+export type { UgTabSavedPayload } from "./internal/tables-tab-saved";
 
 export default {
   description:
-    "Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration).",
+    "Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), announcing sonata.ug.tabSaved when a song's sheet content changes.",
+  register: [ugTabSaved],
   httpRoutes: {
     [fetchUgTab.route]: handleFetchUgTab,
     [searchUgTabs.route]: handleSearchUgTabs,

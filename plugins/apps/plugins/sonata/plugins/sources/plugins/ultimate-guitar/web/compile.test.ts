@@ -5,8 +5,11 @@ import type {
   LyricAnnotation,
   SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import type { ParsedLine, ParsedTab, UgTab } from "../core";
-import type { ParsedChord, ParsedSection } from "../core/parse";
+import type {
+  ParsedLine,
+  ParsedTab,
+  UgTab,
+} from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
   collectUnrecognisedChords,
   compile,
@@ -15,6 +18,15 @@ import {
   UG_CHARS_PER_BAR,
   UG_DEFAULT_TEMPO_BPM,
 } from "./compile";
+import {
+  ALIGNER_VERSION,
+  sheetHash,
+  type UgSourceRaw,
+} from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
+
+type ParsedSection = ParsedTab["sections"][number];
+type ParsedChord = ParsedLine["chords"][number];
+type AlignmentRecord = NonNullable<UgSourceRaw["alignment"]>;
 
 // --- builders ---------------------------------------------------------------
 
@@ -271,7 +283,7 @@ describe("collectUnrecognisedChords — dropped-chord surfacing", () => {
   });
 });
 
-describe("compile — UgTab round-trip", () => {
+describe("compile — UgSourceRaw round-trip", () => {
   it("validates the raw shape, parses the markup, and synthesizes a Score", () => {
     const ugTab: UgTab = {
       tabId: "123",
@@ -285,7 +297,7 @@ describe("compile — UgTab round-trip", () => {
       urlWeb: "https://tabs.ultimate-guitar.com/tab/123",
     };
 
-    const score = compile(ugTab);
+    const score = compile({ tab: ugTab, alignment: null });
 
     expect(score.meta.title).toBe("Hey Jude");
     expect(score.meta.key).toEqual({ tonic: "F", mode: "major" });
@@ -300,5 +312,36 @@ describe("compile — UgTab round-trip", () => {
 
   it("throws on a malformed raw shape (loud failure)", () => {
     expect(() => compile({ songName: 5 })).toThrow();
+  });
+
+  it("falls back to the synthesized timeline when the record is for another sheet", () => {
+    const ugTab: UgTab = {
+      tabId: "1",
+      songName: "Song",
+      artistName: "Artist",
+      type: "Chords",
+      key: null,
+      capo: 0,
+      tuning: "E A D G B E",
+      content: "[Verse]\n[ch]C[/ch] [ch]G[/ch]\nhello there friend",
+      urlWeb: "https://tabs.ultimate-guitar.com/tab/1",
+    };
+    const stale: AlignmentRecord = {
+      alignerVersion: ALIGNER_VERSION,
+      videoId: "dQw4w9WgXcQ",
+      analysisVersion: 1,
+      settingsKey: "final0-fastchroma",
+      sheetHash: sheetHash(`${ugTab.content} edited`),
+      durationSec: 4,
+      beats: [0, 1, 2, 3].map((t) => ({ t, downbeat: t === 0 })),
+      transpose: 0,
+      segments: [{ kind: "gap", startBeat: 0, endBeat: 4 }],
+      barConfidence: [1],
+      score: 1,
+    };
+
+    expect(compile({ tab: ugTab, alignment: stale })).toEqual(
+      compile({ tab: ugTab, alignment: null }),
+    );
   });
 });

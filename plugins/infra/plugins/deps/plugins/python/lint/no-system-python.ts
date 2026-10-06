@@ -52,7 +52,7 @@ export default createRule({
         '"install the command line developer tools" dialog (under an unknown name like `python`, or ' +
         "without the tools), and elsewhere it is whatever Python happens to be installed. Declare a " +
         "`python/` uv project and run it with pythonEnv + runPython " +
-        "(@plugins/infra/plugins/deps/plugins/python/server), or, for a test, link a uv-managed " +
+        "(@plugins/infra/plugins/deps/plugins/python/deps), or, for a test, link a uv-managed " +
         "interpreter (`uv python find` under uvEnv(), which allows managed Pythons only).",
     },
   },

@@ -1,11 +1,12 @@
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { UltimateGuitarLoader } from "../loader";
-import { UG_SOURCE_ID } from "../constants";
+import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 
 /**
  * In-player editor for an Ultimate Guitar song, contributed to `Sonata.Section`
  * (`area: "editor"`). Mounts the `UltimateGuitarLoader`, writing the fetched
- * `UgTab` straight into the context (`setSourceRaw` → live score recompile).
+ * `UgTab` straight into the context as the raw's `tab` (`setSourceRaw` → live
+ * score recompile).
  *
  * This component no longer persists or gates:
  * - **Persistence** lives in the headless, always-mounted

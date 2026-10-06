@@ -55,10 +55,14 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import {
   parseUgTab,
-  UgTabSchema,
   type ParsedLine,
   type ParsedTab,
-} from "../core";
+} from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
+import {
+  alignedScore,
+  isApplicable,
+  UgSourceRawSchema,
+} from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
 
 /** Bar length in quarter-note beats (4/4). */
 export const UG_BEATS_PER_BAR = 4;
@@ -213,7 +217,10 @@ export function collectUnrecognisedChords(parsed: ParsedTab): string[] {
   for (const section of parsed.sections) {
     for (const line of section.lines) {
       for (const chord of line.chords) {
-        if (parseChordSymbol(chord.symbol) === null && !seen.has(chord.symbol)) {
+        if (
+          parseChordSymbol(chord.symbol) === null &&
+          !seen.has(chord.symbol)
+        ) {
           seen.add(chord.symbol);
           out.push(chord.symbol);
         }
@@ -224,10 +231,17 @@ export function collectUnrecognisedChords(parsed: ParsedTab): string[] {
 }
 
 /**
- * Slot-facing compile: validate the raw UG tab shape (loud failure on
- * mismatch), parse its markup, and synthesize the `Score`.
+ * Slot-facing compile: validate the raw `{ tab, alignment }` shape (loud failure
+ * on mismatch) and parse the tab's markup. When the alignment applies to THIS
+ * sheet (current aligner, same `sheetHash`, strong enough), the Score plays on
+ * the recording's beats (`alignedScore`); otherwise the synthesized timeline.
+ * The check is by construction, so a stale record can never be misapplied.
  */
 export function compile(raw: unknown): Score {
-  const tab = UgTabSchema.parse(raw);
-  return synthesizeScore(parseUgTab(tab), tab.songName);
+  const { tab, alignment } = UgSourceRawSchema.parse(raw);
+  const parsed = parseUgTab(tab);
+  if (alignment !== null && isApplicable(alignment, tab.content)) {
+    return alignedScore(parsed, alignment, tab.songName);
+  }
+  return synthesizeScore(parsed, tab.songName);
 }

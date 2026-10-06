@@ -110,6 +110,7 @@ tokens, so anything that imports the barrels back would cycle.
     - `apps/events/sources/url-extract`
     - `apps/mail/mail-core`
     - `apps/sonata/library`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/track-mixer`
     - `config_v2`
     - `conversations/summary`

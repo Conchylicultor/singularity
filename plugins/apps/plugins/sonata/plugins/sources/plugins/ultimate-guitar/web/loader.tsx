@@ -1,6 +1,7 @@
 /**
  * Ultimate Guitar loader: paste a UG tab URL, fetch its raw `UgTab`, and hand it
- * up as the persisted `raw`.
+ * up as the persisted `raw`'s `tab` (with no alignment: a new sheet is aligned
+ * afresh by the alignment child, which the tab save triggers).
  *
  * Unlike the chord-grid loader (which is fully controlled — `raw` *is* what's
  * typed), the source of truth here is the **fetched** `UgTab`: the URL text box
@@ -21,7 +22,15 @@ import { useMemo, useState } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { parseUgTab, UgParseError, UgTabSchema, type UgTab } from "../core";
+import {
+  parseUgTab,
+  UgParseError,
+  type UgTab,
+} from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
+import {
+  UgSourceRawSchema,
+  type UgSourceRaw,
+} from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
 import { fetchUgTab } from "../shared/endpoints";
 import { collectUnrecognisedChords } from "./compile";
 
@@ -32,10 +41,10 @@ interface Props {
 
 const PLACEHOLDER = "https://tabs.ultimate-guitar.com/tab/...";
 
-/** Narrow the persisted `raw` to a valid `UgTab`, or `null` if absent/invalid. */
+/** Narrow the persisted `raw` to its `UgTab`, or `null` if absent/invalid. */
 function asUgTab(raw: unknown): UgTab | null {
-  const parsed = UgTabSchema.safeParse(raw);
-  return parsed.success ? parsed.data : null;
+  const parsed = UgSourceRawSchema.safeParse(raw);
+  return parsed.success ? parsed.data.tab : null;
 }
 
 export function UltimateGuitarLoader({ raw, onRaw }: Props) {
@@ -76,8 +85,12 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const tab = await fetchEndpoint(fetchUgTab, {}, { body: { url: trimmed } });
-      onRaw(tab);
+      const tab = await fetchEndpoint(
+        fetchUgTab,
+        {},
+        { body: { url: trimmed } },
+      );
+      onRaw({ tab, alignment: null } satisfies UgSourceRaw);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

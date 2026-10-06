@@ -1,4 +1,4 @@
-// @hash 2b2d4a9f74ea
+// @hash 0a34462542c3
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -16,6 +16,7 @@
     "apps.sonata.rich.voicing-controls:voicing",
     "apps.sonata.sources.chord-grid:chord-grid-editor",
     "apps.sonata.sources.ultimate-guitar:ultimate-guitar-editor",
+    "apps.sonata.sources.ultimate-guitar.alignment:ug-alignment-recording",
     "apps.sonata.track-mixer:track-mixer"
   ]
 }

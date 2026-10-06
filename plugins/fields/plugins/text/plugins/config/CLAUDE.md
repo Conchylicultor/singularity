@@ -45,6 +45,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `apps/events/sources/url-extract`
     - `apps/mail/mail-core`
     - `apps/sonata/library`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/track-mixer`
     - `conversations/summary`
     - `debug/boot-profile`

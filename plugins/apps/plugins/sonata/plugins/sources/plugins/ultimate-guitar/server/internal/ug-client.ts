@@ -2,7 +2,8 @@ import crypto from "node:crypto";
 import { z } from "zod";
 import { safeFetch, SsrfError } from "@plugins/infra/plugins/safe-fetch/server";
 import { extractUgTabId, UgFetchError } from "../../core";
-import type { UgTab, UgSearchResult } from "../../core";
+import type { UgSearchResult } from "../../core";
+import type { UgTab } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 
 /**
  * Ultimate Guitar mobile-API client.
@@ -179,7 +180,8 @@ export async function fetchUgTabContent(url: string): Promise<UgTab> {
   }
 
   const data = parsed.data;
-  const key = data.tonality_name && data.tonality_name.trim() ? data.tonality_name : null;
+  const key =
+    data.tonality_name && data.tonality_name.trim() ? data.tonality_name : null;
 
   return {
     tabId: String(data.id),

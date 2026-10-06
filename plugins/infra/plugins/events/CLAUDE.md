@@ -164,6 +164,8 @@ insert and the ring's inline prune reach it through the change feed. The
     - `apps/pages/content-search`
     - `apps/pages/history`
     - `apps/prototypes/checkpoints`
+    - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `build`
     - `conversations`
     - `conversations/conversation-category`

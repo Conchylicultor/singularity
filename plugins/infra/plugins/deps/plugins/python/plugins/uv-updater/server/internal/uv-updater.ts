@@ -9,7 +9,7 @@ import type {
   UpdaterHold,
   UpdaterSmoke,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
-import { uvEnv } from "../../deps/internal/uv";
+import { uvEnv } from "@plugins/infra/plugins/deps/plugins/python/deps";
 
 const MINUTE = 60_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -395,6 +395,6 @@ export const uvUpdater: Updater = {
 
   holds: {
     entries: UV_HOLDS,
-    file: "plugins/infra/plugins/deps/plugins/python/server/internal/uv-updater.ts",
+    file: "plugins/infra/plugins/deps/plugins/python/plugins/uv-updater/server/internal/uv-updater.ts",
   },
 };

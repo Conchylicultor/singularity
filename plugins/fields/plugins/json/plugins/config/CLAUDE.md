@@ -30,6 +30,7 @@
   - Imported by:
     - `apps/events/events-core`
     - `apps/mail/mail-core`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `debug/boot-profile`
     - `debug/slow-ops`
     - `debug/trace/engine`

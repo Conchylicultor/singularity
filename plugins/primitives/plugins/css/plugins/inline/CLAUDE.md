@@ -61,6 +61,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `apps/pages/trash`
     - `apps/sonata/progress/loop`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/studio/contributions/tables/row-count`
     - `apps/studio/explorer`
     - `apps/website/landing/hero`

@@ -203,6 +203,7 @@ count accumulates across drops.
     - `apps/events/refresh`
     - `apps/mail/sync`
     - `apps/sonata/piano-roll`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/studio/compositions/release/release-logs`
     - `backup`
     - `build`
@@ -232,6 +233,7 @@ count accumulates across drops.
     - `infra/attachments`
     - `infra/audio-analysis`
     - `infra/deps`
+    - `infra/deps/sweep`
     - `infra/deps/updates`
     - `infra/events-test`
     - `infra/host/duress`

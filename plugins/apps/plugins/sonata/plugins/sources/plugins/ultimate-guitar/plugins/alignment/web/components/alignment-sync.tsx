@@ -1,0 +1,43 @@
+import { useEffect } from "react";
+import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
+import { appliedAlignment, type UgSourceRaw } from "../../core";
+import { useUgAlignment } from "../internal/use-ug-raw";
+
+/**
+ * Headless, always-mounted bridge from the alignment's live row to the UG raw
+ * (`Sonata.Effect`): when a job lands, the applied record is written into
+ * `raw.alignment`, so the Score recompiles onto the recording's beats.
+ *
+ * What is written is `appliedAlignment` — the rule `hydrate` applies too: the
+ * row's record when it was made for the row's video and applies to the open
+ * sheet, else `null` (a weak match, another video's or sheet's record, no row).
+ * A re-align queued or running keeps the current alignment playing until its
+ * result lands. The comparison is by value, so the raw changes (and playback
+ * resets) at most once per finished job — not on every status write, and not
+ * after `hydrate` already opened the song aligned. A row still loading or unreadable leaves the raw as
+ * hydrated; the Recording section shows why.
+ *
+ * Lives outside the Recording section because a section body unmounts while
+ * collapsed. The UG persist observer ignores a change of `raw.alignment`, so
+ * this write is never saved as a sheet edit.
+ */
+export function UgAlignmentSync() {
+  const { setSourceRaw } = useSongDocument();
+  const { raw, row } = useUgAlignment();
+
+  useEffect(() => {
+    if (raw === undefined || row.status !== "ready") return;
+    const applied = appliedAlignment(
+      row.found ? row.row : null,
+      raw.tab.content,
+    );
+    if (JSON.stringify(applied) === JSON.stringify(raw.alignment)) return;
+    setSourceRaw(UG_SOURCE_ID, {
+      tab: raw.tab,
+      alignment: applied,
+    } satisfies UgSourceRaw);
+  }, [raw, row, setSourceRaw]);
+
+  return null;
+}

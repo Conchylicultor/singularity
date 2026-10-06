@@ -7,7 +7,7 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "./compile";
 import { UltimateGuitarLoader } from "./loader";
-import { UG_SOURCE_ID } from "./constants";
+import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import { hydrate } from "./hydrate";
 import { ultimateGuitarCreateOption } from "./components/ug-create-option";
 import { UltimateGuitarEditorSection } from "./components/ug-editor-section";

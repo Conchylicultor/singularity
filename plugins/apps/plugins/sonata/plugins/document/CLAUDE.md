@@ -126,6 +126,7 @@ availability gates over the composed score.
     - `apps/sonata/sources/midi`
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transpose`
 

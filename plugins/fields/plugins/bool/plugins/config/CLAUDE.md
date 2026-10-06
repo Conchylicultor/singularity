@@ -37,6 +37,7 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
     - `apps-core/surface/floating`
     - `apps/events/events-core`
     - `apps/mail/mail-core`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/track-mixer`
     - `apps/sonata/voicing`
     - `conversations`
