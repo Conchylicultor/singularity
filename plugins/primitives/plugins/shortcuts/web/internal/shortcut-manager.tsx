@@ -39,6 +39,11 @@ export function ShortcutManager() {
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      // An element that already handled the key owns it: a tree or list moving
+      // its selection with the arrows, a row activated by Space. This window
+      // listener runs after React's root-delegated handlers, so their
+      // preventDefault is visible here.
+      if (e.defaultPrevented) return;
       const active = shortcutsRef.current;
       const editable = targetClaimsKey(e);
       let winner: (typeof active)[number] | null = null;

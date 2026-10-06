@@ -24,8 +24,9 @@ export const SonataSession = {
   // EFFECT — headless, always-mounted per-session side effects that render
   // nothing (the audio engine, the live player, the metronome). Mounted once
   // inside the session's providers, so they observe the transport whatever
-  // the host shows. App-only effects (shortcuts, play history) belong in the
-  // shell's `Sonata.Effect` instead.
+  // the host shows. Effects that should run only while a player is on screen
+  // (the keyboard transport) are the player's `SonataPlayer.Effect`; app-only
+  // effects (play history, tempo keys) belong in the shell's `Sonata.Effect`.
   Effect: defineMountSlot({
     docLabel: (p) => p.id,
   }),

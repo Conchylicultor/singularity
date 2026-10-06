@@ -183,8 +183,8 @@ export interface SessionValue {
 
   /**
    * Toggle play/pause from the current cursor. Stable; the controls plugin
-   * registers it as a per-surface, focus-scoped Space shortcut while a song is
-   * open, so each Sonata window toggles only its own transport.
+   * registers it as a per-surface, focus-scoped Space shortcut on every shown
+   * player, so each Sonata window or preview toggles only its own transport.
    */
   togglePlay: () => void;
   /** Nudge the playback tempo scale by `delta` (e.g. +0.1 = 10% faster). */

@@ -2,6 +2,7 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import {
   defineDispatchSlot,
+  defineMountSlot,
   defineRenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import type {
@@ -52,6 +53,19 @@ export const SonataPlayer = {
   // TRANSPORT — full-width horizontal strip that navigates the song (the
   // progress scrubber, …), painted by `PlayerTransport`.
   Transport: defineRenderSlot<{ component: ComponentType }>({
+    docLabel: (p) => p.id,
+  }),
+
+  // EFFECT — headless per-player effects that run while the player is SHOWN:
+  // mounted once per player scope while at least one `PlayerDisplay` is on
+  // screen, unmounted when the last one goes (the keyboard transport). "Shown"
+  // is the player's own fact, so every host that shows a player — the Sonata
+  // app's player pane, a file preview — gets these, and a host showing none
+  // (Sonata's library with its now-playing bar) cannot. A contributor may read
+  // the session (`useSession`, the cursor hooks) and `usePlayerView()`, never
+  // Sonata app state. Always-on per-session work (audio) is a
+  // `SonataSession.Effect`; app-only work is the shell's `Sonata.Effect`.
+  Effect: defineMountSlot({
     docLabel: (p) => p.id,
   }),
 };

@@ -6,11 +6,11 @@ import {
 } from "@plugins/primitives/plugins/shortcuts/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
-import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 
 /**
- * Headless ←/→ seek controller (a `Sonata.Effect`, so it mounts once per Sonata
- * surface inside its player scope). It owns the arrow keys directly rather than
+ * Headless ←/→ seek controller (a `SonataPlayer.Effect`, so it mounts once per
+ * player while that player is shown — the Sonata app's player pane or a file
+ * preview, never the library's now-playing bar). It owns the arrow keys directly rather than
  * going through the keydown-only shortcut registry, because good seek UX needs to
  * tell a *tap* from a *press-and-hold*, which requires both keyup and the OS
  * auto-repeat signal:
@@ -23,34 +23,31 @@ import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
  *    suspended for the duration (so the rapid stepping never flickers).
  *
  * Because it runs from a raw window listener (not the surface-scoped shortcut
- * registry), it must enforce focus and the "player on screen" gate itself:
+ * registry), it must enforce what the registry would itself:
  *
  *  - **Focus** — it bails unless THIS surface is the focused one
  *    (`getFocusedSurfaceId()`), so an arrow-key hold in a foreground window can't
- *    scrub a background Sonata window (the cross-window bug the transport bus had).
- *  - **Song** — it bails when no song is open (`currentSongId == null`). The old
- *    transport bus was empty on the library; the player scope now wraps both
- *    library and player, so this gate is restored explicitly.
+ *    scrub a background player (the cross-window bug the transport bus had).
+ *  - **Handled keys** — it bails on an event an element already handled
+ *    (`defaultPrevented`): a file tree or list moving its selection with the
+ *    arrows owns them.
+ *  - **Text fields** — inside an input the arrows move the caret / thumb
+ *    (`targetClaimsKey`).
  *
- * Plain arrow presses are claimed (and `preventDefault`'d so the page doesn't
- * scroll) only when no text field is focused; inside an input the arrows move
- * the caret as usual.
+ * Otherwise the press is claimed (and `preventDefault`'d so the page doesn't
+ * scroll).
  */
 export function SeekHoldController() {
   const { seekBar, startScrub, endScrub } = useSession();
-  const { currentSongId } = useSonataApp();
   const surfaceId = useSurfaceTabId();
 
-  // The window listeners are installed once; read the live transport verbs,
-  // surface id, and song-open gate through refs so the effect closure never goes
-  // stale and we never re-install the listeners (which would drop an in-flight
-  // hold). `useSession()` verbs are referentially stable, but the song-open gate
-  // is not — refs keep the single listener correct across opens.
+  // The window listeners are installed once; read the live transport verbs and
+  // surface id through refs so the effect closure never goes stale and we never
+  // re-install the listeners (which would drop an in-flight hold).
   const seekBarRef = useLatestRef(seekBar);
   const startScrubRef = useLatestRef(startScrub);
   const endScrubRef = useLatestRef(endScrub);
   const surfaceIdRef = useLatestRef(surfaceId);
-  const hasSongRef = useLatestRef(currentSongId != null);
 
   useEffect(() => {
     // The key currently driving a press (so keyup matches its own keydown) and
@@ -64,9 +61,9 @@ export function SeekHoldController() {
     const onKeyDown = (e: KeyboardEvent) => {
       const direction = dirOf(e.key);
       if (direction === null) return;
-      // Only the focused surface, and only when a song is open here.
+      // Only the focused surface, and only a key nothing else handled.
       if (getFocusedSurfaceId() !== surfaceIdRef.current) return;
-      if (!hasSongRef.current) return;
+      if (e.defaultPrevented) return;
       if (targetClaimsKey(e)) return; // let the field move its caret / thumb
       e.preventDefault();
 
@@ -116,7 +113,7 @@ export function SeekHoldController() {
       if (scrubbing) endScrubRef.current();
     };
     // Install the window listeners once: every live value (transport verbs,
-    // surface id, song gate) is read off its stable useLatestRef handle, so the
+    // surface id) is read off its stable useLatestRef handle, so the
     // effect never re-runs and an in-flight hold is never dropped.
   }, []);
 

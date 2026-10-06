@@ -14,7 +14,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { formatElapsed } from "@plugins/primitives/plugins/relative-time/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { SonataPlayer } from "../slots";
-import { usePlayerView } from "../view";
+import { useMarkPlayerShown, usePlayerView } from "../view";
 import { NoDisplay } from "./no-display";
 
 const pauseIcon = symbol("pause");
@@ -24,9 +24,11 @@ const playArrowIcon = symbol("play-arrow");
  * The display lens over the session's score — `displayId`, else the player
  * view's lens — dispatched through `SonataPlayer.Display` inside a `Clip` that
  * fills its parent. Renders the no-display fallback when no lens is
- * contributed.
+ * contributed. While mounted it marks the player shown, which mounts the
+ * player's `SonataPlayer.Effect`s (the keyboard transport).
  */
 export function PlayerDisplay({ displayId }: { displayId?: string }) {
+  useMarkPlayerShown();
   const { score, tempoScale } = useSession();
   const view = usePlayerView();
   const active = displayId ?? view.displayId;

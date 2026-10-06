@@ -144,7 +144,8 @@ export const Sonata = {
   // persisting a source's edits). Mounted once inside the app provider and the
   // player scope, so contributors may `useSonataApp()` and `useSession()`. An
   // effect that must run wherever a song plays (audio) is a
-  // `SonataSession.Effect` instead.
+  // `SonataSession.Effect` instead, and one that runs wherever a player is
+  // shown (Space / ←→) is a `SonataPlayer.Effect`.
   Effect: defineMountSlot({
     docLabel: (p) => p.id,
   }),

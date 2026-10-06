@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -57,6 +58,11 @@ export interface PlayerView {
    *  it (so you can zoom out until everything fits), short songs keep the default.
    *  The renderer is the sole caller: it alone measures the lane height. */
   setSpreadFloor: (min: number) => void;
+  /**
+   * Whether this player is on screen: at least one `PlayerDisplay` is mounted
+   * in it. Gates the `SonataPlayer.Effect` mount (the keyboard transport).
+   */
+  shown: boolean;
 }
 
 const PlayerViewContext = createContext<PlayerView | null>(null);
@@ -68,6 +74,22 @@ export function usePlayerView(): PlayerView {
     throw new Error("usePlayerView must be used within <SonataPlayerScope>");
   }
   return ctx;
+}
+
+/** Mark-shown registration, separate from {@link PlayerView} so only the
+ *  player's own `PlayerDisplay` marks it (not on the barrel). */
+const MarkShownContext = createContext<(() => () => void) | null>(null);
+
+/**
+ * Count the calling component as showing this player for as long as it is
+ * mounted (`PlayerDisplay` calls it). Throws outside a player scope.
+ */
+export function useMarkPlayerShown(): void {
+  const markShown = useContext(MarkShownContext);
+  if (!markShown) {
+    throw new Error("PlayerDisplay must be used within <SonataPlayerScope>");
+  }
+  useEffect(() => markShown(), [markShown]);
 }
 
 export function PlayerViewProvider({ children }: { children: ReactNode }) {
@@ -115,6 +137,15 @@ export function PlayerViewProvider({ children }: { children: ReactNode }) {
   // floor rise).
   const effectiveSpread = Math.max(spreadMin, Math.min(MAX_SPREAD, spread));
 
+  // How many `PlayerDisplay`s are mounted — a count, not a flag, so two displays
+  // of one player (and one unmounting while another mounts) keep it shown.
+  const [shownCount, setShownCount] = useState(0);
+  const markShown = useCallback(() => {
+    setShownCount((n) => n + 1);
+    return () => setShownCount((n) => n - 1);
+  }, []);
+  const shown = shownCount > 0;
+
   const value = useMemo<PlayerView>(
     () => ({
       displayId,
@@ -124,13 +155,16 @@ export function PlayerViewProvider({ children }: { children: ReactNode }) {
       spreadMax: MAX_SPREAD,
       setSpread,
       setSpreadFloor,
+      shown,
     }),
-    [displayId, effectiveSpread, spreadMin, setSpread, setSpreadFloor],
+    [displayId, effectiveSpread, spreadMin, setSpread, setSpreadFloor, shown],
   );
 
   return (
-    <PlayerViewContext.Provider value={value}>
-      {children}
-    </PlayerViewContext.Provider>
+    <MarkShownContext.Provider value={markShown}>
+      <PlayerViewContext.Provider value={value}>
+        {children}
+      </PlayerViewContext.Provider>
+    </MarkShownContext.Provider>
   );
 }

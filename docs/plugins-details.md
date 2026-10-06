@@ -4697,12 +4697,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/audio/sample-loader.sharedSampleLoader`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
-        - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ↑/↓ speed up / slow down tempo, and ←/→ seek the playhead — tap to snap to the previous/next note, hold to scrub.
+        - **`controls`** — Keyboard transport for Sonata players: Space toggles play/pause and ←/→ seek the playhead (tap to jump a bar, hold to scrub) on every shown player — the Sonata app's and a file preview's alike — and, in the Sonata app, ↑/↓ speed up / slow down the tempo. All focus-scoped per surface.
           - Web:
             - Contributes:
-              - `Sonata.Effect` "transport-shortcuts" → `TransportShortcuts`
-              - `Sonata.Effect` "seek-hold" → `SeekHoldController`
+              - `SonataPlayer.Effect` "play-pause" → `PlayPauseShortcut`
+              - `SonataPlayer.Effect` "seek-hold" → `SeekHoldController`
+              - `Sonata.Effect` "tempo-shortcuts" → `TempoShortcuts`
             - Uses:
+              - `apps/sonata/player.SonataPlayer`
               - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.useSonataApp`
@@ -5222,11 +5224,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live/filter.liveInstant`
               - `network/live/filter.liveNumber`
             - Exports (values): `playbackColumns`
-        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport, PlayToggle, PlayerTime. Owns the SonataPlayer.{Display,Transport} slots and the per-player view state (display lens, piano-roll spread).
+        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport, PlayToggle, PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown).
           - Web:
             - Slots:
               - `SonataPlayer.Display` ← `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
               - `SonataPlayer.Transport` ← `apps.sonata.progress.scrubber`
+              - `SonataPlayer.Effect` ← `apps.sonata.controls`
             - Uses:
               - `apps/sonata/document.SongDocumentProvider`
               - `apps/sonata/document.SongSettingsMount`
@@ -5244,6 +5247,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/latest-ref.useLatestRef`
               - `primitives/relative-time.formatElapsed`
               - `primitives/slot-render.defineDispatchSlot`
+              - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
             - Exports (types): `PlayerView`
             - Exports (values):
@@ -5256,6 +5260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `usePlayerView`
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/controls`
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`

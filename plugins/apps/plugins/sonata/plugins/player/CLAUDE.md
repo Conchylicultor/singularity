@@ -4,7 +4,8 @@
 
 ```
 CursorStoreProvider > SongDocumentProvider > PlaybackSession (+ SonataSession.Provider wrappers)
-  > PlayerViewProvider > { children, SonataSession.Effect.Mount, SongSettingsMount }
+  > PlayerViewProvider > { children, SonataSession.Effect.Mount, SongSettingsMount,
+                           SonataPlayer.Effect.Mount (while shown) }
 ```
 
 Every mount is isolated — two Sonata windows, or the app beside a file preview,
@@ -14,7 +15,8 @@ into it with `useLoadDocument()` and composes only the parts it wants:
 
 - `PlayerDisplay` — `SonataPlayer.Display.Dispatch` inside a filling `Clip`,
   over the session's score, with `TEMPO_MATH_FLOOR` applied to the tempo it
-  hands the display. `displayId` defaults to the view's lens.
+  hands the display. `displayId` defaults to the view's lens. While mounted it
+  marks the player **shown** (see below).
 - `PlayerTransport` — every `SonataPlayer.Transport` contribution (the progress
   scrubber with its markers).
 - `PlayToggle` — play / pause from the live cursor (no count-in).
@@ -23,9 +25,23 @@ into it with `useLoadDocument()` and composes only the parts it wants:
 `usePlayerView()` is the per-player view state: the display lens (`displayId`,
 `setDisplay` — the explicit pick, else the default-flagged or first display)
 and the piano roll's spread (`spread`, `spreadMin`, `spreadMax`, `setSpread`,
-`setSpreadFloor`), shared by header controls and the display body.
+`setSpreadFloor`), shared by header controls and the display body, and
+`shown` — whether any `PlayerDisplay` of this player is mounted.
 
-The player owns the `SonataPlayer.Display` and `SonataPlayer.Transport` slots
+## Shown effects (`SonataPlayer.Effect`)
+
+Headless per-player effects that run while the player is **shown**: the scope
+mounts `SonataPlayer.Effect.Mount` once while at least one `PlayerDisplay` is
+mounted (a count, so two displays of one player still mount it once), and
+unmounts it when the last one goes. "A player is on screen" is therefore the
+player's own fact — every host that shows a player gets these contributions
+(the keyboard transport: Space, ←/→ in `controls`), and a host showing none
+(Sonata's library with its now-playing bar) cannot. Contrast
+`SonataSession.Effect` (always, per session — audio) and the shell's
+`Sonata.Effect` (app-only).
+
+The player owns the `SonataPlayer.Display`, `SonataPlayer.Transport` and
+`SonataPlayer.Effect` slots
 because its parts render them and it sits below the app shell (the shell mounts
 the scope, so the player cannot import the shell).
 
@@ -33,11 +49,12 @@ the scope, so the player cannot import the shell).
 
 ## Plugin reference
 
-- Description: Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport, PlayToggle, PlayerTime. Owns the SonataPlayer.{Display,Transport} slots and the per-player view state (display lens, piano-roll spread).
+- Description: Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport, PlayToggle, PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown).
 - Web:
   - Slots:
     - `SonataPlayer.Display` ← `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
     - `SonataPlayer.Transport` ← `apps.sonata.progress.scrubber`
+    - `SonataPlayer.Effect` ← `apps.sonata.controls`
   - Uses:
     - `apps/sonata/document.SongDocumentProvider`
     - `apps/sonata/document.SongSettingsMount`
@@ -55,6 +72,7 @@ the scope, so the player cannot import the shell).
     - `primitives/latest-ref.useLatestRef`
     - `primitives/relative-time.formatElapsed`
     - `primitives/slot-render.defineDispatchSlot`
+    - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types): `PlayerView`
   - Exports (values):
@@ -67,6 +85,7 @@ the scope, so the player cannot import the shell).
     - `usePlayerView`
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/controls`
     - `apps/sonata/library`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`

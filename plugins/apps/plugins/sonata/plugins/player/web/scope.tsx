@@ -9,7 +9,8 @@ import {
   SongSettingsMount,
   useSongDocument,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { PlayerViewProvider } from "./view";
+import { SonataPlayer } from "./slots";
+import { PlayerViewProvider, usePlayerView } from "./view";
 
 /**
  * The one composition root of a Sonata player — everything a surface needs to
@@ -21,7 +22,8 @@ import { PlayerViewProvider } from "./view";
  *
  * plus the per-session effects (`SonataSession.Effect`: the audio engine, the
  * live player, the metronome) and, for a library song, the per-song setting
- * observers. Load into it with `useLoadDocument()`; compose the parts
+ * observers, and — while a `PlayerDisplay` is shown — the per-player
+ * `SonataPlayer.Effect`s (the keyboard transport). Load into it with `useLoadDocument()`; compose the parts
  * (`PlayerDisplay`, `PlayerTransport`, `PlayToggle`, `PlayerTime`) inside it.
  *
  * The stores wrap from the OUTSIDE because the components below read them in
@@ -36,6 +38,7 @@ export function SonataPlayerScope({ children }: { children: ReactNode }) {
           <PlayerViewProvider>
             {children}
             <SonataSession.Effect.Mount />
+            <ShownEffects />
             <SongSettingsMount />
           </PlayerViewProvider>
         </DocumentSession>
@@ -48,4 +51,10 @@ export function SonataPlayerScope({ children }: { children: ReactNode }) {
 function DocumentSession({ children }: { children: ReactNode }) {
   const { content } = useSongDocument();
   return <PlaybackSession content={content}>{children}</PlaybackSession>;
+}
+
+/** The per-player effects, mounted once while the player is shown. */
+export function ShownEffects() {
+  const { shown } = usePlayerView();
+  return shown ? <SonataPlayer.Effect.Mount /> : null;
 }
