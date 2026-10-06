@@ -552,6 +552,7 @@ to reconcile them; they never needed reconciling.
     - `primitives/error-boundary`
     - `primitives/file-viewer`
     - `primitives/file-viewer/markdown`
+    - `primitives/file-viewer/media`
     - `primitives/filter-chips`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`

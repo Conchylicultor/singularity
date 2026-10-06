@@ -19579,6 +19579,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/date-picker`
               - `primitives/dom/copy-source-text`
               - `primitives/dom/overscroll-hint`
+              - `primitives/file-viewer/media`
               - `primitives/networking`
               - `primitives/overlay/image-viewer`
               - `primitives/pane`
@@ -28370,6 +28371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view`
               - `primitives/file-viewer`
               - `primitives/file-viewer/image`
+              - `primitives/file-viewer/media`
               - `primitives/folder-picker`
               - `primitives/icon-picker`
               - `primitives/live-state`
@@ -30065,6 +30067,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view`
               - `primitives/expandable`
               - `primitives/file-viewer`
+              - `primitives/file-viewer/media`
               - `primitives/filter-chips`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
@@ -30613,6 +30616,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/error-boundary`
               - `primitives/file-viewer`
               - `primitives/file-viewer/markdown`
+              - `primitives/file-viewer/media`
               - `primitives/filter-chips`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
@@ -32720,9 +32724,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/file-explorer/browser`
           - `primitives/file-viewer`
+          - `primitives/file-viewer/media`
     - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
       - Web:
-        - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.html`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`, `primitives.file-viewer.pdf`
+        - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.html`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`, `primitives.file-viewer.media`, `primitives.file-viewer.pdf`
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
@@ -32794,6 +32799,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/file-viewer/html`
           - `primitives/file-viewer/image`
           - `primitives/file-viewer/markdown`
+          - `primitives/file-viewer/media`
           - `primitives/file-viewer/pdf`
       - Plugins:
         - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
@@ -32854,6 +32860,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/file-viewer.useFileText`
               - `primitives/loading.Loading`
               - `primitives/markdown.Markdown`
+        - **`media`** — Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the browser's native player with controls, auto-playing on open, Space to play / pause, seeking over byte ranges; a codec the browser cannot decode shows No preview.
+          - Web:
+            - Contributes:
+              - `FileViewer.Renderer` "Video" → `VideoView`
+              - `FileViewer.Renderer` "Audio" → `AudioView`
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/file-type.FileTypeIcon`
+              - `primitives/file-viewer.FileRendererProps`
+              - `primitives/file-viewer.FileViewer`
+              - `primitives/file-viewer.NoPreview`
+              - `primitives/shortcuts.useSurfaceShortcuts`
         - **`pdf`** — PDF preview for host .pdf files, in the browser's own PDF viewer (pages, zoom, search, print).
           - Web:
             - Contributes: `FileViewer.Renderer` "PDF" → `PdfView`
@@ -35760,6 +35780,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/action-presentation`
           - `primitives/css/ui-kit`
           - `primitives/data-view/capsule-toolbar`
+          - `primitives/file-viewer/media`
           - `primitives/icon-button`
           - `primitives/launch`
           - `primitives/overlay/image-viewer`

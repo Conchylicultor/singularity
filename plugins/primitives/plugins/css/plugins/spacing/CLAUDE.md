@@ -365,6 +365,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/diff-view`
     - `primitives/expandable`
     - `primitives/file-viewer`
+    - `primitives/file-viewer/media`
     - `primitives/filter-chips`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`

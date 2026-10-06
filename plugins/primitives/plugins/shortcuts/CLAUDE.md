@@ -56,6 +56,7 @@ exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
     - `primitives/action-presentation`
     - `primitives/css/ui-kit`
     - `primitives/data-view/capsule-toolbar`
+    - `primitives/file-viewer/media`
     - `primitives/icon-button`
     - `primitives/launch`
     - `primitives/overlay/image-viewer`

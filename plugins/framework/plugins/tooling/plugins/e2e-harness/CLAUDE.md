@@ -381,6 +381,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `primitives/date-picker`
     - `primitives/dom/copy-source-text`
     - `primitives/dom/overscroll-hint`
+    - `primitives/file-viewer/media`
     - `primitives/networking`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
