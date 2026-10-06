@@ -132,6 +132,30 @@ describe("$spliceRunsInto with token extensions", () => {
     expect(serializeBlockRuns(editor, extensions)).toEqual(coalesce(next));
   });
 
+  test("emptying a paragraph clears the pending format its text left on it", () => {
+    // What a live editor's reconciler stamps on a paragraph holding bold text,
+    // and what the binding syncs into the doc — so the splice inherits it.
+    const editor = makeEditor([{ text: "bold", marks: ["bold"] }]);
+    editor.update(
+      () => {
+        const p = $getRoot().getFirstChild();
+        if (!$isElementNode(p)) throw new Error("expected a paragraph");
+        p.setTextFormat(1);
+        p.setTextStyle("color: red");
+      },
+      { discrete: true },
+    );
+
+    splice(editor, []);
+
+    editor.getEditorState().read(() => {
+      const p = $getRoot().getFirstChild();
+      if (!$isElementNode(p)) throw new Error("expected a paragraph");
+      expect(p.getTextFormat()).toBe(0);
+      expect(p.getTextStyle()).toBe("");
+    });
+  });
+
   test("fuzz: a splice lands exactly what a fresh seed of the same runs would", () => {
     // The reference is a REBUILD, not `coalesce(to)`: the runs↔Lexical mapping
     // emits a `LineBreakNode` as an unmarked run, so a marked run carrying a

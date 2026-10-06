@@ -379,6 +379,18 @@ export function $spliceRunsInto(
   for (const unit of oldMiddle) unit.node.remove();
   scratch.remove();
 
+  // An element's `textFormat` / `textStyle` is the format typing into it
+  // carries while it holds no text. Lexical's reconciler re-derives it from the
+  // first text child, so it only ever goes stale once the text is gone — and it
+  // is a synced property of the doc, so the splice inherits whatever the
+  // removed text left there. Runs carry no such state, so an emptied paragraph
+  // takes a seed's (none): otherwise undoing a bold paste into an empty block
+  // leaves it typing bold.
+  if (paragraph.isAttached() && !paragraph.getChildren().some($isTextNode)) {
+    paragraph.setTextFormat(0);
+    paragraph.setTextStyle("");
+  }
+
   // A whole-content deletion can leave the paragraph — and with it the root —
   // childless. `runsToLexical([])` leaves one empty paragraph, so match it.
   if (root.getChildrenSize() === 0) root.append($createParagraphNode());

@@ -723,7 +723,7 @@ export function $placeCaretAtLinearOffset(offset: number): void {
     return;
   }
   if ("emptyParagraph" in resolved) {
-    resolved.emptyParagraph.selectStart();
+    $landInEmptyParagraph(resolved.emptyParagraph);
     return;
   }
   const total = $paragraphsPlainLength();
@@ -732,6 +732,25 @@ export function $placeCaretAtLinearOffset(offset: number): void {
     Math.min(Math.max(offset, 0), total),
     resolved.leafStart,
   );
+}
+
+/**
+ * Collapse the caret into an empty paragraph, carrying the paragraph's own
+ * pending format rather than whatever the previous selection carried.
+ *
+ * `ElementNode.select()` leaves `selection.format` / `style` untouched, and
+ * Lexical's `selectionchange` deliberately does NOT re-derive them while the
+ * whole root is empty — so a landing here would keep the format of wherever the
+ * caret stood before (e.g. inside the bold text an undo just removed), and the
+ * next keystroke would type bold into a block that never was. An empty
+ * element's `textFormat` / `textStyle` is exactly what Lexical reads for a
+ * caret in it elsewhere (`$updateSelectionFormatStyleFromElementNode`).
+ */
+function $landInEmptyParagraph(paragraph: ElementNode): void {
+  const sel = paragraph.selectStart();
+  if (!$isRangeSelection(sel)) return;
+  sel.format = paragraph.getTextFormat();
+  sel.style = paragraph.getTextStyle();
 }
 
 /** The last leaf descendant of `node` (null when it has none). */
