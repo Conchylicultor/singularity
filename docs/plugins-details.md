@@ -7189,6 +7189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AppIconGlyph`
           - `AppIconSvgOptions`
         - Exports (values):
+          - `APP_TILE_PALETTE`
           - `appIcon`
           - `appIconToSvg`
     - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.

@@ -17,6 +17,7 @@ export type AppIcon = {
 };
 
 export { appIcon } from "./internal/app-icon";
+export { APP_TILE_PALETTE } from "./internal/tile-palette";
 export { appIconToSvg } from "./internal/app-icon-to-svg";
 export type {
   AppIconGlyph,

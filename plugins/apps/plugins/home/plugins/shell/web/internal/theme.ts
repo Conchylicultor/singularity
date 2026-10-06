@@ -1,3 +1,4 @@
+import { APP_TILE_PALETTE } from "@plugins/apps-core/plugins/app-icon/core";
 import { defineTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
 import { categoricalGroup } from "@plugins/ui/plugins/tokens/plugins/categorical/core";
@@ -15,7 +16,7 @@ const LIGHT_TEXT = "oklch(0.16 0 0)";
  * `primary` is the TEXT colour, not an accent: the launcher's one filled
  * control — the capsule's round New app button — reads as a text-coloured
  * circle with a page-coloured glyph, and the app tiles carry all the colour on
- * the page.
+ * the page, in the shared app-tile palette (`APP_TILE_PALETTE`).
  */
 const colorPalette = colorPaletteGroup.fragment({
   dark: {
@@ -78,29 +79,10 @@ const colorPalette = colorPaletteGroup.fragment({
   },
 });
 
-/**
- * The ocean band the app tiles are painted from: slots 1–9 walk the hue from
- * teal (175) toward violet in 17° steps at one quiet chroma, alternating
- * lightness 0.50 / 0.57 so neighbours separate; a tile's second shade adds
- * 0.13 on top (the avatar primitive's rule). Slot 10 is the neutral slate an
- * app can ask for by name (Settings).
- *
- * The same in both modes: a tile is a flat fill under a white glyph, which
- * needs this lightness whatever the page behind it.
- */
-const OCEAN = {
-  "categorical-1": "oklch(0.50 0.11 175)",
-  "categorical-2": "oklch(0.57 0.11 192)",
-  "categorical-3": "oklch(0.50 0.11 209)",
-  "categorical-4": "oklch(0.57 0.11 226)",
-  "categorical-5": "oklch(0.50 0.11 243)",
-  "categorical-6": "oklch(0.57 0.11 260)",
-  "categorical-7": "oklch(0.50 0.11 277)",
-  "categorical-8": "oklch(0.57 0.11 294)",
-  "categorical-9": "oklch(0.50 0.11 311)",
-  "categorical-10": "oklch(0.48 0.02 250)",
-};
-const categorical = categoricalGroup.fragment({ light: OCEAN, dark: OCEAN });
+const categorical = categoricalGroup.fragment({
+  light: APP_TILE_PALETTE,
+  dark: APP_TILE_PALETTE,
+});
 
 /**
  * Home's own theme — the launcher's look: a black page and ocean tiles.

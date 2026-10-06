@@ -69,6 +69,7 @@ changes to existing `kind: "symbol"` authors.
     - `AppIconGlyph`
     - `AppIconSvgOptions`
   - Exports (values):
+    - `APP_TILE_PALETTE`
     - `appIcon`
     - `appIconToSvg`
 
