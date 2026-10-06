@@ -969,6 +969,7 @@ See "Open questions" in the design doc.
     - `resolveFrom`
     - `resolveRow`
     - `restoreRoute`
+    - `rowOrStale`
     - `setBasePath`
     - `setHistoryAdapter`
     - `setLiveStore`

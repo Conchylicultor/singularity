@@ -235,8 +235,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/deploy/ssh-setup`
     - `apps/events/events-core`
     - `apps/events/sources`
-    - `apps/events/sources/source-detail/runs`
-    - `apps/events/sources/source-detail/runs/caveats`
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
@@ -302,7 +300,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `config_v2/settings`
     - `conversations`
     - `conversations/agents`
-    - `conversations/all-conversations`
     - `conversations/conversation-category`
     - `conversations/conversation-view`
     - `conversations/conversation-view/dependencies`
@@ -318,7 +315,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `conversations/conversation-view/resume`
     - `conversations/conversation-view/rewind`
     - `conversations/conversations-view`
-    - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
     - `conversations/conversations-view/queue`
     - `conversations/hibernation`
@@ -391,7 +387,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/file-tree`
     - `primitives/data-view/custom-columns`
-    - `primitives/data-view/server-query`
     - `primitives/data-view/view-order`
     - `primitives/diff-view`
     - `primitives/file-viewer`
@@ -410,7 +405,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `reports/mutation-errors`
     - `review/code-review`
     - `review/plugin-changes`
-    - `runs`
     - `screenshot`
     - `search/engine`
     - `search/quick-find`
@@ -418,7 +412,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `stats/commits`
     - `stats/cost`
     - `stats/pushes`
-    - `stats/responsiveness`
     - `stats/tasks`
     - `tasks`
     - `tasks/launch-options`

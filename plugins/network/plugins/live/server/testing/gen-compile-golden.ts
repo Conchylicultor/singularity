@@ -1,5 +1,5 @@
 // Writes the compile-SQL golden (`compile-sql-golden.ts`, beside this file) to
-// `plugins/network/plugins/live/fixtures/compile-sql-golden.json`, which
+// `plugins/network/plugins/live/server/testing/compile-sql-golden.json`, which
 // `server/internal/compile-sql-golden.test.ts` reads and compares against:
 //
 //   ./singularity run plugins/network/plugins/live/server/testing/gen-compile-golden.ts

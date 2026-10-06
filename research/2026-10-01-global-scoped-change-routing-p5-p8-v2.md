@@ -176,7 +176,7 @@ interface ArmPlan<Row, P> {
 
   For each it records the full, scoped, `windowIdsOf`, point, reverse-`resolve` and groups SQL and params, plus routes,
   `usesOf`, signatures and folded output.
-  - The test **only reads** `plugins/network/plugins/live/fixtures/compile-sql-golden.json`, and fails loudly when
+  - The test **only reads** `plugins/network/plugins/live/server/testing/compile-sql-golden.json`, and fails loudly when
     it is missing.
   - The golden comes from `plugins/network/plugins/live/scripts/gen-compile-golden.ts`, run with
     `./singularity run` on the **pre-split** code in the same step.

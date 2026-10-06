@@ -7,7 +7,7 @@
 // `orderBy` was resolved.
 //
 // `gen-compile-golden.ts` (beside this file) writes the record to
-// `plugins/network/plugins/live/fixtures/compile-sql-golden.json`;
+// `plugins/network/plugins/live/server/testing/compile-sql-golden.json`;
 // `server/internal/compile-sql-golden.test.ts` recomputes it and compares. It
 // pins a refactor of the bounded / grouping compilers byte for byte (step 9 of
 // research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md). A deliberate
@@ -68,9 +68,9 @@ import {
   type ScopedMemberRead,
 } from "../internal/serve-columns";
 
-/** The fixture's absolute path (`plugins/network/plugins/live/fixtures/compile-sql-golden.json`). */
+/** The fixture's absolute path (`plugins/network/plugins/live/server/testing/compile-sql-golden.json`). */
 export const COMPILE_SQL_GOLDEN_FILE = fileURLToPath(
-  new URL("../../fixtures/compile-sql-golden.json", import.meta.url),
+  new URL("./compile-sql-golden.json", import.meta.url),
 );
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };

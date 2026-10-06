@@ -749,8 +749,10 @@ for a new reader of the two page resources.
     - `database/sql-column.columnWireCodec`
     - `database/sql-column.WireCodec`
     - `infra/query-resource.CompiledGroups`
+    - `infra/query-resource.CompiledUnion`
     - `infra/query-resource.compileGroupsQuery`
     - `infra/query-resource.compileJoins`
+    - `infra/query-resource.compileUnionCollection`
     - `infra/query-resource.deferredWindowQueryResource`
     - `infra/query-resource.EntitySource`
     - `infra/query-resource.joinRefs`
@@ -758,6 +760,8 @@ for a new reader of the two page resources.
     - `infra/query-resource.ReadColumn`
     - `infra/query-resource.RoutedSource`
     - `infra/query-resource.SelectMap`
+    - `infra/query-resource.UnionArmSpec`
+    - `infra/query-resource.UnionColumn`
     - `infra/query-resource.WindowOrderKey`
     - `infra/query-resource.windowQueryResource`
     - `infra/query-resource.WindowQueryResourceSpec`
@@ -765,7 +769,9 @@ for a new reader of the two page resources.
   - Exports (types):
     - `CollectionSource`
     - `CollectionSpecs`
+    - `ColumnOverride`
     - `CompiledValue`
+    - `DefaultScope`
     - `LiveValueSource`
     - `LookupCollectionSpecs`
     - `ScopedMemberRead`
@@ -776,7 +782,12 @@ for a new reader of the two page resources.
     - `ServedLookupCollection`
     - `ServedScopedColumns`
     - `ServedValue`
+    - `ServeUnionOptions`
     - `ServeValueOptions`
+    - `UnionArmBinding`
+    - `UnionArmColumns`
+    - `UnionArmRefs`
+    - `UnionFieldBinding`
   - Exports (values):
     - `compileCollection`
     - `compileValue`
@@ -784,9 +795,11 @@ for a new reader of the two page resources.
     - `serveCollection`
     - `serveColumns`
     - `serveScopedColumns`
+    - `serveUnionCollection`
     - `serveValue`
 - Core:
   - Uses:
+    - `infra/query-resource.KIND_RE`
     - `network/live/filter.decodeFilter`
     - `network/live/filter.encodeFilter`
     - `network/live/filter.Filter`
@@ -802,14 +815,20 @@ for a new reader of the two page resources.
     - `primitives/live-state.WindowSelector`
   - Exports (types):
     - `ContributedColumns`
+    - `LiveArmColumnsHandle`
+    - `LiveArms`
+    - `LiveArmsCollection`
+    - `LiveArmsSpec`
     - `LiveCentralValueSpec`
     - `LiveCollection`
     - `LiveCollectionOf`
     - `LiveCollectionSpec`
     - `LiveColumnFilter`
     - `LiveColumnRef`
+    - `LiveColumnRefOwner`
     - `LiveColumnsDeclaration`
     - `LiveColumnsHandle`
+    - `LiveColumnsOwner`
     - `LiveContributedCollection`
     - `LiveCutKey`
     - `LiveDecodedGroupQuery`
@@ -838,8 +857,11 @@ for a new reader of the two page resources.
     - `LiveScopedColumns`
     - `LiveScrollCollection`
     - `LiveSortDirection`
+    - `LiveTypedParamValueSpec`
+    - `LiveTypedValueParams`
     - `LiveValue`
     - `LiveValueOrigin`
+    - `LiveValueParamParsers`
     - `LiveValueParams`
     - `LiveValueSpec`
     - `LiveWhere`
@@ -855,6 +877,7 @@ for a new reader of the two page resources.
     - `LIVE_ROW_KEY`
     - `LIVE_ROW_KEY_MAX_BYTES`
     - `LIVE_SCOPED_KEY`
+    - `liveArmColumns`
     - `liveCollection`
     - `liveColumns`
     - `liveValue`
@@ -873,6 +896,7 @@ for a new reader of the two page resources.
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`
     - `apps/deploy/deployments`
+    - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/health`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
@@ -912,15 +936,18 @@ for a new reader of the two page resources.
     - `auth`
     - `auth/apple-signing/setup-wizard`
     - `auth/google/setup-wizard`
+    - `backup/runs-arm`
     - `build`
     - `build/build-fix`
     - `build/build-info`
     - `build/deployment`
+    - `build/runs-arm`
     - `build/serve-composition`
     - `config_v2`
     - `config_v2/settings`
     - `conversations`
     - `conversations/agents`
+    - `conversations/all-conversations`
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
@@ -947,6 +974,7 @@ for a new reader of the two page resources.
     - `conversations/summary`
     - `database/query-deadline`
     - `debug/claude-cli-calls`
+    - `debug/latency-ledger`
     - `debug/profiling/op-log/op-store`
     - `debug/profiling/ops`
     - `debug/queue`
@@ -977,11 +1005,14 @@ for a new reader of the two page resources.
     - `primitives/metrics`
     - `primitives/usage-rank`
     - `release`
+    - `release/runs-arm`
     - `reports`
     - `review`
     - `review/code-review`
     - `review/plugin-changes`
+    - `runs`
     - `shell/notifications`
+    - `stats/responsiveness`
     - `tasks/attempt-work`
     - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
@@ -999,6 +1030,7 @@ for a new reader of the two page resources.
 - Test helpers:
   - Server: `@plugins/network/plugins/live/server/testing`
     - `compileCollection` — Derive the specs for a collection — three, or just `rows` for a lookup-only one.
+    - `compileUnion` — Derive a union collection's three server halves.
 - Sub-plugins:
   - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
 

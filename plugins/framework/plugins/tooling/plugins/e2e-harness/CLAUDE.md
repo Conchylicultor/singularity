@@ -320,6 +320,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `config_v2`
     - `config_v2/settings`
     - `config_v2/settings/conflict-agent`
+    - `conversations/all-conversations`
     - `conversations/conversation-ui/row`
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/artifacts`
@@ -331,6 +332,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/rewind`
+    - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
     - `database/admin`
     - `debug/live-state-churn/emit`
@@ -387,6 +389,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `reorder`
     - `reorder/node-types`
     - `reports`
+    - `runs`
     - `shell/global-action-bar`
     - `shell/notifications`
     - `shell/toast`

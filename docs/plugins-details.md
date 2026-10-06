@@ -1746,24 +1746,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/deploy/deployments.deploymentDetailPane`
                   - `primitives/css/badge.Badge`
-                  - `runs.armNumber`
-                  - `runs.armText`
-                  - `runs.runArmFields`
-                  - `runs.RunRowProps`
                   - `runs.Runs`
               - Server:
                 - Uses:
                   - `apps/deploy/deployments._deployRuns`
                   - `apps/deploy/servers._deployServers`
+                  - `database/sql-projection.parsed`
                   - `runs.defineRunKind`
                 - Register: `defineRunKind('deploy')`
               - Core:
-                - Uses: `runs.defineRunArmFields`
+                - Uses:
+                  - `network/live.liveArmColumns`
+                  - `network/live/filter.liveNumber`
+                  - `network/live/filter.liveText`
+                  - `runs.runs`
                 - Exports (types): `DeployRunStatus`
                 - Exports (values):
                   - `DEPLOY_RUN_KIND`
                   - `DEPLOY_STATUS_OUTCOME`
-                  - `deployRunFields`
+                  - `deployRunColumns`
         - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and contributes the derived `status` field into the servers DataView plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its live collection, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
@@ -1886,7 +1887,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/health.ServerHealthRow`
               - `apps/deploy/health.useServerHealth`
               - `apps/deploy/health.useServerHealthMap`
-              - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.useLive`
               - `network/live.useLiveRow`
@@ -1899,11 +1899,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/live-state.combineResources`
               - `primitives/live-state.foldResource`
+              - `primitives/live-state.GateInput`
+              - `primitives/live-state.mapResource`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/log-channels.LiveLogChannel`
               - `primitives/relative-time.RelativeTime`
@@ -1919,6 +1921,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ReleaseState`
               - `ReleaseStateInput`
             - Exports (values):
+              - `candidatePredatesLatest`
               - `RELEASE_STATE_OPTIONS`
               - `releaseStateLabel`
               - `resolveReleaseState`
@@ -2202,19 +2205,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/events/sources/source-detail/runs/extracted-events`
               - `apps/events/sources/source-field`
-        - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / run-ledger hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + the run ledger's revision tick.
+        - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / run hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources and run-ledger collections.
           - Web:
             - Slots: `EventSources.Type` ← `apps.events.sources.coworkmeet`, `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
             - Uses:
-              - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.LiveListResult`
               - `network/live.LiveRowResult`
               - `network/live.useLive`
               - `network/live.useLiveRow`
-              - `primitives/live-state.foldResource`
               - `primitives/live-state.useEndpointResource`
-              - `primitives/live-state.useResource`
             - Exports (values):
               - `EventSources`
               - `useCreateEventSource`
@@ -2222,7 +2222,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useEventSourceOrigin`
               - `useEventSourceRow`
               - `useEventSourceRun`
-              - `useEventSourceRuns`
               - `useEventSources`
               - `useRefreshAllEventSources`
               - `useRefreshEventSourceNow`
@@ -2233,7 +2232,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `resource.declare` "events.sources"
               - `resource.declare` "events.sources:rows"
               - `resource.declare` "events.sources:groups"
-              - `resource.declare` "events.runs-revision"
+              - `resource.declare` "events.source-runs"
+              - `resource.declare` "events.source-runs:rows"
+              - `resource.declare` "events.source-runs:groups"
             - Uses:
               - `database.db`
               - `infra/endpoints.HttpError`
@@ -2258,13 +2259,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `createSource`
               - `defineEventSourceType`
               - `deleteSource`
-              - `eventRunsRevisionServerResource`
               - `eventSourcesServed`
               - `eventsTable`
               - `getEventSourceType`
               - `listEventSourceTypes`
               - `listRunEvents`
-              - `listRuns`
               - `listSources`
               - `markEventsDisappeared`
               - `reanchorRecurringEvents`
@@ -2274,7 +2273,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `updateSource`
               - `upsertEvents`
             - Resources:
-              - `events.runs-revision` (push)
+              - `events.source-runs` (keyed, window)
+              - `events.source-runs:groups` (push)
+              - `events.source-runs:rows` (keyed, point)
               - `events.sources` (keyed, window)
               - `events.sources:groups` (push)
               - `events.sources:rows` (keyed, point)
@@ -2286,8 +2287,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DELETE /api/events/sources/:id`
               - `POST /api/events/sources/:id/refresh`
               - `POST /api/events/sources/refresh-all`
-              - `GET /api/events/sources/:id/runs`
-              - `GET /api/events/runs/:runId`
               - `GET /api/events/runs/:runId/events`
           - Core:
             - Uses:
@@ -2305,8 +2304,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveCollection`
               - `network/live/filter.liveBoolean`
+              - `network/live/filter.liveInstant`
+              - `network/live/filter.liveNumber`
               - `network/live/filter.liveText`
-              - `primitives/live-state.resourceDescriptor`
             - Exports (types):
               - `CreateEventSourceBody`
               - `EventCategory`
@@ -2335,12 +2335,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `deleteEventSource`
               - `EVENT_CATEGORIES`
               - `eventFields`
-              - `eventRunsRevisionResource`
               - `EventSchema`
               - `eventSourceFields`
               - `eventSourceRunEventFields`
               - `EventSourceRunEventSchema`
               - `eventSourceRunFields`
+              - `eventSourceRuns`
               - `EventSourceRunSchema`
               - `eventSources`
               - `EventSourceSchema`
@@ -2350,9 +2350,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ExtractionResultSchema`
               - `extractionStatus`
               - `getEventSource`
-              - `getEventSourceRun`
-              - `listEventSourceRuns`
-              - `ListEventSourceRunsQuerySchema`
               - `listEventSources`
               - `listRunEvents`
               - `ListRunEventsQuerySchema`
@@ -2665,7 +2662,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `Pane.Register` "event-source-run"
                     - Uses:
                       - `apps/events/events-core.useEventSourceRun`
-                      - `apps/events/events-core.useEventSourceRuns`
                       - `apps/events/sources.describeRun`
                       - `apps/events/sources.EventSourceDetail`
                       - `apps/events/sources.eventSourceDetailRoute`
@@ -2673,8 +2669,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `apps/events/sources.RUN_OUTCOME_LABEL`
                       - `apps/events/sources.RUN_OUTCOME_OPTIONS`
                       - `apps/events/sources.RUN_OUTCOME_VARIANT`
-                      - `infra/endpoints.EndpointError`
-                      - `infra/endpoints.getEndpointErrorMessage`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/line.Line`
@@ -2686,13 +2680,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/data-view.defineDataView`
                       - `primitives/data-view.defineItemActions`
                       - `primitives/data-view.FieldDef`
+                      - `primitives/data-view.liveDataSource`
                       - `primitives/detail-sections.defineDetailSections`
-                      - `primitives/live-state.foldResource`
                       - `primitives/loading.Loading`
                       - `primitives/pane.defineRoute`
                       - `primitives/pane.Pane`
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.ResolveResult`
+                      - `primitives/pane.resolveRow`
                       - `primitives/pane.useOpenPane`
                       - `primitives/relative-time.RelativeTime`
                       - `ui/icons.Icon`
@@ -2712,7 +2707,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                         - Uses:
                           - `apps/events/events-core.useEventSourceRun`
                           - `apps/events/sources/source-detail/runs.EventSourceRunDetail`
-                          - `infra/endpoints.getEndpointErrorMessage`
                           - `primitives/css/placeholder.Placeholder`
                           - `primitives/css/spacing.Inset`
                           - `primitives/css/spacing.Stack`
@@ -8098,6 +8092,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
       - `primitives/pane.ResolveResult`
+      - `primitives/pane.resolveRow`
+      - `primitives/pane.rowOrStale`
       - `runs.RunsDataView`
       - `runs.useRun`
       - `ui/icons.Icon`
@@ -8183,26 +8179,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
-          - `runs.armJson`
-          - `runs.armNumber`
-          - `runs.armText`
-          - `runs.runArmFields`
           - `runs.Runs`
           - `ui/icons.Icon`
       - Server:
         - Uses:
           - `backup._backupRuns`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
           - `runs.defineRunKind`
         - Register: `defineRunKind('backup')`
       - Core:
         - Uses:
           - `backup.BACKUP_RUN_KIND`
-          - `runs.defineRunArmFields`
+          - `network/live.liveArmColumns`
+          - `network/live/filter.liveNumber`
+          - `network/live/filter.liveText`
+          - `runs.runs`
         - Exports (types): `BackupRunStatus`
         - Exports (values):
           - `BACKUP_RUN_STATUSES`
           - `BACKUP_STATUS_OUTCOME`
-          - `backupRunFields`
+          - `backupRunColumns`
+          - `BackupSourceReportSchema`
+          - `BackupTargetResultSchema`
     - **`sources`** — Umbrella for pluggable backup sources, each a self-gating sub-plugin contributing a BackupSource.
       - Plugins:
         - **`attachments`** — Config UI for the attachments backup source. Backs up file attachments into the backup archive.
@@ -8772,21 +8771,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-status.BuildStatusChip`
           - `build/build-status.BuildStatusDot`
           - `primitives/css/badge.Badge`
-          - `runs.armNumber`
-          - `runs.armTags`
-          - `runs.armText`
-          - `runs.runArmFields`
           - `runs.Runs`
       - Server:
         - Uses:
           - `build/run-ledger._buildRuns`
+          - `database/sql-projection.parsed`
           - `runs.defineRunKind`
         - Register: `defineRunKind('build')`
       - Core:
         - Uses:
           - `build/run-ledger.BUILD_RUN_KIND`
-          - `runs.defineRunArmFields`
-        - Exports (values): `buildRunArmFields`
+          - `network/live.liveArmColumns`
+          - `network/live/filter.liveNumber`
+          - `network/live/filter.liveStringArray`
+          - `network/live/filter.liveText`
+          - `runs.runs`
+        - Exports (values):
+          - `buildRunColumns`
+          - `BuildStatusSchema`
     - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
       - Web:
         - Uses:
@@ -9491,7 +9493,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.ConfigV2`
       - `config_v2.forkConfig`
       - `config_v2.getConfig`
-      - `conversations/all-conversations.handleQuery`
       - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePreprompt`
       - `conversations/session-chain.listSessionChain`
@@ -9915,7 +9916,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MoveAgentBodySchema`
           - `updateAgent`
           - `UpdateAgentBodySchema`
-    - **`all-conversations`** — All-conversations app pane: a server-delegated DataView (filter/sort/search/keyset over every conversation) reachable from the agent-manager sidebar. Global conversations query handler (filter/sort/search/keyset over conversations_v) + the scalar revision-tick live resource that keeps the All-conversations DataView window fresh.
+    - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar. Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
         - Slots: `allConversationsPane.Actions` ← `primitives.pane`
         - Contributes:
@@ -9925,14 +9926,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item.ConvStatusDot`
           - `conversations/conversation-view.conversationPane`
           - `conversations/model-provider.useModelCatalog`
-          - `infra/endpoints.fetchEndpoint`
           - `primitives/app-shell.opensPane`
           - `primitives/css/inline.Inline`
           - `primitives/css/text.Text`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
-          - `primitives/live-state.matchResource`
-          - `primitives/live-state.useResource`
+          - `primitives/data-view.liveDataSource`
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -9943,56 +9942,52 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `allConversationsPane`
           - `useConversationFieldDefs`
       - Server:
-        - Contributes: `resource.declare` "conversations-revision"
+        - Contributes:
+          - `resource.declare` "conversations.all"
+          - `resource.declare` "conversations.all:rows"
+          - `resource.declare` "conversations.all:groups"
+          - `resource.declare` "conversations.history"
+          - `resource.declare` "conversations.history:rows"
+          - `resource.declare` "conversations.history:groups"
         - Uses:
-          - `database.db`
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-          - `primitives/data-view/server-query.applyJoin`
-          - `primitives/data-view/server-query.augmentServerQuery`
-          - `primitives/data-view/server-query.bindColumns`
-          - `primitives/data-view/server-query.compileWhere`
-          - `primitives/data-view/server-query.FieldColumnMap`
-          - `primitives/keyset.buildSortKeys`
-          - `primitives/keyset.keyValuesOf`
-          - `primitives/keyset.orderByClauses`
-          - `primitives/keyset.seekPredicate`
-          - `tasks/tasks-core.conversationsView`
-        - Exports (values):
-          - `conversationsRevisionResource`
-          - `handleQuery`
-        - Resources: `conversations-revision` (push)
+          - `network/live.serveCollection`
+          - `tasks/tasks-core._conversations`
+          - `tasks/tasks-core.conversationOwnerColumns`
+          - `tasks/tasks-core.conversationOwnerJoins`
+        - Resources:
+          - `conversations.all` (keyed, window)
+          - `conversations.all:groups` (push)
+          - `conversations.all:rows` (keyed, point)
+          - `conversations.history` (keyed, window)
+          - `conversations.history:groups` (push)
+          - `conversations.history:rows` (keyed, point)
       - Core:
         - Uses:
           - `conversations/model-provider.compareModelsNewestFirst`
           - `conversations/model-provider.isPrintOnlyFamily`
           - `conversations/model-provider.ModelCatalog`
           - `conversations/model-provider.modelMeta`
-          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveCollection`
           - `network/live/filter.liveInstant`
           - `network/live/filter.liveText`
-          - `primitives/data-view.ServerFilterWireSchema`
-          - `primitives/live-state.resourceDescriptor`
           - `tasks/tasks-core.ConversationKindSchema`
           - `tasks/tasks-core.ConversationSchema`
           - `tasks/tasks-core.ConversationStatusSchema`
         - Exports (types):
           - `ConversationFieldSpec`
           - `ConversationFieldType`
-          - `QueryConversationsBody`
+          - `ConversationListRow`
         - Exports (values):
+          - `allConversations`
           - `CONVERSATION_FIELDS`
           - `CONVERSATION_FILTERABLE`
           - `CONVERSATION_SEARCHABLE`
+          - `CONVERSATION_SORTABLE`
+          - `conversationHistory`
+          - `ConversationListRowSchema`
           - `conversationModelOptions`
-          - `conversationsRevisionResource`
-          - `queryConversations`
-          - `QueryConversationsBodySchema`
-          - `QueryConversationsResponseSchema`
-          - `SortRuleSchema`
       - Cross-plugin:
         - Imported by:
-          - `conversations`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
     - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Paints the sidebar avatar from the category chosen for it.
@@ -12815,7 +12810,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
           - Plugins:
-            - **`history`** — Contributes the History list (a server-delegated bundle reusing the all-conversations query infra) as the History source of the merged conversation-sidebar DataView.
+            - **`history`** — Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.
               - Web:
                 - Slots: `history-actions` ← `conversations.conversations-view.data-view.history`
                 - Contributes:
@@ -12826,11 +12821,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversations-view/data-view.ConversationSidebarProps`
                   - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
-                  - `infra/endpoints.fetchEndpoint`
                   - `primitives/data-view.defineItemActions`
+                  - `primitives/data-view.liveDataSource`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/live-state.matchResource`
-                  - `primitives/live-state.useResource`
             - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
               - Web:
                 - Slots: `queue-actions` ← `conversations.conversations-view.data-view.queue`
@@ -13518,7 +13511,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `build/build-commits`
       - `conversations`
       - `conversations/agents`
-      - `conversations/all-conversations`
       - `conversations/conversation-category`
       - `conversations/conversation-preprompt`
       - `conversations/conversation-progress`
@@ -13570,7 +13562,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/usage-rank`
       - `release`
       - `reports`
-      - `runs`
       - `search/engine`
       - `shell/notifications`
       - `stats/cost`
@@ -13723,7 +13714,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ensureChangelogTable`
           - `findCarriedProducedRoutes` — A3p: the produced tables whose routes need a carried column.
           - `flushNow` — Flush `producer`'s coalescing buffer now (a test drives the window by hand).
+          - `installedLayouts` — What each table's installed triggers emit.
           - `mountProducersForTest` — Mount `producers` without a booted plugin graph: each is live (A12 passes), runs as boot mode `mode` (default `"serve"`; pass `"exec"` to see A13), and routes through `route` (default the real `routeChange`).
+          - `readInstalledTriggers` — Every installed `live_state_*` trigger on the given tables.
           - `rebuildTriggers`
     - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
       - Cross-plugin:
@@ -14188,21 +14181,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/chord/video-availability`
+          - `apps/deploy/deployments/runs-arm`
+          - `backup/runs-arm`
+          - `build/runs-arm`
           - `conversations/conversation-preprompt`
           - `conversations/session-chain`
+          - `infra/query-resource`
           - `page/callout`
           - `page/links`
+          - `release/runs-arm`
           - `tasks/tasks-core`
       - Server:
         - Exports (types):
+          - `DecodedRow`
           - `SqlDecoder`
           - `SqlDecoderLike`
           - `SqlProjectionFailure`
         - Exports (values):
+          - `decodedRow`
           - `formatSqlProjectionError`
           - `nullable`
           - `parsed`
           - `SqlProjectionError`
+          - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Core:
         - Exports (types):
@@ -14688,7 +14689,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.currentRoutePath`
       - Server:
         - Contributes:
-          - `resource.declare` "latency-ledger.revision"
+          - `resource.declare` "latency-ledger.summary"
           - `change-feed-exclusion` "latency_ledger_minute"
           - `change-feed-exclusion` "latency_ledger_host_minute"
           - `change-feed-exclusion` "latency_ledger_thread_minute"
@@ -14715,20 +14716,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/host/duress.createShedBuffer`
           - `infra/host/duress/latch.isUnderDuress`
           - `infra/retention.defineRetention`
+          - `network/live.serveValue`
         - DB schema: `plugins/debug/plugins/latency-ledger/server/internal/tables.ts`
         - Register:
           - `defineJob('retention.latency_ledger_minute')`
           - `defineJob('retention.latency_ledger_host_minute')`
           - `defineJob('retention.latency_ledger_thread_minute')`
           - `defineJob('retention.latency_ledger_interaction')`
-        - Resources: `latency-ledger.revision` (push)
-        - Routes:
-          - `POST /api/latency-ledger/client`
-          - `GET /api/latency-ledger/summary`
+        - Resources: `latency-ledger.summary` (invalidate)
+        - Routes: `POST /api/latency-ledger/client`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
-          - `primitives/live-state.resourceDescriptor`
+          - `network/live.liveValue`
         - Exports (types):
           - `ClientLatencyMetric`
           - `ClientMinute`
@@ -14750,13 +14750,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `emptyAcc`
           - `emptyCounts`
           - `EXIT_CRITERIA`
-          - `getLatencySummary`
           - `HISTOGRAM_SCHEME`
           - `InteractionSchema`
           - `isEmptyAcc`
           - `LATENCY_METRICS`
           - `LATENCY_WINDOWS`
-          - `latencyLedgerRevisionResource`
+          - `latencySummary`
           - `mergeAcc`
           - `mergeCounts`
           - `METRIC_LABELS`
@@ -19075,6 +19074,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2`
               - `config_v2/settings`
               - `config_v2/settings/conflict-agent`
+              - `conversations/all-conversations`
               - `conversations/conversation-ui/row`
               - `conversations/conversation-view/allow-monitor`
               - `conversations/conversation-view/artifacts`
@@ -19086,6 +19086,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/rewind`
+              - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
               - `database/admin`
               - `debug/live-state-churn/emit`
@@ -19142,6 +19143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder`
               - `reorder/node-types`
               - `reports`
+              - `runs`
               - `shell/global-action-bar`
               - `shell/notifications`
               - `shell/toast`
@@ -20334,8 +20336,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/ssh-setup`
           - `apps/events/events-core`
           - `apps/events/sources`
-          - `apps/events/sources/source-detail/runs`
-          - `apps/events/sources/source-detail/runs/caveats`
           - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
@@ -20401,7 +20401,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/settings`
           - `conversations`
           - `conversations/agents`
-          - `conversations/all-conversations`
           - `conversations/conversation-category`
           - `conversations/conversation-view`
           - `conversations/conversation-view/dependencies`
@@ -20417,7 +20416,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/resume`
           - `conversations/conversation-view/rewind`
           - `conversations/conversations-view`
-          - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
@@ -20490,7 +20488,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-view`
           - `plugin-meta/plugin-view/file-tree`
           - `primitives/data-view/custom-columns`
-          - `primitives/data-view/server-query`
           - `primitives/data-view/view-order`
           - `primitives/diff-view`
           - `primitives/file-viewer`
@@ -20509,7 +20506,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/mutation-errors`
           - `review/code-review`
           - `review/plugin-changes`
-          - `runs`
           - `screenshot`
           - `search/engine`
           - `search/quick-find`
@@ -20517,7 +20513,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
           - `stats/cost`
           - `stats/pushes`
-          - `stats/responsiveness`
           - `stats/tasks`
           - `tasks`
           - `tasks/launch-options`
@@ -20972,6 +20967,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/subagents`
               - `plugin-meta/plugin-tree`
+              - `release`
               - `review/plugin-changes`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
@@ -21020,6 +21016,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `build/deployment`
               - `conversations/conversation-view/commits-graph`
+              - `release`
               - `review/plugin-changes`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
@@ -21998,6 +21995,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database.db`
+          - `database/sql-projection.decodedRow`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.SqlDecoderLike`
           - `primitives/keyset.atOrBeforePredicate`
           - `primitives/keyset.orderByClauses`
           - `primitives/keyset.seekPredicate`
@@ -22005,6 +22005,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `CompiledGroups`
           - `CompiledQuery`
+          - `CompiledUnion`
           - `Edge`
           - `EntitySource`
           - `Hop`
@@ -22014,6 +22015,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReadColumn`
           - `RoutedSource`
           - `SelectMap`
+          - `UnionArmSpec`
+          - `UnionCollectionSpec`
+          - `UnionColumn`
+          - `UnionCuts`
+          - `UnionGroupsQuery`
+          - `UnionOrderKey`
           - `WindowOrderKey`
           - `WindowQueryResourceSpec`
         - Exports (values):
@@ -22021,6 +22028,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `compileGroupsQuery`
           - `compileJoins`
           - `compileQuery`
+          - `compileUnionCollection`
           - `deferredWindowQueryResource`
           - `joinRefs`
           - `queryResource`
@@ -22036,8 +22044,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.WindowResourceDescriptor`
           - `primitives/live-state.WindowSelector`
         - Exports (types):
+          - `ArmKeyCodec`
           - `ColumnRef`
           - `ColumnRefsOf`
+          - `ExprField`
           - `ExtensionJoin`
           - `JoinColumns`
           - `JoinFamily`
@@ -22049,16 +22059,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LookupJoin`
           - `PointQueryResourceContract`
           - `QueryResourceContract`
+          - `TypedColumnRef`
           - `WindowQueryResourceContract`
         - Exports (values):
+          - `armKeyCodec`
           - `BASE_RELATION`
+          - `expr`
           - `familyMember`
           - `familyMemberAlias`
+          - `isExprField`
+          - `KIND_RE`
           - `queryResourceDescriptor`
       - Cross-plugin:
         - Imported by:
           - `conversations/agents`
           - `network/live`
+          - `runs`
           - `tasks/task-category`
           - `tasks/tasks-core`
       - Test helpers:
@@ -23102,8 +23118,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/sql-column.columnWireCodec`
           - `database/sql-column.WireCodec`
           - `infra/query-resource.CompiledGroups`
+          - `infra/query-resource.CompiledUnion`
           - `infra/query-resource.compileGroupsQuery`
           - `infra/query-resource.compileJoins`
+          - `infra/query-resource.compileUnionCollection`
           - `infra/query-resource.deferredWindowQueryResource`
           - `infra/query-resource.EntitySource`
           - `infra/query-resource.joinRefs`
@@ -23111,6 +23129,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource.ReadColumn`
           - `infra/query-resource.RoutedSource`
           - `infra/query-resource.SelectMap`
+          - `infra/query-resource.UnionArmSpec`
+          - `infra/query-resource.UnionColumn`
           - `infra/query-resource.WindowOrderKey`
           - `infra/query-resource.windowQueryResource`
           - `infra/query-resource.WindowQueryResourceSpec`
@@ -23118,7 +23138,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `CollectionSource`
           - `CollectionSpecs`
+          - `ColumnOverride`
           - `CompiledValue`
+          - `DefaultScope`
           - `LiveValueSource`
           - `LookupCollectionSpecs`
           - `ScopedMemberRead`
@@ -23129,7 +23151,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ServedLookupCollection`
           - `ServedScopedColumns`
           - `ServedValue`
+          - `ServeUnionOptions`
           - `ServeValueOptions`
+          - `UnionArmBinding`
+          - `UnionArmColumns`
+          - `UnionArmRefs`
+          - `UnionFieldBinding`
         - Exports (values):
           - `compileCollection`
           - `compileValue`
@@ -23137,9 +23164,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `serveCollection`
           - `serveColumns`
           - `serveScopedColumns`
+          - `serveUnionCollection`
           - `serveValue`
       - Core:
         - Uses:
+          - `infra/query-resource.KIND_RE`
           - `network/live/filter.decodeFilter`
           - `network/live/filter.encodeFilter`
           - `network/live/filter.Filter`
@@ -23155,14 +23184,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.WindowSelector`
         - Exports (types):
           - `ContributedColumns`
+          - `LiveArmColumnsHandle`
+          - `LiveArms`
+          - `LiveArmsCollection`
+          - `LiveArmsSpec`
           - `LiveCentralValueSpec`
           - `LiveCollection`
           - `LiveCollectionOf`
           - `LiveCollectionSpec`
           - `LiveColumnFilter`
           - `LiveColumnRef`
+          - `LiveColumnRefOwner`
           - `LiveColumnsDeclaration`
           - `LiveColumnsHandle`
+          - `LiveColumnsOwner`
           - `LiveContributedCollection`
           - `LiveCutKey`
           - `LiveDecodedGroupQuery`
@@ -23191,8 +23226,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LiveScopedColumns`
           - `LiveScrollCollection`
           - `LiveSortDirection`
+          - `LiveTypedParamValueSpec`
+          - `LiveTypedValueParams`
           - `LiveValue`
           - `LiveValueOrigin`
+          - `LiveValueParamParsers`
           - `LiveValueParams`
           - `LiveValueSpec`
           - `LiveWhere`
@@ -23208,6 +23246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LIVE_ROW_KEY`
           - `LIVE_ROW_KEY_MAX_BYTES`
           - `LIVE_SCOPED_KEY`
+          - `liveArmColumns`
           - `liveCollection`
           - `liveColumns`
           - `liveValue`
@@ -23226,6 +23265,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/composition`
           - `apps/deploy/deployments`
+          - `apps/deploy/deployments/runs-arm`
           - `apps/deploy/health`
           - `apps/deploy/local-serve`
           - `apps/deploy/remote-deploy`
@@ -23265,15 +23305,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `auth`
           - `auth/apple-signing/setup-wizard`
           - `auth/google/setup-wizard`
+          - `backup/runs-arm`
           - `build`
           - `build/build-fix`
           - `build/build-info`
           - `build/deployment`
+          - `build/runs-arm`
           - `build/serve-composition`
           - `config_v2`
           - `config_v2/settings`
           - `conversations`
           - `conversations/agents`
+          - `conversations/all-conversations`
           - `conversations/conversation-category`
           - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
@@ -23300,6 +23343,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/summary`
           - `database/query-deadline`
           - `debug/claude-cli-calls`
+          - `debug/latency-ledger`
           - `debug/profiling/op-log/op-store`
           - `debug/profiling/ops`
           - `debug/queue`
@@ -23330,11 +23374,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/metrics`
           - `primitives/usage-rank`
           - `release`
+          - `release/runs-arm`
           - `reports`
           - `review`
           - `review/code-review`
           - `review/plugin-changes`
+          - `runs`
           - `shell/notifications`
+          - `stats/responsiveness`
           - `tasks/attempt-work`
           - `tasks/auto-start`
           - `tasks/auto-start/launch-option`
@@ -23352,12 +23399,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Test helpers:
         - Server: `@plugins/network/plugins/live/server/testing`
           - `compileCollection` — Derive the specs for a collection — three, or just `rows` for a lookup-only one.
+          - `compileUnion` — Derive a union collection's three server halves.
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
             - Imported by:
               - `apps/browser/bookmarks`
               - `apps/deploy/deployments`
+              - `apps/deploy/deployments/runs-arm`
               - `apps/events/event-list`
               - `apps/events/events-core`
               - `apps/mail/reading-pane`
@@ -23365,16 +23414,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/sonata/playback-history`
               - `apps/sonata/sources/midi`
+              - `backup/runs-arm`
+              - `build/runs-arm`
               - `conversations/all-conversations`
               - `conversations/summary`
               - `debug/profiling/op-log/op-store`
               - `infra/claude-cli`
               - `infra/trash`
               - `network/live`
-              - `primitives/data-view/server-query`
               - `primitives/usage-rank`
               - `release`
+              - `release/runs-arm`
               - `reports`
+              - `runs`
               - `shell/notifications`
               - `tasks/tasks-core`
           - Server:
@@ -31037,9 +31089,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RowTone`
           - `SectionBodyProps`
           - `SelectionConfig`
-          - `ServerDataSourceResult`
-          - `ServerDataSourceSpec`
-          - `ServerPage`
           - `SortController`
           - `SortPreset`
           - `SortRule`
@@ -31099,7 +31148,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useResolveOperatorSet`
           - `useResolveValueCodec`
           - `useRowFilter`
-          - `useServerDataSource`
           - `useSortController`
       - Server:
         - Contributes: `ConfigV2.Register` ×43: "agent-launches", "agents-list", "all-conversations", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
@@ -31182,7 +31230,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/gallery`
           - `primitives/data-view/icons`
           - `primitives/data-view/list`
-          - `primitives/data-view/server-query`
           - `primitives/data-view/table`
           - `primitives/data-view/tree`
           - `primitives/data-view/view-order`
@@ -31201,7 +31248,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewBaseProps`
           - `DataViewDataOrigin`
           - `DataViewDensity`
-          - `DataViewFetchPageOrigin`
           - `DataViewFoldLines`
           - `DataViewGroupHeaders`
           - `DataViewId`
@@ -31257,8 +31303,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SectionsToolbar`
           - `SectionsToolbarForms`
           - `SelectionConfig`
-          - `ServerDataSourceSpec`
-          - `ServerPage`
           - `SortPreset`
           - `SortRule`
           - `TableCellProps`
@@ -31282,7 +31326,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `isSectionsToolbar`
           - `orderFieldsBySection`
           - `scopeFilterRows`
-          - `ServerFilterWireSchema`
           - `SHARED_FIELD_SECTION`
           - `splitFieldSections`
           - `UNGROUPED_FOLD_KEY`
@@ -31347,7 +31390,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `resource.declare` "data-view-custom-values"
               - `resource.declare` "data-view-custom-column-defs"
-              - `data-view.query-augmentor`
               - `live.columns.scoped` "custom"
             - Uses:
               - `database.db`
@@ -31360,10 +31402,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live.serveValue`
               - `primitives/data-view.readDataViewConfigDoc`
               - `primitives/data-view.watchDataViewConfigDoc`
-              - `primitives/data-view/server-query.AugmentedColumn`
-              - `primitives/data-view/server-query.DataViewServer`
-              - `primitives/data-view/server-query.QueryAugmentor`
-              - `primitives/data-view/server-query.QueryAugmentorContext`
             - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`
             - Exports (values): `_dataViewCustomValues`
             - Resources:
@@ -31394,6 +31432,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deploy-history`
+              - `apps/events/sources/source-detail/runs`
               - `apps/studio/compositions/release`
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:
@@ -31518,33 +31557,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `ListViewOptions`
           - Core:
             - Exports (types): `ListViewOptions`
-        - **`server-query`** — Server half of a server-delegated DataView over the one filter language: bindColumns binds a source's core `filterable` declaration to its SQL (domain copied, every column bound), decodeFilterBody strictly decodes the wire filter (400 on anything undeclared), compileWhere compiles it through the language's filterSql, and the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) lets sub-plugins offer extra joined sort/filter columns. Names no field type; the keyset seek + cursor codec live in primitives/keyset.
-          - Server:
-            - Uses:
-              - `infra/endpoints.HttpError`
-              - `network/live/filter.filterSql`
-              - `primitives/data-view.readDataViewConfigDoc`
-            - Exports (types):
-              - `AugmentedColumn`
-              - `ColumnBinding`
-              - `FieldColumnMap`
-              - `QueryAugmentor`
-              - `QueryAugmentorContext`
-              - `ServerQueryAugmentation`
-            - Exports (values):
-              - `applyJoin`
-              - `augmentServerQuery`
-              - `bindColumns`
-              - `compileWhere`
-              - `DataViewServer`
-              - `decodeFilterBody`
-              - `filterableOf`
-          - Cross-plugin:
-            - Imported by:
-              - `conversations/all-conversations`
-              - `primitives/data-view/custom-columns`
-              - `primitives/data-view/union-query`
-              - `runs`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
@@ -31633,32 +31645,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree.useTreeRow`
               - `ui/icons.Icon`
             - Exports (types): `TreeViewOptions`
-        - **`union-query`** — Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Arm pruning evaluates a conjunctive clause over an arm constant (typed NULL, discriminator) with the filter language's own op test, so a negative op keeps the arm. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
-          - Server:
-            - Uses:
-              - `primitives/data-view/server-query.compileWhere`
-              - `primitives/data-view/server-query.FieldColumnMap`
-              - `primitives/keyset.buildSortKeys`
-              - `primitives/keyset.ColumnExpr`
-              - `primitives/keyset.orderByClauses`
-              - `primitives/keyset.seekPredicate`
-              - `primitives/keyset.SortKey`
-            - Exports (types):
-              - `CompiledUnionPage`
-              - `CompileUnionPageArgs`
-              - `UnionArm`
-            - Exports (values): `compileUnionPage`
-          - Cross-plugin:
-            - Imported by: `runs`
-          - Core:
-            - Exports (types):
-              - `UnionColumnSpec`
-              - `UnionColumnSpecs`
-              - `UnionDiscriminator`
-            - Exports (values):
-              - `DEFAULT_UNION_DISCRIMINATOR`
-              - `UnionCursorMismatchError`
-              - `unionFilterable`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Uses:
@@ -32607,13 +32593,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/user-text`
           - `conversations/conversation-view/markdown-extensions`
           - `tasks/task-description`
-    - **`keyset`** — Field-agnostic keyset (cursor) pagination machinery. Null-aware keyset seek/order-by compiler over drizzle SQL (server) paired with the browser-safe cursor codec + sort signature (core). No data-view dependency, so any server-delegated windowed query can reuse it.
+    - **`keyset`** — Field-agnostic keyset pagination machinery: the sort-rule types (core) and a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL (server). No data-view dependency, so any server-delegated windowed query can reuse it.
       - Cross-plugin:
-        - Imported by:
-          - `conversations/all-conversations`
-          - `infra/query-resource`
-          - `primitives/data-view/union-query`
-          - `runs`
+        - Imported by: `infra/query-resource`
       - Server:
         - Exports (types):
           - `ColumnExpr`
@@ -32629,13 +32611,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `seekPredicate`
       - Core:
         - Exports (types):
-          - `CursorPayload`
           - `KeysetSortRule`
           - `SortDirection`
-        - Exports (values):
-          - `decodeCursor`
-          - `encodeCursor`
-          - `sortSignature`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
         - Imported by:
@@ -32931,7 +32908,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/ssh-setup`
           - `apps/events/events-core`
           - `apps/events/sources`
-          - `apps/events/sources/source-detail/runs`
           - `apps/events/sources/source-detail/runs/extracted-events`
           - `apps/events/sources/source-field`
           - `apps/file-explorer/git`
@@ -32978,7 +32954,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/settings`
           - `conversations`
           - `conversations/agents`
-          - `conversations/all-conversations`
           - `conversations/conversation-category`
           - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
@@ -33010,7 +32985,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/tasks-panel`
           - `conversations/conversation-view/track`
           - `conversations/conversation-view/turn-summary`
-          - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
           - `conversations/effort-provider`
           - `conversations/model-provider`
@@ -33060,15 +33034,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/optimistic-mutation`
           - `primitives/pane`
           - `primitives/usage-rank`
-          - `release`
           - `reports/live-state-stale-drop`
           - `reports/resource-errors`
           - `review`
           - `review/code-review`
           - `review/plugin-changes`
-          - `runs`
           - `shell/notifications`
-          - `stats/responsiveness`
           - `tasks`
           - `tasks/attempt-view`
           - `tasks/attempt-work`
@@ -34480,6 +34451,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveFrom`
           - `resolveRow`
           - `restoreRoute`
+          - `rowOrStale`
           - `setBasePath`
           - `setHistoryAdapter`
           - `setLiveStore`
@@ -36065,13 +36037,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `resource.declare` "release.history"
       - `resource.declare` "release.history:rows"
       - `resource.declare` "release.history:groups"
-      - `resource.declare` "release.history-revision"
+      - `resource.declare` "release.candidate"
       - `resource.declare` "release.previews"
     - Uses:
       - `database.db`
       - `database/sql-column.parsedText`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
+      - `infra/git/git-read-cache.createSignedMemo`
+      - `infra/git/git-watcher.refHeadServed`
       - `infra/jobs/supervised-job.defineSupervisedJob`
       - `infra/jobs/supervised-job.runEnded`
       - `infra/jobs/supervised-job.RunEndedPayload`
@@ -36083,8 +36057,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `network/live.serveCollection`
       - `network/live.serveValue`
       - `primitives/log-channels.defineLogSink`
+      - `release/bundles.bundleSignature`
       - `release/bundles.compareToHead`
       - `release/bundles.newReleaseRunId`
+      - `release/bundles.readHeadSha`
       - `release/bundles.releaseOutDir`
       - `release/bundles.resolveBundle`
     - DB schema: `plugins/release/server/internal/tables.ts`
@@ -36101,16 +36077,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `defineSupervisedJob('release.run.supervised')`
       - `defineDaemon('release.preview')`
     - Resources:
+      - `release.candidate` (push)
       - `release.history` (keyed, window)
-      - `release.history-revision` (push)
       - `release.history:groups` (push)
       - `release.history:rows` (keyed, point)
       - `release.previews` (push)
       - `release.runs:rows` (keyed, point)
     - Routes:
       - `POST /api/release`
-      - `GET /api/release/candidate`
-      - `GET /api/release/latest`
       - `POST /api/release/runs/:id/preview`
       - `POST /api/release/runs/:id/preview/stop`
       - `GET /api/release/runs/:id/logs`
@@ -36121,15 +36095,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `network/live.liveValue`
       - `network/live/filter.liveInstant`
       - `network/live/filter.liveText`
-      - `primitives/live-state.resourceDescriptor`
       - `release/bundles.ReleaseManifestSchema`
     - Exports (types):
       - `PlatformTag`
       - `PlatformTagResult`
       - `Preview`
-      - `ReleaseCandidateResponse`
+      - `ReleaseCandidate`
       - `ReleaseIntent`
-      - `ReleaseLatestRunResponse`
       - `ReleaseLogLine`
       - `ReleaseLogsResponse`
       - `ReleaseRun`
@@ -36149,18 +36121,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `PreviewSchema`
       - `RELEASE_LOG_CHANNEL`
       - `RELEASE_TARGETS`
-      - `releaseCandidateEndpoint`
-      - `ReleaseCandidateResponseSchema`
+      - `releaseCandidate`
+      - `ReleaseCandidateSchema`
       - `releaseHistory`
       - `ReleaseIntentSchema`
-      - `releaseLatestRunEndpoint`
-      - `ReleaseLatestRunResponseSchema`
       - `releaseLogsEndpoint`
       - `ReleaseLogsResponseSchema`
       - `releasePreviews`
       - `releaseRuns`
       - `ReleaseRunSchema`
-      - `releaseRunsRevisionResource`
       - `releaseTargetById`
       - `STAGED_INTENT`
       - `StalenessSchema`
@@ -36180,6 +36149,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PruneResult`
         - Exports (values):
           - `bundleRoot`
+          - `bundleSignature`
           - `claimLatestPointer`
           - `compareToHead`
           - `compositionReleaseDir`
@@ -36189,6 +36159,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `newReleaseRunId`
           - `pruneReleaseRunDirs`
           - `readGitProvenance`
+          - `readHeadSha`
           - `releaseOutDir`
           - `resolveBundle`
       - Cross-plugin:
@@ -36214,20 +36185,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `apps/studio/compositions/release.releaseDetailPane`
           - `primitives/css/badge.Badge`
-          - `runs.armBool`
-          - `runs.armText`
-          - `runs.runArmFields`
           - `runs.Runs`
       - Server:
         - Uses:
+          - `database/sql-projection.parsed`
           - `release._releaseRuns`
           - `runs.defineRunKind`
         - Register: `defineRunKind('release')`
       - Core:
-        - Uses: `runs.defineRunArmFields`
+        - Uses:
+          - `network/live.liveArmColumns`
+          - `network/live/filter.liveBoolean`
+          - `network/live/filter.liveText`
+          - `release.ReleaseRunSchema`
+          - `runs.runs`
         - Exports (values):
           - `RELEASE_RUN_KIND`
-          - `releaseRunArmFields`
+          - `releaseRunColumns`
     - **`source-checkout`** — The private, detached git checkout a release of committed code builds from: acquire one pinned to a commit (held by a kernel flock for the owning process's life), dispose of it, and sweep the checkouts whose owner died. DB-free so the release CLI can import it.
       - Server:
         - Uses:
@@ -37054,99 +37028,73 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/loading.Loading`
               - `review/plugin-changes.PluginChangesSlots`
 
-- **`runs`** — The merged run surface: <RunsDataView> over the base field schema plus every arm's contributed fields, and the three seams an arm reaches it through (Runs.Kind for the label + row activation, Runs.Leading for the list row's status glyph, Runs.Fields for its own columns). Every row is a single field-driven line that obeys the view's visible fields, and a domain's detail lives in the pane its rows open — an arm contributes columns and a glyph, never a row body. Also exports useRun, the by-(kind, id) read every run-detail surface hydrates from. The run-kind registry and the one query behind the merged run space: defineRunKind binds a domain's own ledger into the union (base columns typed against the base declaration, extra columns typed against the arm's own field declaration), POST /api/runs/query compiles every registered arm into one keyset page, GET /api/runs/:kind/:id compiles the one arm that owns the kind against every arm's column specs so a single row comes back shaped exactly like a listed one, and runs.revision is the scalar tick that refreshes the loaded window. Names no run kind.
+- **`runs`** — The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields plus every arm's contributed fields, each bound to its column), and the three seams an arm reaches it through (Runs.Kind for the label + row activation, Runs.Leading for the list row's status glyph, Runs.Fields for its own columns). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The run-kind registry and the merged run space as ONE routed union window: defineRunKind binds a domain's own ledger into the `runs` collection as an arm (base fields typed against the row, its own columns against its liveArmColumns set; id and duration derived), and serveUnionCollection serves the window, its `:rows` point read (useRun) and `:groups` from every registered arm — a write to one ledger refills only the rows it changed. Names no run kind.
   - Web:
     - Slots:
       - `Runs.Kind` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`, `build.runs-arm`, `release.runs-arm`
       - `Runs.Leading` ← `build.runs-arm`
       - `Runs.Fields` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`, `build.runs-arm`, `release.runs-arm`
     - Uses:
-      - `infra/endpoints.fetchEndpoint`
-      - `infra/endpoints.useEndpoint`
+      - `network/live.LiveRowResult`
+      - `network/live.useLiveRow`
       - `primitives/css/badge.Badge`
       - `primitives/data-view.DataView`
       - `primitives/data-view.DataViewDensity`
       - `primitives/data-view.defineDataView`
       - `primitives/data-view.defineFieldExtensions`
-      - `primitives/live-state.matchResource`
-      - `primitives/live-state.useResource`
+      - `primitives/data-view.liveDataSource`
       - `primitives/pane.useOpenPane`
       - `primitives/relative-time.RelativeTime`
+      - `primitives/relative-time.useNow`
       - `primitives/slot-render.defineDispatchSlot`
       - `runs/run-outcome.RUN_OUTCOME_OPTIONS`
       - `runs/run-outcome.RunOutcomeChip`
       - `runs/run-outcome.RunOutcomeDot`
     - Exports (types):
       - `RunKindContribution`
-      - `RunRead`
       - `RunRowProps`
       - `RunsDataViewProps`
     - Exports (values):
-      - `armBool`
-      - `armDate`
-      - `armJson`
-      - `armNumber`
-      - `armTags`
-      - `armText`
       - `formatDuration`
-      - `runArmFields`
+      - `RunDuration`
       - `Runs`
       - `RUNS_VIEW`
       - `RunsDataView`
       - `useRun`
   - Server:
-    - Contributes: `resource.declare` "runs.revision"
-    - Uses:
-      - `database.db`
-      - `infra/endpoints.HttpError`
-      - `infra/endpoints.implement`
-      - `primitives/data-view/server-query.decodeFilterBody`
-      - `primitives/data-view/union-query.compileUnionPage`
-      - `primitives/keyset.keyValuesOf`
+    - Contributes:
+      - `resource.declare` "runs"
+      - `resource.declare` "runs:rows"
+      - `resource.declare` "runs:groups"
+    - Uses: `network/live.serveUnionCollection`
     - Exports (types):
-      - `RunArmBaseColumns`
+      - `RunArmBase`
+      - `RunArmRefs`
+      - `RunFieldBinding`
       - `RunKind`
       - `RunKindSpec`
     - Exports (values):
       - `defineRunKind`
-      - `durationMsExpr`
       - `getRunKinds`
-    - Resources: `runs.revision` (push)
-    - Routes:
-      - `POST /api/runs/query`
-      - `GET /api/runs/:kind/:id`
+    - Resources:
+      - `runs` (keyed, window)
+      - `runs:groups` (push)
+      - `runs:rows` (keyed, point)
   - Core:
     - Uses:
-      - `infra/endpoints.defineEndpoint`
-      - `primitives/data-view.ServerFilterWireSchema`
-      - `primitives/live-state.resourceDescriptor`
+      - `infra/query-resource.armKeyCodec`
+      - `network/live.liveCollection`
+      - `network/live.WithContributedColumns`
+      - `network/live/filter.liveInstant`
+      - `network/live/filter.liveNumber`
+      - `network/live/filter.liveText`
+      - `runs/run-outcome.RUN_OUTCOMES`
       - `runs/run-outcome.RunOutcomeSchema`
-    - Exports (types):
-      - `QueryRunsBody`
-      - `QueryRunsResponse`
-      - `RunArmBaseColumnId`
-      - `RunArmFieldSpecs`
-      - `RunBaseColumnId`
-      - `RunBaseColumnNullable`
-      - `RunByIdResponse`
-      - `RunColumnSpec`
-      - `RunColumnType`
-      - `RunDerivedColumnId`
-      - `UnionRun`
+    - Exports (types): `RunRow`
     - Exports (values):
-      - `defineRunArmFields`
-      - `getRun`
-      - `queryRuns`
-      - `QueryRunsBodySchema`
-      - `QueryRunsResponseSchema`
-      - `RUN_BASE_COLUMNS`
-      - `RUN_COLUMN_DOMAINS`
-      - `RUN_SEARCH_COLUMNS`
-      - `runArmUnionSpecs`
-      - `RunByIdResponseSchema`
       - `runRowKey`
-      - `runsRevisionResource`
-      - `UnionRunSchema`
+      - `RunRowSchema`
+      - `runs`
   - Cross-plugin:
     - Imported by:
       - `apps/deploy/deployments/runs-arm`
@@ -37806,16 +37754,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `Stats.Chart` "Responsiveness" → `ResponsivenessSection`
         - Uses:
-          - `infra/endpoints.getEndpointErrorMessage`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/grid.Grid`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
-          - `primitives/live-state.matchResource`
-          - `primitives/live-state.useResource`
           - `stats.Stats`
           - `stats/commits.ChartState`
     - **`tasks`** — Task-based stats: active (open) tasks over time.
@@ -38976,6 +38921,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversationAttachments`
           - `conversationCascadeSignatures`
           - `ConversationKindSchema`
+          - `conversationOwnerColumns`
+          - `conversationOwnerJoins`
           - `conversationsActiveResource`
           - `ConversationSchema`
           - `conversationsGoneResource`

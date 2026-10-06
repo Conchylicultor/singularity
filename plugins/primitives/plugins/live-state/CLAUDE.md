@@ -950,7 +950,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/deploy/ssh-setup`
     - `apps/events/events-core`
     - `apps/events/sources`
-    - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/runs/extracted-events`
     - `apps/events/sources/source-field`
     - `apps/file-explorer/git`
@@ -997,7 +996,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `config_v2/settings`
     - `conversations`
     - `conversations/agents`
-    - `conversations/all-conversations`
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
@@ -1029,7 +1027,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/track`
     - `conversations/conversation-view/turn-summary`
-    - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
     - `conversations/effort-provider`
     - `conversations/model-provider`
@@ -1079,15 +1076,12 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `primitives/optimistic-mutation`
     - `primitives/pane`
     - `primitives/usage-rank`
-    - `release`
     - `reports/live-state-stale-drop`
     - `reports/resource-errors`
     - `review`
     - `review/code-review`
     - `review/plugin-changes`
-    - `runs`
     - `shell/notifications`
-    - `stats/responsiveness`
     - `tasks`
     - `tasks/attempt-view`
     - `tasks/attempt-work`

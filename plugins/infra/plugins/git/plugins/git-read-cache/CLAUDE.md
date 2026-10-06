@@ -183,6 +183,7 @@ primitive and Stage 2.1).
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `plugin-meta/plugin-tree`
+    - `release`
     - `review/plugin-changes`
     - `tasks/attempt-work`
     - `tasks/tasks-core`

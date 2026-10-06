@@ -2197,9 +2197,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `RowTone`
     - `SectionBodyProps`
     - `SelectionConfig`
-    - `ServerDataSourceResult`
-    - `ServerDataSourceSpec`
-    - `ServerPage`
     - `SortController`
     - `SortPreset`
     - `SortRule`
@@ -2259,7 +2256,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useResolveOperatorSet`
     - `useResolveValueCodec`
     - `useRowFilter`
-    - `useServerDataSource`
     - `useSortController`
 - Server:
   - Contributes: `ConfigV2.Register` ×43: "agent-launches", "agents-list", "all-conversations", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
@@ -2342,7 +2338,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/gallery`
     - `primitives/data-view/icons`
     - `primitives/data-view/list`
-    - `primitives/data-view/server-query`
     - `primitives/data-view/table`
     - `primitives/data-view/tree`
     - `primitives/data-view/view-order`
@@ -2361,7 +2356,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewBaseProps`
     - `DataViewDataOrigin`
     - `DataViewDensity`
-    - `DataViewFetchPageOrigin`
     - `DataViewFoldLines`
     - `DataViewGroupHeaders`
     - `DataViewId`
@@ -2417,8 +2411,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `SectionsToolbar`
     - `SectionsToolbarForms`
     - `SelectionConfig`
-    - `ServerDataSourceSpec`
-    - `ServerPage`
     - `SortPreset`
     - `SortRule`
     - `TableCellProps`
@@ -2442,7 +2434,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `isSectionsToolbar`
     - `orderFieldsBySection`
     - `scopeFilterRows`
-    - `ServerFilterWireSchema`
     - `SHARED_FIELD_SECTION`
     - `splitFieldSections`
     - `UNGROUPED_FOLD_KEY`
@@ -2458,10 +2449,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
-  - **`server-query`** — Server half of a server-delegated DataView over the one filter language: bindColumns binds a source's core `filterable` declaration to its SQL (domain copied, every column bound), decodeFilterBody strictly decodes the wire filter (400 on anything undeclared), compileWhere compiles it through the language's filterSql, and the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) lets sub-plugins offer extra joined sort/filter columns. Names no field type; the keyset seek + cursor codec live in primitives/keyset.
   - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
   - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
-  - **`union-query`** — Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Arm pruning evaluates a conjunctive clause over an arm constant (typed NULL, discriminator) with the filter language's own op test, so a negative op keeps the arm. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
   - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
   - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through data-view's global RowOrder slot. Persists a per-view-instance manual row order keyed by (dataViewId, viewId, rowKey): a generic DB table, a push live resource, and a validating upsert endpoint that writes only the drag's bounded set (the moved row plus the seeds now ahead of it) rank-ascending — O(gesture), never a full replace, nothing deleted.
 

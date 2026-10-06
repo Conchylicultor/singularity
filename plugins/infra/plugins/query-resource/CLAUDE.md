@@ -462,7 +462,7 @@ The split is pinned byte for byte by `network/live`'s
 (`network/live/server/testing/compile-sql-golden.ts`) whose every shape's SQL
 and params, routes, `usesOf`, signatures, folded rows and per-tuple
 `where` / `orderBy` resolutions must equal
-`network/live/fixtures/compile-sql-golden.json`. The test only reads the
+`network/live/server/testing/compile-sql-golden.json`. The test only reads the
 fixture; a deliberate SQL change regenerates it with
 `./singularity run plugins/network/plugins/live/server/testing/gen-compile-golden.ts`
 and reviews its diff.
