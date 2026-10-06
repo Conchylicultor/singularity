@@ -48,7 +48,7 @@ export const PrototypeOptionSchema = z.object({
  *   case — most prototypes mock nothing), `malformed` (also a `problems[]`
  *   entry), or `declared` with the kind tag and the ref. The tag is carried
  *   unjudged: kinds are an open set contributed on the web, and the ref is
- *   resolved only there — a fixture catalog is per-worktree while prototypes
+ *   resolved only there — the exhibit catalog is per-worktree while prototypes
  *   are host-global, so the pairing can only ever be a runtime lookup.
  * - `options` — every valid `<meta name="prototype-option">`, in picker order,
  *   each with its default read off the page's own `<html data-<name>>` (see

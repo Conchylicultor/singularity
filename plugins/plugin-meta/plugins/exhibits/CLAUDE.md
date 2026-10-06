@@ -86,8 +86,7 @@ plugin with `exhibits/` and no `web/` fails the build.
 ## Who reads it
 
 - The Prototypes canvas's Real app frame: `exhibit:<id>` in a prototype's
-  `<meta name="mocks">` (`apps/prototypes/compare/exhibit`; `fixture:` and
-  `component:` are aliases of it).
+  `<meta name="mocks">` (`apps/prototypes/compare/exhibit`).
 - The layout-geometry harness: `isolated` exhibits that carry `geometry`, plus
   region exhibits.
 - **Debug → Exhibits** (`web/components/exhibits-gallery.tsx`, this plugin):

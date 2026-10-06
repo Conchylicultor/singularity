@@ -11,11 +11,10 @@ import type {
 } from "@plugins/apps/plugins/prototypes/plugins/compare/web";
 
 /**
- * The `exhibit:` kind (and its `fixture:` / `component:` aliases): one real
- * app component, looked up by id in the exhibit catalog and rendered inside
- * this app's own React tree — so an app exhibit's slot contributions, config
- * and data are the real ones, and an isolated one renders exactly as it does
- * anywhere else.
+ * The `exhibit:` kind: one real app component, looked up by id in the exhibit
+ * catalog and rendered inside this app's own React tree — so an app exhibit's
+ * slot contributions, config and data are the real ones, and an isolated one
+ * renders exactly as it does anywhere else.
  */
 export function ExhibitCounterpart({
   target,

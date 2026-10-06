@@ -129,8 +129,7 @@ The gallery reads these out of your HTML — there is no metadata file.
     browsable in Debug). An `isolated` exhibit renders anywhere from plain
     props; an `app` one as the running app renders it (real slots, config,
     data) — the way to reach an element that lives inside a popover or deep in
-    a screen, which `route:` cannot. `fixture:<id>` and `component:<id>` are
-    older spellings, kept as aliases of `exhibit:`; write `exhibit:`.
+    a screen, which `route:` cannot.
   - `route:/agents/c/123` — a whole app **screen**: the running app itself,
     framed at that in-app path (no rail, no tab bar).
   - `app:/agents` — the **whole app**, chrome included: the running app at that

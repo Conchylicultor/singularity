@@ -4181,12 +4181,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `REAL_APP_LABEL`
               - `REAL_APP_SOURCE`
           - Plugins:
-            - **`exhibit`** — The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size. fixture: and component: are aliases of it, kept so prototypes written before the catalog unified still resolve.
+            - **`exhibit`** — The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size.
               - Web:
-                - Contributes:
-                  - `Counterpart.Kind` "App exhibit" → `ExhibitCounterpart`
-                  - `Counterpart.Kind` "App exhibit (alias of exhibit:)" → `ExhibitCounterpart`
-                  - `Counterpart.Kind` "App exhibit (alias of exhibit:)" → `ExhibitCounterpart`
+                - Contributes: `Counterpart.Kind` "App exhibit" → `ExhibitCounterpart`
                 - Uses:
                   - `apps/prototypes/compare.Counterpart`
                   - `plugin-meta/exhibits.ExhibitResult`

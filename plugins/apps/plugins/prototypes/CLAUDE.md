@@ -44,9 +44,8 @@ other content lives in sub-plugins:
 - **`compare`** — the canvas's **Real app** frame: the real thing the
   prototype declares it mocks (`<meta name="mocks" content="<kind>:<ref>">`),
   contributed as a `FrameSource`. Owns the dispatch; each kind of counterpart
-  is a child plugin — `exhibit` (one real component from the exhibit catalog;
-  `fixture` and `component` are its aliases) and `route` (the running app,
-  framed at a path).
+  is a child plugin — `exhibit` (one real component from the exhibit catalog)
+  and `route` (the running app, framed at a path).
   Also `e2e/compare-diff.ts`, the pixel and colour diff of mock vs app.
 - **`present`** — shows one canvas frame without the app around it (this app
   tab, this browser tab, full screen, or a new tab), a frame action on every
@@ -75,7 +74,7 @@ whose app surface still stands).
   - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
   - **`compare`** — The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and contributed as a FrameSource, so the canvas shows it beside the prototype at the canvas's size. Each kind of counterpart (an exhibit from the exhibit catalog, the running app at a route) is a child plugin.
     - Plugins:
-      - **`exhibit`** — The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size. fixture: and component: are aliases of it, kept so prototypes written before the catalog unified still resolve.
+      - **`exhibit`** — The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size.
       - **`route`** — The route: and app: counterpart kinds for the prototype canvas's Real app frame: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
   - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
   - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).

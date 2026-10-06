@@ -11,10 +11,10 @@ describe("parseMocks", () => {
     expect(parseMocks("   \n\t")).toEqual({ kind: "none" });
   });
 
-  test("a fixture declaration", () => {
-    expect(parseMocks("fixture:control-panel/setting-rail")).toEqual({
+  test("an exhibit declaration", () => {
+    expect(parseMocks("exhibit:control-panel/setting-rail")).toEqual({
       kind: "declared",
-      tag: "fixture",
+      tag: "exhibit",
       ref: "control-panel/setting-rail",
     });
   });
@@ -44,14 +44,14 @@ describe("parseMocks", () => {
   });
 
   test("whitespace around either half is ignored", () => {
-    expect(parseMocks("  fixture : control-panel/setting-rail  ")).toEqual({
+    expect(parseMocks("  exhibit : control-panel/setting-rail  ")).toEqual({
       kind: "declared",
-      tag: "fixture",
+      tag: "exhibit",
       ref: "control-panel/setting-rail",
     });
   });
 
-  test("the bare legacy form (a fixture id with no kind) is malformed", () => {
+  test("a bare id with no kind is malformed", () => {
     const d = parseMocks("control-panel/setting-rail");
     expect(d.kind).toBe("malformed");
     if (d.kind !== "malformed") return;
@@ -74,7 +74,7 @@ describe("parseMocks", () => {
   });
 
   test("a kind is lowercase letters, digits and dashes", () => {
-    expect(parseMocks("Fixture:x").kind).toBe("malformed");
+    expect(parseMocks("Exhibit:x").kind).toBe("malformed");
     expect(parseMocks("my kind:x").kind).toBe("malformed");
     expect(parseMocks("1st:x").kind).toBe("malformed");
     expect(parseMocks("my-kind2:x")).toEqual({

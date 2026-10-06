@@ -14,14 +14,6 @@ app's slots, config and data; the former specimens). Both render here through
 `<ExhibitView>`, so an app exhibit's pills and buttons are the real slot
 contributions.
 
-## Aliases: `fixture:` and `component:`
-
-The two kinds the catalog replaced are contributed as aliases rendering the
-same component, labelled "(alias of exhibit:)". Prototypes live outside the
-repo and are shared by every worktree, so tags already written with those
-kinds must keep resolving on every branch until each prototype says
-`exhibit:`; then the aliases go.
-
 ## What it resolves to
 
 `useExhibit(target)` answers, and each answer is a frame state:
@@ -43,12 +35,9 @@ rows in its hole.
 
 ## Plugin reference
 
-- Description: The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size. fixture: and component: are aliases of it, kept so prototypes written before the catalog unified still resolve.
+- Description: The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size.
 - Web:
-  - Contributes:
-    - `Counterpart.Kind` "App exhibit" → `ExhibitCounterpart`
-    - `Counterpart.Kind` "App exhibit (alias of exhibit:)" → `ExhibitCounterpart`
-    - `Counterpart.Kind` "App exhibit (alias of exhibit:)" → `ExhibitCounterpart`
+  - Contributes: `Counterpart.Kind` "App exhibit" → `ExhibitCounterpart`
   - Uses:
     - `apps/prototypes/compare.Counterpart`
     - `plugin-meta/exhibits.ExhibitResult`
