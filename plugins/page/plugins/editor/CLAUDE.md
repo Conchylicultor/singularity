@@ -352,9 +352,25 @@ fails a handle that declares one without the other.
 
 Escaping the box is `unwrap` (`core/block-ops.ts`): Backspace at the start of an
 anchor's first child dissolves the container and promotes its children into its
-slot. The generic `isIndented` → outdent rung would instead pop that child out
-*and adopt the remaining siblings as its children*, silently re-nesting content
-nobody asked to nest.
+slot. The generic `isIndented` → outdent rung would instead move that child
+*below* the rest of the box (see below: out of a container, an outdent adopts
+nothing and lands after the box).
+
+**An outdent never splits a container.** `outdentOne` adopts a block's followers
+(Notion's outdent) — except when its parent is an anchor: a container's children
+are the box's content, not a subtree of the line above them, and adopting them
+would carry them out of the box under the escaping line, which paints as the box
+cut in two around it. So out of a container the block lands right after the box
+and its followers stay inside. Every outdent path (empty-Enter, Shift+Tab, the
+bulk selection outdent) goes through it, so none of them can split a box.
+
+**Empty-Enter leaves a container only where its flow ends.** On an empty line
+whose parent is an anchor, the ladder's outdent rung fires only for the box's
+LAST line below at least one other (Enter, Enter at the end of a callout steps
+out; `/callout` + Enter on a fresh empty line does not dissolve the box), for
+every block type. Anywhere else in the box the outdent rung is skipped: the
+type escape (`breakOutOnEmptyEnter`) still applies, then an ordinary split mints
+another line inside the box.
 
 ### A container folds to its borrowed line
 
@@ -1257,6 +1273,8 @@ deletion and to escaping structure:
 >
 > **Empty-Enter** escapes one structural level per press: indentation first
 > (outdent, keeping the type), then the type (convertTo), then ordinary split.
+> Inside a container the box is not indentation: it is left only from its last
+> line (see *Empty-Enter leaves a container only where its flow ends*).
 
 Backspace's and empty-Enter's ladders order `convertTo`/`outdent`
 **oppositely, deliberately**: Backspace strips what's visually nearest the caret
@@ -1814,7 +1832,8 @@ move as one rigid body rather than collapsing into a nested chain:
   stayed put* refuses to move, so a leading block that cannot indent holds its whole
   run in place. Skipping cascades; a fully-refused op is an identity no-op.
 - **`foldOutdent` — bottom-to-top.** `outdentOne` adopts the followers left below
-  the block (Notion's outdent). Bottom-up, every selected follower has already left
+  the block (Notion's outdent; never out of a container — see *An outdent never
+  splits a container*). Bottom-up, every selected follower has already left
   by the time an earlier block moves, so only UNSELECTED followers are adopted, by
   the last selected block. Top-down, the first block would swallow the rest of the
   selection as children.

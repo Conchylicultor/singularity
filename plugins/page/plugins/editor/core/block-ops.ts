@@ -151,10 +151,9 @@ export type BlockOp =
    *
    * This is how the caret escapes a container. The generic Backspace ladder would
    * otherwise resolve "start of the first child" to its `isIndented` → **outdent**
-   * rung, and `outdentOne` adopts the followers: the first line would pop out of
-   * the box AND take the rest of the container's content with it as its own
-   * children — silently re-nesting content the user never asked to nest. Correct
-   * for a one-line container, wrong for every other one. `unwrap` removes only the
+   * rung, and out of a container `outdentOne` lands the line AFTER the box: the
+   * first line would jump below the rest of the container's content. Correct for
+   * a one-line container, wrong for every other one. `unwrap` removes only the
    * container.
    */
   | { kind: "unwrap"; blockId: string }
@@ -1024,7 +1023,7 @@ function applyOp(
     case "indent":
       return foldIndent(blocks, op.blockIds).next;
     case "outdent":
-      return foldOutdent(blocks, op.blockIds).next;
+      return foldOutdent(blocks, op.blockIds, anchorOf(anchorTypes)).next;
     case "insert":
       return applyInsert(blocks, op);
     case "delete":
@@ -1641,8 +1640,19 @@ function indentOne(blocks: BlockNode[], blockId: string): BlockNode[] | null {
  * it as its own children (Notion's outdent: the visual subtree below the block
  * stays attached to it). Returns `null` when the move is not available (already
  * top level, or the parent is a page row — outdenting past it escapes the page).
+ *
+ * Out of a container ANCHOR the block adopts NOTHING: it lands right after the
+ * box and the lines below it stay in the box. A container's children are the
+ * box's content, not a subtree of the line above them — adopting them would
+ * carry them out of the box under the escaping line, which paints as the box
+ * cut in two around it. Every outdent path (empty-Enter, Shift+Tab, the bulk
+ * selection outdent) goes through here, so none of them can split a container.
  */
-function outdentOne(blocks: BlockNode[], blockId: string): BlockNode[] | null {
+function outdentOne(
+  blocks: BlockNode[],
+  blockId: string,
+  isAnchor: IsAnchor,
+): BlockNode[] | null {
   const block = byId(blocks, blockId);
   if (!block) return null;
   if (!block.parentId) return null; // already at top level
@@ -1654,9 +1664,11 @@ function outdentOne(blocks: BlockNode[], blockId: string): BlockNode[] | null {
   // Capture followers + the block's existing children from the PRE-move array,
   // before mutating anything.
   const blockRank = Rank.from(block.rank);
-  const followers = childrenOf(blocks, parent.id).filter(
-    (s) => Rank.compare(Rank.from(s.rank), blockRank) > 0,
-  );
+  const followers = isAnchor(parent)
+    ? []
+    : childrenOf(blocks, parent.id).filter(
+        (s) => Rank.compare(Rank.from(s.rank), blockRank) > 0,
+      );
   const existingKids = childrenOf(blocks, block.id);
 
   // Block becomes the sibling immediately after `parent`, reparented to the
@@ -1745,12 +1757,16 @@ function foldIndent(blocks: BlockNode[], blockIds: readonly string[]): Fold {
  * selection as children.) Landing each mover directly after its parent then
  * stacks them back into their original relative order.
  */
-function foldOutdent(blocks: BlockNode[], blockIds: readonly string[]): Fold {
+function foldOutdent(
+  blocks: BlockNode[],
+  blockIds: readonly string[],
+  isAnchor: IsAnchor,
+): Fold {
   if (blockIds.length === 0) return { next: blocks, moved: [] };
   const moved: string[] = [];
   let next = blocks;
   for (const id of inDocumentOrder(blocks, blockIds).reverse()) {
-    const applied = outdentOne(next, id);
+    const applied = outdentOne(next, id, isAnchor);
     if (!applied) continue;
     next = applied;
     moved.push(id);
@@ -1771,7 +1787,9 @@ export function canOutdent(
   blocks: BlockNode[],
   blockIds: readonly string[],
 ): boolean {
-  return foldOutdent(blocks, blockIds).moved.length > 0;
+  // Anchor-blind on purpose: WHETHER a block moves never depends on what it
+  // adopts, only on its parent — so the answer is the same with any anchor set.
+  return foldOutdent(blocks, blockIds, () => false).moved.length > 0;
 }
 
 // ---------------------------------------------------------------------------

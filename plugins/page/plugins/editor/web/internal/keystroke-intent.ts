@@ -85,10 +85,10 @@ export type KeyIntent =
   /**
    * Backspace at the start of a container anchor's FIRST child: dissolve the
    * container (`blockId` is the ANCHOR's id, not the caret's block) and promote
-   * its children into its slot. Not the generic `outdent` rung: `outdentOne`
-   * adopts the followers, so outdenting the first child would pop it out of the
-   * box AND take the rest of the container's content with it as its own
-   * children — a re-nesting nobody asked for.
+   * its children into its slot. Not the generic `outdent` rung: out of a
+   * container `outdentOne` lands the line AFTER the box (it adopts none of the
+   * box's lines), so outdenting the first child would move it below every other
+   * line of the container — a reordering nobody asked for.
    */
   | { type: "unwrap"; blockId: string }
   /**
@@ -241,10 +241,20 @@ function firstChildAnchor(
   ctx: IntentContext,
   node: BlockNode,
 ): BlockNode | null {
+  const parent = containerOf(ctx, node);
+  if (!parent) return null;
+  return childrenOf(ctx.nodes, parent.id)[0]?.id === node.id ? parent : null;
+}
+
+/**
+ * The container ANCHOR `node` sits directly inside, or null. Never the zoom
+ * root: zoomed into a container, its children are the view's top level, and
+ * stepping out of the box would step out of the view.
+ */
+function containerOf(ctx: IntentContext, node: BlockNode): BlockNode | null {
   if (node.parentId === null || node.parentId === ctx.scopeRootId) return null;
   const parent = ctx.nodes.find((n) => n.id === node.parentId);
-  if (!parent || !ctx.isAnchor(parent)) return null;
-  return childrenOf(ctx.nodes, parent.id)[0]?.id === node.id ? parent : null;
+  return parent && ctx.isAnchor(parent) ? parent : null;
 }
 
 function hasPrevSibling(nodes: BlockNode[], node: BlockNode): boolean {
@@ -435,11 +445,32 @@ export function resolveKeystroke(
       // Backspace's — Backspace strips what's visually nearest the caret;
       // empty-Enter escapes nesting outward. Empty == the caret is at both the
       // start and the end. Blocks without the policy fall straight through to split.
-      if (caret.atStart && caret.atEnd && p?.breakOutOnEmptyEnter) {
-        if (isIndented(ctx, node)) return { type: "outdent" };
-        if (node.type !== p.breakOutOnEmptyEnter)
-          return { type: "convertTo", to: p.breakOutOnEmptyEnter };
-        // Already top-level and already the target type: fall through to split.
+      //
+      // A CONTAINER is the one level that is not indentation: its children are
+      // the box's content, a flow the user is writing in, so empty-Enter steps
+      // out of it only where that flow ENDS — on the box's last line, below at
+      // least one other (so `/callout` + Enter on a fresh empty line does not
+      // dissolve the box it just made). This rung holds for every type, since
+      // "Enter, Enter leaves the box" is the box's affordance, not the line's.
+      // Anywhere else in the box the outdent rung is skipped: empty-Enter there
+      // is a type escape or an ordinary split, which mints another line inside.
+      if (caret.atStart && caret.atEnd) {
+        const box = containerOf(ctx, node);
+        if (box) {
+          if (
+            hasPrevSibling(ctx.nodes, node) &&
+            !hasNextSibling(ctx.nodes, node) &&
+            !hasVisibleChildren(ctx, node)
+          )
+            return { type: "outdent" };
+          if (p?.breakOutOnEmptyEnter && node.type !== p.breakOutOnEmptyEnter)
+            return { type: "convertTo", to: p.breakOutOnEmptyEnter };
+        } else if (p?.breakOutOnEmptyEnter) {
+          if (isIndented(ctx, node)) return { type: "outdent" };
+          if (node.type !== p.breakOutOnEmptyEnter)
+            return { type: "convertTo", to: p.breakOutOnEmptyEnter };
+          // Already top-level and already the target type: fall through to split.
+        }
       }
       // Every "is the caret at the end of the block?" decision gates on the live
       // caret edge (`caret.atEnd`), never the reducer node length: the latter lags
@@ -516,13 +547,12 @@ export function resolveKeystroke(
       // "Indentation" that is really a CONTAINER: the first child of an anchor
       // escapes the box by dissolving it, not by outdenting. This rung must sit
       // ABOVE the generic `isIndented` one because an anchor's child satisfies it
-      // — and `outdentOne` would adopt the container's remaining lines as the
-      // escaping block's own children (see the `unwrap` intent's doc), silently
-      // re-nesting content the user never asked to nest.
+      // — and `outdentOne` would land the first line AFTER the box, below the
+      // container's remaining lines (see the `unwrap` intent's doc).
       //
-      // Only the FIRST child: it is the one whose escape would take the whole
-      // box with it. A later line inside the container is an ordinary indented
-      // block with lines of its own above it, so it keeps the generic rung.
+      // Only the FIRST child: it is the one with no line above it inside the
+      // box. A later line inside the container is an ordinary indented block
+      // with lines of its own above it, so it keeps the generic rung.
       // ...but not while the box is CLOSED. On the borrowed line of a collapsed
       // container, `unwrap` would dissolve the box and promote children the user
       // cannot see into the document from one keypress. Open it first (one
@@ -610,8 +640,9 @@ export function resolveKeystroke(
       // Tab/Shift+Tab always consume the event (never move focus / insert a tab).
       if (mods.shift) {
         // Same guard as Backspace's, for the same reason: outdenting the
-        // borrowed line of a CLOSED container makes it adopt the followers
-        // (`outdentOne`), i.e. re-nest hidden content under the escaping block.
+        // borrowed line of a CLOSED container restructures around lines the
+        // user cannot see (the box's hidden content, or followers `outdentOne`
+        // adopts when the line's parent is not itself the container).
         const closed = collapsedAnchorAbove(ctx.nodes, node, ctx.isAnchor);
         if (closed) return { type: "expand", blockId: closed.id };
         return isIndented(ctx, node) ? { type: "outdent" } : { type: "noop" };

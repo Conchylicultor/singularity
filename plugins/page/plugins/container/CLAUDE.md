@@ -53,7 +53,9 @@ is appearance; the rail is structure* below.
   reads the same fact (`BlockOpContext.anchorTypes`) for its split/merge refusals
   and the childless-anchor prune. Because the container owns no line, converting
   its first child to a heading cannot touch it, and Enter in a child is a plain
-  sibling split.
+  sibling split. Empty-Enter leaves the box only from its last line, and no
+  outdent ever splits it (see `page/editor`'s *An outdent never splits a
+  container*).
 - **`wrapOnConvert: true`** — `/<container>` on an existing block WRAPS it: the
   origin keeps its id, type, `data` and children and becomes the anchor's first
   child, both rows minted in ONE patch (one undo entry). A void type has nowhere

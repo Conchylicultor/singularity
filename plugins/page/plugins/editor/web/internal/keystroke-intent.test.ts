@@ -969,6 +969,101 @@ describe("trajectories", () => {
     ).toEqual(["split"]);
   });
 
+  // Empty-Enter inside a CONTAINER steps out of the box only on its last line;
+  // anywhere else it stays in the box. The regression: an empty bullet in the
+  // MIDDLE of a callout took the outdent rung, and `outdentOne` carried the lines
+  // below it out of the box — the callout cut in two around the caret.
+  function boxed(kids: { id: string; text: string; type?: string }[]) {
+    const ranks = Rank.nBetween(null, null, kids.length);
+    return [
+      { ...mk("CA", PAGE, rankA), type: "callout", expanded: true },
+      ...kids.map((k, i) => ({
+        ...mk(k.id, "CA", ranks[i]!.toJSON(), { text: k.text }),
+        type: k.type ?? "text",
+      })),
+      mk("B", PAGE, rankB, { text: "after" }),
+    ];
+  }
+  const EMPTY = { atStart: true, atEnd: true };
+
+  test("empty-Enter: empty plain line in the MIDDLE of a callout → [split]", () => {
+    const nodes = boxed([
+      { id: "X1", text: "aaa" },
+      { id: "X", text: "" },
+      { id: "X3", text: "bbb" },
+    ]);
+    expect(runTrajectory(nodes, "X", "Enter", undefined, EMPTY)).toEqual([
+      "split",
+    ]);
+  });
+
+  test("empty-Enter: empty bullet in the MIDDLE of a callout → [convertTo, split], never outdent", () => {
+    const nodes = boxed([
+      { id: "X1", text: "aaa", type: "bulleted-list" },
+      { id: "X", text: "", type: "bulleted-list" },
+      { id: "X3", text: "bbb", type: "bulleted-list" },
+    ]);
+    expect(
+      runTrajectory(
+        nodes,
+        "X",
+        "Enter",
+        { breakOutOnEmptyEnter: "text" },
+        EMPTY,
+      ),
+    ).toEqual(["convertTo", "split"]);
+  });
+
+  test("empty-Enter: empty LAST line of a callout → [outdent] lands it right after the box", () => {
+    const nodes = boxed([
+      { id: "X1", text: "aaa" },
+      { id: "X", text: "" },
+    ]);
+    expect(runTrajectory(nodes, "X", "Enter", undefined, EMPTY)).toEqual([
+      "outdent",
+      "split",
+    ]);
+    const after = applyBlockOp(
+      nodes,
+      { kind: "outdent", blockIds: ["X"] },
+      ANCHOR_CTX,
+    );
+    expect(after.find((n) => n.id === "X")!.parentId).toBe(PAGE);
+    expect(after.find((n) => n.id === "X1")!.parentId).toBe("CA");
+    expect(
+      nextVisibleLine(
+        after,
+        after.find((n) => n.id === "X1")!,
+      )?.id,
+    ).toBe("X");
+  });
+
+  test("empty-Enter: a callout's ONLY line stays in the box → [split]", () => {
+    // `/callout` on an empty line, then Enter: the box must not dissolve.
+    const nodes = boxed([{ id: "X", text: "" }]);
+    expect(runTrajectory(nodes, "X", "Enter", undefined, EMPTY)).toEqual([
+      "split",
+    ]);
+  });
+
+  test("Shift+Tab in the MIDDLE of a callout leaves the box whole", () => {
+    // The generic half of the bug: every outdent goes through `outdentOne`,
+    // which must not adopt a container's remaining lines.
+    const nodes = boxed([
+      { id: "X1", text: "aaa" },
+      { id: "X", text: "mid" },
+      { id: "X3", text: "bbb" },
+    ]);
+    const after = applyBlockOp(
+      nodes,
+      { kind: "outdent", blockIds: ["X"] },
+      ANCHOR_CTX,
+    );
+    expect(after.find((n) => n.id === "X")!.parentId).toBe(PAGE);
+    expect(after.find((n) => n.id === "X1")!.parentId).toBe("CA");
+    expect(after.find((n) => n.id === "X3")!.parentId).toBe("CA");
+  });
+
   test("Backspace: first line of a callout below a text block → [unwrap, merge]", () => {
     // page ▸ A ("a"), CA(anchor) ▸ [X, Y]. The first press dissolves the box —
     // X and Y become plain siblings after A, NOT X adopting Y — so the second
@@ -1293,15 +1388,17 @@ describe("container anchors", () => {
     ).toEqual({ type: "unwrap", blockId: "CA" });
   });
 
-  test("the unwrap rung beats outdent, which would re-nest the box's other lines", () => {
-    // Sanity-check the alternative the rung exists to avoid: outdenting X adopts
-    // its follower Y as X's own child.
+  test("the unwrap rung beats outdent, which would move the first line below the box", () => {
+    // Sanity-check the alternative the rung exists to avoid. Out of a container
+    // `outdentOne` adopts nothing (it would carry the box's other lines out under
+    // X), so X lands AFTER the box — below Y, the line it used to precede.
     const outdented = applyBlockOp(
       boxed(),
       { kind: "outdent", blockIds: ["X"] },
       ANCHOR_CTX,
     );
-    expect(outdented.find((n) => n.id === "Y")!.parentId).toBe("X");
+    expect(outdented.find((n) => n.id === "Y")!.parentId).toBe("CA");
+    expect(outdented.find((n) => n.id === "X")!.parentId).toBe(PAGE);
     // Unwrapping instead leaves both lines as plain siblings at CA's level.
     const unwrapped = applyBlockOp(
       boxed(),
