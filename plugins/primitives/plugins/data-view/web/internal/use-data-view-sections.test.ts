@@ -363,8 +363,22 @@ describe("aggregateSections", () => {
     // Default representative = first member in current order.
     expect(entry!.row.id).toBe("a");
     expect(entry!.key).toBe("a");
-    // section.count stays the pre-collapse member count.
-    expect(section!.count).toEqual({ kind: "exact", n: 3 });
+    // section.count is the post-collapse entry count — the rows shown.
+    expect(section!.count).toEqual({ kind: "exact", n: 1 });
+  });
+
+  test("a lower-bound count stays a lower bound, recounted to the entries", () => {
+    const section: DataViewSection<Item> = {
+      key: null,
+      count: { kind: "atLeast", n: 3 },
+      entries: [
+        { row: { id: "a", group: "g" }, key: "a" },
+        { row: { id: "b", group: "g" }, key: "b" },
+        { row: { id: "c", group: null }, key: "c" },
+      ],
+    };
+    const [agg] = aggregateSections([section], { getKey: (i) => i.group });
+    expect(agg!.count).toEqual({ kind: "atLeast", n: 2 });
   });
 
   test("null keys pass through 1:1 with no aggregateCount/members", () => {
@@ -438,7 +452,7 @@ describe("aggregateSections", () => {
     // dup="p" collapses within each section separately — NOT across sections.
     expect(aggregated[0]!.entries).toHaveLength(1);
     expect(aggregated[0]!.entries[0]!.aggregateCount).toBe(2);
-    expect(aggregated[0]!.count).toEqual({ kind: "exact", n: 2 });
+    expect(aggregated[0]!.count).toEqual({ kind: "exact", n: 1 });
     expect(aggregated[1]!.entries).toHaveLength(1);
     expect(aggregated[1]!.entries[0]!.aggregateCount).toBe(1);
   });

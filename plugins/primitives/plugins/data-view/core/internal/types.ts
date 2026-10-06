@@ -604,7 +604,8 @@ export interface DataViewSection<TRow> {
   key: string | null;
   /** Header label; absent for the implicit (`key === null`) section. */
   label?: ReactNode;
-  /** Member-row count (pre-aggregation, pre-fold) — the header's number stays
+  /** Entry count (post-aggregation, pre-fold) — one per row the user sees, so an
+   *  aggregate counts once whatever its `aggregateCount`. The header's number stays
    *  the section's TOTAL while some of its rows are folded. A lower bound when
    *  more rows may still load into the section (see {@link SectionCount}). */
   count: SectionCount;

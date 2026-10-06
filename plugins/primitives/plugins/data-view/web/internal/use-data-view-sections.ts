@@ -213,7 +213,9 @@ export function partitionIntoSections<TRow>(
  *   member's `key` — the entry stands for the group, not a single row.
  * - A `null` key passes through 1:1 (no `aggregateCount`/`members`).
  *
- * `section.count` is preserved (the pre-collapse member count).
+ * `section.count` becomes the post-collapse entry count — the rows the user
+ * sees, not the members behind them — keeping its kind: a lower bound stays
+ * one, since a later page can add entries (or only members) but never remove one.
  */
 export function aggregateSections<TRow>(
   sections: DataViewSection<TRow>[],
@@ -252,7 +254,11 @@ export function aggregateSections<TRow>(
         members,
       };
     }
-    return { ...section, entries: out };
+    return {
+      ...section,
+      count: { kind: section.count.kind, n: out.length },
+      entries: out,
+    };
   });
 }
 

@@ -681,7 +681,8 @@ through `useDataViewSections`. The aggregate step runs **after** group-by and
   `members` = every collapsed row, keeping the **position and `key` of the first
   member** (the entry stands for the group, not a single row);
 - a `null` key passes the row through 1:1 (no `aggregateCount`);
-- `section.count` stays the **pre-collapse** member count.
+- `section.count` becomes the **post-collapse** entry count (an aggregate counts
+  once, so the header matches the rows shown; a lower bound stays a lower bound).
 
 Each view renders the representative normally and, when `entry.aggregateCount > 1`,
 a `×N` `Badge` (`css/badge`) in its natural trailing spot — list **trailing**,
