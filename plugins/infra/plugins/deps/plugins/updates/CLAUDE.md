@@ -4,10 +4,17 @@
 
 ## Plugin reference
 
-- Description: The updater registry (UpdaterDeclare) and the daily deps.detect-outdated job: for each updater with something newer than its lock records and no open task, files one auto-started task (Dependencies category) whose agent runs `./singularity deps upgrade <updater>` and pushes on an `upgraded` verdict.
+- Description: Registers the dependency-upgrade schedule (the deps.detect-outdated cron, weekly by default) for Settings → Config. The updater registry (UpdaterDeclare) and the scheduled deps.detect-outdated job (weekly by default, a cron in config): when any updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and pushes on an `upgraded` verdict.
+- Web:
+  - Contributes: `ConfigV2.WebRegister` "config"
+  - Uses: `config_v2.ConfigV2`
 - Server:
-  - Contributes: `taskCategory` "dependencies"
+  - Contributes:
+    - `ConfigV2.Register` "config"
+    - `taskCategory` "dependencies"
   - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
     - `database.db`
     - `infra/jobs.defineJob`
     - `primitives/log-channels.Log`
@@ -33,6 +40,7 @@
     - `GateResult`
     - `Move`
     - `Outdated`
+    - `OutdatedUpdater`
     - `Updater`
     - `UpdaterHold`
     - `UpdaterSmoke`

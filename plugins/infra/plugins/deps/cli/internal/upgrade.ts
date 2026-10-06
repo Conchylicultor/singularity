@@ -1,7 +1,7 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { inThisCheckout } from "./exec";
 
-const run: CliAction<[string], { only?: string }> = (id, opts) =>
+const run: CliAction<[string | undefined], { only?: string }> = (id, opts) =>
   inThisCheckout(async () => {
     // Loaded after the boot has declared the runtime namespace.
     const { upgrade } = await import("./upgrade-body");

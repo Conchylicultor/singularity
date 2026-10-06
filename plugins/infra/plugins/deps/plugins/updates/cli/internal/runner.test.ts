@@ -32,7 +32,8 @@ function fakeUpdater(moves: Move[]): Updater {
   };
 }
 
-const PKG_MOVE: Move[] = [{ name: "pkg", from: "1", to: "2" }];
+const PKG: Move = { name: "pkg", from: "1", to: "2" };
+const PKG_MOVE: Move[] = [PKG];
 
 /**
  * Gates answering from the lock's content: `before` while it says 1, `after`
@@ -66,8 +67,7 @@ const clean: GateResult[] = [
 
 async function run(updater: Updater, gates: Gates) {
   return runUpgrade({
-    updater,
-    only: undefined,
+    selection: [{ updater }],
     root,
     receiptPath: join(root, "receipt.json"),
     gates,
@@ -91,7 +91,7 @@ describe("runUpgrade verdicts", () => {
     expect(readFileSync(join(root, "fake.lock"), "utf8")).toBe("pkg = 2\n");
     const onDisk = JSON.parse(readFileSync(join(root, "receipt.json"), "utf8"));
     expect(onDisk.verdict).toBe("upgraded");
-    expect(onDisk.moves).toEqual(PKG_MOVE);
+    expect(onDisk.moves).toEqual([{ updater: "fake", ...PKG }]);
   });
 
   test("regressed: a failure only the candidate has, twice, puts the lock back", async () => {
@@ -142,5 +142,50 @@ describe("runUpgrade verdicts", () => {
     expect(err).toBeInstanceOf(Error);
     expect((err as Error).message).toBe("check runner crashed");
     expect(readFileSync(join(root, "fake.lock"), "utf8")).toBe("pkg = 1\n");
+  });
+
+  test("a batch moves every updater's files after ONE baseline, and puts them all back on a regression", async () => {
+    writeFileSync(join(root, "other.lock"), "dep = a\n");
+    const other: Updater = {
+      ...fakeUpdater([]),
+      id: "other",
+      files: async () => ["other.lock"],
+      plan: async () => [{ name: "dep", from: "a", to: "b" }],
+      apply: async (r) => writeFileSync(join(r, "other.lock"), "dep = b\n"),
+      smoke: async () => [
+        { name: "other smoke", argv: ["true"], timeoutMs: 1 },
+      ],
+    };
+    const broken = [{ gate: "checks", failures: ["type-check"] }];
+    const gates = fakeGates({ before: clean, after: broken });
+    const receipt = await runUpgrade({
+      selection: [{ updater: fakeUpdater(PKG_MOVE) }, { updater: other }],
+      root,
+      receiptPath: join(root, "receipt.json"),
+      gates,
+      log: () => {},
+    });
+    expect(receipt.updaters).toEqual(["fake", "other"]);
+    expect(receipt.moves.map((m) => m.updater)).toEqual(["fake", "other"]);
+    expect(gates.calls).toEqual(["baseline", "candidate", "retry"]);
+    expect(receipt.verdict).toBe("regressed");
+    expect(readFileSync(join(root, "fake.lock"), "utf8")).toBe("pkg = 1\n");
+    expect(readFileSync(join(root, "other.lock"), "utf8")).toBe("dep = a\n");
+  });
+
+  test("a batch where only some updaters are outdated moves just those", async () => {
+    const gates = fakeGates({ before: clean, after: clean });
+    const receipt = await runUpgrade({
+      selection: [
+        { updater: { ...fakeUpdater([]), id: "idle" } },
+        { updater: fakeUpdater(PKG_MOVE) },
+      ],
+      root,
+      receiptPath: join(root, "receipt.json"),
+      gates,
+      log: () => {},
+    });
+    expect(receipt.verdict).toBe("upgraded");
+    expect(receipt.moves).toEqual([{ updater: "fake", ...PKG }]);
   });
 });

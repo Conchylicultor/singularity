@@ -40,21 +40,27 @@ export default defineCliCommand({
       arguments: [{ name: "<id>", description: "The dependency's id" }],
       run: () => import("./internal/remove"),
     }),
-    defineCliCommand<[string], { only?: string }>({
+    defineCliCommand<[string | undefined], { only?: string }>({
       name: "upgrade",
       description:
-        "Move an updater's lock (mise, uv, …) to the newest releases, proving it first: the full check and test " +
+        "Move updaters' locks (mise, uv, …) to the newest releases, proving it first: the full check and test " +
         "suites plus the moved inputs' smoke tests run before and after the move, and a failure only the new " +
-        "releases have — twice — is a regression, which puts the lock back. Writes deps-upgrade-<updater>.json in " +
-        "the worktree data dir. Refuses to run in the main checkout. Takes about as long as two full check + test runs.",
+        "releases have — twice — is a regression, which puts every lock back. With no updater named, every " +
+        "updater moves at once behind ONE baseline and ONE candidate run (receipt deps-upgrade.json); naming one " +
+        "moves only it (deps-upgrade-<updater>.json). Receipts land in the worktree data dir. Refuses to run in " +
+        "the main checkout. Takes about as long as two full check + test runs.",
       arguments: [
-        { name: "<updater>", description: "The updater's id (mise, uv, …)" },
+        {
+          name: "[updater]",
+          description:
+            "The updater's id (mise, uv, …); omit to upgrade every updater together",
+        },
       ],
       options: [
         {
           flags: "--only <names>",
           description:
-            "Comma-separated names to consider (default: everything outdated). Use it to find which one a regression comes from.",
+            "Comma-separated names to consider (default: everything outdated); needs an updater. Use it to find which one a regression comes from.",
         },
       ],
       run: () => import("./internal/upgrade"),

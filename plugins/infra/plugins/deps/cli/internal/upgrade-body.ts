@@ -6,23 +6,41 @@ import { upgradeThisWorktree } from "@plugins/infra/plugins/deps/plugins/updates
  * updates plugin's server barrel statically: that barrel evaluates config
  * needing the runtime namespace, so this module may only load inside
  * `runExec` (see `./upgrade.ts`).
+ *
+ * No `id`: every declared updater, as one batch. An `id`: that updater alone,
+ * optionally restricted to `only`.
  */
 export async function upgrade(
-  id: string,
+  id: string | undefined,
   only: readonly string[] | undefined,
 ): Promise<void> {
   const updaters = declaredUpdaters();
+  if (id === undefined) {
+    if (only !== undefined)
+      throw new Error(
+        "`--only` names one updater's inputs: name the updater too.",
+      );
+    if (updaters.length === 0) throw new Error("No updater is declared.");
+    report(
+      updaters.map((u) => u.id).join(", "),
+      await upgradeThisWorktree(updaters.map((updater) => ({ updater }))),
+    );
+    return;
+  }
   const updater = updaters.find((u) => u.id === id);
   if (updater === undefined) {
     throw new Error(
       `No updater ${JSON.stringify(id)}. Updaters: ${updaters.map((u) => u.id).join(", ") || "none"}.`,
     );
   }
-  const receipt = await upgradeThisWorktree(updater, only);
+  report(id, await upgradeThisWorktree([{ updater, only }]));
+}
+
+function report(what: string, receipt: { verdict: string }): void {
   console.log(`\nverdict: ${receipt.verdict}`);
   if (receipt.verdict === "regressed") {
     throw new Error(
-      `${id}: regressed — the lock was put back (see the receipt above).`,
+      `${what}: regressed — the locks were put back (see the receipt above).`,
     );
   }
 }

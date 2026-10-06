@@ -8950,7 +8950,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.open-app`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.open-app`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.deps.updates`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -9176,6 +9176,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `fields/secret/config`
       - `framework/tooling/codegen`
       - `infra/audio-analysis`
+      - `infra/deps/updates`
       - `infra/host/duress`
       - `integrations/gmail`
       - `plugin-meta/composition`
@@ -20163,7 +20164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `download`
               - `downloadedFile`
-        - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the daily deps.detect-outdated job files its upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
+        - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the scheduled deps.detect-outdated job includes it in the batched upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
           - Server:
             - Contributes: `updater` "mise"
             - Uses: `infra/deps/updates.UpdaterDeclare`
@@ -20216,10 +20217,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PythonEntryError`
               - `pythonEnv`
               - `runPython`
-        - **`updates`** — The updater registry (UpdaterDeclare) and the daily deps.detect-outdated job: for each updater with something newer than its lock records and no open task, files one auto-started task (Dependencies category) whose agent runs `./singularity deps upgrade <updater>` and pushes on an `upgraded` verdict.
+        - **`updates`** — Registers the dependency-upgrade schedule (the deps.detect-outdated cron, weekly by default) for Settings → Config. The updater registry (UpdaterDeclare) and the scheduled deps.detect-outdated job (weekly by default, a cron in config): when any updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and pushes on an `upgraded` verdict.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "config"
+            - Uses: `config_v2.ConfigV2`
           - Server:
-            - Contributes: `taskCategory` "dependencies"
+            - Contributes:
+              - `ConfigV2.Register` "config"
+              - `taskCategory` "dependencies"
             - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
               - `database.db`
               - `infra/jobs.defineJob`
               - `primitives/log-channels.Log`
@@ -20245,6 +20253,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `GateResult`
               - `Move`
               - `Outdated`
+              - `OutdatedUpdater`
               - `Updater`
               - `UpdaterHold`
               - `UpdaterSmoke`

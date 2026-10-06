@@ -179,10 +179,15 @@ module eval).
   `cli/` barrel, shared CLI machinery: baseline gates →
   move → candidate gates → retry-to-confirm → verdict `current | upgraded |
   regressed`, files put back on anything but `upgraded`), lifted from
-  `plugins/toolchain`. The `UpdaterDeclare` registry and the daily
-  `deps.detect-outdated` job (one auto-started task per outdated updater with no
-  open task of its own author `deps.<id>`, Dependencies category). The receipt
-  is `deps-upgrade-<updater>.json` in the worktree data dir.
+  `plugins/toolchain`. The runner takes a SELECTION of updaters: `./singularity
+  deps upgrade` with no updater moves every one behind one baseline and one
+  candidate run (receipt `deps-upgrade.json`); naming one moves only it
+  (`deps-upgrade-<updater>.json`, `--only` allowed) — how a batch regression is
+  narrowed down. The `UpdaterDeclare` registry and the scheduled
+  `deps.detect-outdated` job (cron in the `depsUpdatesConfig` config, weekly by
+  default, empty disables): ONE auto-started task covering every outdated
+  updater, filed only while no upgrade task (author `deps.*`) is open,
+  Dependencies category.
 - `mise` — the toolchain as the first updater (`toolchain upgrade` is its
   alias; `toolchain:resolved` stays in `plugins/toolchain`).
 - `python` — the `python` kind (`pythonEnv`, `runPython`, `PythonEntryError`,
@@ -367,9 +372,9 @@ torch.
 - Sub-plugins:
   - **`build`** — The build installer kind of infra/deps: build({ inputs, tool, output, run }) (its deps barrel) declares something built from this checkout's own source — identity = sha256 of every file the git ls-files input globs match, the tool's version output and the target platform/arch — built by run(ctx) straight into env/<output>, which is what isIntact checks; builtFile(ready) is its path. admission: { none } skips host admission for a build too small to be worth a grant.
   - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus derive.version — fetched with curl into env/<name>.part (progress in the install log), sha256-checked and renamed, then optionally post-processed in place by derive.run; downloadedFile(ready, name) is the path of one of them.
-  - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the daily deps.detect-outdated job files its upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
+  - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the scheduled deps.detect-outdated job includes it in the batched upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
   - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
   - **`python`** — The python installer kind of infra/deps: pythonEnv({ project }) (its deps barrel) declares a dependency on one uv project (a plugin's `python/` folder) — identity = hash of pyproject.toml + uv.lock + .python-version + the uv version, installed with `uv sync --frozen` into its own env with a uv-downloaded CPython (never the system Python) — and runPython(ready, { module, input, output }) runs one of its modules with JSON in and one JSON document out. Contributes the `uv` updater, which moves every python/ project's uv.lock and its exact .python-version pin (the CPython release) under a 3-day release cooldown.
-  - **`updates`** — The updater registry (UpdaterDeclare) and the daily deps.detect-outdated job: for each updater with something newer than its lock records and no open task, files one auto-started task (Dependencies category) whose agent runs `./singularity deps upgrade <updater>` and pushes on an `upgraded` verdict.
+  - **`updates`** — Registers the dependency-upgrade schedule (the deps.detect-outdated cron, weekly by default) for Settings → Config. The updater registry (UpdaterDeclare) and the scheduled deps.detect-outdated job (weekly by default, a cron in config): when any updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and pushes on an `upgraded` verdict.
 
 <!-- AUTOGENERATED:END -->

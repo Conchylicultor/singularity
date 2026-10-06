@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
@@ -15,8 +16,10 @@ import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provi
 import {
   upgradeTaskDescription,
   upgradeTaskTitle,
+  type OutdatedUpdater,
   type Updater,
 } from "../../core";
+import { depsUpdatesConfig } from "../../shared/config";
 
 const log = Log.channel("deps-updates");
 
@@ -38,18 +41,16 @@ export function declaredUpdaters(): Updater[] {
   return UpdaterDeclare.getContributions().map((c) => c.updater);
 }
 
-/** Who files an updater's tasks — the key an open task is matched by. */
-function authorOf(updaterId: string): string {
-  return `deps.${updaterId}`;
-}
+/** Who files the batched upgrade task — the key an open task is matched by. */
+const AUTHOR = "deps.upgrade";
 
 /**
- * The updater's upgrade task that has not finished: neither landed nor
- * dropped. Held and attempted-without-a-push both count as open — they are a
- * person's to look at, and filing a second task beside one would only
- * duplicate it.
+ * An upgrade task that has not finished: neither landed nor dropped. Held and
+ * attempted-without-a-push both count as open — they are a person's to look
+ * at, and filing a second task beside one would only duplicate it. Matches the
+ * per-updater tasks filed before upgrades were batched (`deps.<updater>`) too.
  */
-async function openUpgradeTaskId(updaterId: string): Promise<string | null> {
+async function openUpgradeTaskId(): Promise<string | null> {
   const rows = await db
     .select({ taskId: tasksCategory.table.taskId })
     .from(tasksCategory.table)
@@ -58,7 +59,8 @@ async function openUpgradeTaskId(updaterId: string): Promise<string | null> {
     const task = await getTask(taskId);
     if (
       task !== null &&
-      task.author === authorOf(updaterId) &&
+      task.author !== null &&
+      task.author.startsWith("deps.") &&
       task.status !== "done" &&
       task.status !== "dropped"
     )
@@ -67,27 +69,21 @@ async function openUpgradeTaskId(updaterId: string): Promise<string | null> {
   return null;
 }
 
-/** One updater's daily pass: at most one task filed. */
-export async function detectOne(
-  updater: Updater,
-  root: string,
+/** One pass: at most one task filed, covering every outdated updater. */
+export async function fileUpgradeTask(
+  batch: readonly OutdatedUpdater[],
 ): Promise<string> {
-  const outdated = await updater.detect(root);
-  if (outdated.length === 0) return `${updater.id}: current`;
-  const title = upgradeTaskTitle(updater.id, outdated);
+  if (batch.length === 0) return "everything current";
+  const title = upgradeTaskTitle(batch);
 
-  const open = await openUpgradeTaskId(updater.id);
+  const open = await openUpgradeTaskId();
   if (open !== null) return `${title}; task ${open} is still open`;
 
   const task = await createTask({
     title,
     titleAuto: false,
-    author: authorOf(updater.id),
-    description: upgradeTaskDescription({
-      updaterId: updater.id,
-      outdated,
-      holdsFile: updater.holds.file,
-    }),
+    author: AUTHOR,
+    description: upgradeTaskDescription(batch),
   });
   await setTaskCategory(task.id, DEPS_CATEGORY_ID);
   await armTaskAutoStart({
@@ -99,35 +95,49 @@ export async function detectOne(
 }
 
 /**
- * Daily: for each updater with something newer than its lock records, and no
- * open task for it, file ONE auto-started task whose agent runs
- * `./singularity deps upgrade <updater>` in its own worktree.
+ * On the configured schedule (weekly by default): ask every updater what is
+ * newer than its lock records and, when anything is and no upgrade task is
+ * open, file ONE auto-started task covering all of it, whose agent runs
+ * `./singularity deps upgrade` (every updater at once) in its own worktree.
  *
  * Detection only — it installs nothing and moves no lock. Main-only by virtue
- * of its schedule. One updater failing to detect does not stop the others; the
- * failures are thrown together at the end.
+ * of its schedule. One updater failing to detect does not stop the others —
+ * the task still covers the ones that answered; the failures are thrown
+ * together at the end.
  */
 export const detectOutdatedDepsJob = defineJob({
   name: "deps.detect-outdated",
   description:
-    "Checks each tracked toolchain for a newer release and files an upgrade task when one is available and none is open.",
+    "Checks each tracked toolchain for a newer release and files one upgrade task covering every outdated one when none is open.",
   // Each updater asks its release source over the network.
   hold: "minutes",
   inProcess:
-    "A read-only detection pass (one release query per updater, then at most one task insert each) that a restart can abort and the next daily tick simply repeats; each query is bounded by its own spawn timeout.",
+    "A read-only detection pass (one release query per updater, then at most one task insert) that a restart can abort and the next scheduled tick simply repeats; each query is bounded by its own spawn timeout.",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
-  schedule: { cron: "0 6 * * *" }, // daily at 06:00 UTC
+  // The user-configured cron; empty disables. Read once at worker startup (a
+  // change takes effect on the next restart).
+  schedule: {
+    cron: () => getConfig(depsUpdatesConfig).detectCron.trim() || null,
+  },
   async run() {
     const failures: unknown[] = [];
+    const batch: OutdatedUpdater[] = [];
     for (const updater of declaredUpdaters()) {
       try {
-        log.publish(`deps outdated: ${await detectOne(updater, REPO_ROOT)}`);
+        const outdated = await updater.detect(REPO_ROOT);
+        if (outdated.length > 0)
+          batch.push({
+            updaterId: updater.id,
+            outdated,
+            holdsFile: updater.holds.file,
+          });
       } catch (err) {
         failures.push(err);
       }
     }
+    log.publish(`deps outdated: ${await fileUpgradeTask(batch)}`);
     if (failures.length > 0) {
       throw new AggregateError(
         failures,

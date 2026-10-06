@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The mise toolchain as an updater: contributes `mise` to the updater registry, so the daily deps.detect-outdated job files its upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
+- Description: The mise toolchain as an updater: contributes `mise` to the updater registry, so the scheduled deps.detect-outdated job includes it in the batched upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
 - Server:
   - Contributes: `updater` "mise"
   - Uses: `infra/deps/updates.UpdaterDeclare`

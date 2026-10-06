@@ -63,7 +63,7 @@ export interface Updater {
     log: (line: string) => void,
   ): Promise<Readonly<Record<string, string>>>;
   /**
-   * The daily, read-only question asked on main: is anything newer (and not
+   * The scheduled, read-only question asked on main: is anything newer (and not
    * held)? Installs nothing, moves nothing.
    */
   detect(root: string): Promise<Outdated[]>;
