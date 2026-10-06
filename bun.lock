@@ -4630,6 +4630,10 @@
       "name": "@singularity/plugin-primitives-file-viewer-fallback",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/file-viewer/plugins/html": {
+      "name": "@singularity/plugin-primitives-file-viewer-html",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/file-viewer/plugins/image": {
       "name": "@singularity/plugin-primitives-file-viewer-image",
       "version": "0.0.1",
@@ -8396,6 +8400,8 @@
     "@singularity/plugin-primitives-file-viewer-diff": ["@singularity/plugin-primitives-file-viewer-diff@workspace:plugins/primitives/plugins/file-viewer/plugins/diff"],
 
     "@singularity/plugin-primitives-file-viewer-fallback": ["@singularity/plugin-primitives-file-viewer-fallback@workspace:plugins/primitives/plugins/file-viewer/plugins/fallback"],
+
+    "@singularity/plugin-primitives-file-viewer-html": ["@singularity/plugin-primitives-file-viewer-html@workspace:plugins/primitives/plugins/file-viewer/plugins/html"],
 
     "@singularity/plugin-primitives-file-viewer-image": ["@singularity/plugin-primitives-file-viewer-image@workspace:plugins/primitives/plugins/file-viewer/plugins/image"],
 

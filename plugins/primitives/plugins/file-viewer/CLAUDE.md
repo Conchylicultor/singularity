@@ -13,7 +13,7 @@ checkout file.
 - `FileViewer.Renderer` is the tiered registry: each renderer's `supports({ file,
   gitStatus? })` answers `native` / `contextual` / `fallback` / `last-resort` / `false`, and every
   offered renderer is a tab, best tier first. Each renderer is one sub-plugin
-  under `plugins/` (code, markdown, image, diff, fallback); a domain renderer
+  under `plugins/` (code, markdown, html, image, diff, fallback); a domain renderer
   lives with its domain (Sonata's MIDI preview under
   `apps/sonata/plugins/sources/plugins/midi/plugins/file-preview`).
 - `FileView` is the self-contained viewer (breadcrumb + tabs over the body).
@@ -28,7 +28,7 @@ checkout file.
 
 - Description: Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
 - Web:
-  - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`, `primitives.file-viewer.pdf`
+  - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.html`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`, `primitives.file-viewer.pdf`
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
@@ -97,6 +97,7 @@ checkout file.
     - `primitives/file-viewer/code`
     - `primitives/file-viewer/diff`
     - `primitives/file-viewer/fallback`
+    - `primitives/file-viewer/html`
     - `primitives/file-viewer/image`
     - `primitives/file-viewer/markdown`
     - `primitives/file-viewer/pdf`
@@ -104,6 +105,7 @@ checkout file.
   - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
   - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's bytes are read from.
   - **`fallback`** — Last-resort renderer for a file no other renderer offers to show (binary formats): a large file icon, "No preview for <kind> files", and Open with default app for a host file.
+  - **`html`** — Rendered page preview for .html and .htm files, in a sandboxed frame that can neither read nor reach the app; the Code tab is its source.
   - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
   - **`markdown`** — Rendered markdown preview for .md and .mdx files.
   - **`pdf`** — PDF preview for host .pdf files, in the browser's own PDF viewer (pages, zoom, search, print).

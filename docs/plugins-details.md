@@ -29397,6 +29397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view`
               - `primitives/file-viewer`
               - `primitives/file-viewer/code`
+              - `primitives/file-viewer/html`
               - `primitives/file-viewer/markdown`
               - `primitives/folder-picker`
               - `primitives/live-state`
@@ -32721,7 +32722,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/file-viewer`
     - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
       - Web:
-        - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`, `primitives.file-viewer.pdf`
+        - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.html`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`, `primitives.file-viewer.pdf`
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
@@ -32790,6 +32791,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/file-viewer/code`
           - `primitives/file-viewer/diff`
           - `primitives/file-viewer/fallback`
+          - `primitives/file-viewer/html`
           - `primitives/file-viewer/image`
           - `primitives/file-viewer/markdown`
           - `primitives/file-viewer/pdf`
@@ -32818,6 +32820,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/file-viewer.FileViewer`
               - `primitives/file-viewer.NoPreview`
+        - **`html`** — Rendered page preview for .html and .htm files, in a sandboxed frame that can neither read nor reach the app; the Code tab is its source.
+          - Web:
+            - Contributes: `FileViewer.Renderer` "Page" → `HtmlView`
+            - Uses:
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/file-viewer.FileRendererProps`
+              - `primitives/file-viewer.fileTextUnavailableMessage`
+              - `primitives/file-viewer.FileViewer`
+              - `primitives/file-viewer.useFileText`
+              - `primitives/loading.Loading`
         - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
           - Web:
             - Contributes: `FileViewer.Renderer` "Image" → `ImageView`
@@ -33797,6 +33809,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view`
           - `primitives/diff-view`
           - `primitives/file-viewer/code`
+          - `primitives/file-viewer/html`
           - `primitives/file-viewer/markdown`
           - `primitives/folder-picker`
           - `primitives/icon-picker`

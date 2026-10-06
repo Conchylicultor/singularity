@@ -102,7 +102,11 @@ export function PreviewPane({
       }
       body={
         <Scroll axis="both" className="h-full">
-          <Theme name={subThemeScope(filesDocumentTheme)} surface="none">
+          <Theme
+            name={subThemeScope(filesDocumentTheme)}
+            surface="none"
+            className="h-full"
+          >
             <FileContent
               file={{ source: "host", path }}
               active={renderers.active}

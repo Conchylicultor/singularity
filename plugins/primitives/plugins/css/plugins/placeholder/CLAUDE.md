@@ -86,6 +86,7 @@
     - `primitives/diff-view`
     - `primitives/file-viewer`
     - `primitives/file-viewer/code`
+    - `primitives/file-viewer/html`
     - `primitives/file-viewer/markdown`
     - `primitives/folder-picker`
     - `primitives/live-state`
