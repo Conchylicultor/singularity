@@ -7,7 +7,10 @@
 // the gear's Layout control, then checks the var is published and that no
 // header control in the top band reaches under the collapsed bar, and that the
 // bar is centred on the anchored header's line — also after that header is
-// made taller. Writes `<out>-docked.png`, `<out>-solo-tall.png`, `<out>-solo.png`.
+// made taller. Then opens the app gallery (Home, a surface with no top header,
+// so no anchor) through the app launcher and checks the bar is still painted
+// and hit-testable at the corner. Writes `<out>-docked.png`, `<out>-solo.png`,
+// `<out>-solo-tall.png`, `<out>-solo-home.png`.
 //
 // Usage:
 //   ./singularity run plugins/shell/plugins/global-action-bar/e2e/solo-safe-area.ts \
@@ -138,5 +141,29 @@ await withBrowser(async (h) => {
     JSON.stringify(tall),
   );
   await snap(page, out, "solo-tall");
+
+  // A surface with no header names no anchor: the band must fall back to the
+  // corner, not disappear (a `position-anchor` naming a missing anchor makes
+  // Chrome skip painting and hit-testing the box while its rects look fine).
+  await page
+    .getByRole("button", { name: "All apps", exact: true })
+    .first()
+    .click();
+  await page.mouse.move(700, 600);
+  await page.waitForTimeout(1000);
+  const homeHit = await page.evaluate(() => {
+    const band = document.querySelector(".floating-bar-band");
+    const r = band?.getBoundingClientRect();
+    if (!band || !r) return { mounted: false, hit: false };
+    const at = document.elementFromPoint(r.left + r.width / 2, r.top + 4);
+    return { mounted: true, hit: at != null && band.contains(at) };
+  });
+  t.ok("home: bar mounted", homeHit.mounted, JSON.stringify(homeHit));
+  t.ok(
+    "home: bar painted and hit-testable",
+    homeHit.hit,
+    JSON.stringify(homeHit),
+  );
+  await snap(page, out, "solo-home");
   await t.finish();
 });

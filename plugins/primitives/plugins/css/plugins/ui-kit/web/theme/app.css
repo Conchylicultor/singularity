@@ -914,9 +914,15 @@
  * fallbacks give a zero-height band at the corner offset: the auto margins meet
  * negative free space, resolve to 0, and the bar hangs from `0.5rem` — the old
  * `top-2`. The last visible anchor in tree order wins; a `display: none`
- * keep-alive tab's header cannot be one. */
+ * keep-alive tab's header cannot be one.
+ *
+ * The anchor is named inside `anchor()` / `anchor-size()`, never through
+ * `position-anchor`: a `position-anchor` naming an anchor that does not exist
+ * makes Chrome skip painting and hit-testing the box entirely (its rects and
+ * computed `visibility` still look normal), so on a surface with no top header
+ * (Home) the bar vanished instead of reaching the fallbacks. */
 @utility anchor-floating-bar-band { anchor-name: --floating-bar-band; } /* twmerge: standalone -- Names this box as an anchor; no built-in group sets anchor-name. */
-@utility floating-bar-band { position-anchor: --floating-bar-band; top: anchor(top, 0.5rem); height: anchor-size(height, 0px); } /* twmerge: standalone -- Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor. */
+@utility floating-bar-band { top: anchor(--floating-bar-band top, 0.5rem); height: anchor-size(--floating-bar-band height, 0px); } /* twmerge: standalone -- Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor. */
 
 /* Control-panel geometry — the one grid every data-control panel (filter, sort,
  * view settings, …) is drawn on, owned by the `control-panel` primitive. The
