@@ -360,6 +360,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/css/cluster`
+    - `primitives/css/color-picker`
     - `primitives/css/control-panel`
     - `primitives/css/inline`
     - `primitives/css/radio-group`

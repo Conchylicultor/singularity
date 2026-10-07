@@ -87,6 +87,7 @@ Shared (both paths):
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `debug/health-monitor`
     - `page/formatting/color`
+    - `primitives/css/color-picker`
     - `primitives/data-view/gallery`
     - `primitives/data-view/icons`
     - `primitives/date-picker`

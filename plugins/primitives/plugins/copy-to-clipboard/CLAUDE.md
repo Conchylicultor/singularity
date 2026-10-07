@@ -28,6 +28,7 @@
     - `page/editor`
     - `page/formatting/link`
     - `page/place`
+    - `primitives/css/color-picker`
     - `primitives/filepath-breadcrumb`
     - `primitives/log-channels`
     - `primitives/setup-steps`

@@ -79,6 +79,7 @@ export const LUCIDE_MAP = {
   "cloud-sync": "cloud-sync",
   "cloud-upload": "cloud-upload",
   code: "code",
+  colorize: "pipette",
   comment: "message-square-text",
   commit: "git-commit-horizontal",
   compare: "git-compare",

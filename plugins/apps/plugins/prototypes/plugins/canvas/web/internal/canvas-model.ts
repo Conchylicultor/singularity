@@ -78,6 +78,21 @@ export interface CanvasState {
   spread: string | null;
   /** Options kept the same in every prototype frame. */
   linked: ReadonlySet<string>;
+  /**
+   * A color being dragged, shown before it is picked: frame `id` (and every
+   * frame, when the option is linked) paints `value` for `option` instead of
+   * its pick. Local and never saved — `setPick` commits it (one write) and
+   * clears it. See {@link previewedValue}.
+   */
+  preview: CanvasPreview | null;
+}
+
+/** A color option's not-yet-picked value, while the reader drags it. */
+export interface CanvasPreview {
+  id: FrameId;
+  option: string;
+  /** A suggestion's name or `#rrggbb` — a pick value of the option. */
+  value: string;
 }
 
 /** The server-side writes a transition asks for, against the shared record. */
@@ -106,6 +121,13 @@ export type CanvasAction =
   | { type: "select"; id: FrameId }
   | { type: "setVersion"; id: FrameId; version: PrototypeVersion | null }
   | { type: "setPick"; id: FrameId; option: string; value: string }
+  /**
+   * Show `value` for a color option on frame `id` (and its linked frames)
+   * without picking it — every move of a drag. Local: no effect, never saved.
+   */
+  | { type: "previewPick"; id: FrameId; option: string; value: string }
+  /** Drop the preview without picking anything. */
+  | { type: "clearPreview" }
   | { type: "resetPicks"; id: FrameId }
   /** Link or unlink `option`; linking copies frame `id`'s value everywhere. */
   | { type: "toggleLink"; id: FrameId; option: PrototypeOption }
@@ -151,7 +173,47 @@ export function initialCanvasState({
     swipeAt: 0.5,
     spread: null,
     linked: new Set(),
+    preview: null,
   };
+}
+
+/**
+ * Whether `action` changes only what is on screen right now — nothing worth
+ * saving with the canvas (a drag's preview).
+ */
+export function isTransientAction(action: CanvasAction): boolean {
+  return action.type === "previewPick" || action.type === "clearPreview";
+}
+
+/**
+ * The value the preview shows for `option` on frame `id`, or `null` when it
+ * shows none there: the frame being dragged on, or any prototype frame when the
+ * option is linked (a linked pick goes to every frame, so its preview does).
+ */
+export function previewedValue(
+  state: CanvasState,
+  id: FrameId,
+  option: string,
+): string | null {
+  const p = state.preview;
+  if (p === null || p.option !== option) return null;
+  return p.id === id || state.linked.has(option) ? p.value : null;
+}
+
+/**
+ * The values spreading over `option` lays out, one frame each: a choice's
+ * values, a color's suggestions — and the spread-from frame's own value first
+ * when it is not among them (a custom color), so that frame keeps its place.
+ */
+export function spreadValues(
+  option: PrototypeOption,
+  baseValue: string,
+): readonly string[] {
+  const values =
+    option.kind === "choice"
+      ? option.values
+      : option.suggestions.map((s) => s.name);
+  return values.includes(baseValue) ? values : [baseValue, ...values];
 }
 
 /** The prototype frames, in canvas order. */
@@ -184,8 +246,15 @@ export function canvasReducer(
   shared: StoredPicks,
 ): CanvasTransition {
   const next = transition(state, action, shared);
-  const settled = settleLayout(next.state);
+  const settled = settlePreview(settleLayout(next.state));
   return settled === next.state ? next : { ...next, state: settled };
+}
+
+/** A preview lives only on a frame still on the canvas. */
+function settlePreview(state: CanvasState): CanvasState {
+  return state.preview !== null && !has(state, state.preview.id)
+    ? { ...state, preview: null }
+    : state;
 }
 
 /**
@@ -343,22 +412,51 @@ function transition(
           selected: action.id,
           // A pick breaks the spread: the frames no longer run over that option.
           spread: state.spread === option ? null : state.spread,
+          // A pick commits the drag it ends.
+          preview: state.preview?.option === option ? null : state.preview,
         },
         effects,
       };
     }
 
+    case "previewPick": {
+      if (!has(state, action.id)) return unchanged(state);
+      const p = state.preview;
+      if (
+        p !== null &&
+        p.id === action.id &&
+        p.option === action.option &&
+        p.value === action.value
+      ) {
+        return unchanged(state);
+      }
+      return unchanged({
+        ...state,
+        preview: { id: action.id, option: action.option, value: action.value },
+      });
+    }
+
+    case "clearPreview":
+      return state.preview === null
+        ? unchanged(state)
+        : unchanged({ ...state, preview: null });
+
     case "resetPicks": {
       const frame = state.frames.find((f) => f.id === action.id);
       if (!frame || frame.kind !== "prototype") return unchanged(state);
+      const preview = state.preview?.id === action.id ? null : state.preview;
       if (frame.picks === "shared") {
-        return { state, effects: [{ kind: "resetShared" }] };
+        return {
+          state: preview === state.preview ? state : { ...state, preview },
+          effects: [{ kind: "resetShared" }],
+        };
       }
       return unchanged({
         ...state,
         frames: state.frames.map((f) =>
           f.id === action.id ? { ...frame, picks: {} } : f,
         ),
+        preview,
       });
     }
 
@@ -413,7 +511,9 @@ function transition(
       const basePicks = picksOf(base, shared);
       const baseValue = pickedValue(action.option, basePicks);
       let nextId = state.nextId;
-      const spreadFrames = action.option.values.map((v): PrototypeFrame => {
+      const values = spreadValues(action.option, baseValue);
+      if (values.length < 2) return unchanged(state);
+      const spreadFrames = values.map((v): PrototypeFrame => {
         if (v === baseValue) return base;
         return {
           id: nextId++,

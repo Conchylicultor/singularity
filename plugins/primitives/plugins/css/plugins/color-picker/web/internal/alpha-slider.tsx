@@ -1,56 +1,62 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useRef } from "react";
-import type { Color } from "./color";
-import { useColorDrag } from "./use-color-drag";
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import type { Color } from "../../core";
+import { SliderTrack } from "./slider-track";
 
 export interface AlphaSliderProps {
   color: Color;
   alpha: number;
   onChange: (alpha: number) => void;
+  /** A drag released, or an arrow key let go. */
+  onCommit?: () => void;
   className?: string;
 }
 
-const CHECKERBOARD = [
-  "linear-gradient(45deg, #ccc 25%, transparent 25%)",
-  "linear-gradient(-45deg, #ccc 25%, transparent 25%)",
-  "linear-gradient(45deg, transparent 75%, #ccc 75%)",
-  "linear-gradient(-45deg, transparent 75%, #ccc 75%)",
-].join(", ");
+const CHECKERBOARD = {
+  backgroundImage: [
+    "linear-gradient(45deg, #ccc 25%, transparent 25%)",
+    "linear-gradient(-45deg, #ccc 25%, transparent 25%)",
+    "linear-gradient(45deg, transparent 75%, #ccc 75%)",
+    "linear-gradient(-45deg, transparent 75%, #ccc 75%)",
+  ].join(", "),
+  backgroundSize: "8px 8px",
+  backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0",
+};
 
+/** Opacity, 0..1, over a checkerboard; the thumb shows the color at that opacity. */
 export function AlphaSlider({
   color,
   alpha,
   onChange,
+  onCommit,
   className,
 }: AlphaSliderProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { onPointerDown } = useColorDrag(ref, (x) => {
-    onChange(x);
-  });
-
   const opaque = color.withAlpha(1).toOklch();
+  const step = (d: 1 | -1, big: boolean) =>
+    onChange(Math.max(0, Math.min(1, alpha + d * (big ? 0.1 : 0.01))));
 
   return (
-    <div
-      ref={ref}
-      onPointerDown={onPointerDown}
-      className={cn("relative h-4 cursor-pointer rounded-full", className)}
-      style={{
-        backgroundImage: CHECKERBOARD,
-        backgroundSize: "8px 8px",
-        backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0",
-      }}
-    >
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{
-          background: `linear-gradient(to right, transparent, ${opaque})`,
-        }}
-      />
-      <div
-        className="pointer-events-none absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ring-1 ring-black/30"
-        style={{ left: `${alpha * 100}%` }}
-      />
-    </div>
+    <SliderTrack
+      position={alpha}
+      onDrag={onChange}
+      onStep={step}
+      onCommit={onCommit}
+      label="Opacity"
+      valueNow={Math.round(alpha * 100)}
+      valueMin={0}
+      valueMax={100}
+      valueText={`${Math.round(alpha * 100)}%`}
+      thumbFill={color.withAlpha(alpha).toOklch()}
+      background={CHECKERBOARD}
+      overlay={
+        <Layer
+          decorative
+          className="rounded-full"
+          style={{
+            background: `linear-gradient(to right, transparent, ${opaque})`,
+          }}
+        />
+      }
+      className={className}
+    />
   );
 }

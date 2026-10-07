@@ -19,6 +19,9 @@ export function ColorPickerPopover({
   ...pickerProps
 }: ColorPickerPopoverProps) {
   const [open, setOpen] = useState(false);
+  // Bumped on every open: a fresh picker per open, so its "before" swatch is
+  // the color this open started from, not the one the first open did.
+  const [session, setSession] = useState(0);
 
   const trigger = children ?? (
     <button
@@ -33,7 +36,13 @@ export function ColorPickerPopover({
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setSession((n) => n + 1);
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
         {trigger}
       </PopoverTrigger>
@@ -43,7 +52,7 @@ export function ColorPickerPopover({
         className={contentClassName}
         align="start"
       >
-        <ColorPicker {...pickerProps} />
+        <ColorPicker key={session} {...pickerProps} />
       </PopoverContent>
     </Popover>
   );

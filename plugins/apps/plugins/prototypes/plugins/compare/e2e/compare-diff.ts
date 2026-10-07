@@ -29,10 +29,14 @@
 // the browser window sized so the frames come out at Laptop's size.
 //
 // --options picks the mock's variant (`theme=launch,palette=azure`) — the
-// values its `<meta name="prototype-option">` lines declare. Without it the
+// values its `<meta name="prototype-option">` lines declare; for a color
+// option, a suggestion's name or a hex (`accent=#3b82f6`, quoted for the
+// shell). Without it the
 // mock is photographed at its authored defaults (the run resets frame A's
 // picks first), which for a page carrying several directions is only one of
-// them. Picked through frame A's own options pill, so the capture shows exactly what a person would see; a
+// them. A choice is picked through frame A's own options pill, so the capture
+// shows exactly what a person would see; a color through the picks endpoint
+// that pill's color picker writes (a hex has no chip to click); a
 // name or value the page does not declare refuses the run instead of
 // photographing the default. (Frame A's picks are the prototype's shared
 // record; the harness reverts what the run wrote.)
@@ -76,8 +80,10 @@ import {
   type ColorScheme,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
+  describeOptionValues,
   humanizeToken,
   isPrototypeId,
+  pickedColor,
   picksFromQuery,
   SIZE_PRESETS,
   viewportRenderSize,
@@ -169,7 +175,7 @@ function readPicks(): OptionPicks {
     meta.options.length === 0
       ? "it declares none"
       : meta.options
-          .map((o) => `${o.name}: ${o.values.join(" | ")}`)
+          .map((o) => `${o.name}: ${describeOptionValues(o)}`)
           .join("; ");
   const search = new URLSearchParams();
   for (const pair of raw.split(",")) {
@@ -256,38 +262,84 @@ async function settle(page: Page): Promise<void> {
   await Promise.all(page.frames().map((f) => f.waitForLoadState("load")));
 }
 
-/** Each option's value, as frame A's document `<html data-*>` carries it now. */
-async function shownPicks(page: Page): Promise<Record<string, string | null>> {
+/**
+ * What each picked option shows in frame A's document now, beside what it
+ * should: a choice's `<html data-*>`, a color's computed `--<name>` (as the
+ * page's `var()` reads it).
+ */
+async function shownPicks(
+  page: Page,
+): Promise<{ name: string; shown: string | null; wanted: string }[]> {
   const handle = await screen(page, "A")
     .locator("iframe:not([aria-hidden])")
     .elementHandle();
   const frame: Frame | null = handle ? await handle.contentFrame() : null;
-  if (!frame) return {};
-  return frame.evaluate(
-    (keys) =>
-      Object.fromEntries(
-        keys.map((k) => [
-          k,
-          document.documentElement.getAttribute(`data-${k}`),
-        ]),
-      ),
-    Object.keys(picks),
+  const wanted = meta.options.flatMap((o) =>
+    o.name in picks
+      ? [
+          {
+            name: o.name,
+            color: o.kind === "color",
+            wanted: o.kind === "color" ? pickedColor(o, picks) : picks[o.name]!,
+          },
+        ]
+      : [],
   );
+  if (!frame) return wanted.map((w) => ({ ...w, shown: null }));
+  const shown = await frame.evaluate(
+    (rows) =>
+      rows.map((r) =>
+        r.color
+          ? getComputedStyle(document.documentElement)
+              .getPropertyValue(`--${r.name}`)
+              .trim()
+              .toLowerCase()
+          : document.documentElement.getAttribute(`data-${r.name}`),
+      ),
+    wanted,
+  );
+  return wanted.map((w, i) => ({
+    name: w.name,
+    wanted: w.wanted,
+    shown: shown[i] ?? null,
+  }));
 }
 
 /**
- * Put frame A on its authored defaults, then pick each `--options` value
- * through its options pill — one radio group per option.
+ * Put frame A on its authored defaults, then pick each `--options` value: a
+ * choice through its options pill (one radio group per option), a color
+ * through the picks endpoint the pill's color picker commits to — frame A's
+ * picks are the prototype's shared record, and the harness reverts what an
+ * automated session wrote there.
  */
 async function pickOptions(page: Page): Promise<void> {
   if (meta.options.length === 0) return;
   const popover = await openOptions(page, "A");
   const reset = popover.getByRole("button", { name: "Reset to defaults" });
   if ((await reset.count()) > 0) await reset.click();
-  for (const [option, value] of Object.entries(picks)) {
-    await pickValue(popover, humanizeToken(option), humanizeToken(value));
+  for (const option of meta.options) {
+    const value = picks[option.name];
+    if (value === undefined || option.kind !== "choice") continue;
+    await pickValue(popover, humanizeToken(option.name), humanizeToken(value));
   }
   await dismiss(page);
+  for (const option of meta.options) {
+    const value = picks[option.name];
+    if (value === undefined || option.kind !== "color") continue;
+    const res = await agentFetch(
+      `/api/prototypes/${encodeURIComponent(name)}/picks`,
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "set", option: option.name, value }),
+      },
+    );
+    if (!res.ok) {
+      throw new Error(
+        `PUT picks ${option.name}=${value} → ${res.status} ${await res.text()}`,
+      );
+    }
+  }
 }
 
 async function capture(loc: Locator, suffix: string): Promise<Buffer> {
@@ -371,13 +423,12 @@ await withBrowser(async (h) => {
   // The mock must show the variant asked for — checked on the document
   // itself, since a capture of the default would diff just as happily.
   if (Object.keys(picks).length > 0) {
-    const shown = await shownPicks(page);
-    const off = Object.entries(picks).filter(([k, v]) => shown[k] !== v);
+    const off = (await shownPicks(page)).filter((p) => p.shown !== p.wanted);
     if (off.length > 0) {
       r.fail(
         "the mock shows the picked options",
         off
-          .map(([k, v]) => `data-${k}=${String(shown[k])}, wanted ${v}`)
+          .map((p) => `${p.name}=${String(p.shown)}, wanted ${p.wanted}`)
           .join("; "),
       );
       await r.finish();
@@ -445,7 +496,7 @@ await withBrowser(async (h) => {
       `mock captured at its default ${unpicked
         .map((o) => `${o.name}=${o.default}`)
         .join(", ")} — pass --options to compare another variant (${unpicked
-        .map((o) => `${o.name}: ${o.values.join(" | ")}`)
+        .map((o) => `${o.name}: ${describeOptionValues(o)}`)
         .join("; ")})`,
     );
   }

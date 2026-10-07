@@ -1,8 +1,12 @@
 import {
+  pickedColor,
   picksFromQuery,
   readPrototypeOptions,
   type OptionPicks,
+  type PrototypeOption,
 } from "../../core";
+import { readHtmlAttr } from "@plugins/infra/plugins/html-decode/core";
+import { splitDeclarations } from "../../core/option-source";
 
 // Option picks on a served document — shared by the live file route and the
 // version file route, so a past version is switchable exactly like the live
@@ -16,10 +20,11 @@ export function hasPicks(search: URLSearchParams): boolean {
 
 /**
  * The prototype's document with the picked option values stamped onto its
- * `<html>` as `data-<option>="<value>"`, overwriting the defaults the author
- * wrote there. Nothing else in the page changes, so the page needs no code of
- * its own to be switchable: its CSS keys on `:root[data-<option>=…]`, its JS
- * reads `document.documentElement.dataset`.
+ * `<html>`, overwriting the defaults the author wrote there: a choice as
+ * `data-<option>="<value>"`, a color as `--<option>: #rrggbb` in its `style`.
+ * Nothing else in the page changes, so the page needs no code of its own to
+ * be switchable: its CSS keys on `:root[data-<option>=…]` and reads
+ * `var(--<option>)`, its JS reads `document.documentElement.dataset`.
  *
  * The text is read whole first because `<html>` streams before the `<meta>`
  * tags that say which picks are valid (prototype HTML is small). The picks are
@@ -47,21 +52,70 @@ export async function servePickedDocument(
       },
     );
   }
-  return new Response(await stampPicks(html, result.picks), { headers });
+  return new Response(await stampPicks(html, options, result.picks), {
+    headers,
+  });
 }
 
-async function stampPicks(html: string, picks: OptionPicks): Promise<string> {
+/**
+ * `html` with `picks` (already judged against `options`) stamped onto its
+ * first `<html>`. Exported for its unit test.
+ */
+export async function stampPicks(
+  html: string,
+  options: readonly PrototypeOption[],
+  picks: OptionPicks,
+): Promise<string> {
   let stamped = false;
   const rewriter = new HTMLRewriter().on("html", {
     element(el) {
       if (stamped) return;
       stamped = true;
       // Names and values are already validated against the declaration, which
-      // only admits [a-z0-9-] — nothing here can break out of the attribute.
-      for (const [option, value] of Object.entries(picks)) {
-        el.setAttribute(`data-${option}`, value);
+      // only admits [a-z0-9-] and `#rrggbb` — nothing here can break out of
+      // the attribute.
+      const colors: [string, string][] = [];
+      for (const option of options) {
+        if (!(option.name in picks)) continue;
+        if (option.kind === "choice") {
+          el.setAttribute(`data-${option.name}`, picks[option.name]!);
+        } else {
+          colors.push([option.name, pickedColor(option, picks)]);
+        }
+      }
+      if (colors.length > 0) {
+        // Edited decoded — a raw `&quot;` holds a `;` that is not a
+        // declaration's end — and written back through `setAttribute`, which
+        // escapes it again.
+        el.setAttribute(
+          "style",
+          withCustomProperties(readHtmlAttr(el, "style") ?? "", colors),
+        );
       }
     },
   });
   return rewriter.transform(new Response(html)).text();
+}
+
+/**
+ * `style` with each `--<name>: <value>` of `vars` set: every existing
+ * declaration of those properties is dropped and the new ones are appended,
+ * so the stamped value is the one in force. Every other declaration is kept
+ * as written.
+ */
+export function withCustomProperties(
+  style: string,
+  vars: readonly (readonly [string, string])[],
+): string {
+  const names = new Set(vars.map(([name]) => name));
+  const kept = splitDeclarations(style)
+    .map((declaration) => declaration.trim())
+    .filter((declaration) => {
+      const colon = declaration.indexOf(":");
+      const prop = colon < 0 ? "" : declaration.slice(0, colon).trim();
+      return !(prop.startsWith("--") && names.has(prop.slice(2)));
+    });
+  return [...kept, ...vars.map(([name, value]) => `--${name}: ${value}`)].join(
+    "; ",
+  );
 }

@@ -182,6 +182,7 @@ primitive exists to name.
     - `primitives/breadcrumb`
     - `primitives/command-palette`
     - `primitives/commit-list`
+    - `primitives/css/color-picker`
     - `primitives/data-view/capsule-toolbar`
     - `primitives/data-view/list`
     - `primitives/data-view/tree`

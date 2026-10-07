@@ -13,7 +13,6 @@
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/css/cluster.Cluster`
-    - `primitives/css/color-picker.Color`
     - `primitives/css/color-picker.ColorPickerPopover`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`

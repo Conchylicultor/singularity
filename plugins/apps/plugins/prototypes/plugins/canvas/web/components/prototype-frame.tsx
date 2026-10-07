@@ -9,6 +9,7 @@ import {
   restoreDocumentScroll,
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { usePageHeight } from "../internal/use-page-height";
+import { publishColorVars } from "../internal/color-vars";
 import {
   probePageExtent,
   publishScreenHeight,
@@ -46,7 +47,10 @@ import {
  * tall and the page scrolls inside it.
  *
  * Whatever the mode, the document is told the height of one screen
- * (`SCREEN_HEIGHT_VAR`).
+ * (`SCREEN_HEIGHT_VAR`), and its color options are painted into it
+ * (`colorVars`, as `--<name>` on its `<html>`) — on the document on screen as
+ * they move, and on an incoming one before it is shown — so a color pick or a
+ * drag never reloads the frame.
  */
 export function PrototypeFrame({
   src,
@@ -56,6 +60,7 @@ export function PrototypeFrame({
   scale,
   wholePage,
   pageHeight,
+  colorVars,
   onPageExtent,
 }: {
   /** The document's URL, from `useFrameSrc` — never built here. */
@@ -68,6 +73,8 @@ export function PrototypeFrame({
   wholePage: boolean;
   /** This document's measured full height, when Whole page is on. */
   pageHeight: number | null;
+  /** Each color option's color, `#rrggbb` by name (`useFrameColorVars`). */
+  colorVars: Readonly<Record<string, string>>;
   onPageExtent: (extent: PageExtent) => void;
 }) {
   // The document on screen. `src` differing from it means a new one is loading.
@@ -97,6 +104,13 @@ export function PrototypeFrame({
   useEffect(() => {
     if (ready) publishScreenHeight(ready.doc, height);
   }, [ready, height]);
+
+  // Only a property that differs is written, so a re-render that moved no
+  // color writes nothing.
+  const latestColors = useLatestRef(colorVars);
+  useEffect(() => {
+    if (ready) publishColorVars(ready.doc, colorVars);
+  }, [ready, colorVars]);
 
   return (
     <div
@@ -141,6 +155,9 @@ export function PrototypeFrame({
                   captureDocumentScroll(ready.doc),
                 );
               }
+              // Its url carries the colors as of when it was asked for; a drag
+              // may have moved them since. Painted before it is shown.
+              publishColorVars(doc, latestColors.current);
               setShownSrc(frameSrc);
               setReady({ frame, doc });
             }}

@@ -17,10 +17,8 @@ import {
   selfClass,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  Color,
-  ColorPickerPopover,
-} from "@plugins/primitives/plugins/css/plugins/color-picker/web";
+import { Color } from "@plugins/primitives/plugins/css/plugins/color-picker/core";
+import { ColorPickerPopover } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {

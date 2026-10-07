@@ -18,6 +18,7 @@ import {
 } from "./saved-canvas";
 
 const design: PrototypeOption = {
+  kind: "choice",
   name: "design",
   values: ["mist", "slate", "paper"],
   default: "mist",

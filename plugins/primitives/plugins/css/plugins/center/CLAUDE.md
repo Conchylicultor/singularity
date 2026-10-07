@@ -57,6 +57,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
     - `apps/pages/page-tree`
+    - `apps/prototypes/canvas`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/chord-chart`
     - `apps/sonata/library`
@@ -114,6 +115,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/dependencies`
     - `plugin-meta/plugin-view/sub-plugins`
+    - `primitives/css/color-picker`
     - `primitives/cursor-pagination`
     - `primitives/data-table`
     - `primitives/data-view/capsule-toolbar`

@@ -30,6 +30,7 @@ import {
   prototypePicks,
   prototypeUrl,
   prototypeVersionUrl,
+  pickedColor,
   resolvePicks,
   setPrototypePicks,
   type OptionPicks,
@@ -43,7 +44,9 @@ import {
 import {
   canvasReducer,
   initialCanvasState,
+  isTransientAction,
   picksOf,
+  previewedValue,
   type CanvasAction,
   type CanvasEffect,
   type CanvasState,
@@ -347,7 +350,8 @@ function DetailProvider({
     if (state === before && effects.length === 0) return;
     latest.current = { from: current, state };
     setHeld({ name, slot, state });
-    if (slot !== null) {
+    // A drag's preview changes every move and is never saved.
+    if (slot !== null && !isTransientAction(action)) {
       writeDraft(SAVED_CANVAS_KEY, serializeCanvas(state), {
         ...SAVED_CANVAS,
         scope: slot,
@@ -420,13 +424,73 @@ export function useStoredPicksOf(): (frame: PrototypeFrame) => StoredPicks {
   return useCallback((frame) => picksOf(frame, shared), [shared]);
 }
 
-/** THE url of a prototype frame's document: its version under its picks. */
+/**
+ * THE url of a prototype frame's document: its version under its picks.
+ *
+ * A color pick alone never changes it: colors are painted into the loaded
+ * document live (`useFrameColorVars`), so a drag never reloads the frame. The
+ * url carries the color picks as of its last change for another reason — a
+ * choice pick, a version step or an edit — so the document it loads comes
+ * back server-stamped with them, with no flash of the default colors.
+ */
 export function useFrameSrc(
   frame: PrototypeFrame,
   meta: PrototypeMeta,
 ): string {
   const stored = useFrameStoredPicks(frame);
-  return prototypeDocumentSrc(meta, frame.version, stored);
+  const options = documentOptions(meta, frame.version);
+  // What the url depends on: everything but the color picks.
+  const key = prototypeDocumentSrc(
+    meta,
+    frame.version,
+    withoutColorPicks(options, stored),
+  );
+  const src = prototypeDocumentSrc(meta, frame.version, stored);
+  const [held, setHeld] = useState({ key, src });
+  if (held.key === key) return held.src;
+  // Set during render (React's "adjust state on a prop change" pattern), so
+  // the new document starts loading in this very commit.
+  setHeld({ key, src });
+  return src;
+}
+
+/** `stored` without the picks of `options`' color options. */
+function withoutColorPicks(
+  options: readonly PrototypeOption[],
+  stored: StoredPicks,
+): StoredPicks {
+  const colors = new Set(
+    options.filter((o) => o.kind === "color").map((o) => o.name),
+  );
+  if (colors.size === 0) return stored;
+  return Object.fromEntries(
+    Object.entries(stored).filter(([name]) => !colors.has(name)),
+  );
+}
+
+/**
+ * The color every color option paints in a frame's document right now, as
+ * `#rrggbb` keyed by option name: the drag's preview, else the pick, else the
+ * page's default. What `PrototypeFrame` sets on the document's `<html>` as
+ * `--<name>`, so a color repaints without a reload.
+ */
+export function useFrameColorVars(
+  frame: PrototypeFrame,
+  meta: PrototypeMeta,
+): Readonly<Record<string, string>> {
+  const { canvas } = usePrototypeDetail();
+  const picks = useFramePicks(frame, meta);
+  const options = documentOptions(meta, frame.version);
+  const vars: Record<string, string> = {};
+  for (const option of options) {
+    if (option.kind !== "color") continue;
+    const preview = previewedValue(canvas, frame.id, option.name);
+    vars[option.name] = pickedColor(
+      option,
+      preview === null ? picks : { ...picks, [option.name]: preview },
+    );
+  }
+  return vars;
 }
 
 /**

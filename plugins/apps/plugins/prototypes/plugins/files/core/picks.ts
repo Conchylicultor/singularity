@@ -2,7 +2,7 @@ import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { isOptionName, isOptionValue } from "./options";
+import { isOptionName, isPickValue } from "./options";
 
 // The wire half of a prototype's option picks: which variant of each option
 // the user has picked, ONE record per prototype, shared by every surface that
@@ -14,7 +14,8 @@ import { isOptionName, isOptionValue } from "./options";
 
 /**
  * The picks as STORED, keyed by option name — raw: checked against the token
- * grammar (`isOptionName` / `isOptionValue`), never against a declaration. A
+ * grammar (`isOptionName` / `isPickValue`: a value token, or a color option's
+ * lowercase `#rrggbb`), never against a declaration. A
  * pick can target an option only a recorded version declares, so the live
  * page's options cannot judge it. Every read still goes through
  * `resolvePicks`, which keeps the picks the document on screen declares and
@@ -28,16 +29,16 @@ const OptionNameSchema = z
     isOptionName,
     "not an option name (lowercase letters, digits and dashes, starting with a letter; `v` is reserved)",
   );
-const OptionValueSchema = z
+const PickValueSchema = z
   .string()
   .refine(
-    isOptionValue,
-    "not an option value (lowercase letters, digits and dashes)",
+    isPickValue,
+    "not an option value (lowercase letters, digits and dashes, or a lowercase #rrggbb color)",
   );
 
 export const StoredPicksSchema = z.record(
   OptionNameSchema,
-  OptionValueSchema,
+  PickValueSchema,
 ) satisfies ZodParser<StoredPicks>;
 
 /**
@@ -51,7 +52,7 @@ export const PicksChangeSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("set"),
     option: OptionNameSchema,
-    value: OptionValueSchema,
+    value: PickValueSchema,
   }),
   z.object({ kind: z.literal("reset") }),
 ]);

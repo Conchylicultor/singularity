@@ -63,9 +63,24 @@ const SavedCanvasSchema = z.object({
 
 type SavedCanvas = z.infer<typeof SavedCanvasSchema>;
 
-/** The canvas as it is written to storage (`linked` is a Set in memory). */
+/**
+ * The canvas as it is written to storage (`linked` is a Set in memory). A
+ * drag's `preview` is never saved: it is what is on screen for a moment, and a
+ * reopened canvas shows the picks.
+ */
 export function serializeCanvas(state: CanvasState): SavedCanvas {
-  return { ...state, frames: [...state.frames], linked: [...state.linked] };
+  return {
+    frames: [...state.frames],
+    nextId: state.nextId,
+    selected: state.selected,
+    size: state.size,
+    zoom: state.zoom,
+    wholePage: state.wholePage,
+    layout: state.layout,
+    swipeAt: state.swipeAt,
+    spread: state.spread,
+    linked: [...state.linked],
+  };
 }
 
 /**
@@ -110,7 +125,11 @@ export function restoreCanvas(raw: unknown): RestoredCanvas {
     kind: "restored",
     // A swipe canvas of one or three frames was written before the reducer
     // settled the layout: it reopens side by side, as it was drawn.
-    state: settleLayout({ ...saved, linked: new Set(saved.linked) }),
+    state: settleLayout({
+      ...saved,
+      linked: new Set(saved.linked),
+      preview: null,
+    }),
   };
 }
 

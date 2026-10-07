@@ -1,7 +1,12 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import { isPrototypeId, resolvePicks, type PrototypeMeta } from "../core";
+import {
+  isPrototypeId,
+  pickedColor,
+  resolvePicks,
+  type PrototypeMeta,
+} from "../core";
 import { listPrototypeMetas } from "../shared/list-metas";
 import { openPicksStore, type PicksStore } from "../shared/picks";
 import { prototypeUrlFormatter } from "./prototype-url";
@@ -48,8 +53,9 @@ const run: CliAction<[], object> = async () => {
 };
 
 /**
- * `picked: palette=azure, density=compact` — the variant the user is looking
- * at, when it is not the page as written. The user's shared picks, judged
+ * `picked: palette=azure, accent=#3b82f6 (azure)` — the variant the user is
+ * looking at, when it is not the page as written. A color reads as its hex,
+ * with its suggestion's name when it is one. The user's shared picks, judged
  * against the live page's options like the pane judges them; the details (and
  * the variant's own URL) are `prototype options <id>`.
  */
@@ -61,9 +67,15 @@ async function pickedLine(
   // server refuses to store any for it.
   if (!isPrototypeId(meta.name) || meta.options.length === 0) return null;
   const picks = resolvePicks(meta.options, await store.read(meta.name));
-  const entries = Object.entries(picks);
-  if (entries.length === 0) return null;
-  return `picked: ${entries.map(([k, v]) => `${k}=${v}`).join(", ")}`;
+  const parts = meta.options.flatMap((option) => {
+    const value = picks[option.name];
+    if (value === undefined) return [];
+    if (option.kind === "choice") return [`${option.name}=${value}`];
+    const hex = pickedColor(option, picks);
+    return [`${option.name}=${hex}${value === hex ? "" : ` (${value})`}`];
+  });
+  if (parts.length === 0) return null;
+  return `picked: ${parts.join(", ")}`;
 }
 
 export default run;

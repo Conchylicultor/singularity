@@ -16,7 +16,6 @@
     - `config_v2.useScopeMembership`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/css/color-picker.Color`
     - `primitives/css/color-picker.ColorPickerPopover`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`

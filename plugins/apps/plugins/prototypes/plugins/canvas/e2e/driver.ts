@@ -17,7 +17,10 @@ import {
   pathUrl,
   usage,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import type {
+  ChoiceOption,
+  PrototypeMeta,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   CANVAS_FRAME_ATTR,
   CANVAS_FRAME_KIND_ATTR,
@@ -26,8 +29,8 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 
 /**
- * The prototype to drive: `--name`, else the first one that declares an
- * option with 3+ values and a `mocks` counterpart — what every canvas flow
+ * The prototype to drive: `--name`, else the first one that declares a
+ * choice option with 3+ values and a `mocks` counterpart — what every canvas flow
  * needs (a variant to pick, a value to spread over, a real app to add).
  */
 export async function pickPrototype(): Promise<PrototypeMeta> {
@@ -40,7 +43,7 @@ export async function pickPrototype(): Promise<PrototypeMeta> {
     : rows.find(
         (p) =>
           p.mocks.kind === "declared" &&
-          p.options.some((o) => o.values.length >= 3),
+          p.options.some((o) => o.kind === "choice" && o.values.length >= 3),
       );
   if (!meta) {
     usage(
@@ -52,12 +55,12 @@ export async function pickPrototype(): Promise<PrototypeMeta> {
   return meta;
 }
 
-/** The first option with at least three values — the one flows pick and spread. */
-export function spreadableOption(
-  meta: PrototypeMeta,
-): PrototypeMeta["options"][number] {
-  const option = meta.options.find((o) => o.values.length >= 3);
-  if (!option) usage(`${meta.name} declares no option with 3+ values`);
+/** The first choice option with at least three values — the one flows pick and spread. */
+export function spreadableOption(meta: PrototypeMeta): ChoiceOption {
+  const option = meta.options.find(
+    (o): o is ChoiceOption => o.kind === "choice" && o.values.length >= 3,
+  );
+  if (!option) usage(`${meta.name} declares no choice option with 3+ values`);
   return option;
 }
 
@@ -133,7 +136,11 @@ export interface FrameDoc {
   height: number;
   /** The recorded version's sha, or `null` for the live folder. */
   sha: string | null;
-  /** Every option's value on screen — the pick, else the page's default. */
+  /**
+   * Every option's value the document was OPENED with — the pick in its `src`,
+   * else the page's default. A color option moves without changing the `src`
+   * (it is painted live): read what it shows with {@link frameColor}.
+   */
   values: Record<string, string>;
 }
 
@@ -170,6 +177,31 @@ export async function frameValue(
   option: string,
 ): Promise<string | null> {
   return (await frameDoc(page, meta, letter))?.values[option] ?? null;
+}
+
+/**
+ * The color a frame's document paints for a color option right now: the
+ * computed `--<option>` on its `<html>`, lowercased — what the page's
+ * `var(--<option>)` reads. `null` while the frame has no document.
+ */
+export async function frameColor(
+  page: Page,
+  letter: string,
+  option: string,
+): Promise<string | null> {
+  const iframe = screen(page, letter).locator("iframe:not([aria-hidden])");
+  if ((await iframe.count()) !== 1) return null;
+  const handle = await iframe.elementHandle();
+  const frame = handle ? await handle.contentFrame() : null;
+  if (!frame) return null;
+  return frame.evaluate(
+    (name) =>
+      getComputedStyle(document.documentElement)
+        .getPropertyValue(`--${name}`)
+        .trim()
+        .toLowerCase(),
+    option,
+  );
 }
 
 /**

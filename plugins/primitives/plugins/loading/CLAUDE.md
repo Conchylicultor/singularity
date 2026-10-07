@@ -181,6 +181,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/dependencies`
     - `plugin-meta/plugin-view/file-tree`
+    - `primitives/css/color-picker`
     - `primitives/cursor-pagination`
     - `primitives/data-view`
     - `primitives/diff-view`

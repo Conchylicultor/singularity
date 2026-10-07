@@ -145,6 +145,7 @@ icon+count button it stands in for — carries a per-site
     - `page/table`
     - `primitives/adaptive-bar`
     - `primitives/collapsible-wrap`
+    - `primitives/css/color-picker`
     - `primitives/css/control-panel`
     - `primitives/data-view`
     - `primitives/data-view/tree`

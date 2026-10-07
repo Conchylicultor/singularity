@@ -22,7 +22,7 @@ import type {
 import type { FrameLayout } from "../internal/layout";
 import type { PageExtent } from "../internal/page-extent";
 import { FrameSource, type FrameResolution } from "../slots";
-import { useFrameSrc } from "../context";
+import { useFrameColorVars, useFrameSrc } from "../context";
 import { PrototypeFrame } from "./prototype-frame";
 
 /** Everything the frame view is sized by, and the letter it publishes. */
@@ -73,6 +73,7 @@ function PrototypeFrameView({
   children = justScreen,
 }: CanvasFrameViewProps & { frame: PrototypeFrameModel }): ReactElement {
   const src = useFrameSrc(frame, meta);
+  const colorVars = useFrameColorVars(frame, meta);
   const screen = (
     <Screen
       layout={layout}
@@ -88,6 +89,7 @@ function PrototypeFrameView({
         scale={layout.scale}
         wholePage={wholePage}
         pageHeight={pageHeight}
+        colorVars={colorVars}
         onPageExtent={onPageExtent}
       />
     </Screen>

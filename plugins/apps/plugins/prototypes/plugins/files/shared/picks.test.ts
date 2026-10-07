@@ -160,7 +160,18 @@ describe("PicksChangeSchema", () => {
       }).success,
     ).toBe(true);
     expect(PicksChangeSchema.safeParse({ kind: "reset" }).success).toBe(true);
+    // A color option's custom pick: lowercase #rrggbb only.
+    expect(
+      PicksChangeSchema.safeParse({
+        kind: "set",
+        option: "accent",
+        value: "#3b82f6",
+      }).success,
+    ).toBe(true);
     for (const bad of [
+      { kind: "set", option: "accent", value: "#3B82F6" },
+      { kind: "set", option: "accent", value: "#3b82f6ff" },
+      { kind: "set", option: "accent", value: "oklch(0.6 0.2 260)" },
       { kind: "set", option: "v", value: "azure" },
       { kind: "set", option: "Palette", value: "azure" },
       { kind: "set", option: "palette", value: "Soft tray" },

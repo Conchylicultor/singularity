@@ -189,19 +189,23 @@ them means jumping between panes.
 
 ## Options: variants the reader flips between
 
-If the design has versions to compare — a palette, a pane style, a density, or
-whole alternative designs — **declare them; never build a switcher, toggle bar
-or settings panel into the page to flip between them, and never split them into
-separate prototypes.** The app draws the picker itself, as a small pill
-floating over the stage, outside your page. So your page holds only the design:
-the picker takes no canvas space, shows up in no screenshot or thumbnail, and
-your CSS never has to style it.
+If the design has versions to compare — a pane style, a density, an accent
+color, or whole alternative designs — **declare them; never build a switcher,
+toggle bar, color input or settings panel into the page to flip between them,
+and never split them into separate prototypes.** The app draws the picker
+itself, as a small pill floating over the stage, outside your page. So your page
+holds only the design: the picker takes no canvas space, shows up in no
+screenshot or thumbnail, and your CSS never has to style it.
+
+There are two kinds: a **choice** (one of a fixed list of values) and a
+**color** (any color, with your suggestions).
 
 ```html
-<html lang="en" data-palette="violet" data-pane="flush">
+<html lang="en" data-pane="flush" data-density="cozy" style="--accent: #7c5cff">
 <head>
-<meta name="prototype-option" content="palette: violet | indigo | azure" />
 <meta name="prototype-option" content="pane: flush | floating | soft-tray" />
+<meta name="prototype-option" content="density: cozy | compact" />
+<meta name="prototype-option" content="accent: color violet=#7c5cff | azure=#3b82f6 | mint=#10b981" />
 ```
 
 - **One tag per option**: `<name>: <value> | <value> | …`. Tag order is picker
@@ -209,23 +213,44 @@ your CSS never has to style it.
   dashes starting with a letter (`v` is reserved); values are lowercase letters,
   digits and dashes (`3-octaves` is fine). The picker shows them humanized
   (`soft-tray` → "Soft tray"), so pick readable tokens.
-- **The default is the attribute you write on `<html>`**: `data-<name>="<value>"`,
-  one of the declared values. The page then carries the attribute everywhere —
-  double-clicked off disk, in the thumbnail, in the app — and the app only
-  overwrites it with the value the reader picked.
-- **Style each value** with `:root[data-palette="azure"] { … }` (the default can
-  be targeted the same way), or read `document.documentElement.dataset.palette`
+- **A choice's default is the attribute you write on `<html>`**:
+  `data-<name>="<value>"`, one of the declared values. The page then carries the
+  attribute everywhere — double-clicked off disk, in the thumbnail, in the app —
+  and the app only overwrites it with the value the reader picked.
+- **Style each value** with `:root[data-pane="floating"] { … }` (the default can
+  be targeted the same way), or read `document.documentElement.dataset.pane`
   in JS. Read it once, at load: picking a value reloads the frame with the new
   attribute, so nothing has to listen for a change.
-- Options are choices only — no sliders. A tuning slider that is part of what
-  the prototype explores stays in the page.
+
+### Colors are a `color` option, never a palette enum
+
+A color the reader might want to tune — an accent, a surface, a brand color —
+is a **`color` option**, never `palette: violet | indigo | azure`. With an enum
+the reader can only flip between your guesses; with a color option they can
+pick the exact color they want, and the mock repaints live as they drag.
+Several colors are several color options.
+
+- **`<name>: color <suggestion>=<color> | …`** — the `color` keyword, then your
+  suggestions (zero or more), each a name (a value token, as above) and a CSS
+  color: `#rrggbb`, `oklch(…)`, `rgb(…)` or `hsl(…)`, opaque. The picker shows
+  them as swatches beside a custom color picker.
+- **The default is the `--<name>` custom property in `<html style>`**:
+  `<html style="--accent: #7c5cff">`. Like a choice's attribute, it renders off
+  disk and in the thumbnail, and it is exactly the property the app overrides.
+- **Read it with `var(--accent)`**, in CSS (`color-mix()` derives shades
+  from it), or `getComputedStyle(document.documentElement)` in JS at the moment
+  you need it. **Never copy it into a JS variable at load:** a color pick does
+  NOT reload the frame — the app sets `--accent` on the live page as the reader
+  drags — so a value read once goes stale.
+- A pick is stored as a suggestion's name or a lowercase `#rrggbb`.
 
 Not an option: a control that is part of the design itself (the product's own
 dropdown, a play button in a player). Options are for the reader choosing which
 version of the design to look at.
 
 A line that cannot be an option (malformed, a missing or unknown default, a
-duplicate) is left out of the picker and reported as a problem on the card.
+color that cannot be read, a duplicate) is left out of the picker and reported
+as a problem on the card.
 
 ### Which variant is the user looking at?
 
@@ -238,7 +263,9 @@ live. Read it from the terminal:
 ```
 
 It prints each option with the value on screen (picked, or the page's default)
-and its values, then the document URL of exactly that variant. The user may
+and its values — a color option as its `#rrggbb` (and its suggestion's name),
+the color to bake in when the user has settled on one — then the document URL
+of exactly that variant. The user may
 flip a variant at any time, so run this when it matters. `prototype list` shows a
 `picked:` line under each prototype that is not on its defaults.
 
@@ -249,11 +276,12 @@ Load the prototype's document with the options in its query — the same
 
 ```bash
 ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
-  --path "/api/prototypes/<id>/index.html?palette=azure&pane=floating"
+  --path "/api/prototypes/<id>/index.html?pane=floating&accent=%2310b981"
 ```
 
-The server stamps the values onto `<html data-*>`, so the page renders that
-variant; a name or value the page does not declare is a 400, not the default.
+The server stamps the values onto `<html>` (`data-*` for a choice, `--<name>` in
+its `style` for a color: a suggestion's name, or a hex with its `#` written
+`%23`), so the page renders that variant; a name or value the page does not declare is a 400, not the default.
 `prototype options` prints the line for the current variant, ready to run.
 
 **Never change the user's picks.** They are the user's choice of what to look

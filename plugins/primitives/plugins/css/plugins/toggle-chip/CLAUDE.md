@@ -66,6 +66,7 @@ anonymous index signature. See
     - `fields/tags/inline`
     - `page/inline-date`
     - `page/place`
+    - `primitives/css/color-picker`
     - `primitives/data-view`
     - `primitives/data-view/view-core`
     - `primitives/file-viewer`

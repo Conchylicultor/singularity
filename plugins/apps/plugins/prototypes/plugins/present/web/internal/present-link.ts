@@ -29,7 +29,8 @@ export function decodeSize(segment: string): PrototypeViewport | undefined {
 
 /**
  * A frame's own picks as ONE route segment: `a=b,c=d`. Each name and value is
- * escaped on its own first, so a `,` or `=` inside one can never split it.
+ * escaped on its own first, so a `,` or `=` inside one can never split it, and
+ * a color pick's `#` (`accent=#3b82f6`) can never start the url's fragment.
  * (The route then escapes the whole segment once more; the router undoes that.)
  */
 export function encodePicks(picks: StoredPicks): string {

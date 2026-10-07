@@ -15,6 +15,7 @@ export interface CollectedEntry {
 export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "config_v2/plugins/settings", id: "config_v2.settings", loader: () => import("@plugins/config_v2/plugins/settings/exhibits"), dependsOn: ["primitives/plugins/css/plugins/control-panel"] },
   { pluginPath: "primitives/plugins/adaptive-bar", id: "primitives.adaptive-bar", loader: () => import("@plugins/primitives/plugins/adaptive-bar/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
+  { pluginPath: "primitives/plugins/css/plugins/color-picker", id: "primitives.css.color-picker", loader: () => import("@plugins/primitives/plugins/css/plugins/color-picker/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/control-panel", id: "primitives.css.control-panel", loader: () => import("@plugins/primitives/plugins/css/plugins/control-panel/exhibits"), dependsOn: ["primitives/plugins/css/plugins/ui-kit"] },
   { pluginPath: "primitives/plugins/css/plugins/coords", id: "primitives.css.coords", loader: () => import("@plugins/primitives/plugins/css/plugins/coords/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/text", id: "primitives.css.text", loader: () => import("@plugins/primitives/plugins/css/plugins/text/exhibits"), dependsOn: ["primitives/plugins/css/plugins/ui-kit"] },

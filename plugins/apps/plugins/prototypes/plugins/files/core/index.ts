@@ -59,10 +59,15 @@ export {
   foldOptions,
   resolvePicks,
   pickedValue,
+  pickedColor,
+  colorPickValue,
+  describeOptionValues,
+  parseOptionColor,
   picksFromQuery,
   humanizeToken,
   isOptionName,
   isOptionValue,
+  isHexColor,
 } from "./options";
 export {
   StoredPicksSchema,
@@ -84,6 +89,9 @@ export {
 export type { PrototypeStatus, PrototypeStatusChange } from "./status";
 export type {
   PrototypeOption,
+  ChoiceOption,
+  ColorOption,
+  ColorSuggestion,
   OptionDeclaration,
   OptionPicks,
   OptionSource,

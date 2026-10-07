@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   DEFAULT_PROTOTYPE_VIEWPORT,
+  type ColorOption,
   type PrototypeOption,
   type PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -8,7 +9,10 @@ import {
   canvasReducer,
   frameA,
   initialCanvasState as openCanvas,
+  isTransientAction,
+  previewedValue,
   prototypeFrames,
+  spreadValues,
   type CanvasAction,
   type CanvasState,
   type PrototypeFrame,
@@ -22,6 +26,7 @@ function initialCanvasState(
 }
 
 const design: PrototypeOption = {
+  kind: "choice",
   name: "design",
   values: ["mist", "slate", "paper"],
   default: "mist",
@@ -256,6 +261,147 @@ describe("spread", () => {
       value: "paper",
     }).state;
     expect(s.spread).toBeNull();
+  });
+});
+
+const accent: ColorOption = {
+  kind: "color",
+  name: "accent",
+  suggestions: [
+    { name: "violet", color: "#7c5cff" },
+    { name: "azure", color: "#3b82f6" },
+  ],
+  default: "#7c5cff",
+};
+
+describe("color preview", () => {
+  it("a drag previews without an effect; the pick commits it in one write", () => {
+    const s0 = initialCanvasState();
+    const moves = ["#3b82f6", "#3c82f6", "#3d83f7"];
+    let s = s0;
+    for (const value of moves) {
+      const t = run(s, { type: "previewPick", id: 1, option: "accent", value });
+      expect(t.effects).toEqual([]);
+      s = t.state;
+    }
+    expect(s.preview).toEqual({ id: 1, option: "accent", value: "#3d83f7" });
+    expect(previewedValue(s, 1, "accent")).toBe("#3d83f7");
+    // The picks did not move.
+    expect(s.frames).toBe(s0.frames);
+
+    const done = run(s, {
+      type: "setPick",
+      id: 1,
+      option: "accent",
+      value: "#3d83f7",
+    });
+    expect(done.effects).toEqual([
+      { kind: "setShared", option: "accent", value: "#3d83f7" },
+    ]);
+    expect(done.state.preview).toBeNull();
+  });
+
+  it("the same preview again is no change", () => {
+    const s = run(initialCanvasState(), {
+      type: "previewPick",
+      id: 1,
+      option: "accent",
+      value: "azure",
+    }).state;
+    expect(
+      run(s, { type: "previewPick", id: 1, option: "accent", value: "azure" })
+        .state,
+    ).toBe(s);
+  });
+
+  it("shows on its own frame, or every frame when the option is linked", () => {
+    let s = run(initialCanvasState(), { type: "addPrototype" }).state;
+    s = run(s, {
+      type: "previewPick",
+      id: 2,
+      option: "accent",
+      value: "azure",
+    }).state;
+    expect(previewedValue(s, 2, "accent")).toBe("azure");
+    expect(previewedValue(s, 1, "accent")).toBeNull();
+    expect(previewedValue(s, 2, "other")).toBeNull();
+    s = run(s, { type: "toggleLink", id: 2, option: accent }).state;
+    expect(previewedValue(s, 1, "accent")).toBe("azure");
+  });
+
+  it("clears on clearPreview, on reset, and with its frame", () => {
+    let s = run(initialCanvasState(), { type: "addPrototype" }).state;
+    const preview = (id: number) =>
+      run(s, { type: "previewPick", id, option: "accent", value: "azure" })
+        .state;
+    expect(run(preview(2), { type: "clearPreview" }).state.preview).toBeNull();
+    expect(
+      run(preview(2), { type: "resetPicks", id: 2 }).state.preview,
+    ).toBeNull();
+    const reset = run(preview(1), { type: "resetPicks", id: 1 });
+    expect(reset.state.preview).toBeNull();
+    expect(reset.effects).toEqual([{ kind: "resetShared" }]);
+    expect(run(preview(2), { type: "remove", id: 2 }).state.preview).toBeNull();
+    s = preview(2);
+    // A pick of another option leaves the drag alone.
+    expect(
+      run(s, { type: "setPick", id: 2, option: "design", value: "paper" }).state
+        .preview,
+    ).toEqual(s.preview);
+  });
+
+  it("is the only transient action", () => {
+    expect(
+      isTransientAction({
+        type: "previewPick",
+        id: 1,
+        option: "accent",
+        value: "azure",
+      }),
+    ).toBe(true);
+    expect(isTransientAction({ type: "clearPreview" })).toBe(true);
+    expect(
+      isTransientAction({
+        type: "setPick",
+        id: 1,
+        option: "accent",
+        value: "azure",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("color spread", () => {
+  it("spreads a color option over its suggestions", () => {
+    const { state } = run(
+      initialCanvasState(),
+      { type: "toggleSpread", id: 1, option: accent },
+      { accent: "azure" },
+    );
+    expect(state.spread).toBe("accent");
+    const protos = prototypeFrames(state.frames);
+    expect(protos.map((f) => f.id)).toEqual([2, 1]);
+    expect(protos[1]!.picks).toEqual({ accent: "azure" });
+  });
+
+  it("a custom color keeps its frame, first", () => {
+    expect(spreadValues(accent, "#10b981")).toEqual([
+      "#10b981",
+      "violet",
+      "azure",
+    ]);
+    const { state } = run(
+      initialCanvasState(),
+      { type: "toggleSpread", id: 1, option: accent },
+      { accent: "#10b981" },
+    );
+    expect(prototypeFrames(state.frames).map((f) => f.id)).toEqual([1, 2, 3]);
+  });
+
+  it("a color with no suggestions has nothing to spread", () => {
+    const bare = { ...accent, suggestions: [] };
+    const s = initialCanvasState();
+    expect(run(s, { type: "toggleSpread", id: 1, option: bare }).state).toBe(s);
   });
 });
 

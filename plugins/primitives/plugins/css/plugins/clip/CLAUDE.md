@@ -76,6 +76,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `page/math/equation`
     - `plugin-meta/plugin-view/file-tree`
     - `primitives/app-shell`
+    - `primitives/css/color-picker`
     - `primitives/data-view/gallery`
     - `primitives/data-view/list`
     - `primitives/diff-view`

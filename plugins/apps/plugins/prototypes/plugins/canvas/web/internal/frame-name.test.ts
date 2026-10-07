@@ -6,6 +6,7 @@ const opt = (
   name: string,
   values: [string, string, ...string[]],
 ): PrototypeOption => ({
+  kind: "choice",
   name,
   values,
   default: values[0],

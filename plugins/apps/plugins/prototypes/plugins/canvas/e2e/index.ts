@@ -15,6 +15,7 @@ export {
   card,
   frameDoc,
   frameValue,
+  frameColor,
   hoverCard,
   frameAction,
   openOptions,

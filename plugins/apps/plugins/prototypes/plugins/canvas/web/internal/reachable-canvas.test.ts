@@ -1,6 +1,6 @@
 import { expect, it } from "bun:test";
 import type {
-  PrototypeOption,
+  ChoiceOption,
   PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
@@ -11,12 +11,14 @@ import {
 } from "./canvas-model";
 import { restoreCanvas, serializeCanvas } from "./saved-canvas";
 
-const design: PrototypeOption = {
+const design: ChoiceOption = {
+  kind: "choice",
   name: "design",
   values: ["mist", "slate", "paper"],
   default: "mist",
 };
-const page: PrototypeOption = {
+const page: ChoiceOption = {
+  kind: "choice",
   name: "page",
   values: ["home", "list"],
   default: "home",

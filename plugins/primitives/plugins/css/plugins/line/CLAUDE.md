@@ -95,6 +95,7 @@ attribute type carries.
     - `primitives/breadcrumb`
     - `primitives/command-palette`
     - `primitives/commit-list`
+    - `primitives/css/color-picker`
     - `primitives/css/row`
     - `primitives/data-view/capsule-toolbar`
     - `primitives/date-picker`

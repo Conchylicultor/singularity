@@ -94,6 +94,7 @@ has the vocabulary for it.
     - `apps/sonata/progress/scrubber`
     - `page/code-block`
     - `page/place/map-layer`
+    - `primitives/css/color-picker`
     - `primitives/overlay/image-viewer`
     - `primitives/tree`
 

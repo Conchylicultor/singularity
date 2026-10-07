@@ -1,11 +1,17 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { Color, MAX_CHROMA } from "./internal/color";
 export { ColorArea, type ColorAreaProps } from "./internal/color-area";
 export { HueSlider, type HueSliderProps } from "./internal/hue-slider";
 export { AlphaSlider, type AlphaSliderProps } from "./internal/alpha-slider";
-export { ColorInput, type ColorInputProps } from "./internal/color-input";
-export { SwatchGrid, type SwatchGridProps } from "./internal/swatch-grid";
+export {
+  ColorValueFields,
+  type ColorValueFieldsProps,
+} from "./internal/color-value-fields";
+export {
+  SwatchGrid,
+  type Swatch,
+  type SwatchGridProps,
+} from "./internal/swatch-grid";
 export { ColorPicker, type ColorPickerProps } from "./internal/color-picker";
 export {
   ColorPickerPopover,
@@ -14,6 +20,6 @@ export {
 
 export default {
   description:
-    "Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.",
+    "Composable color picker primitive: a fitted (always-in-gamut) OKLCH ColorArea, HueSlider, AlphaSlider, per-channel ColorValueFields (HEX / OKLCH / HSL), SwatchGrid with named suggestions, and ColorPicker / ColorPickerPopover with before/after, Reset, eyedropper and a shared Recent row. The Color math (parse, convert, gamut) is in core.",
   contributions: [],
 } satisfies PluginDefinition;

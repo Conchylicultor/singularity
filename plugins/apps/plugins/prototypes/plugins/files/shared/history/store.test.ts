@@ -246,10 +246,20 @@ describe("version options", () => {
 
     const [v0, v1] = (await history()).versions;
     expect(v0!.options).toEqual([
-      { name: "palette", values: ["violet", "azure"], default: "violet" },
+      {
+        kind: "choice",
+        name: "palette",
+        values: ["violet", "azure"],
+        default: "violet",
+      },
     ]);
     expect(v1!.options).toEqual([
-      { name: "palette", values: ["amber", "azure"], default: "amber" },
+      {
+        kind: "choice",
+        name: "palette",
+        values: ["amber", "azure"],
+        default: "amber",
+      },
     ]);
   });
 

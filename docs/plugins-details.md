@@ -4135,12 +4135,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/action-presentation.useActionForm`
               - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/badge.Badge`
+              - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
+              - `primitives/css/color-picker.ColorPicker`
               - `primitives/css/column.Column`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/coords.Placed`
               - `primitives/css/fill.Fill`
+              - `primitives/css/inline.Inline`
               - `primitives/css/layer.layerClasses`
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
@@ -4156,6 +4159,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/css/ui-kit.Popover`
+              - `primitives/css/ui-kit.PopoverContent`
+              - `primitives/css/ui-kit.PopoverTrigger`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineItemActions`
@@ -4181,6 +4187,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/optimistic-mutation.useOptimisticResource`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/popover.InlinePopover`
+              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/persistent-draft.DraftOptions`
@@ -4324,7 +4331,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas.usePrototypeDetail`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/icon-button.IconButton`
-        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
           - Server:
             - Contributes:
               - `resource.declare` "prototypes.list"
@@ -4361,7 +4368,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/html-decode.decodeHtmlText`
               - `infra/html-decode.readHtmlAttr`
               - `network/live.liveValue`
+              - `primitives/css/color-picker.Color`
             - Exports (types):
+              - `ChoiceOption`
+              - `ColorOption`
+              - `ColorSuggestion`
               - `MocksDeclaration`
               - `OptionDeclaration`
               - `OptionPicks`
@@ -4382,11 +4393,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `applyPicksChange`
               - `applyPrototypeStatusChange`
+              - `colorPickValue`
               - `createPrototype`
               - `DEFAULT_PROTOTYPE_VIEWPORT`
+              - `describeOptionValues`
               - `foldOptions`
               - `HEADLESS_PRESET`
               - `humanizeToken`
+              - `isHexColor`
               - `isOptionName`
               - `isOptionValue`
               - `isPrototypeId`
@@ -4397,8 +4411,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `newPrototypeId`
               - `NO_PROTOTYPE_STATUS`
               - `parseMocks`
+              - `parseOptionColor`
               - `parseOptionDeclaration`
               - `parseViewport`
+              - `pickedColor`
               - `pickedValue`
               - `PicksChangeSchema`
               - `picksFromQuery`
@@ -29003,6 +29019,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `page/formatting/link`
           - `page/place`
+          - `primitives/css/color-picker`
           - `primitives/filepath-breadcrumb`
           - `primitives/log-channels`
           - `primitives/setup-steps`
@@ -29279,6 +29296,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/pages/page-tree`
+              - `apps/prototypes/canvas`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/chord-chart`
               - `apps/sonata/library`
@@ -29336,6 +29354,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view`
               - `plugin-meta/plugin-view/dependencies`
               - `plugin-meta/plugin-view/sub-plugins`
+              - `primitives/css/color-picker`
               - `primitives/cursor-pagination`
               - `primitives/data-table`
               - `primitives/data-view/capsule-toolbar`
@@ -29423,6 +29442,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/math/equation`
               - `plugin-meta/plugin-view/file-tree`
               - `primitives/app-shell`
+              - `primitives/css/color-picker`
               - `primitives/data-view/gallery`
               - `primitives/data-view/list`
               - `primitives/diff-view`
@@ -29491,6 +29511,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view`
               - `plugin-meta/plugin-view/inclusion`
               - `primitives/avatar`
+              - `primitives/css/color-picker`
               - `primitives/date-picker`
               - `primitives/metrics`
               - `primitives/metrics/chart-kit`
@@ -29498,40 +29519,68 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/commits`
               - `tasks/task-dependencies`
               - `ui/tokens/shadow`
-        - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
+        - **`color-picker`** — Composable color picker primitive: a fitted (always-in-gamut) OKLCH ColorArea, HueSlider, AlphaSlider, per-channel ColorValueFields (HEX / OKLCH / HSL), SwatchGrid with named suggestions, and ColorPicker / ColorPickerPopover with before/after, Reset, eyedropper and a shared Recent row. The Color math (parse, convert, gamut) is in core.
           - Web:
             - Uses:
+              - `primitives/copy-to-clipboard.CopyButton`
+              - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/coords.pct`
+              - `primitives/css/coords.Placed`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/fill.fillClasses`
+              - `primitives/css/grid.Grid`
+              - `primitives/css/layer.Layer`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/text.SectionLabel`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.Popover`
               - `primitives/css/ui-kit.PopoverContent`
               - `primitives/css/ui-kit.PopoverTrigger`
+              - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/live-state.ResourceView`
+              - `primitives/loading.Loading`
+              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/persistent-draft.useDraft`
+              - `primitives/usage-rank.recordUsage`
+              - `primitives/usage-rank.useRecentUsage`
             - Exports (types):
               - `AlphaSliderProps`
               - `ColorAreaProps`
-              - `ColorInputProps`
               - `ColorPickerPopoverProps`
               - `ColorPickerProps`
+              - `ColorValueFieldsProps`
               - `HueSliderProps`
+              - `Swatch`
               - `SwatchGridProps`
             - Exports (values):
               - `AlphaSlider`
-              - `Color`
               - `ColorArea`
-              - `ColorInput`
               - `ColorPicker`
               - `ColorPickerPopover`
+              - `ColorValueFields`
               - `HueSlider`
-              - `MAX_CHROMA`
               - `SwatchGrid`
           - Cross-plugin:
             - Imported by:
+              - `apps/prototypes/canvas`
+              - `apps/prototypes/files`
               - `apps/sonata/track-mixer`
               - `fields/color/config`
               - `ui/theme-engine/theme-customizer`
               - `ui/tokens/shadow`
+          - Core:
+            - Exports (values):
+              - `Color`
+              - `inGamut`
+              - `maxChroma`
         - **`column`** — Vertical named-slot layout primitive: <Column header body footer> stacks a rigid header, a flexible scrolling body, and a rigid footer in one flex column. Owns the rigid|flexible|rigid fill policy (shrink-0 header/footer, Scroll body); callers write roles, never shrink-0/min-h-0/flex-1 mechanics.
           - Web:
             - Uses:
@@ -29690,6 +29739,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/timeline`
               - `page/editor`
               - `page/place/map-layer`
+              - `primitives/css/color-picker`
               - `primitives/graph-canvas`
               - `primitives/metrics/chart-kit`
               - `primitives/overlay/image-viewer`
@@ -29813,6 +29863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
+              - `primitives/css/color-picker`
               - `primitives/data-view/capsule-toolbar`
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
@@ -29876,6 +29927,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `debug/health-monitor`
               - `page/formatting/color`
+              - `primitives/css/color-picker`
               - `primitives/data-view/gallery`
               - `primitives/data-view/icons`
               - `primitives/date-picker`
@@ -29935,6 +29987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/sync-status`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
+              - `apps/prototypes/canvas`
               - `apps/sonata/progress/loop`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/sources/ultimate-guitar/alignment`
@@ -30034,6 +30087,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/scrubber`
               - `page/code-block`
               - `page/place/map-layer`
+              - `primitives/css/color-picker`
               - `primitives/overlay/image-viewer`
               - `primitives/tree`
         - **`layout-harness`** — Layout-primitive geometry harness, web half: the bare measurer page and the bun:test geometry suite that measure every geometry-gated exhibit across its width sweep.
@@ -30145,6 +30199,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
+              - `primitives/css/color-picker`
               - `primitives/css/row`
               - `primitives/data-view/capsule-toolbar`
               - `primitives/date-picker`
@@ -30515,6 +30570,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
+              - `primitives/css/color-picker`
               - `primitives/data-view`
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
@@ -31065,6 +31121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/command-palette`
               - `primitives/commit-list`
               - `primitives/css/cluster`
+              - `primitives/css/color-picker`
               - `primitives/css/control-panel`
               - `primitives/css/inline`
               - `primitives/css/radio-group`
@@ -31802,6 +31859,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/tags/inline`
               - `page/inline-date`
               - `page/place`
+              - `primitives/css/color-picker`
               - `primitives/data-view`
               - `primitives/data-view/view-core`
               - `primitives/file-viewer`
@@ -34184,6 +34242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/table`
           - `primitives/adaptive-bar`
           - `primitives/collapsible-wrap`
+          - `primitives/css/color-picker`
           - `primitives/css/control-panel`
           - `primitives/data-view`
           - `primitives/data-view/tree`
@@ -34714,6 +34773,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/composition`
           - `plugin-meta/exhibits`
           - `plugin-meta/plugin-health`
+          - `primitives/css/color-picker`
           - `primitives/data-view`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-core`
@@ -34940,6 +35000,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-view`
           - `plugin-meta/plugin-view/dependencies`
           - `plugin-meta/plugin-view/file-tree`
+          - `primitives/css/color-picker`
           - `primitives/cursor-pagination`
           - `primitives/data-view`
           - `primitives/diff-view`
@@ -35959,6 +36020,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps/chord/trainer`
               - `apps/events/sources`
+              - `apps/prototypes/canvas`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/primitives/toolbar-control`
@@ -35977,6 +36039,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/underline`
               - `primitives/action-presentation`
               - `primitives/command-palette`
+              - `primitives/css/color-picker`
               - `primitives/css/control-panel`
               - `primitives/data-view`
               - `primitives/icon-button`
@@ -37785,6 +37848,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/pages/page-tree`
           - `conversations/conversation-view/prompt-templates`
+          - `primitives/css/color-picker`
     - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
       - Web:
         - Uses:
@@ -42314,7 +42378,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useScopeMembership`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/css/color-picker.Color`
               - `primitives/css/color-picker.ColorPickerPopover`
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
@@ -42666,7 +42729,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/cluster.Cluster`
-              - `primitives/css/color-picker.Color`
               - `primitives/css/color-picker.ColorPickerPopover`
               - `primitives/css/fill.fillClasses`
               - `primitives/css/line.Line`

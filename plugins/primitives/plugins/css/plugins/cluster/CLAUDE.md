@@ -88,6 +88,7 @@ defined in exactly one place. The distinct export buys two things:
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/inclusion`
     - `primitives/avatar`
+    - `primitives/css/color-picker`
     - `primitives/date-picker`
     - `primitives/metrics`
     - `primitives/metrics/chart-kit`

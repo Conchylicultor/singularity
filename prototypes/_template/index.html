@@ -23,10 +23,14 @@
 -->
 <!-- Uncomment ONLY if the design has variants to flip between. One tag per
      option, values in picker order; the default goes on <html> itself
-     (<html lang="en" data-palette="violet">). The app draws the picker — never
+     (<html lang="en" data-pane="flush">). The app draws the picker — never
      build a switcher into the page. Style each value with
-     :root[data-palette="azure"] { … }, or read document.documentElement.dataset.
-<meta name="prototype-option" content="palette: violet | azure" />
+     :root[data-pane="floating"] { … }, or read document.documentElement.dataset.
+     A color is a `color` option (never a palette enum): suggestions as
+     name=<color>, the default as --<name> in <html style="--accent: #7c5cff">,
+     read with var(--accent) — it changes live, without a reload.
+<meta name="prototype-option" content="pane: flush | floating" />
+<meta name="prototype-option" content="accent: color violet=#7c5cff | azure=#3b82f6" />
 -->
 
 <style>

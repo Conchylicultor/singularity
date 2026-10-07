@@ -103,13 +103,19 @@ not declare is dropped from its URL.
 - **`+ <addLabel>`** — one button per frame source ("+ Real app"), disabled
   while that source is already on the canvas. The canvas names no source.
 - **The options pill** ("Mist · Home +3") opens on click into "Options":
-  one row of value chips per declared option. Per row:
+  one row per declared option — value chips for a choice; for a color, one
+  swatch per suggestion and a trailing custom swatch (the color on screen,
+  ringed when it is no suggestion) that opens the color picker in its own
+  popover above the swatch. The pill writes a color as a dot and its suggestion's
+  name, or its hex. Per row:
   - **link** — keep this option the same in every frame; linking copies this
     frame's value everywhere, and later picks go to every frame;
-  - **spread** — one frame per value of this option (the frame it was toggled
-    from keeps its place, the others are copies of it with that one value
-    changed); toggled again, it gathers back into that frame. A pick of the
-    spread option breaks the spread.
+  - **spread** — one frame per value of this option — for a color, per
+    suggestion, with the frame's own custom color first when it is none of
+    them (the frame it was toggled from keeps its place, the others are copies
+    of it with that one value changed); toggled again, it gathers back into
+    that frame. A pick of the spread option breaks the spread. A color with
+    nothing to spread over offers no spread.
   The pill is app DOM over the frame, never inside the prototype's page — that
   is what keeps switchers out of the designs.
 - **Keep only** closes every other frame, with an Undo toast.
@@ -120,6 +126,30 @@ Frames are named from their picks (`frameName`): the values of the first two
 options, plus any other option on which the frames differ — so two frames never
 share a name while showing different things. A source frame is named by its
 add label.
+
+## Color options: live, without a reload
+
+A choice pick reloads the frame (its `src` carries the pick). A color pick
+never does — a drag would reload the page on every move. Instead:
+
+- **The `src` is frozen against color-only changes** (`useFrameSrc`): it is
+  rebuilt when anything else in it changes (a choice, the version, an edit's
+  cache-bust), and then carries the color picks of that moment, so the new
+  document arrives server-stamped (no flash of the default colors). A color
+  change alone leaves it as it is.
+- **The colors are painted into the document**: `useFrameColorVars` gives each
+  color option's color (preview ?? pick ?? default, as `#rrggbb`), and
+  `PrototypeFrame` sets them as `--<name>` on the shown document's `<html>`
+  (`internal/color-vars.ts`, the same pattern as the screen height), and on an
+  incoming document in its `load`, before it replaces the one on screen.
+- **Preview, then commit.** Every move of the picker dispatches `previewPick`:
+  `CanvasState.preview` (`{ id, option, value }`, one at a time) is local and
+  never saved (`isTransientAction` skips the save; `serializeCanvas` leaves it
+  out). It shows on its frame, or on every frame when the option is linked
+  (`previewedValue`). The drag's end (and a swatch, a field commit) dispatches
+  the ordinary `setPick` — ONE write of the shared record, which every other
+  tab follows live — and that clears the preview. Closing the popover drops an
+  uncommitted preview.
 
 ## Versions
 
@@ -319,12 +349,15 @@ navigation, so it starts from nothing remembered.
     - `primitives/action-presentation.useActionForm`
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/badge.Badge`
+    - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
+    - `primitives/css/color-picker.ColorPicker`
     - `primitives/css/column.Column`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
     - `primitives/css/layer.layerClasses`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
@@ -340,6 +373,9 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/css/ui-kit.Popover`
+    - `primitives/css/ui-kit.PopoverContent`
+    - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineItemActions`
@@ -365,6 +401,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/optimistic-mutation.useOptimisticResource`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/persistent-draft.DraftOptions`

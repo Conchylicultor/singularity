@@ -30,6 +30,7 @@
     - `apps-core/tab-bar`
     - `apps/chord/trainer`
     - `apps/events/sources`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/present`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/primitives/toolbar-control`
@@ -48,6 +49,7 @@
     - `page/formatting/underline`
     - `primitives/action-presentation`
     - `primitives/command-palette`
+    - `primitives/css/color-picker`
     - `primitives/css/control-panel`
     - `primitives/data-view`
     - `primitives/icon-button`

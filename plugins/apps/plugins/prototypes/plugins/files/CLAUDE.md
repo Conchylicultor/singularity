@@ -150,9 +150,9 @@ localStorage, which left agents blind (their headless browser saw only the
 defaults) and gave each `*.localhost:9000` origin its own picks. Design:
 `research/2026-09-16-global-shared-prototype-option-picks.md`.
 
-- **Raw, grammar-checked only** (`isOptionName` / `isOptionValue` from
-  `core/options.ts`, `v` reserved) — never judged against the live
-  declaration, because a pick can target an option only a recorded version
+- **Raw, grammar-checked only** (`isOptionName` / `isPickValue` from
+  `core/options.ts`, `v` reserved: a value token, or a color option's
+  lowercase `#rrggbb`) — never judged against the live declaration, because a pick can target an option only a recorded version
   declares. Every read still goes through `resolvePicks`, per document.
 - `openPicksStore(root).write(id, change)` — one `set` or `reset` (never the
   whole record, so two surfaces picking different options cannot clobber each
@@ -213,7 +213,7 @@ no registry edit and no codegen edit; `./singularity build` regenerates
   `picked:` line when the user's picks differ from the defaults, plus any
   `problems[]` the folder carries.
 - `prototype options <id>` — each option with the value on screen (picked /
-  default) and its values, the document URL of exactly that variant, and the
+  default; a color as its `#rrggbb`, plus its suggestion's name) and its values, the document URL of exactly that variant, and the
   `screenshot.ts --path …` line that renders it. Read-only.
 - `prototype log <id> [-p]` — versions newest first, with each request and
   agent summary; `-p` adds each version's diff.
@@ -278,8 +278,10 @@ Metadata is therefore read out of the HTML, not a sidecar file:
   `problems[]` entry and reads as the default. Named, not pixels, because the
   free `WxH` was an arbitrary number per prototype that matched no preset.
 - `<meta name="mocks" content="<kind>:<ref>">` → `mocks` (default: `{ kind: "none" }`)
-- every `<meta name="prototype-option" content="<name>: <v> | <v>">`, with its
-  default read off `<html data-<name>>` → `options` (default: `[]`)
+- every `<meta name="prototype-option" content="<name>: <v> | <v>">` (a
+  choice, its default read off `<html data-<name>>`) or `content="<name>: color
+  <s>=<color> | …"` (a color, its default read off the `--<name>` custom
+  property in `<html style>`) → `options` (default: `[]`)
 
 `mocks` is the real app thing this prototype is a mockup OF — the pairing the
 canvas's Real app frame reads: `exhibit:task-draft/composer` (one real component
@@ -305,12 +307,33 @@ looking, and the Real app frame repeats it beside the syntax.
 `options` are the variants a reader flips between (the contract is in
 `prototypes/CLAUDE.md` § Options). `core/options.ts` is pure (parse, fold,
 resolve picks, query → picks; pinned by `options.test.ts`);
-`core/option-source.ts` is the ONE HTML read of the declaration, shared by the
-list, `validatePrototypeFolder` and the server's stamping so they cannot
+`core/option-source.ts` is the ONE HTML read of the declaration (the `<meta>`
+lines, `<html>`'s `data-*` and the custom properties of its `style`), shared by
+the list, `validatePrototypeFolder` and the server's stamping so they cannot
 disagree. The default lives on `<html>` — not "the first value" — so the page
-carries the attribute in every context (off disk, thumbnail, app) and the app
-only ever overwrites it. A line that cannot be an option is dropped from
-`options` and reported in `problems[]`.
+carries it in every context (off disk, thumbnail, app) and the app only ever
+overwrites it. A line that cannot be an option is dropped from `options` and
+reported in `problems[]`.
+
+`PrototypeOption` is a union on `kind` (the wire `PrototypeOptionSchema` is the
+matching discriminated union, also carried by `PrototypeVersion.options`):
+
+- **`choice`** — `values` (2+, distinct) and `default` (one of them, from
+  `data-<name>`). A pick is one of the values.
+- **`color`** — after the colon a leading `color` keyword (`mode: color |
+  mono` stays a choice: the keyword is never followed by `|`), then 0..n
+  `name=<css color>` `suggestions`, each normalised to lowercase `#rrggbb` by
+  the color picker's own parser (`Color.fromCss`, from
+  `primitives/css/color-picker/core`; translucent colors refused,
+  `parseOptionColor`). `default` is the `--<name>` property in `<html style>`,
+  as `#rrggbb`. A pick is a suggestion's name or a lowercase `#rrggbb` —
+  readable by agents, URL-safe as `%23rrggbb`; `colorPickValue` names a color
+  that lands on a suggestion by that suggestion. `pickedColor(option, picks)`
+  is the hex on screen; `pickedValue` is the value (for an unpicked color: the
+  default's suggestion, else its hex). `resolvePicks` drops a color pick whose
+  color IS the default, like a choice's default value. Problems: no `--<name>`
+  (with a hint when a `data-<name>` was written instead), a default or
+  suggestion that is not an opaque color, a duplicate suggestion name.
 
 Parsed with `HTMLRewriter`; every value it yields is decoded once via
 `@plugins/infra/plugins/html-decode/core` — the rewriter decodes nothing.
@@ -331,8 +354,10 @@ Design: `research/2026-08-15-global-prototypes-self-contained.md`.
   Content-Type, per-file bytes). Path-traversal-guarded to stay under
   `prototypes/`; 400 on escape, 404 on missing. **Except** `index.html` asked
   for with option picks (`?palette=azure`, any key but `v`): the picks are
-  checked against the page's own declaration and stamped onto `<html>` as
-  `data-*` — the one HTMLRewriter *rewrite* in the repo (every other use only
+  checked against the page's own declaration and stamped onto `<html>` — a
+  choice as `data-*`, a color as `--<name>: #rrggbb` merged into its `style`
+  (any earlier declaration of that property dropped, the rest kept; edited
+  decoded and escaped again by `setAttribute`) — the one HTMLRewriter *rewrite* in the repo (every other use only
   extracts). An undeclared name or value is a **400** rendered in the frame: a
   broken variant link must say so, not quietly show the default. The file is
   read whole first because `<html>` streams before the `<meta>` tags that say
@@ -441,7 +466,7 @@ for the `checkpoints` plugin's end-of-turn job.
 
 ## Plugin reference
 
-- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
 - Server:
   - Contributes:
     - `resource.declare` "prototypes.list"
@@ -478,7 +503,11 @@ for the `checkpoints` plugin's end-of-turn job.
     - `infra/html-decode.decodeHtmlText`
     - `infra/html-decode.readHtmlAttr`
     - `network/live.liveValue`
+    - `primitives/css/color-picker.Color`
   - Exports (types):
+    - `ChoiceOption`
+    - `ColorOption`
+    - `ColorSuggestion`
     - `MocksDeclaration`
     - `OptionDeclaration`
     - `OptionPicks`
@@ -499,11 +528,14 @@ for the `checkpoints` plugin's end-of-turn job.
   - Exports (values):
     - `applyPicksChange`
     - `applyPrototypeStatusChange`
+    - `colorPickValue`
     - `createPrototype`
     - `DEFAULT_PROTOTYPE_VIEWPORT`
+    - `describeOptionValues`
     - `foldOptions`
     - `HEADLESS_PRESET`
     - `humanizeToken`
+    - `isHexColor`
     - `isOptionName`
     - `isOptionValue`
     - `isPrototypeId`
@@ -514,8 +546,10 @@ for the `checkpoints` plugin's end-of-turn job.
     - `newPrototypeId`
     - `NO_PROTOTYPE_STATUS`
     - `parseMocks`
+    - `parseOptionColor`
     - `parseOptionDeclaration`
     - `parseViewport`
+    - `pickedColor`
     - `pickedValue`
     - `PicksChangeSchema`
     - `picksFromQuery`

@@ -1070,6 +1070,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `plugin-meta/composition`
     - `plugin-meta/exhibits`
     - `plugin-meta/plugin-health`
+    - `primitives/css/color-picker`
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-core`

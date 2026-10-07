@@ -23,6 +23,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
   humanizeToken,
+  type ChoiceOption,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { canvasFrameSelector } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
@@ -51,9 +52,13 @@ async function target(): Promise<PrototypeMeta> {
 
 const meta = await target();
 const name = meta.name;
-// The option a chip will switch while fullscreen, and a value that is not the
-// one already on screen. Absent when the prototype declares no options.
-const option = meta.options.find((o) => o.values.some((v) => v !== o.default));
+// The choice option a chip will switch while fullscreen (a choice reloads the
+// frame, which is what the check watches), and a value that is not the one
+// already on screen. Absent when the prototype declares no choice option.
+const option = meta.options.find(
+  (o): o is ChoiceOption =>
+    o.kind === "choice" && o.values.some((v) => v !== o.default),
+);
 const otherValue = option?.values.find((v) => v !== option.default);
 
 /** The live prototype document's frame URL, wherever it is mounted. */

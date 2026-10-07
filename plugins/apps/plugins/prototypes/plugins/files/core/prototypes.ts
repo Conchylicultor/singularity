@@ -22,11 +22,22 @@ export const MocksDeclarationSchema = z.discriminatedUnion("kind", [
 ]) satisfies ZodParser<MocksDeclaration>;
 
 /** The wire shape of one valid option. Mirrors `PrototypeOption` exactly. */
-export const PrototypeOptionSchema = z.object({
-  name: z.string(),
-  values: z.tuple([z.string(), z.string()]).rest(z.string()).readonly(),
-  default: z.string(),
-}) satisfies ZodParser<PrototypeOption>;
+export const PrototypeOptionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("choice"),
+    name: z.string(),
+    values: z.tuple([z.string(), z.string()]).rest(z.string()).readonly(),
+    default: z.string(),
+  }),
+  z.object({
+    kind: z.literal("color"),
+    name: z.string(),
+    suggestions: z
+      .array(z.object({ name: z.string(), color: z.string() }))
+      .readonly(),
+    default: z.string(),
+  }),
+]) satisfies ZodParser<PrototypeOption>;
 
 /**
  * Metadata for a single prototype, parsed out of `<slug>/index.html` under the
@@ -51,8 +62,8 @@ export const PrototypeOptionSchema = z.object({
  *   resolved only there — the exhibit catalog is per-worktree while prototypes
  *   are host-global, so the pairing can only ever be a runtime lookup.
  * - `options` — every valid `<meta name="prototype-option">`, in picker order,
- *   each with its default read off the page's own `<html data-<name>>` (see
- *   `options.ts`). A line that cannot be an option is left out here and
+ *   each with its default read off the page's own `<html>` — `data-<name>` for
+ *   a choice, `style="--<name>: …"` for a color (see `options.ts`). A line that cannot be an option is left out here and
  *   reported in `problems`. Empty for most prototypes.
  * - `problems` — every way the folder breaks the self-contained contract, empty
  *   when it holds. Prototypes are user content, not code, so this rides the
@@ -154,7 +165,7 @@ export const listPrototypes = defineEndpoint({
  * Build the URL the iframe loads: the prototype's own `index.html`, addressed
  * through the folder so its relative sub-resources resolve. `v` cache-busts on
  * edit; `picks` become `?<option>=<value>`, which the server stamps onto the
- * page's `<html data-<option>>` — so a frame reloaded by an edit comes back on
+ * page's `<html>` (`data-<option>`, or `--<option>` for a color) — so a frame reloaded by an edit comes back on
  * the variant it was showing, and the URL on its own is a link to that variant.
  */
 export function prototypeUrl(

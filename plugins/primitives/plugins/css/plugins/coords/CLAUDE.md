@@ -183,6 +183,7 @@ default is stated twice and can therefore drift.
     - `debug/timeline`
     - `page/editor`
     - `page/place/map-layer`
+    - `primitives/css/color-picker`
     - `primitives/graph-canvas`
     - `primitives/metrics/chart-kit`
     - `primitives/overlay/image-viewer`

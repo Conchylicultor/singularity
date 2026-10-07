@@ -1,6 +1,13 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import { pickedValue, resolvePicks } from "../core";
+import {
+  describeOptionValues,
+  pickedColor,
+  pickedValue,
+  resolvePicks,
+  type OptionPicks,
+  type PrototypeOption,
+} from "../core";
 import { listPrototypeMetas } from "../shared/list-metas";
 import { openPicksStore } from "../shared/picks";
 import { prototypeDocumentUrlFormatter } from "./prototype-url";
@@ -39,13 +46,13 @@ const run: CliAction<[string], object> = async (id) => {
   } else {
     const nameWidth = Math.max(...meta.options.map((o) => o.name.length));
     const valueWidth = Math.max(
-      ...meta.options.map((o) => pickedValue(o, picks).length),
+      ...meta.options.map((o) => shownValue(o, picks).length),
     );
     for (const option of meta.options) {
-      const value = pickedValue(option, picks);
+      const value = shownValue(option, picks);
       const how = option.name in picks ? "picked " : "default";
       console.log(
-        `  ${option.name.padEnd(nameWidth)}  ${value.padEnd(valueWidth)}  ${how}  (${option.values.join(" | ")})`,
+        `  ${option.name.padEnd(nameWidth)}  ${value.padEnd(valueWidth)}  ${how}  (${describeOptionValues(option)})`,
       );
     }
   }
@@ -75,5 +82,17 @@ const run: CliAction<[string], object> = async (id) => {
     );
   }
 };
+
+/**
+ * The value on screen as this command prints it: a choice's value; a color's
+ * `#rrggbb`, followed by its suggestion's name when it is one — the hex is
+ * what an agent bakes into the page.
+ */
+function shownValue(option: PrototypeOption, picks: OptionPicks): string {
+  const value = pickedValue(option, picks);
+  if (option.kind === "choice") return value;
+  const hex = pickedColor(option, picks);
+  return value === hex ? hex : `${hex} (${value})`;
+}
 
 export default run;

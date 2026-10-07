@@ -5,9 +5,11 @@
  * switchers, so it has to be said here, in one wording.
  */
 export const OPTIONS_RULE = [
-  "If the design has variants to flip between (a palette, a layout, a density),",
-  'declare them as options — `<meta name="prototype-option">` plus the default on',
-  "`<html data-…>`, see `prototypes/CLAUDE.md` § Options — and the app draws the",
-  "picker. Never build a switcher, toggle bar or settings panel into the page for",
-  "that.",
+  "If the design has variants to flip between (a layout, a density, an accent",
+  'color), declare them as options — `<meta name="prototype-option">` plus the',
+  "default on `<html data-…>`, see `prototypes/CLAUDE.md` § Options — and the app",
+  "draws the picker. Never build a switcher, toggle bar or settings panel into the",
+  "page for that. A color is a `color` option (`accent: color violet=#7c5cff |",
+  'azure=#3b82f6`, default in `<html style="--accent: …">`, read with',
+  "`var(--accent)`), never a palette enum — the reader can then pick any color.",
 ].join("\n");

@@ -16,6 +16,12 @@ describe("picks segment", () => {
       "theme=mist,screen=home",
     );
   });
+  test("a color pick's # is escaped, so it never starts a url fragment", () => {
+    const picks = { accent: "#3b82f6", screen: "home" };
+    const segment = encodePicks(picks);
+    expect(segment).toBe("accent=%233b82f6,screen=home");
+    expect(decodePicks(segment)).toEqual(picks);
+  });
   test("empty picks is the empty segment", () => {
     expect(decodePicks(encodePicks({}))).toEqual({});
   });
