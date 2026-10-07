@@ -195,35 +195,37 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(1500);
   const step = await page.evaluate(
     () =>
-      new Promise<{ ms: number; srcMs: number; minOpacity: number }>((resolve) => {
-        const img = document.querySelector<HTMLImageElement>(
-          "img[data-viewer-stage]",
-        )!;
-        const from = img.getAttribute("src");
-        const t0 = performance.now();
-        let minOpacity = 1;
-        let srcMs = Infinity;
-        new MutationObserver(() => {
-          srcMs = Math.min(srcMs, performance.now() - t0);
-        }).observe(img, { attributes: true, attributeFilter: ["src"] });
-        const sample = () => {
-          minOpacity = Math.min(
-            minOpacity,
-            Number(getComputedStyle(img).opacity),
+      new Promise<{ ms: number; srcMs: number; minOpacity: number }>(
+        (resolve) => {
+          const img = document.querySelector<HTMLImageElement>(
+            "img[data-viewer-stage]",
+          )!;
+          const from = img.getAttribute("src");
+          const t0 = performance.now();
+          let minOpacity = 1;
+          let srcMs = Infinity;
+          new MutationObserver(() => {
+            srcMs = Math.min(srcMs, performance.now() - t0);
+          }).observe(img, { attributes: true, attributeFilter: ["src"] });
+          const sample = () => {
+            minOpacity = Math.min(
+              minOpacity,
+              Number(getComputedStyle(img).opacity),
+            );
+            if (img.getAttribute("src") !== from && img.complete) {
+              resolve({ ms: performance.now() - t0, srcMs, minOpacity });
+              return;
+            }
+            if (performance.now() - t0 > 5000)
+              resolve({ ms: Infinity, srcMs, minOpacity });
+            else requestAnimationFrame(sample);
+          };
+          document.activeElement?.dispatchEvent(
+            new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
           );
-          if (img.getAttribute("src") !== from && img.complete) {
-            resolve({ ms: performance.now() - t0, srcMs, minOpacity });
-            return;
-          }
-          if (performance.now() - t0 > 5000)
-            resolve({ ms: Infinity, srcMs, minOpacity });
-          else requestAnimationFrame(sample);
-        };
-        document.activeElement?.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-        );
-        requestAnimationFrame(sample);
-      }),
+          requestAnimationFrame(sample);
+        },
+      ),
   );
   r.ok(
     "→ paints the next image within 100 ms, with no fade",

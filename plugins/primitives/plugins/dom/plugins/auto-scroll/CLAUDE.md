@@ -129,7 +129,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.Button`
@@ -160,6 +160,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `captureDocumentScroll`
     - `findScrollParent`
     - `JumpToBottomButton`
+    - `keepInPlace`
     - `KeepScrollAcross`
     - `restoreDocumentScroll`
     - `scrollChildIntoView`
@@ -179,6 +180,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `page/editor`
     - `primitives/log-channels`
     - `primitives/outline/scroll-spy`
+    - `primitives/overlay/image-viewer`
     - `primitives/tree`
     - `primitives/virtual-rows`
 

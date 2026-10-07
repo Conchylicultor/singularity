@@ -21017,6 +21017,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/events-test`
           - `infra/health`
           - `infra/host-fs`
+          - `infra/host-fs/image`
           - `infra/jobs`
           - `infra/ndjson-stream`
           - `infra/request-origin/agent-write-ledger`
@@ -21810,11 +21811,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ArchiveFormat`
           - `ArchiveIndexResult`
           - `ArchiveMember`
+          - `HostFileOpen`
           - `MemberBytes`
           - `TextBytesResult`
         - Exports (values):
           - `decodeTextBytes`
           - `defineArchiveFormat`
+          - `inertHeaders`
+          - `listHostPath`
+          - `openHostFile`
+          - `resolveHostPath`
         - Routes:
           - `GET /api/host-fs/list`
           - `GET /api/host-fs/stat`
@@ -21853,9 +21859,44 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `code-explorer`
+          - `infra/host-fs/image`
           - `infra/host-fs/zip`
           - `primitives/file-viewer`
       - Plugins:
+        - **`image`** — Images on the host filesystem: GET resized (a copy with a long edge from a closed set, EXIF-rotated, never enlarged — JPEG, or WebP with transparency — made with sharp, cached host-wide and served immutable for the file version the URL names; 415 when undecodable) and GET sizes (the upright pixel size of every resizable image in a folder, from the headers only). The daily host-fs-image.sweep keeps the cache within 30 days unused and 1 GB.
+          - Server:
+            - Uses:
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+              - `infra/host-fs.HostFileOpen`
+              - `infra/host-fs.inertHeaders`
+              - `infra/host-fs.listHostPath`
+              - `infra/host-fs.openHostFile`
+              - `infra/host-fs.resolveHostPath`
+              - `infra/jobs.defineJob`
+              - `primitives/log-channels.Log`
+            - Register: `defineJob('host-fs-image.sweep')`
+            - Routes:
+              - `GET /api/host-fs/image/resized`
+              - `GET /api/host-fs/image/sizes`
+          - Core:
+            - Uses:
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
+            - Exports (types):
+              - `HostFsImageSizesResult`
+              - `ImageSize`
+              - `ResizedEdge`
+            - Exports (values):
+              - `hostFsImageResized`
+              - `hostFsImageSizes`
+              - `hostResizedUrl`
+              - `isResizableName`
+              - `parseEdge`
+              - `RESIZABLE_EXTENSIONS`
+              - `RESIZED_EDGES`
+              - `resizedVersion`
+              - `snapEdge`
         - **`zip`** — Zip as a host-fs archive format: a native reader of the zip central directory (zip64, UTF-8 / CP437 / Info-ZIP Unicode names, extended timestamps) registered through defineArchiveFormat, so a .zip browses like a folder — members stored or deflated, encrypted and other methods typed as unreadable.
           - Server:
             - Uses:
@@ -22087,6 +22128,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/deps/sweep`
           - `infra/events`
           - `infra/events-test`
+          - `infra/host-fs/image`
           - `infra/jobs/background-arm`
           - `infra/jobs/deadline-audit`
           - `infra/jobs/supervised-job`
@@ -32664,7 +32706,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/plugin-changes/file-changes`
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -32695,6 +32737,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `captureDocumentScroll`
               - `findScrollParent`
               - `JumpToBottomButton`
+              - `keepInPlace`
               - `KeepScrollAcross`
               - `restoreDocumentScroll`
               - `scrollChildIntoView`
@@ -32714,6 +32757,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `primitives/log-channels`
               - `primitives/outline/scroll-spy`
+              - `primitives/overlay/image-viewer`
               - `primitives/tree`
               - `primitives/virtual-rows`
         - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText (core), and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable. A substituting element also SELECTS as one unit: its letters take no highlight, and a selectionchange listener rings the whole element while the selection overlaps it — so the selection shows exactly what the copy will carry.
@@ -33079,9 +33123,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.useEndpoint`
               - `primitives/css/center.Center`
               - `primitives/file-viewer.FileViewer`
+              - `primitives/loading.Loading`
               - `primitives/overlay/image-viewer.ImageViewer`
               - `primitives/overlay/image-viewer.MissingImage`
               - `primitives/overlay/image-viewer.useImageLoad`
+              - `primitives/overlay/image-viewer.ViewerImage`
         - **`markdown`** — Rendered markdown preview for .md and .mdx files.
           - Web:
             - Contributes: `FileViewer.Renderer` "Markdown" → `MarkdownView`
@@ -34087,6 +34133,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/diff-view`
           - `primitives/file-viewer/code`
           - `primitives/file-viewer/html`
+          - `primitives/file-viewer/image`
           - `primitives/file-viewer/markdown`
           - `primitives/folder-picker`
           - `primitives/icon-picker`
@@ -34238,6 +34285,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/deps`
           - `infra/deps/sweep`
           - `infra/events-test`
+          - `infra/host-fs/image`
           - `infra/host/duress`
           - `infra/jobs`
           - `integrations/youtube/audio-fetch`
@@ -34817,6 +34865,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.SURFACE_LEVELS`
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/css/yield.yieldClass`
+              - `primitives/dom/auto-scroll.keepInPlace`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/scroll-reveal.useRevealOnActive`
               - `primitives/hover-reveal.hoverRevealGroup`
