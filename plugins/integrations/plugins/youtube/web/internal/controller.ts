@@ -1,3 +1,4 @@
+import { snapPlaybackRate } from "../../core";
 import type { YTNamespace, YTPlayer, YTPlayerStateCodes } from "./iframe-api";
 
 /** A stretch of the video, in seconds: `[start, end)`. */
@@ -73,6 +74,8 @@ export interface YouTubePlayerController {
   pause(): void;
   /** Playing, or buffering on the way to playing. `false` before ready. */
   readonly isPlaying: boolean;
+  /** Strictly playing: media time is advancing (not buffering, not paused). */
+  readonly isAdvancing: boolean;
   /**
    * Play `[start, end)` once, then go back to looping `loop` from its start
    * (or pause at `end` when there is no loop). A later `seek` cancels the pass.
@@ -83,6 +86,17 @@ export interface YouTubePlayerController {
   getCurrentTime(): number;
   /** Seconds, or `null` until the video's metadata has loaded. */
   getDuration(): number | null;
+  /** The rate the video plays at (1 = normal speed). */
+  getPlaybackRate(): number;
+  /**
+   * Ask for a playback rate. The video takes only the rates it supports, so
+   * the request is snapped to one (`snapPlaybackRate`: the nearest, and at
+   * least one step off the current rate toward the request), and the promise
+   * resolves to the rate the player reports once it really changed — never a
+   * rate it is not playing. Requests made before the player answered share one
+   * promise, which resolves to where the LAST of them lands.
+   */
+  setPlaybackRate(rate: number): Promise<number>;
 
   /** `useSyncExternalStore` pair for the player's state. */
   subscribe(listener: () => void): () => void;
@@ -150,6 +164,19 @@ interface Attached {
   anchor: { raw: number; media: number; wall: number } | null;
 }
 
+/**
+ * A rate request in flight. `target` is the snapped rate sent to the player,
+ * or `null` while the request is HELD: before the video has played it lists
+ * no rates, so `requested` waits for the first PLAYING to be snapped and sent.
+ * Every request until the player answers shares `promise`.
+ */
+interface PendingRate {
+  target: number | null;
+  requested: number;
+  promise: Promise<number>;
+  resolve: (rate: number) => void;
+}
+
 export class YouTubePlayerControllerImpl implements YouTubePlayerController {
   private attached: Attached | null = null;
   private source: YouTubeSource | null = null;
@@ -157,6 +184,8 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
   /** A `playRange` pass in progress; takes precedence over the loop. */
   private pass: YouTubeRange | null = null;
   private boundaryTimer: ReturnType<typeof setTimeout> | null = null;
+  /** A rate asked for that the player has not reported yet. */
+  private pendingRate: PendingRate | null = null;
 
   private readonly listeners = new Set<() => void>();
   private snapshot: YouTubePlayerState = { kind: "loading" };
@@ -189,8 +218,16 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
     this.callbacks = read;
   }
 
-  /** Create the YouTube player in `element` (which the API replaces with its iframe). */
-  attach(yt: YTNamespace, element: HTMLElement): void {
+  /**
+   * Create the YouTube player in `element` (which the API replaces with its
+   * iframe). `controls` shows YouTube's own bar — for a video the viewer plays
+   * by hand rather than one the app drives.
+   */
+  attach(
+    yt: YTNamespace,
+    element: HTMLElement,
+    { controls }: { controls: boolean },
+  ): void {
     if (this.attached !== null) {
       throw new Error("YouTubePlayerController is already bound to a player");
     }
@@ -198,9 +235,9 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
       width: "100%",
       height: "100%",
       playerVars: {
-        // The app owns play / pause / seek; YouTube's own bar would let the
-        // viewer wander out of the loop the app is keeping.
-        controls: 0,
+        // By default the app owns play / pause / seek; YouTube's own bar
+        // would let the viewer wander out of the loop the app is keeping.
+        controls: controls ? 1 : 0,
         // The iframe's keyboard shortcuts would fight the host app's.
         disablekb: 1,
         fs: 0,
@@ -222,7 +259,10 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
         },
         onStateChange: (event) => this.onStateChange(event.data),
         onError: (event) => this.onError(event.data),
-        onPlaybackRateChange: () => this.rearm(),
+        onPlaybackRateChange: (event) => {
+          this.rearm();
+          this.settleRate(event.data);
+        },
       },
     });
     this.attached = {
@@ -248,6 +288,7 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
     this.stopFrames();
     this.attached = null;
     this.pass = null;
+    this.pendingRate = null;
     this.playhead = null;
     a?.player.destroy();
     this.emit();
@@ -258,6 +299,10 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
 
   get isPlaying(): boolean {
     return this.attached?.playing ?? false;
+  }
+
+  get isAdvancing(): boolean {
+    return this.attached?.advancing ?? false;
   }
 
   play(): void {
@@ -300,6 +345,28 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
 
   getDuration(): number | null {
     return this.requireReady("getDuration").duration;
+  }
+
+  getPlaybackRate(): number {
+    return this.requireReady("getPlaybackRate").player.getPlaybackRate() || 1;
+  }
+
+  setPlaybackRate(rate: number): Promise<number> {
+    const a = this.requireReady("setPlaybackRate");
+    const playing = a.player.getPlaybackRate() || 1;
+    if (this.pendingRate === null && rate === playing) {
+      return Promise.resolve(playing);
+    }
+    const pending = this.pendingRateRequest(rate);
+    const available = a.player.getAvailablePlaybackRates();
+    // Before the video has played it lists no rates: hold the request, and
+    // send it when the video first plays (`applyHeldRate`).
+    if (available === undefined) {
+      pending.target = null;
+      return pending.promise;
+    }
+    this.sendRate(a, pending, available);
+    return pending.promise;
   }
 
   subscribe = (listener: () => void): (() => void) => {
@@ -391,6 +458,7 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
     this.refreshDuration(a);
 
     if (code === codes.PLAYING) {
+      this.applyHeldRate(a);
       if (!a.playingAnnounced) {
         a.playingAnnounced = true;
         this.callbacks().onPlaying?.();
@@ -437,9 +505,76 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
     return this.pass ?? this.source?.loop ?? null;
   }
 
-  /** Seek, and re-arm from the target (a seek within the buffer may emit no state change). */
+  /** The request in flight, now asking for `rate` (one shared promise). */
+  private pendingRateRequest(rate: number): PendingRate {
+    if (this.pendingRate !== null) {
+      this.pendingRate.requested = rate;
+      return this.pendingRate;
+    }
+    let resolve: (rate: number) => void = () => {};
+    const promise = new Promise<number>((r) => {
+      resolve = r;
+    });
+    this.pendingRate = { target: null, requested: rate, promise, resolve };
+    return this.pendingRate;
+  }
+
+  /** Snap the request onto the listed rates and send it (or settle it at once when nothing changes). */
+  private sendRate(
+    a: Attached,
+    pending: PendingRate,
+    available: readonly number[],
+  ): void {
+    const playing = a.player.getPlaybackRate() || 1;
+    const target = snapPlaybackRate(
+      pending.requested,
+      pending.target ?? playing,
+      available,
+    );
+    if (target === playing && pending.target === null) {
+      this.pendingRate = null;
+      pending.resolve(playing);
+      return;
+    }
+    pending.target = target;
+    a.player.setPlaybackRate(target);
+  }
+
+  /** The video plays: send a rate request held until it listed its rates. */
+  private applyHeldRate(a: Attached): void {
+    const pending = this.pendingRate;
+    if (pending === null || pending.target !== null) return;
+    const available = a.player.getAvailablePlaybackRates();
+    if (available === undefined) return;
+    this.sendRate(a, pending, available);
+  }
+
+  /** The player reported a new rate: settle the request it was the answer to. */
+  private settleRate(rate: number): void {
+    const pending = this.pendingRate;
+    if (pending === null || rate !== pending.target) return;
+    this.pendingRate = null;
+    pending.resolve(rate);
+  }
+
+  /**
+   * Seek, and re-arm from the target (a seek within the buffer may emit no
+   * state change). A video that has not started (cued, or loaded without
+   * autoplay) would START on `seekTo`, so it is re-cued at the time instead:
+   * a seek never plays. "Not started" is this controller's own record (no
+   * PLAYING since the load), not `getPlayerState()`: right after a load the
+   * iframe has not reported the cue yet, and a `seekTo` sent then lands on a
+   * player with no video — YouTube answers error 2.
+   */
   private seekPlayer(a: Attached, seconds: number): void {
-    a.player.seekTo(seconds, true);
+    const unstarted =
+      a.player.getPlayerState() === a.codes.CUED ||
+      (!a.playingAnnounced && !(this.source?.autoplay ?? false));
+    if (unstarted && a.videoId !== null) {
+      a.player.cueVideoById({ videoId: a.videoId, startSeconds: seconds });
+    } else {
+      a.player.seekTo(seconds, true);
+    }
     // Until the iframe reports a new time, the seek target is the time.
     a.anchor = {
       raw: a.player.getCurrentTime(),

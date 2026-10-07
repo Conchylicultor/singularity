@@ -177,9 +177,31 @@ export type VoicingAnnotation = Annotation<"voicing", VoicingData>;
 export type SectionAnnotation = Annotation<"section", SectionData>;
 export type LyricAnnotation = Annotation<"lyric", LyricData>;
 
+/**
+ * The recording a Score's timeline is measured on: at tempo scale 1, score
+ * seconds ARE media seconds — `beatToSeconds(score, b)` is the time in the
+ * recording at which beat `b` sounds. It names a timebase, not how the timing
+ * was obtained, so a display or the transport may play the recording beside the
+ * Score without knowing anything about alignment. Meaningful only together with
+ * the Score's own `tempoMap` (see `mergeScores`). At a tempo scale `s`, media
+ * seconds are score seconds × `s`.
+ */
+export interface ScoreRecording {
+  provider: "youtube";
+  videoId: string;
+  /** The recording's length, in seconds. */
+  durationSec: number;
+}
+
 /** The canonical in-memory model — the narrow waist. */
 export interface Score {
-  meta: { title?: string; key?: KeySignature; pickupBeats?: number };
+  meta: {
+    title?: string;
+    key?: KeySignature;
+    pickupBeats?: number;
+    /** The recording this Score's tempo map is measured on, if any. */
+    recording?: ScoreRecording;
+  };
   /** Parts / instruments. */
   tracks: TrackMeta[];
   /** Sorted, piecewise-constant — NOT a single bpm. */

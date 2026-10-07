@@ -12,6 +12,8 @@ const DEFAULT_BPM = 120;
  * speed). Multiplies every tempo segment's bpm, so only the beat↔seconds mapping
  * changes — note onsets/durations and every annotation stay put in beat space.
  * An empty tempoMap materializes the default-bpm segment so scaling still bites.
+ * `meta.recording` is kept: the recording still names the timebase, and a
+ * consumer maps media seconds = score seconds × `factor`.
  * Pure: returns a new Score, never mutates the input.
  */
 export function scaleTempo(score: Score, factor: number): Score {
@@ -132,7 +134,8 @@ export function currentLine(
 ): number {
   let best = min;
   for (const l of lines) {
-    if (l.startBeat <= beat + LINE_EPS && l.startBeat > best) best = l.startBeat;
+    if (l.startBeat <= beat + LINE_EPS && l.startBeat > best)
+      best = l.startBeat;
   }
   return best;
 }
@@ -239,7 +242,8 @@ export function beatToSeconds(score: Score, beat: number): number {
 export function bars(score: Score): { index: number; startBeat: number }[] {
   // Span to cover: from the origin to the latest content end.
   let maxBeat = 0;
-  for (const n of score.notes) maxBeat = Math.max(maxBeat, n.start + n.duration);
+  for (const n of score.notes)
+    maxBeat = Math.max(maxBeat, n.start + n.duration);
   for (const a of score.annotations) maxBeat = Math.max(maxBeat, a.end);
 
   const pickup = score.meta.pickupBeats ?? 0;
@@ -327,7 +331,7 @@ export function beatGrid(
     // Advance to the time signature active at `beat`.
     while (sigIdx + 1 < sigs.length && sigs[sigIdx + 1]!.beat <= beat) sigIdx++;
     const sig = sigs[sigIdx]!;
-    const cellLen = (4 / sig.denominator) / div;
+    const cellLen = 4 / sig.denominator / div;
     if (cellLen <= 0) break;
     result.push({ index, startBeat: beat });
     index++;
@@ -359,10 +363,14 @@ export function mergeScores(scores: Score[]): Score {
       out.meta.pickupBeats = s.meta.pickupBeats;
   }
   // Tempo / time-sig maps come from the first score that has them — overlaying
-  // independent tempo maps is ill-defined, so we don't guess.
+  // independent tempo maps is ill-defined, so we don't guess. The recording
+  // travels WITH the tempo map: it says "these score seconds are that video's
+  // seconds", which is true only of the tempo map it was measured for.
   for (const s of scores) {
-    if (out.tempoMap.length === 0 && s.tempoMap.length > 0)
+    if (out.tempoMap.length === 0 && s.tempoMap.length > 0) {
       out.tempoMap = [...s.tempoMap];
+      if (s.meta.recording !== undefined) out.meta.recording = s.meta.recording;
+    }
     if (out.timeSigMap.length === 0 && s.timeSigMap.length > 0)
       out.timeSigMap = [...s.timeSigMap];
   }
@@ -379,7 +387,8 @@ export function mergeScores(scores: Score[]): Score {
         ? {
             ...a.target,
             noteIds: a.target.noteIds?.map(ns),
-            track: a.target.track !== undefined ? ns(a.target.track) : undefined,
+            track:
+              a.target.track !== undefined ? ns(a.target.track) : undefined,
           }
         : undefined;
       out.annotations.push({ ...a, target });
@@ -394,10 +403,7 @@ export function mergeScores(scores: Score[]): Score {
  * authored truth. Returns a new Score; the base is left untouched. Derived
  * annotations are appended after authored ones.
  */
-export function mergeAnnotations(
-  base: Score,
-  derived: Annotation[],
-): Score {
+export function mergeAnnotations(base: Score, derived: Annotation[]): Score {
   if (derived.length === 0) return base;
   return {
     ...base,

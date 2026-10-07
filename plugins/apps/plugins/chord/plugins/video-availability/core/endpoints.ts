@@ -6,7 +6,7 @@ import { VideoStatusSchema } from "./status";
 
 /**
  * What the player saw when it tried a video. `code` is the IFrame API's
- * `onError` code, mapped by `statusFromPlayerCode`.
+ * `onError` code, mapped by `statusFromPlayerCode` (`integrations/youtube/core`).
  */
 export const PlaybackReportSchema = z.discriminatedUnion("outcome", [
   z.object({ outcome: z.literal("playing") }),

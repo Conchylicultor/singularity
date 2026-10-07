@@ -8,7 +8,7 @@
 - Cross-plugin:
   - Imported by:
     - `infra/audio-analysis`
-    - `integrations/youtube/audio-fetch`
+    - `integrations/youtube`
 - Deps:
   - Exports (types):
     - `PythonEnvSource`

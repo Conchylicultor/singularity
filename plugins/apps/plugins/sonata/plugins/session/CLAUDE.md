@@ -9,8 +9,9 @@ can mount it (the Sonata app, a file preview) — usually through the player's
 `SessionContent` (`empty | pending | failed | ready{score}`, each carrying a
 `contentKey`) and provides `useSession()`: the tempo-scaled `score`, the
 `timelineBeats`, play state, `tempoScale` (clamped to `[0, 4]`; 0 freezes the
-transport), the A–B `loop`, the `countIn`, `seekEpoch`, and the stable verbs
-(play / stop / seek / scrub / loop / count-in / `registerClock`). The playhead
+transport), the A–B `loop`, the `countIn`, `seekEpoch`, `syncEpoch`, and the
+stable verbs (play / stop / seek / scrub / loop / count-in / `registerClock` /
+`registerTransportDriver`). The playhead
 lives in the per-surface cursor store (`CursorStoreProvider`, `useCursorApi`,
 `useCursorSelector`) so a ~60 fps advance never re-renders a `useSession()`
 consumer; the session must be mounted inside a `CursorStoreProvider`.
@@ -25,6 +26,41 @@ once and defers the reset until it composes. Two one-shot load intents ride the
 reset: `requestPlayOnLoad()` (start playing) and `requestSeekOnLoad(beat)` (park
 at `beat`, clamped to the new timeline, instead of the lead-in).
 
+## Clocks and transport drivers
+
+The anchored transport reads a `TransportClock` (`registerClock`; the audio
+engine registers `ctx.currentTime`). Clocks stack: unregistering the active one
+restores the one below, the wall clock at the bottom.
+
+A `TransportDriver` (`registerTransportDriver`, also a stack) is an external
+medium that OWNS the position — a recording the score is timed on. It speaks
+MEDIA seconds (score seconds at tempo scale 1), converted through the unscaled
+tempo map, so a driver never knows the tempo scale. While one is registered:
+
+- the rAF tick reads `position()` (no anchor arithmetic); `null` freezes the
+  cursor;
+- `isPlaying` stays the session's intent and is forwarded (play / pause); on
+  play the driver is first sought to the cursor when the two disagree (> 50 ms —
+  a scrub moves only the cursor). `seekTo` seeks it; a new driver is sought to
+  the cursor on register;
+- an A–B wrap is a seek back to A (a medium cannot fold), guarded so a medium
+  still reporting the old position does not wrap twice;
+- `setTempoScale` asks `setRate` and adopts the rate the medium took (only the
+  latest request); 0 stays the session's freeze and pauses it;
+- the driver's state is followed one way: a pause after moving, or `failed`,
+  stops the transport; an advance while stopped is paused again — the medium
+  never starts the transport, so the two cannot ping-pong;
+- the count-in is skipped (it is clicked on the audio clock, which the medium
+  does not follow).
+
+`syncEpoch` bumps on every driver-relation change that is not a user seek
+(register / unregister, advancing ↔ not, the session's own driver seeks), and
+`readDriver()` says where a schedule built now starts (`internal` / `stalled` /
+`advancing{beat}`) — anchored consumers rebuild from it on `syncEpoch` as they
+do from the cursor on `seekEpoch` (see `audio/engine`'s `scheduleOrigin`).
+Unregistering the last driver carries on from the cursor on the clock,
+without stopping.
+
 ## Slots
 
 - `SonataSession.Provider` (wrapper) — per-session React providers folded around
@@ -37,7 +73,7 @@ at `beat`, clamped to the new timeline, instead of the lead-in).
 
 ## Plugin reference
 
-- Description: Sonata playback session: plays a song's composed content — the tempo-scaled score, the rAF transport over a per-surface cursor store, the A–B loop, the count-in, seek / scrub verbs and the play- and seek-on-load intents. Mountable by any host (useSession); defines the per-session SonataSession.{Provider,Effect} slots the audio plugins contribute to.
+- Description: Sonata playback session: plays a song's composed content — the tempo-scaled score, the rAF transport over a per-surface cursor store, the A–B loop, the count-in, seek / scrub verbs, the play- and seek-on-load intents, a stack of clocks, and a stack of transport drivers (an external medium — a recording — that owns the position while registered). Mountable by any host (useSession); defines the per-session SonataSession.{Provider,Effect} slots the audio plugins contribute to.
 - Web:
   - Slots:
     - `SonataSession.Provider` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`
@@ -52,10 +88,13 @@ at `beat`, clamped to the new timeline, instead of the lead-in).
     - `CountInState`
     - `CursorApi`
     - `CursorStore`
+    - `DriverReading`
+    - `DriverState`
     - `LoopRange`
     - `SessionContent`
     - `SessionValue`
     - `TransportClock`
+    - `TransportDriver`
   - Exports (values):
     - `cursorApiFor`
     - `CursorStoreProvider`
@@ -82,6 +121,7 @@ at `beat`, clamped to the new timeline, instead of the lead-in).
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/scrubber`
     - `apps/sonata/progress/sections`
+    - `apps/sonata/recording`
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/rich/chord-progression`

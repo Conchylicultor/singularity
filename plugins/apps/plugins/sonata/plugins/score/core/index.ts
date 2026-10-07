@@ -9,6 +9,7 @@
 
 export type {
   Score,
+  ScoreRecording,
   Note,
   Annotation,
   ChordAnnotation,

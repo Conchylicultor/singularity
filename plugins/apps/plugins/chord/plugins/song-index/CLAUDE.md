@@ -103,6 +103,13 @@ The two reads answer about the same windows:
   `chordOverlapsWindow`, so a payload can never carry a token the window's
   `chord_tokens` — what "every chord is unlocked" filtered on — does not list.
 
+**Song videos.** The index is also the `hooktheory` source of
+`integrations/youtube/song-videos` (`server/internal/song-videos-source.ts`):
+a song's synced videos by slug (`hooktheorySlugs`: Hooktheory's slug rules,
+tried with and without a leading "the", `&`, parentheticals) through the
+`(artist_slug, song_slug)` index, grouped by video, playable ones only. It
+answers `unavailable` until the index is `ready` and never starts a load.
+
 ## The chord token
 
 A chord is keyed by what it SOUNDS like relative to the local tonic, since one
@@ -220,7 +227,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
 
 ## Plugin reference
 
-- Description: The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, and the snapshot's backup source.
+- Description: The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
@@ -240,6 +247,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
   - Contributes:
     - `ConfigV2.Register` "config"
     - `resource.declare` "chord.index-status"
+    - `song-videos.source` "hooktheory"
     - `backup.source` "Chord song index snapshot"
     - `fork-data-exclusion` "chord_sections"
     - `fork-data-exclusion` "chord_loop_windows"
@@ -264,6 +272,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `database/sql-column.parsedText`
     - `infra/endpoints.implement`
     - `infra/jobs/supervised-job.defineSupervisedJob`
+    - `integrations/youtube/song-videos.SongVideos`
     - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`

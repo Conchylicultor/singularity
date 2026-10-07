@@ -860,6 +860,10 @@
       "name": "@singularity/plugin-apps-sonata-progress-sections",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/recording": {
+      "name": "@singularity/plugin-apps-sonata-recording",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/rhythm": {
       "name": "@singularity/plugin-apps-sonata-rhythm",
       "version": "0.0.1",
@@ -3565,6 +3569,14 @@
     },
     "plugins/integrations/plugins/youtube/plugins/audio-fetch": {
       "name": "@singularity/plugin-integrations-youtube-audio-fetch",
+      "version": "0.0.1",
+    },
+    "plugins/integrations/plugins/youtube/plugins/song-videos": {
+      "name": "@singularity/plugin-integrations-youtube-song-videos",
+      "version": "0.0.1",
+    },
+    "plugins/integrations/plugins/youtube/plugins/song-videos/plugins/youtube-search": {
+      "name": "@singularity/plugin-integrations-youtube-song-videos-youtube-search",
       "version": "0.0.1",
     },
     "plugins/layouts": {
@@ -6613,6 +6625,8 @@
 
     "@singularity/plugin-apps-sonata-progress-sections": ["@singularity/plugin-apps-sonata-progress-sections@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/sections"],
 
+    "@singularity/plugin-apps-sonata-recording": ["@singularity/plugin-apps-sonata-recording@workspace:plugins/apps/plugins/sonata/plugins/recording"],
+
     "@singularity/plugin-apps-sonata-rhythm": ["@singularity/plugin-apps-sonata-rhythm@workspace:plugins/apps/plugins/sonata/plugins/rhythm"],
 
     "@singularity/plugin-apps-sonata-rich": ["@singularity/plugin-apps-sonata-rich@workspace:plugins/apps/plugins/sonata/plugins/rich"],
@@ -7920,6 +7934,10 @@
     "@singularity/plugin-integrations-youtube": ["@singularity/plugin-integrations-youtube@workspace:plugins/integrations/plugins/youtube"],
 
     "@singularity/plugin-integrations-youtube-audio-fetch": ["@singularity/plugin-integrations-youtube-audio-fetch@workspace:plugins/integrations/plugins/youtube/plugins/audio-fetch"],
+
+    "@singularity/plugin-integrations-youtube-song-videos": ["@singularity/plugin-integrations-youtube-song-videos@workspace:plugins/integrations/plugins/youtube/plugins/song-videos"],
+
+    "@singularity/plugin-integrations-youtube-song-videos-youtube-search": ["@singularity/plugin-integrations-youtube-song-videos-youtube-search@workspace:plugins/integrations/plugins/youtube/plugins/song-videos/plugins/youtube-search"],
 
     "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
 

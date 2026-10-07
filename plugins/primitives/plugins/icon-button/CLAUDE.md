@@ -96,6 +96,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/sonata/player`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/sections`
+    - `apps/sonata/recording`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/rich/voicing-controls`
     - `apps/sonata/track-mixer`

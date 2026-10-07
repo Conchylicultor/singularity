@@ -2,15 +2,14 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
   statusFromPlayerCode,
-  type ObservedVideoStatus,
-  type PlaybackReport,
-  type VideoStatus,
-} from "../../core";
+  type EmbedStatus,
+} from "@plugins/integrations/plugins/youtube/core";
+import type { PlaybackReport, VideoStatus } from "../../core";
 import { _chordVideos } from "./tables";
 import { chordVideoStatus } from "./views";
 
 function playerObservation(report: PlaybackReport): {
-  playerStatus: ObservedVideoStatus | null;
+  playerStatus: EmbedStatus | null;
   playerCode: number | null;
 } {
   if (report.outcome === "playing")

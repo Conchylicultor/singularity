@@ -17,6 +17,6 @@ export const depsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/safe-fetch/plugins/browser-fetch", id: "infra.safe-fetch.browser-fetch", loader: () => import("@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps"), dependsOn: [] },
-  { pluginPath: "integrations/plugins/youtube/plugins/audio-fetch", id: "integrations.youtube.audio-fetch", loader: () => import("@plugins/integrations/plugins/youtube/plugins/audio-fetch/deps"), dependsOn: [] },
+  { pluginPath: "integrations/plugins/youtube", id: "integrations.youtube", loader: () => import("@plugins/integrations/plugins/youtube/deps"), dependsOn: [] },
   { pluginPath: "packages/plugins/signal-origin", id: "packages.signal-origin", loader: () => import("@plugins/packages/plugins/signal-origin/deps"), dependsOn: [] },
 ];

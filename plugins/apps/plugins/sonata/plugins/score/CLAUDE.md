@@ -36,6 +36,7 @@
     - `PitchSpelling`
     - `Projection`
     - `Score`
+    - `ScoreRecording`
     - `SectionAnnotation`
     - `SectionData`
     - `TempoEvent`

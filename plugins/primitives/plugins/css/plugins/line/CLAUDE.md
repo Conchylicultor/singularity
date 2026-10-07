@@ -51,6 +51,7 @@ attribute type carries.
     - `apps/pages/history`
     - `apps/prototypes/canvas`
     - `apps/sonata/library`
+    - `apps/sonata/recording`
     - `apps/sonata/sources/midi`
     - `apps/sonata/track-mixer`
     - `apps/studio/compositions/release/release-logs`

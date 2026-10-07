@@ -40,6 +40,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `apps/sonata/primitives/inertial-drag`
     - `apps/sonata/primitives/keyboard`
     - `apps/sonata/progress/loop`
+    - `apps/sonata/recording`
     - `apps/sonata/session`
     - `apps/sonata/track-mixer`
     - `build/serve-composition`

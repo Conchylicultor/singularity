@@ -80,6 +80,69 @@ export interface TransportClock {
 }
 
 /**
+ * What an external transport driver is doing, pushed through
+ * {@link TransportDriver.subscribe}.
+ *
+ *  - `advancing`: the medium plays; `position()` answers.
+ *  - `stalled`: it wants to play but is not advancing (buffering, seeking).
+ *  - `paused`: it is not playing (paused, cued, ended) — by the session's
+ *    request or on its own.
+ *  - `failed`: it cannot play at all.
+ */
+export type DriverState =
+  | { kind: "advancing" }
+  | { kind: "stalled" }
+  | { kind: "paused" }
+  | { kind: "failed"; reason: string };
+
+/**
+ * An external medium that OWNS the playback position — a recording the score
+ * is timed against (`Score.meta.recording`). Where a {@link TransportClock}
+ * only answers "what time is it", a medium seeks, buffers, pauses on its own
+ * and takes only the rates it supports, so while one is registered the session
+ * follows it instead of its anchored clock: the cursor is read from
+ * `position()`, play / pause / seek / tempo are forwarded to it, and an
+ * external pause stops the transport.
+ *
+ * Times are MEDIA seconds — score seconds at tempo scale 1 — so a driver never
+ * has to know the tempo scale: the session converts through the unscaled tempo
+ * map, and a rate the driver took becomes the tempo scale.
+ */
+export interface TransportDriver {
+  /** Media seconds while advancing; `null` while not (buffering, seeking, paused). */
+  position(): number | null;
+  play(): void;
+  pause(): void;
+  /** Move to `mediaSec` (never negative). Does not start or stop playback. */
+  seek(mediaSec: number): void;
+  /** Ask for a playback rate; resolves to the rate the medium actually took. */
+  setRate(rate: number): Promise<number>;
+  /**
+   * Listen to the driver's state. The listener is called once with the
+   * current state on subscribe, then on every change.
+   */
+  subscribe(listener: (state: DriverState) => void): () => void;
+}
+
+/**
+ * Where a scheduler (re)built right now should start, as the session sees it:
+ *  - `internal`: no driver — the anchored clock and the cursor are the truth.
+ *  - `stalled`: a driver is registered but not advancing — schedule nothing.
+ *  - `advancing`: the driver's medium is at `beat`, now.
+ */
+export type DriverReading =
+  | { kind: "internal" }
+  | { kind: "stalled" }
+  | { kind: "advancing"; beat: number };
+
+/**
+ * How far (seconds) the cursor may sit from where a driver is known to be
+ * before resuming playback seeks the driver to the cursor. Below it the two
+ * agree and a seek (a visible YouTube re-buffer) is not worth it.
+ */
+const DRIVER_ALIGN_TOLERANCE_SEC = 0.05;
+
+/**
  * An A–B practice loop range, in beats. `enabled` gates whether the transport
  * actually wraps at `end`; a defined-but-disabled loop stays visible (faded) so
  * the user can keep the markers while playing straight through.
@@ -165,6 +228,23 @@ export interface SessionValue {
    * cursor doesn't need it (it reads the anchor ref every frame).
    */
   seekEpoch: number;
+  /**
+   * Bumped whenever the transport's relation to an external driver changes
+   * without a user seek: a driver registers or unregisters, it starts or stops
+   * advancing (a stall, a resume), or the session seeks it on its own (an A–B
+   * loop wrap, re-aligning it to the cursor on play). Anchored consumers (the
+   * audio scheduler) rebuild from {@link readDriver} on it, as they do from
+   * the cursor on {@link seekEpoch}.
+   */
+  syncEpoch: number;
+  /** Whether a {@link TransportDriver} is registered (it then owns the position). */
+  driven: boolean;
+  /**
+   * Where the transport is right now relative to the driver — see
+   * {@link DriverReading}. Stable; reads live state, so call it at the instant
+   * a schedule is (re)built or checked.
+   */
+  readDriver: () => DriverReading;
   /**
    * The active A–B practice loop range (beats), or `null` when no region is
    * set. When `loop.enabled`, the transport rAF wraps from `loop.end` back to
@@ -269,10 +349,19 @@ export interface SessionValue {
 
   /**
    * Register the authoritative playback clock (e.g. the audio engine's
-   * `AudioContext`). Returns an unregister that restores the wall-clock default.
+   * `AudioContext`). Clocks stack: the last registered is active, and its
+   * unregister restores the one below it (the wall clock at the bottom).
    * Swapping the clock mid-playback re-anchors so the cursor stays continuous.
    */
   registerClock: (clock: TransportClock) => () => void;
+  /**
+   * Register an external medium that owns the position (see
+   * {@link TransportDriver}). Drivers stack like clocks: the last registered
+   * drives, and its unregister restores the previous one — or the anchored
+   * clock, from the cursor, without stopping playback. A newly active driver is
+   * sought to the cursor (and started when the transport plays).
+   */
+  registerTransportDriver: (driver: TransportDriver) => () => void;
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -343,6 +432,13 @@ export function PlaybackSession({
   // The registered count-in length provider (the metronome), read at play time.
   // Mirrors `clockRef`: a single provider, last registration wins.
   const countInProviderRef = useRef<(() => number) | null>(null);
+  // Bumped on every driver-relation change (see `SessionValue.syncEpoch`).
+  const [syncEpoch, setSyncEpoch] = useState(0);
+  // The registered drivers, last on top; `driver` is the top one, as state so
+  // the play/pause sync and the subscription follow it.
+  const driversRef = useRef<TransportDriver[]>([]);
+  const [driver, setDriver] = useState<TransportDriver | null>(null);
+  const driverRef = useLatestRef(driver);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the
   // transport loop below, the audio scheduler, and the displays — reads a single
@@ -357,6 +453,10 @@ export function PlaybackSession({
   // O(log n) closed-form, so the transport loop and reanchor read a single,
   // allocation-free tempo-time source instead of re-sorting the tempo map.
   const tempoIndex = useMemo(() => buildTempoIndex(score), [score]);
+  // The UNSCALED index: its seconds are a driver's media seconds, so a driver's
+  // position maps to a beat whatever the tempo scale (beats are scale-free).
+  const mediaIndex = useMemo(() => buildTempoIndex(baseScore), [baseScore]);
+  const mediaIndexRef = useLatestRef(mediaIndex);
 
   // The timeline origin: the beat the transport parks/starts at and the
   // backward-most stop every rewind/scrub bottoms out on. For a non-empty score
@@ -398,6 +498,16 @@ export function PlaybackSession({
     startScoreSec: number;
   } | null>(null);
   const clockRef = useRef<TransportClock>(wallClock);
+  // Registered clocks, last on top; `clockRef` is the top one (or the wall clock).
+  const clocksRef = useRef<TransportClock[]>([]);
+  // The beat the active driver is known to be at: written every driven frame
+  // and on every seek the session sends it. Resuming compares the cursor with
+  // it to decide whether the driver must first be sought to the cursor (after a
+  // scrub, which moves only the cursor).
+  const driverAtBeatRef = useRef<number | null>(null);
+  // An A–B wrap sought the driver back to A and the medium has not reported a
+  // position before B since.
+  const wrapPendingRef = useRef(false);
   // Zero-based A–B loop iteration the cursor is currently in, tracked so the rAF
   // tick can flag a wrap (iteration change) to the cursor store as a `seek` —
   // making onset-driven consumers (the piano-roll FX) re-anchor instead of
@@ -434,17 +544,56 @@ export function PlaybackSession({
 
   const registerClock = useCallback(
     (clock: TransportClock) => {
+      clocksRef.current = [...clocksRef.current, clock];
       clockRef.current = clock;
       if (isPlayingRef.current) reanchor(cursor.getBeat());
       return () => {
-        if (clockRef.current === clock) {
-          clockRef.current = wallClock;
-          if (isPlayingRef.current) reanchor(cursor.getBeat());
-        }
+        clocksRef.current = clocksRef.current.filter((c) => c !== clock);
+        const top = clocksRef.current.at(-1) ?? wallClock;
+        if (clockRef.current === top) return;
+        clockRef.current = top;
+        if (isPlayingRef.current) reanchor(cursor.getBeat());
       };
     },
     [reanchor, cursor],
   );
+
+  // Seek the active driver to `beat` (its media seconds, floored at the
+  // medium's start). Records where it now is, so resuming does not seek again.
+  const seekDriver = useCallback((d: TransportDriver, beat: number) => {
+    d.seek(Math.max(0, mediaIndexRef.current.beatToSeconds(beat)));
+    driverAtBeatRef.current = beat;
+  }, []);
+
+  const registerTransportDriver = useCallback(
+    (d: TransportDriver) => {
+      driversRef.current = [...driversRef.current, d];
+      setDriver(d);
+      setSyncEpoch((n) => n + 1);
+      return () => {
+        const wasTop = driversRef.current.at(-1) === d;
+        driversRef.current = driversRef.current.filter((x) => x !== d);
+        if (!wasTop) return;
+        const next = driversRef.current.at(-1) ?? null;
+        setDriver(next);
+        setSyncEpoch((n) => n + 1);
+        // Back on the anchored clock: carry on from where the medium was.
+        if (next === null && isPlayingRef.current) reanchor(cursor.getBeat());
+      };
+    },
+    [reanchor, cursor],
+  );
+
+  const readDriver = useCallback((): DriverReading => {
+    const d = driverRef.current;
+    if (d === null) return { kind: "internal" };
+    const pos = d.position();
+    if (pos === null) return { kind: "stalled" };
+    return {
+      kind: "advancing",
+      beat: mediaIndexRef.current.secondsToBeat(pos),
+    };
+  }, []);
 
   const stop = useCallback(() => {
     // Abort any pending count-in too, so Stop during the lead-in cancels it.
@@ -484,6 +633,12 @@ export function PlaybackSession({
     if (isPlayingRef.current) return;
     if (scoreEndBeat(scoreRef.current) <= 0) return;
     if (tempoScaleRef.current === 0) return;
+    // The count-in is clicked out on the audio clock, which a driver does not
+    // follow: with a medium driving, play at once (it has its own intro).
+    if (driverRef.current !== null) {
+      play();
+      return;
+    }
     const lead = countInProviderRef.current?.() ?? 0;
     if (lead <= 0) {
       play();
@@ -620,6 +775,8 @@ export function PlaybackSession({
       // pre-roll bar (where the first note is still falling) rather than flooring
       // on the first note itself.
       const next = Math.max(scoreStartBeat(score), Math.min(end, beat));
+      const d = driverRef.current;
+      if (d !== null) seekDriver(d, next);
       // A seek aborts a pending count-in (you've repositioned; the lead-in is
       // stale). No-op re-render when already null — React bails on the same value.
       setCountIn(null);
@@ -630,7 +787,7 @@ export function PlaybackSession({
       // from the pre-seek position while only the visual cursor jumps.
       setSeekEpoch((n) => n + 1);
     },
-    [reanchor, cursor],
+    [reanchor, cursor, seekDriver],
   );
 
   // Relative seek (keyboard arrows) delegates to the absolute primitive.
@@ -788,10 +945,26 @@ export function PlaybackSession({
   // with fine-grained control and a clean release fling. The tidy 0.05 grid
   // lives in `nudgeTempo`, where repeated *relative* additions are the only
   // thing that would accrue float drift.
+  //
+  // With a driver the medium decides: the rate is asked of it and the rate it
+  // took becomes the scale, so the UI never shows a speed it is not playing.
+  // Only the latest request is adopted (a jog-wheel drag sends many). 0 is the
+  // session's freeze, not a rate: it pauses the driver like any stop.
+  const rateRequestRef = useRef(0);
   const setTempoScale = useCallback((scale: number) => {
-    setTempoScaleState(
-      Math.max(MIN_TEMPO_SCALE, Math.min(MAX_TEMPO_SCALE, scale)),
-    );
+    const clamped = Math.max(MIN_TEMPO_SCALE, Math.min(MAX_TEMPO_SCALE, scale));
+    const d = driverRef.current;
+    const request = ++rateRequestRef.current;
+    if (d === null || clamped === 0) {
+      setTempoScaleState(clamped);
+      return;
+    }
+    void d.setRate(clamped).then((taken) => {
+      if (request !== rateRequestRef.current || driverRef.current !== d) return;
+      setTempoScaleState(
+        Math.max(MIN_TEMPO_SCALE, Math.min(MAX_TEMPO_SCALE, taken)),
+      );
+    });
   }, []);
 
   // A tempo change rescales `score` (and `tempoIndex`) mid-flight; re-anchor at
@@ -831,7 +1004,43 @@ export function PlaybackSession({
     // Anchor against the current cursor + active clock so play/pause/seek compose.
     reanchor(cursor.getBeat());
 
+    // Driven: the medium owns the position. No anchor arithmetic — read it,
+    // convert it to a beat, and freeze the cursor while it does not advance.
+    // The A–B loop cannot fold a medium seamlessly, so the wrap is a seek.
+    const drivenTick = (d: TransportDriver) => {
+      const pos = d.position();
+      if (pos !== null) {
+        const beat = mediaIndexRef.current.secondsToBeat(pos);
+        const endBeat = scoreEndBeat(scoreRef.current);
+        const loop = loopRef.current;
+        const looping = loop && loop.enabled && loop.end > loop.start;
+        if (looping && wrapPendingRef.current && beat >= loop.end) {
+          // The wrap's seek has not landed yet: the medium still reports the
+          // old position. Hold the cursor at A rather than wrap again.
+        } else if (looping && beat >= loop.end) {
+          seekDriver(d, loop.start);
+          wrapPendingRef.current = true;
+          cursor.setBeat(loop.start, { seek: true });
+          setSyncEpoch((n) => n + 1);
+        } else if (beat >= endBeat) {
+          cursor.setBeat(endBeat);
+          setIsPlaying(false);
+          return;
+        } else {
+          wrapPendingRef.current = false;
+          driverAtBeatRef.current = beat;
+          cursor.setBeat(beat);
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
     const tick = () => {
+      const d = driverRef.current;
+      if (d !== null) {
+        drivenTick(d);
+        return;
+      }
       const anchor = anchorRef.current;
       if (!anchor) return;
       // Recompute origin seconds + end from the anchor each frame so seeks and
@@ -893,7 +1102,78 @@ export function PlaybackSession({
     // while playing. `reanchor` and `cursor` are both stable (memoized), and the
     // `scoreRef` / `tempoIndexRef` latest-value handles have stable identity, so
     // this effect still only re-runs on the play/stop transition.
-  }, [isPlaying, reanchor, cursor]);
+  }, [isPlaying, reanchor, cursor, seekDriver]);
+
+  // --- The driver follows the transport. ------------------------------------
+  // `isPlaying` stays the session's intent; the active driver is told. Before
+  // that it is sought to the cursor whenever the two disagree — a driver that
+  // just became active, or a scrub that moved only the cursor: while paused the
+  // cursor is the authority, while playing the medium is. A layout effect, so
+  // the medium starts in the same commit as the transport.
+  useLayoutEffect(() => {
+    if (driver === null) return;
+    const here = cursor.getBeat();
+    const at = driverAtBeatRef.current;
+    const idx = mediaIndexRef.current;
+    if (
+      at === null ||
+      Math.abs(idx.beatToSeconds(here) - idx.beatToSeconds(at)) >
+        DRIVER_ALIGN_TOLERANCE_SEC
+    ) {
+      seekDriver(driver, here);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the seek just sent to an external medium moved the transport's origin; anchored consumers (the audio scheduler) must re-read it, and only this effect knows the seek happened
+      if (isPlaying) setSyncEpoch((n) => n + 1);
+    }
+    if (isPlaying) driver.play();
+    else driver.pause();
+  }, [driver, isPlaying, cursor, seekDriver]);
+
+  // A newly active driver is asked for the current tempo, and adopts the rate
+  // it takes. Forgotten on its way out, so a later driver is sought afresh.
+  useLayoutEffect(() => {
+    if (driver === null) return;
+    if (tempoScaleRef.current > 0) setTempoScale(tempoScaleRef.current);
+    return () => {
+      driverAtBeatRef.current = null;
+    };
+  }, [driver, setTempoScale]);
+
+  // --- The transport follows the driver's state. ----------------------------
+  // A stall or a resume bumps `syncEpoch` (the scheduler re-anchors on it). An
+  // external pause — the medium stopped after moving, or failed — stops the
+  // transport. The medium never STARTS the transport: a stray advance while the
+  // session is stopped (a late play after a quick stop) is paused again, so the
+  // session's intent always wins and the two cannot ping-pong.
+  useEffect(() => {
+    if (driver === null) return;
+    let last: DriverState["kind"] | null = null;
+    return driver.subscribe((state) => {
+      // A driver already unregistered (its medium unmounting) reports its own
+      // teardown on the way out; that is the medium going away, not the user
+      // pausing it, so the transport — now back on its own clock — ignores it.
+      // `driversRef` changes synchronously in the unregister, before this
+      // subscription is torn down by the next render.
+      if (!driversRef.current.includes(driver)) return;
+      const prev = last;
+      last = state.kind;
+      if (prev === null) return; // the current state, on subscribe: no transition
+      const moved = (k: DriverState["kind"] | null) =>
+        k === "advancing" || k === "stalled";
+      if ((prev === "advancing") !== (state.kind === "advancing")) {
+        setSyncEpoch((n) => n + 1);
+      }
+      if (state.kind === "advancing" && !isPlayingRef.current) {
+        driver.pause();
+        return;
+      }
+      if (
+        (state.kind === "failed" || (state.kind === "paused" && moved(prev))) &&
+        isPlayingRef.current
+      ) {
+        setIsPlaying(false);
+      }
+    });
+  }, [driver]);
 
   // Re-anchor when the A–B loop region changes mid-play. The deterministic loop
   // fold is sensitive to the bounds, so without this a bounds change would snap
@@ -932,6 +1212,9 @@ export function PlaybackSession({
       isPlaying,
       tempoScale,
       seekEpoch,
+      syncEpoch,
+      driven: driver !== null,
+      readDriver,
       loop,
       countIn,
       togglePlay,
@@ -951,6 +1234,7 @@ export function PlaybackSession({
       requestPlayOnLoad,
       requestSeekOnLoad,
       registerClock,
+      registerTransportDriver,
     }),
     [
       score,
@@ -958,6 +1242,9 @@ export function PlaybackSession({
       isPlaying,
       tempoScale,
       seekEpoch,
+      syncEpoch,
+      driver,
+      readDriver,
       loop,
       countIn,
       togglePlay,
@@ -977,6 +1264,7 @@ export function PlaybackSession({
       requestPlayOnLoad,
       requestSeekOnLoad,
       registerClock,
+      registerTransportDriver,
     ],
   );
 

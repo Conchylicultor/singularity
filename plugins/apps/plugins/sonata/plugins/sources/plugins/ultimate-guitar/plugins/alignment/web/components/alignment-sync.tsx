@@ -10,8 +10,9 @@ import { useUgAlignment } from "../internal/use-ug-raw";
  * `raw.alignment`, so the Score recompiles onto the recording's beats.
  *
  * What is written is `appliedAlignment` — the rule `hydrate` applies too: the
- * row's record when it was made for the row's video and applies to the open
- * sheet, else `null` (a weak match, another video's or sheet's record, no row).
+ * row's record when it was made for the row's video (or is the resolver's best
+ * try, with none chosen) and the open sheet, whatever its score — else `null`
+ * (another video's or sheet's record, no record, no row).
  * A re-align queued or running keeps the current alignment playing until its
  * result lands. The comparison is by value, so the raw changes (and playback
  * resets) at most once per finished job — not on every status write, and not

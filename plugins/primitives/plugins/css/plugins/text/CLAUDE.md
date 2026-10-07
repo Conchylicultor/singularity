@@ -334,6 +334,7 @@ to reconcile them; they never needed reconciling.
     - `apps/sonata/primitives/jog-wheel`
     - `apps/sonata/progress/scrubber`
     - `apps/sonata/progress/sections`
+    - `apps/sonata/recording`
     - `apps/sonata/rich/chord-progression`
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/key-readout`

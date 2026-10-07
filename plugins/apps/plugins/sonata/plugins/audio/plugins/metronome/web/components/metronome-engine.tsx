@@ -11,7 +11,9 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   useAudioGraph,
+  scheduleOrigin,
   startScheduling,
+  useDriftCorrection,
   type LoopWindowBeats,
   type ScheduleHandle,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/engine/web";
@@ -51,6 +53,8 @@ export function MetronomeEngine() {
     score,
     isPlaying,
     seekEpoch,
+    syncEpoch,
+    readDriver,
     loop,
     countIn,
     registerCountIn,
@@ -216,9 +220,18 @@ export function MetronomeEngine() {
 
     void ctx.resume();
 
-    // Capture the shared anchor at the play instant (same shape the engine uses).
-    const audioAnchor = ctx.currentTime;
-    const fromBeat = cursor.getBeat();
+    // Capture the shared anchor at the play instant (same shape the engine uses):
+    // the cursor on the session's own clock, the medium's position when a
+    // driver owns the transport — and no clicks while it is stalled.
+    const origin = scheduleOrigin(
+      readDriver(),
+      cursor.getBeat(),
+      ctx.currentTime,
+    );
+    if (origin.kind === "stalled") {
+      clickVoicesRef.current?.allOff();
+      return;
+    }
 
     // Every click routes to the single click voice (track is ignored; resolve
     // through the live ref so a context swap can't strand a stale voice).
@@ -227,8 +240,8 @@ export function MetronomeEngine() {
 
     const handle = startScheduling(
       { ...scoreRef.current, notes: clickNotesRef.current },
-      fromBeat,
-      audioAnchor,
+      origin.fromBeat,
+      origin.audioAnchor,
       resolveVoices,
       ctx,
       loopRef.current,
@@ -243,7 +256,21 @@ export function MetronomeEngine() {
     // `clickNotesKey` flips only on a real beat-structure/accent change (NOT a
     // tempo frame); `seekEpoch` re-anchors on a seek; `loopKey` rebuilds with new
     // bounds (a stable wrap leaves it unchanged → seamless). `cursor` is stable.
-  }, [ctx, isPlaying, continuous, clickNotesKey, seekEpoch, loopKey, cursor]);
+    // `syncEpoch` re-anchors on a driver's stall / resume / own seek.
+  }, [
+    ctx,
+    isPlaying,
+    continuous,
+    clickNotesKey,
+    seekEpoch,
+    syncEpoch,
+    loopKey,
+    cursor,
+    readDriver,
+  ]);
+
+  // Clicks follow a driving recording like the notes do.
+  useDriftCorrection(handleRef, ctx);
 
   // Retime effect: a tempo drag re-derives `score` ~60×/s but leaves `clickNotes`
   // stable, so the rebuild effect stays put while this re-times the running

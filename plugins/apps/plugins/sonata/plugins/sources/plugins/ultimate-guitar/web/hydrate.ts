@@ -12,7 +12,8 @@ import { getSongUltimateGuitar } from "../shared/endpoints";
  * so an already-aligned song opens aligned — no recompile-and-reset when the
  * alignment's live row arrives a moment later. The record goes in by the same
  * rule the alignment child's sync effect applies (`appliedAlignment`: made for
- * the row's video, applicable to this sheet — never a weak match).
+ * the row's video — or its best try when none was chosen — and this sheet,
+ * whatever its score).
  *
  * Returns `undefined` for a song that carries no UG tab, so it's skipped in the
  * library's generic collection — and the UG editor section stays hidden for it.

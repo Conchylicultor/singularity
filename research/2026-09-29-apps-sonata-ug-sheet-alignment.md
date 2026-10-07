@@ -172,10 +172,29 @@ AlignmentRecord = {
 `score` is `fit × coverage`: `fit` is the share of the achievable chord fit
 (a free decode where any chord may follow any other) that the sheet's sequence
 explains over an all-filler baseline. `coverage` is the fraction of the sheet's
-chords the path plays. Below `WEAK_MATCH_THRESHOLD = 0.5` a record is stored but
-never applied ("needs a better video"). On the reference songs the right
+chords the path plays. Below `WEAK_MATCH_THRESHOLD = 0.5` a record is a weak
+match: the resolver keeps looking for a better video, but the record is still
+applied (`fitsSheet` checks only the aligner version and the sheet), so the song
+plays on its best try and the Recording section labels it unconfirmed with its
+score. On the reference songs the right
 recordings score 0.70–0.91 and the wrong ones at most 0.34. The aligned `Score`
 is at sounding pitch, and Score beat 0 is t = 0 s of the video.
+
+*Contract 3 (C, play)* — how an aligned `Score` reaches the player
+([`2026-10-07-apps-sonata-ug-alignment-video.md`](2026-10-07-apps-sonata-ug-alignment-video.md)):
+
+- `Score.meta.recording?: { provider: "youtube"; videoId; durationSec }`, set by
+  `alignedScore`. At tempo scale 1, score seconds ARE the video's seconds. It
+  names a timebase, not an alignment. `mergeScores` takes it from the score
+  that supplied the `tempoMap` (the two are true only together), and
+  `scaleTempo` keeps it.
+- The session's `TransportDriver` (`registerTransportDriver`, a stack) replaces
+  "register the video as the clock": a medium that owns the position
+  (`position()` in media seconds or `null`, play / pause / seek, `setRate`
+  resolving to the rate taken, pushed `advancing | stalled | paused | failed`).
+  The `recording` plugin registers the YouTube player as one while the video
+  (in the player's Recording section) is mounted and ready; the synth stays scheduled on the AudioContext, re-anchored
+  on the driver (`syncEpoch`) and drift-checked at ±40 ms.
 
 ## Tasks
 

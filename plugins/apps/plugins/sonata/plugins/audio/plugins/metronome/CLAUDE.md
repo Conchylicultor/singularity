@@ -35,8 +35,10 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
   - Uses:
     - `apps/sonata/audio/engine.LoopWindowBeats`
     - `apps/sonata/audio/engine.ScheduleHandle`
+    - `apps/sonata/audio/engine.scheduleOrigin`
     - `apps/sonata/audio/engine.startScheduling`
     - `apps/sonata/audio/engine.useAudioGraph`
+    - `apps/sonata/audio/engine.useDriftCorrection`
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/session.SonataSession`
     - `apps/sonata/session.useCursorApi`

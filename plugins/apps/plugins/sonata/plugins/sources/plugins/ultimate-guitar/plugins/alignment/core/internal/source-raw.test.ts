@@ -41,15 +41,32 @@ describe("appliedAlignment", () => {
     ).toBeNull();
   });
 
-  it("drops a record for another sheet, and a weak match", () => {
+  it("drops a record for another sheet or another aligner", () => {
     expect(
       appliedAlignment({ videoId: VIDEO, record: record() }, `${CONTENT}!`),
     ).toBeNull();
     expect(
       appliedAlignment(
-        { videoId: VIDEO, record: record({ score: 0.1 }) },
+        {
+          videoId: VIDEO,
+          record: record({ alignerVersion: ALIGNER_VERSION - 1 }),
+        },
         CONTENT,
       ),
     ).toBeNull();
+  });
+
+  it("applies a weak match: the song plays on its best try", () => {
+    const weak = record({ score: 0.1 });
+    expect(appliedAlignment({ videoId: VIDEO, record: weak }, CONTENT)).toBe(
+      weak,
+    );
+  });
+
+  it("applies the resolver's best try when no video was chosen (needs-video)", () => {
+    const best = record({ score: 0.45 });
+    expect(appliedAlignment({ videoId: null, record: best }, CONTENT)).toBe(
+      best,
+    );
   });
 });

@@ -10,7 +10,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { parsedSheet, synthFeatures } from "../testing";
 import { alignChords } from "./align";
-import { GAP_SECTION_NAME, alignedScore, isApplicable } from "./aligned-score";
+import { GAP_SECTION_NAME, alignedScore, fitsSheet } from "./aligned-score";
 import {
   ALIGNER_VERSION,
   WEAK_MATCH_THRESHOLD,
@@ -89,6 +89,12 @@ describe("alignedScore", () => {
       6,
     );
     expect(score.meta.title).toBe("Song");
+    // The timebase it plays on: score seconds are this video's seconds.
+    expect(score.meta.recording).toEqual({
+      provider: "youtube",
+      videoId: record.videoId,
+      durationSec: record.durationSec,
+    });
   });
 
   it("places a lead-in and a pickup bar before the first downbeat, and follows bar-length changes", () => {
@@ -252,31 +258,30 @@ describe("alignedScore", () => {
   });
 });
 
-describe("isApplicable", () => {
+describe("fitsSheet", () => {
   const content = "[Verse]\n[ch]C[/ch] [ch]G[/ch]";
   const record: AlignmentRecord = {
     ...aligned(synthFeatures(played(VERSE_PLAYED))),
     sheetHash: sheetHash(content),
   };
 
-  it("applies a strong record of the current aligner to the sheet it was made for", () => {
-    expect(record.score).toBeGreaterThanOrEqual(WEAK_MATCH_THRESHOLD);
-    expect(isApplicable(record, content)).toBe(true);
+  it("fits the sheet it was made for, by the current aligner", () => {
+    expect(fitsSheet(record, content)).toBe(true);
   });
 
   it("rejects a record made for another sheet", () => {
-    expect(isApplicable(record, `${content}\n[ch]Am[/ch]`)).toBe(false);
+    expect(fitsSheet(record, `${content}\n[ch]Am[/ch]`)).toBe(false);
   });
 
   it("rejects a record of another aligner version", () => {
     expect(
-      isApplicable({ ...record, alignerVersion: ALIGNER_VERSION - 1 }, content),
+      fitsSheet({ ...record, alignerVersion: ALIGNER_VERSION - 1 }, content),
     ).toBe(false);
   });
 
-  it("rejects a weak match", () => {
+  it("still fits when the match is weak: the score is not a condition", () => {
     expect(
-      isApplicable({ ...record, score: WEAK_MATCH_THRESHOLD - 0.01 }, content),
-    ).toBe(false);
+      fitsSheet({ ...record, score: WEAK_MATCH_THRESHOLD - 0.01 }, content),
+    ).toBe(true);
   });
 });

@@ -1,0 +1,9 @@
+// @hash 80a537aef9ec
+{
+  // Hear the recording. Off mutes it; it keeps playing and keeping time.
+  "videoOn": true,
+  // Loudness of the recording, 0–100.
+  "videoVolume": 100,
+  // Milliseconds the synth plays after the recording's reported time (negative = earlier). Tune it by ear until both land together.
+  "syncOffsetMs": 0
+}

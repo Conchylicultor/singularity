@@ -25,6 +25,7 @@ import {
   useAudioControls,
   useAudioState,
 } from "../audio-store";
+import { scheduleOrigin, useDriftCorrection } from "../transport-sync";
 
 /**
  * One track's channel strip: the track's own fader, and the voices feeding it.
@@ -141,7 +142,15 @@ function parseChannelKey(key: string): Map<string, string> {
  * it, in the same gain node, at the same level.
  */
 export function AudioEngine() {
-  const { score, isPlaying, seekEpoch, registerClock, loop } = useSession();
+  const {
+    score,
+    isPlaying,
+    seekEpoch,
+    syncEpoch,
+    readDriver,
+    registerClock,
+    loop,
+  } = useSession();
 
   // Imperative per-surface cursor facade. Read through a ref inside the
   // scheduling effect so the effect's deps stay unchanged (the cursor is read
@@ -270,7 +279,7 @@ export function AudioEngine() {
   );
 
   // Master volume is owned by the shared store (the panel slider writes it).
-  const { volume } = useAudioState();
+  const { volume, graph } = useAudioState();
   // Imperative writers for the engine's health slice. Memoized-stable on the
   // store handle, so listing it in effect deps below doesn't re-run effects.
   const { setStatus, setLoadError, setGraph } = useAudioControls();
@@ -497,8 +506,8 @@ export function AudioEngine() {
     // Capture the shared anchor synchronously at the play instant. The cursor is
     // read straight from the store (it's not a render input here) — a seek bumps
     // `seekEpoch`, re-running this effect so the read reflects the new position.
-    const audioAnchor = ctx.currentTime;
-    const fromBeat = cursorRef.current.getBeat();
+    const playAnchor = ctx.currentTime;
+    const cursorBeat = cursorRef.current.getBeat();
 
     // Route a track to its own channel strip, reading the ref live so it always
     // reflects the latest reconcile.
@@ -510,13 +519,25 @@ export function AudioEngine() {
     void (async () => {
       await Promise.all(channels.map((c) => c.voices.loaded));
       if (cancelled) return;
+      // Where to start. On the session's own clock: the cursor at the play
+      // instant, which the visual transport anchored on too. With a driver (a
+      // recording owns the position): wherever the medium is NOW, after the
+      // load wait — or nothing at all while it is stalled; its resume bumps
+      // `syncEpoch` and rebuilds from there.
+      const reading = readDriver();
+      const origin = scheduleOrigin(
+        reading,
+        cursorBeat,
+        reading.kind === "internal" ? playAnchor : ctx.currentTime,
+      );
+      if (origin.kind === "stalled") return;
       // Compose the play-list score from the live tempo + the (mute-filtered)
       // audible notes. `score.notes` is reference-stable across tempo changes, so
       // this object is the only place tempo and notes are joined for scheduling.
       handle = startScheduling(
         { ...scoreRef.current, notes: audibleNotes },
-        fromBeat,
-        audioAnchor,
+        origin.fromBeat,
+        origin.audioAnchor,
         resolveVoices,
         ctx,
         loopRef.current,
@@ -535,7 +556,22 @@ export function AudioEngine() {
     // window — a deliberate edit. A repeated wrap at a stable loop leaves `loopKey`
     // unchanged, so the pre-scheduled iterations in `startScheduling` keep playing
     // with no teardown (the seamless-loop fix). `loopRef` is a stable latest-ref.
-  }, [isPlaying, audibleNotes, inUseKey, seekEpoch, loopKey]);
+    // `syncEpoch` re-anchors on a driver's stall / resume / own seek (an A–B
+    // wrap is one, since a medium cannot fold a loop) and on a driver coming
+    // or going; `readDriver` is stable.
+  }, [
+    isPlaying,
+    audibleNotes,
+    inUseKey,
+    seekEpoch,
+    syncEpoch,
+    loopKey,
+    readDriver,
+  ]);
+
+  // While a driver owns the transport, keep the running schedule on it: a slip
+  // past ±40 ms re-anchors it without cutting a ringing note.
+  useDriftCorrection(handleRef, graph?.ctx ?? null);
 
   // --- Retime effect: follow the speed jog-wheel without cutting any note. ----
   // Keyed on `score` (which changes only via tempo or content). A pure tempo drag

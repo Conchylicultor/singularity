@@ -5,7 +5,8 @@ domain-specific: the chord trainer is its first user, and it turns the
 callbacks into its own playback reports. `core/` holds the video id itself:
 `VideoIdSchema` (a bare 11-character id) and `youtubeVideoId(raw)` (the id
 behind a bare id, share link or watch URL, or `null`). The `audio-fetch`
-sub-plugin downloads a video's audio on the server. Design:
+sub-plugin downloads a video's audio on the server; `song-videos` answers
+"which videos are this song?". Design:
 [`research/2026-09-18-apps-chord-trainer-app.md`](../../../../research/2026-09-18-apps-chord-trainer-app.md)
 ("The YouTube player").
 
@@ -33,10 +34,38 @@ const state = useYouTubePlayerState(player);    // loading | ready { videoId, pl
 function Playhead() { const t = useYouTubePlayhead(player, true); … }
 ```
 
-The controller: `play()`, `pause()`, `isPlaying`, `playRange(start, end)`,
-`seek(seconds)`, `getCurrentTime()`, `getDuration()` (`null` until known). Every
-method throws `YouTubePlayerNotReadyError` before the player is ready, so gate
-controls on `useYouTubePlayerState(player).kind === "ready"`.
+The controller: `play()`, `pause()`, `isPlaying`, `isAdvancing` (strictly
+playing), `playRange(start, end)`, `seek(seconds)`, `getCurrentTime()`,
+`getDuration()` (`null` until known), `getPlaybackRate()` and
+`setPlaybackRate(rate) → Promise<rate taken>`. Every method throws
+`YouTubePlayerNotReadyError` before the player is ready, so gate controls on
+`useYouTubePlayerState(player).kind === "ready"`.
+
+- **Seek never plays.** `seekTo` on a cued (or unstarted, without autoplay)
+  video starts it — the API's documented behaviour — so the controller re-cues
+  at the time (`cueVideoById`) instead. "Not started" is the controller's own
+  record (no PLAYING since the load), not `getPlayerState()`, which lags the
+  load: a `seekTo` sent before the iframe reports the cue hits a player with no
+  video and gets error 2.
+- **No rates before the first play.** `getAvailablePlaybackRates()` answers
+  `undefined` until the video has played; a `setPlaybackRate` then is HELD and
+  sent (snapped) when the video first reaches PLAYING, its promise resolving
+  as usual once the player reports the rate. Asking for the rate it already
+  plays at resolves at once.
+- **Rates.** A video takes only the rates it lists. `setPlaybackRate` snaps the
+  request (`snapPlaybackRate`, core: the nearest supported rate, but at least
+  one step off the current one toward the request, so a nudge or a slow drag
+  moves) and resolves when `onPlaybackRateChange` reports it. Requests before
+  that share one promise, resolving to where the last lands; a rate the player
+  never takes never resolves — the caller keeps showing the rate it plays.
+
+## The media clock
+
+`createMediaClock(controller).position()` — for something slaved to the video
+(Sonata's synth): the playhead through a linear model (`createMediaClockModel`,
+core, pure) refitted on each reading and slewed toward it at ≤ 5 % of the rate,
+snapping past 150 ms (a seek) or on a rate change; `null` unless strictly
+playing, and every stop forgets the fit. Pull-based: one read per call.
 `loadYouTubeIframeApi()` is exported for a caller that wants the raw `YT`
 namespace; the player uses it itself.
 
@@ -81,7 +110,9 @@ way while the song is muted). Omit `audio` to leave the sound as YouTube has it.
 ## Player settings
 
 `controls: 0` (the app owns play / pause / seek, and YouTube's bar would let
-the viewer leave the loop), `disablekb: 1` (the iframe's shortcuts would fight
+the viewer leave the loop; `<YouTubePlayer controls>` turns the bar on for a
+video the viewer plays by hand — read at creation, so changing it re-creates
+the player), `disablekb: 1` (the iframe's shortcuts would fight
 the app's), `modestbranding: 1`, `playsinline: 1`, `rel: 0`, `iv_load_policy: 3`,
 `fs: 0`, `origin: window.location.origin`. The iframe is 100 % × 100 % of the
 element `<YouTubePlayer>` renders.
@@ -93,21 +124,42 @@ error boundary; the shared promise is cleared, so a remount tries again. A video
 YouTube refuses is not a failure of the player: the state becomes
 `error { code }` and `onError(code)` fires (2 bad parameter, 5 HTML5 error, 100
 not found or private, 101 / 150 embedding refused — 150 also covers region
-blocks and sign-in-required videos).
+blocks and sign-in-required videos). Only 100, 101 and 150 are a verdict on the
+video (`statusFromPlayerCode`); 2 is the caller's bug and 5 a player fault,
+both `undecided`.
 
 The `YT` types are declared locally (`web/internal/iframe-api.ts`), only the
 calls the controller makes; `@types/youtube` is not a dependency.
+
+## Server: embeddability and search
+
+- **Embeddability** (`core`): `EmbedStatus` (`ok | gone | not-embeddable`),
+  `statusFromOembedCode` and `statusFromPlayerCode` (an IFrame `onError` code)
+  map a code to one, or `undecided`. `checkOembed(videoId)` (server) asks
+  oEmbed — never the watch page, which draws a captcha after ~100 — with a 2 s
+  timeout; no answer is `unreachable`, a 200 also names the video. The chord
+  trainer keeps its own ledger of these answers (`apps/chord/video-availability`).
+- **Search** (server): `searchYouTube(query, exec)` — yt-dlp's flat search, one
+  results page, nothing downloaded (~2–3 s); a script with no `ExecContext`
+  uses `searchYouTubeWith(ready)`. "<Artist> - Topic" art tracks show only as
+  `artTrack` (the snippet starts "Provided to YouTube by"): the results page
+  names their channel by the artist alone.
+- **yt-dlp** is this plugin's `python/` uv project (`youtube_audio.fetch`,
+  `youtube_audio.search`, shared `_common.py`), the `youtube-audio` dependency
+  (`deps/`: `ytDlpDep`) — owned here, not by `audio-fetch`, because both the
+  download and the search run it.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (play, pause, isPlaying, playRange for one pass then back to the loop, seek, getCurrentTime, getDuration), useYouTubePlayerState, and useYouTubePlayhead (one read per animation frame while playing). Loops without polling: one timer to the loop's end, reset on every state change.
+- Description: Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
     - `primitives/latest-ref.useLatestRef`
   - Exports (types):
+    - `MediaClock`
     - `YouTubeAudio`
     - `YouTubePlaybackState`
     - `YouTubePlayerCallbacks`
@@ -118,6 +170,7 @@ calls the controller makes; `@types/youtube` is not a dependency.
     - `YTNamespace`
     - `YTPlayer`
   - Exports (values):
+    - `createMediaClock`
     - `loadYouTubeIframeApi`
     - `useYouTubePlayer`
     - `useYouTubePlayerState`
@@ -125,15 +178,45 @@ calls the controller makes; `@types/youtube` is not a dependency.
     - `YouTubeIframeApiLoadError`
     - `YouTubePlayer`
     - `YouTubePlayerNotReadyError`
+- Deps:
+  - Uses:
+    - `infra/deps.defineDep`
+    - `infra/deps/python.pythonEnv`
+  - Exports (values): `ytDlpDep`
 - Cross-plugin:
   - Imported by:
     - `apps/chord/trainer`
+    - `apps/chord/video-availability`
+    - `apps/sonata/recording`
     - `integrations/hooktheory`
-- Core:
+    - `integrations/youtube/song-videos`
+    - `integrations/youtube/song-videos/youtube-search`
+- Server:
+  - Exports (types):
+    - `OembedCheck`
+    - `SearchOptions`
+    - `YouTubeSearchResult`
   - Exports (values):
+    - `checkOembed`
+    - `searchYouTube`
+    - `searchYouTubeWith`
+- Core:
+  - Exports (types):
+    - `CodeVerdict`
+    - `EmbedStatus`
+    - `MediaClockModel`
+  - Exports (values):
+    - `createMediaClockModel`
+    - `EmbedStatusSchema`
+    - `MEDIA_CLOCK_MAX_SLEW`
+    - `MEDIA_CLOCK_SNAP_SEC`
+    - `snapPlaybackRate`
+    - `statusFromOembedCode`
+    - `statusFromPlayerCode`
     - `VideoIdSchema`
     - `youtubeVideoId`
 - Sub-plugins:
-  - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable). The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
+  - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable); a download of the video that failed in a way that may clear (an HTTP 403 on its stream) throws YouTubeAudioDownloadError — isYouTubeAudioError answers 'the video's failure, not the machine's' for both. The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
+  - **`song-videos`** — Which YouTube videos are this song? The SongVideos.Source contribution (a source's find(query, exec) → answered videos | unavailable) and findSongVideos(query, exec): every source asked at once, their answers merged per video, the ones oEmbed says will not play in an embed dropped (and untitled ones named from oEmbed), the rest ranked towards the studio recording. Names no source.
 
 <!-- AUTOGENERATED:END -->

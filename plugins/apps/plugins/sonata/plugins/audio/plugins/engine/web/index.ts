@@ -12,6 +12,14 @@ import { VolumeControl } from "./components/volume-control";
 export { useAudioGraph, type AudioGraph } from "./audio-store";
 export { startScheduling } from "./scheduler";
 export type { LoopWindowBeats, ScheduleHandle } from "./scheduler";
+// Driver-aware anchoring shared by every scheduler slaved to the transport:
+// where a (re)built schedule starts, and the drift check that keeps it on an
+// external medium (a recording) driving the transport.
+export {
+  scheduleOrigin,
+  useDriftCorrection,
+  type ScheduleOrigin,
+} from "./transport-sync";
 
 export default {
   description:

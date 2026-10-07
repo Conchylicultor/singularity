@@ -2,12 +2,12 @@ import { describe, expect, test } from "bun:test";
 import {
   statusFromOembedCode,
   statusFromPlayerCode,
-  type ObservedVideoStatus,
-} from "./status";
+  type EmbedStatus,
+} from "./embed-status";
 
 describe("statusFromOembedCode", () => {
-  // Every code measured on 720 video ids from the dump (2026-09-17/18).
-  const decided: [number, ObservedVideoStatus][] = [
+  // Every code measured on 720 video ids from the Hooktheory dump (2026-09-17/18).
+  const decided: [number, EmbedStatus][] = [
     [200, "ok"],
     [404, "gone"],
     // Not a video id at all ("cheerleader"): nothing will ever play there.
@@ -26,9 +26,8 @@ describe("statusFromOembedCode", () => {
 });
 
 describe("statusFromPlayerCode", () => {
-  const decided: [number, ObservedVideoStatus][] = [
+  const decided: [number, EmbedStatus][] = [
     [100, "gone"],
-    [2, "gone"],
     [101, "not-embeddable"],
     [150, "not-embeddable"],
   ];
@@ -36,8 +35,9 @@ describe("statusFromPlayerCode", () => {
     expect(statusFromPlayerCode(code)).toEqual({ kind: "decided", status });
   });
 
-  // 5 is an HTML5 player fault: it says nothing about availability.
-  test.each([5, 0, 404])("%i is undecided", (code) => {
+  // 2 is an invalid parameter (the caller's bug) and 5 an HTML5 player fault:
+  // neither says anything about the video, so neither counts as a refusal.
+  test.each([2, 5, 0, 404])("%i is undecided", (code) => {
     expect(statusFromPlayerCode(code)).toEqual({ kind: "undecided" });
   });
 });

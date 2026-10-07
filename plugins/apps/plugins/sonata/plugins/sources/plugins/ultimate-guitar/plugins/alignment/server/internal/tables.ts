@@ -9,5 +9,9 @@ export const songUgAlignment = defineExtension(
   _songs,
   "ug_alignment",
   ugAlignmentShape,
+  {
+    // Rows from before automatic picking had their video pasted by the user.
+    columns: { pick: { default: "user" }, candidates: { default: [] } },
+  },
 );
 export const _songUgAlignmentExt = songUgAlignment.table; // drizzle-kit discovery

@@ -60,7 +60,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
   alignedScore,
-  isApplicable,
+  fitsSheet,
   UgSourceRawSchema,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
 
@@ -232,15 +232,16 @@ export function collectUnrecognisedChords(parsed: ParsedTab): string[] {
 
 /**
  * Slot-facing compile: validate the raw `{ tab, alignment }` shape (loud failure
- * on mismatch) and parse the tab's markup. When the alignment applies to THIS
- * sheet (current aligner, same `sheetHash`, strong enough), the Score plays on
- * the recording's beats (`alignedScore`); otherwise the synthesized timeline.
+ * on mismatch) and parse the tab's markup. When the alignment was made for THIS
+ * sheet (`fitsSheet`: current aligner, same `sheetHash` — a weak match
+ * included), the Score plays on the recording's beats (`alignedScore`);
+ * otherwise the synthesized timeline.
  * The check is by construction, so a stale record can never be misapplied.
  */
 export function compile(raw: unknown): Score {
   const { tab, alignment } = UgSourceRawSchema.parse(raw);
   const parsed = parseUgTab(tab);
-  if (alignment !== null && isApplicable(alignment, tab.content)) {
+  if (alignment !== null && fitsSheet(alignment, tab.content)) {
     return alignedScore(parsed, alignment, tab.songName);
   }
   return synthesizeScore(parsed, tab.songName);

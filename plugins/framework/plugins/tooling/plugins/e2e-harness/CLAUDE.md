@@ -310,6 +310,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/sonata/piano-roll`
     - `apps/sonata/pitch-layout`
     - `apps/sonata/progress/loop`
+    - `apps/sonata/recording`
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/track-mixer`
     - `apps/sonata/view-options`

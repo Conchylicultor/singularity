@@ -237,8 +237,8 @@ module eval).
 
 Consumers of the `python` kind (outside this plugin): `audio-python`
 (`plugins/infra/plugins/audio-analysis`, torch + Beat This! + librosa, ≈950
-MB) and `youtube-audio` (`plugins/integrations/plugins/youtube/plugins/audio-fetch`,
-yt-dlp, a few MB) — two projects, so a weekly yt-dlp bump never reinstalls
+MB) and `youtube-audio` (`plugins/integrations/plugins/youtube`, yt-dlp for
+the audio download and the search, a few MB) — two projects, so a weekly yt-dlp bump never reinstalls
 torch.
 
 ## Not done yet (by design, follow-ups)
@@ -337,7 +337,7 @@ torch.
     - `infra/deps/build`
     - `infra/launcher`
     - `infra/safe-fetch/browser-fetch`
-    - `integrations/youtube/audio-fetch`
+    - `integrations/youtube`
     - `packages/signal-origin`
 - Deps:
   - Exports (types):

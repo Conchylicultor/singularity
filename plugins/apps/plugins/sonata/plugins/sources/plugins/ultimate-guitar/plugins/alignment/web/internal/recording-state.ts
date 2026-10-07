@@ -3,6 +3,7 @@ import type { UgTab } from "@plugins/apps/plugins/sonata/plugins/sources/plugins
 import {
   ALIGNER_VERSION,
   sheetHash,
+  type AlignmentCandidate,
   type AlignmentPhase,
   type UgAlignmentRow,
 } from "../../core";
@@ -16,6 +17,19 @@ export type RecordingState =
   | { kind: "loading" }
   | { kind: "unreadable"; message: string }
   | { kind: "no-video" }
+  /** The resolver is choosing: searching (`trying: null`), or aligning one candidate. */
+  | {
+      kind: "finding";
+      trying: AlignmentCandidate | null;
+      phase: AlignmentPhase | null;
+      tried: number;
+    }
+  /**
+   * The resolver tried candidates and none aligned well enough: the user is
+   * asked. `best` is the best try's score — that record still plays
+   * (unconfirmed); null when none scored.
+   */
+  | { kind: "needs-video"; tried: number; best: number | null }
   | { kind: "queued"; videoId: string }
   | { kind: "aligning"; videoId: string; phase: AlignmentPhase | null }
   | {
@@ -26,6 +40,7 @@ export type RecordingState =
       transpose: number;
       capo: number;
     }
+  /** Aligned below `WEAK_MATCH_THRESHOLD`: played all the same, as an unconfirmed match. */
   | { kind: "weak"; videoId: string; score: number }
   | {
       kind: "failed";
@@ -35,6 +50,13 @@ export type RecordingState =
     }
   /** Aligned (or weak) to an earlier sheet, video or aligner, and not re-aligning. */
   | { kind: "out-of-date"; videoId: string };
+
+/** Candidates the resolver has tried (whatever came of them). */
+export function triedCount(candidates: readonly AlignmentCandidate[]): number {
+  return candidates.filter(
+    (c) => c.outcome !== "untried" && c.outcome !== "trying",
+  ).length;
+}
 
 /** The record's `[0, 12)` transpose as the nearer signed interval. */
 export function signedTranspose(transpose: number): number {
@@ -60,14 +82,35 @@ export function recordingState(
       permanent: row.errorPermanent,
     };
   }
-  if (videoId === null) return { kind: "no-video" };
+  if (videoId === null) {
+    if (row.pick === "user") return { kind: "no-video" };
+    const tried = triedCount(row.candidates);
+    if (row.status === "needs-video") {
+      const scores = row.candidates.flatMap((c) =>
+        c.score === null ? [] : [c.score],
+      );
+      return {
+        kind: "needs-video",
+        tried,
+        best: scores.length === 0 ? null : Math.max(...scores),
+      };
+    }
+    return {
+      kind: "finding",
+      trying: row.candidates.find((c) => c.outcome === "trying") ?? null,
+      phase: row.phase,
+      tried,
+    };
+  }
   switch (row.status) {
     case "queued":
       return { kind: "queued", videoId };
     case "running":
+    case "resolving":
       return { kind: "aligning", videoId, phase: row.phase };
     case "aligned":
-    case "weak": {
+    case "weak":
+    case "needs-video": {
       const record = row.record;
       if (
         record === null ||
@@ -108,6 +151,16 @@ export function recordingStateLine(state: RecordingState): string {
       return `Could not read the alignment: ${state.message}`;
     case "no-video":
       return "No recording";
+    case "finding":
+      return state.trying === null
+        ? "Finding a video…"
+        : `Trying ${state.trying.title ?? state.trying.videoId} (${state.phase === "aligning" ? "aligning" : "analysing"})…`;
+    case "needs-video": {
+      const tried = `${state.tried} tried`;
+      return state.best === null
+        ? `Needs a video (${tried})`
+        : `Needs a video — playing the best try, a weak match (${percent(state.best)}, ${tried}); the timing is unconfirmed`;
+    }
     case "queued":
       return "Waiting to align…";
     case "aligning":
@@ -117,7 +170,7 @@ export function recordingStateLine(state: RecordingState): string {
     case "aligned":
       return `Aligned ${percent(state.score)} · ${formatTranspose(state.transpose, state.capo)} semitones`;
     case "weak":
-      return `Needs a better video (${percent(state.score)})`;
+      return `Weak match (${percent(state.score)}) — playing it, but the timing is unconfirmed; a better video may align`;
     case "failed":
       return `Failed: ${state.message}`;
     case "out-of-date":
@@ -138,13 +191,17 @@ export function recordingStateSummary(state: RecordingState): string {
       return "Unreadable";
     case "no-video":
       return "No recording";
+    case "finding":
+      return "Finding a video…";
+    case "needs-video":
+      return "Needs a video";
     case "queued":
     case "aligning":
       return "Aligning…";
     case "aligned":
       return percent(state.score);
     case "weak":
-      return "Weak match";
+      return `Weak · ${percent(state.score)}`;
     case "failed":
       return "Failed";
     case "out-of-date":

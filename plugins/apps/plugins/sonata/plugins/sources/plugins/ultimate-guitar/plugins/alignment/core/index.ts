@@ -11,9 +11,9 @@ export {
 export type { AlignmentSegment } from "./internal/record";
 
 // The aligner (sheet × beat features → record) and the record → Score builder
-// the UG compile() applies when `isApplicable`.
+// the UG compile() applies when the record `fitsSheet`.
 export { alignChords } from "./internal/align";
-export { alignedScore, isApplicable } from "./internal/aligned-score";
+export { alignedScore, fitsSheet } from "./internal/aligned-score";
 
 // The UG source's raw ({ tab, alignment }), the side-table row and the endpoint
 // contracts — the integration surface the UG source and the alignment
@@ -27,12 +27,17 @@ export {
   ugAlignmentShape,
 } from "./internal/row";
 export type {
+  AlignmentCandidate,
   AlignmentPhase,
   AlignmentStatus,
+  CandidateOutcome,
   UgAlignmentRow,
+  VideoPick,
 } from "./internal/row";
 export {
   getUgAlignment,
   realignUg,
+  refuseUgAlignmentVideo,
+  resolveUgAlignment,
   setUgAlignmentVideo,
 } from "./internal/endpoints";

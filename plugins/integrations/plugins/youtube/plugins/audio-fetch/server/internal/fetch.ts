@@ -16,7 +16,7 @@ import {
   writeMeta,
   type AudioMeta,
 } from "./cache";
-import { youtubeAudioDep } from "../../deps";
+import { ytDlpDep } from "@plugins/integrations/plugins/youtube/deps";
 
 /** One video's audio, as downloaded: the stream YouTube served, untouched. */
 export interface YouTubeAudio {
@@ -46,6 +46,37 @@ export class YouTubeAudioUnavailableError extends NonRetryableError {
   }
 }
 
+/**
+ * This video's download failed in a way that may clear later (an HTTP 403 on
+ * its stream, a broken format) — a failure of the video, not of the machine:
+ * a bot check or a network that is down is a plain crash, since every video
+ * would fail alike. Retryable; the message is yt-dlp's own.
+ */
+export class YouTubeAudioDownloadError extends Error {
+  constructor(
+    readonly videoId: string,
+    readonly reason: string,
+  ) {
+    super(`Downloading YouTube video ${videoId} failed: ${reason}`);
+    this.name = "YouTubeAudioDownloadError";
+  }
+}
+
+/**
+ * The failure is THIS video's audio — YouTube will not serve it, or its
+ * download failed — rather than the machine's (a missing dependency, no
+ * network, a bot check, a crash). A caller choosing between videos moves on
+ * to the next one on such a failure, and fails on any other.
+ */
+export function isYouTubeAudioError(
+  err: unknown,
+): err is YouTubeAudioUnavailableError | YouTubeAudioDownloadError {
+  return (
+    err instanceof YouTubeAudioUnavailableError ||
+    err instanceof YouTubeAudioDownloadError
+  );
+}
+
 /** `youtube_audio.fetch`'s one stdout document. */
 const FetchOutputSchema = z.object({
   file: z.string(),
@@ -60,6 +91,10 @@ const FetchOutputSchema = z.object({
 const EXIT_UNAVAILABLE = 3;
 /** Its last stderr line then: `UNAVAILABLE: <yt-dlp's message>`. */
 const UNAVAILABLE_LINE = /^UNAVAILABLE: (.*)$/m;
+/** Its exit code for this video's download failing in a way that may clear. */
+const EXIT_DOWNLOAD_FAILED = 4;
+/** Its last stderr line then: `DOWNLOAD_FAILED: <yt-dlp's message>`. */
+const DOWNLOAD_FAILED_LINE = /^DOWNLOAD_FAILED: (.*)$/m;
 
 /** A download is a few MB; ten minutes covers a slow link and a long video. */
 const FETCH_TIMEOUT_MS = 10 * 60_000;
@@ -97,6 +132,8 @@ function toAudio(path: string, meta: AudioMeta): YouTubeAudio {
  * so it never runs on a backend's event loop.
  *
  * @throws YouTubeAudioUnavailableError when YouTube will not serve the video.
+ * @throws YouTubeAudioDownloadError when this video's download failed in a way
+ *   that may clear (`isYouTubeAudioError` answers both).
  */
 export async function fetchYouTubeAudio(
   videoId: string,
@@ -117,7 +154,7 @@ export async function fetchYouTubeAudio(
     const again = lookupCached(dir, id);
     if (again.kind === "hit") return toAudio(again.audioPath, again.meta);
 
-    const ready = await ensureDep(youtubeAudioDep, exec, { log: say });
+    const ready = await ensureDep(ytDlpDep, exec, { log: say });
     let out: z.infer<typeof FetchOutputSchema>;
     try {
       out = await runPython(ready, {
@@ -135,6 +172,14 @@ export async function fetchYouTubeAudio(
         const reason =
           UNAVAILABLE_LINE.exec(err.stderrTail)?.[1] ?? err.stderrTail;
         throw new YouTubeAudioUnavailableError(id, reason);
+      }
+      if (
+        err instanceof PythonEntryError &&
+        err.exitCode === EXIT_DOWNLOAD_FAILED
+      ) {
+        const reason =
+          DOWNLOAD_FAILED_LINE.exec(err.stderrTail)?.[1] ?? err.stderrTail;
+        throw new YouTubeAudioDownloadError(id, reason);
       }
       throw err;
     }

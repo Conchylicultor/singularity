@@ -273,6 +273,7 @@ the outcome too, with no separate code path.
     - `apps/sonata/piano-roll`
     - `apps/sonata/player`
     - `apps/sonata/progress/scrubber`
+    - `apps/sonata/recording`
     - `apps/sonata/session`
     - `apps/sonata/shell`
     - `apps/studio/explorer`

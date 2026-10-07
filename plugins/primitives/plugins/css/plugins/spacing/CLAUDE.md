@@ -146,6 +146,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/sonata/primitives/toolbar-control`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/scrubber`
+    - `apps/sonata/recording`
     - `apps/sonata/rich/chord-progression`
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/key-readout`

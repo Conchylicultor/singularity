@@ -106,6 +106,7 @@ primitive exists to name.
     - `apps/prototypes/canvas`
     - `apps/prototypes/present`
     - `apps/sonata/library`
+    - `apps/sonata/recording`
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/sources/ultimate-guitar/alignment`

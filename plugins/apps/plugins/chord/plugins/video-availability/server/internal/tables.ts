@@ -1,8 +1,6 @@
 import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
-// Straight from the core module rather than the core barrel: drizzle-kit loads
-// this file on its own, and the barrel also carries the endpoint contracts.
-import { ObservedVideoStatusSchema } from "../../core/status";
+import { EmbedStatusSchema } from "@plugins/integrations/plugins/youtube/core";
 
 // What each source last said about one YouTube video: an observation ledger,
 // not a verdict. The verdict is `chord_video_status_v` (views.ts), derived from
@@ -22,11 +20,11 @@ import { ObservedVideoStatusSchema } from "../../core/status";
 export const _chordVideos = pgTable("chord_videos", {
   /** The parsed YouTube id — the same value `chord_sections.video_id` holds. */
   videoId: text("video_id").primaryKey(),
-  oembedStatus: parsedText("oembed_status", ObservedVideoStatusSchema),
+  oembedStatus: parsedText("oembed_status", EmbedStatusSchema),
   /** The HTTP status oEmbed answered, including the ones that mean nothing to us. */
   oembedCode: integer("oembed_code"),
   oembedCheckedAt: timestamp("oembed_checked_at", { withTimezone: true }),
-  playerStatus: parsedText("player_status", ObservedVideoStatusSchema),
+  playerStatus: parsedText("player_status", EmbedStatusSchema),
   /** The IFrame API `onError` code; null when the player reported playing. */
   playerCode: integer("player_code"),
   playerCheckedAt: timestamp("player_checked_at", { withTimezone: true }),

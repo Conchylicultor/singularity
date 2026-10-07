@@ -41,36 +41,43 @@ import { StoredChordSchema } from "../../core/stored-chord";
 export const SectionSourceSchema = z.enum(["sheetsage-dump", "hooktheory-api"]);
 
 /** One TheoryTab section that derivation kept (`deriveSection` → `indexed`). No melody. */
-export const _chordSections = pgTable("chord_sections", {
-  /** The TheoryTab section id (`qveoYyGGodn`), shared by the dump and the API. */
-  id: text("id").primaryKey(),
-  source: parsedText("source", SectionSourceSchema).notNull(),
-  /** Display names, from the raw dump's API record. */
-  artist: text("artist").notNull(),
-  song: text("song").notNull(),
-  sectionName: text("section_name").notNull(),
-  artistSlug: text("artist_slug").notNull(),
-  songSlug: text("song_slug").notNull(),
-  /** The playable YouTube id, or null when none was pasted or it is not a YouTube id. */
-  videoId: text("video_id"),
-  videoDurationSeconds: doublePrecision("video_duration_seconds"),
-  alignment: parsedJson("alignment", AlignmentSchema).notNull(),
-  keys: parsedJson("keys", z.array(HookpadKeySchema)).notNull(),
-  meters: parsedJson("meters", z.array(HookpadMeterSchema)).notNull(),
-  tempos: parsedJson("tempos", z.array(HookpadTempoSchema)).notNull(),
-  endBeat: doublePrecision("end_beat").notNull(),
-  /** Every Hookpad chord, compacted (`compactChord`), each sounding one with its token. */
-  chords: parsedJson("chords", z.array(StoredChordSchema)).notNull(),
-  /** Why the section has no windows at all, or null when it is loopable (it may still have none). */
-  unloopableReason: parsedText(
-    "unloopable_reason",
-    z.enum(["no-video", "no-timing"]),
-  ),
-  sourceTags: text("source_tags").array().notNull(),
-  importedAt: timestamp("imported_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const _chordSections = pgTable(
+  "chord_sections",
+  {
+    /** The TheoryTab section id (`qveoYyGGodn`), shared by the dump and the API. */
+    id: text("id").primaryKey(),
+    source: parsedText("source", SectionSourceSchema).notNull(),
+    /** Display names, from the raw dump's API record. */
+    artist: text("artist").notNull(),
+    song: text("song").notNull(),
+    sectionName: text("section_name").notNull(),
+    artistSlug: text("artist_slug").notNull(),
+    songSlug: text("song_slug").notNull(),
+    /** The playable YouTube id, or null when none was pasted or it is not a YouTube id. */
+    videoId: text("video_id"),
+    videoDurationSeconds: doublePrecision("video_duration_seconds"),
+    alignment: parsedJson("alignment", AlignmentSchema).notNull(),
+    keys: parsedJson("keys", z.array(HookpadKeySchema)).notNull(),
+    meters: parsedJson("meters", z.array(HookpadMeterSchema)).notNull(),
+    tempos: parsedJson("tempos", z.array(HookpadTempoSchema)).notNull(),
+    endBeat: doublePrecision("end_beat").notNull(),
+    /** Every Hookpad chord, compacted (`compactChord`), each sounding one with its token. */
+    chords: parsedJson("chords", z.array(StoredChordSchema)).notNull(),
+    /** Why the section has no windows at all, or null when it is loopable (it may still have none). */
+    unloopableReason: parsedText(
+      "unloopable_reason",
+      z.enum(["no-video", "no-timing"]),
+    ),
+    sourceTags: text("source_tags").array().notNull(),
+    importedAt: timestamp("imported_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    // The song-video lookup (`hooktheorySongVideos`): a song's sections by slug.
+    index("chord_sections_artist_song_slug").on(t.artistSlug, t.songSlug),
+  ],
+);
 
 /** The loops the trainer can play: derived from `chord_sections` by `LOOP_SHAPES`. */
 export const _chordLoopWindows = pgTable(

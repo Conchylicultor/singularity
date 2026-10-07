@@ -138,6 +138,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/sonata/plugins/progress/plugins/loop",
   "apps/plugins/sonata/plugins/progress/plugins/scrubber",
   "apps/plugins/sonata/plugins/progress/plugins/sections",
+  "apps/plugins/sonata/plugins/recording",
   "apps/plugins/sonata/plugins/rich/plugins/chord-analyzer",
   "apps/plugins/sonata/plugins/rich/plugins/chord-label",
   "apps/plugins/sonata/plugins/rich/plugins/chord-mode",

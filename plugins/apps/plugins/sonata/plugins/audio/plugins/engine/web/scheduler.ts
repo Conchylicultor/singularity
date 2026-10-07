@@ -33,7 +33,30 @@ export interface ScheduleHandle {
    * `newAudioAnchor` is `ctx.currentTime` captured at the change instant.
    */
   retime(tempoSource: Score, newAudioAnchor: number): void;
+  /**
+   * The beat the schedule is sounding at audio time `audioTime` (an A–B loop's
+   * iterations folded back into `[loop.start, loop.end)`). What a drift check
+   * compares with an external medium's position.
+   */
+  beatAt(audioTime: number): number;
+  /**
+   * Re-anchor so `beat` sounds at audio time `audioTime` — `retime`'s sibling
+   * for a POSITION correction at an unchanged tempo (the synth slipped against
+   * an external medium driving the transport). Like `retime` it never cuts a
+   * note already handed to an instrument and never re-triggers one: generation
+   * continues from its own cursor. Notes the jump skipped over that would now
+   * sound more than {@link RESYNC_LATE_SEC} late are dropped instead of played
+   * in a burst. Inside an A–B loop, `beat` lands in the iteration nearest the
+   * current one.
+   */
+  resync(beat: number, audioTime: number): void;
 }
+
+/**
+ * After a `resync` forward, a skipped note is still played if it is at most
+ * this late (a slip of a few tens of ms keeps its notes), and dropped beyond.
+ */
+export const RESYNC_LATE_SEC = 0.08;
 
 // Keep the look-ahead SHORT. smplr commits a note to the audio graph the instant
 // we hand it over (its own look-ahead is 200ms, far wider than ours), locked at the
@@ -156,7 +179,9 @@ export function startScheduling(
       tempo.beatToSeconds(loop ? loop.end : fromBeat) -
       tempo.beatToSeconds(fromBeat);
     if (!loop || sec <= headSec) {
-      return tempo.secondsToBeat(tempo.beatToSeconds(fromBeat) + sec) - fromBeat;
+      return (
+        tempo.secondsToBeat(tempo.beatToSeconds(fromBeat) + sec) - fromBeat
+      );
     }
     const loopSec =
       tempo.beatToSeconds(loop.end) - tempo.beatToSeconds(loop.start);
@@ -164,12 +189,42 @@ export function startScheduling(
     const full = Math.floor(r / loopSec);
     const remSec = r - full * loopSec;
     const remBeat =
-      tempo.secondsToBeat(tempo.beatToSeconds(loop.start) + remSec) - loop.start;
+      tempo.secondsToBeat(tempo.beatToSeconds(loop.start) + remSec) -
+      loop.start;
     return headLenBeats + full * loopLenBeats + remBeat;
   };
 
   let anchorPathSec = pathSec(anchorC); // 0 at build; recomputed on retime
-  const whenFor = (c: number): number => anchorWhen + pathSec(c) - anchorPathSec;
+  const whenFor = (c: number): number =>
+    anchorWhen + pathSec(c) - anchorPathSec;
+  // The path coordinate sounding at audio time `t` (inverse of `whenFor`).
+  const cAt = (t: number): number =>
+    pathSecInverse(t - anchorWhen + anchorPathSec);
+  // The score beat at path coordinate `c`, loop iterations folded.
+  const beatOf = (c: number): number => {
+    if (!loop || c <= headLenBeats) return fromBeat + c;
+    const r = (c - headLenBeats) % loopLenBeats;
+    return loop.start + r;
+  };
+  // The path coordinate of `beat` nearest `near`: in the head, or in the loop
+  // iteration closest to the current one.
+  const cOfBeatNear = (beat: number, near: number): number => {
+    if (!loop || beat < loop.start || beat >= loop.end) return beat - fromBeat;
+    const candidates: number[] = beat >= fromBeat ? [beat - fromBeat] : [];
+    const offset = beat - loop.start;
+    const k = Math.round((near - headLenBeats - offset) / loopLenBeats) + 1;
+    for (const iter of [k - 1, k, k + 1]) {
+      if (iter >= 1) {
+        candidates.push(headLenBeats + (iter - 1) * loopLenBeats + offset);
+      }
+    }
+    return candidates.reduce((best, c) =>
+      Math.abs(c - near) < Math.abs(best - near) ? c : best,
+    );
+  };
+  // Undispatched events due before this audio time are dropped, not played
+  // late (set by `resync`; events are in time order, so it bites once).
+  let dropBefore = -Infinity;
 
   // Sustain-pedal resolution is in BEATS, hence tempo-invariant — compute the
   // per-note extended sounding off-beat ONCE. It survives `retime` untouched
@@ -227,7 +282,8 @@ export function startScheduling(
         li = 0;
       }
       const n = loopNotes[li++]!;
-      const c = headLenBeats + (iter - 1) * loopLenBeats + (n.start - loop.start);
+      const c =
+        headLenBeats + (iter - 1) * loopLenBeats + (n.start - loop.start);
       return buildEvent(n, c);
     }
     return null;
@@ -257,7 +313,8 @@ export function startScheduling(
     for (;;) {
       if (!peeked) peeked = nextEvent();
       if (!peeked || peeked.when > horizon) break;
-      resolveVoices(peeked.track)?.schedule(peeked);
+      if (peeked.when >= dropBefore)
+        resolveVoices(peeked.track)?.schedule(peeked);
       peeked = null;
     }
     // No more events ever (linear playback ended, or a silent loop window): arm
@@ -291,9 +348,7 @@ export function startScheduling(
       // Where are we on the path right now, under the OLD tempo? `when(cNow)` is
       // exactly `ctx.currentTime`, so pathSec(cNow) = now − anchorWhen +
       // anchorPathSec; invert to the cumulative coordinate.
-      const cNow = pathSecInverse(
-        newAudioAnchor - anchorWhen + anchorPathSec,
-      );
+      const cNow = pathSecInverse(newAudioAnchor - anchorWhen + anchorPathSec);
       // Switch tempo, then re-anchor so the current position keeps sounding at
       // `now` and everything ahead is re-derived under the new tempo. Notes
       // already handed to the instrument keep their committed time and are never
@@ -312,6 +367,19 @@ export function startScheduling(
       // EARLIER, and waiting up to REFILL_SEC for the next wake would land them
       // late — extra lag that reads as the song dragging behind the wheel. `pump`
       // clears the armed ticker first, so calling it here never double-schedules.
+      pump();
+    },
+    beatAt(audioTime: number): number {
+      return beatOf(cAt(audioTime));
+    },
+    resync(beat: number, audioTime: number): void {
+      if (cancelled) return;
+      const cNew = cOfBeatNear(beat, cAt(audioTime));
+      anchorWhen = audioTime;
+      anchorC = cNew;
+      anchorPathSec = pathSec(anchorC);
+      dropBefore = audioTime - RESYNC_LATE_SEC;
+      if (peeked) peeked.when = whenFor(peeked.c);
       pump();
     },
   };

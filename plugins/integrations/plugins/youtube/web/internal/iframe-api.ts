@@ -26,13 +26,25 @@ export interface YTPlayer {
   pauseVideo(): void;
   /**
    * Note: on a CUED or UNSTARTED video, seeking also STARTS playback (the API's
-   * documented behaviour). Only a paused player stays paused.
+   * documented behaviour). Only a paused player stays paused — the controller
+   * re-cues at the time instead (`cueVideoById`), see `seekPlayer`.
    */
   seekTo(seconds: number, allowSeekAhead: boolean): void;
   getCurrentTime(): number;
   /** 0 until the video's metadata has loaded. */
   getDuration(): number;
   getPlaybackRate(): number;
+  /**
+   * Ask for a rate. Only the rates `getAvailablePlaybackRates()` lists are
+   * taken; `onPlaybackRateChange` fires once the rate really changed.
+   */
+  setPlaybackRate(rate: number): void;
+  /**
+   * The rates this video supports (`[1]` for some, e.g. live streams).
+   * `undefined` until the video has loaded — a cued video that never played
+   * answers nothing (seen in Chromium, 2026-10-07).
+   */
+  getAvailablePlaybackRates(): number[] | undefined;
   getPlayerState(): number;
   /** 0–100. Independent of `mute`: an unmuted player comes back at this level. */
   setVolume(volume: number): void;

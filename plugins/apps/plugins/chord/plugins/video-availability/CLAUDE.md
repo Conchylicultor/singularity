@@ -37,6 +37,13 @@ each own three columns (status, code, checked-at) and write only those, so one
 source can never overwrite the other's evidence. A null status is "no answer we
 could read"; the code is kept either way. `unknown` is never stored.
 
+The request and the code mappings are not this plugin's: `checkOembed`
+(`integrations/youtube/server`) asks oEmbed, and `statusFromOembedCode` /
+`statusFromPlayerCode` / `EmbedStatus` (`integrations/youtube/core`) say what a
+code means, so anything else that needs "does this video play in an embed?"
+(Sonata's video resolution) asks the same way. This plugin keeps the ledger,
+the view and the trainer's policy.
+
 **oEmbed** (`https://www.youtube.com/oembed`), measured on 720 video ids from
 the dump, 2026-09-17/18:
 
@@ -54,9 +61,10 @@ throttling. oEmbed is cheap and tolerant (~1,000 requests, 12 in flight, no
 429). The watch page is never read: scraping it got the machine a
 `google.com/sorry` captcha after about a hundred pages.
 
-**The player** (IFrame API `onError`): 100 and 2 → `gone`; 101 and 150 →
-`not-embeddable`; `playing` → `ok`; any other code (5, an HTML5 fault) is kept
-with a null status. The columns hold the player's last report.
+**The player** (IFrame API `onError`): 100 → `gone`; 101 and 150 →
+`not-embeddable`; `playing` → `ok`; any other code is kept with a null status —
+2 (an invalid parameter: the caller's bug, not the video's) and 5 (an HTML5
+fault) say nothing about the video, so the verdict stays oEmbed's. The columns hold the player's last report.
 
 ## The verdict: `chord_video_status_v`
 
@@ -124,6 +132,7 @@ are real.
     - `database/sql-projection.parsed`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `integrations/youtube.checkOembed`
     - `primitives/log-channels.defineLogSink`
   - DB schema:
     - `plugins/apps/plugins/chord/plugins/video-availability/server/internal/tables.ts`
@@ -136,20 +145,17 @@ are real.
     - `POST /api/chord/videos/:videoId/playback`
     - `GET /api/chord/videos/summary`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `integrations/youtube.EmbedStatusSchema`
   - Exports (types):
-    - `CodeVerdict`
-    - `ObservedVideoStatus`
     - `PlaybackReport`
     - `VideoStatus`
     - `VideoStatusCounts`
   - Exports (values):
     - `EVIDENCE_TTL_DAYS`
-    - `ObservedVideoStatusSchema`
     - `PlaybackReportSchema`
     - `reportPlaybackEndpoint`
-    - `statusFromOembedCode`
-    - `statusFromPlayerCode`
     - `UNPLAYABLE_STATUSES`
     - `VideoStatusCountsSchema`
     - `VideoStatusSchema`

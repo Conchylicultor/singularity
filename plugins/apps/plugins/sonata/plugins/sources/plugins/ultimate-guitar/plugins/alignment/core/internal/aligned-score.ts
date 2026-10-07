@@ -16,6 +16,8 @@
  *   named "Not in sheet" per gap.
  * - **Pitch.** Built at sheet pitch, then `transposeScore` to the recording's
  *   sounding pitch, so the synth plays in the recording's key.
+ * - **Recording.** `meta.recording` names the video, so the player can play it
+ *   as the Score's clock: the tempo map above makes score seconds its seconds.
  */
 
 import type {
@@ -41,7 +43,6 @@ import type {
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
   ALIGNER_VERSION,
-  WEAK_MATCH_THRESHOLD,
   sheetHash,
   type AlignmentRecord,
   type AlignmentSegment,
@@ -52,17 +53,16 @@ import { isRepeatMarker } from "./sheet";
 export const GAP_SECTION_NAME = "Not in sheet";
 
 /**
- * Whether `record` may be applied to the sheet `content`: made by the current
- * aligner, against exactly this sheet, and not a weak match.
+ * Whether `record` was made for the sheet `content` by the current aligner —
+ * the only condition for applying it. The score is NOT one: a weak match is
+ * applied too (the song plays on its best try, and the Recording section says
+ * it is unconfirmed); `WEAK_MATCH_THRESHOLD` only decides whether the
+ * resolver keeps looking for a better video.
  */
-export function isApplicable(
-  record: AlignmentRecord,
-  content: string,
-): boolean {
+export function fitsSheet(record: AlignmentRecord, content: string): boolean {
   return (
     record.alignerVersion === ALIGNER_VERSION &&
-    record.sheetHash === sheetHash(content) &&
-    record.score >= WEAK_MATCH_THRESHOLD
+    record.sheetHash === sheetHash(content)
   );
 }
 
@@ -135,7 +135,7 @@ function width(line: ParsedLine): number {
 
 /**
  * Build the aligned `Score` of `parsed` from `record`. The caller checks
- * {@link isApplicable} first; a record whose indices do not fit the sheet throws.
+ * {@link fitsSheet} first; a record whose indices do not fit the sheet throws.
  */
 export function alignedScore(
   parsed: ParsedTab,
@@ -309,6 +309,12 @@ export function alignedScore(
       ...(title !== undefined ? { title } : {}),
       ...(key !== null ? { key } : {}),
       ...(pickup > 0 ? { pickupBeats: pickup } : {}),
+      // Score beat 0 is t = 0 s of this video, so its seconds are the Score's.
+      recording: {
+        provider: "youtube",
+        videoId: record.videoId,
+        durationSec: record.durationSec,
+      },
     },
     // No tracks / notes: the shell's re-voicing step generates the chord notes.
     tracks: [],

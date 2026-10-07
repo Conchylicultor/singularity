@@ -14,7 +14,13 @@ else (progress, warnings) on stderr.
   so a reader never sees a partial file under the final name.
 - A video that cannot be had at all (unavailable, private, removed,
   age-gated) exits 3 with `UNAVAILABLE: <yt-dlp's message>` as the last
-  stderr line. Anything else is a crash (exit 1): it may work next time.
+  stderr line.
+- A download of THIS video that failed in a way that may clear (an HTTP 403
+  on its stream, a broken format) exits 4 with `DOWNLOAD_FAILED: <message>`:
+  the video's failure, not the machine's, so a caller choosing between videos
+  can move on to the next one.
+- Anything else is a crash (exit 1): a bot check or a network that is down
+  fails every video alike, so it is the machine's failure, not this video's.
 """
 
 import contextlib
@@ -26,7 +32,10 @@ import sys
 import yt_dlp
 from yt_dlp.utils import DownloadError
 
+from youtube_audio._common import StderrLogger, log
+
 EXIT_UNAVAILABLE = 3
+EXIT_DOWNLOAD_FAILED = 4
 
 # yt-dlp's messages for a video no retry will bring back. A bot check
 # ("Sign in to confirm you're not a bot") is deliberately NOT here: it clears.
@@ -41,27 +50,15 @@ PERMANENT = re.compile(
     re.IGNORECASE,
 )
 
-
-def log(line: str) -> None:
-    print(line, file=sys.stderr, flush=True)
-
-
-class StderrLogger:
-    """yt-dlp's logger, routed to stderr: stdout carries only the result."""
-
-    def debug(self, msg: str) -> None:
-        # yt-dlp sends info lines through debug, prefixed "[debug] " for real debug.
-        if not msg.startswith("[debug] "):
-            log(msg)
-
-    def info(self, msg: str) -> None:
-        log(msg)
-
-    def warning(self, msg: str) -> None:
-        log(f"WARNING: {msg}")
-
-    def error(self, msg: str) -> None:
-        log(msg)
+# yt-dlp's messages for a failure of the machine rather than of the video: a
+# bot check on this IP, or no network. Every video would fail the same way.
+MACHINE = re.compile(
+    r"confirm you.?re not a bot"
+    r"|urlopen error|timed out|Temporary failure in name resolution"
+    r"|nodename nor servname|Network is unreachable"
+    r"|Connection (refused|reset)|Failed to resolve",
+    re.IGNORECASE,
+)
 
 
 def progress_hook():
@@ -113,7 +110,10 @@ def main() -> None:
         if PERMANENT.search(message):
             log(f"UNAVAILABLE: {message.removeprefix('ERROR: ')}")
             sys.exit(EXIT_UNAVAILABLE)
-        raise
+        if MACHINE.search(message):
+            raise
+        log(f"DOWNLOAD_FAILED: {message.removeprefix('ERROR: ')}")
+        sys.exit(EXIT_DOWNLOAD_FAILED)
     finally:
         for name in os.listdir(out_dir):
             if name.startswith(os.path.basename(temp_stem)) and name.endswith(".part"):

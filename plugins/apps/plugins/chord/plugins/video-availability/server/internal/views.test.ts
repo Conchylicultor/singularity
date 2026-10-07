@@ -19,11 +19,8 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
-import {
-  EVIDENCE_TTL_DAYS,
-  type ObservedVideoStatus,
-  type VideoStatus,
-} from "../../core";
+import type { EmbedStatus } from "@plugins/integrations/plugins/youtube/core";
+import { EVIDENCE_TTL_DAYS, type VideoStatus } from "../../core";
 import { _chordVideos } from "./tables";
 import { chordVideoStatus } from "./views";
 
@@ -33,7 +30,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const fresh = new Date(Date.now() - DAY_MS);
 const stale = new Date(Date.now() - (EVIDENCE_TTL_DAYS + 1) * DAY_MS);
 
-type Observation = { status: ObservedVideoStatus | null; at: Date };
+type Observation = { status: EmbedStatus | null; at: Date };
 
 /** Each case: what oEmbed and the player last said, and the verdict expected. */
 const CASES: {

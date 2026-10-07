@@ -841,7 +841,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `chordApp`
-        - **`song-index`** — The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, and the snapshot's backup source.
+        - **`song-index`** — The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
             - Uses:
@@ -861,6 +861,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `ConfigV2.Register` "config"
               - `resource.declare` "chord.index-status"
+              - `song-videos.source` "hooktheory"
               - `backup.source` "Chord song index snapshot"
               - `fork-data-exclusion` "chord_sections"
               - `fork-data-exclusion` "chord_loop_windows"
@@ -885,6 +886,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database/sql-column.parsedText`
               - `infra/endpoints.implement`
               - `infra/jobs/supervised-job.defineSupervisedJob`
+              - `integrations/youtube/song-videos.SongVideos`
               - `network/live.serveValue`
               - `primitives/log-channels.defineLogSink`
             - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`
@@ -1127,6 +1129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database/sql-projection.parsed`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `integrations/youtube.checkOembed`
               - `primitives/log-channels.defineLogSink`
             - DB schema:
               - `plugins/apps/plugins/chord/plugins/video-availability/server/internal/tables.ts`
@@ -1139,20 +1142,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `POST /api/chord/videos/:videoId/playback`
               - `GET /api/chord/videos/summary`
           - Core:
-            - Uses: `infra/endpoints.defineEndpoint`
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `integrations/youtube.EmbedStatusSchema`
             - Exports (types):
-              - `CodeVerdict`
-              - `ObservedVideoStatus`
               - `PlaybackReport`
               - `VideoStatus`
               - `VideoStatusCounts`
             - Exports (values):
               - `EVIDENCE_TTL_DAYS`
-              - `ObservedVideoStatusSchema`
               - `PlaybackReportSchema`
               - `reportPlaybackEndpoint`
-              - `statusFromOembedCode`
-              - `statusFromPlayerCode`
               - `UNPLAYABLE_STATUSES`
               - `VideoStatusCountsSchema`
               - `VideoStatusSchema`
@@ -4589,6 +4589,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/audio/instruments.InstrumentVoices`
                   - `apps/sonata/audio/instruments.SonataAudio`
                   - `apps/sonata/library.sonataPlayerPane`
+                  - `apps/sonata/session.DriverReading`
                   - `apps/sonata/session.SonataSession`
                   - `apps/sonata/session.useCursorApi`
                   - `apps/sonata/session.useSession`
@@ -4604,9 +4605,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `AudioGraph`
                   - `LoopWindowBeats`
                   - `ScheduleHandle`
+                  - `ScheduleOrigin`
                 - Exports (values):
+                  - `scheduleOrigin`
                   - `startScheduling`
                   - `useAudioGraph`
+                  - `useDriftCorrection`
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/audio/live-play`
@@ -4654,8 +4658,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/sonata/audio/engine.LoopWindowBeats`
                   - `apps/sonata/audio/engine.ScheduleHandle`
+                  - `apps/sonata/audio/engine.scheduleOrigin`
                   - `apps/sonata/audio/engine.startScheduling`
                   - `apps/sonata/audio/engine.useAudioGraph`
+                  - `apps/sonata/audio/engine.useDriftCorrection`
                   - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/session.SonataSession`
                   - `apps/sonata/session.useCursorApi`
@@ -5448,6 +5454,41 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/hover-reveal.hoverRevealGroup`
                   - `primitives/hover-reveal.hoverRevealTarget`
                   - `primitives/icon-button.IconButton`
+        - **`recording`** — Sonata recording: RecordingVideo — a song's YouTube video with its volume (on/off + slider) below it, for whoever shows the song's recording to render. When the open score is timed on that video (Score.meta.recording) it is registered as the session's transport driver while mounted and ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo — with a sync offset slider; otherwise it plays on its own with YouTube's controls, labelled not synced. The video's sound, level and the offset persist in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config.
+          - Web:
+            - Slots: `SonataRecording.Refused` ← `apps.sonata.sources.ultimate-guitar.alignment`
+            - Contributes: `ConfigV2.WebRegister` "sonata.recording"
+            - Uses:
+              - `apps/sonata/session.useSession`
+              - `config_v2.ConfigV2`
+              - `config_v2.useConfig`
+              - `config_v2.useSetConfig`
+              - `integrations/youtube.createMediaClock`
+              - `integrations/youtube.useYouTubePlayer`
+              - `integrations/youtube.useYouTubePlayerState`
+              - `integrations/youtube.YouTubePlayer`
+              - `integrations/youtube.YouTubePlayerController`
+              - `integrations/youtube.YouTubePlayerState`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/slider.Slider`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useLatestRef`
+              - `primitives/slot-render.defineMountSlot`
+            - Exports (types): `MediaRefusal`
+            - Exports (values):
+              - `RecordingVideo`
+              - `SonataRecording`
+              - `useMediaRefusal`
+          - Server:
+            - Contributes: `ConfigV2.Register` "sonata.recording"
+            - Uses: `config_v2.ConfigV2`
+          - Cross-plugin:
+            - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
         - **`rhythm`** — Rhythm-necklace data model for Sonata: preset onset patterns (Tresillo, Son, Bossa Nova, …) plus pure rotate/resample/toggle operations. A framework-free leaf shared by the rhythm circle and the per-hand chord-grid grooves.
           - Cross-plugin:
             - Imported by: `apps/sonata/voicing`
@@ -5725,6 +5766,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PitchSpelling`
               - `Projection`
               - `Score`
+              - `ScoreRecording`
               - `SectionAnnotation`
               - `SectionData`
               - `TempoEvent`
@@ -5766,7 +5808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `spellScore`
               - `subdivideBars`
               - `tonicFifths`
-        - **`session`** — Sonata playback session: plays a song's composed content — the tempo-scaled score, the rAF transport over a per-surface cursor store, the A–B loop, the count-in, seek / scrub verbs and the play- and seek-on-load intents. Mountable by any host (useSession); defines the per-session SonataSession.{Provider,Effect} slots the audio plugins contribute to.
+        - **`session`** — Sonata playback session: plays a song's composed content — the tempo-scaled score, the rAF transport over a per-surface cursor store, the A–B loop, the count-in, seek / scrub verbs, the play- and seek-on-load intents, a stack of clocks, and a stack of transport drivers (an external medium — a recording — that owns the position while registered). Mountable by any host (useSession); defines the per-session SonataSession.{Provider,Effect} slots the audio plugins contribute to.
           - Web:
             - Slots:
               - `SonataSession.Provider` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`
@@ -5781,10 +5823,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `CountInState`
               - `CursorApi`
               - `CursorStore`
+              - `DriverReading`
+              - `DriverState`
               - `LoopRange`
               - `SessionContent`
               - `SessionValue`
               - `TransportClock`
+              - `TransportDriver`
             - Exports (values):
               - `cursorApiFor`
               - `CursorStoreProvider`
@@ -5811,6 +5856,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
               - `apps/sonata/progress/sections`
+              - `apps/sonata/recording`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/rich/chord-progression`
@@ -6148,19 +6194,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `UgFetchError`
                   - `UgSearchResultSchema`
               - Plugins:
-                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section to paste a song's YouTube link and follow its alignment (aligning, aligned with score and transpose, weak match, failed, out of date), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, status, record) served as a lookup-only live collection, the sonata.ug-alignment.align supervised job (beat features → alignChords → record), the set-video / re-align / get endpoints, and a trigger re-aligning a song when its UG sheet changes.
+                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section holding the song's YouTube video (the recording plugin's RecordingVideo with its volume — synced to the transport when the song plays on its alignment, a weak match included, else playing on its own) and following how it was found and aligned (finding a video, needs a video, aligning, aligned with score and transpose, weak match, failed, out of date), who picked it, the candidate videos tried (click one to switch), Find a video, and a link field to set one by hand; a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection, the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record), the set-video / find-a-video / video-refused / re-align / get endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
                   - Web:
                     - Contributes:
                       - `Sonata.Section` "Recording" → `RecordingSection`
                       - `Sonata.Effect` "ug-alignment-sync" → `UgAlignmentSync`
+                      - `SonataRecording.Refused` "ug-video-refused" → `ReportVideoRefused`
                     - Uses:
                       - `apps/sonata/document.useSongDocument`
+                      - `apps/sonata/recording.RecordingVideo`
+                      - `apps/sonata/recording.SonataRecording`
+                      - `apps/sonata/recording.useMediaRefusal`
                       - `apps/sonata/shell.Sonata`
                       - `infra/endpoints.EndpointError`
                       - `infra/endpoints.getEndpointErrorMessage`
                       - `infra/endpoints.useEndpointMutation`
                       - `network/live.LiveRowResult`
                       - `network/live.useLiveRow`
+                      - `primitives/collapsible.Collapsible`
+                      - `primitives/collapsible.CollapsibleChevron`
+                      - `primitives/collapsible.CollapsibleContent`
+                      - `primitives/collapsible.CollapsibleTrigger`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/inline.Inline`
                       - `primitives/css/spacing.Stack`
@@ -6184,6 +6238,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `infra/jobs.defineJob`
                       - `infra/jobs.isNonRetryableError`
                       - `infra/jobs/supervised-job.defineSupervisedJob`
+                      - `integrations/youtube/audio-fetch.isYouTubeAudioError`
+                      - `integrations/youtube/song-videos.findSongVideos`
                       - `network/live.serveCollection`
                       - `primitives/log-channels.defineLogSink`
                     - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/server/internal/tables.ts`
@@ -6196,6 +6252,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `GET /api/sonata/songs/:id/ultimate-guitar/alignment`
                       - `PUT /api/sonata/songs/:id/ultimate-guitar/alignment/video`
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign`
+                      - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/resolve`
+                      - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/video-refused`
                   - Core:
                     - Uses:
                       - `apps/sonata/sources/ultimate-guitar/tab.UgTabSchema`
@@ -6212,11 +6270,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `infra/endpoints.defineEndpoint`
                       - `infra/entity-extensions.defineExtensionShape`
                     - Exports (types):
+                      - `AlignmentCandidate`
                       - `AlignmentPhase`
                       - `AlignmentSegment`
                       - `AlignmentStatus`
+                      - `CandidateOutcome`
                       - `UgAlignmentRow`
                       - `UgSourceRaw`
+                      - `VideoPick`
                     - Exports (values):
                       - `alignChords`
                       - `alignedScore`
@@ -6226,9 +6287,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `AlignmentSegmentSchema`
                       - `AlignmentStatusSchema`
                       - `appliedAlignment`
+                      - `fitsSheet`
                       - `getUgAlignment`
-                      - `isApplicable`
                       - `realignUg`
+                      - `refuseUgAlignmentVideo`
+                      - `resolveUgAlignment`
                       - `setUgAlignmentVideo`
                       - `sheetHash`
                       - `UgAlignmentRowSchema`
@@ -9305,7 +9368,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.open-app`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.deps.updates`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.automations`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.recording`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.open-app`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.deps.updates`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.automations`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -9475,6 +9538,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/sonata/piano-roll/fx-shatter`
       - `apps/sonata/pitch-layout`
       - `apps/sonata/primitives/keyboard`
+      - `apps/sonata/recording`
       - `apps/sonata/rich/chord-label`
       - `apps/sonata/rich/voicing-controls`
       - `apps/sonata/sources/midi/folders`
@@ -19518,6 +19582,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/piano-roll`
               - `apps/sonata/pitch-layout`
               - `apps/sonata/progress/loop`
+              - `apps/sonata/recording`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/track-mixer`
               - `apps/sonata/view-options`
@@ -20574,7 +20639,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/deps/build`
           - `infra/launcher`
           - `infra/safe-fetch/browser-fetch`
-          - `integrations/youtube/audio-fetch`
+          - `integrations/youtube`
           - `packages/signal-origin`
       - Deps:
         - Exports (types):
@@ -20683,7 +20748,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `infra/audio-analysis`
-              - `integrations/youtube/audio-fetch`
+              - `integrations/youtube`
           - Deps:
             - Exports (types):
               - `PythonEnvSource`
@@ -23389,12 +23454,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LET_IT_BE_VERSE` — `GET /v1/songs/public/_NgbRXeYgQA?fields=ID,song,jsonData` — the verse of "Let It Be", captured 2026-09-15. `jsonData` is the Hookpad document as a JSON string, editor state (bands, lyrics, cursor, settings, mixer) included; `youtube.id` is a `youtu.be` share link, not a bare id.
           - `TRENDS_NODES_401_HTML` — `GET /v1/trends/nodes?cp=1,4` with no Authorization header, captured 2026-09-16: a 401 whose body is Hooktheory's HTML error page, not its JSON envelope.
           - `UNKNOWN_SECTION_400_JSON` — `GET /v1/songs/public/1?fields=ID,song,jsonData`, captured 2026-09-16: the JSON envelope Hooktheory answers an unknown section id with.
-    - **`youtube`** — Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (play, pause, isPlaying, playRange for one pass then back to the loop, seek, getCurrentTime, getDuration), useYouTubePlayerState, and useYouTubePlayhead (one read per animation frame while playing). Loops without polling: one timer to the loop's end, reset on every state change.
+    - **`youtube`** — Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
       - Web:
         - Uses:
           - `primitives/css/ui-kit.cn`
           - `primitives/latest-ref.useLatestRef`
         - Exports (types):
+          - `MediaClock`
           - `YouTubeAudio`
           - `YouTubePlaybackState`
           - `YouTubePlayerCallbacks`
@@ -23405,6 +23471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `YTNamespace`
           - `YTPlayer`
         - Exports (values):
+          - `createMediaClock`
           - `loadYouTubeIframeApi`
           - `useYouTubePlayer`
           - `useYouTubePlayerState`
@@ -23412,16 +23479,45 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `YouTubeIframeApiLoadError`
           - `YouTubePlayer`
           - `YouTubePlayerNotReadyError`
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps/python.pythonEnv`
+        - Exports (values): `ytDlpDep`
       - Cross-plugin:
         - Imported by:
           - `apps/chord/trainer`
+          - `apps/chord/video-availability`
+          - `apps/sonata/recording`
           - `integrations/hooktheory`
-      - Core:
+          - `integrations/youtube/song-videos`
+          - `integrations/youtube/song-videos/youtube-search`
+      - Server:
+        - Exports (types):
+          - `OembedCheck`
+          - `SearchOptions`
+          - `YouTubeSearchResult`
         - Exports (values):
+          - `checkOembed`
+          - `searchYouTube`
+          - `searchYouTubeWith`
+      - Core:
+        - Exports (types):
+          - `CodeVerdict`
+          - `EmbedStatus`
+          - `MediaClockModel`
+        - Exports (values):
+          - `createMediaClockModel`
+          - `EmbedStatusSchema`
+          - `MEDIA_CLOCK_MAX_SLEW`
+          - `MEDIA_CLOCK_SNAP_SEC`
+          - `snapPlaybackRate`
+          - `statusFromOembedCode`
+          - `statusFromPlayerCode`
           - `VideoIdSchema`
           - `youtubeVideoId`
       - Plugins:
-        - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable). The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
+        - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable); a download of the video that failed in a way that may clear (an HTTP 403 on its stream) throws YouTubeAudioDownloadError — isYouTubeAudioError answers 'the video's failure, not the machine's' for both. The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
           - Server:
             - Uses:
               - `infra/jobs.defineJob`
@@ -23432,15 +23528,57 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `YouTubeAudio`
             - Exports (values):
               - `fetchYouTubeAudio`
-              - `YouTubeAudioUnavailableError`
+              - `isYouTubeAudioError`
             - Register: `defineJob('youtube-audio.sweep')`
-          - Deps:
-            - Uses:
-              - `infra/deps.defineDep`
-              - `infra/deps/python.pythonEnv`
-            - Exports (values): `youtubeAudioDep`
           - Cross-plugin:
-            - Imported by: `infra/audio-analysis`
+            - Imported by:
+              - `apps/sonata/sources/ultimate-guitar/alignment`
+              - `infra/audio-analysis`
+          - Test helpers:
+            - Server: `@plugins/integrations/plugins/youtube/plugins/audio-fetch/server/testing`
+              - `YouTubeAudioDownloadError` — This video's download failed in a way that may clear later (an HTTP 403 on its stream, a broken format) — a failure of the video, not of the machine: a bot check or a network that is down is a plain crash, since every video would fail alike.
+              - `YouTubeAudioUnavailableError` — YouTube will not serve this video to anyone: unavailable, private, removed, age-gated.
+        - **`song-videos`** — Which YouTube videos are this song? The SongVideos.Source contribution (a source's find(query, exec) → answered videos | unavailable) and findSongVideos(query, exec): every source asked at once, their answers merged per video, the ones oEmbed says will not play in an embed dropped (and untitled ones named from oEmbed), the rest ranked towards the studio recording. Names no source.
+          - Server:
+            - Uses:
+              - `integrations/youtube.checkOembed`
+              - `integrations/youtube.OembedCheck`
+            - Exports (types):
+              - `FindOptions`
+              - `SongVideoSource`
+              - `SongVideosResult`
+              - `SourceOutcome`
+            - Exports (values):
+              - `findSongVideos`
+              - `SongVideos`
+              - `SongVideoSourcesFailedError`
+          - Core:
+            - Uses: `integrations/youtube.VideoIdSchema`
+            - Exports (types):
+              - `CandidateSource`
+              - `RankedCandidate`
+              - `SongQuery`
+              - `SourceAnswer`
+              - `SourceVideo`
+              - `VideoCandidate`
+              - `VideoEvidence`
+            - Exports (values):
+              - `mergeSourceAnswers`
+              - `normalizeSongKey`
+              - `rankCandidates`
+              - `SongQuerySchema`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/chord/song-index`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
+              - `integrations/youtube/song-videos/youtube-search`
+          - Plugins:
+            - **`youtube-search`** — The youtube-search song-video source: YouTube's first ten results for "<artist> <title>" (yt-dlp's flat search: title, channel, duration, views, verified, art track), contributed to SongVideos.Source.
+              - Server:
+                - Contributes: `song-videos.source` "youtube-search"
+                - Uses:
+                  - `integrations/youtube.searchYouTube`
+                  - `integrations/youtube/song-videos.SongVideos`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
@@ -27934,6 +28072,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/ssh-setup`
           - `apps/mail/reading-pane`
           - `apps/pages/page-tree`
+          - `apps/sonata/sources/ultimate-guitar/alignment`
           - `apps/website/pages/download`
           - `build/build-logs`
           - `code-explorer/commit-detail`
@@ -28459,6 +28598,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/primitives/jog-wheel`
               - `apps/sonata/primitives/keyboard`
               - `apps/sonata/progress/scrubber`
+              - `apps/sonata/recording`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/studio/graph`
               - `build/build-logs`
@@ -28793,6 +28933,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas`
               - `apps/prototypes/present`
               - `apps/sonata/library`
+              - `apps/sonata/recording`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/sources/ultimate-guitar/alignment`
@@ -29156,6 +29297,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/history`
               - `apps/prototypes/canvas`
               - `apps/sonata/library`
+              - `apps/sonata/recording`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/release/release-logs`
@@ -29502,6 +29644,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/file-explorer/browser`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/canvas`
+              - `apps/sonata/recording`
               - `apps/sonata/sources/midi`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/track-mixer`
@@ -29797,6 +29940,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas`
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/metronome`
+              - `apps/sonata/recording`
               - `apps/sonata/track-mixer`
         - **`space-ramp`** — The spacing ramp's one declaration: the closed step set and the literal class each step-keyed @utility family gives each step, generated from app.css so a step that exists in TypeScript but has no @utility behind it is unspellable. Read by every consumer (Stack, Inset, Column, railClass, Sticky, Pin) instead of re-spelling the steps.
           - Cross-plugin:
@@ -29893,6 +30037,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/primitives/toolbar-control`
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
+              - `apps/sonata/recording`
               - `apps/sonata/rich/chord-progression`
               - `apps/sonata/rich/chord-readout`
               - `apps/sonata/rich/key-readout`
@@ -30444,6 +30589,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/primitives/jog-wheel`
               - `apps/sonata/progress/scrubber`
               - `apps/sonata/progress/sections`
+              - `apps/sonata/recording`
               - `apps/sonata/rich/chord-progression`
               - `apps/sonata/rich/chord-readout`
               - `apps/sonata/rich/key-readout`
@@ -33108,6 +33254,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/player`
           - `apps/sonata/progress/loop`
           - `apps/sonata/progress/sections`
+          - `apps/sonata/recording`
           - `apps/sonata/rich/rhythm-controls`
           - `apps/sonata/rich/voicing-controls`
           - `apps/sonata/track-mixer`
@@ -33267,6 +33414,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/primitives/inertial-drag`
           - `apps/sonata/primitives/keyboard`
           - `apps/sonata/progress/loop`
+          - `apps/sonata/recording`
           - `apps/sonata/session`
           - `apps/sonata/track-mixer`
           - `build/serve-composition`
@@ -35909,6 +36057,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/piano-roll`
           - `apps/sonata/player`
           - `apps/sonata/progress/scrubber`
+          - `apps/sonata/recording`
           - `apps/sonata/session`
           - `apps/sonata/shell`
           - `apps/studio/explorer`

@@ -71,8 +71,10 @@ export const AlignmentRecordSchema = z.object({
 export type AlignmentRecord = z.infer<typeof AlignmentRecordSchema>;
 
 /**
- * Below this overall `score` an alignment is a weak match: stored, shown as
- * "needs a better video", never applied to the Score. Calibrated on the
+ * Below this overall `score` an alignment is a weak match: the resolver keeps
+ * looking for a better video (`walkCandidates`). It is still applied to the
+ * Score — the song plays on its best try, labelled unconfirmed — so this
+ * decides only the search, never the playing. Calibrated on the
  * reference songs (see the plan doc): the right recordings scored 0.70–0.91,
  * the wrong ones at most 0.34.
  */

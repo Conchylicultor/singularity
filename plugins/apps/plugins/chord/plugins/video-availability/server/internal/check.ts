@@ -3,8 +3,8 @@ import { db } from "@plugins/database/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import { checkOembed } from "@plugins/integrations/plugins/youtube/server";
 import type { VideoStatus } from "../../core";
-import { checkOembed } from "./oembed";
 import { _chordVideos } from "./tables";
 import { chordVideoStatus } from "./views";
 

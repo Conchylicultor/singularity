@@ -1,7 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import type { LiveRowResult } from "@plugins/network/plugins/live/web";
 import type { UgTab } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
-import { ALIGNER_VERSION, sheetHash, type UgAlignmentRow } from "../../core";
+import {
+  ALIGNER_VERSION,
+  sheetHash,
+  type AlignmentCandidate,
+  type UgAlignmentRow,
+} from "../../core";
 import type { AlignmentRecord } from "../../core/internal/record";
 import {
   formatTranspose,
@@ -55,6 +60,8 @@ function found(over: Partial<UgAlignmentRow>): LiveRowResult<UgAlignmentRow> {
       phase: null,
       error: null,
       errorPermanent: false,
+      pick: "user",
+      candidates: [],
       record: null,
       updatedAt: new Date(0),
       ...over,
@@ -128,7 +135,10 @@ describe("recordingState", () => {
       found({ status: "weak", record: record({ score: 0.31 }) }),
       tab,
     );
-    expect(recordingStateLine(state)).toBe("Needs a better video (31%)");
+    expect(recordingStateLine(state)).toBe(
+      "Weak match (31%) — playing it, but the timing is unconfirmed; a better video may align",
+    );
+    expect(recordingStateSummary(state)).toBe("Weak · 31%");
   });
 
   it("carries a failure's message and permanence", () => {
@@ -151,6 +161,104 @@ describe("recordingState", () => {
       tab,
     );
     expect(recordingStateLine(state)).toBe("Aligning the sheet…");
+  });
+});
+
+function candidate(
+  videoId: string,
+  over: Partial<AlignmentCandidate> = {},
+): AlignmentCandidate {
+  return {
+    videoId,
+    title: null,
+    channel: null,
+    rank: 0,
+    sources: ["youtube-search"],
+    outcome: "untried",
+    score: null,
+    error: null,
+    ...over,
+  };
+}
+
+describe("recordingState — the resolver's choice", () => {
+  const auto = { pick: "auto" as const, videoId: null };
+
+  it("is finding a video while it searches", () => {
+    const state = recordingState(found({ ...auto, status: "resolving" }), tab);
+    expect(state).toEqual({
+      kind: "finding",
+      trying: null,
+      phase: null,
+      tried: 0,
+    });
+    expect(recordingStateLine(state)).toBe("Finding a video…");
+    expect(recordingStateSummary(state)).toBe("Finding a video…");
+  });
+
+  it("a queued new song is finding a video too, never 'no recording'", () => {
+    expect(recordingState(found({ ...auto, status: "queued" }), tab).kind).toBe(
+      "finding",
+    );
+  });
+
+  it("names the candidate it is trying", () => {
+    const state = recordingState(
+      found({
+        ...auto,
+        status: "resolving",
+        phase: "aligning",
+        candidates: [
+          candidate("AAAAAAAAAAA", { outcome: "weak", score: 0.2 }),
+          candidate("BBBBBBBBBBB", { outcome: "trying", title: "Wonderwall" }),
+        ],
+      }),
+      tab,
+    );
+    expect(state).toMatchObject({ kind: "finding", tried: 1 });
+    expect(recordingStateLine(state)).toBe("Trying Wonderwall (aligning)…");
+  });
+
+  it("needs a video once the candidates tried all fell short, with the count and best score", () => {
+    const state = recordingState(
+      found({
+        ...auto,
+        status: "needs-video",
+        candidates: [
+          candidate("AAAAAAAAAAA", { outcome: "weak", score: 0.31 }),
+          candidate("BBBBBBBBBBB", { outcome: "failed" }),
+          candidate("CCCCCCCCCCC", { outcome: "weak", score: 0.22 }),
+          candidate("DDDDDDDDDDD"),
+        ],
+      }),
+      tab,
+    );
+    expect(state).toEqual({ kind: "needs-video", tried: 3, best: 0.31 });
+    expect(recordingStateLine(state)).toBe(
+      "Needs a video — playing the best try, a weak match (31%, 3 tried); the timing is unconfirmed",
+    );
+    expect(recordingStateSummary(state)).toBe("Needs a video");
+  });
+
+  it("needs a video with nothing scored says so without a percentage", () => {
+    expect(
+      recordingStateLine(
+        recordingState(found({ ...auto, status: "needs-video" }), tab),
+      ),
+    ).toBe("Needs a video (0 tried)");
+  });
+
+  it("an automatically picked video reads like any other once aligned", () => {
+    expect(
+      recordingState(
+        found({ pick: "auto", status: "aligned", record: record() }),
+        tab,
+      ).kind,
+    ).toBe("aligned");
+  });
+
+  it("a user row with no video is 'no recording'", () => {
+    expect(recordingState(found({ videoId: null }), tab).kind).toBe("no-video");
   });
 });
 

@@ -6,6 +6,7 @@ import {
 } from "@plugins/database/plugins/admin/server";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import { BackupSource } from "@plugins/backup/server";
+import { SongVideos } from "@plugins/integrations/plugins/youtube/plugins/song-videos/server";
 import {
   countLoopsInSetEndpoint,
   ensureChordIndexEndpoint,
@@ -22,6 +23,7 @@ import {
   handleNextChords,
 } from "./internal/handlers";
 import { songIndexLoadJob } from "./internal/load-job";
+import { hooktheorySongVideos } from "./internal/song-videos-source";
 import { chordIndexStatusServed } from "./internal/status-resource";
 import {
   _chordIndexState,
@@ -39,7 +41,7 @@ export { loadIndexStatus } from "./internal/state";
 
 export default {
   description:
-    "The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, and the snapshot's backup source.",
+    "The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).",
   httpRoutes: {
     [ensureChordIndexEndpoint.route]: handleEnsureIndex,
     [findLoopsEndpoint.route]: handleFindLoops,
@@ -50,6 +52,9 @@ export default {
   contributions: [
     ConfigV2.Register({ descriptor: songIndexConfig }),
     ...chordIndexStatusServed.declare,
+    // "Which videos are this song?" for anyone who asks (Sonata's UG
+    // alignment): the videos TheoryTab transcribers synced it to.
+    SongVideos.Source(hooktheorySongVideos),
     BackupSource({
       id: "chord-song-index",
       name: "Chord song index snapshot",

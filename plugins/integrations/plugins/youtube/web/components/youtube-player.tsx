@@ -31,6 +31,12 @@ export interface YouTubePlayerProps extends YouTubePlayerCallbacks {
    * Omitted leaves the audio as YouTube has it.
    */
   audio?: YouTubeAudio;
+  /**
+   * Show YouTube's own control bar (play, seek, volume), for a video the viewer
+   * plays by hand. Off by default: the app owns the transport. Read when the
+   * player is created — changing it re-creates the player.
+   */
+  controls?: boolean;
   className?: string;
 }
 
@@ -48,6 +54,7 @@ export function YouTubePlayer({
   loop,
   autoplay = false,
   audio,
+  controls = false,
   className,
   onReady,
   onPlaying,
@@ -91,7 +98,7 @@ export function YouTubePlayer({
     let cancelled = false;
     void loadYouTubeIframeApi().then(
       (yt) => {
-        if (!cancelled) impl.attach(yt, mount);
+        if (!cancelled) impl.attach(yt, mount, { controls });
       },
       (err: unknown) => {
         if (!cancelled) {
@@ -104,7 +111,7 @@ export function YouTubePlayer({
       impl.detach();
       host.replaceChildren();
     };
-  }, [impl, callbacks]);
+  }, [impl, callbacks, controls]);
 
   if (loadError !== null) throw loadError;
 
