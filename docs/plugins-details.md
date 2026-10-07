@@ -13300,6 +13300,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill.fillClasses`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
+              - `primitives/css/scroll.Scroll`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
@@ -30772,6 +30773,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/jsonl-viewer/tool-call/write`
               - `conversations/conversation-view/prompt-templates`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversations-view/data-view`
               - `conversations/recover`
               - `debug/broadcasts`

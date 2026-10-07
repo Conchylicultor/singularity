@@ -90,6 +90,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/tool-call/write`
     - `conversations/conversation-view/prompt-templates`
+    - `conversations/conversation-view/running-agents`
     - `conversations/conversations-view/data-view`
     - `conversations/recover`
     - `debug/broadcasts`

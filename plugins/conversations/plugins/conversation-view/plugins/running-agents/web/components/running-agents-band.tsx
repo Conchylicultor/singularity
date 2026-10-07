@@ -23,6 +23,7 @@ import {
   fillClasses,
 } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -350,12 +351,15 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
           {options}
         </Line>
         {open && (
-          <div
+          // Capped and scrolled on its own: a workflow can fan out into dozens
+          // of rows, and an unbounded list would push the prompt box below it
+          // off-screen with no way to reach it.
+          <Scroll
             id={contentId}
-            className="rail-x-2xs border-t border-border/60 bg-background/40 py-2xs"
+            className="max-h-[40vh] rail-x-2xs border-t border-border/60 bg-background/40 py-2xs"
           >
             {body}
-          </div>
+          </Scroll>
         )}
       </Clip>
     </Text>

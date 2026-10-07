@@ -188,6 +188,7 @@ value (`band-view.ts`: `showAll` + `open`).
     - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/scroll.Scroll`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
