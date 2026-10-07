@@ -7,7 +7,7 @@
 - Description: Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
 - Web:
   - Slots:
-    - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+    - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.place-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
     - `themeCustomizerPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "theme-customizer"
   - Uses:
@@ -71,6 +71,7 @@
     - `ui/tokens/file-type-palette`
     - `ui/tokens/font-family`
     - `ui/tokens/icons`
+    - `ui/tokens/place-palette`
     - `ui/tokens/scrollbar`
     - `ui/tokens/shadow`
     - `ui/tokens/shape`

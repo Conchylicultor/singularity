@@ -1,4 +1,4 @@
-// @hash bf8f90c7580e
+// @hash 646c301ecd9d
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }

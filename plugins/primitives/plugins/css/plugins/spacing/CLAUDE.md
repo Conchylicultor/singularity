@@ -451,6 +451,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `ui/tokens/file-type-palette`
     - `ui/tokens/font-family`
     - `ui/tokens/icons`
+    - `ui/tokens/place-palette`
     - `ui/tokens/scrollbar`
     - `ui/tokens/shadow`
     - `ui/tokens/shape`

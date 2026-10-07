@@ -27025,6 +27025,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Place`
           - `PLACE_TYPE`
           - `placeBlock`
+          - `placeFamilyFill`
           - `placeKindGlyph`
           - `usePlaceProviders`
       - Server:
@@ -27047,6 +27048,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/icons.symbol`
         - Exports (types):
           - `PlaceData`
+          - `PlaceFamily`
           - `PlaceKind`
           - `PlaceSnapshot`
           - `PlaceSnapshotState`
@@ -27057,7 +27059,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `placeBlock`
           - `placeDataFromSnapshot`
           - `PlaceDataSchema`
-          - `placeKindColor`
+          - `PlaceFamilySchema`
           - `PlaceKindSchema`
           - `placeNeedsResolve`
           - `placeResolveEndpoint`
@@ -27070,7 +27072,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/place/google`
           - `page/place/map-layer`
       - Plugins:
-        - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration.
+        - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration. Colours a place by the Table A heading of its type (a vendored copy of Google's place-type table), filing a place-google-unknown-type report when Google returns a type the copy lacks.
           - Web:
             - Contributes: `Place.Provider` "Google Maps"
             - Uses:
@@ -27078,11 +27080,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `integrations/google-maps.useMapsAccess`
               - `page/place.Place`
           - Server:
+            - Contributes: `report-kind` "place-google-unknown-type"
             - Uses:
               - `integrations/google-maps.getMapsKey`
               - `integrations/google-maps/places-api.autocomplete`
               - `integrations/google-maps/places-api.placeDetails`
               - `page/place.definePlaceProvider`
+              - `reports.recordReport`
+              - `reports.ReportKind`
+              - `reports.ReportRow`
+            - DB schema: `plugins/page/plugins/place/plugins/google/server/internal/table-a.ts`
             - Register: `definePlaceProvider('google')`
           - Shared:
             - Exports (values): `GOOGLE_PLACE_PROVIDER_ID`
@@ -27096,8 +27103,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `map.MapLabel`
               - `map.MapPinProps`
               - `page/map.PageMap`
+              - `page/place.placeFamilyFill`
               - `page/place.placeKindGlyph`
-              - `primitives/avatar.avatarFlatClass`
               - `primitives/css/center.Center`
               - `primitives/css/coords.Placed`
               - `primitives/css/layer.Layer`
@@ -28758,7 +28765,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/avatar/config`
           - `fields/avatar/table`
           - `page/place`
-          - `page/place/map-layer`
           - `primitives/data-view/icons`
       - Core:
         - Exports (types):
@@ -31212,6 +31218,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/file-type-palette`
               - `ui/tokens/font-family`
               - `ui/tokens/icons`
+              - `ui/tokens/place-palette`
               - `ui/tokens/scrollbar`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
@@ -34821,6 +34828,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/file-type-palette`
           - `ui/tokens/font-family`
           - `ui/tokens/icons`
+          - `ui/tokens/place-palette`
           - `ui/tokens/scrollbar`
           - `ui/tokens/shadow`
           - `ui/tokens/shape`
@@ -35047,6 +35055,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/file-type-palette`
           - `ui/tokens/font-family`
           - `ui/tokens/icons`
+          - `ui/tokens/place-palette`
           - `ui/tokens/scrollbar`
           - `ui/tokens/shadow`
           - `ui/tokens/shape`
@@ -38363,6 +38372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/worktree-cleanup`
       - `infra/boot-snapshot`
       - `infra/jobs/deadline-audit`
+      - `page/place/google`
       - `reports/adaptive-bar`
       - `reports/caret-flight`
       - `reports/check-thread-stall`
@@ -42119,7 +42129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
-          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.place-palette`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.pages.shell`, `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.file-explorer.browser`, `apps.website.pages.apps`, `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
@@ -42248,6 +42258,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/font-family`
           - `ui/tokens/font-family/google-fonts`
           - `ui/tokens/icons`
+          - `ui/tokens/place-palette`
           - `ui/tokens/rich-text-palette`
           - `ui/tokens/scrollbar`
           - `ui/tokens/shadow`
@@ -42369,7 +42380,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
-              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.place-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
               - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
             - Uses:
@@ -42433,6 +42444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/file-type-palette`
               - `ui/tokens/font-family`
               - `ui/tokens/icons`
+              - `ui/tokens/place-palette`
               - `ui/tokens/scrollbar`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
@@ -42692,6 +42704,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `iconsGroup`
               - `readIconTokens`
+        - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), and their customizer section.
+          - Web:
+            - Contributes:
+              - `ThemeEngine.TokenGroup` "Places"
+              - `ThemeCustomizer.Section` "Places" → `PlacePaletteSection`
+            - Uses:
+              - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
+              - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
+            - Exports (types): `PlacePaletteToken`
+            - Exports (values):
+              - `placePaletteGroup`
+              - `placeTokenFill`
         - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
           - Web:
             - Contributes: `ThemeEngine.TokenGroup` "Rich-text palette"
