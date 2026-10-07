@@ -40,7 +40,10 @@ await withBrowser(async (h) => {
   r.ok("the player plays", (await pause.count()) > 0);
   await snap(page, OUT, "1-playing");
 
-  await page.getByRole("button", { name: /Library/ }).first().click();
+  await page
+    .getByRole("button", { name: /Library/ })
+    .first()
+    .click();
   await nowPlaying.waitFor({ timeout: 10_000 });
   await page.waitForTimeout(1000);
   r.ok("back on the library", new URL(page.url()).pathname === "/sonata");
@@ -55,7 +58,10 @@ await withBrowser(async (h) => {
   r.ok("still playing after reopening", (await pause.count()) > 0);
   await snap(page, OUT, "3-reopened");
 
-  await page.getByRole("button", { name: /Library/ }).first().click();
+  await page
+    .getByRole("button", { name: /Library/ })
+    .first()
+    .click();
   await nowPlaying.waitFor({ timeout: 10_000 });
   await page.waitForTimeout(800);
   await pause.first().click();

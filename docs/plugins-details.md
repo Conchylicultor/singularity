@@ -4851,9 +4851,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata.Effect` "tempo-shortcuts" → `TempoShortcuts`
             - Uses:
               - `apps/sonata/player.SonataPlayer`
+              - `apps/sonata/player.usePlayerView`
               - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useSonataApp`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/shortcuts.getFocusedSurfaceId`
@@ -4893,6 +4893,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useHasDerivedChord`
               - `useHasVoicedChords`
               - `useLibrarySong`
+              - `useLoadCount`
               - `useLoadDocument`
               - `useMountedSongId`
               - `useSongDocument`
@@ -4915,6 +4916,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/rich/key-readout`
               - `apps/sonata/rich/rhythm-controls`
               - `apps/sonata/rich/voicing-controls`
+              - `apps/sonata/shell`
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/chord-grid`
               - `apps/sonata/sources/midi`
@@ -4941,6 +4943,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "sonata-player"
             - Uses:
               - `apps/sonata/document.SonataDocument`
+              - `apps/sonata/document.useLibrarySong`
               - `apps/sonata/document.useLoadDocument`
               - `apps/sonata/document.useSongDocument`
               - `apps/sonata/player.PlayerDisplay`
@@ -5420,6 +5423,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
+              - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
               - `apps/sonata/shell`
               - `apps/sonata/songsheet`
@@ -5539,6 +5543,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
                 - Uses:
                   - `apps/sonata/library.sonataPlayerPane`
+                  - `apps/sonata/player.usePlayerView`
                   - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
                   - `apps/sonata/progress/scrubber.SonataProgress`
                   - `apps/sonata/session.useCursorApi`
@@ -5546,7 +5551,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useLaneInsets`
-                  - `apps/sonata/shell.useSonataApp`
                   - `primitives/css/coords.pct`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/inline.Inline`
@@ -6050,7 +6054,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
               - `apps/sonata/transpose`
-        - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), owns the app state — the open song (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
+        - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
           - Web:
             - Slots:
               - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
@@ -6065,6 +6069,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses:
               - `apps-core.Apps`
+              - `apps/sonata/document.useLibrarySong`
+              - `apps/sonata/document.useLoadCount`
               - `apps/sonata/player.SonataPlayerScope`
               - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
