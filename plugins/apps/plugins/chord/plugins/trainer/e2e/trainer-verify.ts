@@ -20,10 +20,14 @@
 //
 // Mutates server state: records the index request (may start a load), one
 // checked round with its answers, and the player's report on one or two videos.
+// For the run the learner practises exactly I, IV and V (one keystroke each,
+// whatever they had on — a large selection shares every digit); the selection
+// it found is put back before the verdict prints.
 
 import {
   agentFetch,
   boot,
+  onBeforeFinish,
   numArg,
   pathUrl,
   report,
@@ -37,10 +41,15 @@ import {
   type ChordProgress,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import {
+  CatalogStateSchema,
   SelectionSchema,
-  playableChords,
+  chordState,
+  listedTokens,
   practisedChords,
+  sameSelection,
+  type Selection,
 } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
+import { chordTokenFromParts } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
   chordKeyPlan,
   chordLabel,
@@ -106,11 +115,84 @@ async function readCurriculum() {
   return SelectionSchema.parse(value);
 }
 
-const curriculum = await readCurriculum();
-const progressParams = encodeProgressParams({
-  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  tokens: playableChords(curriculum),
+async function post(path: string, body: unknown): Promise<void> {
+  const res = await agentFetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`POST ${path} → HTTP ${res.status}: ${await res.text()}`);
+  }
+}
+
+/** The chord changes that turn `now` into `want`. */
+function changesTo(now: Selection, want: Selection) {
+  const tokens = new Set([
+    ...now.chords.map((c) => c.token),
+    ...want.chords.map((c) => c.token),
+  ]);
+  return [...tokens]
+    .filter((token) => chordState(now, token) !== chordState(want, token))
+    .map((token) => ({ token, state: chordState(want, token) }));
+}
+
+async function moveSelectionTo(want: Selection): Promise<boolean> {
+  const changes = changesTo(await readCurriculum(), want);
+  if (changes.length > 0) {
+    await post("/api/chord/curriculum/chords", { changes });
+  }
+  await post("/api/chord/curriculum/blanks", { blanks: want.blanks });
+  await post("/api/chord/curriculum/extras", { extras: want.extras });
+  const settled = await waitFor(
+    readCurriculum,
+    (s) => sameSelection(s, want),
+    { timeoutMs: 20_000, intervalMs: 250 },
+  );
+  return settled.ok;
+}
+
+const start = await readCurriculum();
+onBeforeFinish(async () => {
+  r.ok(
+    "the selection is back where it was found",
+    await moveSelectionTo(start),
+    "it did not settle back within 20 s",
+  );
 });
+const curriculum: Selection = {
+  chords: [0, 5, 7].map((root) => ({
+    token: chordTokenFromParts({ root, intervals: [4, 3], inversion: 0 }),
+    state: "practice" as const,
+  })),
+  blanks: start.blanks,
+  extras: 0,
+};
+r.ok(
+  "the learner practises I, IV and V for the run",
+  await moveSelectionTo(curriculum),
+  "the selection did not settle within 20 s",
+);
+
+/** Every listed chord of the catalog: the progress read the trainer itself makes. */
+async function readListed() {
+  const settled = await waitFor(
+    async () => {
+      const res = await agentFetch("/api/resources/chord.catalog");
+      if (!res.ok) {
+        throw new Error(`GET /api/resources/chord.catalog → HTTP ${res.status}`);
+      }
+      const { value } = z.object({ value: z.unknown() }).parse(await res.json());
+      return CatalogStateSchema.parse(value);
+    },
+    (state) => state.kind === "ready",
+    { timeoutMs: 120_000, intervalMs: 1000 },
+  );
+  if (settled.value.kind !== "ready") {
+    throw new Error("chord.catalog stayed not-ready for 2 minutes");
+  }
+  return listedTokens(settled.value.catalog);
+}
 
 async function readProgress(): Promise<ChordProgress> {
   const query = new URLSearchParams(progressParams).toString();
@@ -125,6 +207,12 @@ async function readProgress(): Promise<ChordProgress> {
 // ── 1. the index ─────────────────────────────────────────────────────────────
 
 await ensureReady(r, timeoutMs);
+const listed = await readListed();
+r.note(`the catalog lists ${String(listed.size)} chords`);
+const progressParams = encodeProgressParams({
+  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  tokens: [...listed],
+});
 const before = await readProgress();
 r.note(
   `progress before: all time ${before.allTime.songs} songs, ${before.allTime.answers} answers; today ${before.today.songs} songs`,

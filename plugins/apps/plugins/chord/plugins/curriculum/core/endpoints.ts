@@ -1,27 +1,26 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { ChordTokenSchema } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { LoopExtrasSchema } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { BlanksSchema } from "./blanks";
-import { ChordStateSchema } from "./selection";
+import { ChordChangeSchema } from "./change";
 
 // ── Changing the selection ───────────────────────────────────────────────────
 //
-// Four writes, each one transaction. None answers with the new selection: the
+// Three writes, each one transaction. None answers with the new selection: the
 // live `chord.curriculum` resource pushes it to every open tab.
 
-/** Set one chord to practise, hear only, or off. */
-export const setChordStateEndpoint = defineEndpoint({
-  route: "POST /api/chord/curriculum/chord",
-  body: z.object({ token: ChordTokenSchema, state: ChordStateSchema }),
-});
+/** Most chord changes one write carries: more than the catalog's every chord. */
+export const MAX_CHORD_CHANGES = 5000;
 
 /**
- * Set every chord of a chapter at once, and turn the key modes it opens on
- * (practise, hear) or off. Refused when it would leave no key mode on.
+ * Set chords to practise, hear only, or off, applied in order: one chip, a
+ * section, a rare group, Clear, or the Undo of a Clear.
  */
-export const setChapterStateEndpoint = defineEndpoint({
-  route: "POST /api/chord/curriculum/chapter",
-  body: z.object({ chapter: z.string().min(1), state: ChordStateSchema }),
+export const setChordsEndpoint = defineEndpoint({
+  route: "POST /api/chord/curriculum/chords",
+  body: z.object({
+    changes: z.array(ChordChangeSchema).min(1).max(MAX_CHORD_CHANGES),
+  }),
 });
 
 /** How much of the loop is blank. */
@@ -30,18 +29,8 @@ export const setBlanksEndpoint = defineEndpoint({
   body: z.object({ blanks: BlanksSchema }),
 });
 
-export const CellSchema = z.object({
-  chapter: z.string().min(1),
-  row: z.string().min(1),
-  blanks: BlanksSchema,
-});
-
-/**
- * Go to a cell of the path: the server works out what the cell means
- * (`cellSelection`) and replaces the whole selection with it. A client never
- * sends a whole selection it computed.
- */
-export const applyCellEndpoint = defineEndpoint({
-  route: "POST /api/chord/curriculum/cell",
-  body: z.object({ cell: CellSchema }),
+/** How many chords that are off a loop may hold besides. */
+export const setExtrasEndpoint = defineEndpoint({
+  route: "POST /api/chord/curriculum/extras",
+  body: z.object({ extras: LoopExtrasSchema }),
 });

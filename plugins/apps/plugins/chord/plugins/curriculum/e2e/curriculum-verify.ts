@@ -1,18 +1,26 @@
-// Drives the Chord curriculum end to end against this checkout's deploy
-// (`research/2026-09-23-apps-chord-trainer-free-curriculum.md`, verification).
+// Drives the Chord trainer's Chords section end to end against this
+// checkout's deploy (`research/2026-10-06-apps-chord-trainer-free-selection.md`,
+// verification).
 //
 // What it checks, in the order it does it:
 //
-//   1. the Path card opens, and holds the chord chips and the blanks control;
-//   2. Blanks → All: the next round asks every box of a practised chord, and
-//      gives only the chords that are not practised;
-//   3. Blanks → One: the next round asks exactly one box;
-//   4. Blanks → Half: the next round asks only boxes in the loop's second half;
-//   5. a round played saves the blanks it was asked under;
-//   6. a chord chip cycles Off → Practise → Hear only → Off, and its answer
-//      button comes and goes with Practise;
-//   7. a map cell (vi · One) sets both axes at once: vi practised alone, the
-//      home chords only heard, one box blank, one answer button.
+//   1. the Chords section is open and holds the Blanks pills;
+//   2. Blanks → All: the next round asks every practised box and gives only
+//      chords that are not practised;
+//   3. Blanks → Random half: the next round asks half its practised boxes,
+//      rounded up;
+//   4. Blanks → Last half: the next round asks only boxes in the loop's second
+//      half (or its last practised box), and the round played saves `half`;
+//   5. a chip cycles Off → Hear → Practise → Off, its answer button coming
+//      with Practise and going with Off — and the round on screen keeps its
+//      boxes through every edit, with no flash: no loading state appears in
+//      the progress panel or where the round goes, and the round's strip stays
+//      the same DOM node (nothing remounts);
+//   6. a section's rare group cycles to Practise: the Rare button appears;
+//      the section set control (None / Hear) sets the whole section, and the
+//      Rare button goes again;
+//   7. Other chords per loop → 1: a later round holds a chord that is off;
+//   8. Clear turns every chord off, and Undo clear puts them back.
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/chord/plugins/curriculum/e2e/curriculum-verify.ts
@@ -42,12 +50,18 @@ import {
   type ChordProgress,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import {
+  CatalogStateSchema,
   SelectionSchema,
-  cellSelection,
   chordState,
+  groupState,
+  listedTokens,
+  playableChords,
   practisedChords,
   sameSelection,
+  sectionTokens,
   type Blanks,
+  type Catalog,
+  type ChordChange,
   type ChordState,
   type Selection,
 } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
@@ -56,8 +70,10 @@ import {
   chordKeyPlan,
   chordLabel,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
-import { weakestChord } from "@plugins/apps/plugins/chord/plugins/trainer/core";
-import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import {
+  chordTokenFromParts,
+  type ChordToken,
+} from "@plugins/apps/plugins/chord/plugins/song-index/core";
 
 const r = report("chord curriculum");
 const timeoutMs = numArg("timeout-min", 15) * 60_000;
@@ -66,11 +82,82 @@ const timeoutMs = numArg("timeout-min", 15) * 60_000;
 const BOX = 'button[aria-label^="Chord "][aria-label*=" beat"]';
 /** The box strip, whose width turns a box's left edge into a place in the loop. */
 const STRIP = ".chord-strip-boxes";
-/** One chord answer button. */
+/** One answer button (a chord's, or Rare). */
 const PAD = '[aria-label="Chords to choose from"] button[aria-keyshortcuts]';
+/** The Rare joker's button. */
+const RARE_PAD = `${PAD}[aria-label^="Rare,"]`;
+/** The side panel ("Today", "Your chords", the Chords section). */
+const PANEL = '[aria-label="Your progress"]';
 
-const vi = "9:3-4/0" as ChordToken;
-const HOME = ["0:4-3/0", "5:4-3/0", "7:4-3/0"] as ChordToken[];
+// ── Watching for a flash ─────────────────────────────────────────────────────
+//
+// A chip click must not send anything back to loading: the progress read is
+// keyed on the catalog, not the selection. `armFlashWatch` remembers the
+// round's strip node and watches the trainer for a loading state (`Loading`
+// renders `role="status"`), in the panel or in the main column;
+// `readFlashWatch` says what it saw.
+
+type FlashSeen = {
+  loadingIn: string[];
+  stripReplaced: boolean;
+};
+
+async function armFlashWatch(page: Page): Promise<void> {
+  await page.evaluate(
+    ({ strip, panel }) => {
+      const w = window as unknown as {
+        __chordFlash?: {
+          seen: Set<string>;
+          strip: Element | null;
+          stop: () => void;
+        };
+      };
+      w.__chordFlash?.stop();
+      const seen = new Set<string>();
+      const look = () => {
+        for (const el of document.querySelectorAll(
+          '.chord-trainer [role="status"]',
+        )) {
+          seen.add(
+            el.closest(panel) === null
+              ? "the round's column"
+              : "the progress panel",
+          );
+        }
+      };
+      const observer = new MutationObserver(look);
+      observer.observe(document.body, { childList: true, subtree: true });
+      w.__chordFlash = {
+        seen,
+        strip: document.querySelector(strip),
+        stop: () => observer.disconnect(),
+      };
+    },
+    { strip: STRIP, panel: PANEL },
+  );
+}
+
+async function readFlashWatch(page: Page): Promise<FlashSeen> {
+  return page.evaluate((strip) => {
+    const w = window as unknown as {
+      __chordFlash?: {
+        seen: Set<string>;
+        strip: Element | null;
+        stop: () => void;
+      };
+    };
+    const watch = w.__chordFlash;
+    if (watch === undefined) throw new Error("the flash watch was not armed");
+    watch.stop();
+    return {
+      loadingIn: [...watch.seen],
+      stripReplaced:
+        watch.strip === null || document.querySelector(strip) !== watch.strip,
+    };
+  }, STRIP);
+}
+
+const vi = chordTokenFromParts({ root: 9, intervals: [3, 4], inversion: 0 });
 
 // ── Reading the app from outside ─────────────────────────────────────────────
 
@@ -85,6 +172,19 @@ async function readResource(name: string, query = ""): Promise<unknown> {
 
 async function readSelection(): Promise<Selection> {
   return SelectionSchema.parse(await readResource("chord.curriculum"));
+}
+
+async function readCatalog(): Promise<Catalog> {
+  const settled = await waitFor(
+    async () => CatalogStateSchema.parse(await readResource("chord.catalog")),
+    (state) => state.kind === "ready",
+    { timeoutMs: 120_000, intervalMs: 1000 },
+  );
+  const state = settled.value;
+  if (state.kind !== "ready") {
+    throw new Error("chord.catalog stayed not-ready for 2 minutes");
+  }
+  return state.catalog;
 }
 
 async function readProgress(
@@ -109,54 +209,50 @@ async function post(path: string, body: unknown): Promise<void> {
   }
 }
 
+const setChords = (changes: readonly ChordChange[]) =>
+  post("/api/chord/curriculum/chords", { changes });
+
 /** One selection in a few words, for the transcript. */
 function selectionText(s: Selection): string {
-  const chords = s.chords
+  const shown = s.chords
+    .slice(0, 12)
     .map(
       (c) =>
         `${chordLabel(c.token).text}${c.state === "hear" ? " (hear)" : ""}`,
-    )
-    .join(" ");
-  return `${chords} · blanks ${s.blanks} · modes ${s.modes.join(", ")}`;
+    );
+  const more = s.chords.length > 12 ? ` +${s.chords.length - 12} more` : "";
+  return `${shown.join(" ")}${more} · blanks ${s.blanks} · extras ${String(s.extras)}`;
+}
+
+/** The changes that turn `now` into `want`, chord by chord. */
+function changesTo(now: Selection, want: Selection): ChordChange[] {
+  const tokens = new Set([
+    ...now.chords.map((c) => c.token),
+    ...want.chords.map((c) => c.token),
+  ]);
+  return [...tokens]
+    .filter((token) => chordState(now, token) !== chordState(want, token))
+    .map((token) => ({ token, state: chordState(want, token) }));
 }
 
 // ── Reading the answer strip ─────────────────────────────────────────────────
 
 type BoxRead = {
-  /** The box's place in the round, 0-based, in beat order. */
   position: number;
   beats: number;
   /** The chord it shows: its own once given or checked, else the answer given. */
   chord: string | null;
-  /** Given boxes name themselves; the learner is not asked about them. */
   given: boolean;
   mark: "right" | "wrong" | null;
-  /**
-   * Where the box starts in the loop, 0…1 — its left edge over the strip's
-   * width, which is how the strip places it (`beatX`: gridStart / beats). This
-   * is what makes "the second half of the loop" a thing a script can see.
-   */
+  /** Where the box starts in the loop, 0…1 (its left edge over the strip's width). */
   fraction: number;
 };
 
-type StripRead = {
-  heading: string;
-  /** The song on screen, which names the loop together with the boxes below. */
-  song: string;
-  boxes: BoxRead[];
-};
+type StripRead = { heading: string; song: string; boxes: BoxRead[] };
 
-// A box lasts a number of beats, which a chord shorter than the grid's beat
-// makes fractional ("Chord 4, 0.5 beats: I, C, given"); the letter name after
-// the numeral is the chord in the song's key.
 const BOX_LABEL =
   /^Chord (?<position>\d+), (?<beats>[\d.]+) beats?(?:: (?<chord>[^,]+)(?:, (?!given$|given,|right$|wrong$)(?<name>[^,]+))?)?(?<given>, given)?(?:, (?<mark>right|wrong))?$/;
 
-/**
- * The mark a checked box carries, as one of the two the trainer draws. A third
- * word would mean the strip has grown a state this script cannot read, which is
- * worth stopping for rather than quietly recording as "not marked".
- */
 function boxMark(label: string, text: string | undefined): BoxRead["mark"] {
   if (text === undefined) return null;
   if (text === "right" || text === "wrong") return text;
@@ -165,7 +261,6 @@ function boxMark(label: string, text: string | undefined): BoxRead["mark"] {
   );
 }
 
-/** The strip as it stands, or null while the trainer has no round on screen. */
 async function readStrip(page: Page): Promise<StripRead | null> {
   const raw = await page.evaluate(
     ({ strip, box }) => {
@@ -209,12 +304,6 @@ async function readStrip(page: Page): Promise<StripRead | null> {
   };
 }
 
-/**
- * Which loop this is: the song, and the boxes it drew. Two rounds in a row
- * never share one — the trainer leaves out the sections it has just played —
- * so this is what says the screen has really moved on rather than been read
- * again before it re-rendered.
- */
 function loopIdentity(strip: StripRead): string {
   const boxes = strip.boxes
     .map((box) => `${box.chord ?? "–"}@${box.fraction.toFixed(3)}/${box.beats}`)
@@ -222,16 +311,19 @@ function loopIdentity(strip: StripRead): string {
   return `${strip.song}|${boxes}`;
 }
 
-/** A round still waiting for its answers, rather than a checked one. */
+/** The loop AND which of its boxes are asked: what must not move on an edit. */
+const roundShape = (strip: StripRead): string =>
+  `${loopIdentity(strip)}|asked ${asked(strip)
+    .map((b) => b.position)
+    .join(",")}`;
+
 const isUnanswered = (strip: StripRead): boolean =>
   /^Chord \d+ of \d+$/.test(strip.heading);
-
 const asked = (strip: StripRead): BoxRead[] =>
   strip.boxes.filter((box) => !box.given);
 const given = (strip: StripRead): BoxRead[] =>
   strip.boxes.filter((box) => box.given);
 
-/** How a strip reads in one line, for a note or a failure. */
 function stripText(strip: StripRead): string {
   const boxes = strip.boxes
     .map(
@@ -242,15 +334,6 @@ function stripText(strip: StripRead): string {
   return `"${strip.heading}" — ${boxes}`;
 }
 
-/**
- * Whether something turns up on screen within the budget.
- *
- * The panel follows a write the script has already seen the server answer —
- * the selection is pushed — so a straight `isVisible()` asks the browser
- * before it has been told. This waits
- * for the app to catch up and still answers false rather than throwing, so the
- * check that called it reports a failure instead of ending the run.
- */
 async function shows(locator: Locator, timeoutMs = 30_000): Promise<boolean> {
   return locator.waitFor({ state: "visible", timeout: timeoutMs }).then(
     () => true,
@@ -261,28 +344,14 @@ async function shows(locator: Locator, timeoutMs = 30_000): Promise<boolean> {
   );
 }
 
-/**
- * What the trainer shows where a round should be, when there is none — "No
- * song fits these chords yet", a failed query, the index still loading.
- *
- * It does not catch: a page that cannot even be read is a different failure
- * from a page with no round in it, and saying the second when the first
- * happened is how a verification script ends up describing the wrong problem.
- */
 async function whyNoRound(page: Page): Promise<string> {
   const text = await page.locator("body").first().innerText();
   return text.replace(/\s+/g, " ").slice(0, 400);
 }
 
-/**
- * Wait for a round that has not been answered yet — the heading counting the
- * boxes still to name. Never returns without one: no round is a failure, with
- * whatever the screen says instead.
- */
 async function requireRound(
   page: Page,
   what: string,
-  /** A loop that is already on screen: wait for one that is not it. */
   notThis: string | null = null,
 ): Promise<StripRead> {
   const settled = await waitFor(
@@ -307,14 +376,19 @@ async function requireRound(
   return r.finish();
 }
 
-/**
- * Drop the loop on screen and wait for the NEXT one — a different loop, not
- * just a strip that reads like a round. The round already on screen is also
- * unanswered whenever nothing was filled into it, so waiting on the heading
- * alone reads the old round back and asserts about the rule it was built with.
- */
+/** Hand focus back to the page, so the trainer's keys reach it. */
+async function blur(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
+}
+
+/** Drop the loop on screen and wait for the NEXT one — a different loop. */
 async function nextSong(page: Page, what: string): Promise<StripRead> {
   const leaving = await readStrip(page);
+  await blur(page);
   await page.keyboard.press("Enter");
   return requireRound(
     page,
@@ -325,32 +399,16 @@ async function nextSong(page: Page, what: string): Promise<StripRead> {
 
 // ── Playing a round ──────────────────────────────────────────────────────────
 
-/** The digits that answer on their own — a shared digit needs a second key. */
-function soloDigits(tokens: readonly ChordToken[]): Map<ChordToken, string> {
-  const solo = new Map<ChordToken, string>();
-  for (const group of chordKeyPlan(tokens)) {
-    const only = group.tokens.length === 1 ? group.tokens[0] : undefined;
-    if (only !== undefined) solo.set(only, group.digit);
-  }
-  return solo;
-}
-
-/**
- * Fill every asked box and let the round check itself, answering with the
- * weakest practised chord (the one the loop was chosen for). Returns the body
- * the trainer saved.
- */
+/** Fill every asked box with one digit that answers on its own; returns the saved body. */
 async function playRound(
   page: Page,
   strip: StripRead,
   selection: Selection,
-  progress: ChordProgress,
+  listed: ReadonlySet<ChordToken>,
 ): Promise<z.infer<typeof RecordRoundBodySchema>> {
-  const practised = practisedChords(selection);
-  const solo = soloDigits(practised);
-  const guess = weakestChord(practised, progress.chords);
-  const digit = solo.get(guess) ?? [...solo.values()][0];
-  if (digit === undefined) {
+  const practised = practisedChords(selection).filter((t) => listed.has(t));
+  const solo = chordKeyPlan(practised).find((g) => g.tokens.length === 1);
+  if (solo === undefined) {
     throw new Error(
       `every practised chord shares its digit with another (${practised.map((token) => `${chordLabel(token).text} on ${chordDigit(token)}`).join(", ")}), so one keystroke answers nothing`,
     );
@@ -361,22 +419,16 @@ async function playRound(
       res.request().method() === "POST",
     { timeout: 60_000 },
   );
-  // A control the script clicked (a Blanks radio, a chip) keeps focus; the
-  // digits are the trainer's keys, so hand focus back to the page first.
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-  });
+  await blur(page);
   for (let i = 0; i < asked(strip).length; i += 1) {
-    await page.keyboard.press(digit);
+    await page.keyboard.press(solo.digit);
   }
   const res = await saved.catch(async (err: unknown) => {
     if (!(err instanceof Error && err.name === "TimeoutError")) throw err;
     const now = await readStrip(page);
     r.fail(
       "the round is saved",
-      `pressed ${digit} ${String(asked(strip).length)}× and no POST /api/chord/rounds came — the strip reads ${now === null ? "nothing" : stripText(now)}`,
+      `pressed ${solo.digit} ${String(asked(strip).length)}× and no POST /api/chord/rounds came — the strip reads ${now === null ? "nothing" : stripText(now)}`,
     );
     return r.finish();
   });
@@ -392,42 +444,52 @@ async function playRound(
 const start = await readSelection();
 r.note(`the learner starts at ${selectionText(start)}`);
 
-/**
- * Put the selection back: each chord's state, then the blanks. The key modes
- * are only changed by the map-cell step, which this run takes only when the
- * learner started in major keys alone — so they need no putting back.
- */
+/** Put the selection back: every chord's state, the blanks, the extras. */
 onBeforeFinish(async () => {
   const now = await readSelection();
-  const tokens = new Set([
-    ...start.chords.map((c) => c.token),
-    ...now.chords.map((c) => c.token),
-  ]);
-  for (const token of tokens) {
-    const want = chordState(start, token);
-    if (chordState(now, token) !== want) {
-      await post("/api/chord/curriculum/chord", { token, state: want });
-    }
-  }
+  const changes = changesTo(now, start);
+  if (changes.length > 0) await setChords(changes);
   await post("/api/chord/curriculum/blanks", { blanks: start.blanks });
-  const back = await readSelection();
+  await post("/api/chord/curriculum/extras", { extras: start.extras });
+  const back = await waitFor(readSelection, (s) => sameSelection(s, start), {
+    timeoutMs: 20_000,
+    intervalMs: 250,
+  });
   r.ok(
     "the selection is back where it was found",
-    sameSelection(back, start),
-    `${selectionText(back)} — started at ${selectionText(start)}`,
+    back.ok,
+    `${selectionText(back.value)} — started at ${selectionText(start)}`,
   );
 });
 
 await ensureReady(r, timeoutMs);
+const catalog = await readCatalog();
+const listed = listedTokens(catalog);
+const major = catalog.tracks.find((t) => t.id === "major");
+if (major === undefined) throw new Error("the catalog has no Major track");
 
-const progressTokens = [
-  ...new Set([...HOME, vi, ...start.chords.map((c) => c.token)]),
-];
+// The run needs I, IV and V practised (one keystroke each) and vi off: start
+// from there, whatever the learner had.
+const home = [0, 5, 7].map((root) =>
+  chordTokenFromParts({ root, intervals: [4, 3], inversion: 0 }),
+);
+const baseline: Selection = {
+  chords: home.map((token) => ({ token, state: "practice" as const })),
+  blanks: "half",
+  extras: 0,
+};
+{
+  const now = await readSelection();
+  const changes = changesTo(now, baseline);
+  if (changes.length > 0) await setChords(changes);
+  await post("/api/chord/curriculum/extras", { extras: 0 });
+}
+
+const progressTokens = [...new Set([...home, vi])];
 const before = await readProgress(progressTokens);
 let roundsPlayed = 0;
 let answersGiven = 0;
 
-/** Wait until the server's selection passes `check`. */
 async function selectionWhere(
   what: string,
   check: (s: Selection) => boolean,
@@ -440,6 +502,9 @@ async function selectionWhere(
   return settled.value;
 }
 
+// A throw inside the browser run must still reach `r.finish()`, which is what
+// runs the restore above: a top-level await that rejects ends the script
+// before any `onBeforeFinish` hook.
 await withBrowser(async ({ session }) => {
   const { page, captured } = await session({
     viewport: { width: 1320, height: 1000 },
@@ -447,37 +512,42 @@ await withBrowser(async ({ session }) => {
   await boot(page, pathUrl("/chord"), { marker: BOX, timeoutMs });
   await requireRound(page, "the first round");
 
-  // ── 1. the Path card holds the controls ────────────────────────────────────
+  // ── 1. the Chords section is open ──────────────────────────────────────────
 
-  await page.getByRole("button", { name: "Path" }).click();
-  const blanksButton = (label: string) =>
-    page.getByRole("radio", { name: label, exact: true });
+  const pill = (group: string, label: string) =>
+    page
+      .getByRole("radiogroup", { name: group })
+      .getByRole("radio", { name: label, exact: true });
+  if (!(await pill("Blanks", "All").isVisible())) {
+    await page.getByRole("button", { name: "Chords", exact: true }).click();
+  }
   r.ok(
-    "the Path card opens to the blanks control",
-    await shows(blanksButton("All"), 10_000),
-    "no All radio in the Path card",
+    "the Chords section shows the Blanks pills",
+    await shows(pill("Blanks", "All"), 10_000),
+    "no All pill",
   );
 
-  const setBlanks = async (label: string, blanks: Blanks) => {
-    await blanksButton(label).click();
-    const saved = await selectionWhere(
-      `Blanks → ${label} is saved`,
-      (s) => s.blanks === blanks,
-    );
-    // The page's own control reads the pushed selection: once it shows the
-    // new value, the trainer has it too, and the next round is dealt with it.
+  const choose = async (
+    group: string,
+    label: string,
+    check: (s: Selection) => boolean,
+  ) => {
+    await pill(group, label).click();
+    const saved = await selectionWhere(`${group} → ${label} is saved`, check);
     const shown = await waitFor(
-      () => blanksButton(label).getAttribute("aria-checked"),
+      () => pill(group, label).getAttribute("aria-checked"),
       (checked) => checked === "true",
       { timeoutMs: 15_000, intervalMs: 200 },
     );
     r.ok(
-      `the page shows Blanks → ${label}`,
+      `the page shows ${group} → ${label}`,
       shown.ok,
       `aria-checked=${String(shown.value)}`,
     );
     return saved;
   };
+  const setBlanks = (label: string, blanks: Blanks) =>
+    choose("Blanks", label, (s) => s.blanks === blanks);
   const isPractised = (s: Selection, label: string | null) =>
     label !== null &&
     practisedChords(s).some((t) => chordLabel(t).text === label);
@@ -498,124 +568,208 @@ await withBrowser(async ({ session }) => {
     `Chord 1 of ${String(asked(strip).length)}`,
   );
 
-  // ── 3. One ─────────────────────────────────────────────────────────────────
+  // ── 3. Random half ─────────────────────────────────────────────────────────
 
-  selection = await setBlanks("One", "one");
-  strip = await nextSong(page, "a one-box round");
-  r.note(`one-box round: ${stripText(strip)}`);
-  r.eq("at One the round asks exactly one box", asked(strip).length, 1);
-
-  // ── 4. Half ────────────────────────────────────────────────────────────────
-
-  selection = await setBlanks("Half", "half");
-  strip = await nextSong(page, "a cadence round");
-  for (let tries = 0; tries < 6 && strip.boxes.length < 2; tries += 1) {
-    strip = await nextSong(page, "a cadence round with more than one box");
+  selection = await setBlanks("Random half", "random");
+  strip = await nextSong(page, "a random-half round");
+  r.note(`random-half round: ${stripText(strip)}`);
+  {
+    // A practised box is asked, or given under its own practised name.
+    const practisedBoxes =
+      asked(strip).length +
+      given(strip).filter((b) => isPractised(selection, b.chord)).length;
+    r.eq(
+      "at Random half the round asks half its practised boxes, rounded up",
+      asked(strip).length,
+      Math.ceil(practisedBoxes / 2),
+    );
   }
-  r.note(`cadence round: ${stripText(strip)}`);
+
+  // ── 4. Last half ───────────────────────────────────────────────────────────
+
+  selection = await setBlanks("Last half", "half");
+  strip = await nextSong(page, "a last-half round");
+  for (let tries = 0; tries < 6 && strip.boxes.length < 2; tries += 1) {
+    strip = await nextSong(page, "a last-half round with more than one box");
+  }
+  r.note(`last-half round: ${stripText(strip)}`);
   const secondHalf = asked(strip).every((box) => box.fraction >= 0.49);
   const fallback =
     asked(strip).length === 1 &&
     strip.boxes.filter((b) => b.fraction >= 0.49).every((b) => b.given);
   r.ok(
-    "at Half the round asks only the second half (or its last practised box, when the second half holds none)",
+    "at Last half the round asks only the second half (or its last practised box)",
     asked(strip).length > 0 && (secondHalf || fallback),
     stripText(strip),
   );
-
-  // ── 5. the saved round carries its blanks ──────────────────────────────────
-
-  const body = await playRound(page, strip, selection, before);
+  const body = await playRound(page, strip, selection, listed);
   roundsPlayed += 1;
   answersGiven += body.answers.length;
-  r.eq("the saved round says it was asked at Half", body.blanks, "half");
+  r.eq("the saved round says it was asked at Last half", body.blanks, "half");
 
-  // ── 6. a chord chip cycles its three states ────────────────────────────────
+  // ── 5. a chip cycles; the round on screen never changes ────────────────────
 
-  const viLabel = chordLabel(vi).text;
-  const chip = (state: string) =>
-    page.getByRole("button", { name: `${viLabel}, ${state}`, exact: true });
-  const cycleTo = async (from: string, to: ChordState) => {
-    await chip(from).click();
-    return selectionWhere(
-      `the ${viLabel} chip goes to ${to}`,
-      (s) => chordState(s, vi) === to,
+  strip = await nextSong(page, "a round to edit under");
+  const frozen = roundShape(strip);
+  const keepsItsBoxes = async (after: string) => {
+    const now = await readStrip(page);
+    r.ok(
+      `the round on screen keeps its boxes after ${after}`,
+      now !== null && roundShape(now) === frozen,
+      now === null ? "no round" : `${stripText(now)} — was ${frozen}`,
     );
   };
-  if (chordState(await readSelection(), vi) !== "off") {
-    await post("/api/chord/curriculum/chord", { token: vi, state: "off" });
+  const majorBody = page.locator(`[aria-label="${major.name}"]`);
+  const viLabel = chordLabel(vi).text;
+  const chip = (state: ChordState) =>
+    majorBody.getByRole("button", {
+      name: `${viLabel}, ${state === "off" ? "Off" : state === "hear" ? "Hear" : "Practise"}`,
+      exact: true,
+    });
+  const pads = () => page.locator(PAD).count();
+  const padsOff = await pads();
+  const cycle = async (from: ChordState, to: ChordState, padsWant: number) => {
+    await armFlashWatch(page);
+    await chip(from).click();
     await selectionWhere(
-      `${viLabel} starts off`,
-      (s) => chordState(s, vi) === "off",
+      `the ${viLabel} chip goes ${from} → ${to}`,
+      (s) => chordState(s, vi) === to,
     );
-  }
-  const padsOff = await page.locator(PAD).count();
-  await cycleTo("Off", "practice");
-  const padsOn = await waitFor(
-    () => page.locator(PAD).count(),
-    (n) => n === padsOff + 1,
-    { timeoutMs: 20_000, intervalMs: 250 },
-  );
-  r.eq(
-    `practising ${viLabel} adds its answer button`,
-    padsOn.value,
-    padsOff + 1,
-  );
-  await cycleTo("Practise", "hear");
-  const padsHear = await waitFor(
-    () => page.locator(PAD).count(),
-    (n) => n === padsOff,
-    { timeoutMs: 20_000, intervalMs: 250 },
-  );
-  r.eq(
-    `hearing ${viLabel} only takes its button away`,
-    padsHear.value,
-    padsOff,
-  );
-  await cycleTo("Hear only", "off");
-
-  // ── 7. a map cell sets both axes ───────────────────────────────────────────
-
-  const startModes = [...start.modes].sort().join(",");
-  if (startModes !== "major") {
-    r.note(
-      `skipped the map-cell step: the learner started with key modes ${startModes}, which a cell would change and this run could not put back`,
-    );
-  } else {
-    await page
-      .getByRole("button", { name: /^vi · One —/ })
-      .first()
-      .click();
-    const want = cellSelection({ chapter: "major", row: "vi", blanks: "one" });
-    const atCell = await selectionWhere(
-      "the vi · One cell sets the whole selection",
-      (s) => sameSelection(s, want),
+    // Give a re-keyed read time to show itself (it would go pending at once).
+    await page.waitForTimeout(1000);
+    const flash = await readFlashWatch(page);
+    r.ok(
+      `no loading state flashes after ${viLabel} → ${to}`,
+      flash.loadingIn.length === 0,
+      `a loading state appeared in ${flash.loadingIn.join(" and ")}`,
     );
     r.ok(
-      "vi is practised alone; the home chords are only heard",
-      chordState(atCell, vi) === "practice" &&
-        HOME.every((t) => chordState(atCell, t) === "hear"),
-      selectionText(atCell),
+      `the round's strip stays the same node after ${viLabel} → ${to}`,
+      !flash.stripReplaced,
+      "the strip was unmounted and mounted again",
     );
-    const onePad = await waitFor(
-      () => page.locator(PAD).count(),
-      (n) => n === 1,
+    const n = await waitFor(pads, (count) => count === padsWant, {
+      timeoutMs: 20_000,
+      intervalMs: 250,
+    });
+    r.eq(`answer buttons with ${viLabel} at ${to}`, n.value, padsWant);
+    await keepsItsBoxes(`${viLabel} → ${to}`);
+  };
+  await cycle("off", "hear", padsOff);
+  await cycle("hear", "practice", padsOff + 1);
+  await cycle("practice", "off", padsOff);
+  await pill("Blanks", "All").click();
+  await selectionWhere("Blanks → All again", (s) => s.blanks === "all");
+  await keepsItsBoxes("a Blanks change");
+
+  // ── 6. a rare group, and a whole section ───────────────────────────────────
+
+  const rareSection = major.sections.find(
+    (s) => s.kind === "section" && s.rare !== null,
+  );
+  if (rareSection === undefined || rareSection.rare === null) {
+    r.note("skipped the rare-group step: no Major section has a rare group");
+  } else {
+    const group = rareSection.rare.tokens;
+    const tokens = sectionTokens(rareSection);
+    const label = `+${String(group.length)} rare in ${rareSection.name}`;
+    const rareChip = (state: string) =>
+      majorBody.getByRole("button", {
+        name: `${label}, ${state}`,
+        exact: true,
+      });
+    await rareChip("Off").click();
+    await selectionWhere(
+      `${label} → Hear`,
+      (s) => groupState(s, group) === "hear",
+    );
+    await rareChip("Hear").click();
+    await selectionWhere(
+      `${label} → Practise`,
+      (s) => groupState(s, group) === "practice",
+    );
+    r.ok(
+      "practising a rare group brings the Rare button",
+      await shows(page.locator(RARE_PAD), 20_000),
+      "no Rare button",
+    );
+    const set = async (word: "Hear" | "None", state: ChordState) => {
+      const control = majorBody.getByRole("button", {
+        name: `${rareSection.name}: ${word}`,
+        exact: true,
+      });
+      // The section set control shows on hover: point at the section first.
+      await majorBody
+        .getByText(rareSection.name, { exact: true })
+        .first()
+        .hover();
+      await control.click();
+      await selectionWhere(
+        `${rareSection.name}: ${word} sets all ${String(tokens.length)} of its chords`,
+        (s) => groupState(s, tokens) === state,
+      );
+    };
+    await set("Hear", "hear");
+    await set("None", "off");
+    const gone = await waitFor(
+      () => page.locator(RARE_PAD).count(),
+      (n) => n === 0,
       { timeoutMs: 20_000, intervalMs: 250 },
     );
-    r.eq("one answer button: vi's", onePad.value, 1);
+    r.eq("no rare chord practised: no Rare button", gone.value, 0);
   }
+
+  // ── 7. Other chords per loop → 1 ───────────────────────────────────────────
+
+  selection = await choose("Other chords per loop", "1", (s) => s.extras === 1);
+  const playable = new Set(
+    playableChords(selection).map((t) => chordLabel(t).text),
+  );
+  let extra: StripRead | null = null;
+  for (let tries = 0; tries < 12 && extra === null; tries += 1) {
+    strip = await nextSong(page, "a round that may hold another chord");
+    if (given(strip).some((b) => b.chord !== null && !playable.has(b.chord))) {
+      extra = strip;
+    }
+  }
+  r.ok(
+    "with one other chord per loop, a round holds a chord that is off (given)",
+    extra !== null,
+    extra === null ? "12 rounds, all made of the chords on" : stripText(extra),
+  );
+  await choose("Other chords per loop", "None", (s) => s.extras === 0);
+
+  // ── 8. Clear, then Undo clear ──────────────────────────────────────────────
+
+  const beforeClear = await readSelection();
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await selectionWhere(
+    "Clear turns every chord off",
+    (s) => s.chords.length === 0,
+  );
+  const undo = page.getByRole("button", { name: "Undo clear", exact: true });
+  r.ok("Undo clear is offered", await shows(undo, 5_000), "no Undo clear");
+  await undo.click();
+  await selectionWhere("Undo clear puts every chord back", (s) =>
+    sameSelection(s, beforeClear),
+  );
 
   r.ok(
     "no page errors",
     captured.pageErrors.length === 0,
     captured.pageErrors.join("\n"),
   );
+}).catch((err: unknown) => {
+  r.fail(
+    "the browser run finished",
+    err instanceof Error ? (err.stack ?? err.message) : String(err),
+  );
 });
 
 const end = await readProgress(progressTokens);
 r.note(
   `left behind: ${roundsPlayed} rounds and ${answersGiven} answers, which nothing can undo ` +
-    `(all time is now ${end.allTime.songs} songs, ${end.allTime.answers} answers).`,
+    `(all time is now ${end.allTime.songs} songs, ${end.allTime.answers} answers; was ${before.allTime.songs}).`,
 );
 
 await r.finish();

@@ -85,33 +85,11 @@ export function roundFromCandidate(
 
   const { window } = candidate;
   const seconds = (beat: number) => beatToSeconds(alignment, beat);
-  const sounding = candidate.chords
-    .filter((chord) =>
-      chordOverlapsWindow(chord, window.startBeat, window.endBeat),
-    )
-    .sort((a, b) => a.beat - b.beat);
-
-  const boxes: Box[] = [];
-  for (const chord of sounding) {
-    if (chord.token === null) continue;
-    const startBeat = Math.max(chord.beat, window.startBeat);
-    const endBeat = Math.min(chord.beat + chord.duration, window.endBeat);
-    boxes.push({
-      position: boxes.length,
-      token: chord.token,
-      startBeat,
-      endBeat,
-      gridStart: startBeat - window.startBeat,
-      gridSpan: endBeat - startBeat,
-      startSec: seconds(startBeat),
-      endSec: seconds(endBeat),
-    });
-  }
-  if (boxes.length !== window.chordCount) {
-    throw new Error(
-      `Section ${candidate.sectionId} at beat ${window.startBeat}: ${boxes.length} sounding chords in the window, but the index counted ${window.chordCount}`,
-    );
-  }
+  const boxes: Box[] = gridBoxes(candidate).map((box) => ({
+    ...box,
+    startSec: seconds(box.startBeat),
+    endSec: seconds(box.endBeat),
+  }));
 
   return {
     kind: "round",
@@ -132,6 +110,48 @@ export function roundFromCandidate(
       boxes,
     },
   };
+}
+
+/** A box on the beat grid alone: everything but its seconds, which need the alignment. */
+export type GridBox = Omit<Box, "startSec" | "endSec">;
+
+/**
+ * The window's boxes on the beat grid, in beat order — what `roundFromCandidate`
+ * places in the video, and what `dealLoop` decides the asked boxes from before
+ * the video's length is known. One box per sounding chord overlapping the
+ * window (the index's own overlap rule), clipped to it; a rest makes none.
+ *
+ * Throws when the boxes disagree with the window's own chord count, which would
+ * mean the server and this read the window differently.
+ */
+export function gridBoxes(candidate: LoopCandidate): GridBox[] {
+  const { window } = candidate;
+  const sounding = candidate.chords
+    .filter((chord) =>
+      chordOverlapsWindow(chord, window.startBeat, window.endBeat),
+    )
+    .sort((a, b) => a.beat - b.beat);
+
+  const boxes: GridBox[] = [];
+  for (const chord of sounding) {
+    if (chord.token === null) continue;
+    const startBeat = Math.max(chord.beat, window.startBeat);
+    const endBeat = Math.min(chord.beat + chord.duration, window.endBeat);
+    boxes.push({
+      position: boxes.length,
+      token: chord.token,
+      startBeat,
+      endBeat,
+      gridStart: startBeat - window.startBeat,
+      gridSpan: endBeat - startBeat,
+    });
+  }
+  if (boxes.length !== window.chordCount) {
+    throw new Error(
+      `Section ${candidate.sectionId} at beat ${window.startBeat}: ${boxes.length} sounding chords in the window, but the index counted ${window.chordCount}`,
+    );
+  }
+  return boxes;
 }
 
 function readableAlignment(

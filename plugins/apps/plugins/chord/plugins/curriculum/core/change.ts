@@ -1,16 +1,24 @@
-import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { z } from "zod";
+import {
+  ChordTokenSchema,
+  type ChordToken,
+  type LoopExtras,
+} from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import type { Blanks } from "./blanks";
-import { chapterById } from "./path";
-import type { ChordState, Selection } from "./selection";
+import { ChordStateSchema, type ChordState, type Selection } from "./selection";
 
 // ── The writes, as pure functions over a selection ───────────────────────────
 //
 // The server applies these inside one transaction (`updateSelection`); being
-// pure, they are what the tests check.
+// pure, they are what the tests check. None can be refused: every selection is
+// one the trainer can play, or says plainly why it cannot (no chord practised).
 
-/** A change that can be refused: the reason is a sentence for the learner. */
-export type SelectionChange =
-  { ok: true; selection: Selection } | { ok: false; reason: string };
+/** One chord to practise, hear only, or turn off. */
+export const ChordChangeSchema = z.object({
+  token: ChordTokenSchema,
+  state: ChordStateSchema,
+});
+export type ChordChange = z.infer<typeof ChordChangeSchema>;
 
 /** One chord to practise, hear only, or off. */
 export function withChordState(
@@ -26,34 +34,27 @@ export function withChordState(
 }
 
 /**
- * Every chord of a chapter at once, and the key modes its rows open: on for
- * practise and hear, off for off. Refused when it would leave no key mode on —
- * no loop could play.
+ * Several chords at once, in order — one chip, a whole section, a rare group,
+ * Clear (every chord on, sent as off) and its Undo (the snapshot before it). A
+ * token named twice ends in its last state.
  */
-export function withChapterState(
+export function withChordChanges(
   selection: Selection,
-  chapterId: string,
-  state: ChordState,
-): SelectionChange {
-  const chapter = chapterById(chapterId);
-  let next = selection;
-  for (const row of chapter.rows) {
-    for (const token of row.tokens) next = withChordState(next, token, state);
-  }
-  const opened = new Set(chapter.rows.flatMap((row) => row.modes));
-  const modes =
-    state === "off"
-      ? next.modes.filter((mode) => !opened.has(mode))
-      : [...new Set([...next.modes, ...opened])];
-  if (modes.length === 0) {
-    return {
-      ok: false,
-      reason: `Turning ${chapter.name} off would leave no key mode on, so no loop could play.`,
-    };
-  }
-  return { ok: true, selection: { ...next, modes } };
+  changes: readonly ChordChange[],
+): Selection {
+  return changes.reduce(
+    (next, change) => withChordState(next, change.token, change.state),
+    selection,
+  );
 }
 
 export function withBlanks(selection: Selection, blanks: Blanks): Selection {
   return { ...selection, blanks };
+}
+
+export function withExtras(
+  selection: Selection,
+  extras: LoopExtras,
+): Selection {
+  return { ...selection, extras };
 }

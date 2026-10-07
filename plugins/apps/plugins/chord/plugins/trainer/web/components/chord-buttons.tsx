@@ -1,4 +1,5 @@
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import type { Answer } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import {
   chordFunction,
   chordLabel,
@@ -8,6 +9,7 @@ import {
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
   ChordNumeral,
+  chordPaint,
   chordToneStyle,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -16,10 +18,16 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Picking } from "../internal/use-chord-keys";
 
 /**
- * One button per practised chord: its numeral, its colour (a bar at the left
+ * One button per practised listed chord, and — when any practised chord is one
+ * no track lists — one **Rare** button after them, which answers every such
+ * chord. It is there whenever a rare chord is practised, whatever the loop
+ * holds, so its presence gives nothing away.
+ *
+ * Each chord button: its numeral, its colour (a bar at the left
  * edge, from its scale degree), the key that answers it, and under it either
  * the chord's function or — once reveal is on — its name in the song's key.
  * Before the check a click fills the selected box; after it, the chord plays on
@@ -33,19 +41,22 @@ import type { Picking } from "../internal/use-chord-keys";
  */
 export function ChordButtons({
   plan,
+  rareKey,
   lit,
   picking,
   nameChord,
   onPick,
 }: {
-  /** The practised chords grouped by the key that answers them (`chordKeyPlan`). */
+  /** The practised listed chords grouped by the key that answers them (`chordKeyPlan`). */
   plan: readonly ChordKeyGroup[];
+  /** The Rare button's key, or null when no rare chord is practised (no button). */
+  rareKey: string | null;
   lit: ChordToken | null;
   /** The digit waiting for its second key and what that key reaches, or null. */
   picking: Picking | null;
   /** Names a chord in the song's key. */
   nameChord: (token: ChordToken) => string;
-  onPick: (token: ChordToken) => void;
+  onPick: (answer: Answer) => void;
 }) {
   return (
     <Grid minCellWidth="9rem" gap="sm" aria-label="Chords to choose from">
@@ -85,7 +96,36 @@ export function ChordButtons({
           );
         });
       })}
+      {rareKey !== null && <RarePad rareKey={rareKey} onPick={onPick} />}
     </Grid>
+  );
+}
+
+/** The Rare joker: the answer for any chord no track lists. */
+function RarePad({
+  rareKey,
+  onPick,
+}: {
+  rareKey: string;
+  onPick: (answer: Answer) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="chord-pad chord-pad-rare relative"
+      aria-label={`Rare, any chord no track lists, key ${rareKey}`}
+      aria-keyshortcuts={rareKey}
+      onClick={() => onPick("rare")}
+    >
+      <Stack as="span" gap="none" justify="between" className="h-full">
+        <Line as="span" className="gap-xs">
+          <span className="chord-pad-word">Rare</span>
+          <Fill as="span" />
+          <Kbd>{rareKey}</Kbd>
+        </Line>
+        <span className="chord-pad-fn">any chord not listed</span>
+      </Stack>
+    </button>
   );
 }
 
@@ -116,7 +156,12 @@ function ChordPad({
   return (
     <button
       type="button"
-      className="chord-pad chord-tone relative"
+      // Lit, the tile; at rest a neutral pad (trainer.css), its chord colour
+      // only in the bar.
+      className={cn(
+        "chord-pad relative",
+        lit ? chordPaint("tile") : "chord-tone",
+      )}
       style={chordToneStyle(token)}
       data-lit={lit ? "" : undefined}
       data-picking={picking ? "" : undefined}

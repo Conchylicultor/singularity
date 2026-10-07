@@ -1,5 +1,9 @@
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import type { RecordRoundBody } from "@plugins/apps/plugins/chord/plugins/progress/core";
+import {
+  isRightAnswer,
+  type Answer,
+  type RecordRoundBody,
+} from "@plugins/apps/plugins/chord/plugins/progress/core";
 import type { Blanks } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import { clampAnswerMs } from "./answer-time";
 import type { Round } from "./round";
@@ -20,12 +24,13 @@ import type { Round } from "./round";
 //   empty;
 // - once checked, the sheet no longer changes.
 //
-// Which boxes are asked is the curriculum's decision, made outside: early on
-// only the box holding the chord being practised, later the whole loop.
+// Which boxes are asked is the curriculum's decision, made once when the loop
+// is dealt (`dealLoop`), outside this module. An answer is a chord or the Rare
+// joker; whether it is right is `isRightAnswer`, the server's own rule.
 
 export type AnswerSheet = {
-  /** One per box, in playing order: the chord picked (or the given chord), or null while empty. */
-  answers: readonly (ChordToken | null)[];
+  /** One per box, in playing order: the answer picked (or the given chord), or null while empty. */
+  answers: readonly (Answer | null)[];
   /** How long each box's LAST fill took, in ms (already clamped), or null. A given box has none. */
   answerMs: readonly (number | null)[];
   /** One per box: true where the learner must name the chord, false where it was given. */
@@ -79,7 +84,7 @@ export function emptySheet(
 }
 
 /**
- * Fill the selected box with `token`, `elapsedMs` after its chord first
+ * Fill the selected box with `answer` (a chord, or the Rare joker), `elapsedMs` after its chord first
  * finished sounding (clamped to the answer-time bounds, and rounded: the
  * server takes whole ms). A no-op once checked.
  *
@@ -88,14 +93,14 @@ export function emptySheet(
  */
 export function fillSelected(
   sheet: AnswerSheet,
-  token: ChordToken,
+  answer: Answer,
   elapsedMs: number,
 ): AnswerSheet {
   if (sheet.checked || sheet.selected === null) return sheet;
   const at = sheet.selected;
   const answers = sheet.answers.slice();
   const answerMs = sheet.answerMs.slice();
-  answers[at] = token;
+  answers[at] = answer;
   answerMs[at] = Math.round(clampAnswerMs(elapsedMs));
 
   const after = answers.findIndex((a, i) => a === null && i > at);
@@ -155,13 +160,22 @@ export function clearBackward(sheet: AnswerSheet): AnswerSheet {
   return { ...sheet, answers, answerMs, selected: at, checked: false };
 }
 
-/** The score of a checked sheet: right answers, ASKED boxes, and the total answer time. */
+/** A checked sheet's score: right answers, ASKED boxes, and the total answer time. */
 export type SheetScore = { right: number; total: number; totalMs: number };
 
-export function sheetScore(sheet: AnswerSheet, round: Round): SheetScore {
+/**
+ * The score of a checked sheet, by the server's rule (`isRightAnswer`): `listed`
+ * is the catalog's word on a chord, read for the boxes answered Rare.
+ */
+export function sheetScore(
+  sheet: AnswerSheet,
+  round: Round,
+  listed: (token: ChordToken) => boolean,
+): SheetScore {
   const answers = checkedAnswers(sheet, round);
   return {
-    right: answers.filter((a) => a.answer === a.token).length,
+    right: answers.filter((a) => isRightAnswer(a.token, a.answer, listed))
+      .length,
     total: answers.length,
     totalMs: answers.reduce((sum, a) => sum + a.answerMs, 0),
   };

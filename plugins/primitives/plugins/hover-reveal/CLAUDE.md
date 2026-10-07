@@ -40,6 +40,7 @@ remove button — the user is editing that row. The reveal ends when focus leave
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
+    - `apps/chord/curriculum`
     - `apps/pages/page-tree`
     - `apps/prototypes/canvas`
     - `apps/prototypes/present`

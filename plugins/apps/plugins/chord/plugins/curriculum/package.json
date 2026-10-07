@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-chord-curriculum",
-  "description": "The Chord trainer's curriculum: which chords the learner practises, hears or leaves off, how much of a loop is blank, and the path \u2014 chapters of rows met at every blanks level \u2014 that suggests what to practise next.",
+  "description": "The Chord trainer's curriculum: which chords the learner practises, hears or leaves off, how much of a loop is blank, how many other chords a loop may hold, and the catalog — every chord of the song index in tracks and sections — they are chosen from.",
   "private": true,
   "version": "0.0.1"
 }

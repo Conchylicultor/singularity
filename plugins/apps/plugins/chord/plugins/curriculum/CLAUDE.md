@@ -1,88 +1,114 @@
 # curriculum
 
-What the learner practises, and the path that suggests what to practise next.
-Design: `research/2026-09-23-apps-chord-trainer-free-curriculum.md` (it
-replaced the step ladder of `research/2026-09-19-apps-chord-trainer-curriculum.md`).
+What the learner practises, and the catalog of every chord they can choose
+from. Design: `research/2026-10-06-apps-chord-trainer-free-selection.md` (it
+replaced the path of `research/2026-09-23-apps-chord-trainer-free-curriculum.md`).
 
-## The model: two axes the learner sets, and a path that only suggests
+## The model: three settings the learner changes at any time
 
-- **Which chords** — every chord is `practice` (its boxes can be blank, it has
-  an answer button), `hear` (it can play in a loop, its boxes are always given)
-  or `off` (no loop holding it plays). Plus the key modes a loop may be in.
-- **How much is blank** (`Blanks`) — `one` (the target's last box), `half`
-  (the practised boxes in the loop's second half), `all` (every practised box).
+- **Which chords** — every chord is `practice` (its boxes can be blank; it has
+  an answer button, or the Rare joker answers it), `hear` (it can play in a
+  loop, its boxes are always given) or `off`. The chords alone decide which
+  loops fit, whatever key the song is labelled in: there are no key modes.
+- **How much is blank** (`Blanks`) — `all` (every practised box), `random`
+  (half the practised boxes, rounded up, drawn when the loop is dealt), `half`
+  ("Last half": the practised boxes in the loop's second half).
+  `RecordedBlanks` adds `one`, which the path offered: recorded answers still
+  hold it, nothing can set it.
+- **Other chords per loop** (`extras`, song-index's `LoopExtras`) — `0`, `1`,
+  `2` or `any` chords that are off a loop may hold besides.
 
-Both are one value, the **selection** (`Selection`: `chords` — every chord
-that is not off, with its state —, `blanks`, `modes`), live as
-`chord.curriculum`. Nothing gates anything: the learner can change either axis
-at any time, and the trainer follows at once.
+One value, the **selection** (`Selection`: `chords` — every chord that is not
+off, with its state —, `blanks`, `extras`), live as `chord.curriculum`.
+`firstSelection()`: I, IV and V practised, `half`, extras 0.
 
 ```ts
-askedPositions(boxes, { windowBeats, blanks, practised, target }) → number[]
+askedPositions(boxes, { windowBeats, blanks, practised, random? }) → number[]
 // only a practised chord's box can be blank; never empty: a rule that picks
-// nothing falls back to the last practised box; a target not practised throws
+// nothing falls back to the last practised box; no practised box throws.
+// Called once, when the loop is dealt (trainer's dealLoop).
 ```
 
-## The path
+## The catalog
 
-`path.ts` is **plain data**: `CHAPTERS`, each a hand-written list of rows (a
-chord, a few chords heard as one idea — both inversions of a chord —, or a key
-mode). A **cell** is (chapter, row, blanks); the map shows every cell.
+`buildCatalog(sets)` (pure, `catalog.ts`) turns the index's `countTokenSets`
+rows — one per (key mode, chord set) with its window count — into **tracks**
+of **sections** of chords. Where a chord goes is `catalog-rules.ts`, plain
+data: a track is its key modes (`scope`) and an ordered list of section rules,
+predicates over the token's parts against the scales; within a track the
+**first** rule that holds a chord owns it, and a chord no rule holds goes to the
+track's **Other** section — so every chord of a track's modes lands exactly
+once per mode (`catalog.test.ts` checks it over generated chords).
 
-- `routeOf(chapter)`: the cells the path suggests, in order — the first row at
-  one, half, all; every later row at one (alone), then all. `ROUTE` is every
-  chapter's route; the rest of the map is "off the route", still clickable.
-- `cellSelection(cell)`: what a cell means. Everything met before is practised
-  (earlier chapters whole, this chapter's earlier rows), except a later row at
-  `one`: then this chapter's earlier rows are only heard, so the new chord is
-  named alone against known ones. Modes: every mode the rows so far open.
-- `cellOf(selection)`: the cell a selection is, or null — free practice. No two
-  cells mean the same selection (tested), so it reads back exactly.
-- `cellStanding(cell, standing)` / `nextCell(standing)`: a cell is mastered when
-  every chord of its row is mastered **at that blanks level** (progress keeps a
-  standing per level, `byBlanks`); the next cell is the first route cell not
-  mastered. A key-mode row has no chord, so nothing to score — it is never
-  "next". The standing is a function the caller passes, so this plugin does not
-  depend on progress (progress depends on it, for `Blanks`).
+- **Tracks:** Major (Core = the scale's triads, Diatonic sevenths, Inversions —
+  of any family the track names —, Secondary dominants, Borrowed from minor,
+  Colour, Diminished & passing); Minor (Core, Sevenths, Harmonic minor,
+  Inversions, Borrowed from major, Colour & chromatic, Secondary dominants,
+  Diminished & passing); Modal (one section per mode, each scoped to its own
+  mode, holding every chord heard there); Sevenths & jazz (major windows,
+  chords of four tones or more only).
+- **Numbers:** a chord's share = windows in its section's scope holding it /
+  all windows in that scope; a section's coverage = windows holding any of its
+  chords. Sections are ordered by covered windows, Core first and Other last;
+  chords by share.
+- **Listed or rare:** listed when its share is ≥ `LISTED_SHARE` (1 %; a track
+  may set its own `listedShare` — Modal uses 5 %, its modes having few
+  windows), when it is in Core (always complete), or when its section has
+  `MAX_FOLDED_RARE` (2) or fewer below the threshold. The rest fold into the
+  section's `rare: { tokens, share }` group; Other lists nothing.
+  `isListed(catalog, token)` / `listedTokens(catalog)`: listed by any track —
+  the rule for the Rare joker.
+- **Readers:** `suggestedNext(track, selection)` (the listed chord with the
+  highest share still off, in a started track — a hint), `trackStanding`
+  (started, practised, heard, rare on), `groupState(selection, tokens)` (the
+  state a group shares, or `mixed`), `sectionTokens`, `trackTokens`,
+  `catalogOrder` (the listed chords in track/section/share order: "Your
+  chords"), `chordPlaces` (every track and section holding a chord).
 
-**What a chord IS still comes from `stages.ts`**, the chord families
-(`stageOf`, first match wins: major-key triads, minor keys, sevenths,
-inversions — only once the root-position twin is known —, secondary dominants,
-colour, and the four modal stages, which hold no chord). `path.test.ts` checks
-every row's chords belong to one of its chapter's stages, so the hand list
-cannot drift from how the app classifies chords. That is why V7 is in Sevenths,
-not in Major keys, and borrowed iv / ♭VII are in Minor keys.
+Measured on main's full index (2026-10-06): 83,752 token-set rows, the query
+~0.3 s and the build ~0.5 s; Major lists 48 chords (vii° 0.55 % in Core; ii7,
+vi7 and I⁶ above V7), Major's Other covers 6.9 % of its windows; the served
+value is ~72 KB of JSON.
 
 ## Server surface
 
 ```ts
 chordCurriculum;                       // liveValue "chord.curriculum": Selection
-POST /api/chord/curriculum/chord       // { token, state }
-POST /api/chord/curriculum/chapter     // { chapter, state } — every chord of it, and its modes
+chordCatalog;                          // liveValue "chord.catalog": { kind: "not-ready" } | { kind: "ready", catalog }
+POST /api/chord/curriculum/chords      // { changes: { token, state }[] } — a chip, a section, a rare group, Clear, Undo
 POST /api/chord/curriculum/blanks      // { blanks }
-POST /api/chord/curriculum/cell        // { cell } — the server computes cellSelection
+POST /api/chord/curriculum/extras      // { extras }
+isListedChord(token) → Promise<boolean>  // server barrel, for progress (judging a Rare answer)
+loadListedChords() → Promise<{ kind: "not-ready" } | { kind: "ready", listed }>  // server barrel, for progress (the Rare pool)
 ```
 
 - The writes are pure functions over a selection (`change.ts`:
-  `withChordState`, `withChapterState`, `withBlanks`), applied in one
-  transaction by `updateSelection`, which locks the row so two tabs apply one
-  after the other. None answers the new value: `chordCurriculum` pushes it.
-- `chordCurriculum` is a param-less `liveValue` in `core/resource.ts`, served
-  by `serveValue({ source: "db" })` (`server/internal/resource.ts`): a
-  committed `chord_curriculum` write reaches it through the change feed, and
-  the new selection is pushed to every observing tab. One object from one row,
-  so no bound to state.
-- `chapter` → `off` that would leave no key mode on is refused with a 409 —
-  no loop could play.
-- A client never sends a whole selection it computed: `cell` takes the cell
-  and the server works out what it means.
+  `withChordChanges` — applied in order —, `withBlanks`, `withExtras`),
+  applied in one transaction by `updateSelection`, which locks the row so two
+  tabs apply one after the other. None answers the new value:
+  `chordCurriculum` pushes it. None is refused.
+- `chordCurriculum` is a param-less `liveValue` served by `serveValue({
+  source: "db" })`: a committed `chord_curriculum` write reaches it through the
+  change feed. One object from one row, so no bound to state.
+- `chordCatalog` (`server/internal/catalog.ts`): the loader reads the index's
+  identity (`loadReadyIndexIdentity`, song-index) first — while the index is
+  not ready it answers `not-ready` at once, so a load's many progress writes
+  cost nothing, and never an empty catalog in its place. Once ready it builds
+  the catalog with one `countTokenSets` scan, single-flight and memoized by
+  that identity (snapshot, scope, derivation version, window count). The
+  change feed on `chord_index_state` pushes it when a load finishes.
+- `isListedChord` reads the same memo; it throws while the index is not ready
+  (a round being judged came from a ready index). `loadListedChords` hands
+  out the memo's whole listed set (or `not-ready`): progress pools every chord
+  outside it as Rare.
 
 ## `chord_curriculum`
 
-One row (`id = 1`): `chords jsonb`, `blanks text`, `modes jsonb`,
-`updated_at`. **No row means nobody has changed anything**: the loader answers
-`firstSelection()` (I, IV, V practised, half, major) and the first write
-inserts the row — so there is no seed migration.
+One row (`id = 1`): `chords jsonb`, `blanks text` (`RecordedBlanks`: a stored
+`one` reads as `half`, and the next write stores that), `extras jsonb` (default
+0), `updated_at`. **No row means nobody has changed anything**: the loader
+answers `firstSelection()` and the first write inserts the row — so there is no
+seed migration.
 
 Kept in worktree forks and backups, and in the change feed (which pushes
 `chord.curriculum`): it is the learner's own choice, nothing can rebuild it.
@@ -91,39 +117,63 @@ No growth bound: it is one row.
 ## web
 
 ```ts
-useCurriculum()        → ResourceResult<Selection>   // pending until the first value
-useCurriculumWrites()  → { setChordState, setChapterState, setBlanks, applyCell, pending }
-<PathCard selection standing/>   // the folded card holding every control
-<PathProgress standing/>         // the step bar of the chapter in hand
+useCurriculum()        → ResourceResult<Selection>      // loading until the first value
+useCatalog()           → ResourceResult<CatalogState>   // loading, then not-ready until the index loads
+useCurriculumWrites()  → { setChords(changes, onDone?), setBlanks(blanks, onDone?), setExtras(extras, onDone?) }
+<ChordsSection selection catalog standing/>              // the side panel's Chords section
 ```
 
-- **A pending selection is a loading state**, never buttons: the trainer shows
-  its skeleton until the selection lands.
-- **A refused write is a toast** with the server's sentence.
-- **`<PathCard>`**, folded by default. Closed: "Path" and one word on where the
-  learner stands (On track / On the path / Off the route / Free practice), plus
-  **Resume: ‹row› · ‹blanks›** when they are not on the suggested cell. Open:
-  the chord chips (the first chapter's chords and every chord on, in path
-  order; a click moves one practise → hear only → off; the **+** menu sets a
-  whole chapter), the Blanks control (One · Half · All, each with a tiny loop
-  glyph), a sentence on where the path goes next (with Go / Back to the path),
-  and the chapter accordion — each chapter opens to its map: rows × blanks,
-  cells filled by progress, a check when mastered, a ring for "you are here", a
-  pulse for "next", dashed when off the route. Clicking a cell applies it.
-- **`standing`** is how the path reads a chord at a blanks level: the trainer
-  builds it from `chord.progress` (`byBlanks`).
+- **A pending selection or catalog is a loading state**, never buttons or
+  empty tracks: the trainer shows its skeleton until both land (a `not-ready`
+  catalog included).
+- **A refused write is a toast** with the server's sentence; `onDone` runs once
+  the server has applied it (the section's "✓ from the next loop" flash).
+- **`<ChordsSection>`** (mockup `proto-1791276393-29e2`, data = index): a
+  collapsible "Chords" section, its fold remembered per viewer
+  (`persistent-draft`, as is which tracks are open — Major by default). Header:
+  the "✓ from the next loop" flash, and **Clear** (every chord on sent as off)
+  → **Undo clear** for 6 s (the snapshot replayed as one `changes` call, chords
+  turned on since going off again). Open, top to bottom: the **Blanks** pills
+  (All · Random half · Last half, each with its loop glyph), **Other chords per
+  loop** (None · 1 · 2 · Any), then the **tracks** accordion. A track head:
+  badge, name, "N practised · N heard · +N rare" (`trackStanding`) or "not
+  started", chevron, and once started a thin bar of the track's chord use the
+  learner has on (listed chords weighted by their windows, rare groups by
+  theirs). A section: its name, `on/listed`, and a None · Hear · Practise
+  control shown on hover or focus only (it sets the listed chords and the rare
+  group). Chips are one height (`<ChordNumeral>`, `chordToneStyle`); a click
+  cycles off → hear → practise; a practised chip shows ✓ once mastered or a
+  mini meter while learning; the suggested-next chip (`suggestedNext`) is
+  outlined. One "+N rare" chip per section ("N other chords" for Other) cycles
+  the whole group; a group partly on reads `mixed` (dotted) and a click
+  completes it to practise. The **footer** has a fixed height (sticky at the
+  bottom of the scroll): a legend at rest; on hover or focus, the exact numbers
+  — the chord's share in its section's scope and its tier (common ≥ 5 %,
+  occasional ≥ 1 %, rare), the other tracks listing it, its state, its mastery
+  and about what share of the loops it gets now. No percentages at rest.
+- **`standing`** is a lookup the trainer builds from `chord.progress` and
+  `desiredShare` (`ChipStanding`: answers, window, accuracy, mastered,
+  loopShare; `"rare"` for the pooled rare chords). The curriculum does not read
+  progress itself: progress depends on the curriculum.
+- Paint: `web/components/chords.css` — every colour from the chord theme; the
+  mockup's gold accent is the theme's ink (the chord colours are the only
+  colour on the page).
 
 ## e2e
 
-`e2e/curriculum-verify.ts` drives the controls in the real app: it opens the
-Path card, switches Blanks to All / One / Half and checks the next round asks
-what each promises (All gives only chords not practised; One asks one box;
-Half asks the second half), checks a saved round carries its blanks, cycles
-vi's chip Off → Practise → Hear only → Off (its answer button comes and goes),
-and clicks the vi · One cell (vi practised alone, the home chords heard, one
-button). It puts the selection back before the verdict prints, crash included;
-the rounds it plays stay in the history. It skips the cell step when the
-learner is not in major keys alone, since a cell would change the key modes.
+`e2e/curriculum-verify.ts` drives the Chords section in the real app. It
+starts from I, IV and V practised, extras 0, and puts the learner's selection
+back before the verdict prints (crash included); the rounds it plays stay in
+the history. It checks: Blanks All (only chords not practised are given),
+Random half (half the practised boxes, rounded up, asked), Last half (the
+second half, or the last practised box) and that the round played saves
+`half`; vi's chip cycling Off → Hear → Practise → Off with its answer button
+coming and going, **while the round on screen keeps exactly its boxes and
+asked positions** through every edit (and a Blanks change); a Major section's
+rare group going to Practise brings the Rare button, the section set control
+(Hear, None) sets every chord of the section, and the Rare button goes; Other
+chords per loop = 1 lets a later round hold a chord that is off (given); Clear
+empties the selection and Undo clear restores it.
 
 A round nothing was typed into reads exactly like the next one, so after
 "next song" it waits for a different (song, boxes) pair, not just a heading.
@@ -132,27 +182,37 @@ A round nothing was typed into reads exactly like the next one, so after
 
 ## Plugin reference
 
-- Description: The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, the key modes), useCurriculumWrites (its four writes, refusals as toasts), <PathCard> — the folded card holding every practice control: the chord chips, the blanks, where the path goes next, and each chapter's map — and <PathProgress>, the step bar of the chapter in hand. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; the key modes), the live chord.curriculum resource, and the four writes — one chord, a whole chapter, the blanks, or a cell of the path.
+- Description: The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, how many other chords a loop may hold), useCatalog (the live chord.catalog), useCurriculumWrites (chords, blanks, extras; refusals as toasts), and <ChordsSection> — the trainer side panel's collapsible Chords section: Clear / Undo clear, the Blanks and Other-chords-per-loop pills, and every chord of the song index in tracks and sections, each chip cycling off → hear → practise, one chip per section's rare chords, and a footer giving the exact numbers of the chip under the pointer. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, and the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index.
 - Server:
-  - Contributes: `resource.declare` "chord.curriculum"
+  - Contributes:
+    - `resource.declare` "chord.curriculum"
+    - `resource.declare` "chord.catalog"
   - Uses:
+    - `apps/chord/song-index.countTokenSets`
+    - `apps/chord/song-index.loadReadyIndexIdentity`
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
-    - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `network/live.serveValue`
   - DB schema: `plugins/apps/plugins/chord/plugins/curriculum/server/internal/tables.ts`
-  - Resources: `chord.curriculum` (push)
+  - Exports (types): `ListedChordsState`
+  - Exports (values):
+    - `isListedChord`
+    - `loadListedChords`
+  - Resources:
+    - `chord.catalog` (push)
+    - `chord.curriculum` (push)
   - Routes:
-    - `POST /api/chord/curriculum/chord`
-    - `POST /api/chord/curriculum/chapter`
+    - `POST /api/chord/curriculum/chords`
     - `POST /api/chord/curriculum/blanks`
-    - `POST /api/chord/curriculum/cell`
+    - `POST /api/chord/curriculum/extras`
 - Web:
   - Uses:
     - `apps/chord/vocabulary.ChordNumeral`
+    - `apps/chord/vocabulary.chordPaint`
+    - `apps/chord/vocabulary.ChordPaint`
     - `apps/chord/vocabulary.chordToneStyle`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
@@ -162,39 +222,43 @@ A round nothing was typed into reads exactly like the next one, so after
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/center.Center`
+    - `primitives/css/clip.Clip`
     - `primitives/css/coords.pct`
     - `primitives/css/coords.placedClasses`
     - `primitives/css/coords.placedStyle`
     - `primitives/css/fill.Fill`
-    - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.selfClass`
+    - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/overlay/popover.InlinePopover`
+    - `primitives/css/yield.yieldClass`
+    - `primitives/hover-reveal.hoverRevealClass`
+    - `primitives/hover-reveal.useHoverReveal`
+    - `primitives/persistent-draft.useDraft`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types):
+    - `ChipStanding`
     - `CurriculumWrites`
     - `StandingLookup`
   - Exports (values):
-    - `BlanksGlyph`
-    - `PathCard`
-    - `PathProgress`
+    - `ChordsSection`
+    - `useCatalog`
     - `useCurriculum`
     - `useCurriculumWrites`
 - Core:
   - Uses:
     - `apps/chord/song-index.ChordToken`
     - `apps/chord/song-index.chordTokenFromParts`
-    - `apps/chord/song-index.ChordTokenParts`
     - `apps/chord/song-index.ChordTokenSchema`
+    - `apps/chord/song-index.LoopExtras`
+    - `apps/chord/song-index.LoopExtrasSchema`
     - `apps/chord/song-index.parseChordToken`
+    - `apps/chord/song-index.TokenSetCount`
     - `infra/endpoints.defineEndpoint`
     - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.HookpadModeSchema`
@@ -203,60 +267,67 @@ A round nothing was typed into reads exactly like the next one, so after
     - `AskedBox`
     - `AskedOptions`
     - `Blanks`
-    - `Cell`
-    - `CellStanding`
-    - `Chapter`
+    - `Catalog`
+    - `CatalogChord`
+    - `CatalogSection`
+    - `CatalogState`
+    - `CatalogTrack`
+    - `ChordChange`
+    - `ChordPlace`
     - `ChordState`
-    - `PathRow`
+    - `RareGroup`
+    - `RecordedBlanks`
+    - `SectionKind`
     - `SelectedChord`
     - `Selection`
-    - `SelectionChange`
-    - `Stage`
-    - `StageId`
-    - `TokenStanding`
+    - `TrackStanding`
   - Exports (values):
-    - `ALL_CELLS`
-    - `applyCellEndpoint`
     - `askedPositions`
     - `BLANKS`
     - `BLANKS_LABEL`
     - `BlanksSchema`
+    - `buildCatalog`
     - `canonicalSelection`
-    - `cellName`
-    - `cellOf`
-    - `CellSchema`
-    - `cellSelection`
-    - `cellStanding`
-    - `chapterById`
-    - `CHAPTERS`
+    - `CatalogChordSchema`
+    - `catalogOrder`
+    - `CatalogSchema`
+    - `CatalogSectionSchema`
+    - `CatalogStateSchema`
+    - `CatalogTrackSchema`
     - `CHORD_STATES`
+    - `chordCatalog`
+    - `ChordChangeSchema`
     - `chordCurriculum`
+    - `chordPlaces`
     - `chordState`
     - `ChordStateSchema`
     - `firstSelection`
-    - `nextCell`
-    - `onRoute`
-    - `PATH_TOKENS`
-    - `pathOrder`
+    - `groupState`
+    - `isListed`
+    - `LISTED_SHARE`
+    - `listedTokens`
+    - `MAX_CHORD_CHANGES`
+    - `MAX_FOLDED_RARE`
     - `playableChords`
     - `practisedChords`
-    - `ROUTE`
-    - `routeOf`
-    - `sameCell`
+    - `RareGroupSchema`
+    - `RECORDED_BLANKS`
+    - `RecordedBlanksSchema`
     - `sameSelection`
+    - `SectionKindSchema`
+    - `sectionTokens`
     - `SelectedChordSchema`
     - `SelectionSchema`
     - `setBlanksEndpoint`
-    - `setChapterStateEndpoint`
-    - `setChordStateEndpoint`
-    - `STAGE_IDS`
-    - `stageById`
-    - `StageIdSchema`
-    - `stageOf`
-    - `STAGES`
+    - `setChordsEndpoint`
+    - `setExtrasEndpoint`
+    - `suggestedNext`
+    - `trackStanding`
+    - `trackTokens`
     - `withBlanks`
-    - `withChapterState`
+    - `withChordChanges`
     - `withChordState`
+    - `withExtras`
 - Cross-plugin:
   - Imported by:
     - `apps/chord/progress`

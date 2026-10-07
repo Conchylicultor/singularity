@@ -5,16 +5,16 @@ import {
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import type { LoopExtras } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
-  applyCellEndpoint,
+  chordCatalog,
   chordCurriculum,
   setBlanksEndpoint,
-  setChapterStateEndpoint,
-  setChordStateEndpoint,
+  setChordsEndpoint,
+  setExtrasEndpoint,
   type Blanks,
-  type Cell,
-  type ChordState,
+  type CatalogState,
+  type ChordChange,
   type Selection,
 } from "../../core";
 
@@ -24,18 +24,26 @@ import {
 // nothing: `chordCurriculum` brings the new value to every open tab. A refused
 // write is a toast with the server's sentence, never a silent nothing.
 
-/** What the learner has chosen. `pending` until the server's first value lands. */
+/** What the learner has chosen. `loading` until the server's first value lands. */
 export function useCurriculum(): ResourceResult<Selection> {
   return useLive(chordCurriculum);
 }
 
-/** The four writes, and whether one is still out. */
+/**
+ * Every chord of the song index, in tracks and sections. `loading` until the
+ * first value lands; then `not-ready` until the index is loaded — both are a
+ * loading state to render, never an empty catalog.
+ */
+export function useCatalog(): ResourceResult<CatalogState> {
+  return useLive(chordCatalog);
+}
+
+/** The three writes. Each takes an optional `onDone`, called once the server has applied it. */
 export type CurriculumWrites = {
-  setChordState: (token: ChordToken, state: ChordState) => void;
-  setChapterState: (chapter: string, state: ChordState) => void;
-  setBlanks: (blanks: Blanks) => void;
-  applyCell: (cell: Cell) => void;
-  pending: boolean;
+  /** Chords to practise, hear only or turn off, applied in order (one chip, a section, a group, Clear, Undo). */
+  setChords: (changes: readonly ChordChange[], onDone?: () => void) => void;
+  setBlanks: (blanks: Blanks, onDone?: () => void) => void;
+  setExtras: (extras: LoopExtras, onDone?: () => void) => void;
 };
 
 export function useCurriculumWrites(): CurriculumWrites {
@@ -45,20 +53,24 @@ export function useCurriculumWrites(): CurriculumWrites {
       description: getEndpointErrorMessage(err),
       variant: "error",
     });
-  const chord = useEndpointMutation(setChordStateEndpoint, { onError });
-  const chapter = useEndpointMutation(setChapterStateEndpoint, { onError });
+  const chords = useEndpointMutation(setChordsEndpoint, { onError });
   const blanks = useEndpointMutation(setBlanksEndpoint, { onError });
-  const cell = useEndpointMutation(applyCellEndpoint, { onError });
+  const extras = useEndpointMutation(setExtrasEndpoint, { onError });
   return {
-    setChordState: (token, state) => chord.mutate({ body: { token, state } }),
-    setChapterState: (id, state) =>
-      chapter.mutate({ body: { chapter: id, state } }),
-    setBlanks: (value) => blanks.mutate({ body: { blanks: value } }),
-    applyCell: (value) => cell.mutate({ body: { cell: value } }),
-    pending:
-      chord.isPending ||
-      chapter.isPending ||
-      blanks.isPending ||
-      cell.isPending,
+    setChords: (changes, onDone) =>
+      chords.mutate(
+        { body: { changes: [...changes] } },
+        { onSuccess: () => onDone?.() },
+      ),
+    setBlanks: (value, onDone) =>
+      blanks.mutate(
+        { body: { blanks: value } },
+        { onSuccess: () => onDone?.() },
+      ),
+    setExtras: (value, onDone) =>
+      extras.mutate(
+        { body: { extras: value } },
+        { onSuccess: () => onDone?.() },
+      ),
   };
 }

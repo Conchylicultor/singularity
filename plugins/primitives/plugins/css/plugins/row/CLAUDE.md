@@ -188,6 +188,7 @@ genuine transient-chrome list escapes with
     - `apps/browser/bookmarks`
     - `apps/browser/start-page`
     - `apps/browser/tabs`
+    - `apps/chord/curriculum`
     - `apps/deploy/analytics/dashboard`
     - `apps/mail/reading-pane`
     - `apps/mail/search`

@@ -150,6 +150,8 @@ export interface SegmentedControlProps<
   variant?: ToggleChipVariant;
   /** Wrapper override (e.g. spacing). */
   className?: string;
+  /** The group's accessible name (its visible heading, when it has one). */
+  label?: string;
 }
 
 export function SegmentedControl<T extends string>({
@@ -158,10 +160,12 @@ export function SegmentedControl<T extends string>({
   onChange,
   variant = "solid",
   className,
+  label,
 }: SegmentedControlProps<T>) {
   return (
     <div
       role="radiogroup"
+      aria-label={label}
       className={cn("flex shrink-0 flex-nowrap gap-xs", className)}
     >
       {options.map((opt) => (

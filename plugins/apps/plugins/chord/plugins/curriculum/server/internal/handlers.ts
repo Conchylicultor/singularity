@@ -1,33 +1,19 @@
 import { db } from "@plugins/database/server";
-import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
-  applyCellEndpoint,
-  cellSelection,
   setBlanksEndpoint,
-  setChapterStateEndpoint,
-  setChordStateEndpoint,
+  setChordsEndpoint,
+  setExtrasEndpoint,
   withBlanks,
-  withChapterState,
-  withChordState,
-  type Selection,
+  withChordChanges,
+  withExtras,
 } from "../../core";
 import { updateSelection } from "./state";
 
-export const handleSetChordState = implement(
-  setChordStateEndpoint,
+export const handleSetChords = implement(
+  setChordsEndpoint,
   async ({ body }) => {
-    await updateSelection(db, (s) => withChordState(s, body.token, body.state));
-  },
-);
-
-export const handleSetChapterState = implement(
-  setChapterStateEndpoint,
-  async ({ body }) => {
-    await updateSelection(db, (s) => {
-      const change = withChapterState(s, body.chapter, body.state);
-      if (!change.ok) throw new HttpError(409, change.reason);
-      return change.selection;
-    });
+    await updateSelection(db, (s) => withChordChanges(s, body.changes));
   },
 );
 
@@ -38,18 +24,9 @@ export const handleSetBlanks = implement(
   },
 );
 
-export const handleApplyCell = implement(
-  applyCellEndpoint,
+export const handleSetExtras = implement(
+  setExtrasEndpoint,
   async ({ body }) => {
-    // `cellSelection` throws on a chapter or row the path does not have: a
-    // client that names one is out of date, which is a bad request.
-    let next: Selection;
-    try {
-      next = cellSelection(body.cell);
-    } catch (err) {
-      if (err instanceof Error) throw new HttpError(400, err.message);
-      throw err;
-    }
-    await updateSelection(db, () => next);
+    await updateSelection(db, (s) => withExtras(s, body.extras));
   },
 );

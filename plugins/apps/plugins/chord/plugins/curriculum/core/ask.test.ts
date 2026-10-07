@@ -24,7 +24,6 @@ const asked = (
     windowBeats: 16,
     blanks: "all",
     practised: new Set([I, IV, V]),
-    target: V,
     ...over,
   });
 
@@ -43,20 +42,44 @@ describe("askedPositions", () => {
     expect(asked(LOOP, { blanks: "half" })).toEqual([2, 3]);
   });
 
-  test("one: the target's last box, alone", () => {
-    expect(asked(LOOP, { blanks: "one", target: I })).toEqual([3]);
-    expect(asked(LOOP, { blanks: "one", target: IV })).toEqual([1]);
+  test("random: half the practised boxes, rounded up, drawn by the given random", () => {
+    // Always the first remaining box: the draw keeps the beat order's head.
+    expect(asked(LOOP, { blanks: "random", random: () => 0 })).toEqual([0, 1]);
+    // Always the last remaining box: 3 first, then (swapped into its place) 0.
+    expect(asked(LOOP, { blanks: "random", random: () => 0.999 })).toEqual([
+      0, 3,
+    ]);
+    // Three practised boxes: two asked.
+    const practised = new Set([IV, V, I]);
+    const three = LOOP.slice(0, 3);
+    expect(
+      asked(three, { blanks: "random", practised, random: () => 0 }),
+    ).toHaveLength(2);
+  });
+
+  test("random: every draw is a set of distinct practised boxes", () => {
+    let seed = 7;
+    const random = () => {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    };
+    const practised = new Set([IV, V]);
+    for (let i = 0; i < 50; i++) {
+      const positions = asked(LOOP, { blanks: "random", practised, random });
+      expect(positions).toHaveLength(1);
+      expect([1, 2]).toContain(positions[0] ?? -1);
+    }
   });
 
   test("never empty: half with nothing practised in the second half asks the last practised box", () => {
-    expect(
-      asked(LOOP, { blanks: "half", practised: new Set([IV]), target: IV }),
-    ).toEqual([1]);
+    expect(asked(LOOP, { blanks: "half", practised: new Set([IV]) })).toEqual([
+      1,
+    ]);
   });
 
-  test("a target that is not practised, or a round with no practised chord, throws", () => {
-    expect(() => asked(LOOP, { target: vi })).toThrow(/not a practised chord/);
-    expect(() => asked(LOOP, { practised: new Set([vi]), target: vi })).toThrow(
+  test("a chord that is not practised is never asked, and a round with none throws", () => {
+    expect(asked(LOOP, { practised: new Set([vi, IV]) })).toEqual([1]);
+    expect(() => asked(LOOP, { practised: new Set([vi]) })).toThrow(
       /no practised chord/,
     );
   });

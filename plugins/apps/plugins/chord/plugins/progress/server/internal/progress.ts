@@ -11,17 +11,12 @@ import {
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { startOfLocalDay } from "@plugins/packages/plugins/wall-clock/core";
 import {
-  BLANKS,
-  type Blanks,
-} from "@plugins/apps/plugins/chord/plugins/curriculum/core";
-import {
   MASTERY_WINDOW,
   chordMastery,
   decodeProgressParams,
   type ChordAnswerSample,
   type ChordProgress,
   type ChordProgressParams,
-  type ChordStanding,
 } from "../../core";
 
 const RecentAnswerRowSchema = z.object({
@@ -71,58 +66,37 @@ async function recentAnswers(
   return byToken;
 }
 
-const LevelAnswerRowSchema = z.object({
-  token: ChordTokenSchema,
-  blanks: z.enum(BLANKS),
+const PooledAnswerRowSchema = z.object({
   correct: z.boolean(),
   answerMs: z.number().int(),
 });
 
 /**
- * Each (token, blanks level)'s last `MASTERY_WINDOW` answers, most recent
- * first: one index scan of `(token, blanks, answered_at desc, position desc)`
- * per pair. Answers with no level (saved before the setting existed) are read
- * by neither.
+ * The last `MASTERY_WINDOW` answers given for any chord NOT in `listed`, taken
+ * together, most recent first: the pooled standing of the chords the Rare
+ * joker answers.
+ *
+ * Walks `chord_answers_answered_at_idx` backwards, skipping listed chords,
+ * until it has the window — so it reads every answer newer than the 20th rare
+ * one. That grows with the history only while rare answers are scarce, and is
+ * one learner's history: small. The listed set is one array param.
  */
-async function recentAnswersByLevel(
+async function pooledUnlistedAnswers(
   db: NodePgDatabase,
-  tokens: readonly ChordToken[],
-): Promise<Map<string, ChordAnswerSample[]>> {
-  const byPair = new Map<string, ChordAnswerSample[]>();
-  for (const token of tokens) {
-    for (const blanks of BLANKS) byPair.set(pairKey(token, blanks), []);
-  }
-  if (tokens.length === 0) return byPair;
-  const rows = await executeRows(db, {
-    label: "chord.progress recent answers by blanks",
+  listed: ReadonlySet<ChordToken>,
+): Promise<ChordAnswerSample[]> {
+  return executeRows(db, {
+    label: "chord.progress pooled rare answers",
     query: sql`
-      SELECT t.token, l.blanks, a.correct, a.answer_ms AS "answerMs"
-      FROM unnest(${sql.param(tokens)}::text[]) WITH ORDINALITY AS t(token, ord)
-      CROSS JOIN unnest(${sql.param([...BLANKS])}::text[]) AS l(blanks)
-      CROSS JOIN LATERAL (
-        SELECT correct, answer_ms, answered_at, position
-        FROM "chord_answers"
-        WHERE chord_answers.token = t.token AND chord_answers.blanks = l.blanks
-        ORDER BY answered_at DESC, position DESC
-        LIMIT ${MASTERY_WINDOW}
-      ) a
-      ORDER BY t.ord, l.blanks, a.answered_at DESC, a.position DESC
+      SELECT correct, answer_ms AS "answerMs"
+      FROM "chord_answers"
+      WHERE NOT (token = ANY(${sql.param([...listed])}::text[]))
+      ORDER BY answered_at DESC, position DESC
+      LIMIT ${MASTERY_WINDOW}
     `,
-    row: LevelAnswerRowSchema,
+    row: PooledAnswerRowSchema,
   });
-  for (const row of rows) {
-    const list = byPair.get(pairKey(row.token, row.blanks));
-    if (list === undefined) {
-      throw new Error(
-        `chord.progress: the database answered for ${row.token} at ${row.blanks}, which was not asked for`,
-      );
-    }
-    list.push({ correct: row.correct, answerMs: row.answerMs });
-  }
-  return byPair;
 }
-
-const pairKey = (token: ChordToken, blanks: Blanks) => `${token}|${blanks}`;
 
 const TotalsRowSchema = z.object({
   todaySongs: z.number().int(),
@@ -167,19 +141,21 @@ async function totals(db: NodePgDatabase, since: Date) {
  * The `chord.progress` value for one (time zone, chord set). Throws on params
  * `decodeProgressParams` refuses (an unknown time zone, a malformed set).
  *
- * Takes the database and the clock as parameters so a suite can drive it on a
- * throwaway at a chosen instant.
+ * `listed` is the catalog's listed chords: every chord outside it is rare, and
+ * pooled. Takes it, the database and the clock as parameters so a suite can
+ * drive it on a throwaway at a chosen instant with a stub catalog.
  */
 export async function loadChordProgress(
   db: NodePgDatabase,
   params: ChordProgressParams,
+  listed: ReadonlySet<ChordToken>,
   now: Date = new Date(),
 ): Promise<ChordProgress> {
   const { timeZone, tokens } = decodeProgressParams(params);
   const since = startOfLocalDay(now, timeZone);
-  const [recent, byLevel, t] = await Promise.all([
+  const [recent, pooled, t] = await Promise.all([
     recentAnswers(db, tokens),
-    recentAnswersByLevel(db, tokens),
+    pooledUnlistedAnswers(db, listed),
     totals(db, since),
   ]);
   return {
@@ -188,17 +164,9 @@ export async function loadChordProgress(
       if (answers === undefined) {
         throw new Error(`chord.progress: no answer list for token ${token}`);
       }
-      const byBlanks = Object.fromEntries(
-        BLANKS.map((blanks) => {
-          const m = chordMastery(byLevel.get(pairKey(token, blanks)) ?? []);
-          return [
-            blanks,
-            { answers: m.answers, accuracy: m.accuracy, mastered: m.mastered },
-          ];
-        }),
-      ) as ChordStanding["byBlanks"];
-      return { token, ...chordMastery(answers), byBlanks };
+      return { token, ...chordMastery(answers) };
     }),
+    rare: pooled.length === 0 ? null : chordMastery(pooled),
     today: {
       songs: t.todaySongs,
       answers: t.todayAnswers,

@@ -11,6 +11,7 @@ import {
   findLoopsWhere,
   nextChordsQuery,
   playableVideoWhere,
+  tokenSetsQuery,
 } from "./find";
 
 const dialect = new PgDialect();
@@ -19,52 +20,106 @@ const IV = "5:4-3/0";
 const V = "7:4-3/0";
 
 describe("findLoopsWhere", () => {
-  it("binds the target and the unlocked set as whole arrays", () => {
+  it("leads with the practised overlap and binds the playable set as one array", () => {
     const body = FindLoopsBodySchema.parse({
-      unlocked: [I, IV, V],
-      target: IV,
+      playable: [I, IV, V],
+      practised: [IV],
+      extras: 0,
       limit: 10,
     });
     const { sql, params } = dialect.sqlToQuery(findLoopsWhere(body));
     expect(sql).toContain(`"chord_loop_windows"."shape" = $1`);
-    expect(sql).toContain(`"chord_loop_windows"."chord_tokens" @> $2`);
+    expect(sql).toContain(`"chord_loop_windows"."chord_tokens" && $2`);
     expect(sql).toContain(`"chord_loop_windows"."chord_tokens" <@ $3`);
+    expect(sql).not.toContain("@> $");
     // The column's array encoder sends each array as one Postgres array literal.
     expect(params).toEqual(["bars-4", `{"${IV}"}`, `{"${I}","${IV}","${V}"}`]);
   });
 
+  it("a focus adds the windows-holding-it test", () => {
+    const body = FindLoopsBodySchema.parse({
+      playable: [I, IV, V],
+      practised: [I, IV],
+      extras: 0,
+      focus: IV,
+      limit: 10,
+    });
+    const { sql, params } = dialect.sqlToQuery(findLoopsWhere(body));
+    expect(sql).toContain(`"chord_loop_windows"."chord_tokens" @> $2`);
+    expect(sql).toContain(`"chord_loop_windows"."chord_tokens" && $3`);
+    expect(params.slice(1, 3)).toEqual([`{"${IV}"}`, `{"${I}","${IV}"}`]);
+  });
+
+  it("extras 1 and 2 count the chords outside the playable set instead of <@", () => {
+    for (const extras of [1, 2] as const) {
+      const body = FindLoopsBodySchema.parse({
+        playable: [I, IV],
+        practised: [I],
+        extras,
+        limit: 10,
+      });
+      const { sql, params } = dialect.sqlToQuery(findLoopsWhere(body));
+      expect(sql).not.toContain("<@");
+      expect(sql).toContain(
+        `cardinality(array(SELECT t FROM unnest("chord_loop_windows"."chord_tokens") AS t WHERE NOT (t = ANY($3::text[])))) <= $4`,
+      );
+      expect(params.slice(2)).toEqual([[I, IV], extras]);
+    }
+  });
+
+  it("extras any drops the containment test altogether", () => {
+    const body = FindLoopsBodySchema.parse({
+      playable: [I, IV],
+      practised: [I],
+      extras: "any",
+      limit: 10,
+    });
+    const { sql } = dialect.sqlToQuery(findLoopsWhere(body));
+    expect(sql).not.toContain("<@");
+    expect(sql).not.toContain("cardinality");
+    expect(sql).toContain("&&");
+  });
+
   it("adds the optional filters only when given", () => {
     const body = FindLoopsBodySchema.parse({
-      unlocked: [I, IV],
-      target: I,
-      modes: ["major", "mixolydian"],
+      playable: [I, IV],
+      practised: [I],
+      extras: 0,
       requireFeatures: ["seventh"],
       forbidFeatures: ["borrowed", "applied"],
       excludeSectionIds: ["qveoYyGGodn"],
       limit: 5,
     });
     const { sql, params } = dialect.sqlToQuery(findLoopsWhere(body));
-    expect(sql).toContain(`"chord_loop_windows"."key_mode" in ($4, $5)`);
-    expect(sql).toContain(`"chord_loop_windows"."features" @> $6`);
-    expect(sql).toContain(`not "chord_loop_windows"."features" && $7`);
-    expect(sql).toContain(`"chord_loop_windows"."section_id" not in ($8)`);
+    expect(sql).toContain(`"chord_loop_windows"."features" @> $4`);
+    expect(sql).toContain(`not "chord_loop_windows"."features" && $5`);
+    expect(sql).toContain(`"chord_loop_windows"."section_id" not in ($6)`);
+    expect(sql).not.toContain("key_mode");
     expect(params.slice(3)).toEqual([
-      "major",
-      "mixolydian",
       '{"seventh"}',
       '{"borrowed","applied"}',
       "qveoYyGGodn",
     ]);
   });
 
-  it("refuses a target outside the unlocked set", () => {
-    const result = FindLoopsBodySchema.safeParse({
-      unlocked: [I, V],
-      target: IV,
+  it("refuses a practised chord that is not playable, and a focus not practised", () => {
+    const notPlayable = FindLoopsBodySchema.safeParse({
+      playable: [I, V],
+      practised: [IV],
+      extras: 0,
       limit: 10,
     });
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["target"]);
+    expect(notPlayable.success).toBe(false);
+    expect(notPlayable.error?.issues[0]?.path).toEqual(["practised"]);
+    const badFocus = FindLoopsBodySchema.safeParse({
+      playable: [I, V],
+      practised: [I],
+      extras: 0,
+      focus: V,
+      limit: 10,
+    });
+    expect(badFocus.success).toBe(false);
+    expect(badFocus.error?.issues[0]?.path).toEqual(["focus"]);
   });
 });
 
@@ -78,11 +133,12 @@ describe("playableVideoWhere", () => {
   });
 
   it("is not part of the windows-only WHERE", () => {
-    // `findLoopsWhere` is the set `nextChordsQuery` counts, which deliberately
-    // ignores the videos; it must stand on the windows table alone.
+    // `findLoopsWhere` stands on the windows table alone, like the counts,
+    // which deliberately ignore the videos.
     const body = FindLoopsBodySchema.parse({
-      unlocked: [I, IV],
-      target: I,
+      playable: [I, IV],
+      practised: [I],
+      extras: 0,
       limit: 10,
     });
     const { sql } = dialect.sqlToQuery(findLoopsWhere(body));
@@ -133,6 +189,17 @@ describe("nextChordsQuery", () => {
     const { sql, params } = dialect.sqlToQuery(nextChordsQuery(body));
     expect(sql).toContain(`"chord_loop_windows"."key_mode" in ($3)`);
     expect(params).toEqual([[I], "bars-4", "minor", 5]);
+  });
+});
+
+describe("tokenSetsQuery", () => {
+  it("groups the windows of one shape by key mode and chord set", () => {
+    const { sql, params } = dialect.sqlToQuery(
+      tokenSetsQuery({ shape: "bars-4" }),
+    );
+    expect(sql).toContain("GROUP BY 1, 2");
+    expect(sql).toContain('"chord_loop_windows"."shape" = $1');
+    expect(params).toEqual(["bars-4"]);
   });
 });
 

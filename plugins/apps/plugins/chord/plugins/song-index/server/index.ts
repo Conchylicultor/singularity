@@ -33,11 +33,15 @@ import {
 
 // What another server plugin in this backend reads in process — the index is a
 // server plugin like any other, and HTTP between two of them would be the wrong
-// seam. The two counts a curriculum ranks its next step with, and the readiness
+// seam. The counts a curriculum ranks or catalogs chords with, and the readiness
 // read its own endpoint gates on, so it answers `not-ready` with the status
 // exactly as the handlers here do rather than "nothing left to learn".
-export { countLoopsByNextChord, countLoopsInSet } from "./internal/find";
-export { loadIndexStatus } from "./internal/state";
+export {
+  countLoopsByNextChord,
+  countLoopsInSet,
+  countTokenSets,
+} from "./internal/find";
+export { loadIndexStatus, loadReadyIndexIdentity } from "./internal/state";
 
 export default {
   description:

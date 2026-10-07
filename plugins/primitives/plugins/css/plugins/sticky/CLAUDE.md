@@ -86,6 +86,7 @@ toggle, silently resetting any child component state (e.g. an inner
     - `stickyOffsetPx`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/curriculum`
     - `apps/mail/search`
     - `apps/prototypes/canvas`
     - `code-explorer/commit-detail`

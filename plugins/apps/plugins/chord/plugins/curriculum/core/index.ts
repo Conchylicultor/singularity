@@ -1,7 +1,11 @@
-export { STAGE_IDS, STAGES, StageIdSchema, stageById, stageOf } from "./stages";
-export type { Stage, StageId } from "./stages";
-export { BLANKS, BlanksSchema } from "./blanks";
-export type { Blanks } from "./blanks";
+export {
+  BLANKS,
+  BLANKS_LABEL,
+  BlanksSchema,
+  RECORDED_BLANKS,
+  RecordedBlanksSchema,
+} from "./blanks";
+export type { Blanks, RecordedBlanks } from "./blanks";
 export { askedPositions } from "./ask";
 export type { AskedBox, AskedOptions } from "./ask";
 export {
@@ -11,43 +15,56 @@ export {
   SelectionSchema,
   canonicalSelection,
   chordState,
+  firstSelection,
   playableChords,
   practisedChords,
   sameSelection,
 } from "./selection";
 export type { ChordState, SelectedChord, Selection } from "./selection";
 export {
-  ALL_CELLS,
-  BLANKS_LABEL,
-  CHAPTERS,
-  PATH_TOKENS,
-  ROUTE,
-  cellName,
-  cellOf,
-  cellSelection,
-  cellStanding,
-  chapterById,
-  firstSelection,
-  nextCell,
-  onRoute,
-  pathOrder,
-  routeOf,
-  sameCell,
-} from "./path";
+  CatalogChordSchema,
+  CatalogSchema,
+  CatalogSectionSchema,
+  CatalogStateSchema,
+  CatalogTrackSchema,
+  LISTED_SHARE,
+  MAX_FOLDED_RARE,
+  RareGroupSchema,
+  SectionKindSchema,
+  buildCatalog,
+  catalogOrder,
+  chordPlaces,
+  groupState,
+  isListed,
+  listedTokens,
+  sectionTokens,
+  suggestedNext,
+  trackStanding,
+  trackTokens,
+} from "./catalog";
 export type {
-  Cell,
-  CellStanding,
-  Chapter,
-  PathRow,
-  TokenStanding,
-} from "./path";
-export { chordCurriculum } from "./resource";
+  Catalog,
+  CatalogChord,
+  CatalogSection,
+  CatalogState,
+  CatalogTrack,
+  ChordPlace,
+  RareGroup,
+  SectionKind,
+  TrackStanding,
+} from "./catalog";
+export { chordCatalog, chordCurriculum } from "./resource";
 export {
-  CellSchema,
-  applyCellEndpoint,
+  MAX_CHORD_CHANGES,
   setBlanksEndpoint,
-  setChapterStateEndpoint,
-  setChordStateEndpoint,
+  setChordsEndpoint,
+  setExtrasEndpoint,
 } from "./endpoints";
-export { withBlanks, withChapterState, withChordState } from "./change";
-export type { SelectionChange } from "./change";
+export {
+  ChordChangeSchema,
+  withBlanks,
+  withChordChanges,
+  withChordState,
+  withExtras,
+} from "./change";
+export type { ChordChange } from "./change";

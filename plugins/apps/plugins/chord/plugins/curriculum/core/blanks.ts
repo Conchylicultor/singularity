@@ -2,13 +2,30 @@ import { z } from "zod";
 
 // ── How much of the loop the learner names ───────────────────────────────────
 //
-// One of the two things the learner chooses (the other is which chords they
-// practise). Only practised chords are ever blank; every other box is given.
+// One of the things the learner chooses (the others: which chords, and how
+// many other chords a loop may hold). Only practised chords are ever blank;
+// every other box is given.
 //
-//   one  → a single box: the last one of the chord being practised
-//   half → every practised box in the loop's second half (the cadence)
-//   all  → every practised box
+//   all    → every practised box
+//   random → half of the practised boxes, rounded up, picked when the loop is dealt
+//   half   → every practised box in the loop's second half (the cadence): "Last half"
 
-export const BLANKS = ["one", "half", "all"] as const;
+export const BLANKS = ["all", "random", "half"] as const;
 export const BlanksSchema = z.enum(BLANKS);
 export type Blanks = z.infer<typeof BlanksSchema>;
+
+/** How each setting is named on its control. */
+export const BLANKS_LABEL: Record<Blanks, string> = {
+  all: "All",
+  random: "Random half",
+  half: "Last half",
+};
+
+/**
+ * Every blanks setting a saved answer can carry: the settable ones, plus
+ * `one` (the target's last box), which the path offered and which recorded
+ * answers still hold. Nothing can set it any more.
+ */
+export const RECORDED_BLANKS = [...BLANKS, "one"] as const;
+export const RecordedBlanksSchema = z.enum(RECORDED_BLANKS);
+export type RecordedBlanks = z.infer<typeof RecordedBlanksSchema>;

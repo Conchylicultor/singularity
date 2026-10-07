@@ -80,6 +80,28 @@ export async function loadIndexStatus(): Promise<IndexStatus> {
   return indexStatus(requested, state);
 }
 
+/**
+ * Which index is loaded — its snapshot, scope, derivation version and window
+ * count, as one string — or null while none is ready (the same rule as
+ * `loadIndexStatus`). A reader that builds something from the whole index
+ * keys its memo on it: it moves with every load that could change the rows.
+ */
+export async function loadReadyIndexIdentity(): Promise<string | null> {
+  const [requested, state] = await Promise.all([
+    isIndexRequested(),
+    readIndexState(),
+  ]);
+  if (indexStatus(requested, state).kind !== "ready" || state === null) {
+    return null;
+  }
+  return [
+    state.snapshotName,
+    state.scope,
+    state.derivationVersion,
+    state.windows,
+  ].join("|");
+}
+
 /** Record that this instance uses the app. Keeps the first request's time. */
 export async function recordIndexRequest(): Promise<void> {
   await db

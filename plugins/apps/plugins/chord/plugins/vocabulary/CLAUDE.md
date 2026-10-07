@@ -22,6 +22,7 @@ songVocabulary(key)      → { nameChord, noteName }              // "D7", "D/F�
 // web/ — the one drawing of a chord
 <ChordNumeral token/>    // the numeral, its mark and figure raised beside it
 chordToneStyle(token)    // --fn / --fn-depth, which .chord-tone reads
+chordPaint(paint)        // "chord-tone chord-<paint>": tile | tint | tint-quiet | ghost
 ```
 
 ## Naming
@@ -105,11 +106,36 @@ by the curriculum staying small.
 
 ## Drawing
 
-`web/` is the one place a chord is drawn: `<ChordNumeral>` and
-`chordToneStyle`, with `.chord-tone` / `.chord-num` in `chord-paint.css`. The
-trainer and the curriculum both use them, so one chord reads the same in an
-answer box, on a button, in a panel chip and in the Path card's chips and map. Sizes
-belong to the surface, not here.
+`web/` is the one place a chord is drawn: `<ChordNumeral>`,
+`chordToneStyle`, and `chordPaint`, with `.chord-tone` / `.chord-num` and the
+four paints in `chord-paint.css`. The trainer and the curriculum both use them,
+so one chord reads the same in an answer box, on a button, in a panel chip and
+in the Chords section's chips.
+
+**A surface applies a paint by name and never re-states a chord colour.** Its
+component maps its own state to a paint (`chordPaint("tile")`, the Chords
+section's `STATE_PAINT`), and its CSS keeps only geometry and state chrome —
+sizes, radii, the selected / marked / lit edges, shadows, the edge width via
+`--chord-edge` (a paint owns the edge's style and colour; 1.5px by default).
+The paints:
+
+| paint        | fill / edge                                   | numeral (`--chord-ink`)        | worn by |
+|--------------|-----------------------------------------------|--------------------------------|---------|
+| `tile`       | `--fn-bg` (the colour deepened), no edge      | `--fn-ink` (washed to white)   | a filled answer box, a lit button, a "Your chords" chip, a practised chip and its legend swatch |
+| `tint`       | 7 % wash, 55 % edge                           | the chord colour               | a Hear chip and its swatch |
+| `tint-quiet` | 7 % wash, 22 % edge                           | the chord colour at 55 %       | a given answer box |
+| `ghost`      | none, dashed `--input` edge                   | `--faint-foreground` at 60 %   | an empty answer box, an Off chip and its swatch |
+
+Two tint strengths, not one: a Hear chip sits among other chips and must read
+as ON at a glance; a given box sits beside the boxes being asked and must
+recede. The wash is shared so they read as one family.
+
+A label inside a painted surface that should read with the numeral (a box's
+chord name, a lit button's name, a chip's marks) takes
+`color: var(--chord-ink, <its unpainted colour>)`. Uses of the raw `--fn` as a
+LINE — the meter fill, a button's colour bar, the sounding box's ring, a lit
+button's edge — and the piano's keys (which read `--fn-bg` as a value) are not
+paints and stay with their surface. Sizes belong to the surface, not here.
 
 ## Voicing, and what the app actually sounds
 
@@ -136,11 +162,13 @@ surface.
 
 ## Plugin reference
 
-- Description: How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads). Shared by the trainer's boxes, buttons and chips and by the curriculum's Path card (its chips and map rows), so one chord reads the same everywhere.
+- Description: How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour. Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
 - Web:
   - Uses: `primitives/css/ui-kit.cn`
+  - Exports (types): `ChordPaint`
   - Exports (values):
     - `ChordNumeral`
+    - `chordPaint`
     - `chordToneStyle`
 - Core:
   - Uses:

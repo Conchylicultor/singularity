@@ -75,7 +75,6 @@ Shared (both paths):
     - `apps-core/surface/floating/wallpaper`
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
-    - `apps/chord/curriculum`
     - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
     - `apps/pages/page-tree`

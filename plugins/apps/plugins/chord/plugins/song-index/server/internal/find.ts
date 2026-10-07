@@ -14,7 +14,10 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import type { HookpadMode } from "@plugins/integrations/plugins/hooktheory/core";
+import {
+  HookpadModeSchema,
+  type HookpadMode,
+} from "@plugins/integrations/plugins/hooktheory/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
   UNPLAYABLE_STATUSES,
@@ -25,6 +28,7 @@ import {
   ensureVideoStatus,
 } from "@plugins/apps/plugins/chord/plugins/video-availability/server";
 import {
+  ChordTokenSchema,
   DEFAULT_LOOP_SHAPE,
   LoopWindowFieldsSchema,
   NextChordCountSchema,
@@ -33,10 +37,12 @@ import {
   type ChordToken,
   type FindLoopsBody,
   type LoopCandidate,
+  type LoopExtras,
   type LoopShapeId,
   type NextChordCount,
   type NextChordsBody,
   type StoredChord,
+  type TokenSetCount,
   type TokenizedChord,
 } from "../../core";
 import { _chordLoopWindows, _chordSections } from "./tables";
@@ -54,31 +60,54 @@ const s = _chordSections;
 
 /**
  * The one rule for "a window this learner can be given": a window of the shape,
- * in one of the modes, every chord of it unlocked — and, when a target is
- * named, holding that chord. `find` and `countLoopsInSet` both go through it,
+ * in one of the modes (when named), whose chords are playable — or, with
+ * `extras`, all but at most that many — and, when named, holding a practised
+ * chord and the focus chord. `find` and `countLoopsInSet` both go through it,
  * so the two can never disagree about which windows are playable.
  *
- * The `<@` test is the GIN-indexed one; `@>` on the target is the selective
- * part `find` leads with.
+ * The GIN-indexed tests lead: `@>` on the focus, `&&` on the practised chords,
+ * `<@` on the playable set (extras `0`). Extras `1` and `2` count the chords
+ * outside the playable set per row instead — an array subtraction over the ≤ 4
+ * distinct tokens of a window, like `nextChordsQuery`; `any` drops the test.
  */
 export function unlockedWindowsWhere(args: {
   shape: LoopShapeId;
-  unlocked: readonly ChordToken[];
-  /** The chord being learned: keep only windows holding it. */
-  target?: ChordToken;
+  /** The chords a window may hold. */
+  playable: readonly ChordToken[];
+  /** How many chords outside `playable` a window may hold besides. Absent = 0. */
+  extras?: LoopExtras;
+  /** Keep only windows holding at least one of these. */
+  practised?: readonly ChordToken[];
+  /** Keep only windows holding this chord. */
+  focus?: ChordToken;
   modes?: readonly HookpadMode[];
 }): SQL {
-  if (args.unlocked.length === 0) {
+  if (args.playable.length === 0) {
     throw new Error(
-      "an empty unlocked set matches no window: nothing has been unlocked yet",
+      "an empty playable set matches no window: nothing has been turned on yet",
+    );
+  }
+  if (args.practised !== undefined && args.practised.length === 0) {
+    throw new Error(
+      "an empty practised set matches no window: a window must hold a practised chord",
     );
   }
   const conditions: SQL[] = [eq(w.shape, args.shape)];
-  // Selective: the windows holding the target, straight off the GIN index.
-  if (args.target !== undefined)
-    conditions.push(arrayContains(w.chordTokens, [args.target]));
-  // Every chord of the window is unlocked.
-  conditions.push(arrayContained(w.chordTokens, [...args.unlocked]));
+  // Selective: the windows holding the focus, straight off the GIN index.
+  if (args.focus !== undefined)
+    conditions.push(arrayContains(w.chordTokens, [args.focus]));
+  if (args.practised !== undefined)
+    conditions.push(arrayOverlaps(w.chordTokens, [...args.practised]));
+  const extras = args.extras ?? 0;
+  if (extras === 0) {
+    // Every chord of the window is playable.
+    conditions.push(arrayContained(w.chordTokens, [...args.playable]));
+  } else if (extras !== "any") {
+    const playable = sql`${sql.param([...args.playable])}::text[]`;
+    conditions.push(
+      sql`cardinality(array(SELECT t FROM unnest(${w.chordTokens}) AS t WHERE NOT (t = ANY(${playable})))) <= ${extras}`,
+    );
+  }
   if (args.modes) conditions.push(inArray(w.keyMode, [...args.modes]));
   const where = and(...conditions);
   if (where === undefined)
@@ -90,16 +119,16 @@ export function unlockedWindowsWhere(args: {
  * The WHERE of `findLoopWindows` over the windows, built apart so its SQL can
  * be checked without a database. The video's condition is `playableVideoWhere`,
  * kept out of this one because it needs the sections and the video status
- * joined: this one stands on the windows table alone, and it is exactly the
- * set `nextChordsQuery` counts (see why that count ignores the videos there).
+ * joined: this one stands on the windows table alone.
  */
 export function findLoopsWhere(body: FindLoopsBody): SQL {
   const conditions: SQL[] = [
     unlockedWindowsWhere({
       shape: body.shape,
-      unlocked: body.unlocked,
-      target: body.target,
-      modes: body.modes,
+      playable: body.playable,
+      extras: body.extras,
+      practised: body.practised,
+      focus: body.focus,
     }),
   ];
   if (body.requireFeatures)
@@ -165,8 +194,8 @@ export function chordsInWindow(
 }
 
 /**
- * Random windows whose chords are all unlocked and include the target, with
- * what the trainer needs to play them — on a video not known to be unplayable.
+ * Random windows holding a practised chord, whose other chords are playable
+ * (up to `extras` of them need not be), with what the trainer needs to play them — on a video not known to be unplayable.
  *
  * Three steps: the query leaves out the videos already known dead and fetches
  * `limit * CANDIDATE_OVERFETCH` rows; one wave of checks (`ensureVideoStatus`)
@@ -345,7 +374,7 @@ export type LoopSetCountArgs = {
 /**
  * The query behind `countLoopsInSet`, built apart so a database test can run it
  * on a throwaway. It selects on `unlockedWindowsWhere` — the same rule `find`
- * uses — with no target, so a window counts only when every chord in it is in
+ * uses — with no practised chord and no extras, so a window counts only when every chord in it is in
  * the set: one chord outside and it is not this learner's yet.
  */
 export function loopsInSetQuery(args: LoopSetCountArgs): SQL {
@@ -354,7 +383,7 @@ export function loopsInSetQuery(args: LoopSetCountArgs): SQL {
     FROM ${w}
     WHERE ${unlockedWindowsWhere({
       shape: args.shape ?? DEFAULT_LOOP_SHAPE,
-      unlocked: args.unlocked,
+      playable: args.unlocked,
       modes: args.modes,
     })}
   `;
@@ -376,4 +405,40 @@ export async function countLoopsInSet(args: LoopSetCountArgs): Promise<number> {
   const row = rows[0];
   if (row === undefined) throw new Error("count(*) returned no row");
   return row.windows;
+}
+
+const TokenSetCountRowSchema = z.object({
+  mode: HookpadModeSchema,
+  tokens: z.array(ChordTokenSchema),
+  windows: z.number().int().min(1),
+});
+
+/** The query behind `countTokenSets`, built apart so a database test can run it. */
+export function tokenSetsQuery(args: { shape: LoopShapeId }): SQL {
+  return sql`
+    SELECT ${w.keyMode} AS mode, ${w.chordTokens} AS tokens, count(*)::int AS windows
+    FROM ${w}
+    WHERE ${w.shape} = ${args.shape}
+    GROUP BY 1, 2
+  `;
+}
+
+/**
+ * Every distinct (key mode, chord set) of the windows of a shape, with how
+ * many windows have it: the whole index folded to what a chord catalog needs
+ * — which chords occur, in which modes, and together — in one scan (on the
+ * full index, 83,752 rows over 183,270 windows).
+ *
+ * Like the other counts it ignores the videos, and it does not check
+ * readiness: gate it on `loadIndexStatus()`, since before the load it answers
+ * no rows, which would read as an index with no chords.
+ */
+export async function countTokenSets(args: {
+  shape: LoopShapeId;
+}): Promise<TokenSetCount[]> {
+  return executeRows(db, {
+    label: "chord.song-index token sets",
+    query: tokenSetsQuery(args),
+    row: TokenSetCountRowSchema,
+  });
 }

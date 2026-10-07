@@ -146,7 +146,6 @@ export const ICON_MANIFEST: {
     "grid-view",
     "groups",
     "hard-drive",
-    "hearing",
     "heart-broken",
     "help",
     "hide-image",

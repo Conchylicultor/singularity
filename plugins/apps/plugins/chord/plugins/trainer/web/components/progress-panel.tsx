@@ -1,26 +1,29 @@
+import type { ReactNode } from "react";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
   MASTERY_WINDOW,
   TARGET_ACCURACY,
   TARGET_MEDIAN_MS,
   type ChordProgress,
-  type ChordStanding,
+  type MasteryStanding,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
   ChordNumeral,
+  chordPaint,
   chordToneStyle,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
 import {
-  pathOrder,
+  catalogOrder,
+  type Catalog,
   type Selection,
 } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import {
-  PathCard,
-  PathProgress,
+  ChordsSection,
   type StandingLookup,
 } from "@plugins/apps/plugins/chord/plugins/curriculum/web";
 import {
+  foldResource,
   matchResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -42,33 +45,61 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { desiredShare } from "../../core";
 
 const checkIcon = symbol("check");
 
 /**
- * The side panel: today's totals, a quieter all-time line, "Your chords" —
- * the progress bar of the path's chapter in hand, then one line per chord that
- * is on, in path order (a chord only heard is dimmed and says so) — and the
- * Path card, folded, which holds every practice control.
+ * The side panel: today's totals, a quieter all-time line, "Your chords" — one
+ * line per listed chord that is on, in catalog order (track, section, share;
+ * a chord only heard is dimmed and says so), and one Rare line when a chord
+ * no track lists is on, standing for every rare chord answered, pooled (the
+ * Rare button answers them all) — and the Chords section
+ * (curriculum), which holds every practice control.
  *
  * "Your chords" is a plain component, not a DataView: it is a small fixed
- * status list (the chords on, a few dozen at most, in path order), not a
+ * status list (the chords on, a few dozen at most, in catalog order), not a
  * collection anyone searches, sorts or filters.
  */
 export function ProgressPanel({
   progress,
   selection,
+  catalog,
+  listed,
 }: {
   progress: ResourceResult<ChordProgress>;
   selection: Selection;
+  catalog: Catalog;
+  /** Whether a track lists a chord: the ones it does not are pooled as Rare. */
+  listed: (token: ChordToken) => boolean;
 }) {
   return (
     <Card className="rounded-2xl" aria-label="Your progress">
       <Stack gap="lg">
         {matchResource(progress, {
           loading: () => <Loading variant="rows" count={4} />,
-          ready: (p) => <PanelBody progress={p} selection={selection} />,
+          ready: (p) => (
+            <PanelBody
+              progress={p}
+              selection={selection}
+              catalog={catalog}
+              listed={listed}
+            />
+          ),
         })}
+        {/* Outside the progress gate: the section must never remount (it
+            would lose its Undo) — the progress read is keyed on the catalog
+            alone, so a chord change does not send it back to loading, but a
+            catalog reload or a read failure must not take the section down. */}
+        <ChordsSection
+          selection={selection}
+          catalog={catalog}
+          standing={foldResource(progress, {
+            loading: () => null,
+            error: () => null,
+            ready: standingLookup,
+          })}
+        />
       </Stack>
     </Card>
   );
@@ -77,26 +108,25 @@ export function ProgressPanel({
 function PanelBody({
   progress,
   selection,
+  catalog,
+  listed,
 }: {
   progress: ChordProgress;
   selection: Selection;
+  catalog: Catalog;
+  listed: (token: ChordToken) => boolean;
 }) {
   const { today, allTime } = progress;
   const byToken = new Map(progress.chords.map((c) => [c.token, c] as const));
-  // The path reads each chord at each blanks level: how far along, and whether
-  // mastered. A chord the server did not list has never been answered.
-  const standing: StandingLookup = (token, blanks) => {
-    const level = byToken.get(token)?.byBlanks[blanks];
-    if (level === undefined) return { progress: 0, mastered: false };
-    return {
-      progress:
-        (level.accuracy ?? 0) * Math.min(1, level.answers / MASTERY_WINDOW),
-      mastered: level.mastered,
-    };
-  };
-  const chords = [...selection.chords].sort((a, b) =>
-    pathOrder(a.token, b.token),
-  );
+  const order = new Map(catalogOrder(catalog).map((t, i) => [t, i] as const));
+  const chords = selection.chords
+    .filter((c) => listed(c.token))
+    .sort(
+      (a, b) =>
+        (order.get(a.token) ?? Infinity) - (order.get(b.token) ?? Infinity),
+    );
+  const rare = selection.chords.filter((c) => !listed(c.token));
+  const rarePractised = rare.some((c) => c.state === "practice");
   return (
     <Stack gap="lg">
       <Stack gap="sm">
@@ -124,21 +154,49 @@ function PanelBody({
         <Text variant="caption" tone="faint" className="font-semibold">
           Your chords
         </Text>
-        <PathProgress standing={standing} />
         <Stack gap="none">
           {chords.map(({ token, state }) => (
             <ChordStandingLine
               key={token}
-              token={token}
+              chip={<ChordNumeral token={token} />}
+              label={chordLabel(token).text}
+              tone={token}
               heardOnly={state === "hear"}
               standing={byToken.get(token) ?? null}
             />
           ))}
+          {rare.length > 0 && (
+            <ChordStandingLine
+              chip={<span className="chord-chip-word">Rare</span>}
+              label={`Rare (${String(rare.length)} chord${rare.length === 1 ? "" : "s"} no track lists)`}
+              tone={null}
+              heardOnly={!rarePractised}
+              standing={progress.rare}
+            />
+          )}
         </Stack>
       </Stack>
-      <PathCard selection={selection} standing={standing} />
     </Stack>
   );
+}
+
+/**
+ * Each practised chord as the Chords section draws it: its mastery and the
+ * share of the loops it gets now. A chord the server did not list has never
+ * been answered: new, at the new chord's share.
+ */
+function standingLookup(progress: ChordProgress): StandingLookup {
+  const byToken = new Map(progress.chords.map((c) => [c.token, c] as const));
+  return (key) => {
+    const s = key === "rare" ? progress.rare : (byToken.get(key) ?? null);
+    return {
+      answers: s?.answers ?? 0,
+      window: MASTERY_WINDOW,
+      accuracy: s?.accuracy ?? null,
+      mastered: s?.mastered ?? false,
+      loopShare: desiredShare(s),
+    };
+  };
 }
 
 function Stat({ value, label }: { value: string; label: string }) {
@@ -167,30 +225,38 @@ function percent(correct: number, answers: number): string {
  * `standing` is null for a chord the server did not list (never answered).
  */
 function ChordStandingLine({
-  token,
+  chip,
+  label,
+  tone,
   heardOnly,
   standing,
 }: {
-  token: ChordToken;
+  /** What the chip shows: the chord's numeral, or the word Rare. */
+  chip: ReactNode;
+  label: string;
+  /** The chord whose colour the line wears; null for the neutral Rare line. */
+  tone: ChordToken | null;
   /** Played in loops but never asked: the line says so instead of scoring it. */
   heardOnly: boolean;
-  standing: ChordStanding | null;
+  standing: MasteryStanding | null;
 }) {
   const answers = standing?.answers ?? 0;
   const accuracy = standing?.accuracy ?? null;
   const medianMs = standing?.medianMs ?? null;
   const mastered = standing?.mastered ?? false;
-  const label = chordLabel(token).text;
+  const toneStyle = tone === null ? undefined : chordToneStyle(tone);
   if (heardOnly) {
     return (
       <Line
         className="chord-tone gap-xs border-b border-border py-xs last:border-b-0"
-        style={chordToneStyle(token)}
+        style={toneStyle}
         data-heard-only=""
         title={`${label}: hear only — it plays in loops, always given`}
       >
-        <Center className={cn(rigidClass(), "chord-chip w-11")}>
-          <ChordNumeral token={token} />
+        <Center
+          className={cn(rigidClass(), "chord-chip w-11", chordPaint("tile"))}
+        >
+          {chip}
         </Center>
         <Fill>
           <Text variant="caption" tone="faint">
@@ -207,11 +273,13 @@ function ChordStandingLine({
   return (
     <Line
       className="chord-tone gap-xs border-b border-border py-xs last:border-b-0"
-      style={chordToneStyle(token)}
+      style={toneStyle}
       title={title}
     >
-      <Center className={cn(rigidClass(), "chord-chip w-11")}>
-        <ChordNumeral token={token} />
+      <Center
+        className={cn(rigidClass(), "chord-chip w-11", chordPaint("tile"))}
+      >
+        {chip}
       </Center>
       <Fill className="relative">
         <Clip className="chord-meter relative w-full">

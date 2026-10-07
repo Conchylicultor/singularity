@@ -1,26 +1,30 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
-  applyCellEndpoint,
   setBlanksEndpoint,
-  setChapterStateEndpoint,
-  setChordStateEndpoint,
+  setChordsEndpoint,
+  setExtrasEndpoint,
 } from "../core";
 import {
-  handleApplyCell,
   handleSetBlanks,
-  handleSetChapterState,
-  handleSetChordState,
+  handleSetChords,
+  handleSetExtras,
 } from "./internal/handlers";
-import { chordCurriculumServed } from "./internal/resource";
+import { chordCatalogServed, chordCurriculumServed } from "./internal/resource";
+
+// For a server plugin in the same backend: whether the catalog lists a chord,
+// which decides whether the Rare joker answers it (progress judges a round's
+// answers with it). `loadListedChords` is the whole set, for a reader that
+// needs the complement (progress pools every unlisted chord as Rare).
+export { isListedChord, loadListedChords } from "./internal/catalog";
+export type { ListedChordsState } from "./internal/catalog";
 
 export default {
   description:
-    "The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; the key modes), the live chord.curriculum resource, and the four writes — one chord, a whole chapter, the blanks, or a cell of the path.",
+    "The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, and the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index.",
   httpRoutes: {
-    [setChordStateEndpoint.route]: handleSetChordState,
-    [setChapterStateEndpoint.route]: handleSetChapterState,
+    [setChordsEndpoint.route]: handleSetChords,
     [setBlanksEndpoint.route]: handleSetBlanks,
-    [applyCellEndpoint.route]: handleApplyCell,
+    [setExtrasEndpoint.route]: handleSetExtras,
   },
   contributions: [
     // `chord_curriculum` is kept in forks, backups and the change feed on
@@ -28,5 +32,6 @@ export default {
     // it is the learner's own choice, which nothing can rebuild, and the feed
     // is what pushes `chord.curriculum`. No growth bound: it is one row.
     ...chordCurriculumServed.declare,
+    ...chordCatalogServed.declare,
   ],
 } satisfies ServerPluginDefinition;

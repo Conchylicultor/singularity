@@ -1,9 +1,12 @@
-/* How a chord is drawn, wherever it is drawn: its colour and its numeral.
+/* How a chord is drawn, wherever it is drawn: its colour, its numeral, and
+ * the four named paints a chord surface wears.
  *
  * Every surface that shows a chord — the trainer's answer boxes and buttons,
- * the side panel's chips, the curriculum's Path card — shares these two
- * rules, so the same chord reads the same everywhere. The paint around them
- * (the box states, the pad's shadow) stays with the surface that owns it.
+ * the side panel's chips, the curriculum's Chords section — shares these
+ * rules, so the same chord reads the same everywhere. A surface picks a paint
+ * BY NAME (`chordPaint(…)`, `chord-paint.ts`) and keeps only its geometry and
+ * its state chrome (sizes, radii, the selected / marked / lit edges, the pad's
+ * shadow); it never re-states a chord colour.
  *
  * Colours READ the chord theme (`chordTheme`, shell): the chord colours are
  * `--categorical-N`. No hex lives here; black and white appear only as the ends
@@ -18,14 +21,71 @@
   --fn-ink: color-mix(in srgb, var(--fn, var(--categorical-10)) 10%, white);
 }
 
-/* ── The numeral ──────────────────────────────────────────────────────────── */
+/* ── The paints ──────────────────────────────────────────────────────────────
+ * Each sets the surface's fill and edge, and `--chord-ink`: the colour of the
+ * numeral and of any label inside that should read as one with it (a surface
+ * label opts in with `color: var(--chord-ink, <its unpainted colour>)`).
+ *
+ * The edge's WIDTH is the surface's: `--chord-edge` (1.5px unless the surface
+ * says otherwise). A paint owns style and colour only, so a surface never
+ * re-declares `border` and races this file in the cascade.
+ *
+ *   tile        — solid: the deepened chord colour, numeral and labels in the
+ *                 light ink. A chord the learner names: a filled answer box, a
+ *                 lit button, a practised chip, a "Your chords" chip.
+ *   tint        — outline + light wash, numeral in the chord colour: a chord
+ *                 that is on but not asked (a Hear chip, its legend swatch).
+ *   tint-quiet  — the same tint, quieter: a fainter edge and the numeral
+ *                 dimmed. A given answer box — printed beside the boxes being
+ *                 asked, it must recede behind them, where a Hear chip sits
+ *                 among other chips and must read as ON at a glance. Same wash
+ *                 (7 %), so the two read as one family; two strengths, not
+ *                 one, because the one place they would meet (a given box
+ *                 beside a blank one) needs the quieter edge.
+ *   ghost       — off / empty: a dashed neutral edge, no fill, a faint numeral.
+ */
+.chord-tile,
+.chord-tint,
+.chord-tint-quiet,
+.chord-ghost {
+  border-width: var(--chord-edge, 1.5px);
+  color: var(--chord-ink);
+}
+.chord-tile {
+  --chord-ink: var(--fn-ink);
+  background: var(--fn-bg);
+  border-style: solid;
+  border-color: transparent;
+}
+.chord-tint {
+  --chord-ink: var(--fn, var(--categorical-10));
+  background: color-mix(in srgb, var(--fn, var(--categorical-10)) 7%, transparent);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--fn, var(--categorical-10)) 55%, transparent);
+}
+.chord-tint-quiet {
+  --chord-ink: color-mix(in srgb, var(--fn, var(--categorical-10)) 55%, transparent);
+  background: color-mix(in srgb, var(--fn, var(--categorical-10)) 7%, transparent);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--fn, var(--categorical-10)) 22%, transparent);
+}
+.chord-ghost {
+  --chord-ink: color-mix(in srgb, var(--faint-foreground) 60%, transparent);
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--input);
+}
+
+/* ── The numeral ──────────────────────────────────────────────────────────────
+ * In the paint's ink; unpainted (a button at rest, the footer), the chord's
+ * own colour. */
 .chord-num {
   font-family: var(--font-serif);
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1;
   white-space: nowrap;
-  color: var(--fn, var(--foreground));
+  color: var(--chord-ink, var(--fn, var(--foreground)));
 }
 .chord-num-mark {
   font-family: var(--font-sans);

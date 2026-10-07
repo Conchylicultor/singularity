@@ -26,10 +26,11 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import type { Blanks } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
+import type { RecordedBlanks } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import {
   MASTERY_WINDOW,
   encodeProgressParams,
+  type Answer,
   type RecordRoundBody,
 } from "../../core";
 import { loadChordProgress } from "./progress";
@@ -39,6 +40,15 @@ import { _chordAnswers, _chordRounds } from "./tables";
 const I = "0:4-3/0" as ChordToken;
 const IV = "5:4-3/0" as ChordToken;
 const V = "7:4-3/0" as ChordToken;
+/** Two chords the stub catalog below does not list: the Rare joker answers them. */
+const rareA = "1:1-1/0" as ChordToken;
+const rareB = "6:4-4/2" as ChordToken;
+
+/** A catalog that lists every chord but `rareA` and `rareB`. */
+const isListed = (token: ChordToken) =>
+  Promise.resolve(token !== rareA && token !== rareB);
+/** The same stub catalog as a set: what the progress loader pools against. */
+const LISTED: ReadonlySet<ChordToken> = new Set([I, IV, V]);
 
 let t: TestDb;
 
@@ -55,13 +65,13 @@ beforeEach(async () => {
   await t.db.execute(sql`TRUNCATE chord_rounds CASCADE`);
 });
 
-type Answer = { token: ChordToken; answer: ChordToken; answerMs?: number };
+type Given = { token: ChordToken; answer: Answer; answerMs?: number };
 
 /** A round checked at `at`, its answers in the order given, asked at `blanks` (none: before the setting existed). */
 async function roundAt(
   at: Date,
-  answers: Answer[],
-  blanks: Blanks | null = null,
+  answers: Given[],
+  blanks: RecordedBlanks | null = null,
 ): Promise<void> {
   const [round] = await t.db
     .insert(_chordRounds)
@@ -72,7 +82,7 @@ async function roundAt(
       startBeat: 1,
       checkedAt: at,
       boxCount: answers.length,
-      correctCount: answers.filter((a) => a.token === a.answer).length,
+      correctCount: answers.filter((a) => right(a)).length,
     })
     .returning({ id: _chordRounds.id });
   if (round === undefined) throw new Error("no round inserted");
@@ -82,13 +92,19 @@ async function roundAt(
       position,
       token: a.token,
       answer: a.answer,
-      correct: a.token === a.answer,
+      correct: right(a),
       answerMs: a.answerMs ?? 1000,
       answeredAt: at,
       blanks,
     })),
   );
 }
+
+/** The rule the server applies, against the stub catalog. */
+const right = (a: Given) =>
+  a.answer === "rare"
+    ? a.token === rareA || a.token === rareB
+    : a.answer === a.token;
 
 const params = (timeZone: string, tokens: ChordToken[]) =>
   encodeProgressParams({ timeZone, tokens });
@@ -108,7 +124,7 @@ describe("recordRound", () => {
       givenCount: 0,
       blanks: "all",
     };
-    const { roundId } = await recordRound(t.db, body);
+    const { roundId } = await recordRound(t.db, body, isListed);
 
     const [round] = await t.db
       .select()
@@ -151,15 +167,19 @@ describe("recordRound", () => {
   test("a scaffolded round writes only the boxes the learner named", async () => {
     // Four boxes in the loop, one asked for: the answer is written at its own
     // position, and the three shown filled in are the round's `givenCount`.
-    const { roundId } = await recordRound(t.db, {
-      sectionId: "abc_DEF-1",
-      videoId: "dQw4w9WgXcQ",
-      shape: "bars-4",
-      startBeat: 1,
-      answers: [{ position: 2, token: V, answer: V, answerMs: 1100 }],
-      givenCount: 3,
-      blanks: "one",
-    });
+    const { roundId } = await recordRound(
+      t.db,
+      {
+        sectionId: "abc_DEF-1",
+        videoId: "dQw4w9WgXcQ",
+        shape: "bars-4",
+        startBeat: 1,
+        answers: [{ position: 2, token: V, answer: V, answerMs: 1100 }],
+        givenCount: 3,
+        blanks: "random",
+      },
+      isListed,
+    );
     const [round] = await t.db
       .select()
       .from(_chordRounds)
@@ -174,6 +194,51 @@ describe("recordRound", () => {
       .from(_chordAnswers)
       .where(eq(_chordAnswers.roundId, roundId));
     expect(answers.map((a) => a.position)).toEqual([2]);
+  });
+});
+
+describe("recordRound: the Rare joker", () => {
+  test("is right for a chord the catalog does not list, and wrong for a listed one", async () => {
+    const asked: ChordToken[] = [];
+    const { roundId } = await recordRound(
+      t.db,
+      {
+        sectionId: "abc_DEF-1",
+        videoId: "dQw4w9WgXcQ",
+        shape: "bars-4",
+        startBeat: 1,
+        answers: [
+          { position: 0, token: rareA, answer: "rare", answerMs: 900 },
+          { position: 1, token: I, answer: "rare", answerMs: 900 },
+          { position: 2, token: rareB, answer: I, answerMs: 900 },
+          { position: 3, token: V, answer: V, answerMs: 900 },
+        ],
+        givenCount: 0,
+        blanks: "all",
+      },
+      (token) => {
+        asked.push(token);
+        return isListed(token);
+      },
+    );
+    // The catalog is asked only about boxes answered Rare.
+    expect(asked.sort()).toEqual([I, rareA].sort());
+    const answers = await t.db
+      .select()
+      .from(_chordAnswers)
+      .where(eq(_chordAnswers.roundId, roundId))
+      .orderBy(_chordAnswers.position);
+    expect(answers.map((a) => [a.answer, a.correct])).toEqual([
+      ["rare", true],
+      ["rare", false],
+      [I, false],
+      [V, true],
+    ]);
+    const [round] = await t.db
+      .select()
+      .from(_chordRounds)
+      .where(eq(_chordRounds.id, roundId));
+    expect(round?.correctCount).toBe(2);
   });
 });
 
@@ -204,7 +269,12 @@ describe("loadChordProgress", () => {
       await roundAt(new Date(base + i * 1000), [{ token: IV, answer: IV }]);
     }
 
-    const p = await loadChordProgress(t.db, params("UTC", [V, I, IV]), now);
+    const p = await loadChordProgress(
+      t.db,
+      params("UTC", [V, I, IV]),
+      LISTED,
+      now,
+    );
     expect(p.chords).toMatchObject([
       {
         token: I,
@@ -233,39 +303,59 @@ describe("loadChordProgress", () => {
     ]);
   });
 
-  test("each blanks level is judged on its own last MASTERY_WINDOW answers", async () => {
+  test("every unlisted chord stands in one pool: their last MASTERY_WINDOW answers together", async () => {
     const base = Date.parse("2026-09-01T12:00:00Z");
-    // I: 20 right at "one", 3 wrong at "all", 5 with no level (before the setting).
-    for (let i = 0; i < MASTERY_WINDOW; i++) {
-      await roundAt(
-        new Date(base + i * 1000),
-        [{ token: I, answer: I }],
-        "one",
-      );
+    // 15 old wrong answers for rareA, then 12 recent right ones for each.
+    for (let i = 0; i < 15; i++) {
+      await roundAt(new Date(base + i * 1000), [{ token: rareA, answer: I }]);
     }
-    for (let i = 0; i < 3; i++) {
-      await roundAt(
-        new Date(base + i * 1000),
-        [{ token: I, answer: V }],
-        "all",
-      );
+    for (let i = 0; i < 12; i++) {
+      await roundAt(new Date(base + (100 + i) * 1000), [
+        { token: rareA, answer: "rare" },
+        { token: rareB, answer: "rare" },
+      ]);
     }
+    // Newer answers for listed chords are not part of the pool.
     for (let i = 0; i < 5; i++) {
-      await roundAt(new Date(base + i * 1000), [{ token: I, answer: I }]);
+      await roundAt(new Date(base + (200 + i) * 1000), [
+        { token: I, answer: V },
+      ]);
     }
-    const p = await loadChordProgress(t.db, params("UTC", [I]), now);
-    expect(p.chords[0]?.byBlanks).toEqual({
-      one: { answers: 20, accuracy: 1, mastered: true },
-      half: { answers: 0, accuracy: null, mastered: false },
-      all: { answers: 3, accuracy: 0, mastered: false },
-    });
-    // The overall window reads every answer, levelled or not.
-    expect(p.chords[0]?.answers).toBe(MASTERY_WINDOW);
+    // The pool does not depend on the tokens asked for.
+    for (const tokens of [[I], []]) {
+      const p = await loadChordProgress(
+        t.db,
+        params("UTC", tokens),
+        LISTED,
+        now,
+      );
+      // The 24 right ones are the newest rare answers: the window holds 20 of them.
+      expect(p.rare).toMatchObject({
+        answers: MASTERY_WINDOW,
+        correct: MASTERY_WINDOW,
+        accuracy: 1,
+        mastered: true,
+      });
+    }
+    // A catalog that lists rareA too: only rareB's 12 right answers are rare.
+    const wider = await loadChordProgress(
+      t.db,
+      params("UTC", [I]),
+      new Set([...LISTED, rareA]),
+      now,
+    );
+    expect(wider.rare).toMatchObject({ answers: 12, correct: 12 });
+  });
+
+  test("no rare chord ever answered: the pool is null", async () => {
+    await roundAt(new Date("2026-09-18T10:00:00Z"), [{ token: I, answer: I }]);
+    const p = await loadChordProgress(t.db, params("UTC", [I]), LISTED, now);
+    expect(p.rare).toBeNull();
   });
 
   test("a chord never answered has an empty standing, and the empty set is fine", async () => {
     await roundAt(new Date("2026-09-18T10:00:00Z"), [{ token: I, answer: I }]);
-    const p = await loadChordProgress(t.db, params("UTC", [V]), now);
+    const p = await loadChordProgress(t.db, params("UTC", [V]), LISTED, now);
     expect(p.chords).toMatchObject([
       {
         token: V,
@@ -276,7 +366,7 @@ describe("loadChordProgress", () => {
         mastered: false,
       },
     ]);
-    const none = await loadChordProgress(t.db, params("UTC", []), now);
+    const none = await loadChordProgress(t.db, params("UTC", []), LISTED, now);
     expect(none.chords).toEqual([]);
     expect(none.allTime).toEqual({ songs: 1, answers: 1, correct: 1 });
   });
@@ -298,7 +388,7 @@ describe("loadChordProgress", () => {
     ]);
 
     // UTC: midnight 00:00Z — the last three rounds.
-    const utc = await loadChordProgress(t.db, params("UTC", [I]), now);
+    const utc = await loadChordProgress(t.db, params("UTC", [I]), LISTED, now);
     expect(utc.today).toEqual({
       songs: 3,
       answers: 4,
@@ -310,6 +400,7 @@ describe("loadChordProgress", () => {
     const ny = await loadChordProgress(
       t.db,
       params("America/New_York", [I]),
+      LISTED,
       now,
     );
     expect(ny.today).toEqual({
@@ -320,7 +411,12 @@ describe("loadChordProgress", () => {
     });
 
     // Tokyo: it is 00:00 on the 19th there — nothing yet today.
-    const tokyo = await loadChordProgress(t.db, params("Asia/Tokyo", [I]), now);
+    const tokyo = await loadChordProgress(
+      t.db,
+      params("Asia/Tokyo", [I]),
+      LISTED,
+      now,
+    );
     expect(tokyo.today).toEqual({
       songs: 0,
       answers: 0,
@@ -343,6 +439,7 @@ describe("loadChordProgress", () => {
     const p = await loadChordProgress(
       t.db,
       params("America/New_York", [I]),
+      LISTED,
       fallBack,
     );
     expect(p.today.songs).toBe(2);
@@ -353,7 +450,12 @@ describe("loadChordProgress", () => {
     expect(
       (
         await rejection(
-          loadChordProgress(t.db, { timeZone: "Not/AZone", tokens: "" }, now),
+          loadChordProgress(
+            t.db,
+            { timeZone: "Not/AZone", tokens: "" },
+            LISTED,
+            now,
+          ),
         )
       ).message,
     ).toMatch(/not a time zone/);
@@ -363,6 +465,7 @@ describe("loadChordProgress", () => {
           loadChordProgress(
             t.db,
             { timeZone: "UTC", tokens: "7:4-3/0,0:4-3/0" },
+            LISTED,
             now,
           ),
         )

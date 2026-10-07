@@ -45,6 +45,9 @@ function round(tokens: readonly ChordToken[] = [I, IV, V, I]): Round {
 
 const ALL = [0, 1, 2, 3];
 
+/** A catalog listing every chord: the Rare joker is never right. */
+const everyListed = () => true;
+
 describe("emptySheet", () => {
   it("fills the given boxes in and selects the first asked one", () => {
     const sheet = emptySheet(round(), [2]);
@@ -79,7 +82,7 @@ describe("a round with one asked box", () => {
     const sheet = fillSelected(emptySheet(r, [2]), V, 1_400);
     expect(sheet.checked).toBe(true);
     expect(sheet.selected).toBeNull();
-    expect(sheetScore(sheet, r)).toEqual({
+    expect(sheetScore(sheet, r, everyListed)).toEqual({
       right: 1,
       total: 1,
       totalMs: 1_400,
@@ -89,14 +92,14 @@ describe("a round with one asked box", () => {
   it("records only the asked box, and says how many were given", () => {
     const r = round();
     const sheet = fillSelected(emptySheet(r, [2]), IV, 900);
-    expect(recordRoundBody(sheet, r, "one")).toEqual({
+    expect(recordRoundBody(sheet, r, "half")).toEqual({
       sectionId: "abc_123",
       videoId: "X1Fqn9du7xo",
       shape: "bars-4",
       startBeat: 1,
       answers: [{ position: 2, token: V, answer: IV, answerMs: 900 }],
       givenCount: 3,
-      blanks: "one",
+      blanks: "half",
     });
   });
 });
@@ -138,11 +141,33 @@ describe("a given box is out of reach", () => {
     sheet = fillSelected(sheet, V, 800);
     expect(sheet.checked).toBe(true);
     expect(sheet.answers).toEqual([I, IV, V, V]);
-    expect(sheetScore(sheet, r)).toEqual({
+    expect(sheetScore(sheet, r, everyListed)).toEqual({
       right: 1,
       total: 2,
       totalMs: 1_600,
     });
+  });
+});
+
+describe("the Rare joker", () => {
+  it("fills a box like a chord, and scores by the catalog", () => {
+    const bII = major(1);
+    const r = round([I, bII, V, I]);
+    const sheet = fillSelected(
+      fillSelected(emptySheet(r, [1, 2]), "rare", 1_000),
+      "rare",
+      1_000,
+    );
+    expect(sheet.answers).toEqual([I, "rare", "rare", I]);
+    // ♭II is not listed, V is: one right, one wrong.
+    expect(sheetScore(sheet, r, (token) => token !== bII)).toEqual({
+      right: 1,
+      total: 2,
+      totalMs: 2_000,
+    });
+    expect(
+      recordRoundBody(sheet, r, "all").answers.map((a) => a.answer),
+    ).toEqual(["rare", "rare"]);
   });
 });
 
@@ -156,7 +181,7 @@ describe("a round asking for every box", () => {
       sheet = fillSelected(sheet, token, 1_000);
     }
     expect(sheet.checked).toBe(true);
-    expect(sheetScore(sheet, r)).toEqual({
+    expect(sheetScore(sheet, r, everyListed)).toEqual({
       right: 4,
       total: 4,
       totalMs: 4_000,

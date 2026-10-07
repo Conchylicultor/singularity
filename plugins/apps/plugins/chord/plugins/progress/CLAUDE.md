@@ -9,13 +9,14 @@ the answer they gave for each box, and the stats the side panel shows. Design:
 ```ts
 // The trainer, once every box it asked for is filled. One transaction.
 POST /api/chord/rounds
-  { sectionId, videoId, shape, startBeat, givenCount,
-    answers: [{ position, token, answer, answerMs }] }   → { roundId }
+  { sectionId, videoId, shape, startBeat, givenCount, blanks,
+    answers: [{ position, token, answer: ChordToken | "rare", answerMs }] }   → { roundId }
 
-// The panel: the standing of each unlocked chord, today, and all time.
+// The panel: the standing of each chord on, the rare chords pooled, today, and all time.
 const params = encodeProgressParams({
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  tokens: unlocked,
+  tokens: listedOn,
+  rare: practisedUnlisted,   // [] → `rare: null`
 });
 const progress = useLive(chordProgress, params);
 
@@ -23,9 +24,14 @@ const progress = useLive(chordProgress, params);
 chordMastery(answersMostRecentFirst) → { answers, correct, accuracy, medianMs, mastered }
 ```
 
-- **Right or wrong is decided by the server** (`token === answer`); the client
-  never sends it. `boxCount` and `correctCount` on the round come from the same
-  decision.
+- **Right or wrong is decided by the server** (`isRightAnswer(token, answer,
+  listed)`): the chord itself, or the **Rare joker** (`answer: "rare"`) for a
+  chord the catalog does not list — read through the curriculum's server
+  export `isListedChord`, asked only about boxes answered Rare (it needs the
+  index ready, as the round's loop did). A listed chord named for a rare one,
+  or Rare for a listed one, is wrong. The client never sends the verdict;
+  `boxCount` and `correctCount` on the round come from the same decision, and
+  the trainer scores its sheet with the same `isRightAnswer`.
 - **Answer times** must be whole ms in `MIN_ANSWER_MS`…`MAX_ANSWER_MS`
   (300 ms – 30 s). The trainer clamps; the endpoint refuses anything outside.
 - **A round asks for only some of its boxes.** The curriculum scaffolds the
@@ -49,15 +55,31 @@ each chord's last 20 answers; the panel shows what comes back.
 ## `chord.progress`
 
 `chordProgress`, a `liveValue` with `params: ["timeZone", "tokens"]` (so its
-params are `ChordProgressParams`: two strings). `tokens` is the chord set
-sorted (plain string order), deduplicated and joined by commas, so one set is
-one subscription. Build params only with `encodeProgressParams`:
+params are `ChordProgressParams`: two strings). `tokens` is a chord set sorted
+(plain string order), deduplicated and joined by commas, so one set is one
+subscription. Build params only with `encodeProgressParams`:
 `decodeProgressParams` (which the loader runs) throws on an unknown time zone,
-on a malformed token, and on any other spelling of the set. `chords` comes back
+on a malformed token, and on any other spelling of a set. `chords` comes back
 in that sorted order; a panel that wants its own order sorts it itself.
 
+**The params never depend on the learner's selection.** The trainer asks for
+every LISTED chord of the catalog (`listedTokens`), so its subscription is keyed
+on the catalog alone: toggling a chord never re-keys the read, which would send
+it back to `pending` (the panel's loading state, no `desired` for the queue — a
+flash on every chip click).
+
+`rare` is ONE pooled `MasteryStanding` over the last 20 answers given for any
+chord the catalog does NOT list — decided by the server, from the curriculum's
+`loadListedChords`, not by the params — or null when no rare chord was ever
+answered: the Rare row of "Your chords", and the rare chords' desired share of
+loops. One query walks `chord_answers_answered_at_idx` backwards, skipping the
+listed set (one array param), until it has 20 rows. While the song index is
+not loaded there is no catalog to say what is rare, and the loader **throws**
+rather than guess; the trainer subscribes only once `chord.catalog` is ready.
+
 - **Per chord**: one lateral index scan of `(token, answered_at desc,
-  position desc)`, `LIMIT 20` per token.
+  position desc)`, `LIMIT 20` per token — for every listed chord (a few hundred
+  on the full index), each a short index probe.
 - **Today**: since the local day began in `timeZone`, from
   [`startOfLocalDay`](../../../../../packages/plugins/wall-clock/CLAUDE.md), so
   the host's zone never matters — including on the two days a year the clocks
@@ -80,9 +102,12 @@ first value.
   filled in, 0 for every round checked before the curriculum). Indexed on
   `checked_at`.
 - `chord_answers`: one box (`position`, the `token` that played, the `answer`
-  picked, `correct`, `answer_ms`, `answered_at`). FK to the round, cascade.
-  Indexed on `(token, answered_at desc, position desc)`, on `answered_at`, and
-  on `round_id`.
+  picked — a token or `rare` —, `correct`, `answer_ms`, `answered_at`, and
+  `blanks`, a `RecordedBlanks`: the setting it was asked under, `one` for the
+  path's single box, null before the setting existed). FK to the round,
+  cascade. Indexed on `(token, answered_at desc, position desc)`, on
+  `answered_at`, and on `round_id`; the `(token, blanks, …)` index the path
+  read stays, unused.
 
 `answered_at` is the round's check time: the trainer reports how long each box
 took, not when it was filled. Inside a round, `position` orders the answers,
@@ -107,6 +132,8 @@ that are real.
 - Server:
   - Contributes: `resource.declare` "chord.progress"
   - Uses:
+    - `apps/chord/curriculum.isListedChord`
+    - `apps/chord/curriculum.loadListedChords`
     - `database.db`
     - `database/sql-column.parsedText`
     - `infra/endpoints.implement`
@@ -116,8 +143,6 @@ that are real.
   - Routes: `POST /api/chord/rounds`
 - Core:
   - Uses:
-    - `apps/chord/curriculum.Blanks`
-    - `apps/chord/curriculum.BLANKS`
     - `apps/chord/curriculum.BlanksSchema`
     - `apps/chord/song-index.ChordToken`
     - `apps/chord/song-index.ChordTokenSchema`
@@ -126,24 +151,27 @@ that are real.
     - `integrations/hooktheory.TheorytabSectionIdSchema`
     - `network/live.liveValue`
   - Exports (types):
+    - `Answer`
     - `ChordAnswerSample`
     - `ChordMastery`
     - `ChordProgress`
     - `ChordProgressParams`
     - `ChordStanding`
     - `DecodedProgressParams`
-    - `LevelStanding`
+    - `MasteryStanding`
     - `RecordRoundBody`
     - `RoundAnswer`
   - Exports (values):
+    - `AnswerSchema`
     - `chordMastery`
     - `chordProgress`
     - `ChordProgressSchema`
     - `ChordStandingSchema`
     - `decodeProgressParams`
     - `encodeProgressParams`
-    - `LevelStandingSchema`
+    - `isRightAnswer`
     - `MASTERY_WINDOW`
+    - `MasteryStandingSchema`
     - `MAX_ANSWER_MS`
     - `MIN_ANSWER_MS`
     - `RecordRoundBodySchema`
@@ -151,5 +179,7 @@ that are real.
     - `RoundAnswerSchema`
     - `TARGET_ACCURACY`
     - `TARGET_MEDIAN_MS`
+- Cross-plugin:
+  - Imported by: `apps/chord/trainer`
 
 <!-- AUTOGENERATED:END -->

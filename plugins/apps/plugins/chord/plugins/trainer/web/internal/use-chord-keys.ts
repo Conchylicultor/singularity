@@ -6,6 +6,7 @@ import {
   type ChordDigit,
   type ChordKeyGroup,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
+import type { Answer } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import type { ShortcutDescriptor } from "@plugins/primitives/plugins/shortcuts/web";
 
@@ -32,6 +33,10 @@ import type { ShortcutDescriptor } from "@plugins/primitives/plugins/shortcuts/w
 // The clock does not stop for the second key: a two-stroke answer costs what it
 // costs. That is honest, and it is one reason the curriculum keeps the palette
 // small.
+//
+// **The Rare joker has its own key** (`rareKey`), the next digit after the
+// plan's highest (or 0): it answers Rare in one stroke, armed or not — unless
+// the armed digit's picks use that very number, when Escape comes first.
 
 /** The digit waiting for a second key, and what that key reaches right now. */
 export type Picking = {
@@ -54,12 +59,23 @@ export type ChordKeys = {
 /** Which digit is armed, and how far down its list the second stroke reaches. */
 type Armed = { digit: ChordDigit; page: number };
 
+/** The digits, in order, a joker key is drawn from: the first one past the plan's highest, else 0. */
+const JOKER_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+
+/** The Rare joker's key for this plan: the next digit after its highest, or `0` when none is left. */
+export function rareKeyFor(plan: readonly ChordKeyGroup[]): string {
+  const highest = Math.max(0, ...plan.map((g) => Number(g.digit)));
+  return JOKER_KEYS.find((key) => Number(key) > highest) ?? "0";
+}
+
 export function useChordKeys(opts: {
-  /** The unlocked chords grouped by the key that answers them (`chordKeyPlan`). */
+  /** The practised listed chords grouped by the key that answers them (`chordKeyPlan`). */
   plan: readonly ChordKeyGroup[];
-  onPick: (token: ChordToken) => void;
+  /** The Rare joker's key, or null when no rare chord is practised. */
+  rareKey: string | null;
+  onPick: (answer: Answer) => void;
 }): ChordKeys {
-  const { plan, onPick } = opts;
+  const { plan, rareKey, onPick } = opts;
   const [armed, setArmed] = useState<Armed | null>(null);
 
   const pick = useEventCallback(onPick);
@@ -76,6 +92,21 @@ export function useChordKeys(opts: {
   }, [plan, armed]);
 
   const shortcuts = useMemo<ShortcutDescriptor[]>(() => {
+    const joker = (taken: ReadonlySet<string>): ShortcutDescriptor[] =>
+      rareKey === null || taken.has(rareKey)
+        ? []
+        : [
+            {
+              id: "chord.pick-rare",
+              keys: rareKey,
+              label: "Answer Rare",
+              group: "Chord",
+              handler: () => {
+                setArmed(null);
+                pick("rare");
+              },
+            },
+          ];
     // Armed: the number keys belong to this digit, and to nothing else on the
     // page. Only keys that pick something are registered, so a number with no
     // chord behind it stays free rather than swallowing the stroke.
@@ -104,6 +135,14 @@ export function useChordKeys(opts: {
             setArmed((a) => (a === null ? null : { ...a, page: a.page + 1 })),
         });
       }
+      armedKeys.push(
+        ...joker(
+          new Set<string>([
+            ...picking.numbers.values(),
+            ...(pager === null ? [] : [pager]),
+          ]),
+        ),
+      );
       armedKeys.push({
         id: "chord.pick-cancel",
         keys: "escape",
@@ -115,7 +154,7 @@ export function useChordKeys(opts: {
     }
     // At rest: one shortcut per digit the plan holds. A digit with one chord
     // answers; a digit with several arms at the first page.
-    return plan.map((group) => {
+    const atRest = plan.map((group): ShortcutDescriptor => {
       const only = group.tokens.length === 1 ? group.tokens[0] : undefined;
       return {
         id: `chord.pick-${group.digit}`,
@@ -134,7 +173,8 @@ export function useChordKeys(opts: {
         },
       };
     });
-  }, [plan, picking, pick]);
+    return [...atRest, ...joker(new Set(plan.map((g) => g.digit)))];
+  }, [plan, rareKey, picking, pick]);
 
   const cancel = useEventCallback(() => setArmed(null));
 

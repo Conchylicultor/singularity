@@ -92,7 +92,9 @@ export type { IndexLoadPhase, IndexPhase, IndexStatus } from "./index-status";
 export {
   CountLoopsInSetBodySchema,
   FIND_LOOPS_MAX_LIMIT,
+  LOOP_EXTRAS,
   LoopCandidateSchema,
+  LoopExtrasSchema,
   LoopWindowFieldsSchema,
   NEXT_CHORDS_MAX_LIMIT,
   countLoopsInSetEndpoint,
@@ -104,7 +106,9 @@ export type {
   CountLoopsInSetBody,
   FindLoopsBody,
   LoopCandidate,
+  LoopExtras,
   NextChordsBody,
+  TokenSetCount,
 } from "./endpoints";
 export {
   NextChordCountSchema,

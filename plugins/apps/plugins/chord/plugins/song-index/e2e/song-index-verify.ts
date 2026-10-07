@@ -2,13 +2,14 @@
 //
 //   1. `ensure` opens the index, and its status reaches `ready` (a first run on a
 //      machine downloads the dump and builds the snapshot: minutes);
-//   2. find with unlocked {I, IV, V} and target IV in major returns windows whose
+//   2. find with playable {I, IV, V}, IV practised, returns windows whose
 //      chords all lie inside the set, each containing IV;
 //   3. next-chords for {I, IV, V} returns a list ranked by the biggest single
 //      key mode's window count, each row split by mode;
-//   4. 100 random finds, timed, with p50 / p95 reported (target: p95 < 50 ms on
-//      the full index — a worktree loads the sample, so the number there is only
-//      indicative).
+//   4. 100 random finds per extras setting (0, 1, 2, any), timed, with p50 /
+//      p95 reported (target: p95 < 50 ms for extras 0 on the full index; 1 and 2
+//      scan like next-chords — a worktree loads the sample, so the numbers there
+//      are only indicative).
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/chord/plugins/song-index/e2e/song-index-verify.ts [--url http://<ns>.localhost:9000] [--timeout-min 15]
@@ -43,13 +44,13 @@ const V = major(7);
 
 await ensureReady(r, timeoutMs);
 
-// ── 2. find {I, IV, V} ∋ IV, major ───────────────────────────────────────────
+// ── 2. find {I, IV, V}, IV practised ─────────────────────────────────────────
 
 const found = FindResponseSchema.parse(
   await postJson("/api/chord/loops/find", {
-    unlocked: [I, IV, V],
-    target: IV,
-    modes: ["major"],
+    playable: [I, IV, V],
+    practised: [IV],
+    extras: 0,
     limit: 50,
   }),
 );
@@ -68,10 +69,6 @@ if (found.kind !== "ready") {
   r.ok(
     "every window contains IV",
     found.candidates.every((c) => c.window.chordTokens.includes(IV)),
-  );
-  r.ok(
-    "every window is in major",
-    found.candidates.every((c) => c.window.keyMode === "major"),
   );
   r.ok(
     "every candidate carries the chords sounding in its window",
@@ -144,29 +141,36 @@ const POOL = [
   major(10),
   major(3),
 ];
-const timings: number[] = [];
-for (let i = 0; i < 100; i++) {
-  const size = 2 + Math.floor(Math.random() * (POOL.length - 1));
-  const unlocked = [...POOL].sort(() => Math.random() - 0.5).slice(0, size);
-  const target = unlocked[Math.floor(Math.random() * unlocked.length)] ?? I;
-  const t0 = performance.now();
-  const res = FindResponseSchema.parse(
-    await postJson("/api/chord/loops/find", { unlocked, target, limit: 20 }),
-  );
-  timings.push(performance.now() - t0);
-  if (res.kind !== "ready") {
-    r.fail("find stays ready during the timing run", JSON.stringify(res));
-    break;
+for (const extras of [0, 1, 2, "any"] as const) {
+  const timings: number[] = [];
+  for (let i = 0; i < 100; i++) {
+    const size = 2 + Math.floor(Math.random() * (POOL.length - 1));
+    const playable = [...POOL].sort(() => Math.random() - 0.5).slice(0, size);
+    const practised = playable.slice(0, 1 + Math.floor(size / 2));
+    const t0 = performance.now();
+    const res = FindResponseSchema.parse(
+      await postJson("/api/chord/loops/find", {
+        playable,
+        practised,
+        extras,
+        limit: 20,
+      }),
+    );
+    timings.push(performance.now() - t0);
+    if (res.kind !== "ready") {
+      r.fail("find stays ready during the timing run", JSON.stringify(res));
+      break;
+    }
   }
+  timings.sort((a, b) => a - b);
+  const pct = (p: number) =>
+    timings[
+      Math.min(timings.length - 1, Math.ceil((p / 100) * timings.length) - 1)
+    ] ?? NaN;
+  r.note(
+    `find (extras ${extras}) over HTTP, ${timings.length} random calls: p50 ${pct(50).toFixed(1)} ms, p95 ${pct(95).toFixed(1)} ms, max ${pct(100).toFixed(1)} ms`,
+  );
+  r.ok(`100 random finds answered (extras ${extras})`, timings.length === 100);
 }
-timings.sort((a, b) => a - b);
-const pct = (p: number) =>
-  timings[
-    Math.min(timings.length - 1, Math.ceil((p / 100) * timings.length) - 1)
-  ] ?? NaN;
-r.note(
-  `find over HTTP, ${timings.length} random calls: p50 ${pct(50).toFixed(1)} ms, p95 ${pct(95).toFixed(1)} ms, max ${pct(100).toFixed(1)} ms`,
-);
-r.ok("100 random finds answered", timings.length === 100);
 
 await r.finish();

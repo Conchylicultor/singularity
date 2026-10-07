@@ -1,22 +1,45 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { RecordRoundBody } from "../../core";
+import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { isRightAnswer, type RecordRoundBody } from "../../core";
 import { _chordAnswers, _chordRounds } from "./tables";
 
 /**
  * Save one checked round and its answers in one transaction. Whether each
- * answer is right is decided here (`token === answer`); the counts on the
- * round are derived from the same decision. Every answer carries the round's
- * check time as its `answeredAt`.
+ * answer is right is decided here (`isRightAnswer`: the chord itself, or the
+ * Rare joker for a chord the catalog does not list); the counts on the round
+ * are derived from the same decision. Every answer carries the round's check
+ * time as its `answeredAt`.
  *
- * Takes the database as a parameter so a suite can drive it on a throwaway.
+ * `isListed` is the catalog's word on a chord (`isListedChord`, curriculum),
+ * asked only about the boxes answered Rare. Takes it and the database as
+ * parameters so a suite can drive this on a throwaway.
  */
 export async function recordRound(
   db: NodePgDatabase,
   body: RecordRoundBody,
+  isListed: (token: ChordToken) => Promise<boolean>,
 ): Promise<{ roundId: string }> {
+  const jokered = [
+    ...new Set(
+      body.answers.filter((a) => a.answer === "rare").map((a) => a.token),
+    ),
+  ];
+  const listed = new Map(
+    await Promise.all(
+      jokered.map(async (token) => [token, await isListed(token)] as const),
+    ),
+  );
   const answers = body.answers.map((a) => ({
     ...a,
-    correct: a.token === a.answer,
+    correct: isRightAnswer(a.token, a.answer, (token) => {
+      const known = listed.get(token);
+      if (known === undefined) {
+        throw new Error(
+          `recordRound: ${token} was not looked up in the catalog`,
+        );
+      }
+      return known;
+    }),
   }));
   return db.transaction(async (tx) => {
     const [round] = await tx

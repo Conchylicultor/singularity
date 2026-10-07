@@ -2,8 +2,8 @@
 
 The chord app's index of real songs: every TheoryTab section of Sheet Sage's
 Hooktheory dump, read into chords the trainer can compare, and cut into loops.
-It answers one question fast: *give me loops whose chords are all unlocked and
-that include the chord being learned.* Design: `research/2026-09-16-apps-chord-trainer-song-index.md`
+It answers one question fast: *give me loops holding a chord being practised,
+whose other chords are all on (or at most `extras` of them off).* Design: `research/2026-09-16-apps-chord-trainer-song-index.md`
 (v1: token, tables, query), `-v2.md` (snapshot, sample, backups), `-v3.md` (load
 on first use), `research/2026-09-17-apps-chord-trainer-song-index-v4.md` (this
 build).
@@ -14,10 +14,12 @@ build).
 // Open the index (idempotent). Starts a load when it is missing, stale or failed.
 POST /api/chord/index/ensure                → IndexStatus
 
-// Loops made only of `unlocked`, containing `target` (random order), on a video
-// not known to be unplayable. At most `limit` — possibly fewer.
-POST /api/chord/loops/find  { unlocked, target, shape?="bars-4", modes?, requireFeatures?,
-                              forbidFeatures?, excludeSectionIds?, limit ≤ 50 }
+// Loops holding at least one `practised` chord, every other chord `playable`
+// — or up to `extras` (0 | 1 | 2 | "any") outside it —, holding `focus` when
+// named (random order), on a video not known to be unplayable. At most
+// `limit` — possibly fewer. `practised` ⊆ `playable`, `focus` ∈ `practised`.
+POST /api/chord/loops/find  { playable, practised, extras, focus?, shape?="bars-4",
+                              requireFeatures?, forbidFeatures?, excludeSectionIds?, limit ≤ 50 }
   → { kind: "not-ready", status } | { kind: "ready", candidates: LoopCandidate[] }
 
 // For each chord outside `unlocked`: how many windows unlocking it adds, split
@@ -33,15 +35,20 @@ POST /api/chord/loops/count-in-set  { unlocked, shape?, modes? }
   → { kind: "not-ready", status } | { kind: "ready", windows }
 ```
 
-Two counts are also exported from the **server barrel**, for a plugin in the
-same backend (the curriculum ranks its next step with them; HTTP between two
+Three counts are also exported from the **server barrel**, for a plugin in the
+same backend (the curriculum builds its catalog with them; HTTP between two
 server plugins would be the wrong seam):
 
 ```ts
 countLoopsByNextChord(body)                        → NextChordCount[]   // the same rows as the endpoint
 countLoopsInSet({ unlocked, modes?, shape? })      → number             // windows made only of this set
+countTokenSets({ shape })                          → TokenSetCount[]    // GROUP BY key_mode, chord_tokens: { mode, tokens, windows }
 loadIndexStatus()                                  → IndexStatus        // gate your own read on it
+loadReadyIndexIdentity()                           → string | null      // which index is loaded (snapshot|scope|derivation|windows); a memo key
 ```
+
+`countTokenSets` is the whole index folded to what a chord catalog needs (on
+the full index: 83,752 rows over 183,270 windows, ~0.3 s).
 
 Gate an in-process read on `loadIndexStatus()` the way the handlers here do:
 before the index is `ready` the counts are 0, which would read as "nothing
@@ -93,7 +100,14 @@ The two reads answer about the same windows:
   "whichever modes were scanned" is a number no caller can read. `modes` still
   narrows which windows are scanned.
 - `countLoopsInSet` selects on `unlockedWindowsWhere`, the same rule `find`
-  uses with no target — so what it promises is exactly what can be played.
+  uses (playable set, extras 0, no practised chord) — so what it promises is
+  exactly what can be played. `find` adds `chord_tokens && practised` (GIN),
+  `@> [focus]` when named, and for the extras: `0` keeps `<@ playable` (GIN),
+  `1` / `2` count the chords outside the set per row
+  (`cardinality(array(… NOT (t = ANY(playable)))) ≤ n`, an array subtraction
+  like `next-chords`), `any` drops the containment test. Key modes are no
+  longer a `find` filter (the chords alone decide); the count reads keep
+  `modes`.
 - **The count ignores the videos, deliberately.** It only ranks chords, the
   dead videos fall roughly evenly across them, and with checks on demand most
   videos are `unknown` — so a filter would remove almost nothing, for a join
@@ -215,7 +229,8 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
   fields a load counts its total with (`readSnapshotHeads`) — so a load decodes
   it once, not twice.
 - `find` on the full index: p95 31 ms over 100 random unlocked sets, inside the
-  < 50 ms target (`e2e/song-index-verify.ts`). Measured before the video check;
+  < 50 ms target (`e2e/song-index-verify.ts`, before the extras; it now times
+  100 finds per extras setting — extras 1 and 2 are still to measure on main). Measured before the video check;
   a cold batch adds one oEmbed wave (~150 ms expected), still to re-measure
   (`e2e/video-availability-verify.ts` reports a cold and a warm call).
 - `next-chords` on the full index (a scan of the 183,270 windows): 87 ms for one
@@ -279,7 +294,9 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
   - Exports (values):
     - `countLoopsByNextChord`
     - `countLoopsInSet`
+    - `countTokenSets`
     - `loadIndexStatus`
+    - `loadReadyIndexIdentity`
   - Register: `defineSupervisedJob('chord.song-index.load')`
   - Resources: `chord.index-status` (push)
   - Routes:
@@ -320,6 +337,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `IndexStatus`
     - `LoadScope`
     - `LoopCandidate`
+    - `LoopExtras`
     - `LoopSectionInput`
     - `LoopShape`
     - `LoopShapeId`
@@ -338,6 +356,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `SnapshotSkipReason`
     - `StoredChord`
     - `TokenizedChord`
+    - `TokenSetCount`
     - `VideoFractionAlignment`
     - `WindowsByMode`
   - Exports (values):
@@ -372,9 +391,11 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `isInLoadScope`
     - `isInSample`
     - `LoadScopeSchema`
+    - `LOOP_EXTRAS`
     - `LOOP_SHAPE_IDS`
     - `LOOP_SHAPES`
     - `LoopCandidateSchema`
+    - `LoopExtrasSchema`
     - `LoopWindowFieldsSchema`
     - `NEXT_CHORDS_MAX_LIMIT`
     - `NextChordCountSchema`

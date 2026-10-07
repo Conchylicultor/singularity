@@ -38,6 +38,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `apps-core/surface`
     - `apps/agent-manager/welcome`
     - `apps/browser/shell`
+    - `apps/chord/curriculum`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
     - `apps/file-explorer/places`

@@ -29,13 +29,20 @@ import {
   chordTokenFromParts,
   windowsInModes,
   type ChordToken,
+  type LoopExtras,
+  type TokenSetCount,
 } from "../../core";
 import {
   FindLoopsBodySchema,
   NextChordsBodySchema,
 } from "../../core/endpoints";
 import { SkipSummarySchema } from "../../core/skip-tally";
-import { findLoopsWhere, loopsInSetQuery, nextChordsQuery } from "./find";
+import {
+  findLoopsWhere,
+  loopsInSetQuery,
+  nextChordsQuery,
+  tokenSetsQuery,
+} from "./find";
 import { _chordLoopWindows } from "./tables";
 
 let t: TestDb;
@@ -136,8 +143,17 @@ async function countInSet(unlocked: ChordToken[], modes?: HookpadMode[]) {
   return res.rows[0]?.windows;
 }
 
-async function findSectionIds(unlocked: ChordToken[], target: ChordToken) {
-  const body = FindLoopsBodySchema.parse({ unlocked, target, limit: 50 });
+async function findSectionIds(
+  playable: ChordToken[],
+  practised: ChordToken[],
+  extras: LoopExtras = 0,
+) {
+  const body = FindLoopsBodySchema.parse({
+    playable,
+    practised,
+    extras,
+    limit: 50,
+  });
   const res = await t.db.execute<{ section_id: string }>(
     sql`SELECT section_id FROM ${_chordLoopWindows} WHERE ${findLoopsWhere(body)} ORDER BY 1`,
   );
@@ -176,7 +192,7 @@ describe("countLoopsByNextChord's query", () => {
     // windows credited to `vi` are exactly the ones find hands back.
     const [credited] = await nextChords([I, IV, V]);
     expect(credited).toEqual({ token: vi, byMode: { major: 2 } });
-    const found = await findSectionIds([I, IV, V, vi], vi);
+    const found = await findSectionIds([I, IV, V, vi], [vi]);
     expect(found).toEqual(["mixed", "vamp-on-vi"]);
   });
 
@@ -208,6 +224,62 @@ describe("countLoopsByNextChord's query", () => {
   });
 });
 
+describe("find's extras", () => {
+  test("a window must hold a practised chord, its other chords playable or up to `extras` outside", async () => {
+    // Playing I, IV, V with only V practised: `vamp-on-vi` holds no practised
+    // chord, so no extras setting ever offers it.
+    const playable = [I, IV, V];
+    expect(await findSectionIds(playable, [V])).toEqual([
+      "all-unlocked",
+      "minor-playable",
+    ]);
+    // One chord outside: `mixed` (vi) joins; `two-foreign` holds no V.
+    expect(await findSectionIds(playable, [V], 1)).toEqual([
+      "all-unlocked",
+      "minor-playable",
+      "mixed",
+    ]);
+    // Practising I too: `minor-ii` (ii outside) and `two-foreign` (vi, ii) open
+    // at 1 and 2 extras respectively.
+    expect(await findSectionIds(playable, [I, V], 1)).toEqual([
+      "all-unlocked",
+      "minor-ii",
+      "minor-playable",
+      "mixed",
+    ]);
+    expect(await findSectionIds(playable, [I, V], 2)).toEqual([
+      "all-unlocked",
+      "minor-ii",
+      "minor-playable",
+      "mixed",
+      "two-foreign",
+    ]);
+    expect(await findSectionIds([I], [I], "any")).toEqual([
+      "all-unlocked",
+      "minor-ii",
+      "minor-playable",
+      "mixed",
+      "two-foreign",
+    ]);
+  });
+});
+
+describe("countTokenSets' query", () => {
+  test("one row per (mode, chord set), counting its windows", async () => {
+    const res = await t.db.execute<TokenSetCount>(
+      tokenSetsQuery({ shape: "bars-4" }),
+    );
+    const total = res.rows.reduce((sum, row) => sum + row.windows, 0);
+    expect(res.rows).toHaveLength(6);
+    expect(total).toBe(6);
+    expect(res.rows).toContainEqual({
+      mode: "minor",
+      tokens: [I, V],
+      windows: 1,
+    });
+  });
+});
+
 describe("countLoopsInSet's query", () => {
   test("counts the windows made only of chords in the set", async () => {
     // `all-unlocked` (major) and `minor-playable` (minor) are the two windows
@@ -229,7 +301,7 @@ describe("countLoopsInSet's query", () => {
 
   test("an empty set is a programming error, not zero windows", async () => {
     expect(() => loopsInSetQuery({ unlocked: [] })).toThrow(
-      /empty unlocked set/,
+      /empty playable set/,
     );
   });
 });

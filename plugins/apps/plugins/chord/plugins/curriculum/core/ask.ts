@@ -23,23 +23,24 @@ export type AskedOptions = {
   blanks: Blanks;
   /** The chords the learner practises: only their boxes can be blank. */
   practised: ReadonlySet<ChordToken>;
-  /** The chord this loop was chosen for. `find` guarantees the window holds it. */
-  target: ChordToken;
+  /** `random`'s draw: a number in [0, 1), like `Math.random` (the default). Tests fix it. */
+  random?: () => number;
 };
 
 /**
  * Which boxes of the round wait for an answer, in beat order. Every other box
- * is given.
+ * is given. Called once, when the loop is dealt: a `random` draw is not
+ * repeated for the same round.
  *
- * - `one`: the target's last box;
- * - `half`: every practised box starting at or after the window's midpoint;
- * - `all`: every practised box.
+ * - `all`: every practised box;
+ * - `random`: half of the practised boxes, rounded up, drawn at random;
+ * - `half`: every practised box starting at or after the window's midpoint.
  *
  * **Never empty.** A rule that selects nothing — the second half of a loop
  * whose practised chords all sit in its first half — falls back to the last
  * practised box. A round with no practised box at all throws: the loop query
- * only returns loops holding the target, so one would mean the round was built
- * for a different selection.
+ * only returns loops holding a practised chord, so one would mean the round was
+ * dealt for a different selection.
  */
 export function askedPositions(
   boxes: readonly AskedBox[],
@@ -48,11 +49,6 @@ export function askedPositions(
   if (!(Number.isFinite(opts.windowBeats) && opts.windowBeats > 0)) {
     throw new Error(
       `askedPositions: a window lasts a positive number of beats, got ${opts.windowBeats}`,
-    );
-  }
-  if (!opts.practised.has(opts.target)) {
-    throw new Error(
-      `askedPositions: the target ${opts.target} is not a practised chord`,
     );
   }
   const practised = boxes.filter((box) => opts.practised.has(box.token));
@@ -65,22 +61,41 @@ export function askedPositions(
 
   let selected: AskedBox[];
   switch (opts.blanks) {
-    case "one": {
-      const ofTarget = practised.filter((box) => box.token === opts.target);
-      const lastOfTarget = ofTarget.at(-1);
-      selected = lastOfTarget === undefined ? [] : [lastOfTarget];
+    case "all":
+      selected = practised;
       break;
-    }
+    case "random":
+      selected = drawHalf(practised, opts.random ?? Math.random);
+      break;
     case "half":
       selected = practised.filter(
         (box) => box.gridStart >= opts.windowBeats / 2,
       );
       break;
-    case "all":
-      selected = practised;
-      break;
   }
 
   const asked = selected.length === 0 ? [last] : selected;
   return asked.map((box) => box.position).sort((a, b) => a - b);
+}
+
+/** Half of `boxes`, rounded up, drawn without replacement (a partial Fisher–Yates). */
+function drawHalf(
+  boxes: readonly AskedBox[],
+  random: () => number,
+): AskedBox[] {
+  const pool = boxes.slice();
+  const count = Math.ceil(pool.length / 2);
+  for (let i = 0; i < count; i++) {
+    const j = i + Math.floor(random() * (pool.length - i));
+    const at = pool[i];
+    const picked = pool[j];
+    if (at === undefined || picked === undefined) {
+      throw new Error(
+        `drawHalf: the draw ${j} fell outside the ${pool.length} boxes`,
+      );
+    }
+    pool[i] = picked;
+    pool[j] = at;
+  }
+  return pool.slice(0, count);
 }

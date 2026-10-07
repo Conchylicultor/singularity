@@ -1,27 +1,28 @@
 import { z } from "zod";
 import {
   ChordTokenSchema,
+  LoopExtrasSchema,
+  chordTokenFromParts,
   type ChordToken,
+  type LoopExtras,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import {
-  HookpadModeSchema,
-  type HookpadMode,
-} from "@plugins/integrations/plugins/hooktheory/core";
 import { BlanksSchema, type Blanks } from "./blanks";
 
 // ── What the learner has chosen ──────────────────────────────────────────
 //
-// The two axes, set by the learner at any time: each chord's state, and how
-// much of the loop is blank. Plus the key modes loops may be in. It is what
-// the trainer draws its loops, its answer buttons and its blanks from, so it is
-// live: a change in one tab changes every open tab.
+// Three settings, changed by the learner at any time: each chord's state, how
+// much of the loop is blank, and how many chords that are off a loop may hold
+// besides. It is what the trainer draws its loops, its answer buttons and its
+// blanks from, so it is live: a change in one tab changes every open tab. The
+// chords alone decide which loops fit, whatever key the song is labelled in.
 
 /**
  * What a chord is to the learner:
  *
- * - `practice` — its boxes can be blank, and it has an answer button;
+ * - `practice` — its boxes can be blank, and it has an answer button (or, when
+ *   no track lists it, the Rare button answers it);
  * - `hear` — it can play in a loop, but its boxes are always given;
- * - `off` — no loop holding it is played.
+ * - `off` — a loop holding it plays only as one of the loop's `extras`.
  */
 export const CHORD_STATES = ["practice", "hear", "off"] as const;
 export const ChordStateSchema = z.enum(CHORD_STATES);
@@ -38,10 +39,24 @@ export const SelectionSchema = z.object({
   /** Every chord that is not off, in token order. */
   chords: z.array(SelectedChordSchema),
   blanks: BlanksSchema,
-  /** The key modes a loop may be in. Never empty. */
-  modes: z.array(HookpadModeSchema).min(1),
+  /** How many chords that are off a loop may hold besides ("Other chords per loop"). */
+  extras: LoopExtrasSchema,
 });
 export type Selection = z.infer<typeof SelectionSchema>;
+
+/** Where every learner starts: I, IV and V practised, the last half blank, no other chord. */
+export function firstSelection(): Selection {
+  const major = (root: number) =>
+    chordTokenFromParts({ root, intervals: [4, 3], inversion: 0 });
+  return canonicalSelection({
+    chords: [0, 5, 7].map((root) => ({
+      token: major(root),
+      state: "practice" as const,
+    })),
+    blanks: "half",
+    extras: 0,
+  });
+}
 
 /** A chord's state in this selection. */
 export function chordState(
@@ -58,23 +73,23 @@ export function practisedChords(selection: Selection): ChordToken[] {
     .map((c) => c.token);
 }
 
-/** Every chord a loop may hold: practised and heard. */
+/** Every chord a loop may hold without counting as an extra: practised and heard. */
 export function playableChords(selection: Selection): ChordToken[] {
   return selection.chords.map((c) => c.token);
 }
 
-/** The same selection in one canonical form: chords sorted by token, modes sorted. */
+/** The same selection in one canonical form: chords sorted by token. */
 export function canonicalSelection(selection: {
   chords: readonly SelectedChord[];
   blanks: Blanks;
-  modes: readonly HookpadMode[];
+  extras: LoopExtras;
 }): Selection {
   return {
     chords: [...selection.chords].sort((a, b) =>
       a.token < b.token ? -1 : a.token > b.token ? 1 : 0,
     ),
     blanks: selection.blanks,
-    modes: [...new Set(selection.modes)].sort(),
+    extras: selection.extras,
   };
 }
 

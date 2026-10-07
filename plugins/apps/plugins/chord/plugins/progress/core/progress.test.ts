@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { isRightAnswer } from "./answer";
 import { decodeProgressParams, encodeProgressParams } from "./progress";
 
 const I = "0:4-3/0" as ChordToken;
@@ -31,9 +32,11 @@ describe("encodeProgressParams", () => {
   });
 
   test("the empty set is the empty string", () => {
-    expect(encodeProgressParams({ timeZone: "UTC", tokens: [] }).tokens).toBe(
-      "",
-    );
+    const empty = encodeProgressParams({
+      timeZone: "UTC",
+      tokens: [],
+    });
+    expect(empty.tokens).toBe("");
   });
 
   test("an unknown time zone throws", () => {
@@ -45,7 +48,11 @@ describe("encodeProgressParams", () => {
 
 describe("decodeProgressParams", () => {
   test("round-trips what encode produced", () => {
-    const decoded = { timeZone: "America/New_York", tokens: [I, IV, V] };
+    const decoded = {
+      timeZone: "America/New_York",
+      // In canonical (plain string) order: "10:…" sorts before "5:…".
+      tokens: [I, bVII, IV, V],
+    };
     expect(decodeProgressParams(encodeProgressParams(decoded))).toEqual(
       decoded,
     );
@@ -58,10 +65,16 @@ describe("decodeProgressParams", () => {
 
   test("refuses a set not in canonical form", () => {
     expect(() =>
-      decodeProgressParams({ timeZone: "UTC", tokens: "7:4-3/0,0:4-3/0" }),
+      decodeProgressParams({
+        timeZone: "UTC",
+        tokens: "7:4-3/0,0:4-3/0",
+      }),
     ).toThrow(/canonical/);
     expect(() =>
-      decodeProgressParams({ timeZone: "UTC", tokens: "0:4-3/0,0:4-3/0" }),
+      decodeProgressParams({
+        timeZone: "UTC",
+        tokens: "0:4-3/0,0:4-3/0",
+      }),
     ).toThrow(/canonical/);
   });
 
@@ -78,5 +91,20 @@ describe("decodeProgressParams", () => {
     expect(() =>
       decodeProgressParams({ timeZone: "Nowhere/Land", tokens: "" }),
     ).toThrow(/not a time zone/);
+  });
+});
+
+describe("isRightAnswer", () => {
+  const listed = (token: ChordToken) => token !== bVII;
+  test("a chord is right when it is the chord that played", () => {
+    expect(isRightAnswer(I, I, listed)).toBe(true);
+    expect(isRightAnswer(I, V, listed)).toBe(false);
+  });
+
+  test("the Rare joker is right exactly for a chord the catalog does not list", () => {
+    expect(isRightAnswer(bVII, "rare", listed)).toBe(true);
+    expect(isRightAnswer(I, "rare", listed)).toBe(false);
+    // A listed chord named for a rare one is simply wrong.
+    expect(isRightAnswer(bVII, I, listed)).toBe(false);
   });
 });

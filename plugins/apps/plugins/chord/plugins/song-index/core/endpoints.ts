@@ -3,6 +3,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import {
   HookpadModeSchema,
   TheorytabSectionIdSchema,
+  type HookpadMode,
 } from "@plugins/integrations/plugins/hooktheory/core";
 import { VideoStatusSchema } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
 import { AlignmentSchema } from "./beat-time";
@@ -11,7 +12,7 @@ import { IndexStatusSchema } from "./index-status";
 import { DEFAULT_LOOP_SHAPE, LOOP_SHAPE_IDS } from "./loop-shapes";
 import { NextChordCountSchema } from "./next-chords";
 import { TokenizedChordSchema } from "./stored-chord";
-import { ChordTokenSchema } from "./token";
+import { ChordTokenSchema, type ChordToken } from "./token";
 
 // ── The index's HTTP surface ─────────────────────────────────────────────────
 //
@@ -79,15 +80,31 @@ const NotReadySchema = z.object({
 /** Most candidates one find returns. The trainer asks for a small batch, often. */
 export const FIND_LOOPS_MAX_LIMIT = 50;
 
+/**
+ * How many chords outside the playable set a loop may hold: `0` (every chord
+ * playable), at most `1` or `2`, or `any`. The learner's "Other chords per
+ * loop" setting.
+ */
+export const LOOP_EXTRAS = [0, 1, 2, "any"] as const;
+export const LoopExtrasSchema = z.union([
+  z.literal(0),
+  z.literal(1),
+  z.literal(2),
+  z.literal("any"),
+]);
+export type LoopExtras = z.infer<typeof LoopExtrasSchema>;
+
 export const FindLoopsBodySchema = z
   .object({
-    /** The allowed chords: every chord of a returned window is one of these. */
-    unlocked: z.array(ChordTokenSchema).min(1),
-    /** The chord being learned: every returned window contains it. Must be unlocked. */
-    target: ChordTokenSchema,
+    /** The chords a loop may hold: practised and heard. */
+    playable: z.array(ChordTokenSchema).min(1),
+    /** The practised chords: every returned window holds at least one. Each must be playable. */
+    practised: z.array(ChordTokenSchema).min(1),
+    /** How many chords outside `playable` a window may hold besides. */
+    extras: LoopExtrasSchema,
+    /** Keep only windows holding this chord. Must be practised. */
+    focus: ChordTokenSchema.optional(),
     shape: LoopShapeIdSchema.default(DEFAULT_LOOP_SHAPE),
-    /** Keep windows in one of these modes; absent = any. */
-    modes: z.array(HookpadModeSchema).min(1).optional(),
     /** Keep windows whose spelling has every one of these features. */
     requireFeatures: z.array(ChordFeatureSchema).min(1).optional(),
     /** Drop windows whose spelling has any of these features. */
@@ -96,14 +113,27 @@ export const FindLoopsBodySchema = z
     excludeSectionIds: z.array(TheorytabSectionIdSchema).min(1).optional(),
     limit: z.number().int().min(1).max(FIND_LOOPS_MAX_LIMIT),
   })
-  .refine((body) => body.unlocked.includes(body.target), {
-    message:
-      "target must be one of the unlocked chords: no window could hold it otherwise",
-    path: ["target"],
-  });
+  .refine(
+    (body) => body.practised.every((token) => body.playable.includes(token)),
+    {
+      message:
+        "every practised chord must be playable: a practised chord is one a loop may hold",
+      path: ["practised"],
+    },
+  )
+  .refine(
+    (body) => body.focus === undefined || body.practised.includes(body.focus),
+    {
+      message: "focus must be one of the practised chords",
+      path: ["focus"],
+    },
+  );
 export type FindLoopsBody = z.infer<typeof FindLoopsBodySchema>;
 
-/** Random loop windows whose chords are all unlocked and include the target. */
+/**
+ * Random loop windows holding at least one practised chord, whose other chords
+ * are playable — up to `extras` of them may be outside the playable set.
+ */
 export const findLoopsEndpoint = defineEndpoint({
   route: "POST /api/chord/loops/find",
   body: FindLoopsBodySchema,
@@ -182,3 +212,14 @@ export const countLoopsInSetEndpoint = defineEndpoint({
     }),
   ]),
 });
+
+/**
+ * One distinct (key mode, chord set) of the windows of a shape, and how many
+ * windows have it: the rows of the server's `countTokenSets`, which the
+ * curriculum builds its catalog from.
+ */
+export type TokenSetCount = {
+  mode: HookpadMode;
+  tokens: readonly ChordToken[];
+  windows: number;
+};

@@ -1,0 +1,236 @@
+/* The Chords section's paint: the pills, the track heads, the chord chips and
+ * rare chips, the section set control, the footer. Layout stays with the
+ * layout primitives; a chord's colours come from `.chord-tone` (vocabulary).
+ * The mockup is proto-1791276393-29e2 (data = index).
+ *
+ * Every colour reads the chord theme: surfaces and ink from the colour
+ * palette, the chord colours from `--fn`. No hex lives here. The mockup's gold
+ * accent is the theme's ink: the chord colours are the only colour on the
+ * page. */
+
+/* ── The "from the next loop" note and Clear / Undo clear ─────────────────── */
+.chord-applied {
+  color: var(--foreground);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.chord-applied[data-show] {
+  opacity: 1;
+}
+.chord-clear {
+  font-size: 12px;
+  color: var(--faint-foreground);
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.chord-clear:hover {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+.chord-clear[data-undo] {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+/* ── The blanks glyph: a tiny loop, hollow boxes are the ones you name ───── */
+.chord-blanks-glyph {
+  display: inline-flex;
+  gap: 2px;
+}
+.chord-blanks-glyph i {
+  width: 5px;
+  height: 12px;
+  border-radius: 1.5px;
+  background: currentColor;
+  opacity: 0.35;
+}
+.chord-blanks-glyph i[data-blank] {
+  background: transparent;
+  border: 1.3px solid currentColor;
+  opacity: 1;
+}
+
+/* ── Tracks ───────────────────────────────────────────────────────────────── */
+.chord-track-head {
+  padding: 8px 2px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.chord-track-head:hover {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+.chord-track-badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--input);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--faint-foreground);
+}
+.chord-track-badge[data-started] {
+  border-color: var(--foreground);
+  color: var(--foreground);
+}
+.chord-stat {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+.chord-track-cov {
+  height: 3px;
+  margin: -2px 24px 8px 28px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.chord-track-cov-fill {
+  background: var(--foreground);
+  opacity: 0.6;
+}
+.chord-track-body {
+  padding: 2px 0 12px 28px;
+}
+
+/* ── The section set control: None · Hear · Practise ─────────────────────── */
+.chord-sec-set {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1px;
+}
+.chord-sec-set button {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  padding: 2px 5px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.chord-sec-set button:hover,
+.chord-sec-set button[aria-pressed="true"] {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+/* ── A chord chip: off (ghost), hear (tint), practise (tile) ──────────────
+ * The paints are vocabulary's (`chordPaint`, `STATE_PAINT` in the component):
+ * the very tile the trainer's boxes and "Your chords" wear. This file sizes
+ * the chip and draws its state chrome (the suggested-next ring, the hover
+ * lift, the mastery marks); it never names a chord colour. */
+.chord-pick {
+  min-width: 38px;
+  height: 32px;
+  padding: 0 7px;
+  border-radius: 8px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.chord-pick .chord-num {
+  font-size: 17px;
+}
+.chord-pick:hover {
+  filter: brightness(1.12);
+}
+.chord-pick[data-next] {
+  outline: 1.5px solid var(--foreground);
+  outline-offset: 2px;
+}
+/* A practised chip's marks, in the tile's ink. */
+.chord-pick-ok {
+  font-size: 10px;
+  color: var(--chord-ink);
+}
+.chord-pick-m {
+  height: 2px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--chord-ink) 25%, transparent);
+}
+.chord-pick-m-fill {
+  background: var(--chord-ink);
+}
+
+/* ── A rare group's chip ──────────────────────────────────────────────────────
+ * Not one chord, so no chord paint: a neutral word chip in the ink and
+ * surfaces of the palette. */
+.chord-rare {
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+  border: 1.5px dashed var(--input);
+  color: var(--faint-foreground);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.chord-rare:hover {
+  border-color: var(--muted-foreground);
+  color: var(--muted-foreground);
+}
+.chord-rare[data-state="hear"] {
+  border: 1.5px solid var(--muted-foreground);
+  color: var(--muted-foreground);
+}
+.chord-rare[data-state="practice"] {
+  background: var(--secondary);
+  border: 1.5px solid var(--secondary);
+  color: var(--foreground);
+}
+/* Partly on: the hear outline, dotted. */
+.chord-rare[data-state="mixed"] {
+  border: 1.5px dotted var(--muted-foreground);
+  color: var(--muted-foreground);
+}
+
+/* ── The footer ───────────────────────────────────────────────────────────── */
+.chord-foot {
+  height: 68px;
+  overflow: hidden;
+  display: grid;
+  align-items: center;
+  background: var(--card);
+}
+.chord-foot-big {
+  width: 52px;
+}
+.chord-foot-big .chord-num {
+  font-size: 24px;
+  color: var(--foreground);
+}
+.chord-foot-word {
+  font-size: 15px;
+  color: var(--foreground);
+}
+.chord-foot b {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.chord-legend {
+  column-gap: 14px;
+  row-gap: 4px;
+  font-size: 11.5px;
+  color: var(--faint-foreground);
+}
+.chord-legend i {
+  display: inline-block;
+  width: 14px;
+  height: 11px;
+  border-radius: 3px;
+  vertical-align: -1px;
+  margin-right: 5px;
+}
+/* The off / hear / practise swatches wear the chips' own paints (`chordPaint`). */
+.chord-legend i[data-kind="next"] {
+  outline: 1.5px solid var(--foreground);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chord-pick,
+  .chord-applied {
+    transition: none;
+  }
+}

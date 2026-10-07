@@ -13,23 +13,23 @@ import {
   useSoundMix,
 } from "@plugins/apps/plugins/chord/plugins/piano/web";
 import { MAX_VOLUME } from "@plugins/apps/plugins/chord/plugins/piano/core";
-import type {
-  ChordToken,
-  LoopCandidate,
-} from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
-  PATH_TOKENS,
-  askedPositions,
+  listedTokens,
   playableChords,
   practisedChords,
-  type Blanks,
+  type Catalog,
   type Selection,
 } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
-import { useCurriculum } from "@plugins/apps/plugins/chord/plugins/curriculum/web";
+import {
+  useCatalog,
+  useCurriculum,
+} from "@plugins/apps/plugins/chord/plugins/curriculum/web";
 import {
   chordProgress,
   encodeProgressParams,
   recordRoundEndpoint,
+  type Answer,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import { reportPlaybackEndpoint } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
 import {
@@ -40,7 +40,10 @@ import {
 } from "@plugins/integrations/plugins/youtube/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   useEventCallback,
   useLatestRef,
@@ -59,6 +62,7 @@ import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   boxAt,
   clearBackward,
+  desiredShare,
   emptySheet,
   fillSelected,
   moveSelection,
@@ -67,9 +71,11 @@ import {
   selectBox,
   type AnswerSheet,
   type Box,
+  type DealtLoop,
+  type DesiredShares,
   type Round,
 } from "../../core";
-import { useChordKeys } from "../internal/use-chord-keys";
+import { rareKeyFor, useChordKeys } from "../internal/use-chord-keys";
 import { useHeardClock } from "../internal/use-heard-clock";
 import { usePianoFollow } from "../internal/use-piano-follow";
 import {
@@ -85,11 +91,9 @@ import "./trainer.css";
 
 /** One round's answers, tied to the loop they belong to. */
 type RoundSession = {
-  /** The loop and the boxes it asks: a change of blanks or chords re-deals the round. */
+  /** The loop: its asked boxes were dealt with it, so nothing else re-deals the round. */
   key: string;
   sheet: AnswerSheet;
-  /** The blanks setting the asked boxes were chosen by: saved with the round. */
-  blanks: Blanks;
   /** How many times each box was filled (a new fill replays its pop). */
   fills: readonly number[];
   /**
@@ -114,22 +118,35 @@ type RoundSession = {
  * round works".
  *
  * Which chords play, which are asked, and how much of a loop is blank come
- * from the learner's selection (curriculum). Until it has landed the screen
- * shows a loading state: buttons that are about to change would be a claim
- * about what this learner has chosen.
+ * from the learner's selection (curriculum); which chords the Rare button
+ * answers, from the catalog. Until both have landed the screen shows a loading
+ * state: buttons that are about to change would be a claim about what this
+ * learner has chosen.
  */
 export function TrainerScreen() {
   const curriculum = useCurriculum();
+  const catalog = useCatalog();
   return (
     // The pane chrome owns the one scroll viewport; this box only scopes the
     // trainer's CSS variables and its container queries.
     <div className="chord-trainer @container">
       <Inset x="lg" t="lg" b="xl" className="mx-auto max-w-[1280px]">
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- the page's two tracks: the main column and the 316px side panel, which drops below it when the pane is under 1000px wide. A container-query track template, which no layout primitive expresses. */}
-        <div className="grid items-start gap-lg @[1000px]:grid-cols-[minmax(0,1fr)_316px]">
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- the page's two tracks: the main column and the 400px side panel (the Chords section mockup's width), which drops below it when the pane is under 1000px wide. A container-query track template, which no layout primitive expresses. */}
+        <div className="grid items-start gap-lg @[1000px]:grid-cols-[minmax(0,1fr)_400px]">
           {matchResource(curriculum, {
             loading: () => <Loading variant="block" />,
-            ready: (c) => <TrainerBody selection={c} />,
+            ready: (c) =>
+              matchResource(catalog, {
+                loading: () => <Loading variant="block" />,
+                // `not-ready`: the index is still loading (the gate above
+                // waits for it, so this is the moment the catalog is built).
+                ready: (state) =>
+                  state.kind === "ready" ? (
+                    <TrainerBody selection={c} catalog={state.catalog} />
+                  ) : (
+                    <Loading variant="block" />
+                  ),
+              }),
           })}
         </div>
       </Inset>
@@ -137,26 +154,71 @@ export function TrainerScreen() {
   );
 }
 
-/** The two tracks of the page, once the selection is known. */
-function TrainerBody({ selection }: { selection: Selection }) {
-  const unlocked = useMemo(() => playableChords(selection), [selection]);
+/** The two tracks of the page, once the selection and the catalog are known. */
+function TrainerBody({
+  selection,
+  catalog,
+}: {
+  selection: Selection;
+  catalog: Catalog;
+}) {
+  const listedSet = useMemo(() => listedTokens(catalog), [catalog]);
+  const listed = useMemo(
+    () => (token: ChordToken) => listedSet.has(token),
+    [listedSet],
+  );
+  const playable = useMemo(() => playableChords(selection), [selection]);
   const practised = useMemo(() => practisedChords(selection), [selection]);
-  // Every chord on, and every chord the path names: the panel's rows read the
-  // first, the path's map the second.
+  // The practised chords no track lists: answered by the Rare button.
+  const rare = useMemo(
+    () => practised.filter((token) => !listedSet.has(token)),
+    [practised, listedSet],
+  );
+  // EVERY listed chord, whatever the learner has on: the subscription then
+  // depends on the catalog alone, so toggling a chord never re-keys it (a new
+  // key would be a pending read — the panel's loading state, and no `desired`
+  // for the queue — on every chip click). The server pools every unlisted
+  // chord as Rare itself.
+  const timeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    [],
+  );
   const progressParams = useMemo(
-    () =>
-      encodeProgressParams({
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        tokens: [...unlocked, ...PATH_TOKENS],
-      }),
-    [unlocked],
+    () => encodeProgressParams({ timeZone, tokens: [...listedSet] }),
+    [timeZone, listedSet],
   );
   const progress = useLive(chordProgress, progressParams);
+  // How often each practised chord should turn up, from its mastery: unknown
+  // (so nothing is dealt) until the progress has loaded.
+  const desired = useMemo(
+    () =>
+      mapResource(progress, (p): DesiredShares => {
+        const byToken = new Map(p.chords.map((c) => [c.token, c] as const));
+        return {
+          byChord: new Map(
+            practised
+              .filter((token) => listedSet.has(token))
+              .map((token) => [
+                token,
+                desiredShare(byToken.get(token) ?? null),
+              ]),
+          ),
+          // The practised rare chords share one Rare share, from the pooled
+          // standing of every rare chord (the Rare button answers them all).
+          rare:
+            rare.length === 0
+              ? null
+              : { tokens: new Set(rare), share: desiredShare(p.rare) },
+        };
+      }),
+    [progress, practised, rare, listedSet],
+  );
   const queue = useLoopQueue({
-    unlocked,
+    playable,
     practised,
-    modes: selection.modes,
-    progress,
+    extras: selection.extras,
+    blanks: selection.blanks,
+    desired,
   });
   // Kept above the round, which unmounts when the queue runs dry.
   const session = useSessionMemory();
@@ -164,9 +226,19 @@ function TrainerBody({ selection }: { selection: Selection }) {
   return (
     <>
       <Stack gap="md" className={yieldClass("x")}>
-        <LoopArea queue={queue} memory={session} selection={selection} />
+        <LoopArea
+          queue={queue}
+          memory={session}
+          selection={selection}
+          listed={listed}
+        />
       </Stack>
-      <ProgressPanel progress={progress} selection={selection} />
+      <ProgressPanel
+        progress={progress}
+        selection={selection}
+        catalog={catalog}
+        listed={listed}
+      />
     </>
   );
 }
@@ -202,21 +274,23 @@ function LoopArea({
   queue,
   memory,
   selection,
+  listed,
 }: {
   queue: LoopQueue;
   memory: SessionMemory;
   selection: Selection;
+  listed: (token: ChordToken) => boolean;
 }) {
   const { state } = queue;
   switch (state.kind) {
     case "ready":
       return (
         <Trainer
-          loop={state.loop}
-          target={state.target}
+          dealt={state.dealt}
           queue={queue}
           memory={memory}
           selection={selection}
+          listed={listed}
         />
       );
     case "loading":
@@ -237,8 +311,8 @@ function LoopArea({
               No chord is practised
             </Text>
             <Text variant="body" tone="muted" className="break-words">
-              Set at least one chord to Practise in the Path card: those are the
-              chords you name.
+              Set at least one chord to Practise in the Chords section: those
+              are the chords you name.
             </Text>
           </Stack>
         </Card>
@@ -294,19 +368,20 @@ function Notice({
  * by itself.
  */
 function Trainer({
-  loop,
-  target,
+  dealt,
   queue,
   memory,
   selection,
+  listed,
 }: {
-  loop: LoopCandidate;
-  /** The chord this loop was chosen for: the one the round asks about. */
-  target: ChordToken;
+  /** The loop on screen and the boxes it asks, dealt once. */
+  dealt: DealtLoop;
   queue: LoopQueue;
   memory: SessionMemory;
   selection: Selection;
+  listed: (token: ChordToken) => boolean;
 }) {
+  const loop = dealt.candidate;
   // The words to say a chord with. One speller per loop, shared by every box,
   // button and lit key, so nothing on screen can name a chord against a
   // different key from its neighbour — and one tonic under it, so nothing
@@ -344,38 +419,19 @@ function Trainer({
   );
   const round = roundResult.kind === "round" ? roundResult.round : null;
 
-  // Which boxes the round asks about: the practised chords' boxes, narrowed
-  // by the blanks setting. The queue drops a loop whose target is no longer
-  // practised, so the target here always is.
-  const practised = useMemo(
-    () => new Set(practisedChords(selection)),
-    [selection],
-  );
-  const asked = useMemo(
-    () =>
-      round === null
-        ? null
-        : askedPositions(round.boxes, {
-            windowBeats: round.grid.beats,
-            blanks: selection.blanks,
-            practised,
-            target,
-          }),
-    [round, selection.blanks, practised, target],
-  );
-
-  // A change of blanks or chords asks different boxes: the round starts over.
-  const key = `${loopKey(loop)}|${asked?.join(",") ?? ""}`;
+  // Which boxes the round asks about was decided when the loop was dealt
+  // (`dealLoop`), so a selection change mid-round never deals it again: the
+  // round's key is the loop alone.
+  const key = loopKey(loop);
   const [stored, setStored] = useState<RoundSession | null>(null);
   const session: RoundSession | null =
-    round === null || asked === null
+    round === null
       ? null
       : stored?.key === key
         ? stored
         : {
             key,
-            sheet: emptySheet(round, asked),
-            blanks: selection.blanks,
+            sheet: emptySheet(round, dealt.asked),
             fills: round.boxes.map(() => 0),
             lastPlayed: null,
           };
@@ -445,13 +501,15 @@ function Trainer({
     silence: piano.silence,
   });
 
-  const pick = useEventCallback((token: ChordToken) => {
+  const pick = useEventCallback((answer: Answer) => {
     if (session === null || round === null) return;
     if (session.sheet.checked) {
+      // Rare is not one chord: there is nothing to play.
+      if (answer === "rare") return;
       // Always the piano, whatever the sound toggle says: this chord need not
       // be in the loop at all, so there may be no song to play it with.
-      playChord(token);
-      setStored({ ...session, lastPlayed: token });
+      playChord(answer);
+      setStored({ ...session, lastPlayed: answer });
       return;
     }
     const at = session.sheet.selected;
@@ -459,21 +517,31 @@ function Trainer({
     const heard = heardAt(at);
     const sheet = fillSelected(
       session.sheet,
-      token,
+      answer,
       heard === null ? 0 : performance.now() - heard,
     );
     const fills = session.fills.map((n, i) => (i === at ? n + 1 : n));
     setStored({ ...session, sheet, fills });
     // The last fill checks the round: saved once, in one call.
     if (sheet.checked) {
-      record.mutate({ body: recordRoundBody(sheet, round, session.blanks) });
+      record.mutate({ body: recordRoundBody(sheet, round, dealt.blanks) });
     }
   });
 
-  // One button per practised chord — the only chords a blank can hold. The
-  // keys: the chord's digit, and a second key when several chords share it.
-  const plan = useMemo(() => chordKeyPlan([...practised]), [practised]);
-  const keys = useChordKeys({ plan, onPick: pick });
+  // One button per practised listed chord — the chords a blank can hold —
+  // and one Rare button for the practised chords no track lists. The keys:
+  // the chord's digit, a second key when several chords share it, and the
+  // next digit for Rare.
+  const practised = useMemo(() => practisedChords(selection), [selection]);
+  const plan = useMemo(
+    () => chordKeyPlan(practised.filter((token) => listed(token))),
+    [practised, listed],
+  );
+  const rareKey = useMemo(
+    () => (practised.some((token) => !listed(token)) ? rareKeyFor(plan) : null),
+    [practised, listed, plan],
+  );
+  const keys = useChordKeys({ plan, rareKey, onPick: pick });
   const { cancel } = keys;
 
   const togglePlay = useEventCallback(() => {
@@ -629,6 +697,7 @@ function Trainer({
           canReplay={playerReady}
           soundingPosition={sounding}
           nameChord={words.nameChord}
+          listed={listed}
           onSelect={onSelect}
           onReplayBox={onReplayBox}
           onHearAnswer={onHearAnswer}
@@ -636,6 +705,7 @@ function Trainer({
       )}
       <ChordButtons
         plan={plan}
+        rareKey={rareKey}
         lit={shownChord}
         picking={keys.picking}
         nameChord={words.nameChord}

@@ -1,5 +1,5 @@
-export { roundFromCandidate } from "./round";
-export type { Box, Round, RoundResult } from "./round";
+export { gridBoxes, roundFromCandidate } from "./round";
+export type { Box, GridBox, Round, RoundResult } from "./round";
 export { ANSWER_MS_MAX, ANSWER_MS_MIN, clampAnswerMs } from "./answer-time";
 export {
   clearBackward,
@@ -18,4 +18,17 @@ export {
   finishedBoxes,
   gridBeatAt,
 } from "./heard";
-export { weakestChord } from "./target";
+export { dealLoop } from "./deal";
+export type { DealtLoop } from "./deal";
+export {
+  MASTERED_SHARE,
+  NEW_SHARE,
+  PRIOR_LOOPS,
+  SHARE_HISTORY,
+  desiredShare,
+  loopShareKeys,
+  observedShares,
+  pickNext,
+  shareDeficits,
+} from "./loop-share";
+export type { DesiredShares, ShareKey } from "./loop-share";

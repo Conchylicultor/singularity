@@ -26,7 +26,6 @@ required `draftKey`.
   - Exports (values): `InlinePopover`
 - Cross-plugin:
   - Imported by:
-    - `apps/chord/curriculum`
     - `apps/prototypes/canvas`
     - `apps/sonata/track-mixer`
     - `apps/studio/compositions/entry-points`

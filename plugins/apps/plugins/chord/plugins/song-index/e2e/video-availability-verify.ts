@@ -3,7 +3,7 @@
 // steps 3–5):
 //
 //   1. `ensure` opens the index, and its status reaches `ready`;
-//   2. a find with unlocked {I, IV, V} and target IV in major — twice, timed: the
+//   2. a find with playable {I, IV, V}, IV practised — twice, timed: the
 //      first call pays for the oEmbed checks of videos nobody has looked at, the
 //      second finds most of them known. Every candidate's video is `ok` or
 //      `unknown`, never one known to be unplayable;
@@ -33,7 +33,7 @@ const timeoutMs = numArg("timeout-min", 15) * 60_000;
 const I = major(0);
 const IV = major(5);
 const V = major(7);
-const FIND = { unlocked: [I, IV, V], target: IV, modes: ["major"], limit: 50 };
+const FIND = { playable: [I, IV, V], practised: [IV], extras: 0, limit: 50 };
 
 async function find(): Promise<{ candidates: LoopCandidate[]; ms: number }> {
   const t0 = performance.now();

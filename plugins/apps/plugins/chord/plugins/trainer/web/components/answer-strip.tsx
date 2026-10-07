@@ -1,6 +1,10 @@
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
+  isRightAnswer,
+  type Answer,
+} from "@plugins/apps/plugins/chord/plugins/progress/core";
+import {
   useYouTubePlayhead,
   type YouTubePlayerController,
 } from "@plugins/integrations/plugins/youtube/web";
@@ -17,6 +21,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   ChordNumeral,
+  chordPaint,
   chordToneStyle,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
 import {
@@ -62,6 +67,7 @@ export function AnswerStrip({
   canReplay,
   soundingPosition,
   nameChord,
+  listed,
   onSelect,
   onReplayBox,
   onHearAnswer,
@@ -77,6 +83,8 @@ export function AnswerStrip({
   soundingPosition: number | null;
   /** Names a chord in the song's key. */
   nameChord: (token: ChordToken) => string;
+  /** Whether a track lists this chord: when not, Rare is its right answer. */
+  listed: (token: ChordToken) => boolean;
   onSelect: (position: number) => void;
   onReplayBox: (box: Box) => void;
   onHearAnswer: (answer: ChordToken) => void;
@@ -90,7 +98,7 @@ export function AnswerStrip({
   const total = askedPositions.length;
   const asking =
     sheet.selected === null ? 0 : askedPositions.indexOf(sheet.selected);
-  const score = sheet.checked ? sheetScore(sheet, round) : null;
+  const score = sheet.checked ? sheetScore(sheet, round, listed) : null;
 
   return (
     <Card className="rounded-2xl">
@@ -132,6 +140,7 @@ export function AnswerStrip({
                 popped={(fills[box.position] ?? 0) > 0}
                 canReplay={canReplay}
                 nameChord={nameChord}
+                listed={listed}
                 onSelect={onSelect}
                 onReplay={onReplayBox}
                 onHearAnswer={onHearAnswer}
@@ -167,13 +176,15 @@ function AnswerBox({
   popped,
   canReplay,
   nameChord,
+  listed,
   onSelect,
   onReplay,
   onHearAnswer,
 }: {
   box: Box;
   beats: number;
-  answer: ChordToken | null;
+  /** The answer given: a chord, or Rare. */
+  answer: Answer | null;
   /** False on a GIVEN box: its chord was handed over, not asked for. */
   asked: boolean;
   checked: boolean;
@@ -183,6 +194,7 @@ function AnswerBox({
   canReplay: boolean;
   /** Names a chord in the song's key. */
   nameChord: (token: ChordToken) => string;
+  listed: (token: ChordToken) => boolean;
   onSelect: (position: number) => void;
   onReplay: (box: Box) => void;
   onHearAnswer: (answer: ChordToken) => void;
@@ -190,12 +202,20 @@ function AnswerBox({
   // Before the check a box shows the answer given; after it, the chord that
   // played, with a mark saying whether the answer was right. A given box shows
   // its own chord throughout and is never marked — nobody named it.
-  const shown = checked ? box.token : answer;
+  const shown: Answer | null = checked ? box.token : answer;
   // The name follows `shown`, so it leaks nothing: before the check it names
-  // what the LEARNER picked, after it the chord that really played.
-  const name = shown === null ? null : nameChord(shown);
+  // what the LEARNER picked, after it the chord that really played. Rare has
+  // no name: it is not one chord.
+  const name = shown === null || shown === "rare" ? null : nameChord(shown);
+  // Right by the server's rule: the chord itself, or Rare for a chord no track
+  // lists. A box answered Rare that was a listed chord shows the real chord,
+  // as any wrong box does.
   const mark =
-    checked && asked ? (answer === box.token ? "ok" : "bad") : undefined;
+    checked && asked && answer !== null
+      ? isRightAnswer(box.token, answer, listed)
+        ? "ok"
+        : "bad"
+      : undefined;
   // A wrong box keeps the answer given, struck through, beside the chord that
   // played — so the mistake and its correction read as one pair.
   const missed = mark === "bad" ? answer : null;
@@ -207,7 +227,13 @@ function AnswerBox({
   // struck answer opts back into clicks above it.
   return (
     <div
-      className={cn(placedClasses({}), "chord-box chord-tone")}
+      // Its paint: the quiet tint for a given box, the tile once filled, the
+      // ghost while it waits for an answer.
+      className={cn(
+        placedClasses({}),
+        "chord-box",
+        chordPaint(!asked ? "tint-quiet" : shown !== null ? "tile" : "ghost"),
+      )}
       style={{
         ...placedStyle(
           {
@@ -216,7 +242,7 @@ function AnswerBox({
           },
           "fill",
         ),
-        ...(shown === null ? {} : chordToneStyle(shown)),
+        ...(shown === null || shown === "rare" ? {} : chordToneStyle(shown)),
       }}
       data-given={asked ? undefined : ""}
       data-filled={asked && shown !== null ? "" : undefined}
@@ -242,7 +268,7 @@ function AnswerBox({
             aria-label={`Chord ${String(box.position + 1)}, ${beatsLabel}${
               shown === null
                 ? ""
-                : `: ${chordLabel(shown).text}${name === null ? "" : `, ${name}`}`
+                : `: ${answerText(shown)}${name === null ? "" : `, ${name}`}`
             }${asked ? "" : ", given"}${
               mark === undefined ? "" : mark === "ok" ? ", right" : ", wrong"
             }`}
@@ -253,7 +279,7 @@ function AnswerBox({
       >
         <Stack gap="xs" align="center" justify="center" className="size-full">
           {missed === null ? (
-            shown !== null && <ChordNumeral token={shown} />
+            shown !== null && <AnswerGlyph answer={shown} />
           ) : (
             <Stack
               direction="row"
@@ -262,18 +288,25 @@ function AnswerBox({
               justify="center"
               className="chord-box-pair"
             >
-              <Overlay.Interactive>
-                <button
-                  type="button"
-                  className="chord-missed"
-                  title="Hear what you picked"
-                  aria-label={`Hear your answer, ${chordLabel(missed).text}`}
-                  onClick={() => onHearAnswer(missed)}
-                >
-                  <ChordNumeral token={missed} />
-                </button>
-              </Overlay.Interactive>
-              {shown !== null && <ChordNumeral token={shown} />}
+              {missed === "rare" ? (
+                // Rare is not one chord: nothing to play, only the mistake.
+                <span className="chord-missed">
+                  <AnswerGlyph answer={missed} />
+                </span>
+              ) : (
+                <Overlay.Interactive>
+                  <button
+                    type="button"
+                    className="chord-missed"
+                    title="Hear what you picked"
+                    aria-label={`Hear your answer, ${chordLabel(missed).text}`}
+                    onClick={() => onHearAnswer(missed)}
+                  >
+                    <ChordNumeral token={missed} />
+                  </button>
+                </Overlay.Interactive>
+              )}
+              {shown !== null && <AnswerGlyph answer={shown} />}
             </Stack>
           )}
           {name !== null && <span className="chord-box-name">{name}</span>}
@@ -295,6 +328,20 @@ function AnswerBox({
         </Center>
       )}
     </div>
+  );
+}
+
+/** How an answer reads in a label: the chord's numeral text, or "Rare". */
+function answerText(answer: Answer): string {
+  return answer === "rare" ? "Rare" : chordLabel(answer).text;
+}
+
+/** An answer drawn in a box: the chord's numeral, or the word Rare. */
+function AnswerGlyph({ answer }: { answer: Answer }) {
+  return answer === "rare" ? (
+    <span className="chord-box-rare">Rare</span>
+  ) : (
+    <ChordNumeral token={answer} />
   );
 }
 

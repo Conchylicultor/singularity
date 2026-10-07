@@ -9,10 +9,14 @@
  * lives here; black and white appear only as the ends a chord colour is mixed
  * toward. */
 
-/* A chord's own colours (`.chord-tone`) and its numeral (`.chord-num`) are
+/* A chord's own colours (`.chord-tone`), its numeral (`.chord-num`) and the
+ * paints a chord surface wears (tile, tint-quiet, ghost — `chordPaint`) are
  * drawn the same everywhere, so they live with the vocabulary
- * (`vocabulary/web/chord-paint.css`); this file only sizes them for the place
- * they sit in. */
+ * (`vocabulary/web/chord-paint.css`). The components pick a paint by name;
+ * this file only sizes it and draws the state chrome around it (the selected
+ * and marked edges, the lit pad's edge, the shadow). No chord colour is
+ * re-stated here — the meter fill, the pad's bar and the sounding box's ring
+ * use the raw `--fn` as a LINE, which is a value, not a paint. */
 
 /* The mockup's "sunk" black, a step below the page. */
 .chord-trainer {
@@ -48,10 +52,11 @@
 /* A box is a painted frame; its click target is the full-bleed button behind
  * its content (`.chord-box-hit`), so the frame's hover and focus states read
  * off that button. */
+/* Its paint (`chordPaint`): ghost while empty, tile once filled, tint-quiet
+ * when given. */
 .chord-box {
   container-type: inline-size;
   border-radius: 10px;
-  border: 1.5px dashed var(--input);
   transition:
     background-color 0.12s,
     border-color 0.12s,
@@ -77,45 +82,18 @@
 .chord-box .chord-num {
   font-size: clamp(22px, 38cqi, 44px);
 }
-.chord-box[data-filled] {
-  border: 1.5px solid transparent;
-  background: var(--fn-bg);
-}
-.chord-box[data-filled] .chord-num {
-  color: var(--fn-ink);
-}
-/* A GIVEN box — one the round is not asking about. Its chord is already
- * printed, in its own colour but dimmed and flat: no fill, no dashed waiting
- * edge, nothing to click before the check. So the strip reads as "these are
- * the ones I have to name". */
-.chord-box[data-given] {
-  border: 1.5px solid color-mix(in srgb, var(--fn, var(--categorical-10)) 22%, transparent);
-  background: color-mix(in srgb, var(--fn, var(--categorical-10)) 7%, transparent);
-}
-.chord-box[data-given] .chord-num {
-  color: var(--fn, var(--categorical-10));
-  opacity: 0.55;
-}
-/* After the check a given box replays the song over it like any other, so it
- * takes the hover edge back; before it, there is nothing to click. */
-.chord-box[data-given]:has(.chord-box-hit:enabled:hover) {
-  border-color: var(--faint-foreground);
-}
-/* The chord's name under its numeral, once reveal is on. Muted on an empty or
- * given box, the tile's own ink on a filled one — the same pair the numeral
- * follows, so the two lines read as one label. */
+/* A GIVEN box — one the round is not asking about — wears the quiet tint:
+ * its chord already printed, in its own colour but dimmed and flat, no dashed
+ * waiting edge, nothing to click before the check. So the strip reads as
+ * "these are the ones I have to name". After the check it replays the song
+ * like any other box, and takes the hover edge above. */
+/* The chord's name under its numeral, once reveal is on: in the paint's ink,
+ * the same as the numeral, so the two lines read as one label. */
 .chord-box-name {
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--muted-foreground);
-}
-.chord-box[data-filled] .chord-box-name {
-  color: var(--fn-ink);
-}
-.chord-box[data-given] .chord-box-name {
-  color: var(--fn, var(--categorical-10));
-  opacity: 0.55;
+  color: var(--chord-ink, var(--muted-foreground));
 }
 .chord-box[data-selected] {
   border: 2px solid var(--muted-foreground);
@@ -184,7 +162,7 @@
   cursor: pointer;
 }
 .chord-box .chord-missed .chord-num {
-  color: color-mix(in srgb, var(--fn-ink) 72%, transparent);
+  color: color-mix(in srgb, var(--chord-ink) 72%, transparent);
 }
 .chord-missed::after {
   content: "";
@@ -233,11 +211,12 @@
 }
 
 /* ── The chord buttons ────────────────────────────────────────────────────── */
+/* At rest a neutral pad (its chord colour only in the bar); lit, the tile
+ * (`chordPaint("tile")`). */
 .chord-pad {
+  --chord-edge: 1px;
   height: 90px;
   border-radius: 14px;
-  background: var(--muted);
-  border: 1px solid var(--input);
   box-shadow: 0 3px 0 var(--chord-sunk);
   padding: 11px 13px 10px 24px;
   text-align: left;
@@ -248,7 +227,12 @@
     border-color 0.15s,
     background-color 0.15s;
 }
-/* The chord's colour: a short bar set inside the pad, clear of the corners. */
+.chord-pad:not([data-lit]) {
+  background: var(--muted);
+  border: 1px solid var(--input);
+}
+/* The chord's colour: a short bar set inside the pad, clear of the corners —
+ * the raw `--fn` as a line, not a paint. */
 .chord-pad::before {
   content: "";
   position: absolute;
@@ -276,7 +260,22 @@
 .chord-pad-fn {
   font-size: 12px;
   font-weight: 500;
-  color: var(--faint-foreground);
+  color: var(--chord-ink, var(--faint-foreground));
+}
+/* The Rare joker: no chord colour (its bar is the neutral grey), a word where
+ * the numeral sits. */
+.chord-pad-word {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--muted-foreground);
+}
+/* "Rare" in a box: the learner's joker answer, in place of a numeral. */
+.chord-box-rare {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted-foreground);
 }
 /* Waiting for the second key: the digit was pressed and several chords sit on
  * it, so those pads are lit and each shows the number that picks it. */
@@ -296,31 +295,31 @@
   opacity: 0.4;
 }
 /* The chord sounding right now — only once the round is checked, so a lit
- * button never gives an answer away. */
+ * button never gives an answer away. The tile, edged in the chord's colour
+ * (a line, the pad's own state chrome). */
 .chord-pad[data-lit] {
-  background: var(--fn-bg);
   border-color: var(--fn, var(--categorical-10));
-}
-.chord-pad[data-lit] .chord-num,
-.chord-pad[data-lit] .chord-pad-fn {
-  color: var(--fn-ink);
 }
 
 /* ── The side panel ───────────────────────────────────────────────────────── */
+/* A "Your chords" chip: the tile (`chordPaint("tile")`). */
 .chord-chip {
   height: 30px;
   border-radius: 8px;
-  background: var(--fn-bg);
+}
+.chord-chip-word {
+  font-size: 11px;
+  font-weight: 600;
 }
 .chord-chip .chord-num {
   font-size: 18px;
-  color: var(--fn-ink);
 }
 .chord-meter {
   height: 6px;
   border-radius: 3px;
   background: var(--chord-sunk);
 }
+/* The raw `--fn` as a line (a meter), not a paint. */
 .chord-meter-fill {
   border-radius: 3px;
   background: var(--fn, var(--categorical-10));

@@ -19,9 +19,19 @@ the prototype `proto-1789461303-updb` at its default options.
   `needs-duration`. An alignment of `none` throws: `find` never returns one.
 - Answer time: a box's clock starts the first time its chord finishes sounding
   in the round; `clampAnswerMs` bounds the time to 0.3–30 s.
+- `gridBoxes(candidate)`: the same boxes on the beat grid alone (no seconds),
+  readable before the video's length is known; `roundFromCandidate` places them
+  in the video.
+- **Dealing a loop** (`deal.ts`): `dealLoop(candidate, { practised, blanks,
+  random? }) → { candidate, asked, blanks }` — the asked positions
+  (`askedPositions`, curriculum) decided ONCE, `random` draws included, and
+  carried with the queued loop, so the round on screen is frozen: a selection
+  change never deals it again.
 - **The answer sheet** (`sheet.ts`), pure. `emptySheet(round, asked)` takes the
-  positions the learner must name — the curriculum's decision, made outside
-  (`asked` empty, out of range or repeated throws). The other boxes are
+  positions the learner must name — the dealt loop's `asked` (empty, out of
+  range or repeated throws). An answer is a chord or `"rare"` (the Rare joker);
+  `sheetScore(sheet, round, listed)` judges with progress's `isRightAnswer`,
+  `listed` being the catalog's word on a chord. The other boxes are
   **given**: they come already filled with their own chord and cannot be
   selected, cleared or refilled, so the arrows step over them and Backspace
   reaches past them. The first asked box starts selected; a fill writes the
@@ -36,45 +46,70 @@ prev, next)` between two playhead reads — a forward move finishes every box
   whose end it crosses (within 50 ms), a jump back (the loop wrapping) finishes
   the box it cut off within 0.3 s of its end. A box filled before its chord
   finished counts the minimum, 0.3 s.
-- `weakestChord(practised, standings)`: the target of the next loop query —
-  not mastered first, then the fewest recent answers, then the lowest accuracy;
-  ties keep the order given.
+- **How often each practised chord turns up** (`loop-share.ts`; no forced
+  target). `desiredShare(standing)`: 0.50 while new, falling linearly to 0.15
+  as `answers/20 × accuracy` grows, 0.15 once mastered — never 0.
+  `DesiredShares` holds one per listed practised chord, plus one pooled `rare`
+  share for the practised chords no track lists (they count as one key,
+  `"rare"`). `pickNext(pool, history, desired, random?)`: of the pool, the loop
+  that leaves the observed shares (the last `SHARE_HISTORY` = 20 dealt loops
+  plus `PRIOR_LOOPS` = 5 loops of prior at the desired share) closest to the
+  desired ones — least sum of squared gaps; ties broken at random.
+  `shareDeficits(history, desired)`: the keys furthest below their share, for
+  the focused batches. A simulated-stream test checks a new chord settles near
+  50 % and mastered ones near 15 %.
 
 ## web
 
 `trainerPane` (route `chord-trainer`, segment `""`, `appIndex`) renders
 `<SongIndexGate><TrainerScreen/></SongIndexGate>`.
 
-- **Everything comes from the learner's selection** (`useCurriculum`): which
-  chords are practised, heard or off, the blanks (one / half / all) and the key
-  modes. Until it lands the screen shows its loading state — buttons that are
-  about to change would be a claim about what this learner chose.
-- **The loop queue** (`useLoopQueue`): the loop on screen is the queue's
-  first. When it is the last one left, 10 more are asked for
-  (`findLoopsEndpoint`: every chord on — practised and heard — as the chords a
-  loop may hold, the key modes, the weakest PRACTISED chord as target, the
-  sections of the last 20 loops moved past and of the ones still queued left
-  out). Nothing is asked until the progress has loaded, and nothing at all
-  while no chord is practised ("No chord is practised"). An empty answer shows
-  "No song fits these chords yet" (with Try again), never a blank screen;
-  `not-ready` and a failed query show in the same place. **Each queued loop
-  carries the target its batch was asked for**, so the round asks about the
-  chord the loop was chosen for. **Changing the chords drops the queue**: the
-  loops still waiting were drawn from the old chords, so everything behind the
-  loop on screen goes and a fresh query runs at once. The loop on screen stays
-  (the learner may be mid-answer) unless the new chords cannot hold it — a
-  chord in it turned off, or its target no longer practised. The sections
+- **Everything comes from the learner's selection** (`useCurriculum`) **and
+  the catalog** (`useCatalog`): which chords are practised, heard or off, the
+  blanks (all / random half / last half), how many other chords a loop may
+  hold, and which practised chords no track lists (answered by the Rare
+  button). Until both land — a `not-ready` catalog included — the screen shows
+  its loading state: buttons that are about to change would be a claim about
+  what this learner chose.
+- **The loop queue** (`useLoopQueue`) holds the round on screen and a
+  **pool**. When the pool holds 3 loops or fewer it is refilled in parallel:
+  one unfocused `find` (every chord on as `playable`, the practised ones, the
+  `extras`; 10 loops) plus one focused `find` (5 loops) for each of the at most
+  2 chords furthest below their share (`shareDeficits`; for the pooled rare
+  chords, one of them at random). The sections of the last 20 loops moved
+  past, of the round and of the pool are left out. Each next loop is
+  `pickNext(pool, history, desired)` — `desired` from each practised chord's
+  standing (`desiredShare`), the history the chords of the last 20 dealt loops
+  — and the other windows of its song section leave the pool. Nothing is asked
+  until the progress has loaded, and nothing at all while no chord is
+  practised ("No chord is practised"). An empty answer shows "No song fits
+  these chords yet" (with Try again), never a blank screen; `not-ready` and a
+  failed query show in the same place.
+- **The round on screen is frozen.** Each loop is dealt ONCE (`dealLoop`): its
+  asked boxes are decided then — a `random` draw included — and stored with
+  it, and the round's key is the loop alone, so no selection change ever deals
+  it again. **Any change of the chords or the extras empties the pool** behind
+  the round (derived: the pool is stamped with the palette it was found for)
+  and refills it at once; the blanks apply to the next loop dealt. The sections
   already played are remembered across the change.
-- **Which boxes the round asks about** (`askedPositions`, curriculum): only a
-  practised chord's box can be blank; `one` asks the target's last box, `half`
-  the practised boxes in the second half, `all` every practised box. The rest
-  are **given**: they show their chord in its own colour, dimmed and flat, are
-  not click targets before the check, and are never marked right or wrong.
-  After the check they replay their stretch of the song like any other box,
-  because they are part of the loop. The heading counts asked boxes only
-  ("Chord 1 of 2"). **The round's key includes the asked positions**, so
-  changing the blanks or the chords mid-round deals the same loop again with
-  the new boxes; the round is saved with the blanks it was dealt with.
+- **Which boxes the round asks about** (`askedPositions`, curriculum, via
+  `dealLoop`): only a practised chord's box can be blank; `all` every
+  practised box, `random` half of them (rounded up), `half` those in the second
+  half (else the last practised box). The rest are **given**: they show their
+  chord in its own colour, dimmed and flat, are not click targets before the
+  check, and are never marked right or wrong. After the check they replay their
+  stretch of the song like any other box, because they are part of the loop.
+  The heading counts asked boxes only ("Chord 1 of 2"). The round is saved with
+  the blanks it was dealt with.
+- **The Rare joker.** Practised listed chords have their buttons; when at least
+  one practised chord is one no track lists, one **Rare** button follows them —
+  there whenever such a chord is practised, so it gives nothing away — with its
+  own key, the next digit after the plan's highest (`rareKeyFor`; 0 if none is
+  left). A box answered Rare shows "Rare"; checked, it is right when the chord
+  is not listed (`isRightAnswer`, the server's rule). A box answered Rare that
+  was a listed chord shows the real chord with "Rare" struck beside it (nothing
+  to play: Rare is not one chord); a listed answer for a rare chord is simply
+  wrong.
 - **The player** stays mounted from loop to loop (a new video loads in place).
   Browsers block sound until the page is used, so the first loop waits for Play;
   after a Play or a Next every loop starts by itself (`autoplay`).
@@ -82,7 +117,8 @@ prev, next)` between two playhead reads — a forward move finishes every box
   animation frame while the video plays, and stamps each box the first time its
   chord finishes. Nothing re-renders for it.
 - **Keys** (surface-scoped, `useSurfaceShortcuts`; `useChordKeys`): the chord's
-  root digit answers (`chordKeyPlan`, so ♭VII is on the 7). A digit several
+  root digit answers (`chordKeyPlan` over the practised listed chords, so ♭VII
+  is on the 7), and the Rare key answers Rare. A digit several
   practised chords share instead **arms** — those chords light, numbered on their
   buttons, and the next number picks one; Escape drops the pick, and so does
   every other key of the trainer. While a digit is armed **it owns the number
@@ -125,14 +161,17 @@ prev, next)` between two playhead reads — a forward move finishes every box
   hands `<PianoCard>` a `play` function, so the card's playable keys sound on
   the same context rather than opening a second one.
 - **The progress panel** (`ProgressPanel`): today (songs, % right, seconds per
-  chord), an all-time line, "Your chords" — the path's step bar for the
-  chapter in hand (`<PathProgress>`), then one line per chord that is on, in
-  path order (chip, accuracy meter marked at 90 %, accuracy, median time red
-  over 2 s, a check once mastered; a chord only heard is dimmed and reads
-  "hear only") — and the Path card (`<PathCard>`, curriculum), folded, which
-  holds every practice control. The panel builds the path's `standing` from
-  `chord.progress` (`byBlanks`); the progress it reads covers every chord on
-  and every chord the path names. It is a **plain component, not a DataView**:
+  chord), an all-time line, "Your chords" — one line per listed chord that is
+  on, in catalog order (`catalogOrder`: track, section, share; chip, accuracy
+  meter marked at 90 %, accuracy, median time red over 2 s, a check once
+  mastered; a chord only heard is dimmed and reads "hear only"), plus one
+  **Rare** line from the pooled standing (`chord.progress`'s `rare`) when a
+  chord no track lists is on — and the Chords section (`<ChordsSection>`,
+  curriculum), which holds every practice control. The panel hands it a
+  `standing` lookup built from `chord.progress` and `desiredShare`. The
+  progress read covers EVERY listed chord of the catalog (`tokens`), whatever
+  is on, so a chip click never re-keys it (no loading flash, the round stays
+  mounted); the server pools every unlisted chord as `rare` itself. It is a **plain component, not a DataView**:
   a small fixed status list, not a collection anyone searches, sorts or
   filters. It shows a loading state until `chord.progress` has its first value.
 - **The words, and the piano** (`piano/web`): one `songVocabulary(songKey)` and
@@ -171,12 +210,14 @@ at 1000 px, with a named disable).
 
 A chord's own colour and numeral are drawn the same wherever they appear, so
 they live with the vocabulary (`vocabulary/web`: `chordToneStyle`,
-`<ChordNumeral>`, `chord-paint.css`) and the curriculum's Path card (its
-chord chips and map rows) draws them too.
+`<ChordNumeral>`, `chord-paint.css`) and the curriculum's Chords section (its
+chips) draws them too.
 
 ## e2e
 
-`e2e/trainer-verify.ts`: the index reaches ready; /chord shows a round whose
+`e2e/trainer-verify.ts` (its round played with the digits of the practised
+chords; the Chords section and the Rare joker are `curriculum-verify.ts`'s):
+the index reaches ready; /chord shows a round whose
 heading counts its **asked** boxes (the given ones name themselves, ", given",
 which is how the script tells them apart); Play leads to a playback report
 (playing or an error — headless Chromium may not play YouTube); every asked box
@@ -201,9 +242,9 @@ piano.
   - Slots: `chord-trainer.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "chord-trainer"
   - Uses:
-    - `apps/chord/curriculum.PathCard`
-    - `apps/chord/curriculum.PathProgress`
+    - `apps/chord/curriculum.ChordsSection`
     - `apps/chord/curriculum.StandingLookup`
+    - `apps/chord/curriculum.useCatalog`
     - `apps/chord/curriculum.useCurriculum`
     - `apps/chord/piano.PianoCard`
     - `apps/chord/piano.SoundChannelControl`
@@ -211,7 +252,9 @@ piano.
     - `apps/chord/piano.useSoundMix`
     - `apps/chord/song-index.SongIndexGate`
     - `apps/chord/vocabulary.ChordNumeral`
+    - `apps/chord/vocabulary.chordPaint`
     - `apps/chord/vocabulary.chordToneStyle`
+    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `integrations/youtube.useYouTubePlayer`
     - `integrations/youtube.useYouTubePlayerState`
@@ -239,6 +282,8 @@ piano.
     - `primitives/css/yield.yieldClass`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
@@ -251,6 +296,13 @@ piano.
     - `ui/icons.Icon`
 - Core:
   - Uses:
+    - `apps/chord/curriculum.askedPositions`
+    - `apps/chord/curriculum.Blanks`
+    - `apps/chord/progress.Answer`
+    - `apps/chord/progress.isRightAnswer`
+    - `apps/chord/progress.MASTERY_WINDOW`
+    - `apps/chord/progress.MasteryStanding`
+    - `apps/chord/progress.RecordRoundBody`
     - `apps/chord/song-index.beatTimesAlignment`
     - `apps/chord/song-index.BeatTimesAlignment`
     - `apps/chord/song-index.beatToSeconds`
@@ -263,8 +315,12 @@ piano.
   - Exports (types):
     - `AnswerSheet`
     - `Box`
+    - `DealtLoop`
+    - `DesiredShares`
+    - `GridBox`
     - `Round`
     - `RoundResult`
+    - `ShareKey`
     - `SheetScore`
   - Exports (values):
     - `ANSWER_MS_MAX`
@@ -272,17 +328,27 @@ piano.
     - `boxAt`
     - `clampAnswerMs`
     - `clearBackward`
+    - `dealLoop`
+    - `desiredShare`
     - `emptySheet`
     - `fillSelected`
     - `FINISH_EPSILON_S`
     - `finishedBoxes`
     - `gridBeatAt`
+    - `gridBoxes`
+    - `loopShareKeys`
+    - `MASTERED_SHARE`
     - `moveSelection`
+    - `NEW_SHARE`
+    - `observedShares`
+    - `pickNext`
+    - `PRIOR_LOOPS`
     - `recordRoundBody`
     - `roundFromCandidate`
     - `selectBox`
+    - `SHARE_HISTORY`
+    - `shareDeficits`
     - `sheetScore`
-    - `weakestChord`
     - `WRAP_TOLERANCE_S`
 
 <!-- AUTOGENERATED:END -->

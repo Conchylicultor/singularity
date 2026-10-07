@@ -3,7 +3,8 @@ import {
   LoopCandidateSchema,
   type LoopCandidate,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import { roundFromCandidate, type Round } from "./round";
+import { dealLoop } from "./deal";
+import { gridBoxes, roundFromCandidate, type Round } from "./round";
 
 type Alignment = LoopCandidate["alignment"];
 
@@ -358,5 +359,60 @@ describe("roundFromCandidate — alignments", () => {
     expect(() => roundFromCandidate(c, { videoDurationSeconds: 200 })).toThrow(
       "no alignment",
     );
+  });
+});
+
+describe("dealLoop — the asked boxes, decided once", () => {
+  // Window [1, 17): I, IV, V, I, one per bar.
+  const loop = candidate({
+    startBeat: 1,
+    endBeat: 17,
+    chords: [
+      { beat: 1, duration: 4, token: I },
+      { beat: 5, duration: 4, token: IV },
+      { beat: 9, duration: 4, token: V },
+      { beat: 13, duration: 4, token: I },
+    ],
+  });
+  const practised = new Set(loop.window.chordTokens);
+
+  it("reads the boxes on the beat grid alone, before the video's length is known", () => {
+    const videoFraction = candidate({
+      startBeat: 1,
+      endBeat: 17,
+      alignment: { kind: "video-fraction", start: 0.1, end: 0.9, endBeat: 33 },
+      chords: [{ beat: 1, duration: 16, token: I }],
+    });
+    expect(
+      roundFromCandidate(videoFraction, { videoDurationSeconds: null }).kind,
+    ).toBe("needs-duration");
+    expect(gridBoxes(videoFraction).map((b) => b.gridStart)).toEqual([0]);
+  });
+
+  it("asks by the blanks setting and carries it", () => {
+    expect(dealLoop(loop, { practised, blanks: "all" })).toMatchObject({
+      asked: [0, 1, 2, 3],
+      blanks: "all",
+    });
+    expect(dealLoop(loop, { practised, blanks: "half" }).asked).toEqual([2, 3]);
+    const random = dealLoop(loop, {
+      practised,
+      blanks: "random",
+      random: () => 0,
+    });
+    expect(random.asked).toEqual([0, 1]);
+  });
+
+  it("matches the round's boxes", () => {
+    const round = roundOf(loop);
+    expect(
+      gridBoxes(loop).map((b) => [b.position, b.token, b.gridStart]),
+    ).toEqual(round.boxes.map((b) => [b.position, b.token, b.gridStart]));
+  });
+
+  it("throws for a loop holding no practised chord", () => {
+    expect(() =>
+      dealLoop(loop, { practised: new Set(), blanks: "all" }),
+    ).toThrow(/no practised chord/);
   });
 });

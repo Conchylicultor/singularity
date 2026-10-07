@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:chord_curriculum.extras",
+      "entityType": "column",
+      "entityName": "extras",
+      "action": "create"
+    }
+  ]
+}

@@ -4,48 +4,39 @@ import {
   ChordTokenSchema,
   type ChordToken,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import {
-  BLANKS,
-  type Blanks,
-} from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 
 // ── The live stats: `chord.progress` ─────────────────────────────────────────
 
 const count = z.number().int().min(0);
 
-/** One chord at one blanks level, over that level's last `MASTERY_WINDOW` answers. */
-export const LevelStandingSchema = z.object({
-  answers: count,
-  accuracy: z.number().nullable(),
-  mastered: z.boolean(),
-});
-export type LevelStanding = z.infer<typeof LevelStandingSchema>;
-
-/** The same mastery rule, once per blanks level: what the path's map reads. */
-const ByBlanksSchema = z.object(
-  Object.fromEntries(BLANKS.map((b) => [b, LevelStandingSchema])) as Record<
-    Blanks,
-    typeof LevelStandingSchema
-  >,
-);
-
-/** One chord, over its last `MASTERY_WINDOW` answers (`chordMastery`). */
-export const ChordStandingSchema = z.object({
-  token: ChordTokenSchema,
+/** How a chord — or a pool of chords — stands over its last `MASTERY_WINDOW` answers (`chordMastery`). */
+export const MasteryStandingSchema = z.object({
   /** Answers in the window: at most `MASTERY_WINDOW`. */
   answers: count,
   correct: count,
   accuracy: z.number().nullable(),
   medianMs: z.number().nullable(),
   mastered: z.boolean(),
-  /** The chord at each blanks level; answers saved before the setting existed count at none. */
-  byBlanks: ByBlanksSchema,
+});
+export type MasteryStanding = z.infer<typeof MasteryStandingSchema>;
+
+/** One chord, over its last `MASTERY_WINDOW` answers. */
+export const ChordStandingSchema = MasteryStandingSchema.extend({
+  token: ChordTokenSchema,
 });
 export type ChordStanding = z.infer<typeof ChordStandingSchema>;
 
 export const ChordProgressSchema = z.object({
   /** One per requested token, in the params' (canonical, sorted) order. */
   chords: z.array(ChordStandingSchema),
+  /**
+   * Every chord the catalog does not list — the chords the Rare joker
+   * answers — as one pool, over the last `MASTERY_WINDOW` answers given for
+   * any of them. The server decides which chords are rare (its catalog), so
+   * the pool does not depend on what the learner has on. Null when no rare
+   * chord was ever answered.
+   */
+  rare: MasteryStandingSchema.nullable(),
   /** Since local midnight in the params' time zone. `songs` counts checked rounds. */
   today: z.object({
     songs: count,
@@ -60,15 +51,23 @@ export type ChordProgress = z.infer<typeof ChordProgressSchema>;
 
 /**
  * The resource's params, on the wire. Build them with `encodeProgressParams`
- * only: `tokens` is the chord set sorted, deduplicated and joined by commas, so
+ * only: `tokens` is a chord set sorted, deduplicated and joined by commas, so
  * one set is one subscription, and the server refuses any other spelling.
+ *
+ * The trainer asks for EVERY listed chord of the catalog, not for the chords
+ * the learner has on: the subscription then depends only on the catalog, so
+ * toggling a chord never re-keys it (no pending read, no flash).
  */
-export type ChordProgressParams = { timeZone: string; tokens: string };
+export type ChordProgressParams = {
+  timeZone: string;
+  tokens: string;
+};
 
 /** What the params say. */
 export type DecodedProgressParams = {
   /** An IANA zone (`Europe/Paris`): where "today" starts. */
   timeZone: string;
+  /** The chords to stand one by one. */
   tokens: ChordToken[];
 };
 
@@ -107,35 +106,43 @@ export function encodeProgressParams(
  * Read the params back. Throws on an unknown time zone, on a string that is not
  * a chord token, and on a set not in its canonical spelling (unsorted or
  * repeated) — `encodeProgressParams` never produces one, so something built the
- * params by hand. An empty `tokens` is the empty set.
+ * params by hand. An empty set is the empty string.
  */
 export function decodeProgressParams(
   params: ChordProgressParams,
 ): DecodedProgressParams {
   assertTimeZone(params.timeZone);
+  return {
+    timeZone: params.timeZone,
+    tokens: decodeTokenSet("tokens", params.tokens),
+  };
+}
+
+function decodeTokenSet(name: string, text: string): ChordToken[] {
   const tokens =
-    params.tokens === ""
+    text === ""
       ? []
-      : params.tokens.split(",").map((text) => {
-          const parsed = ChordTokenSchema.safeParse(text);
+      : text.split(",").map((part) => {
+          const parsed = ChordTokenSchema.safeParse(part);
           if (!parsed.success) {
             throw new Error(
-              `chord.progress params: "${text}" is not a chord token`,
+              `chord.progress params: "${part}" is not a chord token`,
             );
           }
           return parsed.data;
         });
   const canonical = canonicalTokens(tokens).join(",");
-  if (canonical !== params.tokens) {
+  if (canonical !== text) {
     throw new Error(
-      `chord.progress params: tokens "${params.tokens}" are not in canonical form ("${canonical}"); build params with encodeProgressParams`,
+      `chord.progress params: ${name} "${text}" are not in canonical form ("${canonical}"); build params with encodeProgressParams`,
     );
   }
-  return { timeZone: params.timeZone, tokens };
+  return tokens;
 }
 
 /**
- * The learner's standing: per chord of `tokens`, today, and all time. Pushed
+ * The learner's standing: per chord of `tokens`, every unlisted (rare) chord
+ * as one pool, today, and all time. Pushed
  * again whenever an answer is saved. One object whose `chords` holds one entry
  * per requested token, so the params bound it.
  *

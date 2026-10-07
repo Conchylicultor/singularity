@@ -6,6 +6,7 @@ import {
   LOOP_SHAPE_IDS,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { BlanksSchema } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
+import { AnswerSchema } from "./answer";
 
 // ── Saving a checked round ───────────────────────────────────────────────────
 
@@ -23,8 +24,8 @@ export const RoundAnswerSchema = z.object({
   position: z.number().int().min(0),
   /** The chord that played. */
   token: ChordTokenSchema,
-  /** The chord the learner picked. */
-  answer: ChordTokenSchema,
+  /** The chord the learner picked, or the Rare joker. */
+  answer: AnswerSchema,
   answerMs: z.number().int().min(MIN_ANSWER_MS).max(MAX_ANSWER_MS),
 });
 export type RoundAnswer = z.infer<typeof RoundAnswerSchema>;
@@ -66,7 +67,8 @@ export type RecordRoundBody = z.infer<typeof RecordRoundBodySchema>;
 
 /**
  * Save a checked round and its answers, in one transaction. Whether each answer
- * is right is decided here (`token === answer`), never taken from the client.
+ * is right is decided here (`isRightAnswer`, against the catalog), never taken
+ * from the client.
  * A round skipped before it was checked is never sent.
  */
 export const recordRoundEndpoint = defineEndpoint({
