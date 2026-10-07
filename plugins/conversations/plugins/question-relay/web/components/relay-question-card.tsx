@@ -11,7 +11,7 @@ import {
   AnswerForm,
   AnswerHereButton,
   answerDraftScope,
-  type AnswerSelections,
+  type FormAnswer,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/web";
 import {
   answerRelayQuestion,
@@ -92,14 +92,19 @@ function HeldQuestion({
   // record — the tool result landing in the transcript is the confirmation. A
   // failed POST is reported by the mutation's global toast, and the form keeps
   // the user's picks (it clears its draft only on `true`).
-  const submit = (selections: AnswerSelections): Promise<boolean> =>
-    answer.mutateAsync({ params, body: { selections } }).then(
-      () => {
-        onAnswered();
-        return true;
-      },
-      () => false,
-    );
+  const submit = ({ selections, response }: FormAnswer): Promise<boolean> =>
+    answer
+      .mutateAsync({
+        params,
+        body: { selections, ...(response ? { response } : {}) },
+      })
+      .then(
+        () => {
+          onAnswered();
+          return true;
+        },
+        () => false,
+      );
 
   return (
     <Card>

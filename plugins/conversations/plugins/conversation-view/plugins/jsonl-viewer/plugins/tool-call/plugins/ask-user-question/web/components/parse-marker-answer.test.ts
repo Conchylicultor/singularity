@@ -87,8 +87,11 @@ describe("serializeMarkerAnswer", () => {
 
   it("writes the marker turn parseMarkerAnswer reads back", () => {
     const text = serializeMarkerAnswer(questions, {
-      "Which scope?": { selected: ["B"], other: null },
-      "Which extras?": { selected: ["X", "Y"], other: "Z" },
+      selections: {
+        "Which scope?": { selected: ["B"], other: null },
+        "Which extras?": { selected: ["X", "Y"], other: "Z" },
+      },
+      response: null,
     });
     expect(text).toBe(
       `${ANSWER_MARKER}\n\n- Scope: CLI fix: B\n- Extras: X, Y, Z`,
@@ -96,6 +99,20 @@ describe("serializeMarkerAnswer", () => {
     expect(parseMarkerAnswer(text, questions)).toEqual({
       "Which scope?": { answer: "B", notes: null },
       "Which extras?": { answer: "X, Y, Z", notes: null },
+    });
+  });
+
+  it("appends a free-text reply after the lines, unread as an answer", () => {
+    const text = serializeMarkerAnswer(questions, {
+      selections: { "Which extras?": { selected: ["X"], other: null } },
+      response: "- Scope: none of these\nlet's discuss first",
+    });
+    expect(text).toBe(
+      `${ANSWER_MARKER}\n\n- Scope: CLI fix: \n- Extras: X\n\n- Scope: none of these\nlet's discuss first`,
+    );
+    expect(parseMarkerAnswer(text, questions)).toEqual({
+      "Which scope?": { answer: null, notes: null },
+      "Which extras?": { answer: "X", notes: null },
     });
   });
 });

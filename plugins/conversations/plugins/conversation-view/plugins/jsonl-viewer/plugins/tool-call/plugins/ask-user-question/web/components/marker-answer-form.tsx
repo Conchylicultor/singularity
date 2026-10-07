@@ -4,7 +4,7 @@ import { AnswerForm } from "./answer-form";
 import { answerDraftScope } from "./answer-draft";
 import {
   serializeMarkerAnswer,
-  type AnswerSelections,
+  type FormAnswer,
   type Question,
 } from "./answer-model";
 
@@ -30,8 +30,8 @@ export function MarkerAnswerForm({
   // delivered turn is hidden from the transcript by our own EventFilter. The
   // send returns synchronously and the pending-turn record owns its fate, so
   // the answer counts as accepted at once.
-  const submit = (selections: AnswerSelections) => {
-    const text = serializeMarkerAnswer(questions, selections);
+  const submit = (answer: FormAnswer) => {
+    const text = serializeMarkerAnswer(questions, answer);
     sendConversationTurn(convId, {
       text,
       echo: false,

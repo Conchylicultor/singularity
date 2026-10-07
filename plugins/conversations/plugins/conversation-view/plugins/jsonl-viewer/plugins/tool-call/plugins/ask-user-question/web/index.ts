@@ -22,6 +22,7 @@ export { AnswerHereButton } from "./components/answer-here-button";
 export { answerDraftScope } from "./components/answer-draft";
 export type {
   AnswerSelections,
+  FormAnswer,
   Question,
   QuestionSelection,
 } from "./components/answer-model";

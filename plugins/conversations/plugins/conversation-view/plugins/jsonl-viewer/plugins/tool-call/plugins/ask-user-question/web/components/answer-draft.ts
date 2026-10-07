@@ -19,6 +19,8 @@ export interface QuestionAnswer {
 }
 
 export const ANSWER_DRAFT_KEY = "ask-user-question:answer";
+/** The free-text reply's draft — same scope as the answer's. */
+export const RESPONSE_DRAFT_KEY = "ask-user-question:response";
 
 // Scoping by the tool-use id (unique per question) means a restored draft
 // always belongs to the exact question still on screen, and never collides

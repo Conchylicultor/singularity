@@ -99,6 +99,7 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.Input`
+    - `primitives/css/ui-kit.Textarea`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/persistent-draft.useDraft`
     - `primitives/persistent-draft.writeDraft`
@@ -106,6 +107,7 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `ui/icons.Icon`
   - Exports (types):
     - `AnswerSelections`
+    - `FormAnswer`
     - `Question`
     - `QuestionSelection`
   - Exports (values):

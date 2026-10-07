@@ -93,6 +93,34 @@ export function OptionRow({
   );
 }
 
+/**
+ * A free-standing field laid out like an option row — same box, same leading
+ * column (an icon where the indicator would be) — so its control lines up with
+ * the "Other…" input above it. Not a choice: it never shows a selection.
+ */
+export function FieldRow({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Stack
+      direction="row"
+      gap="sm"
+      align="start"
+      className="w-full rounded-md border border-transparent px-sm py-xs"
+    >
+      {/* pt-xs centres the icon on the field's first line of text. */}
+      <Stack gap="none" className="pt-xs text-muted-foreground">
+        {icon}
+      </Stack>
+      <Fill>{children}</Fill>
+    </Stack>
+  );
+}
+
 export function OptionBody({
   label,
   description,

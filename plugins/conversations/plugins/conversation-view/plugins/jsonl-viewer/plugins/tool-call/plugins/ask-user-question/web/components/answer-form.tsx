@@ -1,23 +1,31 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Button,
   ControlSizeProvider,
   Input,
+  Textarea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { OptionBody, OptionRow } from "./option-row";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import { FieldRow, OptionBody, OptionRow } from "./option-row";
 import {
   type AnswerSelections,
+  type FormAnswer,
   type Question,
   type QuestionSelection,
 } from "./answer-model";
 import {
   ANSWER_DRAFT_KEY,
+  RESPONSE_DRAFT_KEY,
   emptyAnswers,
   type QuestionAnswer,
 } from "./answer-draft";
+
+const commentIcon = symbol("comment");
+const discardIcon = symbol("close");
 
 // Is the freeform "Other" row the active choice? Multi-select: active whenever
 // there is text (it's additive). Single-select: only when the pointer says so.
@@ -38,6 +46,14 @@ function isOptionActive(
   return question.multiSelect ? true : !answer.otherActive;
 }
 
+// Has the user put anything into this question? (Zero picks on a multi-select
+// is a valid answer, but not one a free-text reply should send for them.)
+function hasContent(answer: QuestionAnswer, question: Question): boolean {
+  const typed = answer.otherText.trim().length > 0;
+  if (question.multiSelect) return answer.selected.length > 0 || typed;
+  return answer.otherActive ? typed : answer.selected.length > 0;
+}
+
 function isAnswered(answer: QuestionAnswer, question: Question): boolean {
   // Multi-select (checkbox) questions accept zero selections as a valid
   // answer ("none of these"); only single-select requires a choice.
@@ -51,15 +67,19 @@ function isAnswered(answer: QuestionAnswer, question: Question): boolean {
  * The form state as the answer it stands for, one selection per question
  * text. Single-select keeps only the ACTIVE buffer (a preset, or the typed
  * text) — the inactive one is a draft convenience, not part of the answer.
- * Multi-select is additive: every picked preset plus any typed text.
+ * Multi-select is additive: every picked preset plus any typed text. With a
+ * free-text reply, `onlyAnswered` drops the questions left blank — the reply
+ * stands in for them.
  */
 function selectionsOf(
   questions: Question[],
   answers: QuestionAnswer[],
+  onlyAnswered: boolean,
 ): AnswerSelections {
   const selections: AnswerSelections = {};
   questions.forEach((q, qi) => {
     const answer = answers[qi]!;
+    if (onlyAnswered && !hasContent(answer, q)) return;
     const typed = answer.otherText.trim() || null;
     const selection: QuestionSelection =
       q.multiSelect || !answer.otherActive
@@ -77,7 +97,9 @@ function selectionsOf(
  * The interactive answer form for one AskUserQuestion call — presentational:
  * it owns the in-progress draft and hands the finished answer to `onSubmit`,
  * which decides how it reaches the agent (a relay answer, or the legacy
- * pasted turn — see marker-answer-form.tsx). `onSubmit` says whether the
+ * pasted turn — see marker-answer-form.tsx). Below the questions, "Add a
+ * comment" opens a free-text reply to the whole question: with one, the form
+ * submits whatever is answered (possibly nothing) plus the comment. `onSubmit` says whether the
  * answer was accepted; only then is the draft cleared, so a failed send keeps
  * what the user picked.
  */
@@ -90,7 +112,7 @@ export function AnswerForm({
   questions: Question[];
   /** Scopes the persisted draft — `answerDraftScope(convId, toolUseId)`. */
   draftScope: string;
-  onSubmit: (selections: AnswerSelections) => boolean | Promise<boolean>;
+  onSubmit: (answer: FormAnswer) => boolean | Promise<boolean>;
   /** A secondary action shown beside Submit. */
   secondaryAction?: ReactNode;
 }) {
@@ -102,6 +124,15 @@ export function AnswerForm({
     () => emptyAnswers(questions),
     { scope: draftScope },
   );
+  const [reply, setReply, clearReply] = useDraft<string>(
+    RESPONSE_DRAFT_KEY,
+    "",
+    { scope: draftScope },
+  );
+  // A restored reply draft opens the field on its own.
+  const [replyOpen, setReplyOpen] = useState(false);
+  const showReply = replyOpen || reply.length > 0;
+  const response = reply.trim() || null;
 
   const updateAnswer = (qi: number, next: QuestionAnswer) => {
     setAnswers((prev) => prev.map((a, i) => (i === qi ? next : a)));
@@ -143,10 +174,16 @@ export function AnswerForm({
     updateAnswer(qi, { ...current, otherActive: true });
   };
 
-  const canSubmit = answers.every((a, qi) => isAnswered(a, questions[qi]!));
+  const canSubmit =
+    response !== null ||
+    answers.every((a, qi) => isAnswered(a, questions[qi]!));
 
   const handleSubmit = async () => {
-    if (await onSubmit(selectionsOf(questions, answers))) clearDraft();
+    const selections = selectionsOf(questions, answers, response !== null);
+    if (await onSubmit({ selections, response })) {
+      clearDraft();
+      clearReply();
+    }
   };
 
   // Enter submits once every question is answered, from anywhere in the form
@@ -217,11 +254,44 @@ export function AnswerForm({
           </div>
         );
       })}
-      <Stack direction="row" gap="sm" justify="end">
-        {secondaryAction}
-        <Button disabled={!canSubmit} onClick={handleSubmit}>
-          Submit
-        </Button>
+      {showReply && (
+        <FieldRow icon={<Icon icon={commentIcon} className="size-3" />}>
+          <ControlSizeProvider size="sm">
+            <Textarea
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              autoFocus={replyOpen}
+              rows={2}
+              placeholder="Add a comment…"
+              aria-label="Comment"
+            />
+          </ControlSizeProvider>
+        </FieldRow>
+      )}
+      <Stack direction="row" gap="sm" justify="between">
+        {showReply ? (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              clearReply();
+              setReplyOpen(false);
+            }}
+          >
+            <Icon icon={discardIcon} />
+            Discard comment
+          </Button>
+        ) : (
+          <Button variant="ghost" onClick={() => setReplyOpen(true)}>
+            <Icon icon={commentIcon} />
+            Add a comment
+          </Button>
+        )}
+        <Stack direction="row" gap="sm">
+          {secondaryAction}
+          <Button disabled={!canSubmit} onClick={handleSubmit}>
+            Submit
+          </Button>
+        </Stack>
       </Stack>
     </Stack>
   );

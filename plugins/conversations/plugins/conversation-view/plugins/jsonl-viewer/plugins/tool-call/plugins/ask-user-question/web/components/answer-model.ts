@@ -37,6 +37,17 @@ export interface QuestionSelection {
 /** A whole answer: one selection per question text. */
 export type AnswerSelections = Record<string, QuestionSelection>;
 
+/**
+ * What the answer form submits: the per-question selections, plus the user's
+ * own free-text reply to the whole question (null when none). With a reply,
+ * `selections` holds only the questions the user actually answered — the
+ * reply stands in for the rest.
+ */
+export interface FormAnswer {
+  selections: AnswerSelections;
+  response: string | null;
+}
+
 export interface ParsedAnswer {
   /** Answer value for option matching, or null when no option was selected. */
   answer: string | null;
@@ -161,18 +172,21 @@ export function parseAnswerMap(
 /**
  * The legacy answer text: `ANSWER_MARKER` then one `- <header>: <value>` line
  * per question, the value being the picked labels and any typed text joined
- * with ", ". The inverse is `parseMarkerAnswer`.
+ * with ", ". A free-text reply follows the lines as its own paragraph (the
+ * parser reads only the positional `- ` lines, so it never mistakes it for an
+ * answer). The inverse is `parseMarkerAnswer`.
  */
 export function serializeMarkerAnswer(
   questions: Question[],
-  selections: AnswerSelections,
+  { selections, response }: FormAnswer,
 ): string {
   const lines = questions.map((q) => {
     const s = selections[q.question];
     const parts = s ? [...s.selected, ...(s.other ? [s.other] : [])] : [];
     return `- ${q.header}: ${parts.join(", ")}`;
   });
-  return `${ANSWER_MARKER}\n\n${lines.join("\n")}`;
+  const reply = response ? `\n\n${response}` : "";
+  return `${ANSWER_MARKER}\n\n${lines.join("\n")}${reply}`;
 }
 
 /**

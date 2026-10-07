@@ -470,6 +470,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `SingleLineProvider`
     - `subThemeScope`
     - `SURFACE_LEVELS`
+    - `Textarea`
     - `textSizeFor`
     - `textStepFor`
     - `themeScopeSelectors`

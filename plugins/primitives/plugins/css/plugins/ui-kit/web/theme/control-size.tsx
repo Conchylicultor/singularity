@@ -118,3 +118,20 @@ export function fieldSizeClassFor(density: ControlSize): string {
       return "control-lg px-sm gap-xs text-body";
   }
 }
+
+/**
+ * A multi-line field's (`Textarea`) size bundle: `fieldSizeClassFor`'s inline
+ * padding and text rung, with block padding in place of the fixed height — the
+ * box grows with its rows.
+ */
+export function textareaSizeClassFor(density: ControlSize): string {
+  switch (density) {
+    case "xs":
+      return "px-xs py-2xs text-body";
+    case "sm":
+      return "px-sm py-xs text-caption";
+    case "md":
+    case "lg":
+      return "px-sm py-xs text-body";
+  }
+}

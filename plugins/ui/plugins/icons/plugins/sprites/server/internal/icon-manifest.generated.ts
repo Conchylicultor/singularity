@@ -72,6 +72,7 @@ export const ICON_MANIFEST: {
     "cloud-sync",
     "cloud-upload",
     "code",
+    "comment",
     "commit",
     "compare",
     "computer",

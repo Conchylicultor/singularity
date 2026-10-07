@@ -12286,6 +12286,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/ui-kit.DropdownMenuItem`
                       - `primitives/css/ui-kit.DropdownMenuTrigger`
                       - `primitives/css/ui-kit.Input`
+                      - `primitives/css/ui-kit.Textarea`
                       - `primitives/live-state.ResourceErrorInline`
                       - `primitives/persistent-draft.useDraft`
                       - `primitives/persistent-draft.writeDraft`
@@ -12293,6 +12294,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `ui/icons.Icon`
                     - Exports (types):
                       - `AnswerSelections`
+                      - `FormAnswer`
                       - `Question`
                       - `QuestionSelection`
                     - Exports (values):
@@ -13621,7 +13623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.answerDraftScope`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerForm`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerHereButton`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerSelections`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.FormAnswer`
           - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
           - `primitives/css/card.Card`
@@ -31087,6 +31089,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SingleLineProvider`
               - `subThemeScope`
               - `SURFACE_LEVELS`
+              - `Textarea`
               - `textSizeFor`
               - `textStepFor`
               - `themeScopeSelectors`
