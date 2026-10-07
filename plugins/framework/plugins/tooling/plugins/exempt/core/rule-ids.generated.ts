@@ -38,6 +38,7 @@ export type ExemptableRuleId =
   | "endpoints:no-raw-json-handlers"
   | "entity-projection-safety/no-hand-rolled-entity-projection"
   | "events/no-raw-events-write"
+  | "exempt/no-path-allowlist"
   | "format-safety/no-adhoc-prettier"
   | "git-grep-safety/no-adhoc-git-grep"
   | "guard-path-safety/no-adhoc-path-resolve"

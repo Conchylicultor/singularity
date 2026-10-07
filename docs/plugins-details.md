@@ -124,6 +124,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `active-data.inlineBoundary`
         - Exports (values): `ATTEMPT_ID_RE`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/attempt-chip.tsx` (debt)
     - **`commit-link`** — Renders commit shas in backtick-wrapped inline code as clickable chips that open the commit-detail pane, with the subject, author and date on hover. Resolves the sha against the main checkout's object database and declines when it names no commit.
       - Web:
         - Contributes: `ActiveData.Tag` "commit-link"
@@ -192,6 +194,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `active-data.inlineBoundary`
         - Exports (values): `BLOCK_ID_RE`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-link-chip.tsx` (debt)
     - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
       - Web:
         - Slots: `plugin-conv-side.actions` ← `primitives.pane`
@@ -270,6 +274,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/tasks-core.useTaskAttempts`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/task-card.tsx` (debt)
     - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed. The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its task's title for model-read text (InlineTokenReferentSource).
       - Web:
         - Contributes: `InlineChip.Tag` "task-link" → `TaskLinkChip`
@@ -295,6 +301,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `active-data.inlineBoundary`
         - Exports (values): `TASK_ID_RE`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/task-link-chip.tsx` (debt)
 
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
@@ -543,6 +551,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+          - Exemptions:
+            - Exempts itself from: `spacer/no-split-slot-row` — `web/components/browser-layout.tsx` (sanctioned)
         - **`start-page`** — Browser start page: the empty-state landing shown in the viewport when no URL is loaded — a centered hero (wordmark + search), curated quick links, and the live bookmarks and recents sections.
           - Web:
             - Contributes: `Browser.StartPage` "Start page" → `StartPage`
@@ -1796,6 +1806,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
+          - Exemptions:
+            - Exempts itself from: `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
           - Plugins:
             - **`runs-arm`** — The deploy arm's presence on the merged run surface: the Deploy kind (whose rows open the deployment detail pane on the server the run went to), and its eight own columns (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) as real filterable and sortable SQL dimensions. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
               - Web:
@@ -2445,6 +2457,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/url-extract`
+          - Exemptions:
+            - Exempts itself from: `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
+            - Exempted by: `apps/events/events-core` (0 debt)
         - **`reanchor`** — Keeps a recurring event's occurrence columns (starts_at / ends_at / all_day) current as time passes: the hourly re-anchor tick plus the boot pass, so an 'upcoming' filter never drops a series that is still running just because its source has not been re-extracted since the last occurrence.
           - Server:
             - Uses:
@@ -3764,6 +3779,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
+          - Exemptions:
+            - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-kind-control.tsx` (debt)
         - **`page-outline`** — The open page's headings as an outline rail pinned to the right edge of the pane: one dash per heading, the current section highlighted, hover to expand into a click-to-jump outline. Headings are identified generically from each block type's declared `semantics`, so it names no block type.
           - Web:
             - Contributes: `PageDetail.Overlay` "outline" → `PageOutline`
@@ -3916,6 +3933,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/recent-pages`
               - `conversations/conversation-view/artifacts/page`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+          - Exemptions:
+            - Exempts itself from:
+              - `endpoints/no-void-fetch-endpoint` — `web/components/pages-sidebar.tsx` (sanctioned)
+              - `live/no-legacy-resource-spelling` — `web/components/delete-page-action.tsx`, `web/components/page-breadcrumb.tsx`, `web/components/page-cover.tsx`, `web/components/page-header.tsx`, `web/components/pages-sidebar.tsx`, `web/internal/block-target.ts`, `web/panes.tsx` (debt)
         - **`prompt-origin`** — Origin backlink in the task detail: the page a `/prompt`-block-launched task came from, as a clickable chip opening pageDetailPane. Renders nothing when the task has no prompt-block link or the page is gone.
           - Web:
             - Contributes: `TaskDetailSlots.Section` "Origin" → `PromptOriginSection`
@@ -3928,6 +3949,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `tasks/task-detail.TaskDetailSlots`
               - `ui/icons.Icon`
+          - Exemptions:
+            - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/prompt-origin-section.tsx` (debt)
         - **`shell`** — App shell for Pages. Registers the /pages app entry, defines the Pages.Sidebar slot (headed by the standard app-shell brand header), and contributes the app's own theme (Ink), which Pages selects.
           - Web:
             - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.trash`
@@ -4070,6 +4093,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/pane.useOpenPane`
                   - `primitives/relative-time.RelativeTime`
                   - `ui/icons.Icon`
+              - Exemptions:
+                - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/recent-pages-section.tsx` (debt)
     - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
       - Server:
         - Contributes: `taskCategory` "prototypes"
@@ -5297,6 +5322,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live/filter.liveInstant`
               - `network/live/filter.liveNumber`
             - Exports (values): `playbackColumns`
+          - Exemptions:
+            - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/record-play-observer.tsx` (sanctioned)
         - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport, PlayToggle, PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown).
           - Web:
             - Slots:
@@ -5709,6 +5736,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Routes: `POST /api/sonata/songs/:id/key-auto-detect`
               - Cross-plugin:
                 - Imported by: `apps/sonata/rich/key-readout`
+              - Exemptions:
+                - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
             - **`key-readout`** — Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
@@ -6572,6 +6601,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `songTranspose`
             - Resources: `sonata-transpose:rows` (keyed, point)
             - Routes: `POST /api/sonata/songs/:id/transpose`
+          - Exemptions:
+            - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
         - **`view-options`** — Sonata Hud: shared display-options chip. Renders every Sonata.ViewOption contribution generically via FieldRenderer, so the View popover appears in every display lens (piano roll, notation, songsheet).
           - Web:
             - Contributes: `Sonata.Hud` "view-options" → `ViewOptionsToggle`
@@ -7600,6 +7631,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ui/theme-engine/theme-customizer`
       - `ui/theme-engine/theme-gallery`
       - `ui/tokens/icons`
+  - Exemptions:
+    - Exempted by: `apps-core/layout` (0 debt)
   - Core:
     - Exports (types):
       - `Placement`
@@ -7772,6 +7805,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useRenderSync`
           - `primitives/pane.useSyncPaneRegistry`
           - `primitives/slot-render.renderIsolated`
+      - Exemptions:
+        - Exempts itself from: `apps-core/no-raw-history-nav` — `web/components/apps-layout.tsx` (sanctioned)
     - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive. Owns the surface body and the mode control; each mode (docked / floating / solo) is a self-contained sub-plugin.
       - Web:
         - Slots: `Surface.Placement` ← `apps-core.surface.docked`, `apps-core.surface.floating`, `apps-core.surface.solo`
@@ -8343,6 +8378,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `integrations/google-maps`
       - `integrations/hooktheory`
     - Endpoint callers: `setup-wizard`
+  - Exemptions:
+    - Exempts itself from: `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
   - Server:
     - Exports (types):
       - `GetAccessTokenArgs`
@@ -10202,6 +10239,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-header`
       - `tasks/task-title`
     - Endpoint callers: `transcript-api`
+  - Exemptions:
+    - Exempts itself from:
+      - `timer/no-unlisted-timer` — `server/internal/status-shadow-audit.ts` (debt)
+      - `live/no-legacy-resource-spelling` — `web/use-conversations.ts` (debt)
   - Plugins:
     - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
       - Web:
@@ -10389,6 +10430,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MoveAgentBodySchema`
           - `updateAgent`
           - `UpdateAgentBodySchema`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `server/internal/resources.ts`, `shared/resources.ts`, `web/components/agent-avatar-row.tsx`, `web/components/agent-avatar-title-prefix.tsx`, `web/components/agent-detail.tsx`, `web/components/agent-launches.tsx`, `web/components/agent-status.tsx` (debt)
     - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar. Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
         - Slots: `allConversationsPane.Actions` ← `primitives.pane`
@@ -10532,6 +10575,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DELETE /api/conversation-category/:conversationId/:categoryId`
       - Cross-plugin:
         - Imported by: `stats/commits`
+      - Exemptions:
+        - Exempts itself from: `endpoints:no-raw-json-handlers` — `server/internal/routes.ts` (sanctioned)
       - Shared:
         - Exports (types):
           - `ClassifyBody`
@@ -10845,6 +10890,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/cost`
           - `tasks/attempt-view`
           - `tasks/task-events`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/panes.tsx` (debt)
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Web:
@@ -11180,6 +11227,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/search.useTextFilter`
               - `shell/notifications.toast`
               - `ui/icons.Icon`
+          - Exemptions:
+            - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/dependencies-button.tsx` (debt)
         - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of as a chip of its own.
           - Web:
             - Contributes: `Item.Chips` → `DependentCountItemChip`
@@ -12278,6 +12327,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/pane.useOpenPane`
                       - `tasks/task-detail.taskDetailPane`
                       - `tasks/task-status.StatusIcon`
+                  - Exemptions:
+                    - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/add-task-tool-view.tsx` (debt)
                 - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
                   - Web:
                     - Slots: `agentReportPane.Actions` ← `primitives.pane`
@@ -12387,6 +12438,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `POST /api/conversations/:id/flush-question`
                   - Cross-plugin:
                     - Imported by: `conversations/question-relay`
+                  - Exemptions:
+                    - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
                   - Shared:
                     - Exports (values):
                       - `ANSWER_MARKER`
@@ -12465,6 +12518,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
+                  - Exemptions:
+                    - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-ref-chip.tsx` (debt)
                   - Plugins:
                     - **`edit-page`** — Renders edit_page MCP tool calls as a side-by-side markdown diff, with the edited page as a clickable chip and what the write changed.
                       - Web:
@@ -12909,6 +12964,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/prompt-input`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/push-and-exit`
+          - Exemptions:
+            - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
+            - Exempted by:
+              - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question` (0 debt)
+              - `conversations/conversation-view/pending-turn` (0 debt)
+              - `conversations/conversation-view/push-and-exit` (0 debt)
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
           - Web:
             - Contributes: `Conversation.PromptInput` → `PromptInput`
@@ -13013,6 +13074,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `mcpTool('exit_clean')`
               - `mcpTool('flag_raise')`
             - Routes: `POST /api/conversations/:id/push-and-exit`
+          - Exemptions:
+            - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
           - Shared:
             - Exports (values):
               - `pushAndExitConfig`
@@ -13370,6 +13433,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/live-state.ResourceReadiness`
                   - `primitives/live-state.useResource`
                   - `primitives/optimistic-mutation.useOptimisticResource`
+              - Exemptions:
+                - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/use-queue-rows.ts` (debt)
         - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
           - Server:
             - Uses:
@@ -13827,6 +13892,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations.resumeConversation`
           - `infra/endpoints.implement`
         - Routes: `POST /api/conversations-recover/restore-batch`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/recovery-view.tsx` (debt)
       - Shared:
         - Exports (types): `RestoreBatchBody`
         - Exports (values):
@@ -13871,6 +13938,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineJob('runtime-tmux.prune-signals')`
       - Cross-plugin:
         - Imported by: `debug/session-divergence`
+      - Exemptions:
+        - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `server/internal/tmux-runtime.ts` (sanctioned)
     - **`session-chain`** — Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
       - Server:
         - Uses:
@@ -14343,6 +14412,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/query-deadline`
           - `infra/events-test`
           - `infra/jobs`
+      - Exemptions:
+        - Exempts itself from: `db-connection/no-raw-pg-connection` — `.` (sanctioned)
+        - Exempted by: `database/connection` (0 debt)
       - Server:
         - Exports (types):
           - `CreateDbClientOptions`
@@ -14658,6 +14730,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UnjoinedSnapshotTipsError`
       - Cross-plugin:
         - Imported by: `database`
+      - Exemptions:
+        - Exempts itself from: `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
+        - Exempted by: `database/migrations` (0 debt)
       - Structure:
         - Non-standard folders: `data/`
       - Test helpers:
@@ -14769,6 +14844,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `search/engine`
           - `shell/notifications`
           - `ui/theme-engine/saved-themes`
+      - Exemptions:
+        - Exempts itself from: `sql-column/no-asserted-column-type` — `.` (sanctioned)
+        - Exempted by: `database/sql-column` (0 debt)
       - Server:
         - Exports (types):
           - `ColumnWire`
@@ -14800,6 +14878,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/links`
           - `release/runs-arm`
           - `tasks/tasks-core`
+      - Exemptions:
+        - Exempts itself from: `sql-projection/no-asserted-sql-type` — `.` (sanctioned)
+        - Exempted by: `database/sql-projection` (0 debt)
       - Server:
         - Exports (types):
           - `DecodedRow`
@@ -14814,6 +14895,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SqlProjectionError`
           - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
+      - Exemptions:
+        - Exempts itself from: `sql-rows/no-unparsed-sql-rows` — `.` (sanctioned)
+        - Exempted by: `database/sql-rows` (0 debt)
       - Core:
         - Exports (types):
           - `ParsedResult`
@@ -15237,6 +15321,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `debug/latency-ledger`
           - `debug/timeline`
+      - Exemptions:
+        - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts` (sanctioned)
       - Shared:
         - Exports (types):
           - `GetHealthDataResponse`
@@ -15408,6 +15494,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `POST /api/debug/live-state-emit/start`
               - `POST /api/debug/live-state-emit/stop`
               - `GET /api/debug/live-state-emit/status`
+          - Exemptions:
+            - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `server/internal/emitter.ts` (sanctioned)
           - Core:
             - Exports (types):
               - `EmitStartOptions`
@@ -15613,6 +15701,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pagingProbeConfig`
           - `PROBE_VARIANTS`
           - `ProbeSampleSchema`
+      - Exemptions:
+        - Exempts itself from:
+          - `detached-work-safety/no-raw-set-interval` — `server/internal/probe/entry.ts` (sanctioned)
+          - `sink-safety/no-adhoc-file-sink` — `server/internal/probe/entry.ts` (sanctioned)
     - **`profiling`** — Gantt chart of build steps and server startup phases.
       - Web:
         - Slots:
@@ -15977,6 +16069,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `GET /api/debug/profiling/runtime`
               - `POST /api/debug/profiling/runtime/reset`
               - `GET /api/debug/profiling/flight-window`
+          - Exemptions:
+            - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
         - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
           - Web:
             - Contributes: `Profiling.Section` → `StatsSection`
@@ -16178,6 +16272,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `QueueWedgedPayloadSchema`
           - `stuckHoldMs`
           - `waitTone`
+      - Exemptions:
+        - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/watchdog.ts` (sanctioned)
     - **`read-set`** — Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
       - Web:
         - Slots: `readSetPane.Actions` ← `primitives.pane`
@@ -16436,6 +16532,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SentinelVitalsSchema`
       - Cross-plugin:
         - Imported by: `debug/timeline`
+      - Exemptions:
+        - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
       - Plugins:
         - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status file: its schemas, the one writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
           - Cross-plugin:
@@ -16621,6 +16719,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `debug/boot-monitor`
           - `debug/health-monitor`
+      - Exemptions:
+        - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
       - Plugins:
         - **`cluster`** — Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
           - Web:
@@ -16707,6 +16807,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `StallPayloadSchema`
       - Cross-plugin:
         - Imported by: `debug/health-monitor`
+      - Exemptions:
+        - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
     - **`stuck-spans`** — Stuck-span report renderer: a one-line Debug → Reports summary for the span-stuck kind (how long it has been running, the chain of operations it is stuck under, and a View-trace chip). Stuck-span watchdog: a 15 s interval on each backend's own event loop — deliberately NOT a scheduled job — that reads the runtime profiler's open entries and files a span-stuck report while an http / sub / loader / push / flush / cascade span is still running past its threshold (90 s — past the app pool's 60 s query deadline; http 120 s), once per span run, naming the deepest stuck span of a chain with its open ancestors and attaching one coherent-instant trace per tick. Catches the hang a completion-time slow-op report never can. duressExempt; job and bg spans are excluded.
       - Web:
         - Contributes: `Reports.KindView` → `SpanStuckSummary`
@@ -16725,6 +16827,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports.recordReport`
           - `reports.ReportKind`
         - Register: `defineTimer('stuck-spans.watchdog')`
+      - Exemptions:
+        - Exempts itself from:
+          - `timer/no-unlisted-timer` — `server/internal/watchdog.ts` (sanctioned)
+          - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
       - Core:
         - Exports (types):
           - `StuckAncestor`
@@ -16981,6 +17087,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `trace-event-class` "gates"
             - Uses: `debug/trace/engine.defineTraceEventClass`
+          - Exemptions:
+            - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
         - **`pane`** — Debug → Slow Events: the tabbed pane host (Events list + detail Gantt) over the durable trace store, and the SlowEvents.View tab slot the Slow Ops aggregate/cluster views merge into.
           - Web:
             - Slots:
@@ -17058,6 +17166,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `trace-event-class` "spans"
             - Uses: `debug/trace/engine.defineTraceEventClass`
+          - Exemptions:
+            - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
         - **`stall`** — Stall trace lane: a histogram card of the sampled JS call stacks (top frames + collapsed stack signatures) captured during an event-loop freeze. Built-in trace event class 'stall': the sampled JS call-stack histogram (top leaves + collapsed stack signatures) captured during an event-loop freeze, passed in by the health-monitor sampler via the stall trigger's detail.
           - Web:
             - Contributes: `Trace.Lane` → `StallLane`
@@ -17148,6 +17258,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GET /api/debug/worktrees`
           - `POST /api/debug/worktrees/bulk-delete`
           - `DELETE /api/debug/worktrees/:id`
+      - Exemptions:
+        - Exempts itself from: `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
       - Shared:
         - Exports (types): `BulkDeleteWorktreesBody`
         - Exports (values):
@@ -18662,6 +18774,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineResource`
           - `handleResourceHttp`
           - `notificationsWsHandler`
+      - Exemptions:
+        - Exempts itself from:
+          - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - **`cli`** — The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
@@ -18705,6 +18821,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `framework/cli/build`
               - `framework/cli/push`
+          - Exemptions:
+            - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
           - Cli:
             - Exports (types):
               - `AcquireCheckoutLockOptions`
@@ -18774,6 +18892,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`check`** — `./singularity check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
+          - Exemptions:
+            - Exempts itself from: `check-runner-safety/no-adhoc-check-runner` — `cli/run.ts` (sanctioned)
         - **`db`** — `./singularity db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
         - **`deploy`** — `./singularity deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
         - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in) without failing on it. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
@@ -18800,6 +18920,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `framework/cli/build`
               - `framework/cli/regen-migrations`
+          - Exemptions:
+            - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `cli/migrations-interactive.ts` (sanctioned)
           - Cli:
             - Exports (types):
               - `DetectedPrompt`
@@ -18909,6 +19031,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/release`
               - `framework/cli/run`
               - `framework/cli/test`
+          - Exemptions:
+            - Exempts itself from: `watcher-safety/no-raw-fs-watch` — `cli/admission-valve.ts` (sanctioned)
         - **`push`** — `./singularity push` — the one path work reaches main: commit, rebase onto main, re-normalize generated artifacts, run the tree-scoped checks, fast-forward and push, all under the host-wide push mutex.
           - Cli:
             - Uses:
@@ -18935,6 +19059,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
           - Cli:
             - Uses: `infra/jobs/supervised-job.cliExecContext`
+          - Exemptions:
+            - Exempts itself from: `paths:data-root-not-joined` — `cli/run.ts` (sanctioned)
         - **`start`** — `./singularity start` — build the gateway and register it as a launchd service (macOS) so it comes back after a reboot, then wait for it to actually serve before reporting success.
           - Cli:
             - Uses:
@@ -19060,6 +19186,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `framework/central-core`
           - `framework/server-core`
+      - Exemptions:
+        - Exempts itself from:
+          - `resource-runtime:compiled-routes` — `core/routing.ts`, `core/index.ts` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
       - Test helpers:
         - Core: `@plugins/framework/plugins/resource-runtime/core/testing`
           - `buildSnapshot` — Build the id→entry map for a keyed resource's array `value`, in array order.
@@ -19163,6 +19293,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/audio-analysis`
           - `infra/deps`
           - `infra/jobs/supervised-job`
+      - Exemptions:
+        - Exempts itself from:
+          - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
       - Cli:
         - Exports (values): `runExec`
       - Test helpers:
@@ -19205,6 +19339,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `Check`
           - `CheckContext`
+          - `CheckExemptions`
           - `CheckResult`
           - `CheckScope`
           - `RepoFiles`
@@ -19260,6 +19395,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/tooling.repoFilesOver`
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/collected-dir.loadCollectedDir`
+              - `framework/tooling/exempt.createExemptionIndex`
+              - `framework/tooling/exempt.describeExemption`
+              - `framework/tooling/exempt.ExemptionIndex`
+              - `framework/tooling/exempt.exemptionInputPaths`
+              - `framework/tooling/exempt.isInAnyCategory`
+              - `framework/tooling/exempt.loadExemptions`
+              - `framework/tooling/exempt.ResolvedExemption`
               - `infra/file-sink.defineFileSink`
               - `infra/paths.pruneWorktreeCheckArtifacts`
               - `infra/paths.REPO_ROOT`
@@ -19340,6 +19482,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `runChecks`
               - `scopeOf`
               - `tsBuildInfoPath`
+          - Exemptions:
+            - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
               - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
@@ -19348,6 +19492,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
             - **`bun-runtime`**
+              - Exemptions:
+                - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `check/internal/fd-double-close-probe.ts` (sanctioned)
             - **`class-token-walk-single-source`**
             - **`composition-closure`**
             - **`config-origins-in-sync`**
@@ -19358,12 +19504,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`data-migration-dml-only`**
             - **`data-views-in-sync`**
             - **`durable-signals-accounted`**
+              - Exemptions:
+                - Exempted by: `primitives/log-channels` (0 debt)
             - **`eager-tier-in-sync`**
             - **`fields-eager-in-sync`**
             - **`format-clean`**
             - **`generated-artifacts-normalized`**
             - **`host-budget`**
             - **`host-pools-declared`**
+              - Exemptions:
+                - Exempted by: `infra/host/host-admission` (0 debt)
             - **`inherited-theme-defaults-scoped`**
             - **`keyed-resource-scope`**
             - **`lint-directives-stable`**
@@ -19378,12 +19528,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`no-plugin-imports-in-core`**
             - **`no-plugin-workspace-deps`**
             - **`no-raw-event-source`**
+              - Exemptions:
+                - Exempted by: `primitives/networking` (0 debt)
             - **`no-raw-sse`**
+              - Exemptions:
+                - Exempts itself from: `no-raw-sse` — `check/index.ts` (sanctioned)
+                - Exempted by: `framework/tooling/checks/no-raw-sse` (0 debt)
             - **`no-raw-websocket`**
+              - Exemptions:
+                - Exempted by: `primitives/networking` (0 debt)
             - **`no-reexport-default`**
             - **`no-relative-server-imports`**
             - **`no-use-resource-cast`**
             - **`plugin-boundaries`**
+              - Exemptions:
+                - Exempts itself from: `marker-scan-safety/no-adhoc-marker-scan` — `check/parse.ts` (sanctioned)
+                - Exempted by: `framework/web-core` (0 debt)
             - **`plugin-refs-resolve`**
             - **`plugins-doc-in-sync`**
             - **`plugins-have-claudemd`**
@@ -19445,6 +19605,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/tooling.RepoFiles`
               - `framework/tooling/format.formatIfFormattable`
               - `framework/tooling/format.SourceBytes`
+              - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/resource-vocabulary.isResourceVocabularyOwner`
               - `framework/tooling/resource-vocabulary.PreloadFlag`
               - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
@@ -19470,6 +19631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets.Facet`
               - `plugin-meta/facets.getFacet`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
+              - `plugin-meta/facets/exemptions.exemptionsFacetDef`
               - `plugin-meta/facets/slots.slotsFacetDef`
               - `plugin-meta/parse-utils.findImports`
               - `plugin-meta/parse-utils.findMarkerCalls`
@@ -19519,6 +19681,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `collectedDirNamedCompositionRegistryPath`
               - `collectedDirRegistryPath`
               - `collectEntriesWithDeps`
+              - `collectExemptableRuleIds`
               - `collectFieldEagerBarrels`
               - `collectIconManifest`
               - `collectImportGraph`
@@ -19532,6 +19695,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `discoverCollectedDirs`
               - `discoverCollectedDirsIn`
               - `eagerTierManifestPath`
+              - `EXEMPT_RULE_IDS_REL_PATH`
+              - `exemptRuleIdsPath`
               - `extractRuntimeImportSpecifiers`
               - `fieldsEagerManifestPath`
               - `fileConfigProxy`
@@ -19542,6 +19707,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `generateCustomUtilities`
               - `generateDataViews`
               - `generateEagerTier`
+              - `generateExemptRuleIds`
               - `generateFieldsEager`
               - `generatePluginDocs`
               - `generatePluginRegistry`
@@ -19577,6 +19743,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `renderDataViewsManifest`
               - `renderDetailsDoc`
               - `renderEagerTierManifest`
+              - `renderExemptRuleIds`
               - `renderFieldsEagerManifest`
               - `renderIconManifest`
               - `renderPluginClaudeMd`
@@ -19608,6 +19775,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli`
               - `framework/server-core`
               - `framework/tooling/checks`
+              - `framework/tooling/exempt`
+              - `framework/tooling/lint`
               - `framework/tooling/provision`
               - `framework/web-sdk`
               - `improve/element-picker`
@@ -19767,6 +19936,46 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/icons`
               - `ui/segmented-progress-bar/arc`
               - `ui/theme-toggle`
+          - Exemptions:
+            - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)
+        - **`exempt`** — Inverted exemptions: a plugin declares, in its own exempt/index.ts, which of its files may violate which lint rule or check — with a reason, and a task when it is debt. The manifest types, the generated rule-id union, the file-category vocabulary rule owners scope by, and the one loader + hit-recording matcher the ESLint config, the type-check worker and the check runner all read.
+          - Core:
+            - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+            - Exports (types):
+              - `DebtExemption`
+              - `ExemptableRuleId`
+              - `Exemption`
+              - `ExemptionIndex`
+              - `ExemptionKind`
+              - `ExemptionMatcher`
+              - `Exemptions`
+              - `FileCategory`
+              - `ResolvedExemption`
+              - `SanctionedExemption`
+            - Exports (values):
+              - `categoryGlobs`
+              - `covers`
+              - `createExemptionIndex`
+              - `describeExemption`
+              - `EXEMPT_REGISTRY_PATH`
+              - `exemptCollectedDir`
+              - `exemptionInputPaths`
+              - `FILE_CATEGORIES`
+              - `FILE_CATEGORY_GLOBS`
+              - `isInAnyCategory`
+              - `isInCategory`
+              - `isLintRuleId`
+              - `loadExemptions`
+              - `manifestPathError`
+              - `manifestPathOf`
+              - `NON_APP_FILE_CATEGORIES`
+              - `resolveManifest`
+              - `resolveTarget`
+              - `ruleIdProblems`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/tooling/checks`
+              - `framework/tooling/lint`
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
           - Core:
             - Uses:
@@ -19789,6 +19998,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `listChangedFormattableFiles`
           - Cross-plugin:
             - Imported by: `framework/tooling/codegen`
+          - Exemptions:
+            - Exempts itself from: `format-safety/no-adhoc-prettier` — `.` (sanctioned)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses:
@@ -19833,6 +20044,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `WINDOW_SIZE`
           - Cross-plugin:
             - Imported by: `framework/tooling/e2e-harness`
+          - Exemptions:
+            - Exempts itself from:
+              - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
+              - `python/no-system-python` — `core` (sanctioned)
         - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads.
           - Core:
             - Uses: `framework/cli.defineCliCommand`
@@ -19845,10 +20060,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `loadTypescript`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
+            - Uses:
+              - `framework/tooling/collected-dir.defineCollectedDir`
+              - `framework/tooling/exempt.categoryGlobs`
+              - `framework/tooling/exempt.FILE_CATEGORIES`
+              - `framework/tooling/exempt.FileCategory`
+              - `framework/tooling/exempt.isLintRuleId`
+              - `framework/tooling/exempt.loadExemptions`
+              - `framework/tooling/exempt.NON_APP_FILE_CATEGORIES`
+              - `framework/tooling/exempt.ResolvedExemption`
+              - `framework/tooling/exempt.ruleIdProblems`
             - Exports (types):
               - `BuildLintConfigOptions`
               - `ClassRuleFactory`
+              - `LintContribution`
+              - `LintExemptionMode`
               - `LintToolkit`
+              - `LoadedLintContribution`
               - `ParserTypeSource`
               - `TokenNode`
             - Exports (values):
@@ -19863,42 +20091,105 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `LINT_DATA_FILES`
               - `LINT_SCOPE_EXCLUDE_GLOBS`
               - `lintCollectedDir`
+              - `lintExemptions`
+              - `lintRuleIds`
+              - `loadLintContributions`
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
               - `lintToolkit`
           - Plugins:
             - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
+              - Exemptions:
+                - Exempted by: `framework/tooling/e2e-harness` (0 debt)
             - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`button-safety`** — button-safety lint rules: no-async-raw-button, no-redundant-cursor-pointer
             - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
             - **`check-runner-safety`** — check-runner-safety lint rule: no-adhoc-check-runner
+              - Exemptions:
+                - Exempted by: `framework/cli/check` (0 debt)
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
+              - Exemptions:
+                - Exempted by:
+                  - `debug/live-state-churn/emit` (0 debt)
+                  - `debug/paging-probe` (0 debt)
+                  - `debug/sentinel` (0 debt)
+                  - `framework/central-core` (0 debt)
+                  - `framework/server-core` (0 debt)
+                  - `infra/background/timer` (0 debt)
+                  - `infra/file-watcher` (0 debt)
             - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom
             - **`dom-selection-safety`** — dom-selection-safety lint rule: no-raw-selection-range
+              - Exemptions:
+                - Exempted by: `primitives/dom/dom-selection` (0 debt)
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`format-safety`** — format-safety lint rule: no-adhoc-prettier
+              - Exemptions:
+                - Exempted by: `framework/tooling/format` (0 debt)
             - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
             - **`guard-path-safety`** — guard-path-safety lint rule: no-adhoc-path-resolve
+              - Exemptions:
+                - Exempted by: `framework/tooling/guards` (0 debt)
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
+              - Exemptions:
+                - Exempted by: `plugin-meta/parse-utils` (0 debt)
             - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
+              - Exemptions:
+                - Exempted by: `primitives/dom/in-view` (0 debt)
             - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
+              - Exemptions:
+                - Exempted by:
+                  - `framework/tooling/checks/plugin-boundaries` (0 debt)
+                  - `framework/tooling/test-layout` (0 debt)
+                  - `infra/launcher` (0 debt)
+                  - `plugin-meta/facets/routes` (0 debt)
             - **`namespace-identity`** — Two lint rules over one mistake — answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace, and no-ambient-worktree-env bans the retired SINGULARITY_WORKTREE environment variable a runtime now receives as --namespace.
+              - Exemptions:
+                - Exempts itself from: `namespace-identity/no-ambient-worktree-env` — `lint/no-ambient-worktree-env.ts` (sanctioned)
+                - Exempted by: `framework/tooling/lint/namespace-identity` (0 debt)
             - **`polling-safety`** — polling-safety lint rule: no-refetch-interval
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`repo-walk-safety`** — repo-walk-safety lint rule: no-adhoc-repo-walk
+              - Exemptions:
+                - Exempted by:
+                  - `framework/cli/bootstrap` (0 debt)
+                  - `framework/tooling/checks` (0 debt)
+                  - `framework/tooling/web-artifacts` (0 debt)
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
+              - Exemptions:
+                - Exempted by: `primitives/dom/element-size` (0 debt)
             - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
             - **`runtime-isolation`** — runtime-isolation lint rule: no-deep-own-folder-import
             - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
+              - Exemptions:
+                - Exempted by:
+                  - `primitives/dom/auto-scroll` (0 debt)
+                  - `primitives/dom/scroll-reveal` (0 debt)
             - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
+              - Exemptions:
+                - Exempted by:
+                  - `debug/paging-probe` (0 debt)
+                  - `debug/profiling/runtime` (0 debt)
+                  - `debug/slow-ops` (0 debt)
+                  - `debug/stall-monitor` (0 debt)
+                  - `debug/stuck-spans` (0 debt)
+                  - `debug/trace/gates` (0 debt)
+                  - `debug/trace/spans` (0 debt)
+                  - `infra/file-sink` (0 debt)
+                  - `reports` (0 debt)
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
             - **`watcher-safety`** — watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher) and no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI)
+              - Exemptions:
+                - Exempted by:
+                  - `framework/cli/op-runtime` (0 debt)
+                  - `infra/file-watcher` (0 debt)
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`
@@ -19948,6 +20239,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `isTestFilePath`
               - `partitionTestPaths`
               - `TEST_FILE_GLOB`
+          - Exemptions:
+            - Exempts itself from: `marker-scan-safety/no-adhoc-marker-scan` — `check/index.ts` (sanctioned)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
             - Uses:
@@ -19994,6 +20287,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SHARED_ROOT`
           - Cross-plugin:
             - Imported by: `framework/cli/build`
+          - Exemptions:
+            - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
           - Cli:
             - Exports (types): `CarryForwardResult`
             - Exports (values): `carryForwardServedEntries`
@@ -20010,6 +20305,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/perfs/scheduler.yieldToMain`
       - Cross-plugin:
         - Imported by: `framework/tooling/web-artifacts`
+      - Exemptions:
+        - Exempts itself from: `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)
       - Core:
         - Exports (types):
           - `BabelPluginItem`
@@ -20279,6 +20576,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
           - `tasks/tasks-core`
         - Endpoint callers: `task-attachments`
+      - Exemptions:
+        - Exempts itself from: `paths:no-hardcoded-paths` — `server/index.ts` (sanctioned)
     - **`audio-analysis`** — The audio-analysis settings registration (beat tracker device and model, chroma variant), so they appear in Settings → Config. Audio analysis of YouTube videos on the on-demand `audio-python` dependency: ensureBeatFeatures(videoId, exec) fetches the audio, runs Beat This! (beats, downbeats, no DBN) and a librosa CQT chroma out of process under one background unit of host admission, and caches the validated features host-wide per video, analysis version and settings (beat model, chroma variant — user config, with the fast ones as defaults; the device is config too) under a per-entry host flock; readBeatFeatures answers absent / running / ready / failed from the files, and requestBeatFeatures (GET/POST /api/audio-analysis/beat-features/:videoId) enqueues the audio-analysis.beat-features supervised job.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "config"
@@ -20478,6 +20777,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/queue-health`
               - `debug/stuck-spans`
               - `infra/jobs`
+          - Exemptions:
+            - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)
+            - Exempted by:
+              - `auth` (0 debt)
+              - `conversations` (1 debt)
+              - `debug/health-monitor` (0 debt)
+              - `debug/queue-health` (0 debt)
+              - `debug/stuck-spans` (0 debt)
+              - `infra/jobs` (0 debt)
     - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
       - Web:
         - Contributes: `Core.Boot`
@@ -20838,6 +21146,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `infra/audio-analysis`
               - `integrations/youtube`
+          - Exemptions:
+            - Exempts itself from: `python/no-system-python` — `lint/no-system-python.test.ts` (sanctioned)
+            - Exempted by:
+              - `framework/tooling/guards` (0 debt)
+              - `infra/deps/python` (0 debt)
           - Deps:
             - Exports (types):
               - `PythonEnvSource`
@@ -21165,6 +21478,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/theme-engine/theme-gallery`
           - `ui/tweakcn`
           - `ui/tweakcn/community-browser`
+      - Exemptions:
+        - Exempts itself from: `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+        - Exempted by:
+          - `apps/pages/page-tree` (0 debt)
+          - `apps/sonata/playback-history` (0 debt)
+          - `apps/sonata/rich/key-mode` (0 debt)
+          - `apps/sonata/transpose` (0 debt)
+          - `infra/endpoints` (0 debt)
+          - `infra/ndjson-stream` (0 debt)
+          - `primitives/live-state` (0 debt)
+          - `primitives/networking` (0 debt)
+          - `shell/notifications` (0 debt)
+          - `tasks/task-graph` (0 debt)
       - Server:
         - Exports (values):
           - `HttpError`
@@ -21479,6 +21805,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/events-test/superseded`
           - `POST /api/events-test/queue-saturate`
           - `POST /api/events-test/detached-sleep`
+      - Exemptions:
+        - Exempts itself from:
+          - `jobs:no-raw-addjob` — `server/internal/cron-dedup.ts` (sanctioned)
+          - `endpoints:no-raw-json-handlers` — `server/internal` (sanctioned)
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
@@ -21515,6 +21845,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `framework/tooling/checks`
           - `packages/signal-origin/sink`
+      - Exemptions:
+        - Exempts itself from: `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)
       - Core:
         - Exports (types):
           - `FileSink`
@@ -21554,6 +21886,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `integrations/google-maps`
           - `plugin-meta/plugin-tree`
           - `reports/outbox`
+      - Exemptions:
+        - Exempts itself from:
+          - `detached-work-safety/no-raw-set-interval` — `shared/engine.ts` (sanctioned)
+          - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
       - Server:
         - Exports (types):
           - `FileChangeEvent`
@@ -21819,6 +22155,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/jobs/supervised-job`
               - `infra/safe-fetch/browser-fetch`
               - `infra/worktree`
+          - Exemptions:
+            - Exempts itself from: `host-pools-declared` — `server` (sanctioned)
           - Core:
             - Exports (types):
               - `CpuBudget`
@@ -22224,6 +22562,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/automations`
           - `tasks/task-title`
           - `upstream`
+      - Exemptions:
+        - Exempts itself from:
+          - `timer/no-unlisted-timer` — `server/internal/stuck-lock-sweeper.ts` (sanctioned)
+          - `jobs:no-raw-addjob` — `server/internal/registry.ts`, `check/index.ts` (sanctioned)
+          - `jobs:no-raw-addjob` — `server/internal/enqueue-deadline.test.ts` (sanctioned)
+          - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
       - Test helpers:
         - Server: `@plugins/infra/plugins/jobs/server/testing`
           - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
@@ -22360,6 +22704,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/deps`
               - `infra/events-test`
               - `release`
+          - Exemptions:
+            - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `server/internal/run/supervisor.ts` (sanctioned)
           - Test helpers:
             - Core: `@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing`
               - `execContextForTests` — An `ExecContext` for tests: origin `cli`, admission that admits at once.
@@ -22427,6 +22773,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `gatewayBinary`
       - Cross-plugin:
         - Imported by: `release`
+      - Exemptions:
+        - Exempts itself from:
+          - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
+          - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
+          - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
       - Core:
         - Exports (values):
           - `isRuntimeEnvName`
@@ -22475,6 +22826,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/barrel-import`
           - `plugin-meta/closure`
           - `plugin-meta/composition`
+      - Exemptions:
+        - Exempts itself from: `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
       - Core:
         - Exports (types):
           - `CheckoutRef`
@@ -22506,6 +22859,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops/cluster`
           - `debug/timeline`
           - `debug/worktree-cleanup`
+      - Exemptions:
+        - Exempts itself from: `endpoints/no-raw-web-fetch` — `web` (sanctioned)
       - Server:
         - Exports (values): `ndjsonResponse`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
@@ -22631,6 +22986,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/cost`
           - `tasks`
           - `toolchain`
+      - Exemptions:
+        - Exempts itself from:
+          - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts`, `server/internal/bins.ts` (sanctioned)
+          - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
+          - `paths:data-root-not-joined` — `.` (sanctioned)
       - Server:
         - Exports (types):
           - `AppIdentity`
@@ -22692,6 +23052,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `worktreesDir`
       - Plugins:
         - **`display`** — The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
+          - Exemptions:
+            - Exempts itself from: `paths:no-hardcoded-paths` — `core/internal/display.ts` (sanctioned)
           - Core:
             - Exports (values):
               - `PROTOTYPES_DIR_DISPLAY`
@@ -22784,6 +23146,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `runs`
           - `tasks/task-category`
           - `tasks/tasks-core`
+      - Exemptions:
+        - Exempts itself from:
+          - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
       - Test helpers:
         - Server: `@plugins/infra/plugins/query-resource/server/testing`
           - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.
@@ -22960,6 +23326,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/safe-fetch/browser-fetch`
           - `page/bookmark`
           - `stats/cost`
+      - Exemptions:
+        - Exempts itself from: `namespace:no-hand-built-url` — `server/internal/ssrf.ts` (sanctioned)
       - Server:
         - Exports (types):
           - `PinnedDial`
@@ -23027,6 +23395,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `auth`
           - `auth/apple-signing`
           - `fields/secret/config`
+      - Exemptions:
+        - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
       - Server:
         - Exports (types):
           - `SecretMetadata`
@@ -23095,6 +23465,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths`
           - `reports/outbox`
           - `upstream`
+      - Exemptions:
+        - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
+        - Exempted by:
+          - `conversations/runtime-tmux` (0 debt)
+          - `framework/cli/migrations` (0 debt)
+          - `framework/tooling/checks/bun-runtime` (0 debt)
+          - `infra/jobs/supervised-job` (0 debt)
+          - `infra/launcher` (0 debt)
+          - `infra/spawn` (0 debt)
+          - `packages/host-semaphore` (0 debt)
       - Plugins:
         - **`daemon`** — defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
           - Cross-plugin:
@@ -23104,6 +23484,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/launcher`
               - `infra/spawn/daemon/background-arm`
               - `release`
+          - Exemptions:
+            - Exempts itself from: `daemon/no-raw-worker` — `.` (sanctioned)
+            - Exempted by: `infra/spawn/daemon` (0 debt)
           - Server:
             - Exports (types):
               - `AttachOptions`
@@ -24185,6 +24568,49 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-track`
           - `tasks/tasks-core`
           - `ui/icons/sprites`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
+        - Exempted by:
+          - `active-data/attempt` (1 debt)
+          - `active-data/page-link` (1 debt)
+          - `active-data/task` (1 debt)
+          - `active-data/task-link` (1 debt)
+          - `apps/pages/page-author` (1 debt)
+          - `apps/pages/page-tree` (7 debt)
+          - `apps/pages/prompt-origin` (1 debt)
+          - `apps/pages/welcome/recent-pages` (1 debt)
+          - `conversations` (1 debt)
+          - `conversations/agents` (7 debt)
+          - `conversations/conversation-view` (1 debt)
+          - `conversations/conversation-view/dependencies` (1 debt)
+          - `conversations/conversation-view/jsonl-viewer/tool-call/add-task` (1 debt)
+          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools` (1 debt)
+          - `conversations/conversations-view/data-view/queue` (1 debt)
+          - `conversations/recover` (1 debt)
+          - `framework/central-core` (0 debt)
+          - `framework/resource-runtime` (0 debt)
+          - `framework/server-core` (0 debt)
+          - `infra/query-resource` (0 debt)
+          - `network/live` (0 debt)
+          - `page/annotations/instructions/instructions-page` (1 debt)
+          - `page/annotations/todo/task-link` (1 debt)
+          - `page/editor` (3 debt)
+          - `page/inline-page-link` (2 debt)
+          - `page/links` (2 debt)
+          - `page/page-link` (1 debt)
+          - `primitives/live-state` (0 debt)
+          - `primitives/optimistic-mutation` (0 debt)
+          - `tasks` (1 debt)
+          - `tasks/attempt-view` (3 debt)
+          - `tasks/task-category` (3 debt)
+          - `tasks/task-dependencies` (1 debt)
+          - `tasks/task-deps-tree` (1 debt)
+          - `tasks/task-detail` (1 debt)
+          - `tasks/task-draft-form` (1 debt)
+          - `tasks/task-graph` (1 debt)
+          - `tasks/task-list` (2 debt)
+          - `tasks/tasks-core` (3 debt)
+          - `tasks/worktree-identity` (1 debt)
       - Central:
         - Exports (types): `CentralServedValue`
         - Exports (values): `serveValue`
@@ -24309,6 +24735,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `createHostSemaphore`
       - Cross-plugin:
         - Imported by: `infra/host/host-admission`
+      - Exemptions:
+        - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `server/internal/host-semaphore.ts` (sanctioned)
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
       - Cross-plugin:
         - Imported by:
@@ -24656,6 +25084,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
                   - `ui/icons.Icon`
+              - Exemptions:
+                - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/instructions-page-chip.tsx` (debt)
         - **`private-notes`** — Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
@@ -24771,6 +25201,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `useTodoTaskState`
               - Cross-plugin:
                 - Imported by: `page/annotations/todo`
+              - Exemptions:
+                - Exempts itself from: `live/no-legacy-resource-spelling` — `web/hooks.ts` (debt)
               - Shared:
                 - Exports (types):
                   - `CreateTodoBlockTaskBody`
@@ -25623,6 +26055,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/starred` (table `editor_ext_starred`)
           - `page/annotations/todo/task-link` (table `editor_ext_todo_task`)
         - Endpoint callers: `editor-collab`
+      - Exemptions:
+        - Exempts itself from:
+          - `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/components/page-options.tsx` (debt)
+          - `page-editor/no-adhoc-block-id` — `core/block-id.ts` (sanctioned)
+          - `page-editor/no-adhoc-forest-write` — `server/internal/forest-writer.ts` (sanctioned)
+          - `page-editor/no-adhoc-doc-write` — `web/__tests__`, `web/internal/block-text-write.ts`, `web/internal/live-state-yjs-provider.ts`, `web/internal/local-yjs-provider.ts` (sanctioned)
+          - `page-editor/no-unfiltered-blocks-read` — `server/internal/forest-writer.ts`, `server/internal/handle-patch-blocks.ts`, `server/internal/live-blocks.ts`, `server/internal/page-forest.ts`, `server/internal/trash-blocks.ts` (sanctioned)
+          - `page-editor/no-unfiltered-blocks-read` — `server/internal/page-clipboard.ts` (sanctioned)
+          - `page-editor/no-adhoc-structural-write` — `web/block-store.ts`, `web/composite-block-store.tsx` (sanctioned)
+          - `page-editor/no-unhistoried-block-field` — `web/components/block-text-area.tsx` (sanctioned)
+          - `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
+        - Exempted by: `page/editor` (0 debt)
       - Test helpers:
         - Web: `@plugins/page/plugins/editor/web/testing`
           - `blockTextRunsOptions` — The registry-bound options for the runs ↔ `Y.XmlText` bridge (`core/runs-yjs.ts`): every registered token extension, plus the decorator node classes those extensions materialize.
@@ -25986,6 +26430,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pageLinkInlineNode`
           - `pageLinkToken`
           - `scanPageLinkTokens`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-link-chip.tsx`, `web/components/page-link-inline-node.tsx` (debt)
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
       - Server:
         - Contributes:
@@ -26063,6 +26509,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `page/inline-page-link`
           - `page/page-link`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts` (debt)
     - **`map`** — Map block type: draws every located item on the page on an interactive map (through the map primitive), with overlays derived on each render from the page's blocks by contributed PageMap.Layer functions — so the map cannot drift from the page and names no block type. Clicking a pin scrolls to and selects the block it stands for; items a layer cannot place yet are counted under the map. Map block type: registers its (empty) `data` schema at the server write boundary.
       - Web:
         - Slots: `PageMap.Layer` ← `page.place.map-layer`
@@ -26328,6 +26776,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.typeVar`
           - `ui/icons.symbol`
         - Exports (values): `pageLinkBlock`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-link-block.tsx` (debt)
     - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, and the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip. Owns no reference, no action and no decoration of its own.
       - Web:
         - Slots:
@@ -26840,6 +27290,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-tree`
+      - Exemptions:
+        - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `core/internal/auto-stubs.generated.ts` (sanctioned)
       - Test helpers:
         - Core: `@plugins/plugin-meta/plugins/barrel-import/core/testing`
           - `reactExportsSeen`
@@ -26985,7 +27437,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.
       - Web:
         - Slots:
-          - `Contributions.FacetTable` ← `plugin-meta.facets.contributions.render-contributions`, `plugin-meta.facets.cross-refs.render-contributions`, `plugin-meta.facets.db-schema.render-contributions`, `plugin-meta.facets.exports.render-contributions`, `plugin-meta.facets.registrations.render-contributions`, `plugin-meta.facets.resources.render-contributions`, `plugin-meta.facets.routes.render-contributions`, `plugin-meta.facets.slots.render-contributions`, `plugin-meta.facets.structure.render-contributions`
+          - `Contributions.FacetTable` ← `plugin-meta.facets.contributions.render-contributions`, `plugin-meta.facets.cross-refs.render-contributions`, `plugin-meta.facets.db-schema.render-contributions`, `plugin-meta.facets.exemptions.render-contributions`, `plugin-meta.facets.exports.render-contributions`, `plugin-meta.facets.registrations.render-contributions`, `plugin-meta.facets.resources.render-contributions`, `plugin-meta.facets.routes.render-contributions`, `plugin-meta.facets.slots.render-contributions`, `plugin-meta.facets.structure.render-contributions`
           - `Contributions.RowClick` ← `apps.studio.contributions.tables`, `plugin-meta.facets.structure.render-contributions`
         - Uses:
           - `plugin-meta/plugin-view.pluginViewPane`
@@ -27008,6 +27460,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/facets/contributions/render-contributions`
           - `plugin-meta/facets/cross-refs/render-contributions`
           - `plugin-meta/facets/db-schema/render-contributions`
+          - `plugin-meta/facets/exemptions/render-contributions`
           - `plugin-meta/facets/exports/render-contributions`
           - `plugin-meta/facets/registrations/render-contributions`
           - `plugin-meta/facets/resources/render-contributions`
@@ -27092,6 +27545,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/facets/contributions`
           - `plugin-meta/facets/cross-refs`
           - `plugin-meta/facets/db-schema`
+          - `plugin-meta/facets/exemptions`
           - `plugin-meta/facets/exports`
           - `plugin-meta/facets/registrations`
           - `plugin-meta/facets/resources`
@@ -27224,6 +27678,42 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Tables"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
+        - **`exemptions`**
+          - Core:
+            - Uses: `plugin-meta/facets.defineFacet`
+            - Exports (types):
+              - `DeclaredExemption`
+              - `ExemptedBy`
+              - `ExemptionsData`
+            - Exports (values):
+              - `exemptionsFacetDef`
+              - `exemptionsToComparable`
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
+          - Plugins:
+            - **`render-contributions`** — Aggregated exemptions table in the Studio Contributions view.
+              - Web:
+                - Contributes: `Contributions.FacetTable` "Exemptions"
+                - Uses:
+                  - `plugin-meta/contributions-table.Contributions`
+                  - `plugin-meta/contributions-table.defineFacetTable`
+                  - `plugin-meta/contributions-table.FacetTableEntry`
+                  - `plugin-meta/contributions-table.PluginChip`
+            - **`render-detail`** — Per-plugin exemptions section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "Exemptions" → `ExemptionsDetailSection`
+                - Uses:
+                  - `plugin-meta/plugin-view.PluginLink`
+                  - `plugin-meta/plugin-view.PluginNode`
+                  - `plugin-meta/plugin-view.PluginViewSlots`
+                  - `plugin-meta/plugin-view.SectionCount`
+                  - `plugin-meta/plugin-view.SubHeading`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the exemptions facet (PR review).
+              - Web:
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Exempts itself from"
+                - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`exports`**
           - Core:
             - Uses:
@@ -27347,6 +27837,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `routesFacetDef`
               - `routesToComparable`
+          - Exemptions:
+            - Exempts itself from: `marker-scan-safety/no-adhoc-marker-scan` — `facet/index.ts` (sanctioned)
           - Plugins:
             - **`render-contributions`** — Aggregated cross-plugin routes table in the Studio Contributions view.
               - Web:
@@ -27490,6 +27982,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/test-layout`
           - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-tree`
+      - Exemptions:
+        - Exempts itself from: `import-scan-safety/no-adhoc-import-scan` — `core/find-imports.ts` (sanctioned)
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes: `PluginViewSlots.Section` "Health" → `HealthSection`
@@ -27659,7 +28153,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
         - Slots:
-          - `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`, `plugin-meta.facets.cross-refs.render-detail`, `plugin-meta.facets.db-schema.render-detail`, `plugin-meta.facets.exports.render-detail`, `plugin-meta.facets.registrations.render-detail`, `plugin-meta.facets.resources.render-detail`, `plugin-meta.facets.routes.render-detail`, `plugin-meta.facets.slots.render-detail`, `plugin-meta.facets.structure.render-detail`, `plugin-meta.plugin-health`, `plugin-meta.plugin-view.dependencies`, `plugin-meta.plugin-view.file-tree`, `plugin-meta.plugin-view.inclusion`, `plugin-meta.plugin-view.runtimes`, `plugin-meta.plugin-view.source-path`, `plugin-meta.plugin-view.sub-plugins`
+          - `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`, `plugin-meta.facets.cross-refs.render-detail`, `plugin-meta.facets.db-schema.render-detail`, `plugin-meta.facets.exemptions.render-detail`, `plugin-meta.facets.exports.render-detail`, `plugin-meta.facets.registrations.render-detail`, `plugin-meta.facets.resources.render-detail`, `plugin-meta.facets.routes.render-detail`, `plugin-meta.facets.slots.render-detail`, `plugin-meta.facets.structure.render-detail`, `plugin-meta.plugin-health`, `plugin-meta.plugin-view.dependencies`, `plugin-meta.plugin-view.file-tree`, `plugin-meta.plugin-view.inclusion`, `plugin-meta.plugin-view.runtimes`, `plugin-meta.plugin-view.source-path`, `plugin-meta.plugin-view.sub-plugins`
           - `pluginViewPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "plugin-view"
         - Uses:
@@ -27720,6 +28214,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/facets/contributions/render-detail`
           - `plugin-meta/facets/cross-refs/render-detail`
           - `plugin-meta/facets/db-schema/render-detail`
+          - `plugin-meta/facets/exemptions/render-detail`
           - `plugin-meta/facets/exports/render-detail`
           - `plugin-meta/facets/registrations/render-detail`
           - `plugin-meta/facets/resources/render-detail`
@@ -27915,6 +28410,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane`
           - `reorder/node-types/overflow`
           - `reports/adaptive-bar`
+      - Exemptions:
+        - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/adaptive-bar.tsx` (sanctioned)
       - Core:
         - Exports (types):
           - `AbsentRungs`
@@ -28128,6 +28625,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view`
           - `primitives/app-shell`
           - `primitives/pane`
+      - Exemptions:
+        - Exempts itself from: `pane/no-adhoc-pane-toolbar` — `web/internal/bar.tsx` (sanctioned)
     - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
       - Web:
         - Slots: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`
@@ -28362,6 +28861,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/plugin-changes/file-changes`
           - `tasks/worktree-identity`
     - **`css`** — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
+      - Exemptions:
+        - Exempts itself from: `layout/no-adhoc-layout` — `plugins` (sanctioned)
+        - Exempted by:
+          - `primitives/adaptive-bar` (0 debt)
+          - `primitives/css` (0 debt)
+          - `primitives/overlay/cursor-menu` (0 debt)
+          - `primitives/overlay/floating-action` (0 debt)
+          - `primitives/overlay/surface-overlay` (0 debt)
       - Plugins:
         - **`activity-ring`** — Activity ring around a status dot: <ActivityRing state> draws a spinning arc on a faint track while background work runs and a broken destructive ring when it failed; null renders the child alone with no reserved box. Sized from the ambient ControlSize's status-dot token, so it scales with the dot it wraps.
           - Web:
@@ -28990,6 +29497,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/reports-investigation`
               - `ui/theme-engine/quick-theme`
               - `ui/theme-toggle`
+          - Exemptions:
+            - Exempts itself from: `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)
+            - Exempted by:
+              - `primitives/css/control-panel` (0 debt)
+              - `primitives/css/ui-kit` (0 debt)
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
         - **`coords`** — Coordinate-space positioning primitive: <Placed x y> / placedStyle() places a box by runtime numbers on both axes, plus pct() for fractional coordinates.
           - Web:
@@ -29749,6 +30261,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RadioGroupProps`
               - `RadioOption`
             - Exports (values): `RadioGroup`
+          - Exemptions:
+            - Exempts itself from: `radio/no-adhoc-radio` — `.` (sanctioned)
+            - Exempted by: `primitives/css/radio-group` (0 debt)
         - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
         - **`rail`** — Web half of the rail contract: useRailGuard, the dev-only structural guard a region owner attaches to its own box. It measures every child's content edge against the rail the region published and names whoever applied an inset on top of it — the double-inset that looks reasonable at every call site and is only visible as content indented twice.
           - Core:
@@ -29967,6 +30482,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/sidebar-metrics`
               - `ui/tokens/sidebar-palette`
               - `ui/tokens/type-scale`
+          - Exemptions:
+            - Exempts itself from:
+              - `row/no-adhoc-row` — `web` (sanctioned)
+              - `row/no-row-focus-class` — `web` (sanctioned)
+            - Exempted by: `primitives/css/row` (0 debt)
         - **`scroll`** — Scroll-container layout primitive: <Scroll axis fill> owns overflow AND the flex-child fill policy (min-h-0 flex-1) as one role.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -30374,6 +30894,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/contributions/render-detail`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/db-schema/render-detail`
+              - `plugin-meta/facets/exemptions/render-detail`
               - `plugin-meta/facets/exports/render-detail`
               - `plugin-meta/facets/registrations/render-detail`
               - `plugin-meta/facets/resources/render-detail`
@@ -30645,6 +31166,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/metrics/chart-kit`
               - `primitives/row-actions`
               - `stats`
+          - Exemptions:
+            - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`switch`** — On/off switch primitive: SwitchIndicator is the presentational track+knob (a span with no role or handler, safe inside something that is already the click target), and Switch wraps it in its own role=switch button for standalone use.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -30932,6 +31455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/contributions/render-detail`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/db-schema/render-detail`
+              - `plugin-meta/facets/exemptions/render-detail`
               - `plugin-meta/facets/exports/render-detail`
               - `plugin-meta/facets/registrations/render-detail`
               - `plugin-meta/facets/resources/render-detail`
@@ -31064,6 +31588,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `shell/global-action-bar`
               - `shell/toast`
+          - Exemptions:
+            - Exempts itself from: `theme-boundary/no-adhoc-theme-scope` — `.` (sanctioned)
+            - Exempted by: `primitives/css/theme-boundary` (0 debt)
         - **`toggle-chip`** — Toggle-chip control: a stateful pill (composes Badge) in one of three colour treatments — solid (filled when on), ghost (accent fill when on, transparent when off) and tinted (accent wash when on, bordered when off) — with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
           - Web:
             - Uses:
@@ -31649,6 +32176,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tree-disclosure/merged`
               - `ui/tweakcn/community-browser`
               - `ui/variant-region`
+          - Exemptions:
+            - Exempts itself from:
+              - `control-panel/no-adhoc-panel-body` — `web/components/ui/dropdown-menu.tsx`, `web/components/ui/select.tsx` (sanctioned)
+              - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
+              - `viewport-overlay/no-adhoc-viewport-overlay` — `web/components/ui` (sanctioned)
           - Core:
             - Exports (types): `ClassName`
         - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor. Also owns the runtime auditor for the same invariant — the containing-block + stacking-context ancestor walk (assertViewportEscape / useViewportEscape), which reports the two ways a fixed box silently stops being viewport-relative.
@@ -31685,6 +32217,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/ui-context/element-picker`
               - `reports/viewport-escape`
               - `screenshot/draw-on-app`
+          - Exemptions:
+            - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
             - Imported by:
@@ -32119,6 +32653,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-deps-tree`
           - `tasks/task-list`
           - `ui/theme-engine/theme-gallery`
+      - Exemptions:
+        - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
+        - Exempted by:
+          - `primitives/data-view` (0 debt)
+          - `primitives/tree` (0 debt)
+          - `reorder/editor` (0 debt)
       - Core:
         - Exports (types):
           - `CellEditorProps`
@@ -32848,6 +33388,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/image-viewer`
               - `primitives/tree`
               - `primitives/virtual-rows`
+          - Exemptions:
+            - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
         - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText (core), and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable. A substituting element also SELECTS as one unit: its letters take no highlight, and a selectionchange listener rings the whole element while the selection overlaps it — so the selection shows exactly what the copy will carry.
           - Web:
             - Contributes: `Core.Root` → `CopySourceTextHost`
@@ -32867,6 +33409,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view`
               - `primitives/dom/copy-source-text`
               - `primitives/text-editor/caret-trigger`
+          - Exemptions:
+            - Exempts itself from: `dom-selection-safety/no-raw-selection-range` — `web/internal/dom-selection.ts` (sanctioned)
           - Web:
             - Exports (values):
               - `hasBox`
@@ -32910,6 +33454,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `screenshot`
               - `shell/global-action-bar`
               - `shell/toast`
+          - Exemptions:
+            - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
         - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
           - Web:
             - Uses: `primitives/latest-ref.useEventCallback`
@@ -32927,6 +33473,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/dom/auto-scroll`
               - `primitives/outline/scroll-spy`
               - `primitives/pane`
+          - Exemptions:
+            - Exempts itself from: `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
@@ -32951,6 +33499,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/syntax-highlight`
               - `primitives/tree`
               - `search/quick-find`
+          - Exemptions:
+            - Exempts itself from: `scroll-safety/no-adhoc-scroll-into-view` — `web/internal/use-reveal-on-active.ts` (sanctioned)
     - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
       - Cross-plugin:
         - Imported by:
@@ -34053,6 +34603,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/sidebar-palette`
           - `ui/tokens/type-scale`
           - `ui/tweakcn/community-browser`
+      - Exemptions:
+        - Exempts itself from:
+          - `endpoints/no-raw-web-fetch` — `web/use-resource.ts` (sanctioned)
+          - `endpoints/no-raw-web-fetch` — `web/notifications-client.ts` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
       - Core:
         - Exports (types):
           - `PointParams`
@@ -34390,6 +34945,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/cost`
           - `tasks/automations`
           - `upstream`
+      - Exemptions:
+        - Exempts itself from: `durable-signals-accounted` — `server/internal/log.ts` (sanctioned)
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -34763,6 +35320,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/optimistic-mutation`
           - `primitives/overlay/image-viewer`
           - `primitives/terminal`
+      - Exemptions:
+        - Exempts itself from:
+          - `no-raw-websocket` — `web/shared-websocket.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
+          - `no-raw-event-source` — `.` (sanctioned)
+          - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
       - Test helpers:
         - Web: `@plugins/primitives/plugins/networking/web/testing`
           - `createTransportHub` — Compose one server + bus + locks into a multi-tab transport.
@@ -34806,6 +35368,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `page/editor`
           - `reports/optimistic-divergence`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - **`outline`** — Umbrella for the outline primitive: the scroll-spy position half and the rail chrome half.
       - Plugins:
         - **`rail`** — Notion-style outline rail: a dash per section pinned to the surface's right edge, the current one bright and wide (position from outline/scroll-spy), expanding on hover / focus / tap into the depth-indented outline with click-to-jump. Windows its dashes to the height it has while the panel always lists every entry, so a long document's indicator can never lie.
@@ -34868,6 +35432,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
+          - Exemptions:
+            - Exempts itself from: `layout/no-adhoc-layout` — `.` (sanctioned)
         - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
           - Web:
             - Uses:
@@ -34891,6 +35457,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/prompt-templates`
               - `primitives/outline/rail`
               - `shell/global-action-bar`
+          - Exemptions:
+            - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/floating-action.tsx` (sanctioned)
         - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
           - Web:
             - Uses:
@@ -35196,6 +35764,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/tab-surface`
               - `apps/prototypes/present`
+          - Exemptions:
+            - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)
         - **`tooltip`** — WithTooltip wrapper, <TooltipDoc> documenting tooltip body (name + what it does), and <Kbd> keyboard shortcut badge.
           - Web:
             - Uses:
@@ -35647,6 +36217,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-header`
           - `tasks/tasks-core`
           - `ui/theme-engine/theme-customizer`
+      - Exemptions:
+        - Exempts itself from: `pane/no-core-define-route-in-web` — `.` (sanctioned)
+        - Exempted by:
+          - `primitives/bar` (0 debt)
+          - `primitives/pane` (0 debt)
       - Core:
         - Exports (types):
           - `AppRef`
@@ -35860,6 +36435,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/list`
           - `primitives/data-view/table`
           - `primitives/tree`
+      - Exemptions:
+        - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
         - Imported by:
@@ -36212,6 +36789,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/undo-redo`
           - `reorder/edit-mode`
           - `tasks/task-draft-form`
+      - Exemptions:
+        - Exempts itself from: `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)
+        - Exempted by: `primitives/shortcuts` (0 debt)
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Web:
         - Uses:
@@ -36344,6 +36924,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder`
           - `reorder/editor`
           - `tasks/task-draft-form`
+      - Exemptions:
+        - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
+        - Exempted by:
+          - `page/editor` (0 debt)
+          - `plugin-meta/barrel-import` (0 debt)
+          - `primitives/rank-reorder` (0 debt)
+          - `primitives/sortable-list` (0 debt)
+          - `primitives/tree` (0 debt)
       - Web:
         - Exports (types):
           - `SortableItemProps`
@@ -36828,6 +37416,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tree-disclosure/column`
           - `ui/tree-disclosure/dimmed-leaf`
           - `ui/tree-disclosure/merged`
+      - Exemptions:
+        - Exempts itself from:
+          - `data-view/no-adhoc-row-list` — `.` (sanctioned)
+          - `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`ui-context`** — The UI-context lineage: the node model (contribution | region), its DOM attribute grammar, the portal-crossing chain helpers, the <UiRegion> producer, the collectLineage walk, and the <ui-context> token (collectMeta / serialize / parse). A neutral leaf so both the element picker (its element-picker sub-plugin) and reports/render-loop can ask 'what composed this element?' without either depending on the other.
       - Web:
         - Uses:
@@ -37349,6 +37941,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder`
           - `reorder/node-types/divider`
           - `reorder/node-types/spacer`
+      - Exemptions:
+        - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
     - **`node-types`** — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
       - Web:
         - Slots: `ReorderNodes.NodeType` ← `reorder.node-types.divider`, `reorder.node-types.header`, `reorder.node-types.overflow`, `reorder.node-types.spacer`
@@ -37403,6 +37997,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `reorder/editor.SpacerReorderItem`
               - `reorder/node-types.ReorderNodes`
+          - Exemptions:
+            - Exempted by: `apps/browser/shell` (0 debt)
 
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
@@ -37554,6 +38150,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stats/cost`
       - `tasks/reports-investigation`
       - `upstream`
+  - Exemptions:
+    - Exempts itself from: `sink-safety/no-adhoc-file-sink` — `server/internal/buffer.ts` (sanctioned)
   - Plugins:
     - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, nested-bar = a measuring bar was written inside another bar's occupant so both claim the same row's slack, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
       - Web:
@@ -37958,7 +38556,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `PluginChangesSlots.Section` ← `review.plugin-changes.api-changes`, `review.plugin-changes.file-changes`
-          - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`, `plugin-meta.facets.cross-refs.render-diff`, `plugin-meta.facets.db-schema.render-diff`, `plugin-meta.facets.exports.render-diff`, `plugin-meta.facets.registrations.render-diff`, `plugin-meta.facets.resources.render-diff`, `plugin-meta.facets.routes.render-diff`, `plugin-meta.facets.slots.render-diff`, `plugin-meta.facets.structure.render-diff`
+          - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`, `plugin-meta.facets.cross-refs.render-diff`, `plugin-meta.facets.db-schema.render-diff`, `plugin-meta.facets.exemptions.render-diff`, `plugin-meta.facets.exports.render-diff`, `plugin-meta.facets.registrations.render-diff`, `plugin-meta.facets.resources.render-diff`, `plugin-meta.facets.routes.render-diff`, `plugin-meta.facets.slots.render-diff`, `plugin-meta.facets.structure.render-diff`
         - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
         - Uses:
           - `infra/endpoints.useEndpoint`
@@ -38024,6 +38622,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/facets/contributions/render-diff`
           - `plugin-meta/facets/cross-refs/render-diff`
           - `plugin-meta/facets/db-schema/render-diff`
+          - `plugin-meta/facets/exemptions/render-diff`
           - `plugin-meta/facets/exports/render-diff`
           - `plugin-meta/facets/registrations/render-diff`
           - `plugin-meta/facets/resources/render-diff`
@@ -38539,6 +39138,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-effort`
           - `tasks/task-preprompt`
           - `tasks/task-track`
+      - Exemptions:
+        - Exempts itself from:
+          - `endpoints/no-void-fetch-endpoint` — `web/components/bell-button.tsx` (sanctioned)
+          - `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
       - Shared:
         - Exports (values):
           - `createNotification`
@@ -38984,6 +39587,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-graph`
       - `tasks/task-header`
       - `tasks/task-list`
+  - Exemptions:
+    - Exempts itself from: `live/no-legacy-resource-spelling` — `web/client.ts` (debt)
   - Plugins:
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge tint, dot tint and sentence-case label, so a chip and a badge for the same attempt cannot disagree.
       - Web:
@@ -39041,6 +39646,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `active-data/attempt`
           - `debug/profiling/ops`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/attempt-pane.tsx`, `web/components/attempt-switch-button.tsx`, `web/panes.tsx` (debt)
     - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as one live resource plus a direct read for the server-side exit-drop guard.
       - Server:
         - Contributes: `resource.declare` "attempt-work"
@@ -39513,6 +40120,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/reports-investigation`
           - `tasks/task-dependencies`
           - `toolchain`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `server/internal/resource.ts`, `shared/resources.ts`, `web/hooks.ts` (debt)
     - **`task-dependencies`** — Both ends of the task's dependency edges in one card: the tasks it runs after and the tasks it blocks, as removable chips, with prerequisite / follow-up add affordances (and a quick-add for the folder task when applicable) in the header.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
@@ -39534,6 +40143,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-draft-form.TaskDraftPopover`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/task-dependencies.tsx` (debt)
     - **`task-deps-tree`** — Dependency tree section for the task detail: a merged DataView whose sources render task_dependencies as a nesting = runs-after tree (atomic drag-to-reorder, per-row detach, 'also after' fan-in chips) or the read-only creation tree.
       - Web:
         - Slots:
@@ -39570,6 +40181,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-list.Tasks`
           - `tasks/task-status.StatusIcon`
           - `ui/icons.Icon`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/deps-tree-section.tsx` (debt)
       - Core:
         - Exports (types): `DepsTreeRow`
         - Exports (values):
@@ -39657,6 +40270,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-events`
           - `tasks/task-graph`
           - `tasks/task-header`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/panes.tsx` (debt)
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
         - Slots: `TaskDraftFormSlots.Action` ← `improve.element-picker`
@@ -39725,6 +40340,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `improve`
           - `improve/element-picker`
           - `tasks/task-dependencies`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/task-draft-popover.tsx` (debt)
     - **`task-effort`** — Per-task thinking-mode (effort) picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
       - Web:
         - Contributes: `TaskLaunch.Option` "Thinking mode" → `EffortLaunchControl`
@@ -39822,6 +40439,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-status.STATUS_META`
           - `ui/icons.Icon`
+      - Exemptions:
+        - Exempts itself from:
+          - `endpoints/no-void-fetch-endpoint` — `web/components/task-graph.tsx` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `web/hooks.ts` (debt)
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
@@ -39888,6 +40509,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
           - `tasks/task-track`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/child-count-action.tsx`, `web/components/tasks-list-view.tsx` (debt)
     - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
       - Web:
         - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
@@ -40437,6 +41060,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-title` (table `tasks_ext_short_title`)
           - `tasks/task-source-url` (table `tasks_ext_source_url`)
           - `tasks/task-track` (table `tasks_ext_track`)
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/hooks.ts` (debt)
       - Test helpers:
         - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
           - `installTaskDerivedSchema`
@@ -40451,6 +41076,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.foldResource`
           - `primitives/live-state.useResource`
           - `shell/health-report.HealthReport`
+      - Exemptions:
+        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/internal/use-worktree-identity.ts` (debt)
 
 - **`toolchain`** — Registers the legacy Toolchain task category, so upgrade tasks filed before the toolchain loop moved onto infra/deps' updater runner still render under it. New upgrade tasks are filed by the Dependency upgrades automation under Dependencies.
   - Server:
@@ -41966,6 +42593,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
+          - Exemptions:
+            - Exempts itself from: `type-scale:closed-role-ladder:raw-vars` — `.` (sanctioned)
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Web:
         - Slots: `TreeDisclosure.Variant` ← `ui.tree-disclosure.column`, `ui.tree-disclosure.dimmed-leaf`, `ui.tree-disclosure.merged`

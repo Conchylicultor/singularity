@@ -439,6 +439,19 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `ui/theme-engine/theme-gallery`
     - `ui/tweakcn`
     - `ui/tweakcn/community-browser`
+- Exemptions:
+  - Exempts itself from: `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+  - Exempted by:
+    - `apps/pages/page-tree` (0 debt)
+    - `apps/sonata/playback-history` (0 debt)
+    - `apps/sonata/rich/key-mode` (0 debt)
+    - `apps/sonata/transpose` (0 debt)
+    - `infra/endpoints` (0 debt)
+    - `infra/ndjson-stream` (0 debt)
+    - `primitives/live-state` (0 debt)
+    - `primitives/networking` (0 debt)
+    - `shell/notifications` (0 debt)
+    - `tasks/task-graph` (0 debt)
 - Server:
   - Exports (values):
     - `HttpError`

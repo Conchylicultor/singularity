@@ -41,5 +41,9 @@ export default {
   classRules: {
     "no-adhoc-pane-toolbar": noAdhocPaneToolbar,
   },
-  closed: ["no-adhoc-pane-title", "no-hint-fabrication", "no-onclick-open-pane"],
+  closed: [
+    "no-adhoc-pane-title",
+    "no-hint-fabrication",
+    "no-onclick-open-pane",
+  ],
 } satisfies LintContribution;

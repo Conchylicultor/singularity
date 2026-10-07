@@ -863,6 +863,11 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tree-disclosure/merged`
     - `ui/tweakcn/community-browser`
     - `ui/variant-region`
+- Exemptions:
+  - Exempts itself from:
+    - `control-panel/no-adhoc-panel-body` — `web/components/ui/dropdown-menu.tsx`, `web/components/ui/select.tsx` (sanctioned)
+    - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
+    - `viewport-overlay/no-adhoc-viewport-overlay` — `web/components/ui` (sanctioned)
 - Core:
   - Exports (types): `ClassName`
 

@@ -145,7 +145,10 @@ async function run(job: Job): Promise<Result> {
     // applied here, message by message, so it can be caught suppressing
     // nothing. Validated by the same function the config build used.
     const exemptions = createExemptionIndex(
-      lintExemptions(await loadExemptions(), await loadLintContributions(job.root)),
+      lintExemptions(
+        await loadExemptions(),
+        await loadLintContributions(job.root),
+      ),
     );
     const linter = new Linter({ configType: "flat" });
     const lines: string[] = [];

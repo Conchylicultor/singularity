@@ -729,6 +729,12 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `tasks/automations`
     - `tasks/task-title`
     - `upstream`
+- Exemptions:
+  - Exempts itself from:
+    - `timer/no-unlisted-timer` — `server/internal/stuck-lock-sweeper.ts` (sanctioned)
+    - `jobs:no-raw-addjob` — `server/internal/registry.ts`, `check/index.ts` (sanctioned)
+    - `jobs:no-raw-addjob` — `server/internal/enqueue-deadline.test.ts` (sanctioned)
+    - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
 - Test helpers:
   - Server: `@plugins/infra/plugins/jobs/server/testing`
     - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.

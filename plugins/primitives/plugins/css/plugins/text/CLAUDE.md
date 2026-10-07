@@ -527,6 +527,7 @@ to reconcile them; they never needed reconciling.
     - `plugin-meta/facets/contributions/render-detail`
     - `plugin-meta/facets/cross-refs/render-detail`
     - `plugin-meta/facets/db-schema/render-detail`
+    - `plugin-meta/facets/exemptions/render-detail`
     - `plugin-meta/facets/exports/render-detail`
     - `plugin-meta/facets/registrations/render-detail`
     - `plugin-meta/facets/resources/render-detail`

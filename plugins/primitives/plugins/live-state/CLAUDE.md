@@ -1122,6 +1122,11 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `ui/tokens/sidebar-palette`
     - `ui/tokens/type-scale`
     - `ui/tweakcn/community-browser`
+- Exemptions:
+  - Exempts itself from:
+    - `endpoints/no-raw-web-fetch` — `web/use-resource.ts` (sanctioned)
+    - `endpoints/no-raw-web-fetch` — `web/notifications-client.ts` (sanctioned)
+    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Core:
   - Exports (types):
     - `PointParams`
