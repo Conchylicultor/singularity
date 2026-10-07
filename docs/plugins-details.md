@@ -645,11 +645,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses:
               - `apps/chord/vocabulary.ChordNumeral`
-              - `apps/chord/vocabulary.chordPaint`
-              - `apps/chord/vocabulary.ChordPaint`
               - `apps/chord/vocabulary.chordToneStyle`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
+              - `music/chord-box.chordPaint`
+              - `music/chord-box.ChordPaint`
               - `network/live.useLive`
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleChevron`
@@ -864,7 +864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `TARGET_MEDIAN_MS`
           - Cross-plugin:
             - Imported by: `apps/chord/trainer`
-        - **`shell`** — The Chord app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the trainer's pane (whose header carries the app launcher) is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
+        - **`shell`** — The Chord app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the trainer's pane (whose header carries the app launcher) is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours and the outside-the-scale grey as the chord-palette tokens, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
           - Web:
             - Contributes:
               - `Apps.App` "Chord" → `ChordLayout`
@@ -872,6 +872,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps-core.Apps`
               - `layouts/full-pane.FullPane`
+              - `music/chord-box.chordColour`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/ui-kit.cn`
@@ -1087,7 +1088,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/piano.useSoundMix`
               - `apps/chord/song-index.SongIndexGate`
               - `apps/chord/vocabulary.ChordNumeral`
-              - `apps/chord/vocabulary.chordPaint`
               - `apps/chord/vocabulary.chordToneStyle`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.useEndpointMutation`
@@ -1096,6 +1096,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `integrations/youtube.useYouTubePlayhead`
               - `integrations/youtube.YouTubePlayer`
               - `integrations/youtube.YouTubePlayerController`
+              - `music/chord-box.ChordBox`
+              - `music/chord-box.chordPaint`
               - `network/live.useLive`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
@@ -1228,13 +1230,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `videoStatusSummaryEndpoint`
           - Cross-plugin:
             - Imported by: `apps/chord/song-index`
-        - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
+        - **`vocabulary`** — A chord token drawn with the shared chord box (music/chord-box): <ChordNumeral token> (its Roman numeral, from chordLabel) and chordToneStyle(token) (its degree colour and tile depth, as the --fn custom properties the .chord-tone paint and the named chord paints read). Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
           - Web:
-            - Uses: `primitives/css/ui-kit.cn`
-            - Exports (types): `ChordPaint`
+            - Uses:
+              - `music/chord-box.ChordNumeral`
+              - `music/chord-box.chordToneStyle`
             - Exports (values):
               - `ChordNumeral`
-              - `chordPaint`
               - `chordToneStyle`
           - Core:
             - Uses:
@@ -1254,6 +1256,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/theory.romanNumeral`
               - `integrations/hooktheory.HookpadMode`
               - `integrations/hooktheory.hookpadTonicPc`
+              - `music/chord-box.majorDegree`
+              - `music/chord-box.MajorDegree`
             - Exports (types):
               - `ChordDigit`
               - `ChordFunction`
@@ -4796,6 +4800,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/audio/sample-loader.sharedSampleLoader`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
+        - **`chord-chart`** — Sonata Display: the chord grid. Lays the song's chords out as bars in rows of four under their section headers, each bar split by beats into chord boxes painted in the root's degree colour (held chords drawn as ties), labelled by the shared chord-label mode, following playback with the active bar outlined, the sounding chord ringed and a beat line through the bar. A reading view (no time-axis / pitch-plane capabilities); click a chord to seek.
+          - Web:
+            - Contributes: `SonataPlayer.Display` "Chord grid" → `ChordChart`
+            - Uses:
+              - `apps/sonata/document.useSongDocument`
+              - `apps/sonata/player.SonataPlayer`
+              - `apps/sonata/rich/chord-label.chordBoxFace`
+              - `apps/sonata/rich/chord-label.ChordBoxFace`
+              - `apps/sonata/rich/chord-label.useChordDisplayMode`
+              - `apps/sonata/session.useCursorApi`
+              - `apps/sonata/session.useCursorSelector`
+              - `apps/sonata/session.useSession`
+              - `apps/sonata/shell.Sonata`
+              - `music/chord-box.ChordBox`
+              - `primitives/css/center.Center`
+              - `primitives/css/column.Column`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.Inset`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/dom/scroll-reveal.revealElement`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
         - **`controls`** — Keyboard transport for Sonata players: Space toggles play/pause and ←/→ seek the playhead (tap to jump a bar, hold to scrub) on every shown player — the Sonata app's and a file preview's alike — and, in the Sonata app, ↑/↓ speed up / slow down the tempo. All focus-scoped per surface.
           - Web:
             - Contributes:
@@ -4853,11 +4880,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useWriteSongSetting`
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/chord-chart`
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
               - `apps/sonata/player`
               - `apps/sonata/rich/chord-analyzer`
+              - `apps/sonata/rich/chord-list`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/chord-progression`
               - `apps/sonata/rich/chord-readout`
@@ -5293,6 +5322,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `pitchLayoutConfig`
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/rich/chord-list`
               - `apps/sonata/rich/chord-readout`
               - `apps/sonata/rich/key-readout`
         - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and contributes Plays / Last-played fields (Library.Fields) so they appear on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves them as the song library's `playback` columns (LiveColumns.Serve).
@@ -5332,7 +5362,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport, PlayToggle, PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown).
           - Web:
             - Slots:
-              - `SonataPlayer.Display` ← `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
+              - `SonataPlayer.Display` ← `apps.sonata.chord-chart`, `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
               - `SonataPlayer.Transport` ← `apps.sonata.progress.scrubber`
               - `SonataPlayer.Effect` ← `apps.sonata.controls`
             - Uses:
@@ -5365,6 +5395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `usePlayerView`
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/chord-chart`
               - `apps/sonata/controls`
               - `apps/sonata/library`
               - `apps/sonata/notation`
@@ -5433,6 +5464,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `apps/chord/piano`
                   - `apps/sonata/piano-keyboard`
+                  - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/chord-readout`
                   - `apps/sonata/rich/key-readout`
             - **`rhythm-circle`** — Generic rotating rhythm-necklace SVG: one concentric ring per track, a bead per pulse (index 0 at 12 o'clock, clockwise), filled beads for onsets, and a playhead needle. Imports nothing from Sonata — speaks only plain numbers. The spin is driven imperatively via setPhase(phase) and costs zero React renders; beads are optionally click-to-toggle.
@@ -5617,14 +5649,39 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/shell.Sonata`
                   - `config_v2.ConfigV2`
                   - `config_v2.useConfig`
-                - Exports (values): `useChordDisplayMode`
+                - Exports (types): `ChordBoxFace`
+                - Exports (values):
+                  - `chordBoxFace`
+                  - `useChordDisplayMode`
               - Server:
                 - Contributes: `ConfigV2.Register` "config"
                 - Uses: `config_v2.ConfigV2`
               - Cross-plugin:
                 - Imported by:
+                  - `apps/sonata/chord-chart`
+                  - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`
+            - **`chord-list`** — Sonata Section: the song's chords — one row per distinct chord in order of first appearance, each a chord box (degree colour, chord-label mode) beside a keyboard lit with its notes in that colour and how many times it is played. The chord under the playhead is marked; clicking a row seeks to its first occurrence.
+              - Web:
+                - Contributes: `Sonata.Section` "Chord list" → `ChordList`
+                - Uses:
+                  - `apps/sonata/document.useHasChords`
+                  - `apps/sonata/pitch-layout.usePitchGeometry`
+                  - `apps/sonata/primitives/keyboard.Keyboard`
+                  - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+                  - `apps/sonata/rich/chord-label.chordBoxFace`
+                  - `apps/sonata/rich/chord-label.ChordBoxFace`
+                  - `apps/sonata/rich/chord-label.useChordDisplayMode`
+                  - `apps/sonata/session.useCursorSelector`
+                  - `apps/sonata/session.useSession`
+                  - `apps/sonata/shell.Sonata`
+                  - `music/chord-box.ChordBox`
+                  - `music/chord-box.chordColour`
+                  - `music/chord-box.chordToneStyle`
+                  - `primitives/css/overlay.Overlay`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
             - **`chord-mode`** — Sonata Section: per-song chord mode. One On/Off chip in the 'Chords' card header: on, the song document voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
               - Web:
                 - Contributes:
@@ -5844,6 +5901,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `BarPosition`
               - `Capability`
               - `ChordAnnotation`
+              - `ChordBar`
+              - `ChordBarSegment`
               - `ChordData`
               - `KeyEntry`
               - `KeySignature`
@@ -5882,6 +5941,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `beatToSeconds`
               - `buildActiveNoteIndex`
               - `buildTempoIndex`
+              - `chordBars`
               - `collectKeyEntries`
               - `currentLine`
               - `effectiveKeyAt`
@@ -5941,6 +6001,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/live-play`
               - `apps/sonata/audio/metronome`
+              - `apps/sonata/chord-chart`
               - `apps/sonata/controls`
               - `apps/sonata/library`
               - `apps/sonata/notation`
@@ -5954,6 +6015,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/scrubber`
               - `apps/sonata/progress/sections`
               - `apps/sonata/recording`
+              - `apps/sonata/rich/chord-list`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/rich/chord-progression`
@@ -5978,7 +6040,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata.Effect` ← `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.sources.ultimate-guitar.alignment`
               - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
               - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`
-              - `Sonata.Section` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.sources.ultimate-guitar.alignment`, `apps.sonata.track-mixer`
+              - `Sonata.Section` ← `apps.sonata.rich.chord-list`, `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.sources.ultimate-guitar.alignment`, `apps.sonata.track-mixer`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses:
               - `apps-core.Apps`
@@ -6005,6 +6067,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/sonata/audio/metronome`
+              - `apps/sonata/chord-chart`
               - `apps/sonata/controls`
               - `apps/sonata/library`
               - `apps/sonata/look`
@@ -6016,6 +6079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/playback-history`
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-label`
+              - `apps/sonata/rich/chord-list`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/rich/chord-progression`
@@ -6455,6 +6519,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `qualitySymbol`
               - `qualityToIntervals`
               - `romanNumeral`
+              - `romanNumeralParts`
               - `tonicName`
               - `tonicPc`
               - `transposeChordText`
@@ -19862,6 +19927,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/shell`
               - `apps/prototypes/thumbnails`
               - `apps/sonata`
+              - `apps/sonata/chord-chart`
               - `apps/sonata/library`
               - `apps/sonata/look`
               - `apps/sonata/piano-roll`
@@ -24310,6 +24376,37 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
           - `primitives/loading.Loading`
+
+- **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
+  - Plugins:
+    - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the root's major-scale degree colour — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
+      - Web:
+        - Uses:
+          - `primitives/css/overlay.Overlay`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/ui-kit.cn`
+        - Exports (types):
+          - `ChordBoxHit`
+          - `ChordBoxLabel`
+          - `ChordBoxProps`
+          - `ChordPaint`
+        - Exports (values):
+          - `ChordBox`
+          - `chordColour`
+          - `ChordNumeral`
+          - `chordPaint`
+          - `chordToneStyle`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/chord/curriculum`
+          - `apps/chord/shell`
+          - `apps/chord/trainer`
+          - `apps/chord/vocabulary`
+          - `apps/sonata/chord-chart`
+          - `apps/sonata/rich/chord-list`
+      - Core:
+        - Exports (types): `MajorDegree`
+        - Exports (values): `majorDegree`
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
@@ -29182,6 +29279,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/shell`
               - `apps/pages/page-tree`
               - `apps/sonata/audio/metronome`
+              - `apps/sonata/chord-chart`
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
@@ -29447,6 +29545,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/home/shell`
               - `apps/mail/shell`
               - `apps/prototypes/canvas`
+              - `apps/sonata/chord-chart`
               - `apps/sonata/library`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/studio/contributions`
@@ -30132,8 +30231,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/trainer`
               - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
+              - `apps/sonata/rich/chord-list`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `debug/timeline`
+              - `music/chord-box`
               - `page/editor`
               - `page/embed`
               - `page/read-only-view`
@@ -30235,6 +30336,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/history`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
+              - `apps/sonata/chord-chart`
               - `apps/sonata/notation`
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/midi/file-preview`
@@ -30747,6 +30849,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/compare`
               - `apps/prototypes/present`
               - `apps/sonata/audio/engine`
+              - `apps/sonata/chord-chart`
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
@@ -30754,6 +30857,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
               - `apps/sonata/recording`
+              - `apps/sonata/rich/chord-list`
               - `apps/sonata/rich/chord-progression`
               - `apps/sonata/rich/chord-readout`
               - `apps/sonata/rich/key-readout`
@@ -30915,6 +31019,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/miller`
               - `layouts/route-fallback`
               - `map/google`
+              - `music/chord-box`
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
               - `page/attachment-block`
@@ -31042,6 +31147,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine/theme-gallery`
               - `ui/tokens/categorical`
               - `ui/tokens/chart`
+              - `ui/tokens/chord-palette`
               - `ui/tokens/color-adjust`
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
@@ -31304,6 +31410,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas`
               - `apps/prototypes/compare`
               - `apps/prototypes/present`
+              - `apps/sonata/chord-chart`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
               - `apps/sonata/player`
@@ -31311,6 +31418,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/scrubber`
               - `apps/sonata/progress/sections`
               - `apps/sonata/recording`
+              - `apps/sonata/rich/chord-list`
               - `apps/sonata/rich/chord-progression`
               - `apps/sonata/rich/chord-readout`
               - `apps/sonata/rich/key-readout`
@@ -31873,7 +31981,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/shell`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
-              - `apps/chord/vocabulary`
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
@@ -32040,6 +32147,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/miller`
               - `layouts/route-fallback`
               - `map`
+              - `music/chord-box`
               - `page/attachment-block`
               - `page/audio`
               - `page/bookmark`
@@ -33537,6 +33645,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/tab-bar`
+              - `apps/sonata/chord-chart`
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/ultimate-guitar`
               - `conversations/conversation-view/jsonl-viewer`
@@ -34504,6 +34613,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/canvas`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
+          - `apps/sonata/chord-chart`
           - `apps/sonata/library`
           - `apps/sonata/notation`
           - `apps/sonata/piano-roll`
@@ -34643,6 +34753,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/theme-engine/theme-gallery`
           - `ui/tokens/categorical`
           - `ui/tokens/chart`
+          - `ui/tokens/chord-palette`
           - `ui/tokens/color-adjust`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
@@ -34742,6 +34853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/welcome/recent-pages`
           - `apps/prototypes/canvas`
           - `apps/prototypes/present`
+          - `apps/sonata/chord-chart`
           - `apps/sonata/library`
           - `apps/sonata/notation`
           - `apps/sonata/piano-roll`
@@ -34866,6 +34978,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/theme-engine/theme-customizer`
           - `ui/tokens/categorical`
           - `ui/tokens/chart`
+          - `ui/tokens/chord-palette`
           - `ui/tokens/color-adjust`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
@@ -41940,7 +42053,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
-          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.pages.shell`, `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.file-explorer.browser`, `apps.website.pages.apps`, `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
@@ -42062,6 +42175,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/theme-toggle`
           - `ui/tokens/categorical`
           - `ui/tokens/chart`
+          - `ui/tokens/chord-palette`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
           - `ui/tokens/file-type-palette`
@@ -42189,7 +42303,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
-              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
               - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
             - Uses:
@@ -42247,6 +42361,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine/theme-gallery`
               - `ui/tokens/categorical`
               - `ui/tokens/chart`
+              - `ui/tokens/chord-palette`
               - `ui/tokens/color-adjust`
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
@@ -42356,6 +42471,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ChartTokenValues`
             - Exports (values): `chartGroup`
+        - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per major-scale degree, I … vii) and --chord-outside (a root outside the scale), with their customizer section.
+          - Web:
+            - Contributes:
+              - `ThemeEngine.TokenGroup` "Chord colours"
+              - `ThemeCustomizer.Section` "Chord colours" → `ChordPaletteSection`
+            - Uses:
+              - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
+              - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
+            - Exports (types): `ChordPaletteValues`
+            - Exports (values): `chordPaletteGroup`
         - **`color-adjust`** — Customizer section for a theme's color adjustment — the hue / saturation / lightness shift applied to every color it paints — with "Fill from…" shortcuts.
           - Web:
             - Contributes: `ThemeCustomizer.Section` "Color Adjust" → `ColorAdjustSection`

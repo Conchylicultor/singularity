@@ -96,7 +96,11 @@ export function ChordBox({
   return (
     <div
       ref={ref}
-      className={cn("chord-box relative", chordPaint(STATE_PAINT[state]), className)}
+      className={cn(
+        "chord-box relative",
+        chordPaint(STATE_PAINT[state]),
+        className,
+      )}
       style={{ ...style, ...chordToneStyle(degree) }}
       data-filled={state === "filled" ? "" : undefined}
       data-given={state === "given" ? "" : undefined}
