@@ -148,9 +148,10 @@ glyph a file gets and its colour; a direct `seti()` elsewhere is rare.
   element or attribute throws), **crops it to what it paints** — the smallest
   square around the painted bounding box (`shared/seti-bbox.ts`: geometry
   flattened through every transform, curves and arcs sampled, strokes grown by
-  half their width, unpainted shapes ignored), centred, with a 1/32 margin a
-  side (`SETI_CROP_MARGIN`) — so every glyph fills the icon box it is drawn in
-  instead of sitting in Seti's wide, uneven margins; and writes
+  half their width, unpainted shapes ignored), centred, with a 1/12 margin a
+  side (`SETI_CROP_MARGIN`, the 2-in-24 keyline Material and Lucide draw
+  inside) — so every glyph fills its icon box as much as the symbol beside it
+  does, instead of sitting in Seti's wide, uneven margins; and writes
   `server/internal/seti/seti.json` (Iconify JSON), the upstream
   `LICENSE.txt` beside it, and `core/seti-names.generated.ts` (`SetiName`).
   To upgrade: bump the commit, rerun; `icons:seti-in-sync` fails until you do.

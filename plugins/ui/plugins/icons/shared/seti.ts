@@ -24,14 +24,15 @@ export const SETI_SOURCE = {
 
 // Bump when {@link normalizeSetiSvg} changes what it emits, so the in-sync
 // check asks for a re-vendor even though the commit did not move.
-export const SETI_NORMALIZER_VERSION = 3;
+export const SETI_NORMALIZER_VERSION = 4;
 
 /**
  * The margin a cropped glyph keeps on each side of its square box, as a
- * fraction of the side: enough that an antialiased edge is never cut, small
- * enough that the glyph fills its icon box like a Material symbol does.
+ * fraction of the side: the 2-in-24 keyline Material Symbols and Lucide draw
+ * inside, so a file glyph paints as much of its icon box as the folder or
+ * symbol beside it does — not edge to edge, which reads a size larger.
  */
-export const SETI_CROP_MARGIN = 1 / 32;
+export const SETI_CROP_MARGIN = 1 / 12;
 
 /** What the vendored set is a function of: the source commit and the normalizer. */
 export function setiIdentity(): string {
