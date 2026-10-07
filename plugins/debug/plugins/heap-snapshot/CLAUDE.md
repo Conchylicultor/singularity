@@ -24,7 +24,6 @@
     - `primitives/data-table.ColumnDef`
     - `primitives/data-table.DataTable`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
   - Exports (values): `heapSnapshotPane`

@@ -46,7 +46,6 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
     - `primitives/data-view.HierarchyConfig`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

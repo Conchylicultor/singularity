@@ -146,7 +146,6 @@ ascending), `All`, and `By category` (grouped). The surface is the collection's
     - `primitives/data-view.defineFieldExtensions`
     - `primitives/data-view.liveDataSource`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`

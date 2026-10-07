@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { backupPane, backupRunPane } from "./panes";
@@ -22,7 +22,7 @@ export default {
       id: "backup",
       title: "Backup",
       icon: symbol("backup"),
-      onClick: () => openPane(backupPane, {}, { mode: "root" }),
+      opens: { pane: backupPane, params: {} },
     }),
   ],
   slots: {

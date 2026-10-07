@@ -50,7 +50,6 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `primitives/css/ui-kit.Input`
     - `primitives/icon-button.IconButton`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `shell/notifications.toast`
     - `ui/icons.Icon`

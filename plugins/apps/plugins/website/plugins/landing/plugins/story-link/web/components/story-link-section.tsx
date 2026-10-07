@@ -31,7 +31,7 @@ export function StoryLinkSection() {
           variant="link"
           aspect="inline"
           className="text-foreground decoration-muted-foreground/60 hover:decoration-foreground underline"
-          onClick={() => openPane(storyPane, {}, { mode: "root" })}
+          {...openPane.link(storyPane, {}, { mode: "root" })}
         >
           {LINK}
           <WebsiteArrow />

@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { healthMonitorPane } from "./panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -15,7 +15,7 @@ export default {
       id: "health-monitor",
       title: "Health",
       icon: symbol("speed"),
-      onClick: () => openPane(healthMonitorPane, {}, { mode: "root" }),
+      opens: { pane: healthMonitorPane, params: {} },
     }),
   ],
   slots: { "debug-health-monitor": healthMonitorPane },

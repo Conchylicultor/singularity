@@ -9,7 +9,7 @@ never draw their own header (the shell places it; see
   `icon`; the Equin mark (`/icon.svg`) outside any app. Each app keeps its
   identity at the top-left; the button is the same launcher everywhere. It is
   wrapped in [`HoverPopover`](../../../primitives/plugins/overlay/plugins/hover-popover/CLAUDE.md).
-  Click (link gestures: ⌘/middle-click opens a new tab) → the app gallery, i.e.
+  Click (link gestures: ⌘/middle-click opens it in a new browser tab) → the app gallery, i.e.
   the `Apps.App` entry flagged `default` via `defaultApp()` — never named.
   Hover / ArrowDown → every other `Apps.App` entry, in rail order, as the
   `icons` DataView at `density="compact"` (four tiles a row in the `picker`
@@ -74,7 +74,7 @@ never draw their own header (the shell places it; see
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/embed.isChromelessDocument`
-    - `primitives/link-gesture.linkGestureProps`
+    - `primitives/link-gesture.linkProps`
     - `primitives/overlay/hover-popover.HoverPopover`
     - `primitives/pane.currentRoutePath`
     - `reorder.isNodeData`

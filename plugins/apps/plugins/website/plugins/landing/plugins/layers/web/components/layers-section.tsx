@@ -160,7 +160,7 @@ function Layer({
       // brightens toward the foreground (`website-layer`, see the CSS), in place
       // of the interactive card's accent border and tinted fill.
       className="website-layer hover:border-foreground/22 hover:bg-card rounded-2xl text-left shadow-none"
-      onClick={() => openPane(pane, {}, { mode: "root" })}
+      {...openPane.link(pane, {}, { mode: "root" })}
     >
       <Stack gap="lg">
         {/* The arrow is a real track beside the text, not a corner overlay, so

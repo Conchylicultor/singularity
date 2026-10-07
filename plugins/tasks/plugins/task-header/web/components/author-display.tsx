@@ -43,9 +43,7 @@ export function AuthorDisplay({ author }: { author: string | null }) {
   return (
     <button
       type="button"
-      onClick={() =>
-        openPane(taskDetailPane, { taskId: row.id }, { mode: "swap" })
-      }
+      {...openPane.link(taskDetailPane, { taskId: row.id }, { mode: "swap" })}
       className="text-body hover:text-foreground underline underline-offset-2"
     >
       {row.title}

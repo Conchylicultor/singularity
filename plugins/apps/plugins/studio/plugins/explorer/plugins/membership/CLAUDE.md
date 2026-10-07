@@ -70,7 +70,7 @@ by the `tree` primitive's `RowChrome` `accent` layer (a primitive-owned
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
-    - `primitives/pane.openPane`
+    - `primitives/pane.useOpenPane`
   - Exports (values):
     - `DIFF_LEGEND`
     - `DIFF_TINT`

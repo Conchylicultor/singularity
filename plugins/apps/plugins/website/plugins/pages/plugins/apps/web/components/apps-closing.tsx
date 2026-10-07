@@ -133,7 +133,7 @@ function AppsReadNext() {
           as="button"
           interactive
           className="website-app-next hover:bg-card text-left shadow-none"
-          onClick={() => openPane(next.pane, {}, { mode: "root" })}
+          {...openPane.link(next.pane, {}, { mode: "root" })}
         >
           <Stack gap="sm" align="start">
             <Text

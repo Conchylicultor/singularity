@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { ConfigNavSlots } from "@plugins/config_v2/plugins/settings/web";
 import { configOrphansPane } from "./panes";
@@ -17,7 +17,7 @@ export default {
       id: "config-orphans",
       title: "Config Orphans",
       icon: symbol("rule-folder"),
-      onClick: () => openPane(configOrphansPane, {}, { mode: "root" }),
+      opens: { pane: configOrphansPane, params: {} },
     }),
     ConfigNavSlots.Notice({
       id: "stranded-config",

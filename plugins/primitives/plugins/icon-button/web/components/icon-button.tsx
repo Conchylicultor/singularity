@@ -87,6 +87,8 @@ export function IconButton({
         active={active}
         label={label}
         onClick={props.onClick}
+        onAuxClick={props.onAuxClick}
+        onMouseDown={props.onMouseDown}
         disabled={props.disabled}
         shortcut={shortcut}
       />

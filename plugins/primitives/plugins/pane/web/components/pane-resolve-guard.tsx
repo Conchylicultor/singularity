@@ -1,4 +1,4 @@
-import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -167,7 +167,7 @@ function FallbackChrome({
                     : "Expand pane"
                 }
                 icon={openInFullIcon}
-                {...linkGestureProps(promote.run)}
+                {...linkProps(promote)}
               />
             )}
             {chrome.close && doClose && (

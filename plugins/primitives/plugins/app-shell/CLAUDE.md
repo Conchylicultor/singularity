@@ -70,9 +70,9 @@ reads what is on screen rather than a per-app flag.
     - `primitives/css/ui-kit.SidebarToggleIcons`
     - `primitives/css/ui-kit.SidebarTrigger`
     - `primitives/css/yield.yieldClass`
-    - `primitives/pane.openPane`
     - `primitives/pane.PaneObject`
     - `primitives/pane.SurfaceChromeContext`
+    - `primitives/pane.useOpenPane`
     - `primitives/pane.useRoute`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.renderIsolated`

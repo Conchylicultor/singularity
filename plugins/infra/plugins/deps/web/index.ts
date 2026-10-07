@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Settings } from "@plugins/apps/plugins/settings/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
@@ -18,7 +18,7 @@ export default {
       id: "dependencies",
       title: "Dependencies",
       icon: symbol("deployed-code"),
-      onClick: () => openPane(dependenciesPane, {}, { mode: "root" }),
+      opens: { pane: dependenciesPane, params: {} },
     }),
     DepItemActions({ id: "install", component: InstallDepAction }),
     DepItemActions({ id: "remove", component: RemoveDepAction }),

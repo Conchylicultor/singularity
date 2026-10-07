@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventSourcesPane, eventSourceDetailPane } from "./panes";
 import { EventSourceActions, EventSourceDetail } from "./slots";
@@ -59,7 +59,7 @@ export default {
       id: "sources",
       title: "Sources",
       icon: symbol("folder-code"),
-      onClick: () => openPane(eventSourcesPane, {}, { mode: "root" }),
+      opens: { pane: eventSourcesPane, params: {} },
     }),
     // Ordered by how much each one changes: `open` only looks (and renders
     // nothing at all for a source that stands for no page), `enabled` is

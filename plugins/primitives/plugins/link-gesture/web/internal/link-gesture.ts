@@ -6,10 +6,11 @@ import type { MouseEvent } from "react";
  *   • plain click                 → open it HERE
  *   • ⌘/Ctrl-click, middle-click  → open it ELSEWHERE, staying put
  *
- * Spread onto the control; `open` receives which one the user asked for:
+ * Build them with {@link linkProps} — "elsewhere" is a new browser tab at the
+ * destination's URL, exactly what the same gesture does on an `<a href>`:
  *
  * ```tsx
- * <IconButton icon={MdOpenInFull} label="Expand pane" {...linkGestureProps(go)} />
+ * <IconButton icon={MdOpenInFull} label="Expand pane" {...linkProps({ open: go, href: () => url })} />
  * ```
  *
  * **Why this is not free.** The browser grants these gestures to `<a href>`
@@ -31,20 +32,59 @@ export interface LinkGestureProps {
   onMouseDown(e: MouseEvent): void;
 }
 
-/** Build the {@link LinkGestureProps} for an `open` action (see the interface). */
+/**
+ * The {@link LinkGestureProps} of an in-app link: plain click runs `open`,
+ * ⌘/Ctrl- and middle-click open `href()` in a new browser tab.
+ *
+ * `href` is a thunk, evaluated synchronously inside the click handler and only
+ * for an "elsewhere" gesture. Synchronous, so `window.open` still runs inside
+ * the user gesture and is not popup-blocked; at click time, so a destination
+ * relative to what is on screen (a pane pushed beside the caller) is computed
+ * against the screen the user clicked on, not the one this control rendered in.
+ * It returns an app path (`/agents/c/42`), resolved against this origin.
+ */
+export function linkProps({
+  open,
+  href,
+}: {
+  open: () => void;
+  href: () => string;
+}): LinkGestureProps {
+  return linkGestureProps(({ elsewhere }) => {
+    if (elsewhere) openInBrowserTab(href());
+    else open();
+  });
+}
+
+/**
+ * Open an app path (`/agents/c/42`) of THIS origin in a new browser tab — the
+ * one place that is spelled. `noopener`, so the new tab cannot reach back into
+ * this one through `window.opener`.
+ */
+export function openInBrowserTab(path: string): void {
+  window.open(new URL(path, window.location.origin), "_blank", "noopener");
+}
+
+/**
+ * The low-level form: `open` is told which gesture the user made and decides
+ * itself what "elsewhere" means. Prefer {@link linkProps}; this is for the
+ * control whose "elsewhere" is NOT a browser tab at an app path (open-app's
+ * button flips a configured default between a browser tab on another origin
+ * and a framed pane).
+ */
 export function linkGestureProps(
-  open: (opts: { newTab: boolean }) => void,
+  open: (opts: { elsewhere: boolean }) => void,
 ): LinkGestureProps {
   return {
     onClick(e) {
-      open({ newTab: e.metaKey || e.ctrlKey });
+      open({ elsewhere: e.metaKey || e.ctrlKey });
     },
     onAuxClick(e) {
       if (e.button !== 1) return;
       // The default middle-button action (autoscroll on Windows, paste on
       // X11) has nothing to do with navigating, so it never reaches the page.
       e.preventDefault();
-      open({ newTab: true });
+      open({ elsewhere: true });
     },
     onMouseDown(e) {
       // Autoscroll arms on mousedown, not on the aux click — cancelling it

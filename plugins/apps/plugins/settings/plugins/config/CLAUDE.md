@@ -17,7 +17,6 @@
     - `config_v2/settings.configNavPane`
     - `network/live.useLive`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
 

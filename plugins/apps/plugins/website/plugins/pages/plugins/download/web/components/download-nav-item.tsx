@@ -10,7 +10,7 @@ export function DownloadNavItem() {
   return (
     <WebsiteNavLink
       label="Download"
-      onClick={() => openPane(downloadPane, {}, { mode: "root" })}
+      {...openPane.link(downloadPane, {}, { mode: "root" })}
     />
   );
 }

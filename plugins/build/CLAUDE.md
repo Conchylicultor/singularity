@@ -256,7 +256,6 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `primitives/log-channels.LiveLogChannel`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/relative-time.ElapsedTime`

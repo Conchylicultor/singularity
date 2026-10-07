@@ -49,7 +49,9 @@ export function TraceDetail({ id }: { id: string }): ReactElement {
     return (
       <Center axis="both" className="h-full p-2xl text-center">
         <Placeholder tone={notFound ? "muted" : "error"}>
-          {notFound ? `No trace with id "${id}".` : getEndpointErrorMessage(error)}
+          {notFound
+            ? `No trace with id "${id}".`
+            : getEndpointErrorMessage(error)}
         </Placeholder>
       </Center>
     );
@@ -88,7 +90,10 @@ function AlsoInWindow({
 
   const siblings = useMemo(() => {
     const end = Date.parse(snapshot.wallTime);
-    const self = { startMs: end - (snapshot.atMs - snapshot.windowStartMs), endMs: end };
+    const self = {
+      startMs: end - (snapshot.atMs - snapshot.windowStartMs),
+      endMs: end,
+    };
     return (list?.items ?? [])
       .filter((t) => {
         if (t.id === id) return false;
@@ -116,7 +121,11 @@ function AlsoInWindow({
               size="sm"
               hover="muted"
               title={t.triggerLabel}
-              onClick={() => openPane(traceDetailPane, { id: t.id }, { mode: "push" })}
+              {...openPane.link(
+                traceDetailPane,
+                { id: t.id },
+                { mode: "push" },
+              )}
               icon={
                 <Badge variant={triggerVariant(t.triggerKind)} mono>
                   {t.triggerKind}
@@ -128,7 +137,12 @@ function AlsoInWindow({
                   {t.triggerLabel}
                 </Text>
               </Fill>
-              <Text as="span" variant="caption" tone="muted" className="tabular-nums">
+              <Text
+                as="span"
+                variant="caption"
+                tone="muted"
+                className="tabular-nums"
+              >
                 {t.deltaS >= 0 ? "+" : ""}
                 {t.deltaS.toFixed(1)}s
               </Text>
@@ -167,7 +181,12 @@ function TraceGantt({ snapshot }: { snapshot: TraceSnapshot }): ReactElement {
 
       <GanttContainer title="Window" totalMs={totalMs}>
         <div className="border-b bg-primary/5">
-          <Stack direction="row" align="center" gap="sm" className="px-lg py-xs">
+          <Stack
+            direction="row"
+            align="center"
+            gap="sm"
+            className="px-lg py-xs"
+          >
             <div className="size-2.5 rounded-full bg-primary" />
             <Text as="div" variant="caption" className="font-semibold">
               Trip
@@ -208,7 +227,13 @@ function tripSelection(snapshot: TraceSnapshot): TraceSelection {
     fields: [
       { label: "duration", value: formatDuration(t.durationMs) },
       { label: "threshold", value: formatDuration(t.thresholdMs) },
-      { label: "over budget", value: t.thresholdMs > 0 ? `×${(t.durationMs / t.thresholdMs).toFixed(1)}` : "—" },
+      {
+        label: "over budget",
+        value:
+          t.thresholdMs > 0
+            ? `×${(t.durationMs / t.thresholdMs).toFixed(1)}`
+            : "—",
+      },
       { label: "worktree", value: snapshot.worktree },
     ],
   };
@@ -217,7 +242,11 @@ function tripSelection(snapshot: TraceSnapshot): TraceSelection {
 // The shared bottom strip: whatever lane last reported a selection, rendered
 // generically (title + labelled fields). Class-agnostic — the pane never knows
 // what produced it.
-function DetailStrip({ selection }: { selection: TraceSelection | null }): ReactElement {
+function DetailStrip({
+  selection,
+}: {
+  selection: TraceSelection | null;
+}): ReactElement {
   return (
     <Text as="div" variant="caption" className="px-lg py-sm">
       {selection ? (
@@ -231,7 +260,9 @@ function DetailStrip({ selection }: { selection: TraceSelection | null }): React
           ))}
         </Stack>
       ) : (
-        <span className="text-muted-foreground/60">Click a span or chip to see details.</span>
+        <span className="text-muted-foreground/60">
+          Click a span or chip to see details.
+        </span>
       )}
     </Text>
   );

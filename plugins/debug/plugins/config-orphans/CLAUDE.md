@@ -28,7 +28,6 @@
     - `primitives/live-state.foldResource`
     - `primitives/live-state.useEndpointResource`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`

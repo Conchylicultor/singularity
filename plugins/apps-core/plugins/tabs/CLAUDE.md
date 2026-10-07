@@ -57,10 +57,11 @@ included). A new tab is always fresh, even when the target app is the focused
 one.
 
 `appLinkProps(url)` spreads onto any control to give it browser link gestures
-(click = here, ⌘/Ctrl- or middle-click = new tab), reading them via
-`primitives/link-gesture` — the same reader the pane primitive's Expand uses. Do
-NOT reach for `<a href>`: these URLs address *in-app* tabs, so an anchor's
-middle-click cold-boots a whole second SPA in a browser tab instead.
+(click = `navigate(url)` here, ⌘/Ctrl- or middle-click = `url` in a new
+**browser** tab, the browser's own convention), via `primitives/link-gesture`'s
+`linkProps` — the same reader the pane primitive's Expand and `openPane.link`
+use. A new *in-app* tab is never a modifier on a click: it is an explicit menu
+entry calling `navigate(url, { newTab: true })`.
 
 `navigate` is also installed into the pane primitive's `app-nav-sink` here, so a
 pane that declares a home app can be promoted into it. Pane sits below tabs and
@@ -168,8 +169,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/embed.embedUrl`
     - `primitives/embed.isEmbeddedDocument`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/link-gesture.linkGestureProps`
     - `primitives/link-gesture.LinkGestureProps`
+    - `primitives/link-gesture.linkProps`
     - `primitives/pane.appNavSink`
     - `primitives/pane.createPaneStore`
     - `primitives/pane.currentRoutePath`

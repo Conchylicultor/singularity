@@ -2,7 +2,7 @@ import {
   Core,
   type PluginDefinition,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { EmitInstaller } from "./internal/global-api";
 import { liveStateEmitPane } from "./panes";
@@ -19,7 +19,7 @@ export default {
       id: "live-state-emit",
       title: "Live-State Emit",
       icon: symbol("bolt"),
-      onClick: () => openPane(liveStateEmitPane, {}, { mode: "root" }),
+      opens: { pane: liveStateEmitPane, params: {} },
     }),
     Core.Root({ component: EmitInstaller }),
   ],

@@ -14,9 +14,7 @@ export function ExpandAgentButton() {
     <PaneIconAction
       label="Expand"
       icon={openInFullIcon}
-      onClick={() =>
-        openPane(agentDetailPane, { id: agentId }, { mode: "root" })
-      }
+      {...openPane.link(agentDetailPane, { id: agentId }, { mode: "root" })}
     />
   );
 }

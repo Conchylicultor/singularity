@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import {
   bootProfilePane,
@@ -24,13 +24,13 @@ export default {
       id: "boot-profile",
       title: "Boot Profile",
       icon: symbol("timeline"),
-      onClick: () => openPane(bootProfilePane, {}, { mode: "root" }),
+      opens: { pane: bootProfilePane, params: {} },
     }),
     DebugApp.Sidebar({
       id: "boot-profiles-list",
       title: "Boot Profiles",
       icon: symbol("history"),
-      onClick: () => openPane(bootProfileListPane, {}, { mode: "root" }),
+      opens: { pane: bootProfileListPane, params: {} },
     }),
   ],
   slots: {

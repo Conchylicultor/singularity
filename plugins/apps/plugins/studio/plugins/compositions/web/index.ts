@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { compositionsPane, compositionDetailPane, comparePane } from "./panes";
 import {
@@ -24,7 +24,7 @@ export default {
       id: "compositions",
       title: "Compositions",
       icon: symbol("layers"),
-      onClick: () => openPane(compositionsPane, {}, { mode: "root" }),
+      opens: { pane: compositionsPane, params: {} },
     }),
   ],
   slots: {

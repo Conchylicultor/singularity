@@ -1,7 +1,7 @@
 import { useActiveApp } from "@plugins/apps-core/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
-import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -24,10 +24,13 @@ export function AppBrand({ form }: { form: AppShellBrandForm }) {
       <AppLauncher form={form} />
       <Button
         variant="ghost"
-        {...linkGestureProps(({ newTab }) => {
-          // Already on the app's home: nothing to navigate to.
-          if (!newTab && currentRoutePath() === home) return;
-          navigate(home, { newTab });
+        {...linkProps({
+          open: () => {
+            // Already on the app's home: nothing to navigate to.
+            if (currentRoutePath() === home) return;
+            navigate(home);
+          },
+          href: () => home,
         })}
         // The name is the row's one flexible cell (it takes the slack and
         // truncates; the launcher stays rigid), its text at the leading edge

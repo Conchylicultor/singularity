@@ -138,7 +138,6 @@ are no per-interaction round-trips.
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.ResolveResult`

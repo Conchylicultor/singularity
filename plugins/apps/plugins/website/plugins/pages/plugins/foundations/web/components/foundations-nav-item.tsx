@@ -11,7 +11,7 @@ export function FoundationsNavItem() {
   return (
     <WebsiteNavLink
       label="Foundations"
-      onClick={() => openPane(foundationsPane, {}, { mode: "root" })}
+      {...openPane.link(foundationsPane, {}, { mode: "root" })}
     />
   );
 }

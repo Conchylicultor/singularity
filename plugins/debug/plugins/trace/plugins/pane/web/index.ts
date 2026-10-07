@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { slowEventsPane, traceDetailPane } from "./panes";
 import { SlowEvents } from "./slots";
@@ -32,7 +32,7 @@ export default {
       id: "trace-slow-events",
       title: "Slow Events",
       icon: symbol("bolt"),
-      onClick: () => openPane(slowEventsPane, {}, { mode: "root" }),
+      opens: { pane: slowEventsPane, params: {} },
     }),
   ],
   slots: {

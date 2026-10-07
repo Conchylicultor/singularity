@@ -10,7 +10,7 @@ export function StoryNavItem() {
   return (
     <WebsiteNavLink
       label="Story"
-      onClick={() => openPane(storyPane, {}, { mode: "root" })}
+      {...openPane.link(storyPane, {}, { mode: "root" })}
     />
   );
 }

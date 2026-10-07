@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { readSetPane } from "./panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -15,7 +15,7 @@ export default {
       id: "read-set",
       title: "Read-set",
       icon: symbol("table-chart"),
-      onClick: () => openPane(readSetPane, {}, { mode: "root" }),
+      opens: { pane: readSetPane, params: {} },
     }),
   ],
   slots: { "debug-read-set": readSetPane },

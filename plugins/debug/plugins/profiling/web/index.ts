@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { profilingPane } from "./panes";
 import { Profiling } from "./slots";
@@ -48,7 +48,7 @@ export default {
       id: "profiling",
       title: "Profiling",
       icon: symbol("speed"),
-      onClick: () => openPane(profilingPane, {}, { mode: "root" }),
+      opens: { pane: profilingPane, params: {} },
     }),
   ],
   slots: { ...Profiling, "debug-profiling": profilingPane },

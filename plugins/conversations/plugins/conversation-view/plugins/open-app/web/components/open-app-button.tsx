@@ -51,10 +51,11 @@ function OpenAppAction({ attemptId }: { attemptId: string }) {
       disabled={!built}
       // Plain click opens the app where the setting says (a browser tab by
       // default, or framed beside the chat); ⌘/middle-click takes the other way.
-      {...linkGestureProps(({ newTab }) => {
+      {...linkGestureProps(({ elsewhere }) => {
         const path = sourcePath(source.data?.url);
-        // The gesture's "elsewhere" flips the configured default.
-        const inTab = (target === "new-tab") !== newTab;
+        // The gesture's "elsewhere" flips the configured default — which is
+        // why this is the low-level form: elsewhere is not always a browser tab.
+        const inTab = (target === "new-tab") !== elsewhere;
         if (inTab) window.open(appPreviewUrl(attemptId, path), "_blank");
         else openPane(appPreviewPane, { attemptId, path }, { mode: "push" });
       })}

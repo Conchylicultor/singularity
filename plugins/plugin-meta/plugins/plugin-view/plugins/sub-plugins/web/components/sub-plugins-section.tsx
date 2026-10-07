@@ -76,9 +76,11 @@ function PluginTreeNode({ node, depth }: { node: PluginNode; depth: number }) {
         size="sm"
         indent={depth * 16 + 8}
         icon={chevronIcon}
-        onClick={() =>
-          openPane(pluginViewPane, { pluginId: node.id }, { mode: "swap" })
-        }
+        {...openPane.link(
+          pluginViewPane,
+          { pluginId: node.id },
+          { mode: "swap" },
+        )}
         className="min-h-7"
       >
         <Text>{node.name}</Text>

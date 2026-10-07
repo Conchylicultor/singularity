@@ -4,7 +4,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   useActiveMembership,
   useDiffMap,
@@ -76,13 +76,22 @@ export function MembershipTint({ node }: { node: PluginNode }) {
 /**
  * Hover-revealed pin + graph affordances, contributed to `Explorer.TreeRowBadge`
  * (the trailing actions cluster). Independent of composition data — `pinAsRoot`
- * and `openPane` don't need the closure graph fetched.
+ * and the graph link don't need the closure graph fetched.
  */
 export function MembershipPin({ node }: { node: PluginNode }) {
+  const openPane = useOpenPane();
+  const graphLink = openPane.link(
+    graphCanvasPane,
+    { focusId: node.id },
+    { mode: "root" },
+  );
   return (
     <span
       className="relative z-raised hidden group-hover/tree-row:block"
+      // The row behind is a control of its own: neither half of a link
+      // gesture on these affordances may reach it.
       onClick={(e) => e.stopPropagation()}
+      onAuxClick={(e) => e.stopPropagation()}
     >
       <ControlSizeProvider size="sm">
         <Cluster gap="none">
@@ -94,18 +103,7 @@ export function MembershipPin({ node }: { node: PluginNode }) {
               pinAsRoot(node.id);
             }}
           />
-          <IconButton
-            icon={hubIcon}
-            label="Open in graph"
-            onClick={(e) => {
-              e.stopPropagation();
-              openPane(
-                graphCanvasPane,
-                {},
-                { mode: "root", options: { focusId: node.id } },
-              );
-            }}
-          />
+          <IconButton icon={hubIcon} label="Open in graph" {...graphLink} />
         </Cluster>
       </ControlSizeProvider>
     </span>

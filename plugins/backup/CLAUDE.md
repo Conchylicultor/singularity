@@ -128,7 +128,6 @@ row with a rising count and a new source starting to fail mints its own.
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/loading.Loading`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.ResolveResult`

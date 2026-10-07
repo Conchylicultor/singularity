@@ -65,7 +65,6 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/launch.LaunchAgentPopover`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.ResolveResult`

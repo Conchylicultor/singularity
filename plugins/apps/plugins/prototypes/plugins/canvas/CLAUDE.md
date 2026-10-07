@@ -308,7 +308,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
   - Uses:
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLinkProps`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/action-presentation.ActionFormShield`
@@ -352,7 +352,6 @@ navigation, so it starts from nothing remembered.
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/link-gesture.linkGestureProps`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`

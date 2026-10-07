@@ -84,7 +84,6 @@ composes primitives.
     - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.type`

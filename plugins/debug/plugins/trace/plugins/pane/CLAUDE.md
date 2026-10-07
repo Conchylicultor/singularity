@@ -71,7 +71,6 @@ descriptor the strip renders without knowing what produced it. Header: the
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
     - `primitives/loading.Loading`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

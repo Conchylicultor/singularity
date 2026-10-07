@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane } from "@plugins/config_v2/plugins/settings/web";
 import { Settings } from "@plugins/apps/plugins/settings/plugins/shell/web";
 import { settingsConfigIndexPane } from "./panes";
@@ -15,7 +15,7 @@ export default {
       id: "config",
       title: "Config",
       icon: symbol("tune"),
-      onClick: () => openPane(configNavPane, {}, { mode: "root" }),
+      opens: { pane: configNavPane, params: {} },
       badge: ConfigConflictDot,
     }),
     Settings.RailBadge({

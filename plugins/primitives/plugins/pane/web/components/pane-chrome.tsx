@@ -1,4 +1,4 @@
-import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useContext, useMemo, type ReactNode } from "react";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
@@ -155,7 +155,7 @@ export function PaneChrome({
               : "Expand pane"
           }
           icon={openInFullIcon}
-          {...linkGestureProps(promote.run)}
+          {...linkProps(promote)}
         />
       )}
       {!ancestorsHidden && chrome.close && doClose && (

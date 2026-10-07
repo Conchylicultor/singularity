@@ -33,6 +33,10 @@ import {
   type SerializedSlot,
 } from "./history-sink";
 import { appNavSink, navigateApp } from "./app-nav-sink";
+import {
+  linkProps,
+  type LinkGestureProps,
+} from "@plugins/primitives/plugins/link-gesture/web";
 import { definePaneHeaderSlot, type PaneHeaderSlot } from "./header-slot";
 import type { ResolveResult } from "./resolve";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
@@ -687,6 +691,12 @@ export interface PaneStore {
   resolveRoute(route: PaneSlot[]): PaneMatch | null;
   setBasePath(basePath: string): void;
   getBasePath(): string;
+  /**
+   * The full address — base path included — this store writes for `route`:
+   * what the address bar shows once `route` is on screen, and so what a new
+   * browser tab must be given to boot into the same layout.
+   */
+  routeUrl(route: PaneSlot[]): string;
   /** Open a pane (non-positional). Used by `promote` and the open hooks. */
   openPaneImpl(
     internal: PaneInternal,
@@ -730,6 +740,10 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     return currentBasePath + rawUrl;
   }
 
+  function routeUrl(route: PaneSlot[]): string {
+    return applyBasePath(buildRouteUrl(route));
+  }
+
   function setRoute(route: PaneSlot[], replace = false): void {
     currentState = { kind: "resolved", slots: route };
     // The address bar moves BEFORE any listener hears of the change, so every
@@ -745,7 +759,6 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // Background stores update in-memory route + notify their own listeners
     // only; they never touch the browser URL/history.
     if (!store.live) return;
-    const url = buildRouteUrl(route);
     // `hint` is deliberately NOT serialized: an optimistic mirror of server-owned
     // state must not outlive the navigation that created it, or it comes back as
     // stale data on the very paths (reload, back/forward) that have no opener to
@@ -756,7 +769,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       options: s.options,
       uuid: s.uuid,
     }));
-    const fullUrl = applyBasePath(url);
+    const fullUrl = routeUrl(route);
     if (fullUrl === currentRoutePath() && replace) return;
     // Emit a push/replace INTENT through the installed history adapter — the
     // pane primitive never touches `window.history` itself. The default adapter
@@ -973,65 +986,17 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     params: Record<string, string>,
     implOpts?: { root?: boolean; options?: PaneOptions; hint?: PaneHintBag },
   ): void {
-    const replace = !internal.chrome.history;
-    const route = currentSlots();
-    const ownParams = extractOwnParams(internal, params);
-    const options = implOpts?.options ?? {};
-    const hint = implOpts?.hint ?? {};
-
-    if (!implOpts?.root) {
-      const existingIdx = route.findIndex((s) => s.paneId === internal.id);
-      // Replacing the slot in place is only honest where the route can host
-      // this address. Without the guard, opening a deployment on a DIFFERENT
-      // server rewrote the leaf and left the old `server/:serverId` standing to
-      // its left — a route that says one server and means another, and (when
-      // the leaf params happened to match) a click that did nothing at all.
-      if (
-        existingIdx >= 0 &&
-        prefixHosts(route.slice(0, existingIdx), internal, params)
-      ) {
-        const existing = route[existingIdx]!;
-        const sameParams =
-          Object.keys(ownParams).length ===
-            Object.keys(existing.params).length &&
-          Object.keys(ownParams).every(
-            (k) => ownParams[k] === existing.params[k],
-          );
-        // Identity is (paneId, params, options). A hint is not identity: two
-        // opens that differ only by their optimistic hint must dedupe to the
-        // same slot, or the pane remounts (or stacks) for a display-only value.
-        if (sameParams && sameOptions(options, existing.options)) return;
-        // Everything right of the slot is truncated, exactly as before — but the
-        // slot is rebuilt through the same relative open as every other path, so
-        // an ancestor the caller named and the route does not yet carry is
-        // inserted instead of dropped.
-        setRoute(
-          relativeHead(
-            route.slice(0, existingIdx),
-            internal,
-            params,
-            ownParams,
-            options,
-            hint,
-          ),
-          replace,
-        );
-        return;
-      }
-    }
-
-    // Build a fresh route from the target's declared ancestry. Nothing of the
-    // old route survives, so nothing of it is consulted either: an ancestor's
-    // params come from what the CALLER supplied. (They used to be read off a
-    // matching slot in the outgoing route when one was there, which quietly
-    // beat the caller — an open for server B landing on the page for server A.)
-    setRoute(
-      [
-        ...chainSlots(internal, params, EMPTY, { fromScratch: true }),
-        createSlot(internal.id, ownParams, options, hint),
-      ],
-      replace,
+    apply(
+      computeOpen(currentSlots(), undefined, internal, params, {
+        mode: implOpts?.root ? "root" : "push",
+        options: implOpts?.options,
+        hint: implOpts?.hint,
+      }),
     );
+  }
+
+  function apply(next: OpenComputation): void {
+    if (next.changed) setRoute(next.route, next.replace);
   }
 
   function close(internal: PaneInternal, instanceId: number): void {
@@ -1055,19 +1020,8 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
   function promote(internal: PaneInternal, instanceId: number): void {
     if (typeof window === "undefined") return;
-    const route = currentSlots();
-    const idx = route.findIndex((s) => s.instanceId === instanceId);
-    if (idx < 0) return;
-    const fullParams: Record<string, string> = {};
-    for (let i = 0; i <= idx; i++) {
-      Object.assign(fullParams, route[i]!.params);
-    }
-    // Options carry forward (they are the pane's configuration); the hint does
-    // not — promoting is a navigation, and the promoted pane re-reads canonical.
-    openPaneImpl(internal, fullParams, {
-      root: true,
-      options: route[idx]!.options,
-    });
+    const next = computePromote(currentSlots(), internal, instanceId);
+    if (next) apply(next);
   }
 
   function setParams(
@@ -1113,6 +1067,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     resolveRoute,
     setBasePath,
     getBasePath,
+    routeUrl,
     openPaneImpl,
     close,
     unwrap,
@@ -1697,6 +1652,206 @@ function relativeHead(
   ];
 }
 
+/** What an open asks for — `useOpenPane`'s `opts`, erased. */
+export interface OpenRequest {
+  mode: PaneOpenMode;
+  side?: "left" | "right";
+  options?: PaneOptions;
+  hint?: PaneHintBag;
+}
+
+/** Where an open lands. See {@link computeOpen}. */
+export interface OpenComputation {
+  /** The route after the open — the current route itself when `!changed`. */
+  route: PaneSlot[];
+  /** Write it as a history replace (the target opts out of history). */
+  replace: boolean;
+  /** False when the target is already on screen as asked: nothing to write. */
+  changed: boolean;
+}
+
+/**
+ * The route an open produces, computed without writing it — THE one place the
+ * open semantics live (modes, sides, dedup, ancestor chain; see
+ * `useOpenPane`'s doc in CLAUDE.md).
+ *
+ * Every path that opens goes through it — `useOpenPane`'s callback,
+ * `store.openPaneImpl`, `promote` — and so does every path that only needs to
+ * know where an open WOULD land: a link's ⌘/middle-click opens that route's URL
+ * in a browser tab. One function is what keeps the URL a link hands the browser
+ * from drifting away from what the plain click on the same link does.
+ *
+ * `callerInstanceId` is the pane the open is relative to; `undefined`, or an
+ * instance no longer in `currentRoute`, is a non-positional open.
+ */
+export function computeOpen(
+  currentRoute: PaneSlot[],
+  callerInstanceId: number | undefined,
+  target: PaneInternal,
+  params: Record<string, string>,
+  opts: OpenRequest,
+): OpenComputation {
+  const options = opts.options ?? {};
+  const hint = opts.hint ?? {};
+  const replace = !target.chrome.history;
+  const unchanged: OpenComputation = {
+    route: currentRoute,
+    replace,
+    changed: false,
+  };
+  const to = (route: PaneSlot[]): OpenComputation => ({
+    route,
+    replace,
+    changed: true,
+  });
+  const ownParams = extractOwnParams(target, params);
+
+  const callerIndex =
+    opts.mode === "root" || callerInstanceId === undefined
+      ? -1
+      : currentRoute.findIndex((s) => s.instanceId === callerInstanceId);
+
+  if (callerIndex < 0) {
+    // Non-positional. Not `root` ⇒ look for the target in the route first.
+    if (opts.mode !== "root") {
+      const existingIdx = currentRoute.findIndex((s) => s.paneId === target.id);
+      // Replacing the slot in place is only honest where the route can host
+      // this address. Without the guard, opening a deployment on a DIFFERENT
+      // server rewrote the leaf and left the old `server/:serverId` standing to
+      // its left — a route that says one server and means another, and (when
+      // the leaf params happened to match) a click that did nothing at all.
+      if (
+        existingIdx >= 0 &&
+        prefixHosts(currentRoute.slice(0, existingIdx), target, params)
+      ) {
+        const existing = currentRoute[existingIdx]!;
+        // Identity is (paneId, params, options). A hint is not identity: two
+        // opens that differ only by their optimistic hint must dedupe to the
+        // same slot, or the pane remounts (or stacks) for a display-only value.
+        if (
+          sameParams(ownParams, existing.params) &&
+          sameOptions(options, existing.options)
+        )
+          return unchanged;
+        // Everything right of the slot is truncated, exactly as before — but the
+        // slot is rebuilt through the same relative open as every other path, so
+        // an ancestor the caller named and the route does not yet carry is
+        // inserted instead of dropped.
+        return to(
+          relativeHead(
+            currentRoute.slice(0, existingIdx),
+            target,
+            params,
+            ownParams,
+            options,
+            hint,
+          ),
+        );
+      }
+    }
+
+    // Build a fresh route from the target's declared ancestry. Nothing of the
+    // old route survives, so nothing of it is consulted either: an ancestor's
+    // params come from what the CALLER supplied. (They used to be read off a
+    // matching slot in the outgoing route when one was there, which quietly
+    // beat the caller — an open for server B landing on the page for server A.)
+    return to([
+      ...chainSlots(target, params, EMPTY, { fromScratch: true }),
+      createSlot(target.id, ownParams, options, hint),
+    ]);
+  }
+
+  const caller = currentRoute[callerIndex]!;
+
+  // swap: the caller's slot BECOMES the target — same column, children
+  // truncated. Two shapes, one meaning ("navigate the column I am in"):
+  // the same pane showing a different entity (a dependency chip switching
+  // the task detail to another task), and a DIFFERENT pane taking the
+  // column over (the pages tree column becoming the page that was clicked).
+  // The second used to fall through to the right-push below — a mode that
+  // silently did something else whenever the target happened not to be the
+  // caller, which is exactly the kind of quiet mismatch a caller cannot see.
+  if (opts.mode === "swap") {
+    // Only a same-pane swap can be a no-op: a different pane in the column
+    // is a change however the params compare.
+    if (
+      target.id === caller.paneId &&
+      sameParams(ownParams, caller.params) &&
+      sameOptions(options, caller.options)
+    )
+      return unchanged;
+    return to(
+      relativeHead(
+        currentRoute.slice(0, callerIndex),
+        target,
+        params,
+        ownParams,
+        options,
+        hint,
+      ),
+    );
+  }
+
+  if (opts.side === "left") {
+    const alreadyAncestor = currentRoute
+      .slice(0, callerIndex)
+      .some((s) => s.paneId === target.id);
+    if (!alreadyAncestor) {
+      // The caller and everything right of it survive: a left-push inserts
+      // ahead of the caller rather than replacing anything. Only the part
+      // LEFT of the caller is the target's prefix, so only that part is
+      // rebuilt when it cannot host the address.
+      return to([
+        ...relativeHead(
+          currentRoute.slice(0, callerIndex),
+          target,
+          params,
+          ownParams,
+          options,
+          hint,
+        ),
+        ...currentRoute.slice(callerIndex),
+      ]);
+    }
+  }
+
+  // push right (default): truncate after caller, append target
+  return to(
+    relativeHead(
+      currentRoute.slice(0, callerIndex + 1),
+      target,
+      params,
+      ownParams,
+      options,
+      hint,
+    ),
+  );
+}
+
+/**
+ * Where re-rooting instance `instanceId` lands: the same pane, alone at the
+ * root, carrying every param its position in the route gave it. `null` when the
+ * instance is not in the route — there is nothing to promote.
+ */
+function computePromote(
+  currentRoute: PaneSlot[],
+  internal: PaneInternal,
+  instanceId: number,
+): OpenComputation | null {
+  const idx = currentRoute.findIndex((s) => s.instanceId === instanceId);
+  if (idx < 0) return null;
+  const fullParams: Record<string, string> = {};
+  for (let i = 0; i <= idx; i++) {
+    Object.assign(fullParams, currentRoute[i]!.params);
+  }
+  // Options carry forward (they are the pane's configuration); the hint does
+  // not — promoting is a navigation, and the promoted pane re-reads canonical.
+  return computeOpen(currentRoute, undefined, internal, fullParams, {
+    mode: "root",
+    options: currentRoute[idx]!.options,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Router contexts.
 // ---------------------------------------------------------------------------
@@ -1870,17 +2025,17 @@ export interface PaneRouteEntry<OwnParams = Record<string, string>> {
  * `usePromote()` decides between (see the hook for why) are different enough
  * that the chrome around the button needs to tell them apart: a cross-app
  * hand-off can name where it is sending you ("Open in Pages"), a re-root
- * cannot. A bare callback erased that, so the destination travels with `run`.
+ * cannot. A bare callback erased that, so the destination travels with `open`.
+ *
+ * Both arms are a link's two halves — `open()` for a plain click, `href()` for
+ * the URL a ⌘/middle-click opens in a browser tab — so the button spreads
+ * `linkProps(promote)` and the two cannot name different destinations.
  */
 export type PromoteAction =
   /** Hand off to another app — this pane is being hosted away from home. */
-  | {
-      kind: "cross-app";
-      app: AppRef;
-      run: (opts?: { newTab?: boolean }) => void;
-    }
+  | { kind: "cross-app"; app: AppRef; open(): void; href(): string }
   /** Re-root here: drop the ancestors, stay in the app already hosting us. */
-  | { kind: "re-root"; run: (opts?: { newTab?: boolean }) => void };
+  | { kind: "re-root"; open(): void; href(): string };
 
 export interface PaneObject<
   FullParams = {},
@@ -2232,14 +2387,22 @@ function makePaneObject(
         return {
           kind: "cross-app",
           app: home,
-          run: (opts?: { newTab?: boolean }) => navigateApp(url, opts),
+          open: () => navigateApp(url),
+          href: () => url,
         };
       }
 
       if (idx === 0) return null;
       return {
         kind: "re-root",
-        run: () => store.promote(internal, instanceId),
+        open: () => store.promote(internal, instanceId),
+        // At click time, against the route as it is then — the same read
+        // `store.promote` makes.
+        href: () => {
+          const current = store.getRoute();
+          const next = computePromote(current, internal, instanceId);
+          return store.routeUrl(next ? next.route : current);
+        },
       };
     }, [store, instanceId, slots, surfaceAppId, canNavigate]);
   }
@@ -2840,128 +3003,84 @@ export interface OpenPaneFn {
   >(
     target: PaneObject<Params, any, Options, HintT>,
     params: NoInfer<Params>,
-    opts: {
-      mode: PaneOpenMode;
-      side?: "left" | "right";
-      options?: Partial<Options>;
-      hint?: HintT;
-    },
+    opts: OpenPaneOpts<Options, HintT>,
   ): void;
+  /**
+   * The same open as a LINK: spread the result onto the control that opens it.
+   * Same arguments as the call. Plain click opens exactly as the call does;
+   * ⌘/Ctrl- and middle-click open the URL of the route that plain click would
+   * produce in a new browser tab — computed at click time, against the route
+   * on screen then — and leave this tab where it is.
+   *
+   * ```tsx
+   * <Button {...openPane.link(traceDetailPane, { id }, { mode: "push" })}>Open trace</Button>
+   * ```
+   *
+   * Use the call itself only where there is no control to spread onto (an
+   * `onSelect` callback, an open after a mutation settles).
+   */
+  link<
+    Params = Record<string, string>,
+    Options extends object = NoOptions,
+    HintT extends object = NoHint,
+  >(
+    target: PaneObject<Params, any, Options, HintT>,
+    params: NoInfer<Params>,
+    opts: OpenPaneOpts<Options, HintT>,
+  ): LinkGestureProps;
+}
+
+/** The `opts` of an {@link OpenPaneFn} open, typed against the target pane. */
+export interface OpenPaneOpts<Options extends object, HintT extends object> {
+  mode: PaneOpenMode;
+  side?: "left" | "right";
+  options?: Partial<Options>;
+  hint?: HintT;
 }
 
 export function useOpenPane(): OpenPaneFn {
   const resolveStore = useStoreResolver();
   const callerInstanceId = useContext(PaneInstanceContext);
 
-  return useCallback(
-    (
+  return useMemo(() => {
+    // The store is resolved per click, never at render: global chrome outlives
+    // the tab it was rendered beside (see the section comment above).
+    const compute = (
+      store: PaneStore,
       target: AnyPane,
       params: Record<string, string>,
-      opts: {
-        mode: PaneOpenMode;
-        side?: "left" | "right";
-        options?: PaneOptions;
-        hint?: PaneHintBag;
-      },
-    ) => {
+      opts: OpenRequest,
+    ) =>
+      computeOpen(
+        store.getRoute(),
+        callerInstanceId,
+        target._internal,
+        params,
+        opts,
+      );
+    const open = (
+      target: AnyPane,
+      params: Record<string, string>,
+      opts: OpenRequest,
+    ): void => {
       const store = resolveStore();
-      const targetInternal = target._internal;
-      const options = opts.options ?? {};
-      const hint = opts.hint ?? {};
-      if (opts.mode === "root" || callerInstanceId === undefined) {
-        store.openPaneImpl(targetInternal, params, {
-          root: opts.mode === "root",
-          options,
-          hint,
-        });
-        return;
-      }
-
-      const currentRoute = store.getRoute();
-      const callerIndex = currentRoute.findIndex(
-        (s) => s.instanceId === callerInstanceId,
-      );
-      if (callerIndex < 0) {
-        store.openPaneImpl(targetInternal, params, { options, hint });
-        return;
-      }
-
-      const callerPaneId = currentRoute[callerIndex]!.paneId;
-      const ownParams = extractOwnParams(targetInternal, params);
-      const replace = !targetInternal.chrome.history;
-
-      // swap: the caller's slot BECOMES the target — same column, children
-      // truncated. Two shapes, one meaning ("navigate the column I am in"):
-      // the same pane showing a different entity (a dependency chip switching
-      // the task detail to another task), and a DIFFERENT pane taking the
-      // column over (the pages tree column becoming the page that was clicked).
-      // The second used to fall through to the right-push below — a mode that
-      // silently did something else whenever the target happened not to be the
-      // caller, which is exactly the kind of quiet mismatch a caller cannot see.
-      if (opts.mode === "swap") {
-        const existing = currentRoute[callerIndex]!;
-        // Only a same-pane swap can be a no-op: a different pane in the column
-        // is a change however the params compare.
-        const sameParams =
-          targetInternal.id === callerPaneId &&
-          Object.keys(ownParams).length ===
-            Object.keys(existing.params).length &&
-          Object.keys(ownParams).every(
-            (k) => ownParams[k] === existing.params[k],
-          );
-        if (sameParams && sameOptions(options, existing.options)) return;
-        store.setRoute(
-          relativeHead(
-            currentRoute.slice(0, callerIndex),
-            targetInternal,
-            params,
-            ownParams,
-            options,
-            hint,
-          ),
-          replace,
-        );
-        return;
-      }
-
-      if (opts.side === "left") {
-        const alreadyAncestor = currentRoute
-          .slice(0, callerIndex)
-          .some((s) => s.paneId === targetInternal.id);
-        if (!alreadyAncestor) {
-          // The caller and everything right of it survive: a left-push inserts
-          // ahead of the caller rather than replacing anything. Only the part
-          // LEFT of the caller is the target's prefix, so only that part is
-          // rebuilt when it cannot host the address.
-          const newRoute = [
-            ...relativeHead(
-              currentRoute.slice(0, callerIndex),
-              targetInternal,
-              params,
-              ownParams,
-              options,
-              hint,
-            ),
-            ...currentRoute.slice(callerIndex),
-          ];
-          store.setRoute(newRoute, replace);
-          return;
-        }
-      }
-
-      // push right (default): truncate after caller, append target
-      store.setRoute(
-        relativeHead(
-          currentRoute.slice(0, callerIndex + 1),
-          targetInternal,
-          params,
-          ownParams,
-          options,
-          hint,
-        ),
-        replace,
-      );
-    },
-    [resolveStore, callerInstanceId],
-  ) as OpenPaneFn;
+      const next = compute(store, target, params, opts);
+      if (next.changed) store.setRoute(next.route, next.replace);
+    };
+    const link = (
+      target: AnyPane,
+      params: Record<string, string>,
+      opts: OpenRequest,
+    ): LinkGestureProps =>
+      linkProps({
+        open: () => open(target, params, opts),
+        // Unchanged ⇒ the destination is already on screen, and the current
+        // route's URL is exactly it.
+        href: () => {
+          const store = resolveStore();
+          return store.routeUrl(compute(store, target, params, opts).route);
+        },
+      });
+    return Object.assign(open, { link }) as OpenPaneFn;
+  }, [resolveStore, callerInstanceId]);
 }

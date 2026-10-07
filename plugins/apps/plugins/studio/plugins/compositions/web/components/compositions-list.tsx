@@ -84,9 +84,7 @@ export function CompositionsList(): ReactElement {
           </Button>
           <Button
             variant="ghost"
-            onClick={() =>
-              openPane(comparePane, {}, { mode: "push", side: "right" })
-            }
+            {...openPane.link(comparePane, {}, { mode: "push", side: "right" })}
           >
             <Icon icon={compareIcon} />
             Compare

@@ -301,13 +301,11 @@ function OpDetailView({ row, now }: { row: OpRow; now: number }): ReactElement {
             selfClass("start"),
             "font-medium text-primary hover:underline",
           )}
-          onClick={() =>
-            openPane(
-              conversationPane,
-              { convId: data.conversationId! },
-              { mode: "push" },
-            )
-          }
+          {...openPane.link(
+            conversationPane,
+            { convId: data.conversationId },
+            { mode: "push" },
+          )}
         >
           Open conversation →
         </Text>

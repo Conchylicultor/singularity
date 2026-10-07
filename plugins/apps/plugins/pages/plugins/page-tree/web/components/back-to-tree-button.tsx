@@ -41,7 +41,7 @@ export function BackToTreeButton() {
       icon={arrowBackIcon}
       // `swap`: the page's own column becomes the tree again — the exact
       // inverse of the row activation that put the page here.
-      onClick={() => openPane(pagesTreePane, {}, { mode: "swap" })}
+      {...openPane.link(pagesTreePane, {}, { mode: "swap" })}
     />
   );
 }

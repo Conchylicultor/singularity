@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Mail } from "@plugins/apps/plugins/mail/plugins/shell/web";
 import { mailSearchPane, mailMessagePane } from "./panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -12,7 +12,7 @@ export default {
       id: "search",
       title: "Search",
       icon: symbol("search"),
-      onClick: () => openPane(mailSearchPane, {}, { mode: "root" }),
+      opens: { pane: mailSearchPane, params: {} },
     }),
     Pane.Register({ pane: mailSearchPane }),
     Pane.Register({ pane: mailMessagePane }),

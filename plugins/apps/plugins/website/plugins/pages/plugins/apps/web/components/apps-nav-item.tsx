@@ -8,7 +8,7 @@ export function AppsNavItem() {
   return (
     <WebsiteNavLink
       label="Apps"
-      onClick={() => openPane(appsPane, {}, { mode: "root" })}
+      {...openPane.link(appsPane, {}, { mode: "root" })}
     />
   );
 }

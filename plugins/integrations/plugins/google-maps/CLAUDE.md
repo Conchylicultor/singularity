@@ -125,8 +125,8 @@ over:
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
+    - `primitives/pane.useOpenPane`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepCommand`
     - `primitives/setup-steps.StepDone`

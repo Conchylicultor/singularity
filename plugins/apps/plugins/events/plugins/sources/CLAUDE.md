@@ -195,7 +195,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.ResolveResult`

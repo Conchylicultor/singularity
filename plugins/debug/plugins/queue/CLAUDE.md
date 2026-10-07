@@ -39,7 +39,6 @@
     - `primitives/live-state.ResourcePaging`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `shell/notifications.toast`
     - `ui/icons.Icon`

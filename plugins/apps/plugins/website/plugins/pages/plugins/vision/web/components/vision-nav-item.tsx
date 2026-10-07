@@ -11,7 +11,7 @@ export function VisionNavItem() {
   return (
     <WebsiteNavLink
       label="Vision"
-      onClick={() => openPane(visionPane, {}, { mode: "root" })}
+      {...openPane.link(visionPane, {}, { mode: "root" })}
     />
   );
 }

@@ -23,6 +23,13 @@ export interface PanelActionRowProps {
    * mutually assignable.
    */
   onClick?: MouseEventHandler<HTMLElement>;
+  /**
+   * The rest of a link's gestures (`link-gesture`): a middle-click arrives as
+   * an aux click, never a click, so a relocated link that dropped these would
+   * go inert for it in the panel while working inline.
+   */
+  onAuxClick?: MouseEventHandler<HTMLElement>;
+  onMouseDown?: MouseEventHandler<HTMLElement>;
 }
 
 /**
@@ -59,12 +66,16 @@ export function PanelActionRow({
   disabled,
   shortcut,
   onClick,
+  onAuxClick,
+  onMouseDown,
 }: PanelActionRowProps) {
   return (
     <Row
       icon={<Icon icon={icon} active={active} />}
       hover="muted"
       onClick={onClick}
+      onAuxClick={onAuxClick}
+      onMouseDown={onMouseDown}
       // `disabled` drives `Row`'s element inference as much as `onClick` does:
       // with BOTH undefined `Row` infers a non-interactive `<div>`, and both
       // are optional here. `?? false` pins the inference, so this is always a

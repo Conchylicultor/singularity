@@ -25,7 +25,7 @@ export function WebsiteWordmark() {
     <Button
       variant="ghost"
       aspect="inline"
-      onClick={() => openPane(landingPane, {}, { mode: "root" })}
+      {...openPane.link(landingPane, {}, { mode: "root" })}
     >
       <WordmarkText />
     </Button>

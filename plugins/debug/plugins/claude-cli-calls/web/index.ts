@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { claudeCliCallsPane } from "./panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -15,7 +15,7 @@ export default {
       id: "claude-cli-calls",
       title: "Claude CLI Calls",
       icon: symbol("auto-awesome"),
-      onClick: () => openPane(claudeCliCallsPane, {}, { mode: "root" }),
+      opens: { pane: claudeCliCallsPane, params: {} },
     }),
   ],
   slots: { "claude-cli-calls": claudeCliCallsPane },

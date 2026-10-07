@@ -2,7 +2,7 @@ import {
   Core,
   type PluginDefinition,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { ProfilerInstaller } from "./internal/global-api";
 import { renderProfilerPane } from "./panes";
@@ -19,7 +19,7 @@ export default {
       id: "render-profiler",
       title: "Render Profiler",
       icon: symbol("insights"),
-      onClick: () => openPane(renderProfilerPane, {}, { mode: "root" }),
+      opens: { pane: renderProfilerPane, params: {} },
     }),
     Core.Root({ component: ProfilerInstaller }),
   ],

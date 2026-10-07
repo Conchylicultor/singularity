@@ -122,7 +122,6 @@ the `Specimens.Specimen` dispatch slot — so there is one id namespace for both
     - `primitives/live-state.useQueryResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
   - Exports (types):

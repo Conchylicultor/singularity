@@ -43,9 +43,7 @@ export function DownloadNextSteps() {
           n={2}
           title="Learn the basics"
           action={
-            <DownloadLink
-              onClick={() => openPane(guidePane, {}, { mode: "root" })}
-            >
+            <DownloadLink {...openPane.link(guidePane, {}, { mode: "root" })}>
               Read the guide
               <WebsiteArrow />
             </DownloadLink>

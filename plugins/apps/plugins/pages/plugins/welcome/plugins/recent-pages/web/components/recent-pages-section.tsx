@@ -74,13 +74,11 @@ export function RecentPagesSection(): ReactElement | null {
                   gap="md"
                   align="center"
                   className="px-md py-sm text-left transition-colors hover:bg-accent"
-                  onClick={() =>
-                    openPane(
-                      pageDetailPane,
-                      { pageId: page.id },
-                      { mode: "push" },
-                    )
-                  }
+                  {...openPane.link(
+                    pageDetailPane,
+                    { pageId: page.id },
+                    { mode: "push" },
+                  )}
                 >
                   <PageIcon
                     icon={icon}

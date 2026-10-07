@@ -404,7 +404,7 @@
     },
     {
       "paneId": "graph",
-      "segment": "graph",
+      "segment": "graph/:focusId?",
       "appIndex": false,
       "parent": null
     },

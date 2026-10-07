@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
@@ -7,21 +7,27 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
  * link: it takes the sentence's size and flow, underlined in the quiet grey,
  * and comes up to full foreground on hover.
  */
+type Gesture = Pick<
+  ComponentProps<typeof Button>,
+  "onClick" | "onAuxClick" | "onMouseDown"
+>;
+
 export function DownloadLink({
   href,
-  onClick,
   children,
+  ...gesture
 }: {
   children: ReactNode;
 } & (
-  { href: string; onClick?: never } | { onClick: () => void; href?: never }
+  | { href: string; onClick?: never; onAuxClick?: never; onMouseDown?: never }
+  | ({ href?: never } & Gesture)
 )) {
   return (
     <Button
       variant="link"
       aspect="inline"
       className="text-foreground decoration-muted-foreground/60 hover:decoration-foreground underline"
-      onClick={onClick}
+      {...gesture}
       render={
         href === undefined ? undefined : (
           <a href={href} target="_blank" rel="noreferrer noopener" />

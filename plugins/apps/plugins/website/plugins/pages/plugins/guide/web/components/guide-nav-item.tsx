@@ -10,7 +10,7 @@ export function GuideNavItem() {
   return (
     <WebsiteNavLink
       label="Guide"
-      onClick={() => openPane(guidePane, {}, { mode: "root" })}
+      {...openPane.link(guidePane, {}, { mode: "root" })}
     />
   );
 }

@@ -53,13 +53,11 @@ export function SystemFolder({
                 selected={selected}
                 indent={16 + 4}
                 icon={<Icon icon={icon} className="text-muted-foreground" />}
-                onClick={() =>
-                  openPane(
-                    systemAgentDetailPane,
-                    { systemId: d.id },
-                    { mode: "push" },
-                  )
-                }
+                {...openPane.link(
+                  systemAgentDetailPane,
+                  { systemId: d.id },
+                  { mode: "push" },
+                )}
               >
                 <Text>{d.name}</Text>
               </Row>

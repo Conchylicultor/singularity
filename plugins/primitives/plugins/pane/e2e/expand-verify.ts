@@ -8,7 +8,9 @@
  *   2. hosted by another app it is present even at the route root, because
  *      "stranded in the wrong app" is the case worth fixing;
  *   3. a plain click takes THIS tab to the home app;
- *   4. a middle click and a ⌘-click each open a NEW tab there instead.
+ *   4. a middle click and a ⌘-click each open a new BROWSER tab there instead
+ *      (the browser's own convention for a link), whose URL cold-boots to the
+ *      pane in its home app — and leave this tab, and its tab set, as it was.
  *
  * Run: bun plugins/primitives/plugins/pane/e2e/expand-verify.ts
  */
@@ -31,8 +33,11 @@ import {
 // overflow row, which renders a second, `aria-hidden` copy of each child
 // off-screen to measure it — so `button[aria-label=…]` matches twice. The
 // accessibility tree skips aria-hidden subtrees.
+//
+// Hosted away from home the same button names its destination ("Open in
+// Pages"), so both spellings are the promote button.
 const expand = (p: Session["page"]) =>
-  p.getByRole("button", { name: "Expand pane", exact: true });
+  p.getByRole("button", { name: /^(Expand pane|Open in Pages)$/ });
 // A page-detail header action that exists in both apps: the signal the pane has
 // painted, so "no Expand button" cannot be confused with "not rendered yet".
 // Deliberately not the star — that label is on every sidebar tree row too, so
@@ -174,7 +179,8 @@ await withBrowser(async (h) => {
     await s.context.close();
   }
 
-  // 4. Middle click and ⌘-click each open a new tab instead.
+  // 4. Middle click and ⌘-click each open a new BROWSER tab instead — never an
+  // in-app tab (that is an explicit menu entry's job, not a modifier's).
   const newTabGestures: Array<
     [string, Parameters<ReturnType<typeof expand>["click"]>[0]]
   > = [
@@ -184,14 +190,43 @@ await withBrowser(async (h) => {
   for (const [name, click] of newTabGestures) {
     const s = await openPage(h, outside);
     const tabsBefore = await tabCloses(s.page).count();
+    const urlBefore = s.page.url();
 
+    // Armed BEFORE the click: the popup event fires during it.
+    const popup = s.context.waitForEvent("page", { timeout: 30_000 });
     await expand(s.page).click(click);
-    r.ok(
-      `${name} shows the pane in its home app`,
-      await reachedPath(s, home),
-      `left on ${s.page.url()}`,
+    const opened = await popup.then(
+      (p) => p,
+      (err: unknown) => {
+        if (err instanceof Error && err.name === "TimeoutError") return null;
+        throw err;
+      },
     );
-    r.eq(`${name} adds a tab`, await tabCloses(s.page).count(), tabsBefore + 1);
+    r.ok(`${name} opens a browser tab`, opened !== null, "no page event");
+    if (opened) {
+      // The URL the link computed, booted cold in its own document: it must
+      // land on the pane in its home app, exactly where a plain click goes.
+      await opened.waitForLoadState("domcontentloaded");
+      r.eq(
+        `${name}: the browser tab's URL is the home-app route`,
+        new URL(opened.url()).pathname,
+        home,
+      );
+      await headerReady(opened)
+        .first()
+        .waitFor({ state: "visible", timeout: 60_000 })
+        .then(
+          () => r.ok(`${name}: the browser tab boots to the pane`, true),
+          () =>
+            r.fail(`${name}: the browser tab boots to the pane`, opened.url()),
+        );
+    }
+    r.eq(`${name} leaves this tab's route`, s.page.url(), urlBefore);
+    r.eq(
+      `${name} adds no in-app tab`,
+      await tabCloses(s.page).count(),
+      tabsBefore,
+    );
     r.ok(
       `${name}: no page errors`,
       s.captured.pageErrors.length === 0,

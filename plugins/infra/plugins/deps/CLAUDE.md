@@ -285,7 +285,6 @@ torch.
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.foldResource`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`

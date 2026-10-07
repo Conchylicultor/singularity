@@ -73,7 +73,6 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.resolveFrom`

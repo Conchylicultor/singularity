@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { explorerPane } from "./panes";
 import { Explorer } from "./slots";
@@ -25,7 +25,7 @@ export default {
       id: "explorer",
       title: "Plugin",
       icon: symbol("account-tree"),
-      onClick: () => openPane(explorerPane, {}, { mode: "root" }),
+      opens: { pane: explorerPane, params: {} },
     }),
   ],
   slots: { ...Explorer, explorer: explorerPane },

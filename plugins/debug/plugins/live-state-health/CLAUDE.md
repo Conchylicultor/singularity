@@ -43,7 +43,6 @@ instrumentation of its own.
     - `primitives/live-state.useNotificationsClient`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`

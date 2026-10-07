@@ -8,8 +8,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import type {
@@ -130,7 +129,7 @@ export function VersionList({
  * The version list's one shipped row action: open the conversation whose turn
  * recorded this version. Nothing for a version no conversation made (the
  * baseline, a hand checkpoint, a restore from the CLI). A link, so ⌘-click opens
- * it in a new tab and leaves the prototype where it is.
+ * it in a new browser tab and leaves the prototype where it is.
  */
 export function OpenVersionConversation({
   row,
@@ -141,11 +140,7 @@ export function OpenVersionConversation({
     <IconButton
       icon={openInNewIcon}
       label="Open the conversation that made it"
-      {...linkGestureProps(({ newTab }) =>
-        navigate(conversationRoute.link(agentManagerApp, { convId }), {
-          newTab,
-        }),
-      )}
+      {...appLinkProps(conversationRoute.link(agentManagerApp, { convId }))}
     />
   );
 }

@@ -64,13 +64,11 @@ export function ServersList() {
       actions={
         <Button
           variant="default"
-          onClick={() =>
-            openPane(
-              serverDetailPane,
-              { serverId: NEW_SERVER_ID },
-              { mode: "push" },
-            )
-          }
+          {...openPane.link(
+            serverDetailPane,
+            { serverId: NEW_SERVER_ID },
+            { mode: "push" },
+          )}
         >
           + Add
         </Button>

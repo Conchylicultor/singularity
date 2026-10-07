@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { liveStateHealthPane } from "./panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -15,7 +15,7 @@ export default {
       id: "live-state-health",
       title: "Live State",
       icon: symbol("monitor-heart"),
-      onClick: () => openPane(liveStateHealthPane, {}, { mode: "root" }),
+      opens: { pane: liveStateHealthPane, params: {} },
     }),
   ],
   slots: { "live-state-health": liveStateHealthPane },

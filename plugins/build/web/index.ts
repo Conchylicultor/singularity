@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { buildConfig } from "../shared/config";
@@ -40,7 +40,7 @@ export default {
       id: "build",
       title: "Builds",
       icon: symbol("build"),
-      onClick: () => openPane(buildPane, {}, { mode: "root" }),
+      opens: { pane: buildPane, params: {} },
     }),
     ConfigV2.WebRegister({ descriptor: buildConfig }),
   ],

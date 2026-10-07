@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { graphCanvasPane } from "./panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -15,7 +15,7 @@ export default {
       id: "graph",
       title: "Plugin Graph",
       icon: symbol("hub"),
-      onClick: () => openPane(graphCanvasPane, {}, { mode: "root" }),
+      opens: { pane: graphCanvasPane, params: {} },
     }),
   ],
   slots: { graph: graphCanvasPane },

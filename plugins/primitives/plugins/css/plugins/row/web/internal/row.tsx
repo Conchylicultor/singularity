@@ -51,10 +51,15 @@ function setRef(
  * synthesize a click on the button; `href`/`target`/`rel`/`download` because they
  * ARE the `<a>`; `role`/`tabIndex`/`autoFocus` and the keyboard/focus handlers
  * because the control is the focusable node (on the split path the box is a plain
- * `<div>` that cannot take focus at all).
+ * `<div>` that cannot take focus at all). `onAuxClick`/`onMouseDown` travel with
+ * `onClick` because together they are a link's gestures (`link-gesture`): on the
+ * split path the box also wraps the row's actions, so a middle-click on an action
+ * would otherwise open the row's link.
  */
 const CONTROL_KEYS = [
   "onClick",
+  "onAuxClick",
+  "onMouseDown",
   "onKeyDown",
   "onKeyUp",
   "onFocus",

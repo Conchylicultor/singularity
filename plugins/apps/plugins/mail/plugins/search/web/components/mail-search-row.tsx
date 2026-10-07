@@ -42,13 +42,11 @@ export function MailSearchRow({
 
   return (
     <Row
-      onClick={() =>
-        openPane(
-          mailMessagePane,
-          { messageId: message.id },
-          { mode: "push", side: "right", hint: message },
-        )
-      }
+      {...openPane.link(
+        mailMessagePane,
+        { messageId: message.id },
+        { mode: "push", side: "right", hint: message },
+      )}
       // Transparent when read, so the leading column stays aligned across rows.
       icon={
         <StatusDot

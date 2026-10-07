@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventListPane } from "./panes";
 import { EventList } from "./slots";
@@ -24,7 +24,7 @@ export default {
       id: "event-list",
       title: "Events",
       icon: symbol("event-note"),
-      onClick: () => openPane(eventListPane, {}, { mode: "root" }),
+      opens: { pane: eventListPane, params: {} },
     }),
   ],
   slots: { ...EventList, "event-list": eventListPane },

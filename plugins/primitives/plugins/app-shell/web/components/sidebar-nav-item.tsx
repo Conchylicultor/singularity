@@ -5,7 +5,7 @@ import {
   SidebarMenuItem,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { openPane, useRoute } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane, useRoute } from "@plugins/primitives/plugins/pane/web";
 import type {
   AppShellSidebarItem,
   AppShellSidebarNav,
@@ -37,12 +37,13 @@ function SidebarNavOpensItem({
   ...item
 }: AppShellSidebarNav & { target: SidebarNavTarget }) {
   const route = useRoute();
+  const openPane = useOpenPane();
   const isActive = route?.panes[0]?.pane === target.pane._internal;
   return (
     <SidebarNavRow
       {...item}
       isActive={isActive}
-      onClick={() => openPane(target.pane, target.params, { mode: "root" })}
+      {...openPane.link(target.pane, target.params, { mode: "root" })}
     />
   );
 }
@@ -63,19 +64,31 @@ function SidebarNavOpensItem({
 function SidebarNavRow({
   icon,
   title,
-  onClick,
   badge: Badge,
   isActive,
-}: Pick<AppShellSidebarNav, "icon" | "title" | "badge"> & {
-  onClick: () => void;
-  isActive: boolean;
-}) {
+  onClick,
+  onAuxClick,
+  onMouseDown,
+}: Pick<AppShellSidebarNav, "icon" | "title" | "badge"> &
+  // The row's click gesture: a plain `onClick`, or a pane link's click /
+  // aux-click / mousedown trio (see primitives/link-gesture).
+  Pick<
+    React.ComponentProps<"button">,
+    "onClick" | "onAuxClick" | "onMouseDown"
+  > & {
+    isActive: boolean;
+  }) {
   const iconClass =
     "size-sidebar-icon text-sidebar-icon group-hover/menu-button:text-current group-data-active/menu-button:text-current";
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton onClick={onClick} isActive={isActive}>
+        <SidebarMenuButton
+          onClick={onClick}
+          onAuxClick={onAuxClick}
+          onMouseDown={onMouseDown}
+          isActive={isActive}
+        >
           {Badge ? (
             <span className="relative">
               <Icon icon={icon} active={isActive} className={iconClass} />

@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
 import { themeCustomizerPane } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { Settings } from "@plugins/apps/plugins/settings/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -12,7 +11,7 @@ export default {
       id: "appearance",
       title: "Appearance",
       icon: symbol("palette"),
-      onClick: () => openPane(themeCustomizerPane, {}, { mode: "root" }),
+      opens: { pane: themeCustomizerPane, params: {} },
     }),
   ],
 } satisfies PluginDefinition;

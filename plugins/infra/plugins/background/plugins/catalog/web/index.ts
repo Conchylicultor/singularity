@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { backgroundEntryPane, backgroundPane } from "./panes";
@@ -20,7 +20,7 @@ export default {
       id: "background",
       title: "Background activity",
       icon: symbol("schedule"),
-      onClick: () => openPane(backgroundPane, {}, { mode: "root" }),
+      opens: { pane: backgroundPane, params: {} },
     }),
   ],
   slots: {

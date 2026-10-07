@@ -270,6 +270,28 @@ is a `swap`, which mints a fresh instance so nothing of the old one leaks.
 
 Inside a pane component, `useOpenPane()` returns an
 `openPane(pane, params, opts)` that knows the caller's position in the route.
+
+**A control that opens a pane spreads its link form**, `openPane.link(pane,
+params, opts)` — the same arguments — instead of calling it from `onClick`:
+
+```tsx
+<Button {...openPane.link(traceDetailPane, { id }, { mode: "push" })}>Open trace</Button>
+onSelect={(id) => openPane(reportDetailPane, { reportId: id }, { mode: "push" })}  // no control: the call
+```
+
+Plain click opens exactly as the call does; ⌘/Ctrl- and middle-click open the
+URL of the route that plain click *would* produce in a new **browser** tab
+(`primitives/link-gesture`'s `linkProps`) and leave this tab alone. The URL is
+computed at click time, against the route then on screen; when the target is
+already shown it is the current route's. Both halves run one pure
+`computeOpen(currentRoute, callerInstanceId, target, params, opts)` — the only
+place the modes below are implemented, shared with `store.openPaneImpl` and
+`promote` — so the URL a link hands the browser cannot drift from what its click
+does. `store.routeUrl(route)` is the base-path-prefixed address for a route.
+`hint` is lost in the new tab (it always is on a rebuilt route), and `options`
+are not in URLs: state a link must carry belongs in a URL param.
+`lint/no-onclick-open-pane` flags an `onClick` whose only job is `openPane(…)`.
+
 Modes:
 
 - `"root"` — replace the entire route with a fresh one rooted at target.
@@ -668,9 +690,11 @@ picks one of two destinations:
   **"Expand pane"**, because there is no other app to name.
 
 So `usePromote()` returns the destination, not just a way to get there: a
-discriminated `PromoteAction` (`{ kind: "cross-app"; app; run }` /
-`{ kind: "re-root"; run }`) the chrome labels itself from. `null` still means
-"nowhere to go" and paints no button.
+discriminated `PromoteAction` (`{ kind: "cross-app"; app; open; href }` /
+`{ kind: "re-root"; open; href }`) the chrome labels itself from. `null` still
+means "nowhere to go" and paints no button. `open` / `href` are a link's two
+halves, so the button spreads `linkProps(promote)`: ⌘/middle-click opens the
+destination — the home-app URL, or the re-rooted route's — in a browser tab.
 
 ### A pane wears its home app's theme
 
@@ -892,7 +916,8 @@ See "Open questions" in the design doc.
     - `primitives/dom/in-view.useInView`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/link-gesture.linkGestureProps`
+    - `primitives/link-gesture.LinkGestureProps`
+    - `primitives/link-gesture.linkProps`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
@@ -1037,7 +1062,6 @@ See "Open questions" in the design doc.
     - `apps/prototypes/present`
     - `apps/prototypes/shell`
     - `apps/settings/accounts`
-    - `apps/settings/appearance`
     - `apps/settings/config`
     - `apps/settings/shell`
     - `apps/sonata/library`

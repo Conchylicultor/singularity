@@ -25,7 +25,6 @@
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `ui/icons.Icon`
   - Exports (values): `recoveryPane`

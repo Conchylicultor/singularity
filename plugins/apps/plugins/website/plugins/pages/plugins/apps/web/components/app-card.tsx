@@ -91,7 +91,7 @@ export function AppCard({
               variant="outline"
               shape="pill"
               className="website-app-install font-semibold"
-              onClick={() => openPane(downloadPane, {}, { mode: "root" })}
+              {...openPane.link(downloadPane, {}, { mode: "root" })}
             >
               Install
             </Button>

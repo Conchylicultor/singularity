@@ -77,9 +77,11 @@ export function DetailStrip({
           {traceId !== undefined && (
             <Button
               variant="outline"
-              onClick={() =>
-                openPane(traceDetailPane, { id: traceId }, { mode: "push" })
-              }
+              {...openPane.link(
+                traceDetailPane,
+                { id: traceId },
+                { mode: "push" },
+              )}
             >
               Open trace
             </Button>

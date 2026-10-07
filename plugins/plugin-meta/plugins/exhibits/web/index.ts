@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { exhibitsPane } from "./components/exhibits-pane";
@@ -17,7 +17,7 @@ export default {
       id: "exhibits",
       title: "Exhibits",
       icon: symbol("grid-view"),
-      onClick: () => openPane(exhibitsPane, {}, { mode: "root" }),
+      opens: { pane: exhibitsPane, params: {} },
     }),
   ],
   slots: { exhibits: exhibitsPane },

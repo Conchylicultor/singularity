@@ -32,7 +32,6 @@
     - `primitives/css/ui-kit.SelectTrigger`
     - `primitives/css/ui-kit.SelectValue`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `ui/icons.Icon`

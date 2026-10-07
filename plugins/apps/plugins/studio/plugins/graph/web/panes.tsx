@@ -10,22 +10,25 @@ import { GraphView } from "./components/graph-view";
 
 export const graphCanvasPane = Pane.define({
   title: "Plugin Graph",
-  route: defineRoute({ id: "graph", segment: "graph" }),
+  // `:focusId?` — which plugin to center the closure subgraph on. A VIEW of the
+  // graph, so it has an address (a link to "the graph around X" opens there in a
+  // new browser tab too), while the bare `graph` stays valid: no focus seeds from
+  // the active composition, else the search prompt.
+  route: defineRoute({ id: "graph", segment: "graph/:focusId?" }),
   app: studioApp,
   component: GraphBody,
   width: 900,
-  // Which plugin to center the closure subgraph on. A pane OPTION: it mirrors no
-  // server state, and "no focus" (the whole graph) is a legitimate default, not
-  // a missing value.
-  options: { focusId: undefined as PluginId | undefined },
+  // A focus id that names no plugin is not a missing pane: the graph view
+  // renders nothing around it and the search prompt picks another.
+  useResolve: false,
 });
 
 function GraphBody() {
-  const { focusId } = graphCanvasPane.useOptions();
+  const { focusId } = graphCanvasPane.useParams();
   return (
     <PaneChrome pane={graphCanvasPane}>
       <Clip className="h-full">
-        <GraphView paneFocusId={focusId} />
+        <GraphView paneFocusId={focusId as PluginId | undefined} />
       </Clip>
     </PaneChrome>
   );
