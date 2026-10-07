@@ -105,3 +105,33 @@ describe("Avatar tile presentation", () => {
     expect(dot?.className).not.toMatch(/\bring-\d/);
   });
 });
+
+describe("Avatar fill (a colour outside the categorical palette)", () => {
+  it("paints the tile with the fill and wins over color", () => {
+    const { container } = render(
+      <AvatarPresentationProvider value="tile">
+        <Avatar fill="var(--place-food)" color="rose" icon={face} />
+      </AvatarPresentationProvider>,
+    );
+    const el = box(container);
+    expect(el.style.getPropertyValue("--avatar-fill")).toBe(
+      "var(--place-food)",
+    );
+    expect(el.classList).toContain("bg-[var(--avatar-fill)]");
+    expect(el.classList).not.toContain("bg-categorical-4");
+  });
+
+  it("paints the badge with a soft tint of the fill", () => {
+    const { container } = render(<Avatar fill="#06ACC1" icon={face} />);
+    expect(box(container).classList).toContain("text-[var(--avatar-fill)]");
+  });
+
+  it("colorless still wins", () => {
+    const { container } = render(
+      <Avatar fill="#06ACC1" colorless icon={face} />,
+    );
+    const el = box(container);
+    expect(el.style.getPropertyValue("--avatar-fill")).toBe("");
+    expect(el.classList).toContain("bg-muted");
+  });
+});

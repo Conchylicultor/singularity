@@ -4,7 +4,7 @@ import {
   type ControlSize,
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { forwardRef } from "react";
+import { forwardRef, type CSSProperties } from "react";
 import {
   runtimeSymbol,
   type IconRef,
@@ -13,6 +13,8 @@ import {
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AvatarShape } from "../../core";
 import {
+  AVATAR_FILL_FLAT_CLASS,
+  AVATAR_FILL_SOFT_CLASS,
   avatarColorPick,
   avatarFlatClass,
   avatarGradientClass,
@@ -30,6 +32,12 @@ export interface AvatarProps extends DensityControlled {
    */
   icon?: SavedSymbolName | null;
   color?: string | null;
+  /**
+   * A CSS colour from outside the categorical palette — a domain's own theme
+   * token (`var(--place-food)`), for a surface whose colours carry meaning of
+   * their own. Wins over `color` and the auto-colour; `colorless` still wins.
+   */
+  fill?: string;
   /**
    * A glyph named in code (an app's icon), drawn when there is no saved `icon`.
    * Not persisted.
@@ -137,6 +145,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
   {
     icon,
     color,
+    fill,
     symbol,
     shape = "circle",
     statusDot,
@@ -154,13 +163,20 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
   const drawn: IconRef | null =
     icon != null ? runtimeSymbol(icon) : (symbol ?? null);
   const glyph = fallbackGlyph ? fallbackGlyph.charAt(0).toUpperCase() : null;
+  const custom = !colorless && fill !== undefined;
   const filled =
     !colorless && (drawn != null || color != null || glyph != null);
-  const pick = filled
-    ? avatarColorPick(color, fallbackKey ?? icon ?? undefined)
-    : null;
-  const paint =
-    presentation === "tile"
+  const pick =
+    filled && !custom
+      ? avatarColorPick(color, fallbackKey ?? icon ?? undefined)
+      : null;
+  const paint = custom
+    ? presentation === "tile"
+      ? AVATAR_FILL_FLAT_CLASS
+      : presentation === "gradient-tile"
+        ? cn(AVATAR_FILL_FLAT_CLASS, GRADIENT_TILE_RELIEF)
+        : AVATAR_FILL_SOFT_CLASS
+    : presentation === "tile"
       ? avatarFlatClass(pick)
       : presentation === "gradient-tile"
         ? cn(avatarGradientClass(pick), GRADIENT_TILE_RELIEF)
@@ -173,6 +189,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
     <span
       ref={ref}
       title={title}
+      style={custom ? ({ "--avatar-fill": fill } as CSSProperties) : undefined}
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid inline-level avatar disc: inline-flex center on a shrink-0 leaf that sits inline in flex rows; Center is block-level grid and would break inline placement
       className={cn(
         // A size container, so the glyph's `cqh` share resolves against the box.

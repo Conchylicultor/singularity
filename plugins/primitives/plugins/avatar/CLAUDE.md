@@ -149,7 +149,6 @@ color palette.
     - `fields/avatar/config`
     - `fields/avatar/table`
     - `page/place`
-    - `page/place/map-layer`
     - `primitives/data-view/icons`
 - Core:
   - Exports (types):

@@ -8,7 +8,12 @@ export {
   type PlaceSnapshot,
   type PlaceData,
 } from "./schemas";
-export { placeKindColor, PlaceKindSchema, type PlaceKind } from "./kinds";
+export {
+  PlaceKindSchema,
+  PlaceFamilySchema,
+  type PlaceKind,
+  type PlaceFamily,
+} from "./kinds";
 export {
   PLACE_SNAPSHOT_TTL_MS,
   placeSnapshotState,

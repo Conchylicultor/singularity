@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PlaceKindSchema } from "./kinds";
+import { PlaceFamilySchema, PlaceKindSchema } from "./kinds";
 
 /**
  * One candidate a provider offers while the user is typing — the two lines a
@@ -40,11 +40,17 @@ export const PlaceSnapshotSchema = z.object({
   /** Human-readable kind ("Coffee shop", "Museum"), when the provider names one. */
   category: z.string().optional(),
   /**
-   * The neutral kind the card's icon is drawn from, mapped by the provider from
+   * The neutral kind the card's glyph is drawn from, mapped by the provider from
    * its own taxonomy. Absent when the provider's type has no kind yet — the
    * card then draws a generic pin.
    */
   kind: PlaceKindSchema.optional(),
+  /**
+   * The provider's category for this place, mapped onto the neutral families —
+   * the card's colour. Absent when the provider could not place it in one: the
+   * card then paints a neutral circle.
+   */
+  family: PlaceFamilySchema.optional(),
   /** The provider's own page for this place, opened by the card's external link. */
   mapsUrl: z.string().optional(),
   lat: z.number().optional(),
@@ -71,6 +77,7 @@ export const PlaceDataSchema = z.object({
   address: z.string().optional(),
   category: z.string().optional(),
   kind: PlaceKindSchema.optional(),
+  family: PlaceFamilySchema.optional(),
   mapsUrl: z.string().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),

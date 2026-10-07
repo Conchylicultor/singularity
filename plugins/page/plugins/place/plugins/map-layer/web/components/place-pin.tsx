@@ -2,12 +2,13 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { avatarFlatClass } from "@plugins/primitives/plugins/avatar/web";
 import { MapLabel, type MapPinProps } from "@plugins/map/web";
-import { placeKindColor } from "@plugins/page/plugins/place/core";
-import { placeKindGlyph } from "@plugins/page/plugins/place/web";
+import {
+  placeFamilyFill,
+  placeKindGlyph,
+} from "@plugins/page/plugins/place/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { placePinKind } from "../internal/place-layer";
+import { placePinData } from "../internal/place-layer";
 
 /** The drop's head: a 30px disc. The tip lands 36px below its top (√2·15 + 15). */
 const HEAD_PX = 30;
@@ -16,8 +17,8 @@ const LABEL_GAP_PX = 4;
 
 /**
  * A place on the map: a teardrop whose colour and glyph say what KIND of place
- * it is — the same family colour (`placeKindColor`), flat tile paint
- * (`avatarFlatClass`) and glyph (`placeKindGlyph`) as the /place card's circle,
+ * it is — the same family colour (`placeFamilyFill`, the `place` palette
+ * token) and glyph (`placeKindGlyph`) as the /place card's circle,
  * so a place reads as the same thing on the page and on the map. The name sits
  * beside the drop's head as a `MapLabel`, whose paint follows the tiles, not the
  * app theme.
@@ -28,7 +29,7 @@ const LABEL_GAP_PX = 4;
  * stays centred on the head.
  */
 export function PlacePin({ pin, active, tiles }: MapPinProps) {
-  const kind = placePinKind(pin);
+  const { kind, family } = placePinData(pin);
   return (
     <span className="group/pin relative block h-9 w-[30px] cursor-pointer">
       <Layer
@@ -45,8 +46,8 @@ export function PlacePin({ pin, active, tiles }: MapPinProps) {
           <Layer
             className={cn(
               "-rotate-45 rounded-full rounded-bl-none border-2 border-categorical-foreground shadow-md",
-              avatarFlatClass({ slot: placeKindColor(kind), shade: 0 }),
             )}
+            style={{ backgroundColor: placeFamilyFill(family) }}
           />
           <Center className="relative size-full">
             {/* 14px: the card tile's 46% glyph share of the 30px head. */}

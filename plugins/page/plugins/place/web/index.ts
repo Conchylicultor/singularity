@@ -8,6 +8,7 @@ export { Place } from "./slots";
 export type { PlaceProviderContribution } from "./slots";
 export { usePlaceProviders } from "./internal/use-place-providers";
 export { placeKindGlyph } from "./internal/kind-glyphs";
+export { placeFamilyFill } from "./internal/family-fill";
 export { placeBlock, PLACE_TYPE } from "../core";
 
 export default {

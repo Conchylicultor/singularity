@@ -1,6 +1,7 @@
 import { defineBlock } from "@plugins/page/plugins/editor/core";
 import { PlaceDataSchema } from "./schemas";
-import { PlaceKindSchema, type PlaceKind } from "./kinds";
+import { PlaceFamilySchema, PlaceKindSchema } from "./kinds";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const locationOnIcon = symbol("location-on");
@@ -36,13 +37,17 @@ function timestampAttr(raw: string | undefined): number | undefined {
 }
 
 /**
- * Read the `kind` attribute. Unlike `lat`/`fetched`, an unknown value is read as
- * ABSENT rather than thrown: the kind set is closed and grows, so markdown
- * written by a newer build (or by hand) can name a kind this one does not know,
- * and the only consequence is a generic pin until the next refresh re-maps it.
+ * Read the `kind` / `family` attribute. Unlike `lat`/`fetched`, an unknown value
+ * is read as ABSENT rather than thrown: both sets are closed and grow, so
+ * markdown written by a newer build (or by hand) can name a value this one does
+ * not know, and the only consequence is a generic pin or a neutral circle until
+ * the next refresh re-maps it.
  */
-function kindAttr(raw: string | undefined): PlaceKind | undefined {
-  const parsed = PlaceKindSchema.safeParse(raw);
+function closedSetAttr<T extends string>(
+  schema: ZodParser<T>,
+  raw: string | undefined,
+): T | undefined {
+  const parsed = schema.safeParse(raw);
   return parsed.success ? parsed.data : undefined;
 }
 
@@ -75,6 +80,7 @@ export const placeBlock = defineBlock({
         address: data.address,
         category: data.category,
         kind: data.kind,
+        family: data.family,
         maps: data.mapsUrl,
         lat: data.lat,
         lng: data.lng,
@@ -91,7 +97,8 @@ export const placeBlock = defineBlock({
         name: attrs.name,
         address: attrs.address,
         category: attrs.category,
-        kind: kindAttr(attrs.kind),
+        kind: closedSetAttr(PlaceKindSchema, attrs.kind),
+        family: closedSetAttr(PlaceFamilySchema, attrs.family),
         mapsUrl: attrs.maps,
         lat: numberAttr(attrs.lat, "lat"),
         lng: numberAttr(attrs.lng, "lng"),

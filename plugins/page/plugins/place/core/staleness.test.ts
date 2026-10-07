@@ -76,6 +76,7 @@ describe("placeDataFromSnapshot", () => {
           address: "51 Galerie de Montpensier, Paris",
           category: "Coffee shop",
           kind: "cafe",
+          family: "food",
           mapsUrl: "https://example.test/p1",
           lat: 48.86,
           lng: 2.33,
@@ -89,6 +90,7 @@ describe("placeDataFromSnapshot", () => {
       address: "51 Galerie de Montpensier, Paris",
       category: "Coffee shop",
       kind: "cafe",
+      family: "food",
       mapsUrl: "https://example.test/p1",
       lat: 48.86,
       lng: 2.33,
@@ -104,6 +106,7 @@ describe("placeDataFromSnapshot", () => {
     );
     expect(refreshed.category).toBeUndefined();
     expect(refreshed.kind).toBeUndefined();
+    expect(refreshed.family).toBeUndefined();
     expect(refreshed.mapsUrl).toBeUndefined();
   });
 

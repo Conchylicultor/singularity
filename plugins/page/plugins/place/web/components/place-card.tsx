@@ -13,10 +13,12 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { placeKindColor, type PlaceData } from "../../core";
+import type { PlaceData } from "../../core";
+import { placeFamilyFill } from "../internal/family-fill";
 import { placeKindGlyph } from "../internal/kind-glyphs";
 
 const copyIcon = symbol("content-copy");
+
 const checkIcon = symbol("check");
 const refreshIcon = symbol("refresh");
 const replaceIcon = symbol("edit-location-alt");
@@ -38,8 +40,8 @@ export interface PlaceCardProps {
 }
 
 /**
- * The resolved place: one row — a circle whose glyph and colour say what KIND
- * of place it is, the name, and `category · address`. The whole row opens the
+ * The resolved place: one row — a circle whose glyph says what KIND of place
+ * it is and whose colour says its FAMILY (the provider's category), the name, and `category · address`. The whole row opens the
  * provider's page; refresh, copy-address and replace are hover actions. No provider
  * name, no badge: the link is the row.
  */
@@ -59,7 +61,7 @@ export function PlaceCard({ data, refresh, onReplace }: PlaceCardProps) {
           <AvatarPresentationProvider value="tile">
             <Avatar
               symbol={placeKindGlyph(data.kind)}
-              color={placeKindColor(data.kind)}
+              fill={placeFamilyFill(data.family)}
             />
           </AvatarPresentationProvider>
         </Center>

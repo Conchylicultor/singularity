@@ -157,6 +157,18 @@ export function avatarFlatClass(pick: AvatarColorPick | null): string {
     : "bg-muted text-foreground";
 }
 
+/**
+ * The paint for a `fill` — a colour from outside the categorical palette (a
+ * domain's own token, e.g. `var(--place-food)`), set on the box as
+ * `--avatar-fill`. Same two presentations as a slot: the soft badge is a 15%
+ * tint with the fill as text, the flat tile the solid fill under the
+ * categorical-foreground glyph.
+ */
+export const AVATAR_FILL_SOFT_CLASS =
+  "bg-[color-mix(in_oklab,var(--avatar-fill)_15%,transparent)] text-[var(--avatar-fill)]";
+export const AVATAR_FILL_FLAT_CLASS =
+  "bg-[var(--avatar-fill)] text-categorical-foreground";
+
 /** The soft (badge) class for a colour / fallback key — `avatarSoftClass(avatarColorPick(…))`. */
 export function avatarColorClass(
   color: string | null | undefined,

@@ -210,6 +210,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `debug/worktree-cleanup`
     - `infra/boot-snapshot`
     - `infra/jobs/deadline-audit`
+    - `page/place/google`
     - `reports/adaptive-bar`
     - `reports/caret-flight`
     - `reports/check-thread-stall`

@@ -25,7 +25,7 @@ function roundTrip(data: PlaceData): PlaceData {
 }
 
 describe("place markdown tag", () => {
-  test("the kind survives a round trip", () => {
+  test("the kind and family survive a round trip", () => {
     const data: PlaceData = {
       providerId: "google",
       placeId: "p1",
@@ -33,17 +33,24 @@ describe("place markdown tag", () => {
       address: "51 Galerie de Montpensier, Paris",
       category: "Coffee shop",
       kind: "cafe",
+      family: "food",
       fetchedAt: Date.parse("2026-09-29T12:00:00.000Z"),
     };
     expect(roundTrip(data)).toEqual(data);
   });
 
-  test("a kind this build does not know reads as absent, not as an error", () => {
+  test("a kind or family this build does not know reads as absent, not as an error", () => {
     const parsed = tag.parseAttrs!(
-      { name: "Somewhere", address: "Paris", kind: "spaceport" },
+      {
+        name: "Somewhere",
+        address: "Paris",
+        kind: "spaceport",
+        family: "space",
+      },
       parseCtx,
     );
     expect(parsed.kind).toBeUndefined();
+    expect(parsed.family).toBeUndefined();
     expect(parsed.name).toBe("Somewhere");
   });
 });

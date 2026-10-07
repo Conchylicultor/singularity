@@ -4,8 +4,10 @@ import type { MapPin } from "@plugins/map/core";
 import type { Block } from "@plugins/page/plugins/editor/core";
 import {
   PLACE_TYPE,
+  PlaceFamilySchema,
   PlaceKindSchema,
   placeBlock,
+  type PlaceFamily,
   type PlaceKind,
 } from "@plugins/page/plugins/place/core";
 
@@ -13,15 +15,22 @@ import {
 export const PLACE_PIN_TYPE = "place";
 
 /**
- * What a place pin carries beyond its label: the place's kind, which picks the
- * pin's colour and glyph exactly as it picks the /place card's circle.
+ * What a place pin carries beyond its label: the place's kind (its glyph) and
+ * family (its colour), exactly as they pick the /place card's circle.
  */
-const PlacePinDataSchema = z.object({ kind: PlaceKindSchema.optional() });
+const PlacePinDataSchema = z.object({
+  kind: PlaceKindSchema.optional(),
+  family: PlaceFamilySchema.optional(),
+});
 type PlacePinData = z.infer<typeof PlacePinDataSchema>;
 
-/** The kind a place pin was made with. Throws on a pin this layer did not make. */
-export function placePinKind(pin: MapPin): PlaceKind | undefined {
-  return PlacePinDataSchema.parse(pin.data).kind;
+/** The kind and family a place pin was made with. Throws on a pin this layer did not make. */
+export function placePinData(pin: MapPin): {
+  kind: PlaceKind | undefined;
+  family: PlaceFamily | undefined;
+} {
+  const { kind, family } = PlacePinDataSchema.parse(pin.data);
+  return { kind, family };
 }
 
 /**
@@ -39,7 +48,7 @@ export function placeOverlays(blocks: readonly Block[]): PageMapLayerResult {
     if (b.type !== PLACE_TYPE) continue;
     const parsed = placeBlock.safeParse(b.data);
     if (!parsed.success) continue;
-    const { placeId, lat, lng, name, kind } = parsed.data;
+    const { placeId, lat, lng, name, kind, family } = parsed.data;
     if (placeId === undefined) continue;
     if (lat === undefined || lng === undefined) {
       unplaced++;
@@ -52,7 +61,7 @@ export function placeOverlays(blocks: readonly Block[]): PageMapLayerResult {
         pinType: PLACE_PIN_TYPE,
         position: { lat, lng },
         label: name,
-        data: { kind } satisfies PlacePinData,
+        data: { kind, family } satisfies PlacePinData,
       },
       blockId: b.id,
     });

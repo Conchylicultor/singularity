@@ -14,8 +14,8 @@
     - `map.MapLabel`
     - `map.MapPinProps`
     - `page/map.PageMap`
+    - `page/place.placeFamilyFill`
     - `page/place.placeKindGlyph`
-    - `primitives/avatar.avatarFlatClass`
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
     - `primitives/css/layer.Layer`

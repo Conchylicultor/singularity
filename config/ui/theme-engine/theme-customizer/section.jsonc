@@ -24,6 +24,7 @@
     "ui.tokens.categorical:categorical",
     "ui.tokens.file-type-palette:file-type-palette",
     "ui.tokens.chord-palette:chord-palette",
+    "ui.tokens.place-palette:place",
     "ui.tweakcn.community-browser:import-by-url"
   ]
 }

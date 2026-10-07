@@ -71,6 +71,7 @@ export function placeDataFromSnapshot(
     address: snapshot.address,
     category: snapshot.category,
     kind: snapshot.kind,
+    family: snapshot.family,
     mapsUrl: snapshot.mapsUrl,
     lat: snapshot.lat,
     lng: snapshot.lng,

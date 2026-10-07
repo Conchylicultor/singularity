@@ -9,7 +9,10 @@ import type {
   PlaceSuggestion,
 } from "@plugins/page/plugins/place/core";
 import { GOOGLE_PLACE_PROVIDER_ID } from "../../shared";
+import { recordReport } from "@plugins/reports/server";
 import { googleTypeToKind } from "./type-to-kind";
+import { googleTypeToFamily } from "./type-to-family";
+import { PLACE_GOOGLE_UNKNOWN_TYPE } from "./unknown-type-kind";
 
 /**
  * The API key, or a loud stop.
@@ -53,13 +56,28 @@ export const googlePlaceProvider = definePlaceProvider({
 
   async resolve(placeId: string, session: string): Promise<PlaceSnapshot> {
     const place = await placeDetails(await requireKey(), placeId, session);
+    const { family, unknownPrimary } = googleTypeToFamily(
+      place.primaryType,
+      place.types,
+    );
+    if (unknownPrimary !== undefined) {
+      // Not a throw: a type Google added since the copy was made must not stop
+      // the place resolving. The card paints neutral; the report says why.
+      await recordReport({
+        kind: PLACE_GOOGLE_UNKNOWN_TYPE,
+        source: "server-place-google",
+        data: { primaryType: unknownPrimary, placeName: place.name },
+      });
+    }
     return {
       placeId: place.placeId,
       name: place.name,
       address: place.address,
       category: place.category,
-      // Google's taxonomy stops here: the block stores only the neutral kind.
+      // Google's taxonomy stops here: the block stores only the neutral kind
+      // and family.
       kind: googleTypeToKind(place.primaryType, place.types),
+      family,
       mapsUrl: place.mapsUrl,
       lat: place.lat,
       lng: place.lng,

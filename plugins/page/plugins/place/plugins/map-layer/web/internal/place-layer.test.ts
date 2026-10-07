@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Block } from "@plugins/page/plugins/editor/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { PLACE_PIN_TYPE, placeOverlays, placePinKind } from "./place-layer";
+import { PLACE_PIN_TYPE, placeOverlays, placePinData } from "./place-layer";
 
 function block(id: string, type: string, data: unknown): Block {
   const at = new Date("2026-01-01T00:00:00.000Z");
@@ -38,7 +38,7 @@ describe("placeOverlays", () => {
             pinType: PLACE_PIN_TYPE,
             position: { lat: 48.8584, lng: 2.2945 },
             label: "Eiffel Tower",
-            data: { kind: undefined },
+            data: { kind: undefined, family: undefined },
           },
           blockId: "b1",
         },
@@ -47,18 +47,25 @@ describe("placeOverlays", () => {
     });
   });
 
-  test("the pin carries the place's kind, read back by placePinKind", () => {
+  test("the pin carries the place's kind and family, read back by placePinData", () => {
     const [entry] = placeOverlays([
-      block("b1", "place", { ...eiffel, kind: "attraction" }),
+      block("b1", "place", {
+        ...eiffel,
+        kind: "attraction",
+        family: "entertainment",
+      }),
     ]).overlays;
     expect(entry?.overlay.kind).toBe("pin");
     if (entry?.overlay.kind !== "pin") return;
-    expect(placePinKind(entry.overlay)).toBe("attraction");
+    expect(placePinData(entry.overlay)).toEqual({
+      kind: "attraction",
+      family: "entertainment",
+    });
   });
 
-  test("placePinKind refuses a pin it did not make", () => {
+  test("placePinData refuses a pin it did not make", () => {
     expect(() =>
-      placePinKind({
+      placePinData({
         kind: "pin",
         id: "x",
         pinType: PLACE_PIN_TYPE,

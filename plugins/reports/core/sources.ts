@@ -38,6 +38,10 @@ export const SERVER_REPORT_SOURCES = [
   // own config overrides sit where no live config reads them any more (a plugin
   // was removed, or moved onto a destination that already had settings).
   "server-config-audit",
+  // The Google place provider (page/place/google) was handed a place type its
+  // copy of Google's Table A lacks. An observation of Google's taxonomy moving,
+  // not an error anyone caught: the place still resolved.
+  "server-place-google",
   // A report a backend filed synchronously on its way out of a DELIBERATE
   // `process.exit()` — not a crash (nothing threw) and not a caught error
   // (nobody is still running to catch it). Its own source because that
