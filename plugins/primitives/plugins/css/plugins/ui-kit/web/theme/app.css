@@ -235,6 +235,18 @@
   }
 }
 
+/* The quiet answer, for a field that is focused most of the time — the prompt
+ * editor box. A halo there is on screen almost permanently, so focus instead
+ * lifts the resting border a notch toward the foreground: visible, never loud.
+ * It does not turn the border the ring hue (see `focus-ring`), so a saturated
+ * theme `--ring` cannot double the stroke. */
+@utility focus-border-within {
+  /* twmerge: standalone -- State-scoped border-color under :has(); must coexist with the resting border-* class, not replace it. */
+  &:has(:focus-visible) {
+    border-color: color-mix(in oklch, var(--color-input), var(--color-foreground) 18%);
+  }
+}
+
 /* The third answer to "whose focus rings me?", and the only one that is a
  * CHOICE rather than a fact about the DOM. `focus-ring` says *my own* focus
  * rings me; `focus-ring-within` says *any* focus under me rings me;

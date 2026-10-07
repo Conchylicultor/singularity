@@ -11,7 +11,9 @@
 import type { RegistryEntry } from "./custom-utilities-types";
 
 export const CUSTOM_UTILITY_REGISTRY = [
-  { classes: ["focus-ring", "focus-ring-within", "focus-ring-from"], standalone: true, reason: "Additive box-shadow/outline; no single-value built-in group to conflict with." },
+  { classes: ["focus-ring", "focus-ring-within"], standalone: true, reason: "Additive box-shadow/outline; no single-value built-in group to conflict with." },
+  { classes: ["focus-border-within"], standalone: true, reason: "State-scoped border-color under :has(); must coexist with the resting border-* class, not replace it." },
+  { classes: ["focus-ring-from"], standalone: true, reason: "Additive box-shadow/outline; no single-value built-in group to conflict with." },
   { classes: ["rounded-checkbox", "rounded-squircle", "rounded-card", "rounded-control", "rounded-popover"], extend: "rounded" },
   { classes: ["shadow-popover"], extend: "shadow" },
   { classes: ["region-line"], standalone: true, reason: "Composite single-line invariant (align-items + whitespace); name doesn't misfile into a built-in group and it's a base layer, not a selectively-overridden single property." },

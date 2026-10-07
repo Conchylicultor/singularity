@@ -199,7 +199,7 @@ function EditorShell({
       // fill (transparent, or `input` at 30% in dark mode, by default).
       className={cn(
         yieldClass("x"),
-        "focus-ring-within w-full rounded-card border p-composer transition-colors",
+        "focus-border-within w-full rounded-card border p-composer transition-colors",
         "border-input",
         disabled ? "bg-input/50 dark:bg-input/80" : "bg-composer",
       )}
