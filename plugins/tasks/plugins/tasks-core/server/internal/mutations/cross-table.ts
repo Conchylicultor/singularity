@@ -14,6 +14,7 @@ import {
   isCanonicalWorktreePath,
 } from "@plugins/infra/plugins/worktree/server";
 import path from "path";
+import { ADOPTED_SPAWNED_BY } from "../../../core/adopted";
 
 // ONE HALF of the exit-drop policy, and named for exactly the half it is: does
 // any sibling conversation on this task remain active? If one does, another
@@ -125,7 +126,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     runtime: input.runtimeId,
     status: input.status,
     title: input.title ?? null,
-    spawnedBy: "poller",
+    spawnedBy: ADOPTED_SPAWNED_BY,
     model: input.model,
   };
   await db.transaction(async (tx) => {

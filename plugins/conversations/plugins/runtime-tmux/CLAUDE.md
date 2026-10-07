@@ -277,6 +277,8 @@ may be a real command (`/compact`).
     - `infra/paths.CLAUDE_SESSIONS_DIR`
     - `infra/paths.PS`
     - `infra/paths.TMUX`
+    - `infra/worktree.ensureMainWorktreeRoot`
+    - `infra/worktree.isCanonicalWorktreePath`
     - `infra/worktree.isWorktreeOpActive`
     - `packages/spawn-priority.backgroundPrefix`
     - `reports.DEFAULT_REPORT_DEBOUNCE_MS`

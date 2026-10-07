@@ -11,7 +11,10 @@ import {
   markConversationClosed,
   setConversationHibernated,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  ADOPTED_SPAWNED_BY,
+  type Conversation,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { recordReport } from "@plugins/reports/server";
 import { isTransientDbError } from "@plugins/database/server";
@@ -284,7 +287,7 @@ async function adopt(
             conversationId: conversation.id,
             taskId,
             model: conversation.model,
-            spawnedBy: "poller",
+            spawnedBy: ADOPTED_SPAWNED_BY,
             createdAt: conversation.createdAt.toISOString(),
             kind: conversation.kind,
           },
@@ -327,6 +330,9 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
       return;
     case "hibernate":
       await setConversationHibernated(id, new Date());
+      if (plan.endTurn) {
+        await updateConversation(id, { status: "waiting", waitingFor: null });
+      }
       return;
     case "gone":
       // A "starting" row that never came up AND has no session to resume:

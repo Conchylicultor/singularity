@@ -431,6 +431,7 @@ serves them.
     - `TaskStatus`
     - `TrailerCommit`
   - Exports (values):
+    - `ADOPTED_SPAWNED_BY`
     - `AttemptSchema`
     - `attemptsResource`
     - `AttemptStatusSchema`
@@ -446,6 +447,7 @@ serves them.
     - `conversationsSystemResource`
     - `ConversationStatusSchema`
     - `ConversationSummarySchema`
+    - `isAdoptedConversation`
     - `isBlockedStatus`
     - `isSettled`
     - `newAttemptId`

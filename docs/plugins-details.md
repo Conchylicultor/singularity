@@ -13753,6 +13753,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.CLAUDE_SESSIONS_DIR`
           - `infra/paths.PS`
           - `infra/paths.TMUX`
+          - `infra/worktree.ensureMainWorktreeRoot`
+          - `infra/worktree.isCanonicalWorktreePath`
           - `infra/worktree.isWorktreeOpActive`
           - `packages/spawn-priority.backgroundPrefix`
           - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
@@ -40038,6 +40040,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TaskStatus`
           - `TrailerCommit`
         - Exports (values):
+          - `ADOPTED_SPAWNED_BY`
           - `AttemptSchema`
           - `attemptsResource`
           - `AttemptStatusSchema`
@@ -40053,6 +40056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversationsSystemResource`
           - `ConversationStatusSchema`
           - `ConversationSummarySchema`
+          - `isAdoptedConversation`
           - `isBlockedStatus`
           - `isSettled`
           - `newAttemptId`

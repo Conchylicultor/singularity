@@ -242,7 +242,8 @@ export async function markConversationGone(id: string): Promise<boolean> {
 
 // Hibernation flag (orthogonal to status): set a Date to mark the process
 // intentionally absent, null to clear it on resume. Status is untouched —
-// a hibernated conversation stays `waiting`. Only the status reconciler (suspend branch)
+// a hibernated conversation shows `waiting` (the status reconciler settles a
+// row that still says `working` when it hibernates it). Only the status reconciler (suspend branch)
 // and the idle-kill job set it; only `ensureResumed` clears it.
 export async function setConversationHibernated(
   id: string,

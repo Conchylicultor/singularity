@@ -27,7 +27,13 @@ import {
 
 /** The read-time section a queue row belongs to (the enum the `section` field partitions by). */
 export type QueueSection =
-  "pinned" | "queued" | "working" | "unranked" | "disconnected" | "done";
+  | "pinned"
+  | "queued"
+  | "working"
+  | "lost"
+  | "unranked"
+  | "disconnected"
+  | "done";
 
 /**
  * One flat DataView row per conversation. Extends {@link Conversation} with the
@@ -69,7 +75,7 @@ type QueueDisplay = {
  * the bounded POINT ranks (subscribed to the LIVE conversation id set, replayed
  * through the optimistic overlay) — runs the shared {@link classifyQueue}, and
  * flattens the classification into one `QueueRow[]` in display order (Pinned,
- * Queue, Working, Unranked, Disconnected, Done).
+ * Queue, Working, Lost, Unranked, Disconnected, Done).
  * Task-group members are emitted representative-first so the aggregate entry's key
  * equals the representative id (selection-highlight parity with the classic view).
  */
@@ -142,6 +148,7 @@ export function useQueueRows(): {
       workingUnranked,
       blockedIds,
       unranked,
+      lost,
       disconnected,
       recentGone,
     } = classifyQueue({ active, gone, queue, tasks });
@@ -230,7 +237,8 @@ export function useQueueRows(): {
     }
     for (const conv of workingUnranked) emitFlat(conv, "working");
 
-    // 4–6. flat sections (keep incoming order).
+    // 4–7. flat sections (keep incoming order).
+    for (const conv of lost) emitFlat(conv, "lost");
     for (const conv of unranked) emitFlat(conv, "unranked");
     for (const conv of disconnected) emitFlat(conv, "disconnected");
     for (const conv of recentGone) emitFlat(conv, "done");

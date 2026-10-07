@@ -1,4 +1,7 @@
-import { isBlockedStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  isAdoptedConversation,
+  isBlockedStatus,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import type {
   Conversation,
   TaskListItem,
@@ -31,6 +34,14 @@ export interface ClassifiedQueue {
   allWaitingCount: number;
   blockedIds: Set<string>;
   unranked: Conversation[];
+  /**
+   * Live conversations nothing launched: sessions main found running and
+   * adopted (`isAdoptedConversation`) — typically an agent's own
+   * `tmux new-session` from its checkout. Kept out of the ranked sections
+   * whatever their rank or status, so they are visible without passing for
+   * the user's work.
+   */
+  lost: Conversation[];
   disconnected: Conversation[];
   recentGone: Conversation[];
 }
@@ -38,8 +49,8 @@ export interface ClassifiedQueue {
 /**
  * Pure, React-free queue classification — the single source of truth for how
  * live conversations, their queue ranks, and their tasks partition into the
- * queue's read-time sections (Pinned / Queue / Working / Unranked / Disconnected /
- * Done), grouped by `taskId` with a shared rank per group.
+ * queue's read-time sections (Pinned / Queue / Working / Lost / Unranked /
+ * Disconnected / Done), grouped by `taskId` with a shared rank per group.
  *
  * A pin only moves a WAITING group into its own section: an active group belongs
  * in Working whether or not it is pinned, since Working answers "what is running
@@ -61,6 +72,7 @@ export function classifyQueue(data: {
   const blocked = new Set<string>();
   const noRank: Conversation[] = [];
   const workingNoRank: Conversation[] = [];
+  const lost: Conversation[] = [];
 
   for (const c of active) {
     if (
@@ -69,6 +81,10 @@ export function classifyQueue(data: {
       c.status !== "starting"
     )
       continue;
+    if (isAdoptedConversation(c)) {
+      lost.push(c);
+      continue;
+    }
     // A live conversation's task reports the RUNNING half of blocked
     // (`in_progress_blocked`), so this must ask the predicate — matching the
     // `"blocked"` literal alone would mark nothing here.
@@ -137,6 +153,7 @@ export function classifyQueue(data: {
     allWaitingCount: waitingCount,
     blockedIds: blocked,
     unranked: noRank,
+    lost,
     disconnected: active.filter((c) => c.status === "gone"),
     recentGone: gone,
   };

@@ -42,12 +42,18 @@ export const CloseConversationContext = createContext<
  *
  * Offered on every live section — including Working, so a group that starts
  * running can still be pinned for when it comes back — but never on the closed
- * conversations under Done.
+ * conversations under Done, nor on Lost ones (never ranked).
  */
 export function PinAction({
   row,
 }: ItemActionProps<QueueRow>): ReactElement | null {
-  if (row.section === "done" || row.section === "disconnected") return null;
+  // A lost conversation is never ranked, so a pin would have nothing to lift.
+  if (
+    row.section === "done" ||
+    row.section === "disconnected" ||
+    row.section === "lost"
+  )
+    return null;
   return (
     <IconButton
       icon={keepIcon}

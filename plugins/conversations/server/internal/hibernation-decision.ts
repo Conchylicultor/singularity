@@ -8,9 +8,11 @@
  * A MISSING PROCESS NEVER CHANGES STATUS. tmux presence is an internal resource
  * detail: panes are idle-killed to reclaim resources and transparently respawned
  * by `ensureResumed` when the user opens the conversation. A `waiting` row stays
- * `waiting` and a `working` row stays `working` when its pane disappears — only
- * an explicit close (`exit_clean` / the UI's Exit, via `closeRequested` →
- * `markConversationClosed`) moves a conversation to a terminal status.
+ * `waiting` when its pane disappears — only an explicit close (`exit_clean` /
+ * the UI's Exit, via `closeRequested` → `markConversationClosed`) moves a
+ * conversation to a terminal status. (The reconciler separately settles a
+ * `working` row to `waiting`, since nothing computes without a process — see
+ * `planAbsent`; that is never a terminal status, so none of the below applies.)
  *
  * WHY THIS MATTERS BEYOND THE UI — writing `gone` from process absence deleted
  * users' work. `gone` is simultaneously:

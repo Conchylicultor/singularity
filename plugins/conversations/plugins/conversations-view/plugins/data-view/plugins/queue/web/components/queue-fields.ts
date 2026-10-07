@@ -13,6 +13,7 @@ const SECTION_FIELD: FieldDef<QueueRow> = {
     { value: "pinned", label: "Pinned" },
     { value: "queued", label: "Queue" },
     { value: "working", label: "Working" },
+    { value: "lost", label: "Lost" },
     { value: "unranked", label: "Unranked" },
     { value: "disconnected", label: "Disconnected" },
     { value: "done", label: "Done" },

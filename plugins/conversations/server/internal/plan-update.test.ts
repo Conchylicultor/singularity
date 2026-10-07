@@ -380,6 +380,7 @@ describe("planConversationUpdate — no live session", () => {
   test("resumable → hibernate; already hibernated → left alone", () => {
     expect(planConversationUpdate(row(), ABSENT, ctx())).toEqual({
       kind: "hibernate",
+      endTurn: false,
     });
     expect(
       planConversationUpdate(
@@ -390,10 +391,36 @@ describe("planConversationUpdate — no live session", () => {
     ).toEqual({ kind: "noop" });
   });
 
-  test("a mid-work resumable row hibernates too — absence never moves status", () => {
+  test("a mid-work resumable row hibernates and settles to waiting — nothing computes without a process", () => {
     expect(
       planConversationUpdate(row({ status: "working" }), ABSENT, ctx()),
-    ).toEqual({ kind: "hibernate" });
+    ).toEqual({ kind: "hibernate", endTurn: true });
+  });
+
+  test("an already-hibernated row still saying working is settled, not re-stamped", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working", hibernatedAt: new Date(NOW - 1000) }),
+        ABSENT,
+        ctx(),
+      ),
+    ).toEqual({
+      kind: "patch",
+      patch: { status: "waiting", waitingFor: null },
+      adoptedSessionId: null,
+      taskTitle: null,
+      questionOpened: false,
+    });
+  });
+
+  test("off main, a working row is not this backend's to settle", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working" }),
+        ABSENT,
+        ctx({ onMain: false }),
+      ),
+    ).toEqual({ kind: "noop" });
   });
 
   test("nothing to resume → gone", () => {
@@ -443,7 +470,7 @@ describe("planConversationUpdate — no live session", () => {
           ABSENT,
           ctx(),
         ),
-      ).toEqual({ kind: "hibernate" });
+      ).toEqual({ kind: "hibernate", endTurn: false });
     });
 
     test("past it, closeRequested → closed", () => {

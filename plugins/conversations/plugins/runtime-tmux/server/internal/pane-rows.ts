@@ -1,15 +1,14 @@
 import type { PaneRef } from "./claude-session";
 
 /**
- * The tmux session names this runtime manages. The ONE statement of it: the
+ * The tmux session names this runtime launches. The ONE statement of it: the
  * pane listing (`parsePaneRows`) and every signal route (signals.ts) test this
- * constant, so the sessions the sweep sees and the sessions a signal can name
- * cannot drift apart.
+ * constant. A session under another name is listed only when it was started
+ * from an agent worktree (see `parsePaneRows`).
  *
  * It used to be stated twice, the second time as a tmux `-f` filter written
- * `#{r:…}` — not a tmux modifier, so it expanded to its own (non-empty) text
- * and kept every pane. The sweep then adopted hand-made sessions (`spike-auq`)
- * whose changes no signal could ever name
+ * `#{r:…}` — not a tmux modifier, and it kept every pane, so the sweep adopted
+ * every session on the host whose start path was a worktree
  * (research/2026-10-07-conversations-status-shadow-audit-retirement.md).
  */
 export const AGENT_SESSION_RE = /^(conv|claude)-/;
@@ -44,16 +43,30 @@ export interface TmuxPane extends PaneRef {
 }
 
 /**
- * `list-panes -a -F PANE_ROW_FORMAT` output → the panes of the sessions this
- * runtime manages, keyed by session name (= conversation id). The first pane of
- * a session wins; malformed lines are skipped.
+ * `list-panes -a -F PANE_ROW_FORMAT` output → the panes this runtime tracks,
+ * keyed by session name (= conversation id):
+ *
+ * - every session named like one we launch (`AGENT_SESSION_RE`), and
+ * - any other session started FROM an agent worktree (`isAgentWorktree` of its
+ *   start path) — something an agent ran outside the conversation launcher, a
+ *   `tmux new-session` from its checkout. Main adopts those as *lost*
+ *   conversations (the queue's Lost section), so nothing an agent leaves
+ *   running goes unseen. No signal names them; the minute sweep follows them.
+ *
+ * Everything else (the user's own sessions) is never listed, captured or
+ * probed. The first pane of a session wins; malformed lines are skipped.
  */
-export function parsePaneRows(stdout: string): Map<string, TmuxPane> {
+export function parsePaneRows(
+  stdout: string,
+  isAgentWorktree: (path: string) => boolean,
+): Map<string, TmuxPane> {
   const map = new Map<string, TmuxPane>();
   for (const line of stdout.trim().split("\n").filter(Boolean)) {
     const [name, pidStr, paneId, deadStr, startPath, ...rest] = line.split(SEP);
     if (!name || !pidStr || !paneId) continue;
-    if (!AGENT_SESSION_RE.test(name)) continue;
+    const worktreePath = startPath ?? "";
+    if (!AGENT_SESSION_RE.test(name) && !isAgentWorktree(worktreePath))
+      continue;
     if (map.has(name)) continue;
     const pid = Number(pidStr);
     if (!Number.isFinite(pid)) continue;
@@ -61,7 +74,7 @@ export function parsePaneRows(stdout: string): Map<string, TmuxPane> {
       panePid: pid,
       paneId,
       dead: deadStr === "1",
-      worktreePath: startPath ?? "",
+      worktreePath,
       rawTitle: rest.join(SEP),
     });
   }

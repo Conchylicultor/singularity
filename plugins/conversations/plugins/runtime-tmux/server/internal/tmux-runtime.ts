@@ -15,7 +15,11 @@ import {
 import { TMUX } from "@plugins/infra/plugins/paths/server";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
+import {
+  ensureMainWorktreeRoot,
+  isCanonicalWorktreePath,
+  isWorktreeOpActive,
+} from "@plugins/infra/plugins/worktree/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
@@ -344,7 +348,7 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
 export async function listPanes(): Promise<Map<string, TmuxPane>> {
   const proc = Bun.spawn(
     // No tmux-side `-f` filter: which sessions are ours is decided once, in JS
-    // (`AGENT_SESSION_RE`, pane-rows.ts) — the same constant the signals test.
+    // (`parsePaneRows`, pane-rows.ts).
     [TMUX, "list-panes", "-a", "-F", PANE_ROW_FORMAT],
     { stdout: "pipe", stderr: "pipe" },
   );
@@ -364,7 +368,10 @@ export async function listPanes(): Promise<Map<string, TmuxPane>> {
       `tmux list-panes failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
     );
   }
-  return parsePaneRows(stdout);
+  const repoRoot = await ensureMainWorktreeRoot();
+  return parsePaneRows(stdout, (path) =>
+    isCanonicalWorktreePath(path, repoRoot),
+  );
 }
 
 const NULL_SESSION: SessionState = {

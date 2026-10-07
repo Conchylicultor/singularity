@@ -82,7 +82,12 @@ export type UpdatePlan =
    * the shell reports that the safety net fired.
    */
   | { kind: "gone"; stuckStartingMs: number | null }
-  | { kind: "hibernate" }
+  /**
+   * Stamp `hibernatedAt`. `endTurn` is set when the row still says `working`:
+   * with no process, nothing is computing, so the row is settled to `waiting`
+   * in the same reconcile (see `planAbsent`).
+   */
+  | { kind: "hibernate"; endTurn: boolean }
   | {
       kind: "patch";
       patch: UpdateConversationPatch;
@@ -236,15 +241,27 @@ function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
   // Suspend-instead-of-gone: a resumable conversation whose process is missing
   // (idle-killed, lost to a reboot, or a resume that never came up) becomes
   // hibernated rather than gone — it keeps showing as a normal conversation and
-  // is silently resumed on open. A missing pane NEVER moves status; only an
-  // explicit close (above) does. The reconciler NEVER clears `hibernatedAt` —
+  // is silently resumed on open. A missing pane never moves a row to a
+  // terminal status; only an explicit close (above) does. The reconciler NEVER clears `hibernatedAt` —
   // only `ensureResumed` does. See `decideMissingProcessAction` for why coupling
   // status to process absence deleted users' worktrees.
+  //
+  // The one status a missing process does settle is `working`: no process means
+  // nothing is computing, and a row left at `working` reads as an agent busy
+  // for hours (a session killed mid-turn, or mid-hook). It becomes `waiting` —
+  // the status a hibernated conversation is meant to show — never a terminal
+  // one, so the row stays active and its worktree is untouched. This is the
+  // reconciler's call, not `decideMissingProcessAction`'s, which stays blind to
+  // status so it can never write `gone` from it.
+  const endTurn = row.status === "working";
   const action = decideMissingProcessAction(row, { onMain: ctx.onMain });
   switch (action) {
     case "hibernate":
-      return { kind: "hibernate" };
+      return { kind: "hibernate", endTurn };
     case "leave-hibernated":
+      // Rows hibernated before `endTurn` existed (or by a path that skipped
+      // it) still say `working`; settle them without re-stamping.
+      return endTurn ? settleToWaiting() : { kind: "noop" };
     case "leave-unowned":
       return { kind: "noop" };
     case "gone":
@@ -259,4 +276,14 @@ function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
       throw new Error(`unhandled missing-process action: ${String(unhandled)}`);
     }
   }
+}
+
+function settleToWaiting(): UpdatePlan {
+  return {
+    kind: "patch",
+    patch: { status: "waiting", waitingFor: null },
+    adoptedSessionId: null,
+    taskTitle: null,
+    questionOpened: false,
+  };
 }
