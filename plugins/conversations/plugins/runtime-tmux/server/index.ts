@@ -14,7 +14,7 @@ import { pruneTmuxSignalsJob } from "./internal/prune-signals-job";
 export { captureProcessTree, subtreePids } from "./internal/process-tree";
 export type { ProcessTree, ProcessLister } from "./internal/process-tree";
 export { listPanes } from "./internal/tmux-runtime";
-export type { TmuxPane } from "./internal/tmux-runtime";
+export type { TmuxPane } from "./internal/pane-rows";
 // The pane identity a session record has to name in order to claim the pane —
 // exported so an observer judging the same panes reads `%pane_id` from the same
 // place the resolver does.

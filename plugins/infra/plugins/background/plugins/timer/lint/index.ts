@@ -28,9 +28,9 @@ export default {
       "plugins/debug/plugins/health-monitor/server/internal/host-sampler.ts",
       // TEMPORARY shadow audit, pending deletion: the retired 1 s status
       // poller, now writing nothing and only reporting a state change no push
-      // signal delivered within 2 s. Delete it (and this line) once its
-      // reports are empty or explained
-      // (research/2026-10-02-conversations-poller-push-status.md).
+      // signal delivered (fixed only by the sweep, or not at all). Delete it
+      // (and this line) once its reports stay empty
+      // (research/2026-10-07-conversations-status-shadow-audit-retirement.md).
       "plugins/conversations/server/internal/status-shadow-audit.ts",
     ],
   },

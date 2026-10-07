@@ -47,6 +47,7 @@ import {
 } from "./plan-update";
 import {
   findTranscriptPath,
+  onSessionTranscriptWritten,
   refreshConversationChain,
   resolveAnchoredChain,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
@@ -140,7 +141,9 @@ export async function collectLive(
  *
  * 1. **A transcript must exist.** Otherwise a freshly-resumed session that dies
  *    before the user types anything would overwrite the (still-resumable) id
- *    with one that has no transcript on disk, breaking the next Resume.
+ *    with one that has no transcript on disk, breaking the next Resume. This
+ *    refusal is only "not yet": `planFor` records it in `awaitingTranscript`,
+ *    and the transcript's birth wakes the conversation again.
  *
  * 2. **That transcript must sit in THIS conversation's projects directory.**
  *    Gate 1 alone only asks whether a transcript exists *somewhere on the host*
@@ -161,13 +164,13 @@ export async function collectLive(
  * noise, not an alarm. Standing corruption is the periodic monitor's signal to
  * raise.
  */
-async function acceptsSessionId(
+async function sessionGate(
   conversationId: string,
   storedSessionId: string | null,
   candidate: string,
-): Promise<boolean> {
+): Promise<SessionGate> {
   const candidatePath = await findTranscriptPath(candidate);
-  if (!candidatePath) return false;
+  if (!candidatePath) return "no-transcript";
 
   // What we already believe about this conversation: its full chain, or — before
   // the chain has any row — the stored tail on its own.
@@ -179,7 +182,30 @@ async function acceptsSessionId(
       : [];
 
   const { anchorDir } = await resolveAnchoredChain(known);
-  return anchorDir === null || dirname(candidatePath) === anchorDir;
+  return anchorDir === null || dirname(candidatePath) === anchorDir
+    ? "accepted"
+    : "foreign";
+}
+
+/** Why a session-id candidate was (not) adopted. */
+type SessionGate = "accepted" | "no-transcript" | "foreign";
+
+// Conversation id → the session id it was refused ONLY because that session's
+// transcript did not exist yet. The CLI writes the sessions file (the signal
+// that woke the reconcile) a moment BEFORE it creates `<sessionId>.jsonl`, and
+// no later sessions-file write is due until the turn ends — so without a wake
+// on the transcript's birth the id waited for the turn end or the sweep
+// (research/2026-10-07-conversations-status-shadow-audit-retirement.md, class A).
+// Kept current by every plan of the row (`planFor`); bounded by the active rows.
+const awaitingTranscript = new Map<string, string>();
+
+/** The conversations waiting on any of `sessionIds`' transcripts to appear. */
+function awaitingAny(sessionIds: ReadonlySet<string>): string[] {
+  const out: string[] = [];
+  for (const [conversationId, sessionId] of awaitingTranscript) {
+    if (sessionIds.has(sessionId)) out.push(conversationId);
+  }
+  return out;
 }
 
 function livenessOf(row: Conversation, live: LiveSnapshot): Liveness {
@@ -198,18 +224,23 @@ export async function planFor(
 ): Promise<{ plan: UpdatePlan; liveness: Liveness }> {
   const liveness = livenessOf(row, live);
   const candidate = sessionCandidate(row, liveness);
-  const sessionAccepted =
-    candidate !== null &&
-    (await acceptsSessionId(row.id, row.claudeSessionId, candidate));
-  return {
-    plan: planConversationUpdate(row, liveness, {
-      onMain: isMain(),
-      now: Date.now(),
-      sessionAccepted,
-      questionHold: holds.get(row.id) ?? null,
-    }),
-    liveness,
-  };
+  const gate =
+    candidate === null
+      ? null
+      : await sessionGate(row.id, row.claudeSessionId, candidate);
+  const plan = planConversationUpdate(row, liveness, {
+    onMain: isMain(),
+    now: Date.now(),
+    sessionAccepted: gate === "accepted",
+    questionHold: holds.get(row.id) ?? null,
+  });
+  const rowStaysLive = plan.kind === "noop" || plan.kind === "patch";
+  if (candidate !== null && gate === "no-transcript" && rowStaysLive) {
+    awaitingTranscript.set(row.id, candidate);
+  } else {
+    awaitingTranscript.delete(row.id);
+  }
+  return { plan, liveness };
 }
 
 /**
@@ -376,8 +407,8 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
 }
 
 // When a signal-driven reconcile last ran for a conversation — read by the
-// shadow audit (status-shadow-audit.ts) only, as evidence in its report.
-// Bounded: the audit prunes entries older than a minute on every tick.
+// shadow audit (status-shadow-audit.ts) only, to tell a late signal from a
+// missed one. Bounded: the audit prunes stale entries on every tick.
 export const lastSignalReconcileAt = new Map<string, number>();
 
 /** Reconcile `rows` (active rows) plus the orphans in `live`. Inside the gate. */
@@ -522,6 +553,12 @@ export async function startStatusReconciler(): Promise<void> {
   for (const runtime of Runtime.all()) {
     await runtime.subscribe(onSignal);
   }
+  // The one state no runtime signal carries: a refused session id's transcript
+  // appearing (see `awaitingTranscript`).
+  onSessionTranscriptWritten((sessionIds) => {
+    const conversationIds = awaitingAny(sessionIds);
+    if (conversationIds.length > 0) onSignal({ conversationIds });
+  });
   await reconcileAll();
 }
 

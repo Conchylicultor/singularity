@@ -12,6 +12,7 @@ import { opSignalsDir } from "@plugins/infra/plugins/worktree/data-dirs";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { tmuxSignalsDir } from "../../data-dirs";
 import { routeSessionFile, type SessionFileRoute } from "./claude-session";
+import { AGENT_SESSION_RE } from "./pane-rows";
 import { installTmuxHooks } from "./tmux-hooks";
 
 // The tmux runtime's push signals: three watched directories, each turning a
@@ -19,9 +20,6 @@ import { installTmuxHooks } from "./tmux-hooks";
 // ever WAKE the reconciler — `inspect()` re-reads the panes, the process tree
 // and the sessions files, so a spurious, duplicate or late signal is harmless.
 // What would be harmful is a missing one; the status sweep job is that backstop.
-
-/** The tmux session names this runtime manages (the `listPanes` filter). */
-export const AGENT_SESSION_RE = /^(conv|claude)-/;
 
 // A woken reconcile can land before the pane has drawn what woke it: the
 // PreToolUse hook fires before the AskUserQuestion menu is painted (measured on

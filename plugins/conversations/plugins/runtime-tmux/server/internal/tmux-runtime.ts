@@ -22,12 +22,9 @@ import { basename } from "node:path";
 import { relayHookEntry } from "@plugins/conversations/plugins/question-relay/server";
 import { tmuxSignalsDir } from "../../data-dirs";
 import { AGENT_SESSION_WRAPPER } from "./agent-session-env";
-import {
-  resolveSessionState,
-  type PaneRef,
-  type SessionState,
-} from "./claude-session";
+import { resolveSessionState, type SessionState } from "./claude-session";
 import { parseInputDraft } from "./input-draft";
+import { PANE_ROW_FORMAT, parsePaneRows, type TmuxPane } from "./pane-rows";
 import { asLaunchMessage } from "./launch-message";
 import {
   mergeLaunchSettings,
@@ -109,10 +106,6 @@ const FORM_CLEAR_TIMEOUT_MS = 6_000;
 // fresh capture each 100 ms, at most MENU_APPEAR_TIMEOUT_MS) for a menu to
 // appear before deciding there is nothing to dismiss.
 const MENU_APPEAR_TIMEOUT_MS = 3_000;
-
-// Field separator: tab (not present in pane paths or titles) keeps splits
-// unambiguous even though pane titles can contain arbitrary characters.
-const SEP = "\t";
 
 // typeTurn() submit-verification poll. The CLI is an async (Ink/React) TUI:
 // when tmux writes the turn's text and Enter into the PTY in one read chunk,
@@ -341,21 +334,6 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
 }
 
 /**
- * One live pane as `listPanes` reports it. It extends `PaneRef`, so a pane can
- * be handed straight to `resolveSessionState` — the resolver's inputs are a
- * strict subset of what listing a pane already tells us, and there is nothing
- * to assemble (or mis-assemble) at the call site.
- *
- * `#{pane_id}` is the pane's identity for its whole life. `#{window_id}` is
- * deliberately not carried: it moves under `break-pane` / `move-window`, and
- * matching on it would buy nothing that `%pane_id` does not already settle.
- */
-export interface TmuxPane extends PaneRef {
-  rawTitle: string;
-  dead: boolean;
-}
-
-/**
  * Live tmux panes we manage, keyed by conversation id (the tmux session name).
  *
  * Exported so out-of-plugin observers (the session-divergence monitor) can join
@@ -365,16 +343,9 @@ export interface TmuxPane extends PaneRef {
  */
 export async function listPanes(): Promise<Map<string, TmuxPane>> {
   const proc = Bun.spawn(
-    [
-      TMUX,
-      "list-panes",
-      "-a",
-      "-F",
-      `#{session_name}${SEP}#{pane_pid}${SEP}#{pane_id}${SEP}#{pane_dead}${SEP}#{pane_start_path}${SEP}#{pane_title}`,
-      "-f",
-      // Mirrors AGENT_SESSION_RE (signals.ts): the sessions this runtime owns.
-      `#{r:^(conv|claude)-,#{session_name}}`,
-    ],
+    // No tmux-side `-f` filter: which sessions are ours is decided once, in JS
+    // (`AGENT_SESSION_RE`, pane-rows.ts) — the same constant the signals test.
+    [TMUX, "list-panes", "-a", "-F", PANE_ROW_FORMAT],
     { stdout: "pipe", stderr: "pipe" },
   );
   const [stdout, stderr] = await Promise.all([
@@ -382,33 +353,18 @@ export async function listPanes(): Promise<Map<string, TmuxPane>> {
     new Response(proc.stderr).text(),
   ]);
   const exit = await proc.exited;
-  const map = new Map<string, TmuxPane>();
   if (exit !== 0) {
     // "no server running" is a legitimate empty state — tmux had no sessions
     // so it could not start a server to query. Any other non-zero exit
     // (FD exhaustion, hung server, killed mid-call) means we cannot trust
     // emptiness as truth; throw so the reconciler treats this runtime's state
     // as unknown rather than declaring every conversation gone.
-    if (/no server running/i.test(stderr)) return map;
+    if (/no server running/i.test(stderr)) return new Map();
     throw new Error(
       `tmux list-panes failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
     );
   }
-  for (const line of stdout.trim().split("\n").filter(Boolean)) {
-    const [name, pidStr, paneId, deadStr, startPath, ...rest] = line.split(SEP);
-    if (!name || !pidStr || !paneId) continue;
-    if (map.has(name)) continue;
-    const pid = Number(pidStr);
-    if (!Number.isFinite(pid)) continue;
-    map.set(name, {
-      panePid: pid,
-      paneId,
-      dead: deadStr === "1",
-      worktreePath: startPath ?? "",
-      rawTitle: rest.join(SEP),
-    });
-  }
-  return map;
+  return parsePaneRows(stdout);
 }
 
 const NULL_SESSION: SessionState = {

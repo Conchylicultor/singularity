@@ -50,6 +50,7 @@
     - `conversations/session-chain.listSessionChain`
     - `conversations/session-chain.recordSessionId`
     - `conversations/transcript-watcher.findTranscriptPath`
+    - `conversations/transcript-watcher.onSessionTranscriptWritten`
     - `conversations/transcript-watcher.readChainLines`
     - `conversations/transcript-watcher.refreshConversationChain`
     - `conversations/transcript-watcher.resolveAnchoredChain`

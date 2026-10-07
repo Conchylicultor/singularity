@@ -9,6 +9,7 @@ import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { resolveConversationTranscriptPaths } from "./resolve-chain";
 import { readJsonlEventsFromChain } from "./parse-jsonl";
 import { transcriptChainSignature } from "./chain-signature";
+import { notifySessionTranscriptWrites } from "./session-writes";
 import type { JsonlEvent } from "../../core";
 
 // ---------------------------------------------------------------------------
@@ -112,6 +113,7 @@ export async function startTranscriptWatcher(): Promise<void> {
   watcher = await transcriptsWatcher.start({
     dirs: [CLAUDE_PROJECTS_DIR],
     onChange: (events) => {
+      notifySessionTranscriptWrites(events, CLAUDE_PROJECTS_DIR);
       // Collapse the batch per room FIRST. Parcel delivers many events at once
       // (a sub-agent directory sees one per appended line), and a discovered
       // room re-resolves on each — so processing per event would run one DB

@@ -104,6 +104,7 @@ memo degrades to a full chain re-read on every push.
   - Exports (values):
     - `conversationChainTag`
     - `findTranscriptPath`
+    - `onSessionTranscriptWritten`
     - `readChainLines`
     - `readJsonlEvents`
     - `readJsonlEventsFromChain`

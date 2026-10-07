@@ -206,7 +206,11 @@ The op-signal directory exists so no backend has to watch
 output (thousands of files per build), which would stream to every backend. Until the push path has proved itself,
 a temporary 1 s shadow of the retired poller on main
 (`conversations.status-shadow-audit`) writes nothing and reports any state change
-no signal delivered within 2 s. Design:
+no signal delivered — one fixed only by the sweep, or not at all; a signal that
+merely came late is logged, not reported. Every session name is tested against
+one constant, `AGENT_SESSION_RE` (`pane-rows.ts`), by the pane listing and every
+signal route alike: a tmux-side `-f` copy of it once kept every pane, and main
+adopted sessions no signal could name. Design:
 [`research/2026-10-02-conversations-poller-push-status.md`](../../../../research/2026-10-02-conversations-poller-push-status.md).
 
 ## The pane starts from an allowlisted environment

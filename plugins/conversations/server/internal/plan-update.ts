@@ -57,7 +57,7 @@ export interface PlanContext {
   onMain: boolean;
   now: number;
   /**
-   * Whether the live session id passed `acceptsSessionId` — the async gate the
+   * Whether the live session id passed `sessionGate` — the async gate the
    * shell runs only when {@link sessionCandidate} names one.
    */
   sessionAccepted: boolean;
@@ -103,7 +103,7 @@ export function liveStatusFor(info: RuntimeInfo): ConversationStatus {
 }
 
 /**
- * The session id the shell must run `acceptsSessionId` on before planning, or
+ * The session id the shell must run `sessionGate` on before planning, or
  * null when there is nothing to gate: only on the rare reconcile where the
  * runtime reports an id different from the stored one, never on the steady
  * state.
