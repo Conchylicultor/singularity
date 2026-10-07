@@ -4065,6 +4065,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.FieldDef`
               - `primitives/data-view.FieldOption`
               - `primitives/data-view.ItemActionProps`
+              - `primitives/dom/auto-scroll.captureDocumentScroll`
+              - `primitives/dom/auto-scroll.restoreDocumentScroll`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/embed.isEmbeddedDocument`
@@ -4344,6 +4346,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
+              - `apps/prototypes/canvas`
               - `apps/prototypes/checkpoints`
               - `apps/prototypes/thumbnails`
         - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, grouped and filterable by a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
@@ -32624,7 +32627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/plugin-changes/file-changes`
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -32637,6 +32640,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/persistent-draft.writeDraft`
               - `ui/icons.Icon`
             - Exports (types):
+              - `DocumentScroll`
               - `EdgeAutoScroll`
               - `EdgeScrollSurface`
               - `FindScrollParentOptions`
@@ -32651,15 +32655,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `UseEdgeAutoScrollOptions`
               - `UseStickyScrollOptions`
             - Exports (values):
+              - `captureDocumentScroll`
               - `findScrollParent`
               - `JumpToBottomButton`
               - `KeepScrollAcross`
+              - `restoreDocumentScroll`
               - `scrollChildIntoView`
               - `scrollToBottom`
               - `useEdgeAutoScroll`
               - `useStickyScroll`
           - Cross-plugin:
             - Imported by:
+              - `apps/prototypes/canvas`
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-progression`
               - `conversations/conversation-view/jsonl-viewer`

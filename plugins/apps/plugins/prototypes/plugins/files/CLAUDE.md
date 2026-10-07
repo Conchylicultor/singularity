@@ -560,6 +560,7 @@ for the `checkpoints` plugin's end-of-turn job.
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/checkpoints`
     - `apps/prototypes/thumbnails`
 

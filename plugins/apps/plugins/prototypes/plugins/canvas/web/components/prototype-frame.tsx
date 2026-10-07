@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import {
   useEventCallback,
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  captureDocumentScroll,
+  restoreDocumentScroll,
+} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { usePageHeight } from "../internal/use-page-height";
 import {
   probePageExtent,
@@ -25,6 +29,13 @@ import {
  * always rendered after the one on screen, so promoting it only removes its
  * predecessor — React never moves the loaded frame's DOM node, which would
  * reload it.
+ *
+ * **A new `src` keeps the reader's place.** At the swap, every scroll offset of
+ * the outgoing document is carried onto the incoming one
+ * (`captureDocumentScroll` / `restoreDocumentScroll`, from auto-scroll),
+ * so an agent's edit reloading a live frame does not throw the reader back to
+ * the top. What the page holds in script (an open menu, a typed value) is not
+ * carried: that lives in the old document, and only a reload shows the edit.
  *
  * With `wholePage`, the document is first probed (`PageProbe`) for whether it
  * HAS a whole-page height. If it does, the frame is as tall as its own document
@@ -79,6 +90,9 @@ export function PrototypeFrame({
     onPageExtent({ kind: "page", height: h }),
   );
   const docHeight = hasPage && pageHeight !== null ? pageHeight : height;
+  // The in-flight scroll restore into the document on screen, if any.
+  const cancelRestore = useRef<(() => void) | null>(null);
+  useEffect(() => () => cancelRestore.current?.(), []);
 
   useEffect(() => {
     if (ready) publishScreenHeight(ready.doc, height);
@@ -120,6 +134,13 @@ export function PrototypeFrame({
               const doc = frame.contentDocument;
               // allow-same-origin (above) is what makes this readable.
               if (!doc) throw new Error("prototype frame is not same-origin");
+              if (loading && ready) {
+                cancelRestore.current?.();
+                cancelRestore.current = restoreDocumentScroll(
+                  doc,
+                  captureDocumentScroll(ready.doc),
+                );
+              }
               setShownSrc(frameSrc);
               setReady({ frame, doc });
             }}

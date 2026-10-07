@@ -5,13 +5,15 @@ container. `no-adhoc-scroll-write` (see
 [`scroll-safety`](../../../../../framework/plugins/tooling/plugins/lint/plugins/scroll-safety/CLAUDE.md))
 bans `scrollTop =` / `scrollTo()` / `scrollBy()` repo-wide except in this
 plugin's own files, so a new scroll behavior belongs *here*, not in the consumer
-that wants it. Today that is five roles:
+that wants it. Today that is six roles:
 
 - **stick-to-bottom streaming** — `useStickyScroll` + `JumpToBottomButton`
 - **container-scoped positioning** — `scrollToBottom`, `scrollChildIntoView`
   (scroll only THIS container; never an ancestor, unlike `scrollIntoView`)
 - **gesture edge auto-scroll** — `useEdgeAutoScroll`
 - **scroll kept across a wholesale swap** — `KeepScrollAcross`
+- **scroll carried to a new document** — `captureDocumentScroll` /
+  `restoreDocumentScroll`
 - **scroll-container discovery** — `findScrollParent`
 
 ## `useStickyScroll` — following is an intent, never an inference
@@ -77,6 +79,17 @@ changes, so ordinary updates force no layout. Restoring in the layout phase also
 lands before a child's state-driven follow-up render — `useVirtualRows` attaches
 its virtualizer there and reads the restored offset as its `initialOffset`.
 
+## `captureDocumentScroll` / `restoreDocumentScroll` — a reload keeps the place
+
+For a same-origin iframe whose new document replaces the old one (the prototype
+canvas swaps a loaded twin in on every live edit): capture every scroll offset
+of the outgoing document, restore them into the incoming one, matched by id or
+else DOM path. A client-rendered page is not tall enough at `load`, so the
+restore re-tries on every DOM mutation and sub-resource load until each offset
+is reached, the reader acts (wheel / touch / key / pointer — never `scroll`,
+which our own writes fire), or 5 s pass; the returned function cancels it.
+Script state is not carried — it lives in the old document.
+
 ## `useEdgeAutoScroll` — the gesture contract
 
 While a gesture's pointer sits in the top or bottom edge band of its scroll
@@ -116,7 +129,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.Button`
@@ -129,6 +142,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/persistent-draft.writeDraft`
     - `ui/icons.Icon`
   - Exports (types):
+    - `DocumentScroll`
     - `EdgeAutoScroll`
     - `EdgeScrollSurface`
     - `FindScrollParentOptions`
@@ -143,15 +157,18 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `UseEdgeAutoScrollOptions`
     - `UseStickyScrollOptions`
   - Exports (values):
+    - `captureDocumentScroll`
     - `findScrollParent`
     - `JumpToBottomButton`
     - `KeepScrollAcross`
+    - `restoreDocumentScroll`
     - `scrollChildIntoView`
     - `scrollToBottom`
     - `useEdgeAutoScroll`
     - `useStickyScroll`
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/canvas`
     - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-progression`
     - `conversations/conversation-view/jsonl-viewer`

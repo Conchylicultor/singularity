@@ -144,7 +144,11 @@ shift the whole stepper (the script notes it rather than failing). A recorded ve
 live folder is cache-busted by its `PrototypeMeta.rev` (a hash of that
 prototype's own files), so an agent's edit reloads it — and nothing else does. A new `src` loads in a second, hidden iframe and replaces the one
 on screen on `load` (`prototype-frame.tsx`), so a frame never blanks while a
-client-rendered prototype boots.
+client-rendered prototype boots, and every scroll offset of the outgoing
+document is carried onto the incoming one (auto-scroll's `restoreDocumentScroll`: matched
+by id, else by DOM path; re-tried as the new document renders, until reached,
+the reader scrolls, or 5 s), so a reload keeps the reader's place. Script state
+(an open menu, a typed value) is not carried.
 
 ## Size, zoom, Whole page
 
@@ -342,6 +346,8 @@ navigation, so it starts from nothing remembered.
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.FieldOption`
     - `primitives/data-view.ItemActionProps`
+    - `primitives/dom/auto-scroll.captureDocumentScroll`
+    - `primitives/dom/auto-scroll.restoreDocumentScroll`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/embed.isEmbeddedDocument`
