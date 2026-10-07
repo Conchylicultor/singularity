@@ -21,6 +21,10 @@ import {
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
+  ENTRY_CATEGORY_OPTIONS,
+  entryCategory,
+  entryExtension,
+  entryKindLabel,
   formatCount,
   formatModified,
   formatModifiedFull,
@@ -121,6 +125,13 @@ function buildRows(
         kind: entry.kind,
         size: entry.size,
         mtimeMs: entry.mtimeMs,
+        ...(entry.birthtimeMs !== undefined
+          ? { birthtimeMs: entry.birthtimeMs }
+          : {}),
+        ...(entry.atimeMs !== undefined ? { atimeMs: entry.atimeMs } : {}),
+        ...(entry.symlinkTarget !== undefined
+          ? { symlinkTarget: entry.symlinkTarget }
+          : {}),
         hidden: entry.hidden,
         browsable: isBrowsable(entry),
       });
@@ -192,23 +203,43 @@ const HOSTED: HostedToolbar = {
   forms: { switcher: "chip", options: "visible" },
 };
 
+/** The Kind column: what the entry is, in words ("PDF document", "Folder"). */
+const KIND_FIELD: FieldDef<EntryRow> = {
+  id: "kind",
+  label: "Kind",
+  width: "140px",
+  align: "start",
+  value: (r) => entryKindLabel(r),
+};
+
 /**
- * The Modified column: the short date, left-aligned, the full one on hover.
- * 92px: the mockup's 96px track less the row's 4px gap between cells.
+ * A date column (Modified, Created, Accessed): the short date, left-aligned,
+ * the full one on hover, "—" where the filesystem records none — its value
+ * then null, so it sorts last rather than as 1970. 92px: the mockup's 96px
+ * track less the row's 4px gap between cells.
  */
-function modifiedField(now: number): FieldDef<EntryRow> {
+function timeField(
+  id: string,
+  label: string,
+  get: (r: EntryRow) => number | undefined,
+  now: number,
+  visible?: boolean,
+): FieldDef<EntryRow> {
   return {
-    id: "modified",
-    label: "Modified",
+    id,
+    label,
     type: "number",
     width: "96px",
     align: "start",
-    value: (r) => r.mtimeMs,
-    cell: (r) => (
-      <span title={formatModifiedFull(r.mtimeMs)}>
-        {formatModified(r.mtimeMs, now)}
-      </span>
-    ),
+    ...(visible === undefined ? {} : { visible }),
+    value: (r) => get(r) ?? null,
+    cell: (r) => {
+      const ms = get(r);
+      if (ms === undefined) return "—";
+      return (
+        <span title={formatModifiedFull(ms)}>{formatModified(ms, now)}</span>
+      );
+    },
   };
 }
 
@@ -230,8 +261,9 @@ export interface FileTreeProps {
 }
 
 /**
- * The folder's contents as a DataView tree: Name / Modified / Size in aligned
- * columns plus every `FileBrowserSlots.Fields` contribution, folders first, every folder lazily listed through host-fs on first
+ * The folder's contents as a DataView tree: Name / Kind / Modified / Size in
+ * aligned columns (Created, Accessed, Category, Extension, Path and Link
+ * target hidden until switched on) plus every `FileBrowserSlots.Fields` contribution, folders first, every folder lazily listed through host-fs on first
  * expand — an archive file (a zip) expands like one. Clicking a folder makes it the listing; clicking a file selects it
  * (and opens it beside the listing). Double-click or Enter opens either.
  */
@@ -268,12 +300,17 @@ export function FileTree({
     [listings, request],
   );
 
-  // At 900px and under the Modified column gives its room to the names.
+  // At 900px and under the Kind and Modified columns give their room to the names.
   const narrow = useViewportAtMost(900);
   const fields = useMemo<FieldDef<EntryRow>[]>(
     () => [
       { id: "name", label: "Name", primary: true, value: (r) => r.name },
-      ...(narrow ? [] : [modifiedField(now)]),
+      ...(narrow
+        ? []
+        : [
+            KIND_FIELD,
+            timeField("modified", "Modified", (r) => r.mtimeMs, now),
+          ]),
       {
         id: "size",
         label: "Size",
@@ -285,6 +322,29 @@ export function FileTree({
           const n = childCount(listings, r.path, shows);
           return n === null ? "—" : formatCount(n);
         },
+      },
+      timeField("created", "Created", (r) => r.birthtimeMs, now, false),
+      timeField("accessed", "Accessed", (r) => r.atimeMs, now, false),
+      {
+        id: "category",
+        label: "Category",
+        type: "enum",
+        options: ENTRY_CATEGORY_OPTIONS,
+        visible: false,
+        value: (r) => entryCategory(r),
+      },
+      {
+        id: "extension",
+        label: "Extension",
+        visible: false,
+        value: (r) => entryExtension(r.name),
+      },
+      { id: "path", label: "Path", visible: false, value: (r) => r.path },
+      {
+        id: "link",
+        label: "Link target",
+        visible: false,
+        value: (r) => r.symlinkTarget ?? null,
       },
     ],
     [now, shows, listings, narrow],

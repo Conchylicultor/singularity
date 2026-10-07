@@ -169,6 +169,9 @@ describe("list", () => {
       size: 13,
       mtimeMs: 2000,
     });
+    // An archive records only mtime: no creation or access time.
+    expect(byName["readme.txt"]!.birthtimeMs).toBeUndefined();
+    expect(byName["readme.txt"]!.atimeMs).toBeUndefined();
   });
   test("a nested directory lists; a member file is not-a-dir; an unknown one missing", async () => {
     const nested = await listHostPath(join(archive, "2022"));

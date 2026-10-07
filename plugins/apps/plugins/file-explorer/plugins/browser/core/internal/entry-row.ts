@@ -15,6 +15,12 @@ export interface EntryRow {
   kind: HostFsEntryKind;
   size: number;
   mtimeMs: number;
+  /** Absent where the filesystem does not record it, and inside an archive. */
+  birthtimeMs?: number;
+  /** Approximate (see `HostFsEntry.atimeMs`); absent inside an archive. */
+  atimeMs?: number;
+  /** The link's own text, present iff the entry is a symlink. */
+  symlinkTarget?: string;
   hidden: boolean;
   /**
    * Opens like a folder: a directory, or an archive file (`isBrowsable`). An

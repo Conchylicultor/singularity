@@ -2899,14 +2899,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useExplorerLocation`
               - `useHomeDir`
               - `useOpenExplorerFolder`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/file-explorer/git`
-              - `apps/file-explorer/places`
-              - `conversations/conversation-view/explorer`
-              - `plugin-meta/plugin-view/file-tree`
           - Core:
+            - Uses:
+              - `primitives/file-type.FilePreview`
+              - `primitives/file-type.fileTypeOf`
             - Exports (types):
+              - `EntryCategory`
               - `EntryRow`
               - `ExplorerLens`
               - `ExplorerLocation`
@@ -2917,6 +2915,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `decodeOpenParam`
               - `displayPath`
               - `encodeOpenParam`
+              - `ENTRY_CATEGORY_OPTIONS`
+              - `entryCategory`
+              - `entryExtension`
+              - `entryKindLabel`
               - `formatCount`
               - `formatModified`
               - `formatModifiedFull`
@@ -2927,6 +2929,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `locationKey`
               - `parentPath`
               - `pathChain`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/file-explorer/git`
+              - `apps/file-explorer/places`
+              - `conversations/conversation-view/explorer`
+              - `plugin-meta/plugin-view/file-tree`
         - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field, ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (GET /api/file-explorer/git/checkout, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from a file watcher on the checkout and its git dir while subscribed.
           - Web:
             - Contributes:

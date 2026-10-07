@@ -14,6 +14,15 @@ function kindOf(st: Stats): HostFsEntryKind {
   return "other";
 }
 
+/** The entry's creation and access times, from the same `Stats` as its mtime. */
+function times(st: Stats): Pick<HostFsEntry, "birthtimeMs" | "atimeMs"> {
+  // Linux filesystems without statx birth time report 0: not recorded, not 1970.
+  return {
+    atimeMs: st.atimeMs,
+    ...(st.birthtimeMs > 0 ? { birthtimeMs: st.birthtimeMs } : {}),
+  };
+}
+
 /**
  * The `archive` mark of a file named `name`: present when a registered format
  * claims it. A name check only, so a listing costs no extra I/O.
@@ -50,6 +59,7 @@ export async function describeEntry(
       kind,
       size: own.size,
       mtimeMs: own.mtimeMs,
+      ...times(own),
       hidden,
       ...archiveMark(kind, name),
     };
@@ -62,6 +72,7 @@ export async function describeEntry(
       kind: "symlink",
       size: own.size,
       mtimeMs: own.mtimeMs,
+      ...times(own),
       hidden,
       symlinkTarget,
     };
@@ -73,6 +84,7 @@ export async function describeEntry(
     kind,
     size: st.size,
     mtimeMs: st.mtimeMs,
+    ...times(st),
     hidden,
     symlinkTarget,
     ...archiveMark(kind, name),

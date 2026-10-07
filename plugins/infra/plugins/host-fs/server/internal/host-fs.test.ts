@@ -95,6 +95,9 @@ describe("listHostDir", () => {
       hidden: false,
     });
     expect(byName["notes.txt"]!.symlinkTarget).toBeUndefined();
+    // Creation and access times ride along from the same stat as mtime.
+    expect(byName["notes.txt"]!.birthtimeMs).toBeGreaterThan(0);
+    expect(byName["notes.txt"]!.atimeMs).toBeNumber();
     // A symlink to a directory IS a directory.
     expect(byName["link-to-beta"]).toMatchObject({
       kind: "dir",

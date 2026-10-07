@@ -24,6 +24,16 @@ export const HostFsEntrySchema = z.object({
   /** Bytes, of the resolved target for a followed symlink. */
   size: z.number(),
   mtimeMs: z.number(),
+  /**
+   * When the entry was created, where the filesystem records it. Absent inside
+   * an archive, and on a filesystem without birth time.
+   */
+  birthtimeMs: z.number().optional(),
+  /**
+   * Last access as the filesystem records it — approximate (relatime / lazy
+   * updates, and our own reads bump it). Absent inside an archive.
+   */
+  atimeMs: z.number().optional(),
   /** A dotfile. Presentation only: hidden entries are still listed. */
   hidden: z.boolean(),
   /** The link's own text (`readlink`), present iff the entry is a symlink. */

@@ -21,4 +21,11 @@ export {
   formatSize,
 } from "./internal/format";
 export type { EntryRow } from "./internal/entry-row";
+export {
+  ENTRY_CATEGORY_OPTIONS,
+  entryCategory,
+  entryExtension,
+  entryKindLabel,
+  type EntryCategory,
+} from "./internal/entry-kind";
 export type { ExplorerLens, LensHideRule } from "./internal/lens";
