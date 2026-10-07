@@ -19,27 +19,26 @@
   }
 }
 
-/* A bar: its number on top, its chords, a dot per beat underneath. */
+/* A bar: its number on top, its chords, a dot per beat underneath. No frame
+ * of its own — the chord boxes are the only cards on the sheet. */
 .chord-chart-bar {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 2px;
   height: 6.5rem;
   padding: 2px 4px 4px;
-  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--card);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  transition: background-color 0.15s;
 }
 .chord-chart-bar > :first-child {
   padding-inline-start: 4px;
 }
-/* The bar under the playhead: outlined in the ink colour. */
+/* The bar under the playhead: a quiet wash behind it, its number in ink. */
 .chord-chart-bar[data-active] {
-  border-color: var(--foreground);
-  box-shadow: 0 0 0 1px var(--foreground);
+  background: var(--muted);
+}
+.chord-chart-bar[data-active] > :first-child {
+  color: var(--foreground);
 }
 
 /* The chords, each as wide as the beats it lasts in the bar. */

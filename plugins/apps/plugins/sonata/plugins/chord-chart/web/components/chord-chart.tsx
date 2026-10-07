@@ -252,9 +252,9 @@ function ChordChartInner({ score }: ChordChartProps) {
 }
 
 /**
- * One bar: a neutral cell holding its bar number, its chords as chord boxes
+ * One bar, unframed: its bar number, its chords as chord boxes
  * weighted by the beats they last in it, and a dot per beat. A chord held over
- * the barline is a tie — the dimmed box, no text. The active bar is outlined
+ * the barline is a tie — the dimmed box, no text. The active bar gets a quiet wash
  * and carries the beat line.
  */
 function BarCell({
