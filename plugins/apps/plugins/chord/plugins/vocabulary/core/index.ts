@@ -1,5 +1,6 @@
 export { chordLabel } from "./label";
 export type { ChordLabel } from "./label";
+export { appliedReading, inversionReading } from "./reading";
 export { chordDegree, chordFunction } from "./degree";
 export type { ChordFunction } from "./degree";
 export { chordDigit, chordKeyPlan, pickPage } from "./keys";

@@ -13,6 +13,7 @@ import {
   CORE_SECTION_ID,
   OTHER_SECTION_ID,
   TRACK_RULES,
+  type ChordReader,
   type TrackRule,
 } from "./catalog-rules";
 import { chordState, type ChordState, type Selection } from "./selection";
@@ -31,10 +32,12 @@ export const LISTED_SHARE = 0.01;
 /** A section with this many rare chords or fewer lists them instead of folding them. */
 export const MAX_FOLDED_RARE = 2;
 
-/** One listed chord, and the share of its section's windows holding it (0…1). */
+/** One listed chord, the share of its section's windows holding it (0…1), and what it reads as there ("V/V", "I/3", "Neapolitan"). */
 export const CatalogChordSchema = z.object({
   token: ChordTokenSchema,
   share: z.number().min(0).max(1),
+  /** Shown under the numeral; null when the chord is just itself (I, V7). */
+  reading: z.string().nullable(),
 });
 export type CatalogChord = z.infer<typeof CatalogChordSchema>;
 
@@ -103,6 +106,8 @@ export type CatalogState = z.infer<typeof CatalogStateSchema>;
 /** One section while it is counted. */
 type Tally = {
   rule: { id: string; name: string; kind: SectionKind };
+  /** The section's own reader, tried before the track's. */
+  reads: ChordReader | undefined;
   /** Its rule index in the track: the tiebreak after coverage. */
   order: number;
   scope: readonly HookpadMode[];
@@ -146,6 +151,7 @@ function buildTrack(
             ? ("core" as const)
             : ("section" as const),
       },
+      reads: rule.reads,
       order,
       scope: rule.scope ?? track.scope,
       windows: 0,
@@ -154,6 +160,7 @@ function buildTrack(
     })),
     {
       rule: { id: OTHER_SECTION_ID, name: "Other", kind: "other" as const },
+      reads: undefined,
       order: track.sections.length,
       scope: track.scope,
       windows: 0,
@@ -238,8 +245,8 @@ function finishSection(
     .map(([token, count]) => ({ token, share: share(count) }))
     .sort((a, b) => b.share - a.share || compareTokens(a.token, b.token));
 
-  let listed: CatalogChord[];
-  let rare: CatalogChord[];
+  let listed: Ranked[];
+  let rare: Ranked[];
   switch (tally.rule.kind) {
     case "core":
       listed = byShare;
@@ -282,10 +289,17 @@ function finishSection(
     scope: [...tally.scope],
     windows: tally.windows,
     coverage: share(tally.covered),
-    chords: listed,
+    chords: listed.map(({ token, share }) => ({
+      token,
+      share,
+      reading: tally.reads?.(token) ?? track.reads(token),
+    })),
     rare: rareGroup,
   };
 }
+
+/** A chord of a section and its share, before it is listed or folded. */
+type Ranked = { token: ChordToken; share: number };
 
 const compareTokens = (a: ChordToken, b: ChordToken) =>
   a < b ? -1 : a > b ? 1 : 0;

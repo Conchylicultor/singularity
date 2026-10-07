@@ -694,6 +694,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/song-index.LoopExtrasSchema`
               - `apps/chord/song-index.parseChordToken`
               - `apps/chord/song-index.TokenSetCount`
+              - `apps/chord/vocabulary.appliedReading`
+              - `apps/chord/vocabulary.chordLabel`
+              - `apps/chord/vocabulary.inversionReading`
               - `infra/endpoints.defineEndpoint`
               - `integrations/hooktheory.HookpadMode`
               - `integrations/hooktheory.HookpadModeSchema`
@@ -1226,7 +1229,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `videoStatusSummaryEndpoint`
           - Cross-plugin:
             - Imported by: `apps/chord/song-index`
-        - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour. Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
+        - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
             - Exports (types): `ChordPaint`
@@ -1237,6 +1240,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses:
               - `apps/chord/song-index.ChordToken`
+              - `apps/chord/song-index.chordTokenFromParts`
               - `apps/chord/song-index.parseChordToken`
               - `apps/sonata/score.accidentalGlyph`
               - `apps/sonata/score.fifthsToTonic`
@@ -1261,6 +1265,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SongKey`
               - `SongVocabulary`
             - Exports (values):
+              - `appliedReading`
               - `chordDegree`
               - `chordDigit`
               - `chordFunction`
@@ -1268,6 +1273,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `chordLabel`
               - `chordSound`
               - `chordVoicing`
+              - `inversionReading`
               - `pickPage`
               - `songKeyLabel`
               - `songKeySignature`

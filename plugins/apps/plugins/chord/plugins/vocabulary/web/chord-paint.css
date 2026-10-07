@@ -93,3 +93,13 @@
   vertical-align: 0.9em;
   margin-left: 0.05em;
 }
+
+/* ── A reading under the numeral ("V/V", "I/3") ──────────────────────────────
+ * In the paint's ink, dimmed, so it reads as the numeral's footnote on every
+ * paint; unpainted, the muted text. Its size is the surface's. */
+.chord-caption {
+  font-family: var(--font-sans);
+  line-height: 1;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--chord-ink, var(--muted-foreground)) 75%, transparent);
+}

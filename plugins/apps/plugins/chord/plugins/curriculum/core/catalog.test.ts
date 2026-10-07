@@ -20,7 +20,13 @@ import {
   type Catalog,
   type CatalogTrack,
 } from "./catalog";
-import { MODE_SCALES, TRACK_RULES } from "./catalog-rules";
+import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
+import {
+  MAJOR_NAMES,
+  MODE_SCALES,
+  SECTION_NAMES,
+  TRACK_RULES,
+} from "./catalog-rules";
 import { firstSelection, type Selection } from "./selection";
 
 const t = (text: string) => text as ChordToken;
@@ -87,11 +93,11 @@ describe("buildCatalog over a known index", () => {
     const core = major.sections[0];
     expect(core?.id).toBe("major:core");
     expect(core?.chords).toEqual([
-      { token: I, share: 0.911 },
-      { token: IV, share: 0.5 },
-      { token: V, share: 0.5 },
-      { token: vi, share: 0.3 },
-      { token: viiDim, share: 0.005 },
+      { token: I, share: 0.911, reading: null },
+      { token: IV, share: 0.5, reading: null },
+      { token: V, share: 0.5, reading: null },
+      { token: vi, share: 0.3, reading: null },
+      { token: viiDim, share: 0.005, reading: null },
     ]);
     expect(core?.rare).toBeNull();
     expect(core?.coverage).toBe(0.911);
@@ -111,7 +117,9 @@ describe("buildCatalog over a known index", () => {
 
   test("more than two chords below 1 % fold into the rare group", () => {
     const colour = sectionOf(major, "colour");
-    expect(colour.chords).toEqual([{ token: Vsus4, share: 0.05 }]);
+    expect(colour.chords).toEqual([
+      { token: Vsus4, share: 0.05, reading: null },
+    ]);
     expect(colour.rare?.tokens).toEqual([Isus4, Isus2, IVsus2]);
     expect(colour.rare?.share).toBeCloseTo(0.012, 10);
   });
@@ -133,7 +141,7 @@ describe("buildCatalog over a known index", () => {
     const jazz = trackOf(catalog, "jazz");
     expect(trackTokens(jazz)).toEqual([V7]);
     expect(sectionOf(jazz, "sevenths").chords).toEqual([
-      { token: V7, share: 0.1 },
+      { token: V7, share: 0.1, reading: null },
     ]);
   });
 
@@ -220,8 +228,8 @@ describe("buildCatalog: modal sections", () => {
       ["modal:lydian", 40],
     ]);
     expect(sectionOf(modal, "dorian").chords).toEqual([
-      { token: i, share: 1 },
-      { token: IV, share: 0.75 },
+      { token: i, share: 1, reading: null },
+      { token: IV, share: 0.75, reading: null },
     ]);
   });
 
@@ -342,5 +350,66 @@ describe("buildCatalog places every chord exactly once per mode", () => {
         expect(shares).toEqual([...shares].sort((a, b) => b - a));
       }
     }
+  });
+});
+
+describe("buildCatalog: readings", () => {
+  const I6 = t("0:4-3/1");
+  const I7 = t("0:4-3-3/0");
+  const flatII = t("1:4-3/0");
+  const catalog = buildCatalog([
+    set("major", [I, II, I6, I7, flatII], 100),
+    set("minor", [i, I, IV, flatII], 100),
+    set("phrygian", [i, flatII], 100),
+  ]);
+  const readingOf = (track: string, section: string, token: ChordToken) =>
+    sectionOf(trackOf(catalog, track), section).chords.find(
+      (c) => c.token === token,
+    )?.reading;
+
+  test("structural readings: an inversion over its bass, an applied dominant by its target", () => {
+    expect(readingOf("major", "inversions", I6)).toBe("I/3");
+    expect(readingOf("major", "secondary", II)).toBe("V/V");
+    expect(readingOf("major", "secondary", I7)).toBe("V7/IV");
+    expect(readingOf("major", "core", I)).toBeNull();
+  });
+
+  test("a name depends on where the chord is heard", () => {
+    expect(readingOf("major", "borrowed", flatII)).toBe("Neapolitan");
+    expect(readingOf("minor", "colour", flatII)).toBe("Neapolitan");
+    expect(readingOf("minor", "borrowed", I)).toBe("Picardy");
+    expect(readingOf("minor", "borrowed", IV)).toBe("dorian IV");
+    expect(readingOf("modal", "phrygian", flatII)).toBe("phrygian");
+    expect(readingOf("modal", "phrygian", i)).toBeNull();
+  });
+
+  test("every named chord is spelled as some chord's label", () => {
+    // Every label the common stacks take, on any root.
+    const labels = new Set<string>();
+    const stacks = [
+      [4, 3],
+      [3, 4],
+      [3, 3],
+      [4, 3, 3],
+      [4, 3, 4],
+      [3, 4, 3],
+      [3, 3, 3],
+      [4, 3, 3, 4, 3],
+    ];
+    for (let root = 0; root < 12; root++) {
+      for (const intervals of stacks) {
+        labels.add(
+          chordLabel(chordTokenFromParts({ root, intervals, inversion: 0 }))
+            .text,
+        );
+      }
+    }
+    const names = [
+      ...Object.keys(MAJOR_NAMES),
+      ...Object.values(SECTION_NAMES).flatMap((sections) =>
+        Object.values(sections).flatMap((n) => Object.keys(n)),
+      ),
+    ];
+    expect(names.filter((name) => !labels.has(name))).toEqual([]);
   });
 });

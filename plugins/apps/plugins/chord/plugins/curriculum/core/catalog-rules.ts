@@ -1,4 +1,12 @@
-import type { ChordTokenParts } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import type {
+  ChordToken,
+  ChordTokenParts,
+} from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import {
+  appliedReading,
+  chordLabel,
+  inversionReading,
+} from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import type { HookpadMode } from "@plugins/integrations/plugins/hooktheory/core";
 
 // ── The catalog's rules: tracks, and the sections a chord falls into ────────
@@ -143,7 +151,12 @@ export type SectionRule = {
   /** The key modes whose windows the section counts in. Absent = the track's. */
   scope?: readonly HookpadMode[];
   holds: (parts: ChordTokenParts) => boolean;
+  /** What a chord reads as HERE, before the track's reading: Picardy for I in minor's borrowed chords. Null falls through to the track. */
+  reads?: ChordReader;
 };
+
+/** What a listed chord does, shown under its numeral ("V/V", "I/3", "Neapolitan"), or null. */
+export type ChordReader = (token: ChordToken) => string | null;
 
 export type TrackRule = {
   id: string;
@@ -158,6 +171,8 @@ export type TrackRule = {
   listedShare?: number;
   /** In classification order: the first that holds a chord owns it. Other is added after them. */
   sections: readonly SectionRule[];
+  /** What a chord of the track reads as, unless its section says otherwise. */
+  reads: ChordReader;
 };
 
 /** The id every track's catch-all section takes. */
@@ -249,6 +264,74 @@ const JAZZ_FAMILIES = [
   substitution,
 ];
 
+// ── Readings: what a chord does, under its numeral ───────────────────────────
+//
+// The structural readings (an inversion over its bass, an applied dominant by
+// its target) are vocabulary's, read off the token. The names here depend on
+// the key the chord is heard in, which is what a track and a section know: ♭II
+// is the Neapolitan in a major or minor key and simply phrygian in a phrygian
+// one; I is the Picardy third in minor.
+
+/** The first reader with something to say. */
+const firstOf =
+  (...readers: ChordReader[]): ChordReader =>
+  (token) => {
+    for (const read of readers) {
+      const reading = read(token);
+      if (reading !== null) return reading;
+    }
+    return null;
+  };
+
+/** Names by the chord's label ("♭II" → "Neapolitan"): the label is how a musician spells the chord. */
+export const named =
+  (names: Readonly<Record<string, string>>): ChordReader =>
+  (token) =>
+    names[chordLabel(token).text] ?? null;
+
+const inversion: ChordReader = inversionReading;
+const appliedIn =
+  (scale: readonly number[]): ChordReader =>
+  (token) =>
+    appliedReading(token, scale);
+
+/** Named chords of a major key: the ones an applied-dominant reading cannot name. */
+export const MAJOR_NAMES: Readonly<Record<string, string>> = {
+  "♭II": "Neapolitan",
+  "♭II7": "tritone sub",
+  "♭VII7": "backdoor",
+  IV7: "blues IV",
+};
+const MAJOR_READS = firstOf(inversion, appliedIn(MAJOR), named(MAJOR_NAMES));
+/** In minor, ♭VII7 is the key's own seventh: no name. */
+const MINOR_READS = firstOf(inversion, appliedIn(MINOR));
+
+/** Per-section names, by track then section id: what a chord is called where it is heard. */
+export const SECTION_NAMES: Readonly<
+  Record<string, Readonly<Record<string, Readonly<Record<string, string>>>>>
+> = {
+  minor: {
+    borrowed: { IV: "dorian IV", I: "Picardy" },
+    colour: { "♭II": "Neapolitan" },
+  },
+  modal: {
+    mixolydian: { I7: "tonic 7" },
+    lydian: { II: "lydian II" },
+    phrygian: { "♭II": "phrygian" },
+    locrian: { "♭II": "phrygian" },
+    phrygianDominant: { "♭II": "phrygian" },
+  },
+};
+
+/** The section's own names, when it has any. */
+function sectionReads(
+  trackId: string,
+  sectionId: string,
+): ChordReader | undefined {
+  const names = SECTION_NAMES[trackId]?.[sectionId];
+  return names === undefined ? undefined : named(names);
+}
+
 const MODAL_MODES = [
   ["mixolydian", "Mixolydian"],
   ["dorian", "Dorian"],
@@ -290,6 +373,7 @@ export const TRACK_RULES: readonly TrackRule[] = [
     name: "Major",
     blurb: "The chords of major-key songs, most common first.",
     scope: ["major"],
+    reads: MAJOR_READS,
     sections: [
       { id: CORE_SECTION_ID, name: "Core", holds: majorTriad },
       { id: "sevenths", name: "Diatonic sevenths", holds: majorSeventh },
@@ -313,6 +397,7 @@ export const TRACK_RULES: readonly TrackRule[] = [
     name: "Minor",
     blurb: "Minor-key songs: a new home chord, i.",
     scope: ["minor"],
+    reads: MINOR_READS,
     sections: [
       { id: CORE_SECTION_ID, name: "Core", holds: minorTriad },
       { id: "sevenths", name: "Sevenths", holds: minorSeventh },
@@ -322,11 +407,17 @@ export const TRACK_RULES: readonly TrackRule[] = [
         name: "Inversions",
         holds: inversionOf(...MINOR_FAMILIES),
       },
-      { id: "borrowed", name: "Borrowed from major", holds: borrowedIntoMinor },
+      {
+        id: "borrowed",
+        name: "Borrowed from major",
+        holds: borrowedIntoMinor,
+        reads: sectionReads("minor", "borrowed"),
+      },
       {
         id: "colour",
         name: "Colour & chromatic",
         holds: neapolitanOrColour,
+        reads: sectionReads("minor", "colour"),
       },
       { id: "secondary", name: "Secondary dominants", holds: minorSecondary },
       { id: "diminished", name: "Diminished & passing", holds: passing },
@@ -338,11 +429,15 @@ export const TRACK_RULES: readonly TrackRule[] = [
     blurb: "Chords you know, heard from a different home.",
     scope: MODAL_MODES.map(([mode]) => mode),
     listedShare: 0.05,
+    // A mode is heard as a home, so only an inversion is read structurally;
+    // what a chord is called there is its section's.
+    reads: inversion,
     sections: MODAL_MODES.map(([mode, name]) => ({
       id: mode,
       name,
       scope: [mode],
       holds: () => true,
+      reads: sectionReads("modal", mode),
     })),
   },
   {
@@ -351,6 +446,7 @@ export const TRACK_RULES: readonly TrackRule[] = [
     blurb: "Seventh chords and beyond, in major-key songs.",
     scope: ["major"],
     admits: (parts) => toneCount(parts) >= 4,
+    reads: MAJOR_READS,
     sections: [
       { id: "sevenths", name: "Diatonic sevenths", holds: majorSeventh },
       {

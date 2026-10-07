@@ -4,13 +4,13 @@
  * The mockup is proto-1791276393-29e2 (data = index).
  *
  * Every colour reads the chord theme: surfaces and ink from the colour
- * palette, the chord colours from `--fn`. No hex lives here. The mockup's gold
- * accent is the theme's ink: the chord colours are the only colour on the
- * page. */
+ * palette, the chord colours from `--fn`, the mockup's gold from the theme's
+ * `--accent` (the started track, its coverage, the "from the next loop" note,
+ * Undo clear). No hex lives here. */
 
 /* ── The "from the next loop" note and Clear / Undo clear ─────────────────── */
 .chord-applied {
-  color: var(--foreground);
+  color: var(--accent);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -29,7 +29,7 @@
   background: var(--secondary);
 }
 .chord-clear[data-undo] {
-  color: var(--foreground);
+  color: var(--accent);
   background: var(--secondary);
 }
 
@@ -70,8 +70,8 @@
   color: var(--faint-foreground);
 }
 .chord-track-badge[data-started] {
-  border-color: var(--foreground);
-  color: var(--foreground);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .chord-stat {
   color: var(--muted-foreground);
@@ -84,8 +84,8 @@
   background: var(--border);
 }
 .chord-track-cov-fill {
-  background: var(--foreground);
-  opacity: 0.6;
+  background: var(--accent);
+  opacity: 0.75;
 }
 .chord-track-body {
   padding: 2px 0 12px 28px;
@@ -115,21 +115,28 @@
  * The paints are vocabulary's (`chordPaint`, `STATE_PAINT` in the component):
  * the very tile the trainer's boxes and "Your chords" wear. This file sizes
  * the chip and draws its state chrome (the suggested-next ring, the hover
- * lift, the mastery marks); it never names a chord colour. */
+ * lift, the mastery marks); it never names a chord colour. Tall enough for
+ * the reading under the numeral (`.chord-caption`, in the paint's ink). */
 .chord-pick {
-  min-width: 38px;
-  height: 32px;
-  padding: 0 7px;
-  border-radius: 8px;
-  display: inline-grid;
-  place-items: center;
+  min-width: 48px;
+  height: 44px;
+  padding: 0 9px;
+  border-radius: 10px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition:
     background 0.12s,
     border-color 0.12s;
 }
 .chord-pick .chord-num {
-  font-size: 17px;
+  font-size: 18px;
+}
+.chord-pick-caption {
+  font-size: 9px;
+  margin-top: 2px;
 }
 .chord-pick:hover {
   filter: brightness(1.12);
@@ -140,7 +147,7 @@
 }
 /* A practised chip's marks, in the tile's ink. */
 .chord-pick-ok {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--chord-ink);
 }
 .chord-pick-m {
@@ -157,13 +164,13 @@
  * Not one chord, so no chord paint: a neutral word chip in the ink and
  * surfaces of the palette. */
 .chord-rare {
-  height: 32px;
-  padding: 0 9px;
-  border-radius: 8px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
   white-space: nowrap;
   border: 1.5px dashed var(--input);
   color: var(--faint-foreground);
-  font-size: 11.5px;
+  font-size: 12px;
   cursor: pointer;
 }
 .chord-rare:hover {

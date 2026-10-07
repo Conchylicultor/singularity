@@ -141,23 +141,35 @@ useCurriculumWrites()  → { setChords(changes, onDone?), setBlanks(blanks, onDo
   learner has on (listed chords weighted by their windows, rare groups by
   theirs). A section: its name, `on/listed`, and a None · Hear · Practise
   control shown on hover or focus only (it sets the listed chords and the rare
-  group). Chips are one height (`<ChordNumeral>`, `chordToneStyle`); a click
+  group). Chips are one height, 44 px (`<ChordNumeral>`, `chordToneStyle`),
+  with the chord's **reading** under the numeral when it has one (`V/V`,
+  `I/3`, `Neapolitan` — `CatalogChord.reading`, see below); a click
   cycles off → hear → practise; a practised chip shows ✓ once mastered or a
   mini meter while learning; the suggested-next chip (`suggestedNext`) is
   outlined. One "+N rare" chip per section ("N other chords" for Other) cycles
   the whole group; a group partly on reads `mixed` (dotted) and a click
   completes it to practise. The **footer** has a fixed height (sticky at the
   bottom of the scroll): a legend at rest; on hover or focus, the exact numbers
-  — the chord's share in its section's scope and its tier (common ≥ 5 %,
+  — its reading, the chord's share in its section's scope and its tier (common ≥ 5 %,
   occasional ≥ 1 %, rare), the other tracks listing it, its state, its mastery
   and about what share of the loops it gets now. No percentages at rest.
 - **`standing`** is a lookup the trainer builds from `chord.progress` and
   `desiredShare` (`ChipStanding`: answers, window, accuracy, mastered,
   loopShare; `"rare"` for the pooled rare chords). The curriculum does not read
   progress itself: progress depends on the curriculum.
+- **Readings** are computed once, in the catalog: each listed chord's
+  `reading` is its section rule's `reads` (a name heard only there — I is
+  `Picardy` in Minor › Borrowed from major, ♭II `phrygian` in the phrygian
+  modes) else its track's (an inversion over its bass and an applied dominant
+  by its target, both vocabulary's `inversionReading` / `appliedReading`, then
+  the key's named chords — `Neapolitan`, `backdoor`, `tritone sub`, `blues IV`
+  in major). Names are keyed by the chord's label (`MAJOR_NAMES`,
+  `SECTION_NAMES` in `catalog-rules.ts`); a test checks every key is a real
+  label. Minor names no ♭VII7: it is the key's own seventh.
 - Paint: `web/components/chords.css` — every colour from the chord theme; the
-  mockup's gold accent is the theme's ink (the chord colours are the only
-  colour on the page).
+  mockup's gold is the theme's `--accent` (the started track, its coverage
+  bar, the "✓ from the next loop" note, Undo clear). The caption's colour is
+  vocabulary's `.chord-caption`, in the chip paint's ink.
 
 ## e2e
 
@@ -259,6 +271,9 @@ A round nothing was typed into reads exactly like the next one, so after
     - `apps/chord/song-index.LoopExtrasSchema`
     - `apps/chord/song-index.parseChordToken`
     - `apps/chord/song-index.TokenSetCount`
+    - `apps/chord/vocabulary.appliedReading`
+    - `apps/chord/vocabulary.chordLabel`
+    - `apps/chord/vocabulary.inversionReading`
     - `infra/endpoints.defineEndpoint`
     - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.HookpadModeSchema`

@@ -161,6 +161,8 @@ type Hover =
   | {
       kind: "chord";
       token: ChordToken;
+      /** What it reads as in its section ("V/V"), or null. */
+      reading: string | null;
       track: CatalogTrack;
       section: CatalogSection;
       share: number;
@@ -607,12 +609,14 @@ function Section({
           <ChordChip
             key={chord.token}
             token={chord.token}
+            reading={chord.reading}
             suggested={chord.token === next}
             ctx={ctx}
             onHover={() =>
               ctx.setHover({
                 kind: "chord",
                 token: chord.token,
+                reading: chord.reading,
                 track,
                 section,
                 share: chord.share,
@@ -643,11 +647,13 @@ function Section({
 
 function ChordChip({
   token,
+  reading,
   suggested,
   ctx,
   onHover,
 }: {
   token: ChordToken;
+  reading: string | null;
   suggested: boolean;
   ctx: Ctx;
   onHover: () => void;
@@ -662,7 +668,9 @@ function ChordChip({
       style={chordToneStyle(token)}
       data-state={state}
       data-next={suggested ? "" : undefined}
-      aria-label={`${chordLabel(token).text}, ${STATE_LABEL[state]}`}
+      aria-label={[chordLabel(token).text, reading, STATE_LABEL[state]]
+        .filter((part) => part !== null)
+        .join(", ")}
       onClick={() => ctx.apply([{ token, state: NEXT_STATE[state] }])}
       onPointerEnter={onHover}
       onFocus={onHover}
@@ -670,10 +678,13 @@ function ChordChip({
       onBlur={() => ctx.setHover(null)}
     >
       <ChordNumeral token={token} />
+      {reading !== null && (
+        <span className="chord-caption chord-pick-caption">{reading}</span>
+      )}
       {learning?.kind === "mastered" && (
         <span
           className={cn(placedClasses({ decorative: true }), "chord-pick-ok")}
-          style={placedStyle({ end: 3 }, { start: 2 })}
+          style={placedStyle({ end: 4 }, { start: 2 })}
         >
           <Icon icon={checkIcon} />
         </span>
@@ -841,7 +852,7 @@ function HoverDetail({ hover, ctx }: { hover: Hover; ctx: Ctx }) {
       />
     );
   }
-  const { token, track, share } = hover;
+  const { token, reading, track, share } = hover;
   const state = chordState(ctx.selection, token);
   const others = [
     ...new Set(
@@ -877,6 +888,7 @@ function HoverDetail({ hover, ctx }: { hover: Hover; ctx: Ctx }) {
                 ? "Hearing"
                 : "Off"}
           </b>
+          {reading !== null && ` · ${reading}`}
           {others.length > 0 && ` · also in ${others.join(", ")}`}
         </>
       }

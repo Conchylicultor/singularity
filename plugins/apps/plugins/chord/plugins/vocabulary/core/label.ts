@@ -53,7 +53,7 @@ const TRIAD_FIGURES = ["", "6", "64"] as const;
 const SEVENTH_FIGURES = ["", "65", "43", "42"] as const;
 
 /** A pitch above the tonic as a major-scale degree, with Sonata's accidental readings. */
-const SCALE_DEGREE_NAMES = [
+export const SCALE_DEGREE_NAMES = [
   "1",
   "♭2",
   "2",

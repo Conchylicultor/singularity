@@ -15,11 +15,15 @@ const INK_2 = "#979590";
 const INK_3 = "#66655F";
 const OK = "#62B57A";
 const BAD = "#E2574C";
+const GOLD = "#E8C26A";
 
 /**
  * Surfaces and text. `primary` is the mockup's filled button — a grey (13 %
- * ink over the raised surface), not white and not an accent: the chord colours
- * are the only colour on the page.
+ * ink over the raised surface), not white. `accent` is the mockup's one accent,
+ * gold: what marks progress and confirms a change (a started track, its
+ * coverage, "from the next loop") — and, being the palette's accent, every
+ * shared hover and selection fill in the app, with dark text on it. Beside it,
+ * the chord colours are the only colour on the page.
  *
  * Written with `both(…)`, like every fragment here: light mode gets the same
  * dark values, which is what makes the app dark only.
@@ -39,8 +43,8 @@ const colorPalette = colorPaletteGroup.fragment(
     muted: RAISED,
     mutedForeground: INK_2,
     faintForeground: INK_3,
-    accent: RULE_2,
-    accentForeground: INK,
+    accent: GOLD,
+    accentForeground: GROUND,
     destructive: BAD,
     destructiveForeground: GROUND,
     success: OK,

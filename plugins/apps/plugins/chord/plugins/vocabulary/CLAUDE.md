@@ -9,6 +9,8 @@ What the Chord trainer says about a chord token (`"7:4-3-3/1"`, see
 chordLabel(token)        → { numeral, suffix, figure, text }   // "V" "" "65" "V65"
 chordDegree(token)       → 0..6 | null                          // major-scale degree of the root
 chordFunction(token)     → "tonic" | "subdominant" | "dominant" | null
+inversionReading(token)  → "I/3" | "V7/4" | null                // root-position chord over its bass degree
+appliedReading(token, scale) → "V/V" | "V7/IV" | "vii°7/V" | null // a foreign dominant, by its target
 chordDigit(token)        → "1".."7"                             // the root's LETTER degree: ♭VII → 7
 chordKeyPlan(unlocked)   → { digit, tokens[] }[]                // digits ascending, tokens in unlock order
 pickPage(tokens, page)   → { numbers, pager }                   // the second stroke, paged past seven
@@ -23,7 +25,19 @@ songVocabulary(key)      → { nameChord, noteName }              // "D7", "D/F�
 <ChordNumeral token/>    // the numeral, its mark and figure raised beside it
 chordToneStyle(token)    // --fn / --fn-depth, which .chord-tone reads
 chordPaint(paint)        // "chord-tone chord-<paint>": tile | tint | tint-quiet | ghost
+.chord-caption           // a reading under a numeral, in the paint's ink, dimmed
 ```
+
+## Readings
+
+A reading says what a chord is FOR, in the words a learner meets it by: `I/3`,
+`V/V`. The two read off the token alone live here — `inversionReading` (any
+triad or seventh inversion) and `appliedReading` (a dominant, dominant seventh
+or diminished seventh foreign to the scale it is given, named by the degree it
+resolves to; none for a target on the tonic, outside the scale, or
+diminished). Names that depend on where a chord is heard — `Neapolitan`,
+`Picardy`, `phrygian`, `backdoor` — belong to the curriculum's catalog rules,
+which know the track and section.
 
 ## Naming
 
@@ -137,6 +151,10 @@ LINE — the meter fill, a button's colour bar, the sounding box's ring, a lit
 button's edge — and the piano's keys (which read `--fn-bg` as a value) are not
 paints and stay with their surface. Sizes belong to the surface, not here.
 
+A reading under a numeral (`V/V`, `I/3`) is `.chord-caption`: the sans, in the
+paint's ink at 75 % — so a tile's caption is the light ink dimmed, a tint's the
+chord colour dimmed, a ghost's faint. The surface sets only its size.
+
 ## Voicing, and what the app actually sounds
 
 `chordVoicing` is Sonata's `chordPitches` + `invertVoicing`, then shifted by
@@ -162,7 +180,7 @@ surface.
 
 ## Plugin reference
 
-- Description: How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour. Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
+- Description: How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
 - Web:
   - Uses: `primitives/css/ui-kit.cn`
   - Exports (types): `ChordPaint`
@@ -173,6 +191,7 @@ surface.
 - Core:
   - Uses:
     - `apps/chord/song-index.ChordToken`
+    - `apps/chord/song-index.chordTokenFromParts`
     - `apps/chord/song-index.parseChordToken`
     - `apps/sonata/score.accidentalGlyph`
     - `apps/sonata/score.fifthsToTonic`
@@ -197,6 +216,7 @@ surface.
     - `SongKey`
     - `SongVocabulary`
   - Exports (values):
+    - `appliedReading`
     - `chordDegree`
     - `chordDigit`
     - `chordFunction`
@@ -204,6 +224,7 @@ surface.
     - `chordLabel`
     - `chordSound`
     - `chordVoicing`
+    - `inversionReading`
     - `pickPage`
     - `songKeyLabel`
     - `songKeySignature`
