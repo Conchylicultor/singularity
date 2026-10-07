@@ -7,6 +7,8 @@ The Ultimate Guitar tab model, pure and framework-free:
 - `parseUgTab` / `parseUgContent`, the markup parser (see the parent's
   `CLAUDE.md`, "Markup parser"), with its `UgParseError` taxonomy and the
   `Parsed*` model.
+- `inferSections`, the A / B / … labels of an untagged tab's stanzas (see the
+  parent's `CLAUDE.md`, "Inferred sections").
 
 It is a leaf of its own so the UG source and its `alignment` child can both
 read the model without importing each other. UG web imports the alignment
@@ -22,11 +24,13 @@ core, so an alignment → UG edge would be an R6 cycle. Co-located
   - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
 - Core:
   - Exports (types):
+    - `InferredSection`
     - `ParsedLine`
     - `ParsedTab`
     - `UgParseErrorKind`
     - `UgTab`
   - Exports (values):
+    - `inferSections`
     - `parseUgContent`
     - `parseUgTab`
     - `UG_SOURCE_ID`

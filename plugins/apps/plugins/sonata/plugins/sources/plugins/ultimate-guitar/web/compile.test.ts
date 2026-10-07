@@ -40,7 +40,7 @@ function line(lyric: string, ...chords: ParsedChord[]): ParsedLine {
 }
 
 function section(name: string, lines: ParsedLine[]): ParsedSection {
-  return { name, lines };
+  return { name, lines, stanzaBreaks: [] };
 }
 
 function tab(sections: ParsedSection[], key: string | null = null): ParsedTab {
@@ -178,15 +178,19 @@ describe("synthesizeScore — lyric-proportional, bar-quantized timing", () => {
     ]);
   });
 
-  it("emits no section annotation for an implicit (name:'') section", () => {
+  it("emits no section annotation for a named tab's implicit (name:'') leading section", () => {
     const score = synthesizeScore(
-      tab([section("", [line("intro lyric", ch("C", 0))])]),
+      tab([
+        section("", [line("intro lyric", ch("C", 0))]),
+        section("Verse", [line("verse lyric", ch("G", 0))]),
+      ]),
     );
 
-    expect(byType(score, "section")).toHaveLength(0);
+    const sections = byType(score, "section") as SectionAnnotation[];
+    expect(sections.map((s) => s.data.name)).toEqual(["Verse"]);
     // chords + lyrics still emitted
-    expect(byType(score, "chord")).toHaveLength(1);
-    expect(byType(score, "lyric")).toHaveLength(1);
+    expect(byType(score, "chord")).toHaveLength(2);
+    expect(byType(score, "lyric")).toHaveLength(2);
   });
 
   it("skips an unrecognised chord but keeps the next chord's proportional slot", () => {
@@ -342,6 +346,25 @@ describe("compile — UgSourceRaw round-trip", () => {
 
     expect(compile({ tab: ugTab, alignment: stale })).toEqual(
       compile({ tab: ugTab, alignment: null }),
+    );
+  });
+});
+
+describe("synthesizeScore — inferred sections", () => {
+  it("labels an untagged tab's stanzas, spanning their lines", () => {
+    const verse = line("verse words here", ch("C", 0), ch("F", 8));
+    const refrain = line("refrain words", ch("G", 0), ch("Am", 6));
+    const untagged = {
+      ...section("", [verse, verse, refrain, verse]),
+      stanzaBreaks: [1, 2, 3],
+    };
+    const score = synthesizeScore(tab([untagged]));
+    const sections = byType(score, "section") as SectionAnnotation[];
+    const lyrics = byType(score, "lyric") as LyricAnnotation[];
+    expect(sections.map((s) => s.data.name)).toEqual(["A", "A", "B", "A"]);
+    expect(sections.every((s) => s.source === "derived")).toBe(true);
+    expect(sections.map((s) => [s.start, s.end])).toEqual(
+      lyrics.map((l) => [l.start, l.end]),
     );
   });
 });

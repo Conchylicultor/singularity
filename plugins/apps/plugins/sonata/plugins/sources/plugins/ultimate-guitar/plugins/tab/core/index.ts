@@ -10,3 +10,6 @@ export type { UgTab } from "./raw-tab";
 
 export { parseUgTab, parseUgContent, UgParseError } from "./parse";
 export type { UgParseErrorKind, ParsedTab, ParsedLine } from "./parse";
+
+export { inferSections } from "./infer-sections";
+export type { InferredSection } from "./infer-sections";

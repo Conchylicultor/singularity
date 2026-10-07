@@ -83,6 +83,17 @@ Ultimate Guitar (UG) input source for Sonata. The source pipeline so far:
   and from update only when `content` differs from the stored row. UG knows
   nothing of who listens. See `plugins/alignment/CLAUDE.md`.
 
+## Inferred sections
+
+A tab with **no** named section still has stanzas (blank-line separated).
+`inferSections(parsed)` (`plugins/tab/core/infer-sections.ts`) labels each
+stanza with chords by chord repetition — stanzas whose chord-symbol sequences
+match within a 25% edit distance share a letter (A, A, B, A, B), and a lone
+chords-only first / last stanza reads Intro / Outro. Both `synthesizeScore`
+and `alignedScore` emit them as `source: "derived"` section annotations, so
+the chord chart and songsheet print a header per stanza. A tab with any named
+section gets none (its author gave the structure).
+
 ## Child plugins
 
 - `plugins/tab`: the tab model (`UG_SOURCE_ID`, `UgTab`, the markup parser),
@@ -101,6 +112,8 @@ raw text into `{ sections, key, capo }`:
 | `[Verse]` / `[Chorus]` / `[Verse 1]` … | a `ParsedSection.name` (a bracketed label alone on its line) |
 | lyric text | a `ParsedLine.lyric` with chords positioned over it by column |
 | `[tab]…[/tab]` | whitespace-preservation wrappers — recognised but **zero-width** |
+| blank line | not a line; recorded as a `ParsedSection.stanzaBreaks` index (a new stanza starts there) |
+| `[ch]C[/ch] = [ch]A[/ch]` | a chord-substitution legend ("alternates" after the song) — **dropped**, not part of the song |
 | key / capo | carried through from the UG metadata fields, not the markup |
 
 The load-bearing idea: **markup tokens are zero-width**. The scanner advances a

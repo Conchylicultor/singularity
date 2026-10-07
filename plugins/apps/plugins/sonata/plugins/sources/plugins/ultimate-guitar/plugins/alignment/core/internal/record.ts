@@ -3,9 +3,12 @@ import { z } from "zod";
 /**
  * The aligner's version: part of every stored record. Bump it when the
  * aligner's output changes meaning — `compile()` only applies a record whose
- * `alignerVersion` is current, and the job re-aligns a stale one.
+ * `alignerVersion` is current, and the job re-aligns a stale one. The
+ * record's indices point into the PARSED tab, so a parser change that adds or
+ * drops lines changes its meaning too (2: chord-substitution legend lines are
+ * no longer lines of the song).
  */
-export const ALIGNER_VERSION = 1;
+export const ALIGNER_VERSION = 2;
 
 /** One sheet chord occurrence in the performance, over beat indices `[startBeat, endBeat)`. */
 export const ChordSegmentSchema = z.object({

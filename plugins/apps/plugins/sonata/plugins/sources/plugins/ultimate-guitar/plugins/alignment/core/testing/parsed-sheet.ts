@@ -16,6 +16,7 @@ export function parsedSheet(
   return {
     sections: sections.map((section) => ({
       name: section.name,
+      stanzaBreaks: [],
       lines: section.lines.map((line) => {
         if (typeof line !== "string") return { chords: [], lyric: line.lyric };
         const symbols = line.split(/\s+/).filter((s) => s.length > 0);

@@ -6434,6 +6434,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/video-refused`
                   - Core:
                     - Uses:
+                      - `apps/sonata/sources/ultimate-guitar/tab.InferredSection`
+                      - `apps/sonata/sources/ultimate-guitar/tab.inferSections`
+                      - `apps/sonata/sources/ultimate-guitar/tab.ParsedLine`
+                      - `apps/sonata/sources/ultimate-guitar/tab.ParsedTab`
                       - `apps/sonata/sources/ultimate-guitar/tab.UgTabSchema`
                       - `apps/sonata/theory.parseChordSymbol`
                       - `apps/sonata/theory.parseKeySignature`
@@ -6486,11 +6490,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
                   - Core:
                     - Exports (types):
+                      - `InferredSection`
                       - `ParsedLine`
                       - `ParsedTab`
                       - `UgParseErrorKind`
                       - `UgTab`
                     - Exports (values):
+                      - `inferSections`
                       - `parseUgContent`
                       - `parseUgTab`
                       - `UG_SOURCE_ID`

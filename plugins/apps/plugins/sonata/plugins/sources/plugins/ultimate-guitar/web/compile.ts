@@ -31,6 +31,9 @@
  *    symbol).
  *  - A named section emits a `section` annotation spanning all its lines; an
  *    implicit (`name:""`) section emits none but still emits its chords/lyrics.
+ *    A tab with no named section at all gets its stanzas labelled instead
+ *    (`inferSections`: A, B, … by chord repetition), as `source:"derived"`
+ *    section annotations.
  *
  * Recognised chords become `source:"authored"` chord annotations. The chord
  * *notes* are not produced here — the shell's reactive re-voicing step
@@ -54,6 +57,7 @@ import {
   parseKeySignature,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import {
+  inferSections,
   parseUgTab,
   type ParsedLine,
   type ParsedTab,
@@ -108,9 +112,13 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
   const annotations: Annotation[] = [];
 
   let cursor = 0; // global beat cursor
+  // Each line's beat span, by section then line — for the inferred sections.
+  const lineSpans: { start: number; end: number }[][] = [];
 
   for (const section of parsed.sections) {
     const sectionStart = cursor;
+    const spans: { start: number; end: number }[] = [];
+    lineSpans.push(spans);
 
     for (const line of section.lines) {
       const lineStart = cursor;
@@ -155,6 +163,7 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
       });
 
       cursor = lineEnd;
+      spans.push({ start: lineStart, end: lineEnd });
 
       if (line.lyric.trim().length > 0 || lineChords.length > 0) {
         annotations.push({
@@ -179,6 +188,17 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
         source: "authored",
       } satisfies Annotation<"section", SectionData>);
     }
+  }
+
+  for (const inferred of inferSections(parsed)) {
+    const spans = lineSpans[inferred.section]!;
+    annotations.push({
+      type: "section",
+      start: spans[inferred.from]!.start,
+      end: spans[inferred.to - 1]!.end,
+      data: { name: inferred.label },
+      source: "derived",
+    } satisfies Annotation<"section", SectionData>);
   }
 
   const key: KeySignature | null = parseKeySignature(parsed.key);

@@ -39,8 +39,8 @@ const EPS = 1e-6;
 
 /** A group of consecutive lines under one section header (or no header). */
 interface LineGroup {
-  /** Section name, or null for lines before/outside any section. */
-  section: string | null;
+  /** The section, or null for lines before/outside any section. */
+  section: SectionAnnotation | null;
   /** Global indices (into the flat `lines` array) of this group's lines. */
   lines: { line: LyricAnnotation; index: number }[];
 }
@@ -50,7 +50,8 @@ interface LineGroup {
  * A line's section is the section annotation whose `[start, end]` contains the
  * line's `start`; lines before/outside any section render under no header.
  * Consecutive lines sharing a section collapse into one group so the header
- * prints once.
+ * prints once — the same annotation, not the same name, so two "A" stanzas in a
+ * row keep a header each.
  */
 function groupLines(
   lines: LyricAnnotation[],
@@ -60,10 +61,10 @@ function groupLines(
   lines.forEach((line, index) => {
     // The section containing this line's start (last matching wins, so a later,
     // tighter section overrides an enclosing one if they ever overlap).
-    let section: string | null = null;
+    let section: SectionAnnotation | null = null;
     for (const s of sections) {
       if (s.start <= line.start + EPS && s.end >= line.start - EPS) {
-        section = s.data.name;
+        section = s;
       }
     }
     const last = groups.at(-1);
@@ -186,7 +187,7 @@ function SongsheetInner({ score }: SongsheetProps) {
               <Stack key={gi} gap="2xs">
                 {group.section !== null ? (
                   <Text variant="eyebrow" tone="muted" as="div">
-                    {group.section}
+                    {group.section.data.name}
                   </Text>
                 ) : null}
                 <Stack gap="2xs">

@@ -46,7 +46,7 @@ const EPS = 1e-6;
 
 /** A run of consecutive bars under one section header (or none). */
 interface BarGroup {
-  section: string | null;
+  section: SectionAnnotation | null;
   /** The bars, each with its index into the flat bar list the selectors use. */
   bars: { bar: ChordBar; index: number }[];
 }
@@ -55,7 +55,8 @@ interface BarGroup {
  * Group the bars under the section each starts in, in order. A bar's section is
  * the section annotation covering its first beat (the last one wins, so a
  * tighter section overrides an enclosing one); consecutive bars sharing a
- * section collapse into one group so its header prints once.
+ * section collapse into one group so its header prints once — the same
+ * annotation, not the same name, so two "A" stanzas in a row keep a header each.
  */
 function groupBars(
   bars: ChordBar[],
@@ -63,10 +64,10 @@ function groupBars(
 ): BarGroup[] {
   const groups: BarGroup[] = [];
   bars.forEach((bar, index) => {
-    let section: string | null = null;
+    let section: SectionAnnotation | null = null;
     for (const s of sections) {
       if (s.start <= bar.startBeat + EPS && s.end > bar.startBeat + EPS) {
-        section = s.data.name;
+        section = s;
       }
     }
     const last = groups.at(-1);
@@ -221,7 +222,7 @@ function ChordChartInner({ score }: ChordChartProps) {
                 <Stack key={gi} gap="xs">
                   {group.section !== null ? (
                     <Text variant="eyebrow" tone="muted" as="div">
-                      {group.section}
+                      {group.section.data.name}
                     </Text>
                   ) : null}
                   <div className="chord-chart-bars">

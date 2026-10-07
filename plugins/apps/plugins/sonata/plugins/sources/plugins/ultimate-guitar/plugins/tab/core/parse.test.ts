@@ -238,3 +238,27 @@ describe("parseUgTab", () => {
     expect(parseUgTab({ ...tab, key: null }).key).toBeNull();
   });
 });
+
+describe("parseUgContent — stanzas and legends", () => {
+  it("records where a blank line opened a stanza, per section", () => {
+    const content =
+      "[ch]C[/ch]\none\n[ch]F[/ch]\ntwo\n\n\n[ch]G[/ch]\nthree\n\nfour\n[Chorus]\n\nla";
+    const sections = parseUgContent(content);
+    expect(sections[0]!.lines.map((l) => l.lyric)).toEqual([
+      "one",
+      "two",
+      "three",
+      "four",
+    ]);
+    expect(sections[0]!.stanzaBreaks).toEqual([2, 3]);
+    // A blank right after a header opens nothing: the section starts there anyway.
+    expect(sections[1]!.stanzaBreaks).toEqual([]);
+  });
+
+  it("drops chord-substitution legend lines", () => {
+    const content =
+      "[ch]C[/ch]\nwords\n\nCapo III\n[ch]C[/ch]     = [ch]A[/ch]\n[ch]E7[/ch]    = [ch]C#7[/ch]**";
+    const lines = parseUgContent(content)[0]!.lines;
+    expect(lines.map((l) => l.lyric)).toEqual(["words", "Capo III"]);
+  });
+});

@@ -208,6 +208,10 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/video-refused`
 - Core:
   - Uses:
+    - `apps/sonata/sources/ultimate-guitar/tab.InferredSection`
+    - `apps/sonata/sources/ultimate-guitar/tab.inferSections`
+    - `apps/sonata/sources/ultimate-guitar/tab.ParsedLine`
+    - `apps/sonata/sources/ultimate-guitar/tab.ParsedTab`
     - `apps/sonata/sources/ultimate-guitar/tab.UgTabSchema`
     - `apps/sonata/theory.parseChordSymbol`
     - `apps/sonata/theory.parseKeySignature`

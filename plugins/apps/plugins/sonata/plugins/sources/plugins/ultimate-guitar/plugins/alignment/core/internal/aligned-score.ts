@@ -13,7 +13,9 @@
  *   occurrence (a line looped "x2" appears twice), with the line's chords at
  *   the beats they were found on; lyric-only lines share the span of the chord
  *   line above them; one section annotation per section occurrence, and one
- *   named "Not in sheet" per gap.
+ *   named "Not in sheet" per gap. A tab with no named section gets its stanzas'
+ *   inferred labels instead (`inferSections`), one annotation per run of line
+ *   occurrences through one stanza.
  * - **Pitch.** Built at sheet pitch, then `transposeScore` to the recording's
  *   sounding pitch, so the synth plays in the recording's key.
  * - **Recording.** `meta.recording` names the video, so the player can play it
@@ -37,9 +39,11 @@ import {
   transposeKey,
   transposeScore,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import type {
-  ParsedLine,
-  ParsedTab,
+import {
+  inferSections,
+  type InferredSection,
+  type ParsedLine,
+  type ParsedTab,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
   ALIGNER_VERSION,
@@ -196,6 +200,24 @@ export function alignedScore(
     else occ.segments.push(seg);
   }
 
+  const inferred = inferSections(parsed);
+  const stanzaOf = (section: number, line: number) =>
+    inferred.find(
+      (s) => s.section === section && line >= s.from && line < s.to,
+    );
+  const pushInferred = (run: {
+    stanza: InferredSection;
+    start: number;
+    end: number;
+  }) =>
+    annotations.push({
+      type: "section",
+      start: run.start,
+      end: run.end,
+      data: { name: run.stanza.label },
+      source: "derived",
+    } satisfies Annotation<"section", SectionData>);
+
   for (const group of groups) {
     if (group.kind === "gap") {
       annotations.push({
@@ -213,10 +235,27 @@ export function alignedScore(
     const sectionEnd =
       n + lastLine.segments[lastLine.segments.length - 1]!.endBeat;
 
+    // The run of line occurrences through one inferred stanza: a new run when
+    // the stanza changes or the performance starts it over.
+    let run: {
+      stanza: InferredSection;
+      start: number;
+      end: number;
+      line: number;
+    } | null = null;
     for (const occ of group.lines) {
       const line = section.lines[occ.line]!;
       const start = n + occ.segments[0]!.startBeat;
       const end = n + occ.segments[occ.segments.length - 1]!.endBeat;
+
+      const stanza = stanzaOf(group.section, occ.line);
+      if (run !== null && run.stanza === stanza && occ.line > run.line) {
+        run.end = end;
+        run.line = occ.line;
+      } else {
+        if (run !== null) pushInferred(run);
+        run = stanza ? { stanza, start, end, line: occ.line } : null;
+      }
 
       for (const seg of occ.segments) {
         const data = parseChordSymbol(line.chords[seg.chord]!.symbol);
@@ -285,6 +324,8 @@ export function alignedScore(
         cursor = next;
       }
     }
+
+    if (run !== null) pushInferred(run);
 
     if (section.name.length > 0) {
       annotations.push({

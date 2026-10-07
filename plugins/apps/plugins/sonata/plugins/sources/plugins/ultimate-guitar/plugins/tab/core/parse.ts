@@ -102,6 +102,13 @@ export interface ParsedSection {
    */
   name: string;
   lines: ParsedLine[];
+  /**
+   * Indices into `lines` of every line a blank line came before: where the tab
+   * starts a new stanza. Blank lines carry no musical content, but in a tab
+   * with no `[Section]` headers they are its only structure — what
+   * `inferSections` labels. Ascending, never `0`.
+   */
+  stanzaBreaks: number[];
 }
 
 /** The full structured tab: ordered sections plus song-level metadata. */
@@ -228,6 +235,15 @@ function sectionLabel(line: string): string | null {
   return label.length > 0 ? label : null;
 }
 
+/**
+ * Whether a chord line's residual text marks it a chord-substitution legend
+ * (`[ch]Cmaj7[/ch] = [ch]Amaj7[/ch]**`): an `=` and nothing else but spaces and
+ * footnote stars. A lyric never reads like that.
+ */
+function isChordLegend(text: string): boolean {
+  return text.includes("=") && /^[\s=*]+$/.test(text);
+}
+
 /** Trim only trailing whitespace — leading columns are load-bearing. */
 function trimEnd(s: string): string {
   return s.replace(/\s+$/, "");
@@ -241,8 +257,11 @@ function trimEnd(s: string): string {
  * Parse UG raw `content` markup into ordered sections of chord-over-lyric lines.
  *
  * Lines that appear before the first `[Section]` header land in an implicit
- * leading section with an empty `name`. Blank lines are dropped (sections, not
- * blank lines, carry structure) but still break chord↔lyric pairing.
+ * leading section with an empty `name`. Blank lines are not lines of the song:
+ * they break chord↔lyric pairing and are kept only as the section's
+ * `stanzaBreaks`. A chord-substitution legend line (`[ch]C[/ch] = [ch]A[/ch]`,
+ * the "alternates" a tab lists after the song) is dropped: it names chords but
+ * is not part of the song.
  *
  * Throws {@link UgParseError} on malformed markup (see module docs).
  */
@@ -267,10 +286,20 @@ export function parseUgContent(content: string): ParsedSection[] {
   // appears before the first header.
   const target = (): ParsedSection => {
     if (!current) {
-      current = { name: "", lines: [] };
+      current = { name: "", lines: [], stanzaBreaks: [] };
       sections.push(current);
     }
     return current;
+  };
+  // A blank line was seen since the last pushed line: the next one opens a stanza.
+  let pendingBreak = false;
+  const push = (line: ParsedLine): void => {
+    const section = target();
+    if (pendingBreak && section.lines.length > 0) {
+      section.stanzaBreaks.push(section.lines.length);
+    }
+    pendingBreak = false;
+    section.lines.push(line);
   };
 
   for (let li = 0; li < lines.length; li++) {
@@ -278,8 +307,9 @@ export function parseUgContent(content: string): ParsedSection[] {
 
     const header = sectionLabel(raw);
     if (header !== null) {
-      current = { name: header, lines: [] };
+      current = { name: header, lines: [], stanzaBreaks: [] };
       sections.push(current);
+      pendingBreak = false;
       continue;
     }
 
@@ -287,14 +317,18 @@ export function parseUgContent(content: string): ParsedSection[] {
     const hasLyric = text.trim().length > 0;
 
     if (chords.length === 0) {
-      if (!hasLyric) continue; // blank / whitespace-only line
-      target().lines.push({ chords: [], lyric: trimEnd(text) });
+      if (!hasLyric) {
+        pendingBreak = true; // blank / whitespace-only line
+        continue;
+      }
+      push({ chords: [], lyric: trimEnd(text) });
       continue;
     }
 
     if (hasLyric) {
+      if (isChordLegend(text)) continue;
       // Inline chords woven into a lyric line — self-contained.
-      target().lines.push({ chords, lyric: trimEnd(text) });
+      push({ chords, lyric: trimEnd(text) });
       continue;
     }
 
@@ -303,14 +337,14 @@ export function parseUgContent(content: string): ParsedSection[] {
     if (next !== null && sectionLabel(next) === null) {
       const below = scanLine(next);
       if (below.chords.length === 0 && below.text.trim().length > 0) {
-        target().lines.push({ chords, lyric: trimEnd(below.text) });
+        push({ chords, lyric: trimEnd(below.text) });
         li++; // consume the paired lyric line
         continue;
       }
     }
 
     // Nothing to pair with → a chord-only line (intro riff, instrumental).
-    target().lines.push({ chords, lyric: "" });
+    push({ chords, lyric: "" });
   }
 
   return sections;
