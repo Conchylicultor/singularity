@@ -178,14 +178,14 @@ describe("picksFromQuery", () => {
 
   test("round-trips through prototypeUrl", () => {
     const url = prototypeUrl("proto-1-abcd", {
-      v: 7,
+      v: "a1b2c3",
       picks: resolvePicks([PANE, PALETTE], {
         palette: "azure",
         pane: "soft-tray",
       }),
     });
     expect(url).toBe(
-      "/api/prototypes/proto-1-abcd/index.html?v=7&pane=soft-tray&palette=azure",
+      "/api/prototypes/proto-1-abcd/index.html?v=a1b2c3&pane=soft-tray&palette=azure",
     );
     expect(
       picksFromQuery([PANE, PALETTE], new URL(url, "http://x").searchParams),
@@ -193,8 +193,8 @@ describe("picksFromQuery", () => {
   });
 
   test("an untouched prototype keeps its plain URL", () => {
-    expect(prototypeUrl("p", { v: 3, picks: {} })).toBe(
-      "/api/prototypes/p/index.html?v=3",
+    expect(prototypeUrl("p", { v: "a1b2c3", picks: {} })).toBe(
+      "/api/prototypes/p/index.html?v=a1b2c3",
     );
     expect(prototypeUrl("p")).toBe("/api/prototypes/p/index.html");
   });

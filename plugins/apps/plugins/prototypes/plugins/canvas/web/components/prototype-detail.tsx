@@ -1,8 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import {
-  matchResource,
-  useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
@@ -15,7 +12,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   prototypesList,
-  prototypesVersion,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { prototypeDetailPane } from "../panes";
@@ -68,20 +64,15 @@ export function PrototypeTitle(): ReactNode {
 
 /**
  * The pane body — also what a surface mounting its own provider draws to show
- * the whole canvas (Present's canvas page). The list and the version (the live
- * frames' cache-bust) are gated together, so the canvas never renders from a
- * half-loaded snapshot.
+ * the whole canvas (Present's canvas page). Each meta carries its `rev`, the
+ * live frames' cache-bust.
  */
 export function PrototypeCanvas(): ReactNode {
   const { name } = usePrototypeDetail();
-  const gate = useCombinedResources({
-    rows: useLive(prototypesList),
-    version: useLive(prototypesVersion),
-  });
-  return matchResource(gate, {
+  return matchResource(useLive(prototypesList), {
     loading: () => <Loading variant="block" />,
     error: () => <Loading variant="block" />,
-    ready: ({ rows, version }) => {
+    ready: (rows) => {
       const meta = rows.find((p) => p.name === name) ?? null;
       if (!meta) {
         return (
@@ -94,7 +85,7 @@ export function PrototypeCanvas(): ReactNode {
         <Column
           className="h-full"
           header={<ProblemBanner meta={meta} />}
-          body={<Canvas meta={meta} cacheBust={version} />}
+          body={<Canvas meta={meta} />}
           scrollBody={false}
         />
       );

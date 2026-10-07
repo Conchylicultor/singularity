@@ -29,8 +29,6 @@ import { PrototypeFrame } from "./prototype-frame";
 export interface CanvasFrameViewProps {
   frame: CanvasFrame;
   meta: PrototypeMeta;
-  /** The live `prototypesVersion` value: an edit reloads live frames. */
-  cacheBust: number;
   /** The canvas-wide logical size and scale (`layoutFrames`). */
   layout: FrameLayout;
   /** The frame's letter, published for drivers (`data-canvas-frame`). */
@@ -67,7 +65,6 @@ export function CanvasFrameView(props: CanvasFrameViewProps): ReactElement {
 function PrototypeFrameView({
   frame,
   meta,
-  cacheBust,
   layout,
   letter,
   wholePage = false,
@@ -75,7 +72,7 @@ function PrototypeFrameView({
   onPageExtent = ignoreExtent,
   children = justScreen,
 }: CanvasFrameViewProps & { frame: PrototypeFrameModel }): ReactElement {
-  const src = useFrameSrc(frame, meta, cacheBust);
+  const src = useFrameSrc(frame, meta);
   const screen = (
     <Screen
       layout={layout}

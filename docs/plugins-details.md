@@ -4073,7 +4073,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/link-gesture.linkGestureProps`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.ResourceErrorInline`
-              - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
               - `primitives/optimistic-mutation.OptimisticSettled`
               - `primitives/optimistic-mutation.useOptimisticResource`
@@ -4226,7 +4225,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes:
               - `resource.declare` "prototypes.list"
-              - `resource.declare` "prototypes.version"
               - `resource.declare` "prototypes.history"
               - `resource.declare` "prototypes.picks"
               - `resource.declare` "prototypes.statuses"
@@ -4248,7 +4246,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypes.list` (push)
               - `prototypes.picks` (push)
               - `prototypes.statuses` (push)
-              - `prototypes.version` (push)
             - Routes:
               - `GET /api/prototypes`
               - `POST /api/prototypes`
@@ -4322,7 +4319,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PrototypeStatusChangeSchema`
               - `prototypeStatuses`
               - `PrototypeStatusSchema`
-              - `prototypesVersion`
               - `prototypeUrl`
               - `PrototypeVersionSchema`
               - `prototypeVersionUrl`
@@ -4455,7 +4451,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.matchResource`
-              - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
               - `primitives/overlay/popup-open.PopupOpenScope`
               - `primitives/overlay/portal-host.PortalHost`

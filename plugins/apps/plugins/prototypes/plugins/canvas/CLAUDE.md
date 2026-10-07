@@ -141,8 +141,8 @@ so stepping never slides › out from under the pointer (`canvas-version.ts`
 asserts it). Known gap: the stepper sits after the frame's name, and a version
 that declares different options gets a different name, so stepping onto it can
 shift the whole stepper (the script notes it rather than failing). A recorded version is a frozen document with no cache-bust; the
-live folder is cache-busted by `prototypesVersion`, so an agent's edit
-reloads it. A new `src` loads in a second, hidden iframe and replaces the one
+live folder is cache-busted by its `PrototypeMeta.rev` (a hash of that
+prototype's own files), so an agent's edit reloads it — and nothing else does. A new `src` loads in a second, hidden iframe and replaces the one
 on screen on `load` (`prototype-frame.tsx`), so a frame never blanks while a
 client-rendered prototype boots.
 
@@ -355,7 +355,6 @@ navigation, so it starts from nothing remembered.
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/optimistic-mutation.OptimisticSettled`
     - `primitives/optimistic-mutation.useOptimisticResource`

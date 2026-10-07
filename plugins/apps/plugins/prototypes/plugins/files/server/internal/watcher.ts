@@ -8,11 +8,7 @@ import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { adoptPrototypeHistories, prototypeHistoryServed } from "./history";
 import { prototypePicksServed } from "./picks";
 import { prototypeStatusesServed } from "./status";
-import {
-  prototypesListServed,
-  prototypesVersionServed,
-  bumpPrototypesVersion,
-} from "./resources";
+import { prototypesListServed } from "./resources";
 import { changedPrototypes, readPrototypesSignature } from "./signature";
 import { classifyTreePath } from "./tree-path";
 
@@ -75,12 +71,12 @@ export function onPrototypesChanged(listener: () => void): void {
 
 /**
  * Re-read the tree; if its bytes really moved, re-broadcast the list (new/edited
- * mocks appear in the gallery), bump the version (open iframes cache-bust and
- * reload), re-read the history of every prototype that moved (an edit flips its
+ * mocks appear in the gallery, and the moved prototypes' `rev` reloads their
+ * open live frames), re-read the history of every prototype that moved (an edit flips its
  * `dirty` flag) and wake the listeners. Then give any new prototype its `v0`.
  *
  * Everything goes through this one gate — the watcher's events and the
- * reconcile tick alike — because the version is a RELOAD. A prototype on screen
+ * reconcile tick alike — because a new `rev` is a RELOAD. A prototype on screen
  * is a live app the author is clicking through, and a reload throws that state
  * away, so "the watcher woke up" is not enough of a reason: the tree has to
  * have actually changed.
@@ -91,9 +87,7 @@ async function refreshOnce(): Promise<void> {
   if (changed.length === 0) return;
   lastSignature = signature;
 
-  bumpPrototypesVersion();
   prototypesListServed.notify();
-  prototypesVersionServed.notify();
   for (const name of changed) notifyHistory(name);
   for (const listener of listeners) listener();
 
@@ -110,7 +104,7 @@ function notifyHistory(name: string): void {
 
 // Single-flight with a trailing re-run: a signature read is async, so two
 // triggers arriving together must not each compare against a stale `lastSignature`
-// and bump twice for one edit — that is two reloads of the same iframe.
+// and notify twice for one edit.
 let refreshing = false;
 let refreshAgain = false;
 
@@ -135,7 +129,7 @@ async function refresh(): Promise<void> {
  * (by this backend or any other — the store is host-global) re-reads that one
  * history and nothing else: the prototype's bytes did not move, so nothing may
  * reload. Picks written under `_picks/` likewise re-read that one prototype's
- * picks and bump nothing — the frames follow on their own, because their `src`
+ * picks and reload nothing — the frames follow on their own, because their `src`
  * carries the picks. A status written under `_status/` re-reads the statuses,
  * and likewise reloads nothing. Everything else goes through the signature gate.
  */
@@ -172,7 +166,7 @@ export async function startPrototypesWatcher(): Promise<void> {
   prototypesDir.ensure();
 
   // The tree as it stands at boot is the baseline, so the first genuine edit is
-  // what bumps the version — not the first tick after start.
+  // what re-broadcasts — not the first tick after start.
   lastSignature = await readPrototypesSignature();
 
   // Every prototype that predates version history gets its `v0` — once; after

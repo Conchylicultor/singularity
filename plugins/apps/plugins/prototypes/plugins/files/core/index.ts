@@ -3,7 +3,6 @@ export {
   MocksDeclarationSchema,
   PrototypeOptionSchema,
   prototypesList,
-  prototypesVersion,
   PROTOTYPES_API_BASE,
   PROTOTYPE_FILE_ROUTE,
   PROTOTYPE_ASSET_ROUTE,

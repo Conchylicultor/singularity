@@ -22,10 +22,7 @@ import {
 } from "./internal/history";
 import { handleSetPicks, prototypePicksServed } from "./internal/picks";
 import { handleSetStatus, prototypeStatusesServed } from "./internal/status";
-import {
-  prototypesListServed,
-  prototypesVersionServed,
-} from "./internal/resources";
+import { prototypesListServed } from "./internal/resources";
 import {
   prototypesTreeWatcher,
   startPrototypesWatcher,
@@ -64,7 +61,6 @@ export default {
   },
   contributions: [
     ...prototypesListServed.declare,
-    ...prototypesVersionServed.declare,
     ...prototypeHistoryServed.declare,
     ...prototypePicksServed.declare,
     ...prototypeStatusesServed.declare,

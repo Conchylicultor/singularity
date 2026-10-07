@@ -3,8 +3,8 @@ import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 /**
  * Rewrite a prototype's `index.html` with its own bytes. The watcher sees the
- * new mtime, bumps `prototypes.version`, and every open frame of the prototype
- * reloads — an agent's edit, minus the edit.
+ * new mtime, re-broadcasts the list with this prototype's new `rev`, and every
+ * open frame of the prototype reloads — an agent's edit, minus the edit.
  */
 export async function touchPrototype(name: string): Promise<void> {
   const path = prototypesDir.file(name, "index.html");

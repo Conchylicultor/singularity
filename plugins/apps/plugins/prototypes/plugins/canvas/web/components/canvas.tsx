@@ -49,13 +49,7 @@ import { CanvasShortcuts } from "./canvas-shortcuts";
  * and the Swipe layout, one swiped over the other. The size & zoom chip sits in
  * its bottom-right corner.
  */
-export function Canvas({
-  meta,
-  cacheBust,
-}: {
-  meta: PrototypeMeta;
-  cacheBust: number;
-}): ReactElement {
+export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
   const { canvas } = usePrototypeDetail();
   const [roomRef, room] = useElementSize<HTMLDivElement>();
   const browserWindow = useWindowSize();
@@ -115,12 +109,7 @@ export function Canvas({
             }}
           >
             {swipe ? (
-              <SwipeFrames
-                meta={meta}
-                cacheBust={cacheBust}
-                layout={layout}
-                names={names}
-              />
+              <SwipeFrames meta={meta} layout={layout} names={names} />
             ) : (
               canvas.frames.map((frame, index) => (
                 <FrameCard
@@ -130,7 +119,6 @@ export function Canvas({
                   first={index === 0}
                   last={index === canvas.frames.length - 1}
                   meta={meta}
-                  cacheBust={cacheBust}
                   layout={layout}
                   name={names(frame)}
                   pageHeight={pageHeightOf(extents.get(frame.id))}
@@ -186,7 +174,6 @@ function FrameCard({
   first,
   last,
   meta,
-  cacheBust,
   layout,
   name,
   pageHeight,
@@ -197,7 +184,6 @@ function FrameCard({
   first: boolean;
   last: boolean;
   meta: PrototypeMeta;
-  cacheBust: number;
   layout: FrameLayout;
   name: string;
   pageHeight: number | null;
@@ -220,7 +206,6 @@ function FrameCard({
       <CanvasFrameView
         frame={frame}
         meta={meta}
-        cacheBust={cacheBust}
         layout={layout}
         letter={letterOf(index)}
         wholePage={canvas.wholePage}
@@ -298,12 +283,10 @@ function SelectableScreen({
  */
 function SwipeFrames({
   meta,
-  cacheBust,
   layout,
   names,
 }: {
   meta: PrototypeMeta;
-  cacheBust: number;
   layout: FrameLayout;
   names: (frame: CanvasFrame) => string;
 }): ReactElement | null {
@@ -323,18 +306,11 @@ function SwipeFrames({
   // Each frame renders ONCE: B's view wraps A's, so both screens and both
   // resolutions (a source frame's tag) are in hand for the one composition.
   return (
-    <CanvasFrameView
-      frame={b}
-      meta={meta}
-      cacheBust={cacheBust}
-      layout={layout}
-      letter={letterOf(1)}
-    >
+    <CanvasFrameView frame={b} meta={meta} layout={layout} letter={letterOf(1)}>
       {(screenB, resolutionB) => (
         <CanvasFrameView
           frame={a}
           meta={meta}
-          cacheBust={cacheBust}
           layout={layout}
           letter={letterOf(0)}
         >

@@ -63,6 +63,13 @@ export const PrototypeOptionSchema = z.object({
 // the HTML omits before constructing one, so input === output here.
 export const PrototypeMetaSchema = z.object({
   name: z.string(),
+  /**
+   * A short hash of this prototype's own files (names, sizes, mtimes). The live
+   * document's url carries it, so a frame reloads exactly when ITS files change
+   * — never for another prototype's edit, and never for a backend restart (the
+   * same bytes give the same rev in every process).
+   */
+  rev: z.string(),
   title: z.string(),
   blurb: z.string(),
   viewport: PrototypeViewportSchema,
@@ -81,16 +88,6 @@ export type PrototypeMeta = z.infer<typeof PrototypeMetaSchema>;
  */
 export const prototypesList = liveValue("prototypes.list", {
   schema: z.array(PrototypeMetaSchema),
-});
-
-/**
- * A monotonically increasing version (a timestamp) bumped on every file change
- * under `prototypes/`. Open iframes append it to their `src` so an agent's edit
- * cache-busts and reloads the iframe automatically (watcher → bump → re-render).
- * Pending until the server answers — never a stand-in `0` a frame would load.
- */
-export const prototypesVersion = liveValue("prototypes.version", {
-  schema: z.number(),
 });
 
 /** Base path for the raw file-serving routes. */
@@ -151,10 +148,10 @@ export const listPrototypes = defineEndpoint({
  */
 export function prototypeUrl(
   name: string,
-  opts: { v?: number; picks?: OptionPicks } = {},
+  opts: { v?: string; picks?: OptionPicks } = {},
 ): string {
   const params = new URLSearchParams();
-  if (opts.v !== undefined) params.set("v", String(opts.v));
+  if (opts.v !== undefined) params.set("v", opts.v);
   for (const [option, value] of Object.entries(opts.picks ?? {})) {
     params.set(option, value);
   }

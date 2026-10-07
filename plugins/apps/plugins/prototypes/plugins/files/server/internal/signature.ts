@@ -1,6 +1,6 @@
-import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { listPrototypeDirNames } from "../../shared/read-folder";
+import { readFolderSignature } from "../../shared/folder-signature";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 /**
@@ -8,17 +8,14 @@ import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
  * prototype folder: every file in it with its size and mtime.
  *
  * This is the answer to "did anything actually change?", and it is what the
- * version bump is gated on. A watcher event is a hint that something MIGHT have
- * changed — parcel also reports a touch, a chmod, an atomic-save's temp file,
- * and (before this) a timer tick — and the gallery's version is a cache-bust
- * that RELOADS every open prototype iframe, throwing away whatever state the
- * author had built up on screen. So an unchanged tree must produce an unchanged
- * signature, and therefore no reload.
+ * list re-broadcast is gated on. A watcher event is a hint that something MIGHT
+ * have changed — parcel also reports a touch, a chmod, an atomic-save's temp
+ * file, and a reconcile tick — and nothing may be re-read for a tree that did
+ * not move.
  *
- * `(size, mtime)` rather than content: prototypes live outside every checkout
- * (nothing ever rewrites their mtimes behind the author's back), a rewrite the
- * author makes always moves the mtime, and this runs on a 30s timer — so it has
- * to stay a handful of stats.
+ * Each folder's string is {@link readFolderSignature} — the same one the lister
+ * hashes into `PrototypeMeta.rev`, so "the watcher saw this prototype move" and
+ * "its live frames reload" are one fact.
  *
  * Per folder rather than one string for the tree, because a prototype's
  * version history cares WHICH prototype moved: the diff of two signatures
@@ -29,26 +26,8 @@ export async function readPrototypesSignature(): Promise<Map<string, string>> {
 
   const signature = new Map<string, string>();
   for (const dirName of dirNames) {
-    const dirAbs = join(prototypesDir.path, dirName);
-    let entries;
-    try {
-      entries = await readdir(dirAbs, { withFileTypes: true });
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") continue; // removed mid-walk
-      throw err;
-    }
-    const parts: string[] = [];
-    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-      if (!entry.isFile() || entry.name.startsWith(".")) continue;
-      try {
-        const s = await stat(join(dirAbs, entry.name));
-        parts.push(`${entry.name}:${s.size}:${s.mtimeMs}`);
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
-        throw err;
-      }
-    }
-    signature.set(dirName, parts.join("\n"));
+    const sig = await readFolderSignature(join(prototypesDir.path, dirName));
+    if (sig !== null) signature.set(dirName, sig);
   }
   return signature;
 }

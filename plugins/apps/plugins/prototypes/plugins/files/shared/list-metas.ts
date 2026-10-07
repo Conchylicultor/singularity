@@ -29,6 +29,7 @@ import {
   type PrototypeViewport,
 } from "../core";
 import { listPrototypeDirNames, readPrototypeFolder } from "./read-folder";
+import { readFolderSignature, revOfSignature } from "./folder-signature";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 /** What `index.html` declares about itself, before defaults are folded in. */
@@ -147,8 +148,12 @@ async function readMeta(
   dirName: string,
   siblings: string[],
 ): Promise<PrototypeMeta> {
+  const signature = await readFolderSignature(
+    join(prototypesDir.path, dirName),
+  );
   const base = {
     name: dirName,
+    rev: revOfSignature(signature ?? ""),
     // NOT `dirName`: that is a minted id, which names nothing to a reader. See
     // UNTITLED_PROTOTYPE.
     title: UNTITLED_PROTOTYPE,

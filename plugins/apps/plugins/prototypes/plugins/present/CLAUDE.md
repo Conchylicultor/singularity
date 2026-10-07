@@ -187,7 +187,6 @@ embedded document): a reload reopens the canvas the link carries.
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/overlay/portal-host.PortalHost`

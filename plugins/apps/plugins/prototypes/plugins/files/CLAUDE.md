@@ -130,8 +130,8 @@ DB: prototypes are host-global and forever, a worktree DB is neither.
 writes `_history/<id>.git/latest.json` (`{ n, sha }`, temp-then-rename). Git's
 own files have no extension, so they never pass the watcher's extension filter;
 this stamp does, and the watcher turns it into a notify of that one id's
-`prototypes.history` — without bumping the frame-reload version, since the
-prototype's bytes did not move. Folder edits reach it through the signature
+`prototypes.history` — without re-reading the list (so no frame reloads), since
+the prototype's bytes did not move. Folder edits reach it through the signature
 gate, which is per folder so it can name the prototypes whose `dirty` may have
 flipped. Nothing notifies after a write in-process; the stamp is the one signal.
 
@@ -162,8 +162,8 @@ defaults) and gave each `*.localhost:9000` origin its own picks. Design:
   Missing file = `{}`; a malformed file THROWS (never read as "nothing picked").
 - `prototypes.picks` (push, keyed by `name`) + `PUT /api/prototypes/:name/picks`
   (`setPrototypePicks`). The writer notifies at once; every other backend hears
-  it through the watcher (`picks-recorded`, `tree-path.ts`), which bumps no
-  version — the frames reload because their `src` carries the picks.
+  it through the watcher (`picks-recorded`, `tree-path.ts`), which re-reads
+  nothing else — the frames reload because their `src` carries the picks.
 - **Automated sessions are undone.** The PUT records into the
   `prototype-picks` agent-write ledger
   (`infra/request-origin/agent-write-ledger`) inside the lock, around the one
@@ -370,14 +370,15 @@ by `serveValue(…, { source: "external" })` — the truth is the data dir, not
 Postgres — whose `notify` the watcher (and a PUT, for its own write) calls. The
 server barrel spreads each served value's `declare` into `contributions`. None
 has a placeholder: until the server answers, a read is `pending`, never an empty
-list, a `0` version or an empty history.
+list or an empty history.
 
 - `prototypes.list` (`prototypesList` / `prototypesListServed`,
-  `resources.ts`) — the prototype list (push).
-- `prototypes.version` (`prototypesVersion` / `prototypesVersionServed`,
-  `resources.ts`) — a timestamp bumped when a prototype's bytes change;
-  iframes append it to their `src` so an agent's edit reloads them
-  automatically.
+  `resources.ts`) — the prototype list (push). Each `PrototypeMeta.rev` is a
+  short hash of that folder's signature (`shared/folder-signature.ts`); a live
+  frame's `src` carries it as `?v=`, so an agent's edit reloads exactly that
+  prototype's frames. Derived from the bytes on disk, it survives a backend
+  restart unchanged — there is no global, process-born version that would
+  reload every open frame on each redeploy or on another prototype's edit.
 - `prototypes.history` (`prototypeHistory` / `prototypeHistoryServed`,
   `history.ts`) — one prototype's versions + `dirty` (push, a value per
   `name`); see Version history.
@@ -391,10 +392,10 @@ list, a `0` version or an empty history.
 extension a prototype can ship (`.html/.css/.js/.json` plus images and
 `.woff2`); `onShutdown` stops it. No polling.
 
-**Nothing bumps the version unless the tree really moved.** Every wake-up — a
+**Nothing re-broadcasts unless the tree really moved.** Every wake-up — a
 watcher event, the 30s reconcile — runs the same gate: re-read
 `readPrototypesSignature()` (every file's size + mtime) and return early when it
-matches the last one. The version is a RELOAD of every open prototype iframe,
+matches the last one. A moved `rev` is a RELOAD of that prototype's open iframes,
 and a prototype is a live app somebody is clicking through, so a reload costs
 the author the state they built up on screen. A watcher event only says
 something *might* have changed (a touch, a chmod, an atomic save's temp file),
@@ -426,7 +427,7 @@ but its name is not a forbidden reference target. The check catches copied
 *files*, never copied *design*.
 
 The `core` barrel exports the shared contracts the web consumes: `PrototypeMeta`,
-the live values `prototypesList` / `prototypesVersion` / `prototypeHistory` /
+the live values `prototypesList` / `prototypeHistory` /
 `prototypePicks` / `prototypeStatuses` (`liveValue` declarations, read with
 `useLive`), `prototypeUrl()` /
 `prototypeVersionUrl()`, the `listPrototypes` / `createPrototype` /
@@ -444,7 +445,6 @@ for the `checkpoints` plugin's end-of-turn job.
 - Server:
   - Contributes:
     - `resource.declare` "prototypes.list"
-    - `resource.declare` "prototypes.version"
     - `resource.declare` "prototypes.history"
     - `resource.declare` "prototypes.picks"
     - `resource.declare` "prototypes.statuses"
@@ -466,7 +466,6 @@ for the `checkpoints` plugin's end-of-turn job.
     - `prototypes.list` (push)
     - `prototypes.picks` (push)
     - `prototypes.statuses` (push)
-    - `prototypes.version` (push)
   - Routes:
     - `GET /api/prototypes`
     - `POST /api/prototypes`
@@ -540,7 +539,6 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PrototypeStatusChangeSchema`
     - `prototypeStatuses`
     - `PrototypeStatusSchema`
-    - `prototypesVersion`
     - `prototypeUrl`
     - `PrototypeVersionSchema`
     - `prototypeVersionUrl`

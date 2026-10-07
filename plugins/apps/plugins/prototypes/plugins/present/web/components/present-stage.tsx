@@ -1,8 +1,5 @@
 import { useState, type ReactElement, type ReactNode } from "react";
-import {
-  matchResource,
-  useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -20,7 +17,6 @@ import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import {
   prototypesList,
-  prototypesVersion,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
@@ -75,13 +71,9 @@ export function PresentStage({
   /** Absent on the new-tab page: closing the tab is how you leave. */
   exit?: PresentExit;
 }): ReactNode {
-  const stage = useCombinedResources({
-    rows: useLive(prototypesList),
-    version: useLive(prototypesVersion),
-  });
-  return matchResource(stage, {
+  return matchResource(useLive(prototypesList), {
     loading: () => <Loading variant="block" />,
-    ready: ({ rows, version }) => {
+    ready: (rows) => {
       const meta = rows.find((p) => p.name === name) ?? null;
       if (!meta) {
         return (
@@ -90,26 +82,17 @@ export function PresentStage({
           </Text>
         );
       }
-      return (
-        <PresentedFrame
-          meta={meta}
-          cacheBust={version}
-          frameId={frameId}
-          exit={exit}
-        />
-      );
+      return <PresentedFrame meta={meta} frameId={frameId} exit={exit} />;
     },
   });
 }
 
 function PresentedFrame({
   meta,
-  cacheBust,
   frameId,
   exit,
 }: {
   meta: PrototypeMeta;
-  cacheBust: number;
   frameId: FrameId | undefined;
   exit: PresentExit | undefined;
 }): ReactElement {
@@ -154,7 +137,6 @@ function PresentedFrame({
     <CanvasFrameView
       frame={frame}
       meta={meta}
-      cacheBust={cacheBust}
       layout={layout}
       letter={letterOf(index)}
       wholePage={canvas.wholePage}

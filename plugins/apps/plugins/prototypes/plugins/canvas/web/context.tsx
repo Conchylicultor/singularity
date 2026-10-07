@@ -424,10 +424,9 @@ export function useStoredPicksOf(): (frame: PrototypeFrame) => StoredPicks {
 export function useFrameSrc(
   frame: PrototypeFrame,
   meta: PrototypeMeta,
-  cacheBust: number,
 ): string {
   const stored = useFrameStoredPicks(frame);
-  return prototypeDocumentSrc(meta, frame.version, cacheBust, stored);
+  return prototypeDocumentSrc(meta, frame.version, stored);
 }
 
 /**
@@ -435,19 +434,19 @@ export function useFrameSrc(
  * `null` — under `stored` picks, judged against the options THAT version
  * declares.
  *
- * - live: its `index.html`, cache-busted by `cacheBust` (the live
- *   `prototypesVersion` value), so an agent's edit reloads the frame.
+ * - live: its `index.html`, cache-busted by `meta.rev` (a hash of this
+ *   prototype's own files), so an agent's edit reloads the frame — and an edit
+ *   to another prototype, or a backend restart, does not.
  * - a recorded version: its frozen document. No cache-bust, since a sha
  *   addresses content that never changes.
  */
 export function prototypeDocumentSrc(
   meta: PrototypeMeta,
   version: PrototypeVersion | null,
-  cacheBust: number,
   stored: StoredPicks,
 ): string {
   const resolved = resolvePicks(documentOptions(meta, version), stored);
   return version === null
-    ? prototypeUrl(meta.name, { v: cacheBust, picks: resolved })
+    ? prototypeUrl(meta.name, { v: meta.rev, picks: resolved })
     : prototypeVersionUrl(meta.name, version.sha, { picks: resolved });
 }
