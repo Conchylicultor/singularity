@@ -8,7 +8,7 @@
 // the move is a relocation, not a fork. `server/internal/list.ts` re-exports it,
 // which is why the server barrel's API is unchanged.
 
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import {
   decodeHtmlText,
@@ -29,7 +29,11 @@ import {
   type PrototypeViewport,
 } from "../core";
 import { listPrototypeDirNames, readPrototypeFolder } from "./read-folder";
-import { readFolderSignature, revOfSignature } from "./folder-signature";
+import {
+  readFolderFiles,
+  revOfSignature,
+  signatureOfFiles,
+} from "./folder-signature";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 /** What `index.html` declares about itself, before defaults are folded in. */
@@ -113,7 +117,9 @@ export async function listPrototypeMetas(): Promise<PrototypeMeta[]> {
 
   const metas: PrototypeMeta[] = [];
   for (const dirName of dirNames) {
-    metas.push(await readMeta(dirName, dirNames));
+    const meta = await readMeta(dirName, dirNames);
+    // Removed between the listing and its read: it no longer exists to list.
+    if (meta !== null) metas.push(meta);
   }
   return metas;
 }
@@ -147,13 +153,23 @@ export async function readPrototypeTitle(
 async function readMeta(
   dirName: string,
   siblings: string[],
-): Promise<PrototypeMeta> {
-  const signature = await readFolderSignature(
-    join(prototypesDir.path, dirName),
-  );
+): Promise<PrototypeMeta | null> {
+  const dirAbs = join(prototypesDir.path, dirName);
+  let dirStat;
+  try {
+    dirStat = await stat(dirAbs);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  const files = await readFolderFiles(dirAbs);
+  if (files === null) return null;
+  const createdAt = dirStat.birthtimeMs;
   const base = {
     name: dirName,
-    rev: revOfSignature(signature ?? ""),
+    rev: revOfSignature(signatureOfFiles(files)),
+    createdAt,
+    modifiedAt: files.reduce((max, f) => Math.max(max, f.mtimeMs), createdAt),
     // NOT `dirName`: that is a minted id, which names nothing to a reader. See
     // UNTITLED_PROTOTYPE.
     title: UNTITLED_PROTOTYPE,

@@ -13,6 +13,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
 import { PROTOTYPES_CATEGORY_ID } from "@plugins/apps/plugins/prototypes/core";
@@ -113,6 +114,23 @@ export function PrototypeGallery() {
     },
     { id: "blurb", label: "Blurb", type: "text", value: (p) => p.blurb },
     { id: "name", label: "Folder", type: "text", value: (p) => p.name },
+    // Sort keys: hidden on the card, offered in the sort and filter menus.
+    {
+      id: "createdAt",
+      label: "Created",
+      type: "date",
+      value: (p) => new Date(p.createdAt),
+      cell: (p) => <RelativeTime date={new Date(p.createdAt)} />,
+      visible: false,
+    },
+    {
+      id: "modifiedAt",
+      label: "Last modified",
+      type: "date",
+      value: (p) => new Date(p.modifiedAt),
+      cell: (p) => <RelativeTime date={new Date(p.modifiedAt)} />,
+      visible: false,
+    },
     // Filter / group-by only — the card already shows it, as its checkbox.
     // An enum of two rather than a bool, because this field is READ as section
     // headings (the gallery groups by it by default) and as filter values, and

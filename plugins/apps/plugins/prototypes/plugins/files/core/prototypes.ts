@@ -70,6 +70,17 @@ export const PrototypeMetaSchema = z.object({
    * same bytes give the same rev in every process).
    */
   rev: z.string(),
+  /**
+   * When the prototype folder was created (its birth time), epoch ms — for
+   * sorting the gallery by age.
+   */
+  createdAt: z.number(),
+  /**
+   * When any of its files last changed, epoch ms: the newest mtime among the
+   * files `rev` hashes (the folder's birth time when it holds none), so this
+   * moves exactly when `rev` does.
+   */
+  modifiedAt: z.number(),
   title: z.string(),
   blurb: z.string(),
   viewport: PrototypeViewportSchema,

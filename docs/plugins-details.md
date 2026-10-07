@@ -4481,6 +4481,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
+              - `primitives/relative-time.RelativeTime`
               - `shell/notifications.toast`
               - `ui/icons.Icon`
             - Exports (types): `PrototypeGalleryRow`
@@ -36625,6 +36626,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
           - `apps/prototypes/canvas`
+          - `apps/prototypes/gallery`
           - `apps/sonata/library`
           - `apps/sonata/playback-history`
           - `apps/sonata/player`

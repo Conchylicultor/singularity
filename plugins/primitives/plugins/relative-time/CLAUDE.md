@@ -29,6 +29,7 @@ dense-list spelling for a trailing time column, where "ago" is implied.
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/canvas`
+    - `apps/prototypes/gallery`
     - `apps/sonata/library`
     - `apps/sonata/playback-history`
     - `apps/sonata/player`
