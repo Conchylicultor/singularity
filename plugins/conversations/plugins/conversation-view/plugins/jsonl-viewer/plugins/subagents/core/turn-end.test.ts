@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { turnEndedOfLines } from "./turn-end";
+import { newestTurnLineAt, turnEndedOfLines } from "./turn-end";
 
 const assistant = (stopReason: string | null, content: unknown[] = []) => ({
   type: "assistant",
@@ -58,5 +58,35 @@ describe("turnEndedOfLines", () => {
   test("a window with no message at all has not ended", () => {
     expect(turnEndedOfLines([])).toBe(false);
     expect(turnEndedOfLines([attachment()])).toBe(false);
+  });
+});
+
+describe("newestTurnLineAt", () => {
+  const at = (line: Record<string, unknown>, timestamp: string) => ({
+    ...line,
+    timestamp,
+  });
+
+  test("the newest assistant/user line's own timestamp, past trailing bookkeeping", () => {
+    expect(
+      newestTurnLineAt([
+        at(user("go"), "2026-10-07T02:33:39.334Z"),
+        at(assistant(null), "2026-10-07T02:34:00.164Z"),
+        at(attachment(), "2026-10-07T02:34:01.000Z"),
+      ]),
+    ).toBe("2026-10-07T02:34:00.164Z");
+  });
+
+  test("a user line that woke the teammate is the newest line", () => {
+    expect(
+      newestTurnLineAt([
+        at(assistant("end_turn"), "2026-10-07T02:33:34.537Z"),
+        at(user("<teammate-message>…"), "2026-10-07T02:33:39.334Z"),
+      ]),
+    ).toBe("2026-10-07T02:33:39.334Z");
+  });
+
+  test("no assistant/user line in the window is null", () => {
+    expect(newestTurnLineAt([attachment()])).toBeNull();
   });
 });

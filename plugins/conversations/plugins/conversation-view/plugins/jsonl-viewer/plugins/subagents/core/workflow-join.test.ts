@@ -56,6 +56,7 @@ const agent = (
   lastActivityAt: over.lastActivityAt ?? "2026-09-27T01:30:00.000Z",
   lastStep: null,
   turnEnded: over.turnEnded ?? false,
+  newestTurnLineAt: null,
   workflow: { runId, reported: over.reported ?? false },
 });
 
@@ -69,6 +70,7 @@ const ordinary: SubagentActivityRow = {
   lastActivityAt: "2026-09-27T01:01:00.000Z",
   lastStep: null,
   turnEnded: false,
+  newestTurnLineAt: null,
 };
 
 describe("workflowRunIdOf", () => {

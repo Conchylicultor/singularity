@@ -160,6 +160,18 @@ value with a fresh ETag.
   untagged piece), so `false` means "nothing seen", never "still working". A named
   teammate woken by a later message appends a user line, and the next read sees an
   open turn again — nothing is latched.
+- **a named teammate went idle** — a teammate gets no task-notification (it has
+  no tool-use id to carry), and Claude Code 2.1.29x often writes its turn's last
+  text piece with `stop_reason: null`, so the marker above misses. What the lead
+  DOES receive is an `idle_notification` relayed into the parent transcript
+  (`teammateIdleTimes`, keyed by the teammate's `name`; a name two rows share
+  refuses). It counts only while the teammate's newest assistant/user line —
+  its own `timestamp`, the row's `newestTurnLineAt` — is no newer than the
+  notification: a teammate woken afterwards is working again. Compared against
+  the line's timestamp, not the file's mtime, because the harness writes the
+  final line up to ~0.1 s AFTER sending the notification (83 of 267 teammates
+  on this machine, 2026-10-07); by line timestamp all 267 agree, the two
+  exceptions being teammates genuinely woken after their last idle.
 - **none of those, and the parent has no live process** — the sub-agent was killed
   or died with the session. That is **ended without reporting**, a third state,
   not "still running". Rendering it as running would be the card lying about work
@@ -478,6 +490,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `formatLastStep`
     - `lastStepOfLines`
     - `LastStepSchema`
+    - `newestTurnLineAt`
     - `subagentActivity`
     - `SubagentActivityPayloadSchema`
     - `SubagentActivityRowSchema`
@@ -487,6 +500,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `subagentRunState`
     - `subagentTranscript`
     - `SubagentTranscriptSchema`
+    - `teammateIdleTimes`
     - `toolResultIsOutcome`
     - `turnEndedOfLines`
     - `UndescribedSubagentSchema`

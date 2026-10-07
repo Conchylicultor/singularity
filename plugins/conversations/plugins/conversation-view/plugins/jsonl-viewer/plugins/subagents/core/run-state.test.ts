@@ -237,4 +237,53 @@ describe("subagentRunState", () => {
       ).toEqual({ kind: "running" });
     });
   });
+  describe("a named teammate", () => {
+    // conv-1790861753-uid9's automations-web: no tool-use id, so no
+    // notification can match; its last text piece has stop_reason null.
+    const teammate = {
+      toolUseId: "",
+      agentToolEvent: undefined,
+      taskNotifications: [],
+      requestShape: "background" as const,
+      turnEnded: false,
+      conversationStatus: "working" as const,
+    };
+
+    test("its idle notification, with nothing written since, finishes it", () => {
+      expect(
+        subagentRunState({
+          ...teammate,
+          teammateIdle: {
+            idleAt: "2026-10-07T02:34:00.465Z",
+            newestTurnLineAt: "2026-10-07T02:34:00.164Z",
+          },
+        }),
+      ).toEqual({ kind: "finished" });
+    });
+
+    test("a line written after the idle notification means it was woken: running again", () => {
+      expect(
+        subagentRunState({
+          ...teammate,
+          teammateIdle: {
+            idleAt: "2026-10-07T02:33:34.804Z",
+            newestTurnLineAt: "2026-10-07T02:33:39.334Z",
+          },
+        }),
+      ).toEqual({ kind: "running" });
+    });
+
+    test("woken and its lead gone: ended without reporting, not finished", () => {
+      expect(
+        subagentRunState({
+          ...teammate,
+          conversationStatus: "done",
+          teammateIdle: {
+            idleAt: "2026-10-07T02:33:34.804Z",
+            newestTurnLineAt: "2026-10-07T02:33:39.334Z",
+          },
+        }),
+      ).toEqual({ kind: "ended-without-reporting" });
+    });
+  });
 });

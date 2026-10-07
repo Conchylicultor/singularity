@@ -18,6 +18,7 @@ interface TranscriptState {
   size: number;
   lastStep: LastStep | null;
   turnEnded: boolean;
+  newestTurnLineAt: string | null;
   lastActivityAt: string;
 }
 
@@ -95,6 +96,7 @@ export async function scanActivityIn(
       lastStep: transcript?.lastStep ?? null,
       // No transcript yet: no turn has been taken, let alone ended.
       turnEnded: transcript?.turnEnded ?? false,
+      newestTurnLineAt: transcript?.newestTurnLineAt ?? null,
       ...(entry.workflowRunId === undefined
         ? {}
         : {

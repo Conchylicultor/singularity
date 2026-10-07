@@ -43,3 +43,29 @@ export function turnEndedOfLines(
   }
   return false;
 }
+
+/**
+ * When the sub-agent's newest assistant/user line was written — its own
+ * `timestamp`, read backwards from the same window as `turnEndedOfLines` and by
+ * the same rule (only those two line types count; bookkeeping lines appended
+ * after the final message say nothing).
+ *
+ * A teammate's `idle_notification` is only evidence while nothing newer than it
+ * is in the transcript: a teammate woken by a later message appends a user line
+ * stamped after the notification, so comparing against this re-opens it.
+ *
+ * NOT the file's mtime: the harness writes the final piece's line a fraction of
+ * a second AFTER it sends the idle notification (83 of 267 teammates on this
+ * machine, 2026-10-07), while each line's own `timestamp` precedes it in all of
+ * them but the two woken afterwards. `null` = no such line in the window.
+ */
+export function newestTurnLineAt(
+  lines: readonly Record<string, unknown>[],
+): string | null {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i]!;
+    if (line.type !== "user" && line.type !== "assistant") continue;
+    return typeof line.timestamp === "string" ? line.timestamp : null;
+  }
+  return null;
+}

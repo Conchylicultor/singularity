@@ -170,6 +170,7 @@ function entry(over: {
       startedAt: ago(over.startedAgo).toISOString(),
       lastActivityAt: ago(over.endedAgo ?? 0).toISOString(),
       turnEnded: false,
+      newestTurnLineAt: null,
       lastStep,
     },
     state: over.state,

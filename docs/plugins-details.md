@@ -12080,6 +12080,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `formatLastStep`
                   - `lastStepOfLines`
                   - `LastStepSchema`
+                  - `newestTurnLineAt`
                   - `subagentActivity`
                   - `SubagentActivityPayloadSchema`
                   - `SubagentActivityRowSchema`
@@ -12089,6 +12090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `subagentRunState`
                   - `subagentTranscript`
                   - `SubagentTranscriptSchema`
+                  - `teammateIdleTimes`
                   - `toolResultIsOutcome`
                   - `turnEndedOfLines`
                   - `UndescribedSubagentSchema`

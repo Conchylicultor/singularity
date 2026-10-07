@@ -36,6 +36,14 @@ export interface SubagentRunStateInput {
    * `turnEnded`). `undefined` = no row yet. Positive evidence only.
    */
   turnEnded: boolean | undefined;
+  /**
+   * The newest `idle_notification` this sub-agent, as a named teammate, sent
+   * the parent (`teammateIdleTimes`), and the sub-agent's own newest line
+   * (the row's `newestTurnLineAt`). Idle counts only while nothing newer than
+   * the notification is in its transcript — a teammate woken by a later
+   * message is working again. Absent = not a teammate, or never went idle.
+   */
+  teammateIdle?: { idleAt: string; newestTurnLineAt: string | null };
   /** The parent conversation's status. */
   conversationStatus: ConversationStatus;
   /**
@@ -87,6 +95,14 @@ export interface SubagentRunStateInput {
  * is doing now. It sits AFTER the agent's own turn end: an agent that closed its
  * turn finished, even if the journal line recording it never landed.
  *
+ * A named teammate has one more: the `idle_notification` it sends its lead
+ * when its turn is over. Its own `end_turn` marker is often missing (Claude
+ * Code 2.1.29x writes a turn's last text piece with `stop_reason: null`), and
+ * it gets no task-notification, so without this a teammate that had reported
+ * and gone quiet read "running" for as long as its lead lived. It sits beside
+ * the turn end, which it stands in for, and is withdrawn by anything the
+ * teammate writes after it.
+ *
  * Last, the parent's own liveness.
  *
  * Deliberately NO staleness timeout as a fourth answer: a sub-agent that has
@@ -113,6 +129,9 @@ export function subagentRunState(
     return { kind: "finished" };
   }
   if (input.turnEnded === true) return { kind: "finished" };
+  if (input.teammateIdle !== undefined && isStillIdle(input.teammateIdle)) {
+    return { kind: "finished" };
+  }
   if (input.workflowRunEnded === true) {
     return { kind: "ended-without-reporting" };
   }
@@ -122,4 +141,15 @@ export function subagentRunState(
   return hasLiveProcess(input.conversationStatus)
     ? { kind: "running" }
     : { kind: "ended-without-reporting" };
+}
+
+/** No line newer than the idle notification: the teammate has not been woken since. */
+function isStillIdle(idle: {
+  idleAt: string;
+  newestTurnLineAt: string | null;
+}): boolean {
+  return (
+    idle.newestTurnLineAt === null ||
+    Date.parse(idle.newestTurnLineAt) <= Date.parse(idle.idleAt)
+  );
 }

@@ -89,6 +89,13 @@ const SubagentBaseSchema = z.object({
    */
   turnEnded: z.boolean(),
   /**
+   * When its newest assistant/user line was written, by that line's own
+   * `timestamp` (`newestTurnLineAt`). What a teammate's idle notification is
+   * compared against: idle only counts if nothing newer is in the transcript.
+   * `null` = no such line yet.
+   */
+  newestTurnLineAt: z.string().nullable(),
+  /**
    * Set when a `Workflow` run spawned this agent (found under
    * `subagents/workflows/wf_<runId>/`). On BOTH arms: an agent whose meta is
    * unreadable still sits in its run's folder, so it still belongs to the run.

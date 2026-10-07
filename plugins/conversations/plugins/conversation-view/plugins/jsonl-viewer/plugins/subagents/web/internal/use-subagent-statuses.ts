@@ -11,6 +11,7 @@ import {
   describedSubagent,
   subagentActivity,
   subagentRunState,
+  teammateIdleTimes,
   workflowCallsIn,
   workflowRunsOf,
   type DescribedSubagent,
@@ -163,6 +164,26 @@ export function useConversationSubagents(
   );
   const agentCalls = agentCallsIn(eventList);
   const conversationStatus = conversation.status;
+  const idleTimes = teammateIdleTimes(eventList);
+  // A teammate's idle notification names it by the name it was spawned with.
+  // A name more than one row answers to refuses, exactly as the card join
+  // does: either reading would put one teammate's idle on the other.
+  const nameCounts = new Map<string, number>();
+  for (const row of rows) {
+    if (row.kind === "described" && row.name !== undefined) {
+      nameCounts.set(row.name, (nameCounts.get(row.name) ?? 0) + 1);
+    }
+  }
+  const teammateInputs = (
+    row: SubagentActivityRow | undefined,
+  ): Pick<SubagentRunStateInput, "teammateIdle"> => {
+    if (row?.kind !== "described" || row.name === undefined) return {};
+    if (nameCounts.get(row.name) !== 1) return {};
+    const idleAt = idleTimes.get(row.name);
+    return idleAt === undefined
+      ? {}
+      : { teammateIdle: { idleAt, newestTurnLineAt: row.newestTurnLineAt } };
+  };
 
   const workflowRuns = workflowRunsOf({
     rows,
@@ -202,6 +223,7 @@ export function useConversationSubagents(
       turnEnded: row.turnEnded,
       conversationStatus,
       ...workflowInputs(row),
+      ...teammateInputs(row),
     });
     return {
       row,
@@ -242,6 +264,7 @@ export function useConversationSubagents(
         turnEnded: row?.turnEnded,
         conversationStatus,
         ...workflowInputs(row),
+        ...teammateInputs(row),
       });
       const startedAt = row?.startedAt ?? agentToolEvent?.at ?? null;
       return {

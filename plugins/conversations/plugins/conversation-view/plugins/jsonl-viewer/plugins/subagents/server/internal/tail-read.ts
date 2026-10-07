@@ -1,4 +1,9 @@
-import { lastStepOfLines, turnEndedOfLines, type LastStep } from "../../core";
+import {
+  lastStepOfLines,
+  newestTurnLineAt,
+  turnEndedOfLines,
+  type LastStep,
+} from "../../core";
 
 /** What one bounded read of a transcript's end says about the sub-agent. */
 export interface TailReading {
@@ -6,6 +11,8 @@ export interface TailReading {
   lastStep: LastStep | null;
   /** Its newest turn has ended (`turnEndedOfLines`) — positive evidence only. */
   turnEnded: boolean;
+  /** Its newest assistant/user line's own `timestamp` (`newestTurnLineAt`). */
+  newestTurnLineAt: string | null;
 }
 
 /**
@@ -21,7 +28,7 @@ export const TAIL_WINDOW_BYTES = 64 * 1024;
 
 /**
  * What a transcript's last `TAIL_WINDOW_BYTES` say: the most recent classifiable
- * step, and whether the newest turn has ended.
+ * step, whether the newest turn has ended, and when its newest line was written.
  *
  * This half only bounds the read and parses the window, ONCE for both readings;
  * the rules live in core — `lastStepOfLines` (including the one that matters
@@ -53,5 +60,6 @@ export async function readTail(
   return {
     lastStep: lastStepOfLines(parsed),
     turnEnded: turnEndedOfLines(parsed),
+    newestTurnLineAt: newestTurnLineAt(parsed),
   };
 }

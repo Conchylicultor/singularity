@@ -126,7 +126,7 @@ describe("readTail", () => {
     expect(await lastStepOf(path)).toBeNull();
   });
 
-  test("the same read says whether the newest turn has ended", async () => {
+  test("the same read says whether the newest turn has ended, and when its newest line was written", async () => {
     const path = join(await newDir(), "agent-done.jsonl");
     await writeFile(path, assistant([{ type: "text", text: "Working" }]));
     expect((await tailOf(path)).turnEnded).toBe(false);
@@ -135,6 +135,7 @@ describe("readTail", () => {
       line({
         type: "assistant",
         uuid: crypto.randomUUID(),
+        timestamp: "2026-10-07T02:34:00.164Z",
         message: {
           role: "assistant",
           stop_reason: "end_turn",
@@ -147,6 +148,7 @@ describe("readTail", () => {
     expect(await tailOf(path)).toEqual({
       lastStep: { kind: "text", preview: "Done." },
       turnEnded: true,
+      newestTurnLineAt: "2026-10-07T02:34:00.164Z",
     });
   });
 });
