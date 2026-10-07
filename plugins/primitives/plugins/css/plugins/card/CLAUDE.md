@@ -50,7 +50,6 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
 - Cross-plugin:
   - Imported by:
     - `active-data/task`
-    - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
     - `apps/chord/piano`
     - `apps/chord/trainer`

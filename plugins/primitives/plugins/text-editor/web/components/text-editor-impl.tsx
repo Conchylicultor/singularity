@@ -236,7 +236,7 @@ function EditorShell({
               placeholder={
                 // Shares the editable's grid cell (see the wrapper above) and so
                 // counts toward the box's height, unlike an absolute overlay.
-                <div className="text-muted-foreground pointer-events-none select-none p-composer-text text-body">
+                <div className="text-faint-foreground pointer-events-none select-none p-composer-text text-body">
                   {placeholder ?? ""}
                 </div>
               }

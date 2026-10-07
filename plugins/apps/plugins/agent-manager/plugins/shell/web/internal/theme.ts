@@ -291,7 +291,9 @@ const density = densityGroup.fragment(
  *   headings, "Queue 14" — the mock's 1.4 line at that size);
  * - 13px `label` and base on a 1.4 line (the sidebar, section heads, inherited
  *   text — the base is set on the app's scope root, never on `html`);
- * - 13.5px `body` on a 19px line (messages, the prompt).
+ * - 13.5px `body` on a 19px line (messages, the prompt);
+ * - 26px semibold `display` on a 32px line (the home's greeting — prototype
+ *   proto-1791387390-fyca; the app's one headline, so no other surface moves).
  */
 const typeScale = typeScaleGroup.fragment(
   both({
@@ -316,6 +318,9 @@ const typeScale = typeScaleGroup.fragment(
     lineHeightCode: "1.1875rem",
     fontSizeGroup: "0.78125rem",
     lineHeightGroup: "1.09375rem",
+    fontSizeDisplay: "1.625rem",
+    lineHeightDisplay: "2rem",
+    fontWeightDisplay: "600",
   }),
 );
 

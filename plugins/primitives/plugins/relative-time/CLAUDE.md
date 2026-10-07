@@ -13,7 +13,6 @@ dense-list spelling for a trailing time column, where "ago" is implied.
 - Cross-plugin:
   - Imported by:
     - `active-data/commit-link`
-    - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deploy-history`

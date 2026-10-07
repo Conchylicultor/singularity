@@ -247,7 +247,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper`
     - `apps-core/surface/floating/wallpaper/upload`
-    - `apps/agent-manager/welcome`
     - `apps/browser/shell`
     - `apps/browser/start-page`
     - `apps/browser/webview`

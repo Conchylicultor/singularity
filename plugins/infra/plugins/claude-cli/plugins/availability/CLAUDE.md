@@ -116,6 +116,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `recheckClaudeCode`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/welcome`
     - `conversations`
     - `conversations/agents`
     - `conversations/model-provider/catalog`

@@ -66,6 +66,7 @@ icon+count button it stands in for — carries a per-site
     - `apps-core/surface/floating`
     - `apps-core/tab-bar`
     - `apps/agent-manager/pages-nav`
+    - `apps/agent-manager/welcome`
     - `apps/browser/bookmarks`
     - `apps/browser/navigation`
     - `apps/browser/proxy`

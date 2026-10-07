@@ -55,7 +55,6 @@
     - `active-data/conv`
     - `active-data/plugin-link`
     - `active-data/task`
-    - `apps/agent-manager/welcome`
     - `conversations/agents`
     - `conversations/all-conversations`
     - `conversations/conversation-preprompt`

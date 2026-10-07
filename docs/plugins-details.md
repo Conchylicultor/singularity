@@ -335,26 +335,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Pane.Register` "welcome"
             - Uses:
               - `conversations.useConversations`
-              - `conversations/conversation-view.conversationPane`
-              - `primitives/css/card.Card`
-              - `primitives/css/center.Center`
-              - `primitives/css/clip.Clip`
-              - `primitives/css/fill.fillClasses`
-              - `primitives/css/grid.Grid`
-              - `primitives/css/rigid.rigidClass`
+              - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/launch.LaunchControl`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/icon-button.IconButton`
+              - `primitives/launch.useTaskLaunch`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
-              - `primitives/pane.useOpenPane`
-              - `primitives/relative-time.RelativeTime`
-              - `ui/icons.Icon`
+              - `primitives/persistent-draft.useDraft`
+              - `primitives/text-editor/composer.ComposerField`
+              - `tasks/launch-options.LaunchOptionPills`
+              - `tasks/launch-options.LaunchOptionValues`
             - Exports (values): `welcomePane`
     - **`browser`** — Minimal iframe-based web browser app.
       - Plugins:
@@ -10158,6 +10157,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `BackgroundWorkSchema`
       - `closeConversation`
       - `conversationRoute`
+      - `CONVERSATIONS_CATEGORY_ID`
       - `createConversation`
       - `CreateConversationBodySchema`
       - `CutLossesSchema`
@@ -10840,7 +10840,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/conv`
           - `active-data/plugin-link`
           - `active-data/task`
-          - `apps/agent-manager/welcome`
           - `conversations/agents`
           - `conversations/all-conversations`
           - `conversations/conversation-preprompt`
@@ -20969,6 +20968,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `recheckClaudeCode`
           - Cross-plugin:
             - Imported by:
+              - `apps/agent-manager/welcome`
               - `conversations`
               - `conversations/agents`
               - `conversations/model-provider/catalog`
@@ -29132,7 +29132,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data/task`
-              - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
               - `apps/chord/piano`
               - `apps/chord/trainer`
@@ -29172,7 +29171,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/layout`
               - `apps-core/surface/floating`
               - `apps-core/tab-bar`
-              - `apps/agent-manager/welcome`
               - `apps/browser/webview`
               - `apps/chord/curriculum`
               - `apps/chord/song-index`
@@ -29286,7 +29284,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface`
-              - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/chord/curriculum`
               - `apps/chord/song-index`
@@ -29765,7 +29762,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
-              - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
@@ -29989,6 +29985,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/app-launcher`
               - `apps-core/tab-bar`
+              - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/chord/curriculum`
               - `apps/chord/piano`
@@ -30346,7 +30343,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `rigidClass`
           - Cross-plugin:
             - Imported by:
-              - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/chord/curriculum`
               - `apps/chord/piano`
@@ -30550,6 +30546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
+              - `apps/agent-manager/welcome`
               - `apps/file-explorer/browser`
               - `apps/file-explorer/places`
               - `apps/mail/reading-pane`
@@ -33998,6 +33995,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating`
           - `apps-core/tab-bar`
           - `apps/agent-manager/pages-nav`
+          - `apps/agent-manager/welcome`
           - `apps/browser/bookmarks`
           - `apps/browser/navigation`
           - `apps/browser/proxy`
@@ -34283,12 +34281,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LaunchControlProps`
           - `LaunchRequest`
           - `LaunchToggle`
+          - `TaskLaunchTarget`
+          - `UseTaskLaunchOptions`
         - Exports (values):
           - `LaunchAgentForm`
           - `LaunchAgentPopover`
           - `LaunchControl`
           - `LaunchModelMenuContent`
           - `useLaunchConversation`
+          - `useTaskLaunch`
       - Cross-plugin:
         - Imported by:
           - `active-data/task`
@@ -36367,6 +36368,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
         - Imported by:
+          - `apps/agent-manager/welcome`
           - `apps/chord/curriculum`
           - `apps/file-explorer/browser`
           - `apps/prototypes/canvas`
@@ -36494,7 +36496,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `active-data/commit-link`
-          - `apps/agent-manager/welcome`
           - `apps/browser/start-page`
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/deploy-history`
@@ -37189,6 +37190,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ComposerRule`
           - Cross-plugin:
             - Imported by:
+              - `apps/agent-manager/welcome`
               - `primitives/launch`
               - `tasks/task-draft-form`
           - Plugins:
@@ -40054,6 +40056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TaskLaunchServer`
       - Cross-plugin:
         - Imported by:
+          - `apps/agent-manager/welcome`
           - `plugin-meta/plugin-health`
           - `primitives/launch`
           - `tasks`
@@ -41213,7 +41216,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating`
           - `apps-core/surface/floating/wallpaper`
           - `apps-core/surface/floating/wallpaper/upload`
-          - `apps/agent-manager/welcome`
           - `apps/browser/shell`
           - `apps/browser/start-page`
           - `apps/browser/webview`

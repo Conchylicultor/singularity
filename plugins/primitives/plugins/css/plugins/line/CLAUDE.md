@@ -35,6 +35,7 @@ attribute type carries.
   - Imported by:
     - `apps-core/app-launcher`
     - `apps-core/tab-bar`
+    - `apps/agent-manager/welcome`
     - `apps/browser/shell`
     - `apps/chord/curriculum`
     - `apps/chord/piano`

@@ -77,6 +77,7 @@ Ordering for both surfaces lives in
     - `TaskLaunchServer`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/welcome`
     - `plugin-meta/plugin-health`
     - `primitives/launch`
     - `tasks`

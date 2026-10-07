@@ -1,185 +1,231 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversations } from "@plugins/conversations/web";
 import {
   matchResource,
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
-import type { ConversationEntry } from "@plugins/conversations/core";
-import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
+import {
+  CONVERSATIONS_CATEGORY_ID,
+  type ConversationEntry,
+} from "@plugins/conversations/core";
+import { useTaskLaunch } from "@plugins/primitives/plugins/launch/web";
+import {
+  LaunchOptionPills,
+  type LaunchOptionValues,
+} from "@plugins/tasks/plugins/launch-options/web";
+import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 
-const arrowForwardIcon = symbol("arrow-forward");
+const sendIcon = symbol("arrow-upward");
 
+const NEEDS_YOU_DOT = "bg-warning";
+const RUNNING_DOT = "bg-success";
+
+/**
+ * The agent manager's home: the date and a greeting, ONE prompt that starts an
+ * agent, and one line of counts under it — nothing else.
+ */
 export function WelcomeView() {
   const conv = useConversations();
+  const now = new Date();
 
-  const openPane = useOpenPane();
-  const openConversation = (name: string) => {
-    openPane(conversationPane, { convId: name }, { mode: "root" });
+  // The counts describe the user's conversations, so they render only once those
+  // are known — a loading read shows nothing, never a zero it would then take
+  // back; a failed one says so, where the counts would be.
+  return (
+    <Scroll className="h-full">
+      <Stack
+        gap="xl"
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- the column sits a little above the middle of the pane, where the eye lands, and stays put while the prompt grows
+        className="mx-auto w-full max-w-2xl px-xl pt-[28vh] pb-2xl"
+      >
+        <Stack gap="xs">
+          <Text as="div" variant="caption" tone="faint">
+            {now.toLocaleDateString(undefined, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </Text>
+          <Text as="h1" variant="display" className="tracking-tight">
+            {greeting(now)}
+          </Text>
+        </Stack>
+        <Stack gap="lg">
+          <HomePrompt />
+          {matchResource(conv, {
+            loading: () => null,
+            error: (error) => (
+              <ResourceErrorInline
+                variant="inline"
+                subject="your conversations"
+                error={error}
+                refetch={conv.refetch}
+              />
+            ),
+            ready: (data) => (
+              <Counts
+                {...partition(data.active)}
+                total={data.active.length + data.totalGoneCount}
+              />
+            ),
+          })}
+        </Stack>
+      </Stack>
+    </Scroll>
+  );
+}
+
+/** The two counts the home shows: waiting on the user, and running. */
+function partition(active: ConversationEntry[]) {
+  return {
+    needsYou: active.filter((c) => c.status === "waiting").length,
+    running: active.filter(
+      (c) => c.status === "working" || c.status === "starting",
+    ).length,
+  };
+}
+
+function greeting(d: Date): string {
+  const h = d.getHours();
+  if (h >= 5 && h < 12) return "Good morning";
+  if (h >= 12 && h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+/** What the user has typed and picked, and not launched yet. */
+type HomeDraft = {
+  text: string;
+  /** Only the launch options the user changed; the rest read through to defaults. */
+  picked: LaunchOptionValues;
+};
+
+/** How long the fallback task title may be — the title model replaces it. */
+const TITLE_CHARS = 80;
+
+/**
+ * The one prompt: Enter (or the round send button) files a task carrying the
+ * bar's launch options — the same pills as the Improve and Launch popovers:
+ * model, thinking mode, preprompt — starts it, and opens the conversation in
+ * place of the home. The unsent draft survives a reload.
+ */
+function HomePrompt() {
+  const [draft, setDraft, clearDraft] = useDraft<HomeDraft>(
+    "agent-manager-home:prompt",
+    { text: "", picked: {} },
+  );
+  const { resolveOptions, launch } = useTaskLaunch({
+    openAfterLaunch: true,
+    openMode: "root",
+  });
+  const options = resolveOptions(draft.picked);
+  const setPicked = (picked: LaunchOptionValues) =>
+    setDraft((d) => ({ ...d, picked }));
+  // Claude Code missing or signed out: the send button says why, rather than
+  // filing a launch that cannot run.
+  const claudeBlock = useClaudeCodeLaunchBlock();
+  const prompt = draft.text.trim();
+  const canSend = prompt !== "" && claudeBlock === null;
+
+  const send = async () => {
+    if (!canSend) return;
+    // A placeholder the title model upgrades (the server files it titleAuto):
+    // the prompt's first line, so the task reads sensibly until then.
+    const title = prompt.split("\n")[0]!.slice(0, TITLE_CHARS);
+    await launch(prompt, draft.picked, {
+      title,
+      categoryId: CONVERSATIONS_CATEGORY_ID,
+    });
+    clearDraft();
   };
 
-  // The counts and the recents describe the user's conversations, so they
-  // render only once those are known — a loading read shows neither, never a
-  // zero or an empty list it would then take back; a failed one says so once,
-  // where the recents would be.
   return (
-    <Center className="h-full p-2xl">
-      <Stack align="center" gap="2xl" className="w-full max-w-sm">
-        {/* Branding */}
-        <Stack align="center" gap="sm">
-          <img src="/icon.svg" alt="Equin" className="size-24" />
-          <Text as="span" variant="heading" className="tracking-tight">
-            Equin
-          </Text>
-        </Stack>
-
-        {matchResource(conv, {
-          loading: () => null,
-          // Said once, below, where the recents would be.
-          error: () => null,
-          ready: (data) => (
-            <ConversationStats
-              active={data.active}
-              totalGoneCount={data.totalGoneCount}
+    <ComposerField
+      value={draft.text}
+      onChange={(text) => setDraft((d) => ({ ...d, text }))}
+      onSubmit={() => void send()}
+      submitMode="enter"
+      placeholder="What should an agent do?"
+      autoFocus
+      minRows={2}
+      maxHeight="16rem"
+      namespace="agent-manager-home-prompt"
+      barStart={
+        <LaunchOptionPills
+          side="start"
+          values={options}
+          onChange={setPicked}
+          disabled={false}
+        />
+      }
+      barEnd={
+        <>
+          <LaunchOptionPills
+            side="end"
+            values={options}
+            onChange={setPicked}
+            disabled={false}
+          />
+          {/* Round, and filled only once there is something to send — empty,
+              it is the disabled glyph, so the field reads as waiting for words.
+              One rung above the bar's compact density: it is the field's one
+              action, so it reads larger than the pills beside it. */}
+          <ControlSizeProvider size="md">
+            <IconButton
+              icon={sendIcon}
+              label="Start agent"
+              tooltip={claudeBlock ?? undefined}
+              shortcut="enter"
+              variant="default"
+              className="rounded-full"
+              disabled={!canSend}
+              onClick={send}
             />
-          ),
-        })}
-
-        {/* New Conversation */}
-        <LaunchControl fullWidth openMode="root" />
-
-        {matchResource(conv, {
-          loading: () => null,
-          error: (error) => (
-            <ResourceErrorInline
-              variant="inline"
-              subject="your conversations"
-              error={error}
-              refetch={conv.refetch}
-            />
-          ),
-          ready: (data) => (
-            <RecentConversations
-              conversations={[...data.active, ...data.recentGone].slice(0, 5)}
-              onOpen={openConversation}
-            />
-          ),
-        })}
-      </Stack>
-    </Center>
+          </ControlSizeProvider>
+        </>
+      }
+    />
   );
 }
 
-function ConversationStats({
-  active,
-  totalGoneCount,
+function Counts({
+  needsYou,
+  running,
+  total,
 }: {
-  active: ConversationEntry[];
-  totalGoneCount: number;
+  needsYou: number;
+  running: number;
+  total: number;
 }) {
-  const activeCount = active.length;
-  const workingCount = active.filter((c) => c.status === "working").length;
-  const totalCount = activeCount + totalGoneCount;
-  if (totalCount === 0) return null;
-
   return (
-    <Grid cols={3} gap="md" className="w-full">
-      {[
-        { label: "Total", value: totalCount },
-        { label: "Active", value: activeCount },
-        { label: "Working", value: workingCount },
-      ].map((stat) => (
-        <Card key={stat.label} className="rounded-lg p-md text-center">
-          <Text as="div" variant="title" className="text-foreground">
-            {stat.value}
-          </Text>
-          <div className="text-2xs text-muted-foreground">{stat.label}</div>
-        </Card>
-      ))}
-    </Grid>
+    <Line className="gap-lg px-2xs">
+      <Count dot={NEEDS_YOU_DOT} label={`${needsYou} need you`} />
+      <Count dot={RUNNING_DOT} label={`${running} running`} />
+      <Fill />
+      {/* The all-time total sits apart, at the line's far end: context, not status. */}
+      <Text variant="caption" tone="faint" className="tabular-nums">
+        {total.toLocaleString()} total
+      </Text>
+    </Line>
   );
 }
 
-function RecentConversations({
-  conversations,
-  onOpen,
-}: {
-  conversations: ConversationEntry[];
-  onOpen: (id: string) => void;
-}) {
-  if (conversations.length === 0) return null;
-
+function Count({ dot, label }: { dot: string; label: string }) {
   return (
-    <div className="w-full">
-      <Stack
-        direction="row"
-        align="center"
-        justify="between"
-        gap="none"
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset below the section header above the recents card
-        className="mb-2"
-      >
-        <Text as="span" variant="label" className="text-muted-foreground">
-          Recent conversations
-        </Text>
-      </Stack>
-      <Clip as={Card} className="rounded-lg p-none">
-        <Stack gap="none" className="divide-y">
-          {conversations.map((conversation) => (
-            <Stack
-              as="button"
-              direction="row"
-              align="center"
-              gap="md"
-              key={conversation.id}
-              className="px-md py-sm text-left hover:bg-accent transition-colors"
-              onClick={() => onOpen(conversation.id)}
-            >
-              <StatusDot
-                colorClass={
-                  conversation.active ? "bg-info" : "bg-muted-foreground/40"
-                }
-              />
-              <Stack as={Clip} gap="2xs" className={fillClasses("x")}>
-                <span
-                  className={cn(
-                    "truncate text-caption",
-                    !conversation.active
-                      ? "text-muted-foreground"
-                      : "font-medium text-foreground",
-                  )}
-                >
-                  {conversation.title ?? "Starting..."}
-                </span>
-                <RelativeTime
-                  date={conversation.createdAt}
-                  className="text-3xs text-muted-foreground"
-                />
-              </Stack>
-              <Icon
-                icon={arrowForwardIcon}
-                className={cn(
-                  "size-3.5 text-muted-foreground/50",
-                  rigidClass(),
-                )}
-              />
-            </Stack>
-          ))}
-        </Stack>
-      </Clip>
-    </div>
+    <Line className="gap-xs">
+      <StatusDot colorClass={dot} />
+      <Text variant="caption" tone="muted">
+        {label}
+      </Text>
+    </Line>
   );
 }

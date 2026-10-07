@@ -200,6 +200,7 @@
     - `BackgroundWorkSchema`
     - `closeConversation`
     - `conversationRoute`
+    - `CONVERSATIONS_CATEGORY_ID`
     - `createConversation`
     - `CreateConversationBodySchema`
     - `CutLossesSchema`

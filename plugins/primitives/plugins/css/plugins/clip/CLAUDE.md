@@ -36,7 +36,6 @@ truncation leaf (it ellipsizes via the ambient single-line context).
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface`
-    - `apps/agent-manager/welcome`
     - `apps/browser/shell`
     - `apps/chord/curriculum`
     - `apps/chord/song-index`

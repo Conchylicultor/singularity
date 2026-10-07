@@ -1,4 +1,5 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { CONVERSATIONS_CATEGORY_ID } from "../../core/task-category";
 import { dirname } from "node:path";
 import { z } from "zod";
 import {
@@ -300,7 +301,7 @@ async function adopt(
     // auto-created conversation task. Linked-to-existing-attempt adoptions keep
     // the task's original category.
     if (adopted?.createdTaskId) {
-      await setTaskCategory(adopted.createdTaskId, "conversations");
+      await setTaskCategory(adopted.createdTaskId, CONVERSATIONS_CATEGORY_ID);
     }
   } catch (err) {
     console.error(`[conversations.status] adopt orphan "${id}" failed`, err);

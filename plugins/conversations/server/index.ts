@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { CONVERSATIONS_CATEGORY_ID } from "../core/task-category";
 import { handleClose } from "./internal/handle-close";
 import { handleList } from "./internal/handle-list";
 import { handleListGone } from "./internal/handle-list-gone";
@@ -141,7 +142,11 @@ export default {
       with: {},
       oneShot: false,
     }),
-    TaskCategory({ id: "conversations", label: "Conversations", order: 0 }),
+    TaskCategory({
+      id: CONVERSATIONS_CATEGORY_ID,
+      label: "Conversations",
+      order: 0,
+    }),
     TaskCategory({ id: "system", label: "System", order: 1 }),
     conversationSpawnFailedKind,
     claudeCodeUnavailableAtSpawnKind,

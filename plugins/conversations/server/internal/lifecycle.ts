@@ -1,4 +1,5 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { CONVERSATIONS_CATEGORY_ID } from "../../core/task-category";
 import { existsSync } from "node:fs";
 import { rename } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -346,7 +347,7 @@ export async function commitConversation(
       );
       await setTaskCategory(
         task.id,
-        p.kind === "system" ? "system" : "conversations",
+        p.kind === "system" ? "system" : CONVERSATIONS_CATEGORY_ID,
         tx,
       );
       taskId = task.id;

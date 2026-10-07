@@ -93,12 +93,15 @@ started" notification confirms it), so its props are the form's minus
     - `LaunchControlProps`
     - `LaunchRequest`
     - `LaunchToggle`
+    - `TaskLaunchTarget`
+    - `UseTaskLaunchOptions`
   - Exports (values):
     - `LaunchAgentForm`
     - `LaunchAgentPopover`
     - `LaunchControl`
     - `LaunchModelMenuContent`
     - `useLaunchConversation`
+    - `useTaskLaunch`
 - Cross-plugin:
   - Imported by:
     - `active-data/task`

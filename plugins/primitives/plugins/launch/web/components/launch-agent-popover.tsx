@@ -7,25 +7,18 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import {
-  useOpenPane,
-  type PaneOpenMode,
-} from "@plugins/primitives/plugins/pane/web";
+import { type PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   LaunchOptionPills,
-  TaskLaunch,
-  pickKnownOptions,
-  useLaunchOptionDefaults,
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
-import { launchTask, type LaunchTaskResponse } from "@plugins/tasks/core";
+import { type LaunchTaskResponse } from "@plugins/tasks/core";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { useTaskLaunch } from "./use-task-launch";
 
 /**
  * An on/off choice the caller adds to the form. The form draws it and hands
@@ -130,9 +123,11 @@ export function LaunchAgentForm({
   const { text, picked } = draft;
   // Only what the user changed; the rest reads through to the registry's
   // defaults, so an option registered after mount is still sent with its seed.
-  const defaults = useLaunchOptionDefaults();
-  const options: LaunchOptionValues = { ...defaults, ...picked };
-  const registered = TaskLaunch.Option.useContributions();
+  const { resolveOptions, launch } = useTaskLaunch({
+    openAfterLaunch,
+    openMode,
+  });
+  const options = resolveOptions(picked);
   // Same read-through for toggles: the draft holds only flipped ones.
   const toggleValues: Record<string, boolean> = {
     ...Object.fromEntries(toggles.map((t) => [t.id, t.defaultValue ?? false])),
@@ -142,35 +137,21 @@ export function LaunchAgentForm({
     setDraft((d) => ({ ...d, picked: next }));
   // Stable per-instance Lexical namespace so multiple forms don't collide.
   const editorId = useId();
-  const openPane = useOpenPane();
   // Claude Code missing or signed out: say so, with the fix, where the Launch
   // button is — rather than filing a launch that cannot run.
   const claudeBlock = useClaudeCodeLaunchBlock();
 
   const submit = async () => {
     const req = await getRequest(text, toggleValues);
-    const result = await fetchEndpoint(
-      launchTask,
-      {},
-      {
-        body: {
-          prompt: req.prompt,
-          options: pickKnownOptions(options, registered),
-          task:
-            "taskId" in req
-              ? { id: req.taskId }
-              : { title, categoryId: req.categoryId },
-        },
-      },
+    const result = await launch(
+      req.prompt,
+      picked,
+      "taskId" in req
+        ? { id: req.taskId }
+        : { title, categoryId: req.categoryId },
     );
     clearDraft();
     onSubmitted?.(result);
-    if (result.started && openAfterLaunch)
-      openPane(
-        conversationPane,
-        { convId: result.conversation.id },
-        { mode: openMode },
-      );
   };
 
   return (

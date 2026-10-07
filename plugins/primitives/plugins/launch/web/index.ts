@@ -14,6 +14,11 @@ export {
   type LaunchAgentRequest,
   type LaunchToggle,
 } from "./components/launch-agent-popover";
+export {
+  useTaskLaunch,
+  type TaskLaunchTarget,
+  type UseTaskLaunchOptions,
+} from "./components/use-task-launch";
 
 export default {
   description:

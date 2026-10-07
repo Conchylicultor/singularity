@@ -66,7 +66,6 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `rigidClass`
 - Cross-plugin:
   - Imported by:
-    - `apps/agent-manager/welcome`
     - `apps/browser/shell`
     - `apps/chord/curriculum`
     - `apps/chord/piano`

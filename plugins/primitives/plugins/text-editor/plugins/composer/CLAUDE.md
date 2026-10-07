@@ -65,6 +65,7 @@ The composer names no contributor: a host decides what goes on the bar.
     - `ComposerRule`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/welcome`
     - `primitives/launch`
     - `tasks/task-draft-form`
 - Sub-plugins:
