@@ -6,6 +6,7 @@ export { useDarkMode } from "./internal/use-dark-mode";
 export { HighlightedCode } from "./internal/highlighted-code";
 export {
   CodeListing,
+  CodePaneSurface,
   type CodeListingProps,
   type CodeListingVariant,
 } from "./internal/code-listing";

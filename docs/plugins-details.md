@@ -33017,6 +33017,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/file-viewer.useFileText`
               - `primitives/loading.Loading`
               - `primitives/syntax-highlight.CodeListing`
+              - `primitives/syntax-highlight.CodePaneSurface`
         - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's bytes are read from.
           - Web:
             - Contributes: `FileViewer.Renderer` "Diff" → `FileDiffView`
@@ -36181,6 +36182,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UseHighlightedHtmlOptions`
         - Exports (values):
           - `CodeListing`
+          - `CodePaneSurface`
           - `getHighlighter`
           - `HighlightedCode`
           - `languageForPath`

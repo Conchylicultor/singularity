@@ -18,6 +18,7 @@
     - `UseHighlightedHtmlOptions`
   - Exports (values):
     - `CodeListing`
+    - `CodePaneSurface`
     - `getHighlighter`
     - `HighlightedCode`
     - `languageForPath`

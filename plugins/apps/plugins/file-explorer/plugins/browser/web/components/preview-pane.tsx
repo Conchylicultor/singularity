@@ -109,6 +109,7 @@ export function PreviewPane({
           <Theme
             name={subThemeScope(filesDocumentTheme)}
             surface="none"
+            // The code renderer is its own scroll box, sized to this height.
             className="h-full"
           >
             <FileContent

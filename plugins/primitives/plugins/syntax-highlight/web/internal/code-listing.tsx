@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type ReactNode, type Ref } from "react";
 import type { ShikiTransformer } from "shiki";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -7,12 +7,15 @@ import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-re
 import { languageForPath, SHIKI_LANGS } from "./lang";
 import { useDarkMode } from "./use-dark-mode";
 import { useHighlightedHtml } from "./use-highlighted-html";
+import { codeBackground } from "./highlighter";
 
 /**
  * - `block` — a bounded, muted code block inside flowing content (a transcript
  *   entry): its own scroll box capped at 280px.
- * - `pane` — the whole surface of a viewer: transparent, as wide as its longest
- *   line, and scrolled by the host's scroll container.
+ * - `pane` — the whole surface of a viewer: its own scroll box filling the
+ *   host's height, painted with the highlight theme's background — so the code's
+ *   colour reaches the pane's bottom edge, and shows in the overscroll bounce
+ *   (which moves a viewport's content, revealing the viewport's own paint).
  */
 export type CodeListingVariant = "block" | "pane";
 
@@ -65,6 +68,37 @@ const withHighlightStyle = (out: string) => `${HIGHLIGHT_STYLE}${out}`;
 // wrap them. `[&_.ln]` is the line-number gutter.
 
 /**
+ * The surface a `pane` listing draws on: a scroll box filling its host's
+ * height, painted with the highlight theme's background. Exported so a
+ * viewer's own states before the listing (loading the file) sit on the same
+ * colour, and the pane never flashes the app's.
+ */
+export function CodePaneSurface({
+  ref,
+  className,
+  children,
+  html,
+}: {
+  ref?: Ref<HTMLElement>;
+  className?: string;
+  children?: ReactNode;
+  html?: string;
+}) {
+  const dark = useDarkMode();
+  return (
+    <Scroll
+      ref={ref}
+      axis="both"
+      style={{ backgroundColor: codeBackground(dark) }}
+      className={className ? `h-full ${className}` : "h-full"}
+      {...(html !== undefined
+        ? { dangerouslySetInnerHTML: { __html: html } }
+        : { children })}
+    />
+  );
+}
+
+/**
  * Code with syntax highlighting and a line-number gutter — the one listing
  * behind a transcript's Read result and a file viewer's Code tab. Until the
  * highlight lands (or if it fails) the plain code shows, never a blank box.
@@ -106,7 +140,7 @@ export function CodeListing({
   }, [highlightLine, html]);
 
   if (!code) {
-    return (
+    const empty = (
       <Text
         as="p"
         variant="caption"
@@ -115,17 +149,24 @@ export function CodeListing({
         {emptyText}
       </Text>
     );
+    return variant === "pane" ? (
+      <CodePaneSurface>{empty}</CodePaneSurface>
+    ) : (
+      empty
+    );
   }
 
   if (html === null) {
     return variant === "pane" ? (
       <ContentScope>
-        <pre
-          // eslint-disable-next-line text/no-adhoc-typography -- leading-5 fixes mono code line-height for line-number gutter alignment, distinct from caption's tighter line-height
-          className="whitespace-pre-wrap break-words p-md font-mono text-caption leading-5"
-        >
-          {code}
-        </pre>
+        <CodePaneSurface>
+          <pre
+            // eslint-disable-next-line text/no-adhoc-typography -- leading-5 fixes mono code line-height for line-number gutter alignment, distinct from caption's tighter line-height
+            className="whitespace-pre-wrap break-words p-md font-mono text-caption leading-5"
+          >
+            {code}
+          </pre>
+        </CodePaneSurface>
       </ContentScope>
     ) : (
       <ContentScope>
@@ -143,11 +184,11 @@ export function CodeListing({
   return (
     <ContentScope>
       {variant === "pane" ? (
-        <div
+        <CodePaneSurface
           ref={containerRef}
           // eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- [&>pre]:leading-5 fixes mono code line-height for line-number gutter alignment; [&_.ln]:mr-4 is the line-number gutter width (paired with [&_.ln]:w-7), a fixed code-gutter dimension the density ramp can't express
-          className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:w-max [&>pre]:min-w-full [&>pre]:bg-transparent [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
-          dangerouslySetInnerHTML={{ __html: html }}
+          className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:w-max [&>pre]:min-w-full [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+          html={html}
         />
       ) : (
         <Scroll
