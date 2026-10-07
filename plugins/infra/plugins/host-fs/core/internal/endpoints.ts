@@ -137,6 +137,57 @@ export const hostFsList = defineEndpoint({
   response: HostFsListResultSchema,
 });
 
+// ── peek ─────────────────────────────────────────────────────────────────────
+
+/** How many folders one `peek` request reads at most. */
+export const HOST_FS_PEEK_MAX_PATHS = 500;
+
+/**
+ * How many child names `peek` returns for one folder at most. A fuller folder
+ * answers `too-many` with its raw total instead of shipping every name.
+ */
+export const HOST_FS_PEEK_MAX_NAMES = 10_000;
+
+export const HostFsPeekResultSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("ok"),
+    path: z.string(),
+    /** Every child, hidden ones included, by name only — no child is stat'ed. */
+    children: z.array(z.object({ name: z.string(), hidden: z.boolean() })),
+  }),
+  /** More than {@link HOST_FS_PEEK_MAX_NAMES} children: `total` counts them all. */
+  z.object({
+    kind: z.literal("too-many"),
+    path: z.string(),
+    total: z.number(),
+  }),
+  /**
+   * An archive file on disk: `peek` never opens one (reading its index is not
+   * the cheap read peek promises). `list` of its path lists its root.
+   */
+  z.object({ kind: z.literal("archive"), path: z.string() }),
+  Missing,
+  Denied,
+  NotADir,
+  UnreadableArchive,
+]);
+export type HostFsPeekResult = z.infer<typeof HostFsPeekResultSchema>;
+
+/**
+ * The child names of several folders at once — what a folder holds without
+ * describing it: one `readdir` per folder on disk, the cached index for a
+ * folder inside an archive. For counting a folder's items without listing it
+ * (each child's `hidden` lets the caller apply its own visibility rules).
+ * `results` is aligned with `paths`; each path is read like `list` reads one.
+ */
+export const hostFsPeek = defineEndpoint({
+  route: "POST /api/host-fs/peek",
+  body: z.object({
+    paths: z.array(z.string()).max(HOST_FS_PEEK_MAX_PATHS),
+  }),
+  response: z.object({ results: z.array(HostFsPeekResultSchema) }),
+});
+
 // ── stat ─────────────────────────────────────────────────────────────────────
 
 export const HostFsStatResultSchema = z.discriminatedUnion("kind", [

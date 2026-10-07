@@ -13,6 +13,7 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { completeHostDir, splitPrefix } from "./complete";
 import { listHostDir } from "./list";
 import { isAppOrigin, openArgv } from "./open";
+import { peekHostDir, peekHostDirs } from "./peek";
 import { classifyFsError, expandTilde, resolveHostPath } from "./path";
 import { parseRange, serveHostFile } from "./raw";
 import { statHostPath } from "./stat";
@@ -69,6 +70,47 @@ describe("resolveHostPath", () => {
   test("classifyFsError rethrows the unexpected", () => {
     const weird = Object.assign(new Error("boom"), { code: "EIO" });
     expect(() => classifyFsError(weird)).toThrow("boom");
+  });
+});
+
+describe("peek", () => {
+  test("names every child with its hidden flag, without describing it", async () => {
+    const res = await peekHostDir(root);
+    if (res.kind !== "ok") throw new Error(`expected ok, got ${res.kind}`);
+    const children = Object.fromEntries(
+      res.children.map((c) => [c.name, c.hidden]),
+    );
+    expect(children).toEqual({
+      ".hidden-dir": true,
+      Alpha: false,
+      beta: false,
+      "notes.txt": false,
+      "link-to-beta": false,
+      "link-to-notes": false,
+      dangling: false,
+      locked: false,
+    });
+  });
+  test("reads a symlinked folder through the link", async () => {
+    const res = await peekHostDir(join(root, "link-to-beta"));
+    expect(res.kind === "ok" && res.children).toEqual([
+      { name: "file.txt", hidden: false },
+    ]);
+  });
+  test("denied, missing and not-a-dir are their own answers, never an empty folder", async () => {
+    expect(
+      await peekHostDirs([
+        join(root, "locked"),
+        join(root, "nope"),
+        join(root, "notes.txt"),
+        join(root, "Alpha"),
+      ]),
+    ).toEqual([
+      { kind: "denied", path: join(root, "locked") },
+      { kind: "missing", path: join(root, "nope") },
+      { kind: "not-a-dir", path: join(root, "notes.txt") },
+      { kind: "ok", path: join(root, "Alpha"), children: [] },
+    ]);
   });
 });
 

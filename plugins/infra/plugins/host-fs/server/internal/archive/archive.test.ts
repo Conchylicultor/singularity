@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { listHostPath } from "../list";
 import { openHostPath } from "../open";
+import { peekHostDir } from "../peek";
 import { serveArchiveMember } from "../raw";
 import { statHostOrArchivePath } from "../stat";
 import { readHostPathText } from "../text";
@@ -192,6 +193,36 @@ describe("list", () => {
       archive: join(root, "broken.fake"),
       reason: "corrupt",
     });
+  });
+});
+
+describe("peek", () => {
+  test("a folder inside an archive is read from the index; the archive file is never opened", async () => {
+    expect(await peekHostDir(join(archive, "2022"))).toEqual({
+      kind: "ok",
+      path: join(archive, "2022"),
+      children: [
+        { name: "b.stream", hidden: false },
+        { name: "summer", hidden: false },
+      ],
+    });
+    const calls = indexCalls;
+    expect(await peekHostDir(join(root, "broken.fake"))).toEqual({
+      kind: "archive",
+      path: join(root, "broken.fake"),
+    });
+    expect(indexCalls).toBe(calls);
+  });
+  test("a broken archive's member folder is unreadable, not empty", async () => {
+    expect((await peekHostDir(join(root, "broken.fake", "x"))).kind).toBe(
+      "unreadable-archive",
+    );
+  });
+  test("a real directory under a claimed name is read from disk", async () => {
+    const real = await peekHostDir(join(root, "real-dir.fake"));
+    expect(real.kind === "ok" && real.children).toEqual([
+      { name: "inside.txt", hidden: false },
+    ]);
   });
 });
 

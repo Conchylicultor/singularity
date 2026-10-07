@@ -29,3 +29,9 @@ export {
   type EntryCategory,
 } from "./internal/entry-kind";
 export type { ExplorerLens, LensHideRule } from "./internal/lens";
+export {
+  archiveReasonMessage,
+  itemCount,
+  type EntryFilter,
+  type ItemCount,
+} from "./internal/item-count";

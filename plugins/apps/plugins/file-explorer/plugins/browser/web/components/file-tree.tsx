@@ -18,9 +18,11 @@ import {
   type HostFsEntry,
   type HostFsListResult,
 } from "@plugins/infra/plugins/host-fs/core";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
+  archiveReasonMessage,
   ENTRY_CATEGORY_OPTIONS,
   entryCategory,
   entryExtension,
@@ -29,21 +31,18 @@ import {
   formatModified,
   formatModifiedFull,
   formatSize,
+  itemCount,
   joinPath,
+  type EntryFilter,
   type EntryRow,
 } from "../../core";
 import type { Listing, Listings } from "../internal/listings";
+import { useFolderPeek } from "../internal/folder-peek";
 import { FileBrowserSlots } from "../slots";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
 import { useViewportAtMost } from "../internal/use-viewport-at-most";
 
 const FILE_TREE_VIEW = defineDataView("file-explorer.tree");
-
-/**
- * Whether the browser shows a listed entry, `path` in display form: Show
- * hidden files and every lens's hide rule decide it.
- */
-export type EntryFilter = (entry: HostFsEntry, path: string) => boolean;
 
 /** What a listing's failure says, in the user's terms. */
 function listingFailure(listing: Listing): string | null {
@@ -56,25 +55,10 @@ function listingFailure(listing: Listing): string | null {
     case "not-a-dir":
       return "Not a folder";
     case "unreadable-archive":
-      return unreadableArchiveMessage(listing.result.reason);
+      return archiveReasonMessage(listing.result.reason);
     case "ok":
     case undefined:
       return null;
-  }
-}
-
-function unreadableArchiveMessage(
-  reason: Extract<HostFsListResult, { kind: "unreadable-archive" }>["reason"],
-): string {
-  switch (reason) {
-    case "corrupt":
-      return "This archive is damaged or not in a format it claims";
-    case "encrypted":
-      return "This archive is encrypted";
-    case "unsupported-method":
-      return "This archive uses a compression method that cannot be read";
-    case "too-many-entries":
-      return "This archive has too many entries to browse";
   }
 }
 
@@ -140,17 +124,6 @@ function buildRows(
   };
   walk(root, null);
   return rows;
-}
-
-/** How many entries a folder shows, once it is listed. */
-export function childCount(
-  listings: Listings,
-  path: string,
-  shows: EntryFilter,
-): number | null {
-  const result = listings.get(path)?.result;
-  if (result?.kind !== "ok") return null;
-  return result.entries.filter((e) => shows(e, joinPath(path, e.name))).length;
 }
 
 /** A tree-view listing's state, as the lazy-children contract spells it. */
@@ -243,6 +216,72 @@ function timeField(
   };
 }
 
+function muted(text: string, title: string): ReactNode {
+  return (
+    <span className="text-muted-foreground" title={title}>
+      {text}
+    </span>
+  );
+}
+
+/**
+ * A folder's Size cell: how many items it holds, by the browser's visibility
+ * rules (Show hidden files, every lens hide rule), expanded or not. An
+ * expanded folder counts its listing; any other is peeked (its child names,
+ * one directory read) by this cell — so only folders on screen are read, as
+ * the tree renders only the rows it shows. Never a 0 that is really a failure.
+ */
+function FolderSize({
+  path,
+  listed,
+  shows,
+  visit,
+}: {
+  path: string;
+  listed: HostFsListResult | null | undefined;
+  shows: EntryFilter;
+  visit: string;
+}): ReactNode {
+  const peek = useFolderPeek(path, visit, listed?.kind !== "ok");
+  if (peek.kind === "failed" && listed?.kind !== "ok") {
+    return (
+      <Button
+        variant="ghost"
+        title={`${peek.message} — click to retry`}
+        onClick={(e) => {
+          e.stopPropagation();
+          peek.retry();
+        }}
+      >
+        Retry
+      </Button>
+    );
+  }
+  const count = itemCount(
+    path,
+    listed,
+    peek.kind === "ok" ? peek.result : undefined,
+    shows,
+  );
+  switch (count.kind) {
+    case "count":
+      return formatCount(count.n);
+    case "many":
+      return muted(
+        formatCount(count.total),
+        "Too many items to apply the visibility rules: every item is counted",
+      );
+    case "denied":
+      return muted("No access", "Permission denied");
+    case "unreadable":
+      return muted("Unreadable", archiveReasonMessage(count.reason));
+    case "gone":
+      return muted("—", "This folder no longer exists");
+    case "loading":
+      return <Loading variant="block" className="ml-auto h-3 w-10" />;
+  }
+}
+
 export interface FileTreeProps {
   root: string;
   /** The listings of the root and of every folder opened so far. */
@@ -282,6 +321,9 @@ export function FileTree({
 }: FileTreeProps): ReactNode {
   // "Today" is today as of this listing: the folder is re-listed on every visit.
   const [now] = useState(() => Date.now());
+  // Folder counts are cached for this visit: scrolling back costs nothing, and
+  // the next visit re-reads them, as it re-lists the folder.
+  const [visit] = useState(() => crypto.randomUUID());
   const rows = useMemo(
     () => buildRows(listings, root, shows),
     [listings, root, shows],
@@ -317,11 +359,17 @@ export function FileTree({
         type: "number",
         width: "80px",
         value: (r) => (r.kind === "dir" ? null : r.size),
-        cell: (r) => {
-          if (r.kind !== "dir") return formatSize(r.size);
-          const n = childCount(listings, r.path, shows);
-          return n === null ? "—" : formatCount(n);
-        },
+        cell: (r) =>
+          r.kind === "dir" ? (
+            <FolderSize
+              path={r.path}
+              listed={listings.get(r.path)?.result}
+              shows={shows}
+              visit={visit}
+            />
+          ) : (
+            formatSize(r.size)
+          ),
       },
       timeField("created", "Created", (r) => r.birthtimeMs, now, false),
       timeField("accessed", "Accessed", (r) => r.atimeMs, now, false),
@@ -347,7 +395,7 @@ export function FileTree({
         value: (r) => r.symlinkTarget ?? null,
       },
     ],
-    [now, shows, listings, narrow],
+    [now, shows, listings, narrow, visit],
   );
 
   const treeOptions = useMemo<TreeViewOptions<EntryRow>>(

@@ -44,6 +44,7 @@ import {
   isWithin,
   joinPath,
   parentPath,
+  type EntryFilter,
   type EntryRow,
   type LensHideRule,
 } from "../../core";
@@ -60,7 +61,7 @@ import {
 import { WithLenses, type ComposedLens } from "../internal/lenses";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
 import { useViewportAtMost } from "../internal/use-viewport-at-most";
-import { FileTree, type EntryFilter } from "./file-tree";
+import { FileTree } from "./file-tree";
 import { PreviewPane } from "./preview-pane";
 
 const backIcon = symbol("chevron-left");
@@ -267,7 +268,7 @@ function Listing({
     [lens, lensShown],
   );
   const shows = useCallback<EntryFilter>(
-    (entry: HostFsEntry, path: string) => {
+    (entry: Pick<HostFsEntry, "hidden">, path: string) => {
       if (!showHidden && entry.hidden) return false;
       if (activeHides.length === 0) return true;
       const abs = absolutePath(path, home);

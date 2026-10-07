@@ -104,7 +104,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 
 ## Plugin reference
 
-- Description: The one host-filesystem API: list / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
+- Description: The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`
@@ -132,6 +132,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `GET /api/host-fs/text`
     - `GET /api/host-fs/raw`
     - `GET /api/host-fs/volume`
+    - `POST /api/host-fs/peek`
     - `POST /api/host-fs/open`
 - Core:
   - Uses:
@@ -144,17 +145,21 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `HostFsEntryKind`
     - `HostFsListResult`
     - `HostFsOpenResult`
+    - `HostFsPeekResult`
     - `HostFsStatResult`
     - `HostFsTextResult`
     - `HostFsVolumeResult`
     - `HostFsWithin`
   - Exports (values):
     - `HOST_FS_COMPLETE_LIMIT`
+    - `HOST_FS_PEEK_MAX_NAMES`
+    - `HOST_FS_PEEK_MAX_PATHS`
     - `HOST_FS_TEXT_MAX_BYTES`
     - `hostFileUrl`
     - `hostFsComplete`
     - `hostFsList`
     - `hostFsOpen`
+    - `hostFsPeek`
     - `hostFsRaw`
     - `hostFsStat`
     - `hostFsText`

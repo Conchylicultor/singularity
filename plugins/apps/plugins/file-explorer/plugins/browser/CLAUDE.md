@@ -83,12 +83,15 @@
     - `primitives/file-type.fileTypeOf`
   - Exports (types):
     - `EntryCategory`
+    - `EntryFilter`
     - `EntryRow`
     - `ExplorerLens`
     - `ExplorerLocation`
+    - `ItemCount`
     - `LensHideRule`
   - Exports (values):
     - `absolutePath`
+    - `archiveReasonMessage`
     - `baseName`
     - `decodeOpenParam`
     - `displayPath`
@@ -103,6 +106,7 @@
     - `formatSize`
     - `HOME`
     - `isWithin`
+    - `itemCount`
     - `joinPath`
     - `locationKey`
     - `parentPath`

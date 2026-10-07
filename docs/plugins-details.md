@@ -2964,12 +2964,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/file-type.fileTypeOf`
             - Exports (types):
               - `EntryCategory`
+              - `EntryFilter`
               - `EntryRow`
               - `ExplorerLens`
               - `ExplorerLocation`
+              - `ItemCount`
               - `LensHideRule`
             - Exports (values):
               - `absolutePath`
+              - `archiveReasonMessage`
               - `baseName`
               - `decodeOpenParam`
               - `displayPath`
@@ -2984,6 +2987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `formatSize`
               - `HOME`
               - `isWithin`
+              - `itemCount`
               - `joinPath`
               - `locationKey`
               - `parentPath`
@@ -21870,7 +21874,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `accountInitial`
           - `hostAccount`
           - `HostAccountSchema`
-    - **`host-fs`** — The one host-filesystem API: list / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
+    - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
       - Server:
         - Uses:
           - `infra/endpoints.HttpError`
@@ -21898,6 +21902,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GET /api/host-fs/text`
           - `GET /api/host-fs/raw`
           - `GET /api/host-fs/volume`
+          - `POST /api/host-fs/peek`
           - `POST /api/host-fs/open`
       - Core:
         - Uses:
@@ -21910,17 +21915,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HostFsEntryKind`
           - `HostFsListResult`
           - `HostFsOpenResult`
+          - `HostFsPeekResult`
           - `HostFsStatResult`
           - `HostFsTextResult`
           - `HostFsVolumeResult`
           - `HostFsWithin`
         - Exports (values):
           - `HOST_FS_COMPLETE_LIMIT`
+          - `HOST_FS_PEEK_MAX_NAMES`
+          - `HOST_FS_PEEK_MAX_PATHS`
           - `HOST_FS_TEXT_MAX_BYTES`
           - `hostFileUrl`
           - `hostFsComplete`
           - `hostFsList`
           - `hostFsOpen`
+          - `hostFsPeek`
           - `hostFsRaw`
           - `hostFsStat`
           - `hostFsText`
