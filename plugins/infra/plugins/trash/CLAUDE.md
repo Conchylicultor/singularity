@@ -126,8 +126,8 @@ bun test plugins/infra/plugins/trash
 - Server:
   - Contributes:
     - `resource.declare` "trash-entries"
-    - `resource.declare` "trash-entries:rows"
     - `resource.declare` "trash-entries:groups"
+    - `resource.declare` "trash-entries:rows"
   - Uses:
     - `database.db`
     - `database/sql-column.parsedJson`

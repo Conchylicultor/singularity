@@ -68,6 +68,10 @@ unbounded.
 - Description: Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
 - Web:
   - Slots:
+    - `debug-boot-profile.actions`
+    - `debug-boot-profile-detail.actions`
+    - `debug-boot-profiles-list.actions`
+  - Slot contributors:
     - `debug-boot-profile.actions` ← `primitives.pane`
     - `debug-boot-profile-detail.actions` ← `primitives.pane`
     - `debug-boot-profiles-list.actions` ← `primitives.pane`
@@ -77,47 +81,22 @@ unbounded.
     - `Pane.Register` "debug-boot-profiles-list"
     - `DebugApp.Sidebar` "Boot Profile"
     - `DebugApp.Sidebar` "Boot Profiles"
-  - Uses:
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug/profiling` ×8
+    - `primitives/perfs/boot-trace` ×7
+    - `infra/endpoints` ×4
+    - `primitives/pane` ×4
+    - `primitives/css/spacing` ×2
+    - `primitives/css/text` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/data-table` ×2
+    - `primitives/data-view` ×2
+    - `primitives/live-state` ×2
     - `apps/debug/shell.DebugApp`
-    - `debug/profiling.formatDuration`
-    - `debug/profiling.GanttContainer`
-    - `debug/profiling.PhaseConfig`
-    - `debug/profiling.PhaseGroup`
-    - `debug/profiling.ProfilingContext`
-    - `debug/profiling.Span`
-    - `debug/profiling.SpanDetail`
-    - `debug/profiling.WaitWorkRow`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
-    - `infra/endpoints.useEndpointMutation`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/data-table.ColumnDef`
-    - `primitives/data-table.DataTable`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.useEndpointResource`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
-    - `primitives/perfs/boot-trace.BootPhase`
-    - `primitives/perfs/boot-trace.BootSpan`
-    - `primitives/perfs/boot-trace.BootTrace`
-    - `primitives/perfs/boot-trace.bootWindowEnd`
-    - `primitives/perfs/boot-trace.getBootTrace`
-    - `primitives/perfs/boot-trace.refreshBootTrace`
-    - `primitives/perfs/boot-trace.useBootTrace`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.toast`
     - `ui/icons.Icon`

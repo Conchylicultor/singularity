@@ -51,10 +51,35 @@ export interface ExtractContext {
   fs?: FsSnapshot;
 }
 
-export interface DocFact {
+interface DocFactBase {
   folder: string;
   key: string;
+}
+
+/** One group of a {@link DocFact} whose values the doc may summarize. */
+export interface DocFactGroup {
+  /** What the group's values share, as the summary names it (`` `apps` ``, a slot). */
+  label: string;
   values: string[];
+}
+
+/**
+ * One fact a facet documents about a plugin: a key and its values, one per line.
+ *
+ * A facet whose list can grow without bound (importers, contributions) hands
+ * its values GROUPED, with the noun they count. The doc then lists them in full
+ * while short, and past its budget prints one count per group instead, the full
+ * list going to a separate on-demand file. A flat fact (exports, routes) is
+ * always printed in full: the facet is the one that knows what a value is, so
+ * only it can say how the list summarizes — and whether it may.
+ */
+export type DocFact =
+  | (DocFactBase & { values: string[] })
+  | (DocFactBase & { noun: string; groups: DocFactGroup[] });
+
+/** Every value of a fact, in order — a grouped fact's groups concatenated. */
+export function docFactValues(fact: DocFact): string[] {
+  return "groups" in fact ? fact.groups.flatMap((g) => g.values) : fact.values;
 }
 
 export interface RenderDocContext {

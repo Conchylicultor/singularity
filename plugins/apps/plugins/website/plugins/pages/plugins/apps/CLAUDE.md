@@ -37,19 +37,16 @@ shell never names this page. The homepage's applications layer opens it.
   - Contributes:
     - `Pane.Register` "website-apps"
     - `WebsiteHeader` "apps" → `AppsNavItem`
-    - `ThemeEngine.SubTheme` "equin gallery"
     - `ThemeEngine.SubTheme` "equin closing"
-  - Uses:
+    - `ThemeEngine.SubTheme` "equin gallery"
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/website/shell` ×5
+    - `primitives/css/ui-kit` ×5
+    - `primitives/pane` ×4
+    - `primitives/avatar` ×2
     - `apps/website/pages/download.downloadPane`
     - `apps/website/pages/foundations.foundationsPane`
     - `apps/website/pages/vision.visionPane`
-    - `apps/website/shell.WebsiteBand`
-    - `apps/website/shell.WebsiteChrome`
-    - `apps/website/shell.WebsiteHeader`
-    - `apps/website/shell.WebsiteHero`
-    - `apps/website/shell.WebsiteNavLink`
-    - `primitives/avatar.Avatar`
-    - `primitives/avatar.AvatarPresentationProvider`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
     - `primitives/css/fill.Fill`
@@ -59,16 +56,7 @@ shell never names this page. The homepage's applications layer opens it.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/css/ui-kit.subThemeScope`
     - `primitives/filter-chips.FilterChip`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneObject`
-    - `primitives/pane.useOpenPane`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/theme-engine.ThemeEngine`

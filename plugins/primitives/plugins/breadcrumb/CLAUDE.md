@@ -33,7 +33,8 @@ comes back when the trail's slack covers the open run's (cached) width plus a
 
 - Description: Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
 - Web:
-  - Slots: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`
+  - Slots: `BreadcrumbSlots.Separator`
+  - Slot contributors: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`
   - Uses:
     - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`

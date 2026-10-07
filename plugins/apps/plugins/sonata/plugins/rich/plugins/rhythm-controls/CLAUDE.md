@@ -82,20 +82,12 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
   - Contributes:
     - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
     - `Sonata.Section` "Rhythm" → `RhythmControls`
-  - Uses:
-    - `apps/sonata/document.grooveSetting`
-    - `apps/sonata/document.SonataDocument`
-    - `apps/sonata/document.useFailSongSetting`
-    - `apps/sonata/document.useHasVoicedChords`
-    - `apps/sonata/document.useLibrarySong`
-    - `apps/sonata/document.useMountedSongId`
-    - `apps/sonata/document.useSongSetting`
-    - `apps/sonata/document.useWriteSongSetting`
-    - `apps/sonata/primitives/rhythm-circle.RhythmCircle`
-    - `apps/sonata/primitives/rhythm-circle.RhythmCircleHandle`
-    - `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`
-    - `apps/sonata/session.useCursorApi`
-    - `apps/sonata/session.useSession`
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/document` ×8
+    - `primitives/css/ui-kit` ×6
+    - `primitives/live-state` ×5
+    - `apps/sonata/primitives/rhythm-circle` ×3
+    - `apps/sonata/session` ×2
     - `apps/sonata/shell.Sonata`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLiveRow`
@@ -103,18 +95,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.Select`
-    - `primitives/css/ui-kit.SelectContent`
-    - `primitives/css/ui-kit.SelectItem`
-    - `primitives/css/ui-kit.SelectTrigger`
-    - `primitives/css/ui-kit.SelectValue`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.GateInput`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
   - Exports (types): `RhythmGroove`
   - Exports (values): `useSaveRhythm`

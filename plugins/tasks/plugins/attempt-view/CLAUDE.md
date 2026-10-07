@@ -6,39 +6,29 @@
 
 - Description: Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 - Web:
-  - Slots: `attemptPane.Actions` ← `primitives.pane`
+  - Slots: `attemptPane.Actions`
+  - Slot contributors: `attemptPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "attempt"
     - `Conversation.ActionBar` → `AttemptSwitchButton`
-  - Uses:
-    - `conversations.useConversationById`
-    - `conversations/conversation-ui/item.CONV_STATUS_DOT`
-    - `conversations/conversation-ui/item.conversationTitle`
-    - `conversations/conversation-view.conversationPane`
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×7
+    - `conversations/conversation-ui/item` ×2
+    - `primitives/css/fill` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/live-state` ×2
     - `conversations/conversation-view/action-bar.Conversation`
+    - `conversations/conversation-view.conversationPane`
+    - `conversations.useConversationById`
     - `primitives/css/badge.Badge`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/launch.LaunchControl`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.PaneInstanceContext`
-    - `primitives/pane.resolveFrom`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
   - Exports (values): `attemptPane`
 - Cross-plugin:

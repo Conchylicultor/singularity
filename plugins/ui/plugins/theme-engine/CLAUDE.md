@@ -148,12 +148,19 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
 - Description: Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, and the injector that resolves one theme per scope into CSS variables.
 - Web:
   - Slots:
-    - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
-    - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.place-palette`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
-    - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.pages.shell`, `apps.website.shell`, `ui.theme-engine`
-    - `ThemeEngine.SubTheme` ← `apps.file-explorer.browser`, `apps.website.pages.apps`, `apps.website.shell`
+    - `ThemeEngine.VariantGroup`
+    - `ThemeEngine.TokenGroup`
+    - `ThemeEngine.Theme`
+    - `ThemeEngine.SubTheme`
+    - `ThemeEngine.FixedTheme`
+    - `ThemeEngine.ThemeSource`
+  - Slot contributors: 36 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ThemeEngine.TokenGroup` ×16
+    - `ThemeEngine.Theme` ×7
+    - `ThemeEngine.VariantGroup` ×7
+    - `ThemeEngine.SubTheme` ×3
+    - `ThemeEngine.ThemeSource` ×2
     - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
-    - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
   - Contributes:
     - `Core.Root` → `ThemeInjector`
     - `Core.Root` → `AppScopeThemes`
@@ -250,44 +257,11 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `TokenGroupFragmentsSchema`
     - `tokenGroupMatchesSearch`
 - Cross-plugin:
-  - Imported by:
-    - `apps-core/chrome-theme`
-    - `apps-core/surface/floating`
-    - `apps/agent-manager/shell`
-    - `apps/chord/shell`
-    - `apps/file-explorer/browser`
-    - `apps/file-explorer/shell`
-    - `apps/home/shell`
-    - `apps/pages/shell`
-    - `apps/website/pages/apps`
-    - `apps/website/shell`
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui` ×26
+    - `apps` ×8
+    - `apps-core` ×2
     - `reports/theme-resolution`
-    - `ui/segmented-progress-bar`
-    - `ui/tab-bar/customizer`
-    - `ui/theme-engine/quick-theme`
-    - `ui/theme-engine/saved-themes`
-    - `ui/theme-engine/theme-customizer`
-    - `ui/theme-engine/theme-gallery`
-    - `ui/theme-toggle`
-    - `ui/tokens/categorical`
-    - `ui/tokens/chart`
-    - `ui/tokens/chord-palette`
-    - `ui/tokens/color-palette`
-    - `ui/tokens/density`
-    - `ui/tokens/file-type-palette`
-    - `ui/tokens/font-family`
-    - `ui/tokens/font-family/google-fonts`
-    - `ui/tokens/icons`
-    - `ui/tokens/place-palette`
-    - `ui/tokens/rich-text-palette`
-    - `ui/tokens/scrollbar`
-    - `ui/tokens/shadow`
-    - `ui/tokens/shape`
-    - `ui/tokens/sidebar-metrics`
-    - `ui/tokens/sidebar-palette`
-    - `ui/tokens/type-scale`
-    - `ui/tweakcn/community-browser`
-    - `ui/variant-region`
 - Sub-plugins:
   - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (the theme picker, the light/dark switch), every component variant picker, and a hand-off to the full customizer pane…
   - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source, hydrated before first paint, plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom…

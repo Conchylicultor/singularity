@@ -217,7 +217,15 @@ pages every ledger off its own keyset query (`runs-arm`).
 - Description: Trigger `./singularity build` from the toolbar.
 - Web:
   - Slots:
-    - `BuildDetailSlots.Section` ← `build.build-commits`, `build.build-fix`, `build.build-info`, `build.build-logs`, `build.build-profiling`
+    - `BuildDetailSlots.Section`
+    - `buildPane.Actions`
+    - `buildDetailPane.Actions`
+  - Slot contributors:
+    - `BuildDetailSlots.Section` ← `build.build-commits`
+    - `BuildDetailSlots.Section` ← `build.build-fix`
+    - `BuildDetailSlots.Section` ← `build.build-info`
+    - `BuildDetailSlots.Section` ← `build.build-logs`
+    - `BuildDetailSlots.Section` ← `build.build-profiling`
     - `buildPane.Actions` ← `primitives.pane`
     - `buildDetailPane.Actions` ← `primitives.pane`
   - Contributes:
@@ -228,36 +236,27 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
-  - Uses:
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×4
+    - `primitives/live-state` ×4
+    - `infra/endpoints` ×2
+    - `primitives/log-channels` ×2
+    - `primitives/pane` ×2
     - `apps-core/tabs.navigate`
     - `apps/debug/shell.DebugApp`
     - `build/deployment.DeploymentChain`
     - `config_v2.ConfigV2`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.ButtonGroup`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useNotificationsChannelStatuses`
-    - `primitives/live-state.useResourceContractMismatches`
     - `primitives/loading.Loading`
-    - `primitives/log-channels.clientLog`
-    - `primitives/log-channels.LiveLogChannel`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/relative-time.ElapsedTime`
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
@@ -275,26 +274,20 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `ConfigV2.Register` "config"
     - `taskCategory` "build"
     - `resource.declare` "build.history"
-    - `resource.declare` "build.history:rows"
     - `resource.declare` "build.history:groups"
+    - `resource.declare` "build.history:rows"
     - `trigger` "build.run"
-  - Uses:
-    - `build/deployment.deploymentServed`
-    - `build/deployment.readDeployment`
-    - `build/run-ledger._buildRuns`
-    - `build/run-ledger.settleDeadInflightRun`
-    - `config_v2.ConfigV2`
-    - `config_v2.getConfig`
-    - `config_v2.watchConfig`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `config_v2` ×3
+    - `build/deployment` ×2
+    - `build/run-ledger` ×2
+    - `infra/endpoints` ×2
+    - `infra/paths` ×2
     - `database.db`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
     - `infra/events.Trigger`
     - `infra/git/git-watcher.refAdvanced`
-    - `infra/jobs.defineJob`
     - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `infra/paths.checkoutRef`
-    - `infra/paths.REPO_ROOT`
+    - `infra/jobs.defineJob`
     - `infra/worktree.readCompositionMarker`
     - `network/live.serveCollection`
     - `primitives/log-channels.Log`

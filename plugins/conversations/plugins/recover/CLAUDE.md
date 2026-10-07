@@ -6,7 +6,8 @@
 
 - Description: Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
 - Web:
-  - Slots: `recoveryPane.Actions` ← `primitives.pane`
+  - Slots: `recoveryPane.Actions`
+  - Slot contributors: `recoveryPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conversations-recover"
     - `DebugApp.Sidebar` "Recovery"

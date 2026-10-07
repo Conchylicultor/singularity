@@ -87,38 +87,29 @@ honest — the prototype does exist — and it self-corrects.
 - Description: Prototypes gallery list pane — one card per prototype over its rendered preview, grouped and filterable by a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
 - Web:
   - Slots:
+    - `prototypesGalleryPane.Actions`
+    - `PrototypeCardActions`
+  - Slot contributors:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
     - `PrototypeCardActions` ← `apps.prototypes.gallery`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
     - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
     - `PrototypeCardActions` "done" → `DoneCardAction`
-  - Uses:
-    - `apps/prototypes/canvas.prototypeDetailPane`
-    - `apps/prototypes/canvas.usePrototypeDetail`
-    - `apps/prototypes/thumbnails.PrototypeThumbnail`
-    - `apps/prototypes/thumbnails.usePrototypeThumbnails`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×4
+    - `infra/endpoints` ×3
+    - `primitives/live-state` ×3
+    - `primitives/pane` ×3
+    - `apps/prototypes/canvas` ×2
+    - `apps/prototypes/thumbnails` ×2
+    - `primitives/css/ui-kit` ×2
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.FieldDef`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useCombinedResources`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.toast`
     - `ui/icons.Icon`

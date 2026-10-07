@@ -25,31 +25,27 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
 
 - Description: Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
 - Web:
-  - Slots: `conv-commits-graph.actions` ← `primitives.pane`
+  - Slots: `conv-commits-graph.actions`
+  - Slot contributors: `conv-commits-graph.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conv-commits-graph"
     - `Conversation.ActionBar` → `CommitsChip`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×4
+    - `primitives/commit-list` ×2
+    - `primitives/css/ui-kit` ×2
     - `code-explorer/commit-detail.commitDetailPane`
-    - `conversations.useConversationById`
-    - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
+    - `conversations/conversation-view.conversationPane`
+    - `conversations.useConversationById`
     - `network/live.useLive`
-    - `primitives/commit-list.CommitRowItem`
-    - `primitives/commit-list.MergeBaseMarker`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Separator`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "commits-graph.graph"

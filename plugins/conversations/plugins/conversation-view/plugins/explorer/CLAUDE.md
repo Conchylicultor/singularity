@@ -18,7 +18,8 @@ reverse. The pane's id and segment predate this plugin (it moved out of
 
 - Description: Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/>, rooted at the checkout (git status from the file explorer's git lens).
 - Web:
-  - Slots: `conv-file-tree.actions` ← `primitives.pane`
+  - Slots: `conv-file-tree.actions`
+  - Slot contributors: `conv-file-tree.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conv-file-tree"
     - `Conversation.ActionBar` → `ConvTreeButton`

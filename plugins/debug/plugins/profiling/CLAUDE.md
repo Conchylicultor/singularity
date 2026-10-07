@@ -7,7 +7,14 @@
 - Description: Gantt chart of build steps and server startup phases.
 - Web:
   - Slots:
-    - `Profiling.Section` ← `debug.profiling.boot`, `debug.profiling.build`, `debug.profiling.ops`, `debug.profiling.runtime`, `debug.profiling.stats`
+    - `Profiling.Section`
+    - `profilingPane.Actions`
+  - Slot contributors:
+    - `Profiling.Section` ← `debug.profiling.boot`
+    - `Profiling.Section` ← `debug.profiling.build`
+    - `Profiling.Section` ← `debug.profiling.ops`
+    - `Profiling.Section` ← `debug.profiling.runtime`
+    - `Profiling.Section` ← `debug.profiling.stats`
     - `profilingPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-profiling"

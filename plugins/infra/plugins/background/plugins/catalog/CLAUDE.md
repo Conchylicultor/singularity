@@ -42,44 +42,32 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
 - Description: Debug → Background activity: a DataView over the pushed background.catalog — everything this backend runs on its own, grouped by kind, with a status dot, the trigger in words and its next run, and the last run — and a detail pane per entry with its scope, declaring plugin, recent runs and Run now. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
 - Web:
   - Slots:
+    - `background.actions`
+    - `background-entry.actions`
+  - Slot contributors:
     - `background.actions` ← `primitives.pane`
     - `background-entry.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-background"
     - `Pane.Register` "debug-background-entry"
     - `DebugApp.Sidebar` "Background activity"
-  - Uses:
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×6
+    - `primitives/live-state` ×5
+    - `primitives/data-view` ×3
+    - `infra/endpoints` ×2
+    - `primitives/css/status-dot` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/relative-time` ×2
     - `apps/debug/shell.DebugApp`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/status-dot.StatusDot`
-    - `primitives/css/status-dot.StatusDotPaint`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.FieldDef`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.resolveFrom`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.useOpenPane`
-    - `primitives/relative-time.RelativeTime`
-    - `primitives/relative-time.useNow`
     - `runs/run-outcome.RUN_OUTCOME_META`
   - Exports (values):
     - `NextRun`

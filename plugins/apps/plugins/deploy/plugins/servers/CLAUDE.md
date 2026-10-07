@@ -31,48 +31,41 @@ key also writes the row's `ssh_public_key`, so no hand-notify exists.
 - Description: Server registry for the deployment platform.
 - Web:
   - Slots:
-    - `ServerDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.health`, `apps.deploy.servers`, `apps.deploy.ssh-setup`
+    - `ServerDetail.Section`
+    - `Servers.Fields`
+    - `item-actions`
+    - `serversRootPane.Actions`
+    - `serverDetailPane.Actions`
+  - Slot contributors:
+    - `ServerDetail.Section` ← `apps.deploy.deployments`
+    - `ServerDetail.Section` ← `apps.deploy.health`
+    - `ServerDetail.Section` ← `apps.deploy.servers`
+    - `ServerDetail.Section` ← `apps.deploy.ssh-setup`
     - `Servers.Fields` ← `apps.deploy.health`
     - `item-actions` ← `apps.deploy.servers`
     - `serversRootPane.Actions` ← `primitives.pane`
     - `serverDetailPane.Actions` ← `primitives.pane`
   - Contributes:
-    - `Pane.Register` "deploy-servers"
     - `Pane.Register` "deploy-server-detail"
+    - `Pane.Register` "deploy-servers"
     - `ServerDetail.Section` "Server" → `ServerEditForm`
     - `item-actions` "open-console" → `OpenConsoleAction`
-  - Uses:
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×5
+    - `primitives/pane` ×5
+    - `infra/endpoints` ×4
+    - `primitives/css/ui-kit` ×3
+    - `primitives/css/fill` ×2
+    - `primitives/editable-field` ×2
+    - `primitives/live-state` ×2
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.DialogDescription`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineFieldExtensions`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.FieldDef`
     - `primitives/detail-sections.defineDetailSections`
-    - `primitives/editable-field.EditableField`
-    - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.resolveFrom`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.useOpenPane`
   - Exports (types):
     - `Server`
     - `SshKey`

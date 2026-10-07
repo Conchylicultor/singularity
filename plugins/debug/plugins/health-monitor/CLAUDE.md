@@ -105,35 +105,25 @@ measured overhead on a real worktree workload is still an open task.
 
 - Description: Health monitor debug pane: per-backend event-loop lag, phys_footprint/heap, and GC pressure over time, plus host load/memory/swap. Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and phys_footprint appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.
 - Web:
-  - Slots: `healthMonitorPane.Actions` ← `primitives.pane`
+  - Slots: `healthMonitorPane.Actions`
+  - Slot contributors: `healthMonitorPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-health-monitor"
     - `DebugApp.Sidebar` "Health"
-  - Uses:
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `stats/commits` ×7
+    - `primitives/pane` ×3
+    - `infra/endpoints` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/text` ×2
     - `apps/debug/shell.DebugApp`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.Rigid`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`
-    - `stats/commits.axisProps`
-    - `stats/commits.ChartState`
-    - `stats/commits.gridProps`
-    - `stats/commits.lineCursor`
-    - `stats/commits.tooltipContentStyle`
-    - `stats/commits.tooltipLabelStyle`
-    - `stats/commits.yAxisFormatter`
   - Exports (values): `healthMonitorPane`
 - Server:
   - Uses:

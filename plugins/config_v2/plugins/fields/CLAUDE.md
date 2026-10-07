@@ -68,8 +68,11 @@ the config-only templates to mirror.
 - Description: Field type registry. Sub-plugins contribute field types with core factories and web renderers.
 - Web:
   - Slots:
-    - `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
-    - `Fields.Sample` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.dynamic-flags.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
+    - `Fields.Renderer`
+    - `Fields.Sample`
+  - Slot contributors: 38 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Renderer` ×19
+    - `Fields.Sample` ×19
   - Uses:
     - `primitives/css/cluster.Cluster`
     - `primitives/css/control-panel.ControlPanel`
@@ -94,30 +97,10 @@ the config-only templates to mirror.
     - `useFieldSamples`
     - `useLocalValue`
 - Cross-plugin:
-  - Imported by:
-    - `apps/events/sources`
-    - `apps/events/sources/source-detail/settings`
-    - `apps/sonata/view-options`
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×19
+    - `apps` ×3
     - `config_v2/settings`
-    - `fields/avatar/config`
-    - `fields/bool/config`
-    - `fields/color/config`
-    - `fields/directory-path/config`
-    - `fields/dynamic-enum/config`
-    - `fields/dynamic-flags/config`
-    - `fields/enum/config`
-    - `fields/float/config`
-    - `fields/int/config`
-    - `fields/json/config`
-    - `fields/list/config`
-    - `fields/multiline-text/config`
-    - `fields/object/config`
-    - `fields/reorder-tree/config`
-    - `fields/secret/config`
-    - `fields/string-list/config`
-    - `fields/tags/config`
-    - `fields/text/config`
-    - `fields/variant/config`
     - `primitives/data-view/view-core`
 - Core:
   - Exports (types):

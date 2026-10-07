@@ -2048,98 +2048,65 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
 - Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
   - Slots:
-    - `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.icons`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`
+    - `DataViewSlots.View`
+    - `DataViewSlots.FieldExtension`
+    - `DataViewSlots.RowOrder`
+    - `DataViewSlots.Setting`
+    - `DataViewSlots.Control`
+    - `DataViewSlots.Cell`
+    - `DataViewSlots.CellEditor`
+    - `DataViewSlots.Filter`
+    - `DataViewSlots.ValueCodec`
+    - `DataViewSlots.Grouping`
+    - `DataViewSlots.ColumnConfig`
+  - Slot contributors: 38 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `DataViewSlots.Cell` ×9
+    - `DataViewSlots.CellEditor` ×6
+    - `DataViewSlots.Filter` ×6
+    - `DataViewSlots.View` ×5
+    - `DataViewSlots.Grouping` ×3
+    - `DataViewSlots.ValueCodec` ×3
+    - `DataViewSlots.Setting` ×2
+    - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
+    - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-    - `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`
-    - `DataViewSlots.Control` ← `primitives.data-view`
-    - `DataViewSlots.Cell` ← `fields.avatar.table`, `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`
-    - `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`
-    - `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
-    - `DataViewSlots.ValueCodec` ← `fields.bool.data-view-codec`, `fields.date.data-view-codec`, `fields.number.data-view-codec`
-    - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
-    - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
-  - Contributes:
-    - `ConfigV2.WebRegister` ×46: "agent-launches", "agents-list", "all-conversations", "apps-core.launcher", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tasks.automations", "tasks.automations.history", "theme-engine.themes", "theme-engine.themes.quick"
-    - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
-    - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
-    - `DataViewSlots.Setting` "data-view.fold" → `FoldControl`
-    - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
-    - `DataViewSlots.Control` "Sort" → `SortControlPanel`
-    - `DataViewSlots.Control` "View settings" → `SettingsControlPanel`
-  - Uses:
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
+  - Contributes: 52 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×46
+    - `DataViewSlots.Control` ×3
+    - `DataViewSlots.Setting` ×3
+  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×11
+    - `primitives/data-view/view-core` ×7
+    - `network/live` ×4
+    - `primitives/css/control-panel` ×4
+    - `primitives/live-state` ×4
+    - `primitives/slot-render` ×4
+    - `primitives/cursor-pagination` ×3
+    - `config_v2` ×2
+    - `primitives/collapsible` ×2
+    - `primitives/css/row` ×2
+    - `primitives/css/sticky/stack` ×2
+    - `primitives/css/sticky` ×2
+    - `primitives/css/text` ×2
+    - `primitives/hover-reveal` ×2
+    - `primitives/latest-ref` ×2
+    - `primitives/loading` ×2
+    - `primitives/search` ×2
+    - `primitives/sortable-list` ×2
     - `fields.Fields`
-    - `network/live.LiveSegmentError`
-    - `network/live.ScrollTruncation`
-    - `network/live.useLive`
-    - `network/live.useLiveScroll`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.CollapsibleProvider`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelPopover`
-    - `primitives/css/control-panel.PanelStackApi`
-    - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/row.Row`
-    - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/sticky.Sticky`
-    - `primitives/css/sticky.stickyOffsetPx`
-    - `primitives/css/sticky/stack.StickyStack`
-    - `primitives/css/sticky/stack.StickyStackItem`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.DensityControlled`
-    - `primitives/css/ui-kit.DropdownMenu`
-    - `primitives/css/ui-kit.DropdownMenuContent`
-    - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/css/ui-kit.DropdownMenuSection`
-    - `primitives/css/ui-kit.DropdownMenuSeparator`
-    - `primitives/css/ui-kit.DropdownMenuTrigger`
-    - `primitives/css/ui-kit.Input`
     - `primitives/css/yield.yieldClass`
-    - `primitives/cursor-pagination.InfiniteScrollFooter`
-    - `primitives/cursor-pagination.InfiniteScrollHandle`
-    - `primitives/cursor-pagination.useInfiniteScroll`
-    - `primitives/data-view/view-core.buildViewConfigContributions`
-    - `primitives/data-view/view-core.buildViewDescriptors`
-    - `primitives/data-view/view-core.CollapsedViewSwitcher`
-    - `primitives/data-view/view-core.EditableViewSwitcher`
-    - `primitives/data-view/view-core.ResolvedViewInstance`
-    - `primitives/data-view/view-core.useViewModel`
-    - `primitives/data-view/view-core.ViewSettingsPopover`
     - `primitives/dom/element-size.useElementSize`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.refuseResource`
-    - `primitives/live-state.ResourceError`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/loading.Loading`
-    - `primitives/loading.LoadingVariant`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/row-actions.RowActions`
-    - `primitives/search.SearchInput`
-    - `primitives/search.useTextFilter`
-    - `primitives/slot-render.defineDispatchSlot`
-    - `primitives/slot-render.defineRenderSlot`
-    - `primitives/slot-render.renderIsolated`
-    - `primitives/slot-render.RenderSlot`
-    - `primitives/sortable-list.SortableItem`
-    - `primitives/sortable-list.SortableList`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types):
@@ -2270,7 +2237,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: `ConfigV2.Register` ×46: "agent-launches", "agents-list", "all-conversations", "apps-core.launcher", "config_v2.settings.nav", "conversations-sidebar", "conversations.op-status.queue", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "file-explorer.places", "file-explorer.tree", "home.apps", "infra.background.catalog", "infra.background.recent-runs", "infra.deps.dependencies", "mail-threads", "page.links.backlinks", "pages-sidebar", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tasks.automations", "tasks.automations.history", "theme-engine.themes", "theme-engine.themes.quick"
+  - Contributes: 46 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×46
   - Uses:
     - `config_v2.getConfig`
     - `config_v2.watchConfig`
@@ -2280,84 +2248,18 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `readDataViewConfigDoc`
     - `watchDataViewConfigDoc`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 78 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×28
+    - `apps` ×19
+    - `conversations` ×7
+    - `debug` ×7
+    - `primitives` ×7
+    - `tasks` ×3
+    - `infra` ×2
     - `apps-core/app-launcher`
-    - `apps/deploy/deploy-history`
-    - `apps/deploy/deployments`
-    - `apps/deploy/servers`
-    - `apps/events/event-list`
-    - `apps/events/sources`
-    - `apps/events/sources/source-detail/runs`
-    - `apps/events/sources/source-detail/runs/extracted-events`
-    - `apps/file-explorer/browser`
-    - `apps/file-explorer/places`
-    - `apps/home/app-cards`
-    - `apps/mail/threads`
-    - `apps/pages/page-tree`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/gallery`
-    - `apps/sonata/library`
-    - `apps/studio/compositions`
-    - `apps/studio/compositions/closure-tree`
-    - `apps/studio/compositions/release`
-    - `apps/studio/explorer`
     - `config_v2/settings`
-    - `conversations/agents`
-    - `conversations/all-conversations`
-    - `conversations/conversation-view/op-status`
-    - `conversations/conversation-view/running-agents`
-    - `conversations/conversations-view/data-view`
-    - `conversations/conversations-view/data-view/history`
-    - `conversations/conversations-view/data-view/queue`
-    - `debug/boot-profile`
-    - `debug/config-orphans`
-    - `debug/profiling/runtime`
-    - `debug/reports`
-    - `debug/slow-ops/cluster`
-    - `debug/slow-ops/pane`
-    - `debug/trace/pane`
-    - `fields/avatar/table`
-    - `fields/bool/data-view-codec`
-    - `fields/bool/data-view-group`
-    - `fields/bool/filter`
-    - `fields/bool/inline`
-    - `fields/bool/table`
-    - `fields/color/table`
-    - `fields/date/data-view-codec`
-    - `fields/date/data-view-group`
-    - `fields/date/filter`
-    - `fields/date/inline`
-    - `fields/date/table`
-    - `fields/enum/column-config`
-    - `fields/enum/data-view-group`
-    - `fields/enum/filter`
-    - `fields/enum/inline`
-    - `fields/enum/table`
-    - `fields/image/table`
-    - `fields/number/data-view-codec`
-    - `fields/number/filter`
-    - `fields/number/inline`
-    - `fields/number/table`
-    - `fields/tags/filter`
-    - `fields/tags/inline`
-    - `fields/tags/table`
-    - `fields/text/filter`
-    - `fields/text/inline`
-    - `fields/text/table`
-    - `infra/background/catalog`
-    - `infra/deps`
     - `page/links`
-    - `primitives/data-view/custom-columns`
-    - `primitives/data-view/gallery`
-    - `primitives/data-view/icons`
-    - `primitives/data-view/list`
-    - `primitives/data-view/table`
-    - `primitives/data-view/tree`
-    - `primitives/data-view/view-order`
     - `runs`
-    - `tasks/automations`
-    - `tasks/task-deps-tree`
-    - `tasks/task-list`
     - `ui/theme-engine/theme-gallery`
 - Exemptions:
   - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)

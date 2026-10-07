@@ -32,84 +32,38 @@
 - Server:
   - Contributes:
     - `ConfigV2.Register` "auto-answer"
-    - `trigger` "tasks.maybe-launch-on-status"
     - `trigger` "conversations.notify-created"
     - `trigger` "conversations.turn-emitter.reconcile"
     - `trigger` "conversations.turn-emitter.reconcile"
+    - `trigger` "tasks.maybe-launch-on-status"
     - `taskCategory` "conversations"
     - `taskCategory` "system"
-    - `report-kind` "conversation-spawn-failed"
-    - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "auto-start-model-unavailable"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.forkConfig`
-    - `config_v2.getConfig`
+    - `report-kind` "claude-code-unavailable-at-spawn"
+    - `report-kind` "conversation-spawn-failed"
+  - Uses: 68 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×28
+    - `conversations/transcript-watcher` ×7
+    - `config_v2` ×3
+    - `infra/claude-cli/availability` ×3
+    - `reports` ×3
+    - `conversations/session-chain` ×2
+    - `database` ×2
+    - `infra/endpoints` ×2
+    - `infra/events` ×2
+    - `infra/worktree` ×2
+    - `tasks/auto-start` ×2
+    - `tasks/task-category` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePreprompt`
-    - `conversations/session-chain.listSessionChain`
-    - `conversations/session-chain.recordSessionId`
-    - `conversations/transcript-watcher.findTranscriptPath`
-    - `conversations/transcript-watcher.onSessionTranscriptWritten`
-    - `conversations/transcript-watcher.readChainLines`
-    - `conversations/transcript-watcher.refreshConversationChain`
-    - `conversations/transcript-watcher.resolveAnchoredChain`
-    - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-    - `conversations/transcript-watcher.watchTranscript`
-    - `database.db`
-    - `database.isTransientDbError`
     - `database/fork.databaseForkJob`
     - `infra/attachments.getAttachment`
     - `infra/background/timer.defineTimer`
-    - `infra/claude-cli/availability.assertClaudeCodeReady`
-    - `infra/claude-cli/availability.checkClaudeCode`
-    - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `infra/events.defineTriggerEvent`
-    - `infra/events.Trigger`
     - `infra/jobs.defineJob`
-    - `infra/worktree.setupWorktree`
-    - `infra/worktree.worktreePathFor`
     - `infra/worktree/spare-pool.spareRefillJob`
-    - `reports.recordReport`
-    - `reports.ReportKind`
-    - `reports.ReportRow`
     - `shell/notifications.recordNotification`
-    - `tasks/auto-start.claimAutoStart`
-    - `tasks/auto-start.getTaskAutoStart`
-    - `tasks/task-category.setTaskCategory`
-    - `tasks/task-category.TaskCategory`
     - `tasks/task-effort.getTaskEffort`
     - `tasks/task-preprompt.getTaskPreprompt`
-    - `tasks/tasks-core.adoptOrphanConversation`
-    - `tasks/tasks-core.conversationAttachments`
-    - `tasks/tasks-core.conversationStatusChanged`
-    - `tasks/tasks-core.createAttempt`
-    - `tasks/tasks-core.createTask`
-    - `tasks/tasks-core.DbExecutor`
-    - `tasks/tasks-core.deleteConversationRow`
-    - `tasks/tasks-core.getAttempt`
-    - `tasks/tasks-core.getConversation`
-    - `tasks/tasks-core.getConversationClaudeSessionId`
-    - `tasks/tasks-core.getConversationRuntime`
-    - `tasks/tasks-core.getTask`
-    - `tasks/tasks-core.hasBlockingDep`
-    - `tasks/tasks-core.insertConversation`
-    - `tasks/tasks-core.listAttemptsForTask`
-    - `tasks/tasks-core.listConversationsForDisplay`
-    - `tasks/tasks-core.listConversationsForInfra`
-    - `tasks/tasks-core.listExistingConversationIds`
-    - `tasks/tasks-core.listGoneConversations`
-    - `tasks/tasks-core.markConversationClosed`
-    - `tasks/tasks-core.markConversationGone`
-    - `tasks/tasks-core.orphanedAttemptSink`
-    - `tasks/tasks-core.setConversationHibernated`
-    - `tasks/tasks-core.taskStatusChanged`
-    - `tasks/tasks-core.updateConversation`
-    - `tasks/tasks-core.updateTask`
-    - `tasks/tasks-core.updateTaskTitle`
-    - `tasks/tasks-core.withTaskStatusBatch`
   - DB schema:
     - `plugins/conversations/server/internal/tables-created-event.ts`
     - `plugins/conversations/server/internal/tables-turn-completed-event.ts`
@@ -225,69 +179,15 @@
     - `RewindRefusalSchema`
     - `stopConversation`
 - Cross-plugin:
-  - Imported by:
-    - `active-data/conv`
-    - `active-data/task`
-    - `apps/agent-manager/welcome`
-    - `apps/prototypes/checkpoints`
-    - `conversations/agents`
-    - `conversations/conversation-category`
-    - `conversations/conversation-preprompt`
-    - `conversations/conversation-progress`
-    - `conversations/conversation-ui/row`
-    - `conversations/conversation-view`
-    - `conversations/conversation-view/artifacts/research`
-    - `conversations/conversation-view/artifacts/screenshot`
-    - `conversations/conversation-view/artifacts/skill`
-    - `conversations/conversation-view/commits-graph`
-    - `conversations/conversation-view/dependencies`
-    - `conversations/conversation-view/drop-and-exit`
-    - `conversations/conversation-view/drop-dependents`
-    - `conversations/conversation-view/exit`
-    - `conversations/conversation-view/exit-menu`
-    - `conversations/conversation-view/explorer`
-    - `conversations/conversation-view/fork-session`
-    - `conversations/conversation-view/hold-and-exit`
-    - `conversations/conversation-view/jsonl-viewer/background-shells`
-    - `conversations/conversation-view/jsonl-viewer/file-path`
-    - `conversations/conversation-view/jsonl-viewer/subagents`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
-    - `conversations/conversation-view/markdown-extensions`
-    - `conversations/conversation-view/model`
-    - `conversations/conversation-view/new-child-task`
-    - `conversations/conversation-view/op-status`
-    - `conversations/conversation-view/open-app`
-    - `conversations/conversation-view/prompt-input`
-    - `conversations/conversation-view/prompt-templates`
-    - `conversations/conversation-view/push-and-exit`
-    - `conversations/conversation-view/push-profiling`
-    - `conversations/conversation-view/resume`
-    - `conversations/conversation-view/rewind`
-    - `conversations/conversation-view/status`
-    - `conversations/conversation-view/tasks-panel`
-    - `conversations/conversation-view/terminal-pane`
-    - `conversations/conversation-view/track`
-    - `conversations/conversation-view/turn-summary`
-    - `conversations/conversation-view/vscode`
-    - `conversations/conversations-view/queue`
-    - `conversations/hibernation`
-    - `conversations/question-relay`
-    - `conversations/recover`
-    - `conversations/runtime-api`
-    - `conversations/runtime-tmux`
-    - `conversations/summary`
+  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×48
+    - `tasks` ×4
+    - `review` ×3
+    - `active-data` ×2
+    - `apps` ×2
     - `debug/profiling/ops`
     - `improve`
     - `page/annotations/agent-notes/agent-page`
-    - `review`
-    - `review/code-review`
-    - `review/plugin-changes/file-changes`
-    - `tasks`
-    - `tasks/attempt-view`
-    - `tasks/task-header`
-    - `tasks/task-title`
   - Endpoint callers: `transcript-api`
 - Exemptions:
   - Exempts itself from:

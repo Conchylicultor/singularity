@@ -54,44 +54,28 @@ The orphan reconciler lives in `op-log/plugins/op-store` (`reconcile.ts`).
 
 - Description: Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane — all computed client-side from opsHistory rows.
 - Web:
-  - Slots: `opDetailPane.Actions` ← `primitives.pane`
+  - Slots: `opDetailPane.Actions`
+  - Slot contributors: `opDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Profiling.Section` → `OpSection`
     - `Pane.Register` "debug-profiling-op-detail"
-  - Uses:
-    - `conversations.useConversationTitleBySlug`
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug/profiling` ×8
+    - `debug/profiling/ops/op-gantt` ×4
+    - `primitives/pane` ×4
+    - `network/live` ×2
+    - `primitives/css/badge` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/text` ×2
     - `conversations/conversation-view.conversationPane`
-    - `debug/profiling.formatDuration`
-    - `debug/profiling.GanttContainer`
-    - `debug/profiling.MultiSpanLane`
-    - `debug/profiling.Profiling`
-    - `debug/profiling.ProfilingContext`
-    - `debug/profiling.Span`
-    - `debug/profiling.SpanDetail`
-    - `debug/profiling.SpanRow`
+    - `conversations.useConversationTitleBySlug`
     - `debug/profiling/build.buildProfileDetailPane`
-    - `debug/profiling/ops/op-gantt.opFillClass`
-    - `debug/profiling/ops/op-gantt.OpGantt`
-    - `debug/profiling/ops/op-gantt.waitFillClass`
-    - `debug/profiling/ops/op-gantt.waitLabel`
-    - `network/live.useLive`
-    - `network/live.useLiveRow`
-    - `primitives/css/badge.Badge`
-    - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.useNow`
     - `shell/toast.showToast`
     - `tasks/attempt-view.attemptPane`

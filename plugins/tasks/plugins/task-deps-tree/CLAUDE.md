@@ -30,6 +30,9 @@ now"), the opposite of the monotone one here.
 - Description: Dependency tree section for the task detail: a merged DataView whose sources render task_dependencies as a nesting = runs-after tree (atomic drag-to-reorder, per-row detach, 'also after' fan-in chips) or the read-only creation tree.
 - Web:
   - Slots:
+    - `actions`
+    - `sources`
+  - Slot contributors:
     - `actions` ← `tasks.task-deps-tree`
     - `sources` ← `tasks.task-deps-tree`
   - Contributes:
@@ -37,30 +40,17 @@ now"), the opposite of the monotone one here.
     - `actions` "detach" → `DetachAction`
     - `sources` "Dependencies" → `DepsSource`
     - `sources` "Created" → `CreatedSource`
-  - Uses:
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×7
+    - `tasks/task-list` ×4
+    - `primitives/live-state` ×3
+    - `primitives/css/ui-kit` ×2
+    - `tasks/task-detail` ×2
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/data-view.DataViewSourceProps`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineDataViewSources`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.HierarchyConfig`
-    - `primitives/data-view.ItemActionProps`
-    - `primitives/data-view.MergedDataView`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
-    - `tasks/task-detail.taskDetailPane`
-    - `tasks/task-detail.TaskDetailSlots`
-    - `tasks/task-list.buildTreeOptions`
-    - `tasks/task-list.clusterTaskHierarchy`
-    - `tasks/task-list.taskFieldSchema`
-    - `tasks/task-list.Tasks`
     - `tasks/task-status.StatusIcon`
     - `ui/icons.Icon`
 - Exemptions:

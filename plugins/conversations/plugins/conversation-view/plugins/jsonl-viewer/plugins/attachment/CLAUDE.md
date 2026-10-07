@@ -6,7 +6,9 @@
 
 - Description: Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
 - Web:
-  - Slots: `JsonlViewerAttachment.Renderer` ← `conversations.conversation-view.jsonl-viewer.attachment.agent-listing-delta`, `conversations.conversation-view.jsonl-viewer.attachment.attached-file`, `conversations.conversation-view.jsonl-viewer.attachment.command-permissions`, `conversations.conversation-view.jsonl-viewer.attachment.date`, `conversations.conversation-view.jsonl-viewer.attachment.deferred-tools`, `conversations.conversation-view.jsonl-viewer.attachment.directory-listing`, `conversations.conversation-view.jsonl-viewer.attachment.edited-text-file`, `conversations.conversation-view.jsonl-viewer.attachment.environment`, `conversations.conversation-view.jsonl-viewer.attachment.harness-nudge`, `conversations.conversation-view.jsonl-viewer.attachment.hook-additional-context`, `conversations.conversation-view.jsonl-viewer.attachment.hook-error`, `conversations.conversation-view.jsonl-viewer.attachment.hook-message`, `conversations.conversation-view.jsonl-viewer.attachment.hook-success`, `conversations.conversation-view.jsonl-viewer.attachment.instructions`, `conversations.conversation-view.jsonl-viewer.attachment.mcp-instructions-delta`, `conversations.conversation-view.jsonl-viewer.attachment.model`, `conversations.conversation-view.jsonl-viewer.attachment.nested-memory`, `conversations.conversation-view.jsonl-viewer.attachment.prompt-snapshot`, `conversations.conversation-view.jsonl-viewer.attachment.queued-command`, `conversations.conversation-view.jsonl-viewer.attachment.remote-session`, `conversations.conversation-view.jsonl-viewer.attachment.session-context`, `conversations.conversation-view.jsonl-viewer.attachment.session-mode`, `conversations.conversation-view.jsonl-viewer.attachment.skill-listing`, `conversations.conversation-view.jsonl-viewer.attachment.structured-output`, `conversations.conversation-view.jsonl-viewer.attachment.task-reminder`, `conversations.conversation-view.jsonl-viewer.attachment.team-context`, `conversations.conversation-view.jsonl-viewer.attachment.tool-output-notice`
+  - Slots: `JsonlViewerAttachment.Renderer`
+  - Slot contributors: 27 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `JsonlViewerAttachment.Renderer` ×27
   - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -15,34 +17,8 @@
     - `primitives/slot-render.defineDispatchSlot`
   - Exports (values): `JsonlViewerAttachment`
 - Cross-plugin:
-  - Imported by:
-    - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
-    - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
-    - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
-    - `conversations/conversation-view/jsonl-viewer/attachment/date`
-    - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
-    - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
-    - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
-    - `conversations/conversation-view/jsonl-viewer/attachment/environment`
-    - `conversations/conversation-view/jsonl-viewer/attachment/harness-nudge`
-    - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
-    - `conversations/conversation-view/jsonl-viewer/attachment/hook-error`
-    - `conversations/conversation-view/jsonl-viewer/attachment/hook-message`
-    - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
-    - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
-    - `conversations/conversation-view/jsonl-viewer/attachment/mcp-instructions-delta`
-    - `conversations/conversation-view/jsonl-viewer/attachment/model`
-    - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
-    - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
-    - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
-    - `conversations/conversation-view/jsonl-viewer/attachment/remote-session`
-    - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
-    - `conversations/conversation-view/jsonl-viewer/attachment/session-mode`
-    - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
-    - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
-    - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
-    - `conversations/conversation-view/jsonl-viewer/attachment/team-context`
-    - `conversations/conversation-view/jsonl-viewer/attachment/tool-output-notice`
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×27
 - Core:
   - Exports (types):
     - `AttachmentEvent`

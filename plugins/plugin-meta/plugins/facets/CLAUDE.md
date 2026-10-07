@@ -94,6 +94,7 @@ See `plugins/commands/` for the reference implementation.
     - `framework/tooling/collected-dir.loadCollectedDir`
   - Exports (types):
     - `DocFact`
+    - `DocFactGroup`
     - `ExtractContext`
     - `Facet`
     - `FacetDef`
@@ -101,6 +102,7 @@ See `plugins/commands/` for the reference implementation.
   - Exports (values):
     - `createFacet`
     - `defineFacet`
+    - `docFactValues`
     - `facetCollectedDir`
     - `getFacet`
     - `loadFacets`

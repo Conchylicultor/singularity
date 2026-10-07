@@ -28,7 +28,8 @@ It names no block type and no map vendor.
 
 - Description: Map block type: draws every located item on the page on an interactive map (through the map primitive), with overlays derived on each render from the page's blocks by contributed PageMap.Layer functions — so the map cannot drift from the page and names no block type. Clicking a pin scrolls to and selects the block it stands for; items a layer cannot place yet are counted under the map. Map block type: registers its (empty) `data` schema at the server write boundary.
 - Web:
-  - Slots: `PageMap.Layer` ← `page.place.map-layer`
+  - Slots: `PageMap.Layer`
+  - Slot contributors: `PageMap.Layer` ← `page.place.map-layer`
   - Contributes: `Editor.Block` "map" → `MapBlock`
   - Uses:
     - `map.MapView`

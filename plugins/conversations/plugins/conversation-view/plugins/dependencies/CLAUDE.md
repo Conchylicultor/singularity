@@ -7,32 +7,24 @@
 - Description: Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
 - Web:
   - Contributes: `Conversation.PromptBar` "Deps" → `DependenciesButton`
-  - Uses:
-    - `conversations.useActiveConversations`
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×3
+    - `primitives/live-state` ×3
+    - `infra/endpoints` ×2
+    - `primitives/css/fill` ×2
+    - `primitives/css/text` ×2
+    - `primitives/search` ×2
     - `conversations/conversation-ui/item.ConversationItem`
     - `conversations/conversation-view.Conversation`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
+    - `conversations.useActiveConversations`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.ButtonGroup`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`
-    - `primitives/search.SearchInput`
-    - `primitives/search.useTextFilter`
     - `shell/notifications.toast`
     - `ui/icons.Icon`
 - Exemptions:

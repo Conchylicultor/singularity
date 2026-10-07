@@ -123,9 +123,19 @@ row, or on a failed re-read the row as last seen).
 - Description: The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields plus every arm's contributed fields, each bound to its column), and the three seams an arm reaches it through (Runs.Kind for the label + row activation, Runs.Leading for the list row's status glyph, Runs.Fields for its own columns). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The run-kind registry and the merged run space as ONE routed union window: defineRunKind binds a domain's own ledger into the `runs` collection as an arm (base fields typed against the row, its own columns against its liveArmColumns set; id and duration derived), and serveUnionCollection serves the window, its `:rows` point read (useRun) and `:groups` from every registered arm — a write to one ledger refills only the rows it changed. Names no run kind.
 - Web:
   - Slots:
-    - `Runs.Kind` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`, `build.runs-arm`, `release.runs-arm`
+    - `Runs.Kind`
+    - `Runs.Leading`
+    - `Runs.Fields`
+  - Slot contributors:
+    - `Runs.Kind` ← `apps.deploy.deployments.runs-arm`
+    - `Runs.Kind` ← `backup.runs-arm`
+    - `Runs.Kind` ← `build.runs-arm`
+    - `Runs.Kind` ← `release.runs-arm`
     - `Runs.Leading` ← `build.runs-arm`
-    - `Runs.Fields` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`, `build.runs-arm`, `release.runs-arm`
+    - `Runs.Fields` ← `apps.deploy.deployments.runs-arm`
+    - `Runs.Fields` ← `backup.runs-arm`
+    - `Runs.Fields` ← `build.runs-arm`
+    - `Runs.Fields` ← `release.runs-arm`
   - Uses:
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
@@ -156,8 +166,8 @@ row, or on a failed re-read the row as last seen).
 - Server:
   - Contributes:
     - `resource.declare` "runs"
-    - `resource.declare` "runs:rows"
     - `resource.declare` "runs:groups"
+    - `resource.declare` "runs:rows"
   - Uses: `network/live.serveUnionCollection`
   - Exports (types):
     - `RunArmBase`

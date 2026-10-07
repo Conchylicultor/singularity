@@ -31,18 +31,15 @@ existed, draws a generic pin / neutral circle until the next refresh.
 
 - Description: Place block type: search an address or business through a registered place provider and render it as a card (name, address, category, link out to the provider's map). Owns the Place.Provider registry, so the block names no provider. Place block server half: the definePlaceProvider registry plus the two provider-agnostic lookup endpoints (search, resolve), which dispatch by `providerId` and name no provider. Also registers the place `data` schema at the server write boundary.
 - Web:
-  - Slots: `Place.Provider` ← `page.place.google`
+  - Slots: `Place.Provider`
+  - Slot contributors: `Place.Provider` ← `page.place.google`
   - Contributes: `Editor.Block` "place" → `PlaceBlock`
-  - Uses:
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
-    - `page/editor.BLOCK_INSET`
-    - `page/editor.BlockRendererProps`
-    - `page/editor.Editor`
-    - `page/editor.useBlockActivate`
-    - `primitives/avatar.Avatar`
-    - `primitives/avatar.AvatarPresentationProvider`
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×4
+    - `infra/endpoints` ×3
+    - `primitives/avatar` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
@@ -52,14 +49,10 @@ existed, draws a generic pin / neutral circle until the next refresh.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.Input`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/undo-redo.localUndoProps`

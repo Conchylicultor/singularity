@@ -33,73 +33,55 @@ migrate (Resources page item 3).
     - `Agents.List`
     - `Agents.ListActions`
     - `Agents.View`
-    - `Agents.AgentActions` ← `conversations.agents`
+    - `Agents.AgentActions`
     - `Agents.SystemAgent`
+    - `agentsRootPane.Actions`
+    - `agentDetailPane.Actions`
+    - `systemAgentDetailPane.Actions`
+    - `agentSidePane.Actions`
+  - Slot contributors:
+    - `Agents.AgentActions` ← `conversations.agents`
     - `agentsRootPane.Actions` ← `primitives.pane`
     - `agentDetailPane.Actions` ← `primitives.pane`
     - `systemAgentDetailPane.Actions` ← `primitives.pane`
-    - `agentSidePane.Actions` ← `conversations.agents`, `primitives.pane`
+    - `agentSidePane.Actions` ← `conversations.agents`
+    - `agentSidePane.Actions` ← `primitives.pane`
   - Contributes:
-    - `Pane.Register` "agents-root"
     - `Pane.Register` "agent-detail"
-    - `Pane.Register` "agent-system-detail"
     - `Pane.Register` "agent-side"
+    - `Pane.Register` "agent-system-detail"
+    - `Pane.Register` "agents-root"
     - `agentSidePane.Actions` "expand-agent" → `ExpandAgentButton`
     - `Shell.Sidebar` "Agents"
     - `Item.Avatar` → `AgentAvatarRow`
     - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-  - Uses:
-    - `conversations.useConversationById`
-    - `conversations/conversation-ui/item.CONV_STATUS_DOT`
-    - `conversations/conversation-ui/item.ConversationItemConv`
-    - `conversations/conversation-ui/item.Item`
+  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×7
+    - `primitives/live-state` ×5
+    - `primitives/avatar` ×4
+    - `primitives/collapsible` ×4
+    - `conversations/conversation-ui/item` ×3
+    - `primitives/css/ui-kit` ×3
+    - `primitives/data-view` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/css/status-dot` ×2
+    - `primitives/css/text` ×2
     - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.ModelSelect`
+    - `conversations.useConversationById`
     - `fields/avatar/table.avatarFieldDef`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/app-shell.opensPane`
-    - `primitives/avatar.Avatar`
-    - `primitives/avatar.AVATAR_COLOR_KEYS`
-    - `primitives/avatar.AvatarPicker`
-    - `primitives/avatar.DEFAULT_AGENT_AVATAR`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/center.Center`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/status-dot.StatusDot`
-    - `primitives/css/status-dot.statusDotPaintClass`
     - `primitives/css/surface.Surface`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineItemActions`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/multi-select.useMultiSelect`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.PaneIconAction`
-    - `primitives/pane.resolveFrom`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor.TextEditor`
     - `shell.Shell`
@@ -116,37 +98,27 @@ migrate (Resources page item 3).
     - `systemAgentDetailPane`
 - Server:
   - Contributes:
-    - `resource.declare` "agents"
     - `resource.declare` "agent-launches"
+    - `resource.declare` "agents"
     - `derived-view` "agents_v"
     - `derived-table` "task_latest_conversation"
     - `taskCategory` "agents"
-  - Uses:
-    - `conversations.createConversation`
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×5
+    - `primitives/rank` ×4
+    - `infra/endpoints` ×2
+    - `infra/query-resource` ×2
+    - `tasks/task-category` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
-    - `database.db`
+    - `conversations.createConversation`
     - `database/derived-tables.DerivedTable`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/derived-views.View`
     - `database/sql-column.parsedText`
+    - `database.db`
     - `infra/attachments.Attachments`
     - `infra/claude-cli/availability.assertClaudeCodeReady`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `infra/query-resource.compileEdges`
-    - `infra/query-resource.rel`
     - `network/live.serveValue`
-    - `primitives/rank.nextRankUnder`
-    - `primitives/rank.rankAdjacentTo`
-    - `primitives/rank.rankAfterSibling`
-    - `primitives/rank.withRank`
-    - `tasks/task-category.setTaskCategory`
-    - `tasks/task-category.TaskCategory`
-    - `tasks/tasks-core.conversationCascadeSignatures`
-    - `tasks/tasks-core.conversationsActiveResource`
-    - `tasks/tasks-core.conversationsView`
-    - `tasks/tasks-core.createTask`
-    - `tasks/tasks-core.listConversationsForDisplay`
     - `ui/icons/sprites.defineSavedIconSource`
   - DB schema:
     - `plugins/conversations/plugins/agents/server/internal/rollup-table.ts`

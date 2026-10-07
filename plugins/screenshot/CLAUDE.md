@@ -6,34 +6,28 @@
 
 - Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
 - Web:
-  - Slots: `screenshotPane.Actions` ← `primitives.pane`
+  - Slots: `screenshotPane.Actions`
+  - Slot contributors: `screenshotPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "screenshot"
     - `ActionBar.Item` → `ScreenshotButton`
-  - Uses:
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×3
+    - `screenshot/draw-canvas` ×3
+    - `infra/endpoints` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/launch` ×2
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/coords.Placed`
     - `primitives/css/grid.Grid`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/launch.LaunchControl`
-    - `primitives/launch.LaunchRequest`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/text-editor.TextEditor`
-    - `screenshot/draw-canvas.applyStrokes`
-    - `screenshot/draw-canvas.DrawCanvas`
-    - `screenshot/draw-canvas.Stroke`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.toast`
     - `ui/icons.Icon`

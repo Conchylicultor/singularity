@@ -7,7 +7,14 @@
 - Description: Root plugin hosting stacked chart contributions from child plugins.
 - Web:
   - Slots:
-    - `Stats.Chart` ← `stats.commits`, `stats.cost`, `stats.pushes`, `stats.responsiveness`, `stats.tasks`
+    - `Stats.Chart`
+    - `statsPane.Actions`
+  - Slot contributors:
+    - `Stats.Chart` ← `stats.commits`
+    - `Stats.Chart` ← `stats.cost`
+    - `Stats.Chart` ← `stats.pushes`
+    - `Stats.Chart` ← `stats.responsiveness`
+    - `Stats.Chart` ← `stats.tasks`
     - `statsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "stats"

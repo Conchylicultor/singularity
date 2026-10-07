@@ -6,7 +6,8 @@
 
 - Description: All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar. Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
 - Web:
-  - Slots: `allConversationsPane.Actions` ← `primitives.pane`
+  - Slots: `allConversationsPane.Actions`
+  - Slot contributors: `allConversationsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "all-conversations"
     - `Shell.Sidebar` "Conversations"
@@ -32,11 +33,11 @@
 - Server:
   - Contributes:
     - `resource.declare` "conversations.all"
-    - `resource.declare` "conversations.all:rows"
     - `resource.declare` "conversations.all:groups"
+    - `resource.declare` "conversations.all:rows"
     - `resource.declare` "conversations.history"
-    - `resource.declare` "conversations.history:rows"
     - `resource.declare` "conversations.history:groups"
+    - `resource.declare` "conversations.history:rows"
   - Uses:
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`

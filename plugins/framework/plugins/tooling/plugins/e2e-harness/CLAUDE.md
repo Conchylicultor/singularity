@@ -269,145 +269,27 @@ own `requestfailed` listener calls it too. Diagnosis:
   - Uses: `framework/tooling/guards.MODULE_EXTENSION`
   - Exports (values): `isE2eScriptPath`
 - Cross-plugin:
-  - Imported by:
-    - `active-data/page-link`
-    - `active-data/prototype`
-    - `apps-core/app-launcher`
-    - `apps-core/chrome-theme`
-    - `apps-core/layout`
-    - `apps-core/surface`
-    - `apps-core/tabs`
-    - `apps/agent-manager/pages-nav`
-    - `apps/agent-manager/shell`
-    - `apps/chord/curriculum`
-    - `apps/chord/piano`
-    - `apps/chord/song-index`
-    - `apps/chord/trainer`
-    - `apps/deploy/deploy-history`
-    - `apps/deploy/deploy-history/investigate-failure`
-    - `apps/deploy/local-serve`
-    - `apps/deploy/remote-deploy`
-    - `apps/events/event-list`
-    - `apps/events/sources`
-    - `apps/events/sources/source-detail/runs`
-    - `apps/file-explorer`
-    - `apps/file-explorer/git`
-    - `apps/home`
-    - `apps/mail/threads`
-    - `apps/pages/auto-icon`
-    - `apps/pages/history`
-    - `apps/pages/page-outline`
-    - `apps/pages/page-tree`
-    - `apps/pages/starred`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/compare`
-    - `apps/prototypes/present`
-    - `apps/prototypes/shell`
-    - `apps/prototypes/thumbnails`
-    - `apps/sonata`
-    - `apps/sonata/chord-chart`
-    - `apps/sonata/library`
-    - `apps/sonata/look`
-    - `apps/sonata/piano-roll`
-    - `apps/sonata/pitch-layout`
-    - `apps/sonata/progress/loop`
-    - `apps/sonata/recording`
-    - `apps/sonata/sources/midi/file-preview`
-    - `apps/sonata/track-mixer`
-    - `apps/sonata/view-options`
-    - `apps/studio/compositions/release`
-    - `apps/website`
-    - `apps/website/improve`
-    - `apps/website/pages/apps`
-    - `apps/website/shell`
+  - Imported by: 138 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×43
+    - `primitives` ×23
+    - `page` ×22
+    - `conversations` ×16
+    - `apps-core` ×5
+    - `debug` ×4
+    - `config_v2` ×3
+    - `shell` ×3
+    - `tasks` ×3
+    - `ui` ×3
+    - `active-data` ×2
+    - `infra` ×2
+    - `reorder` ×2
     - `build`
-    - `config_v2`
-    - `config_v2/settings`
-    - `config_v2/settings/conflict-agent`
-    - `conversations/all-conversations`
-    - `conversations/conversation-ui/row`
-    - `conversations/conversation-view/allow-monitor`
-    - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/investigate-event`
-    - `conversations/conversation-view/jsonl-viewer/outline`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
-    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
-    - `conversations/conversation-view/op-status`
-    - `conversations/conversation-view/prompt-templates`
-    - `conversations/conversation-view/rewind`
-    - `conversations/conversation-view/running-agents`
-    - `conversations/conversation-view/selection-actions`
-    - `conversations/conversations-view/data-view/history`
-    - `conversations/conversations-view/data-view/queue`
     - `database/admin`
-    - `debug/live-state-churn/emit`
-    - `debug/queue-health`
-    - `debug/render-profiler`
-    - `debug/reports`
     - `improve/element-picker`
-    - `infra/background/catalog`
-    - `infra/events-test`
     - `network/live`
-    - `page/annotations`
-    - `page/annotations/agent-access`
-    - `page/annotations/agent-notes/agent-page`
-    - `page/annotations/human-notes`
-    - `page/annotations/todo/task-link`
-    - `page/callout`
-    - `page/code-block`
-    - `page/container`
-    - `page/divider`
-    - `page/editor`
-    - `page/editor-collab`
-    - `page/formatting/link`
-    - `page/image`
-    - `page/inline-date`
-    - `page/map`
-    - `page/page-reference`
-    - `page/place`
-    - `page/place/map-layer`
-    - `page/prompt/block`
-    - `page/quote`
-    - `page/table`
-    - `page/url-paste`
-    - `primitives/adaptive-bar`
-    - `primitives/css/control-panel`
-    - `primitives/css/grow-relay`
-    - `primitives/css/radio-group`
-    - `primitives/css/space-ramp`
-    - `primitives/css/ui-kit`
-    - `primitives/data-view`
-    - `primitives/data-view/custom-columns`
-    - `primitives/data-view/list`
-    - `primitives/data-view/tree`
-    - `primitives/data-view/view-core`
-    - `primitives/date-picker`
-    - `primitives/dom/copy-source-text`
-    - `primitives/dom/overscroll-hint`
-    - `primitives/file-viewer/media`
-    - `primitives/networking`
-    - `primitives/overlay/image-viewer`
-    - `primitives/pane`
-    - `primitives/path-bar`
-    - `primitives/row-actions`
-    - `primitives/shortcuts`
-    - `primitives/text-editor/caret-trigger`
-    - `primitives/tree`
     - `release`
-    - `reorder`
-    - `reorder/node-types`
     - `reports`
     - `runs`
-    - `shell/global-action-bar`
-    - `shell/notifications`
-    - `shell/toast`
-    - `tasks/auto-start`
-    - `tasks/launch-options`
-    - `tasks/task-draft-form`
-    - `ui/icons`
-    - `ui/segmented-progress-bar/arc`
-    - `ui/theme-toggle`
 - Exemptions:
   - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)
 

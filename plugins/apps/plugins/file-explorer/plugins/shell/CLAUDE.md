@@ -7,8 +7,11 @@
 - Description: App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
 - Web:
   - Slots:
-    - `FileExplorer.Sidebar` ← `apps.file-explorer.places`
+    - `FileExplorer.Sidebar`
     - `FileExplorer.Toolbar`
+    - `FileExplorer.Places`
+  - Slot contributors:
+    - `FileExplorer.Sidebar` ← `apps.file-explorer.places`
     - `FileExplorer.Places` ← `apps.file-explorer.places`
   - Contributes:
     - `Apps.App` "Files" → `FileExplorerLayout`

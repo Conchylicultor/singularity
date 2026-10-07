@@ -172,8 +172,8 @@ effect with no timer to fire again.
     - `shell/health-report.HealthReport`
 - Server:
   - Contributes:
-    - `report-kind` "db-query-deadline"
     - `report-kind` "db-abandon-cap"
+    - `report-kind` "db-query-deadline"
     - `resource.declare` "db-query-deadlines"
   - Uses:
     - `database.dbLog`

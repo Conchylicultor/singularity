@@ -128,18 +128,18 @@ state rather than the previous window's numbers.
 - Server:
   - Contributes:
     - `resource.declare` "latency-ledger.summary"
-    - `change-feed-exclusion` "latency_ledger_minute"
     - `change-feed-exclusion` "latency_ledger_host_minute"
-    - `change-feed-exclusion` "latency_ledger_thread_minute"
     - `change-feed-exclusion` "latency_ledger_interaction"
-    - `fork-data-exclusion` "latency_ledger_minute"
+    - `change-feed-exclusion` "latency_ledger_minute"
+    - `change-feed-exclusion` "latency_ledger_thread_minute"
     - `fork-data-exclusion` "latency_ledger_host_minute"
-    - `fork-data-exclusion` "latency_ledger_thread_minute"
     - `fork-data-exclusion` "latency_ledger_interaction"
-    - `backup-data-exclusion` "latency_ledger_minute"
+    - `fork-data-exclusion` "latency_ledger_minute"
+    - `fork-data-exclusion` "latency_ledger_thread_minute"
     - `backup-data-exclusion` "latency_ledger_host_minute"
-    - `backup-data-exclusion` "latency_ledger_thread_minute"
     - `backup-data-exclusion` "latency_ledger_interaction"
+    - `backup-data-exclusion` "latency_ledger_minute"
+    - `backup-data-exclusion` "latency_ledger_thread_minute"
   - Uses:
     - `database.db`
     - `database/admin.ExcludeFromBackup`

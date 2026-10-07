@@ -24,12 +24,12 @@ gets a `useId()`-derived Lexical namespace.
 - Description: Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
 - Web:
   - Contributes: `ActiveData.Tag` "task" → `TaskCard`
-  - Uses:
-    - `active-data.ActiveData`
-    - `active-data.useActiveDataBinding`
-    - `conversations.useConversationById`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×3
+    - `active-data` ×2
     - `conversations/conversation-ui/row.ConversationRow`
     - `conversations/conversation-view.conversationPane`
+    - `conversations.useConversationById`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/card.Card`
     - `primitives/css/link-chip.LinkChip`
@@ -37,9 +37,6 @@ gets a `useId()`-derived Lexical namespace.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/launch.LaunchControl`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `primitives/text-editor.TextEditor`

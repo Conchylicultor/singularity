@@ -214,48 +214,39 @@ serves them.
 - Load-bearing: yes
 - Server:
   - Contributes:
-    - `resource.declare` "tasks"
-    - `resource.declare` "task-detail"
     - `resource.declare` "attempts"
-    - `resource.declare` "pushes"
-    - `resource.declare` "pushes:rows"
-    - `resource.declare` "pushes:groups"
-    - `resource.declare` "pushes.attempts-cascade"
     - `resource.declare` "conversations-active"
-    - `resource.declare` "conversations-system"
     - `resource.declare` "conversations-gone"
     - `resource.declare` "conversations-gone-stats"
+    - `resource.declare` "conversations-system"
+    - `resource.declare` "pushes"
+    - `resource.declare` "pushes.attempts-cascade"
+    - `resource.declare` "pushes:groups"
+    - `resource.declare` "pushes:rows"
+    - `resource.declare` "task-detail"
+    - `resource.declare` "tasks"
     - `derived-table` "attempt_conv_agg"
     - `derived-table` "attempt_push_agg"
     - `derived-view` "attempts_v"
     - `derived-view` "conversations_v"
     - `derived-view` "task_blocking_v"
     - `derived-view` "tasks_v"
-  - Uses:
-    - `database.db`
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/query-resource` ×3
+    - `primitives/rank` ×3
+    - `database/sql-projection` ×2
+    - `infra/entities` ×2
+    - `infra/git/git-watcher` ×2
+    - `infra/worktree` ×2
+    - `network/live` ×2
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
-    - `database/sql-projection.nullable`
-    - `database/sql-projection.parsed`
+    - `database.db`
     - `infra/attachments.Attachments`
-    - `infra/entities.defaultNow`
-    - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
     - `infra/git/git-read-cache.createSignedMemo`
-    - `infra/git/git-watcher.defineRefReaction`
-    - `infra/git/git-watcher.lastKnownMainSha`
     - `infra/host/host-read-pool.withHeavyReadSlot`
-    - `infra/query-resource.compileEdges`
-    - `infra/query-resource.queryResource`
-    - `infra/query-resource.rel`
-    - `infra/worktree.ensureMainWorktreeRoot`
-    - `infra/worktree.isCanonicalWorktreePath`
-    - `network/live.serveCollection`
-    - `network/live.serveValue`
     - `primitives/commit-list.runGit`
-    - `primitives/rank.nextRankUnder`
-    - `primitives/rank.RankExecutor`
-    - `primitives/rank.withRank`
   - DB schema:
     - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
@@ -469,66 +460,19 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by:
-    - `active-data`
-    - `active-data/attempt`
-    - `active-data/conv`
-    - `active-data/task`
-    - `active-data/task-link`
+  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×25
+    - `tasks` ×12
+    - `debug` ×6
+    - `active-data` ×5
+    - `page` ×3
+    - `stats` ×2
     - `backup/sources/transcripts`
     - `code-explorer`
-    - `conversations`
-    - `conversations/agents`
-    - `conversations/all-conversations`
-    - `conversations/conversation-category`
-    - `conversations/conversation-preprompt`
-    - `conversations/conversation-progress`
-    - `conversations/conversation-view/allow-monitor`
-    - `conversations/conversation-view/code`
-    - `conversations/conversation-view/commits-graph`
-    - `conversations/conversation-view/drop-and-exit`
-    - `conversations/conversation-view/drop-dependents`
-    - `conversations/conversation-view/exit`
-    - `conversations/conversation-view/hold-and-exit`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-    - `conversations/conversation-view/notes`
-    - `conversations/conversation-view/push-and-exit`
-    - `conversations/conversation-view/turn-summary`
-    - `conversations/conversations-view/grouped`
-    - `conversations/conversations-view/queue`
-    - `conversations/hibernation`
-    - `conversations/question-relay`
-    - `conversations/summary`
-    - `conversations/transcript-api`
-    - `conversations/transcript-retention`
-    - `conversations/transcript-watcher`
     - `database/query`
-    - `debug/profiling/boot-bench`
-    - `debug/profiling/runtime`
-    - `debug/queue-health`
-    - `debug/session-divergence`
-    - `debug/slow-ops/cluster`
-    - `debug/worktree-cleanup`
     - `infra/deps/updates`
-    - `page/annotations/todo/task-link`
-    - `page/prompt/block`
-    - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `review/plugin-changes`
-    - `stats/cost`
-    - `stats/tasks`
-    - `tasks`
-    - `tasks/attempt-work`
-    - `tasks/auto-start`
-    - `tasks/automations`
-    - `tasks/reports-investigation`
-    - `tasks/task-category`
-    - `tasks/task-effort`
-    - `tasks/task-events`
-    - `tasks/task-preprompt`
-    - `tasks/task-source-url`
-    - `tasks/task-title`
-    - `tasks/task-track`
   - Extended by:
     - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
     - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)

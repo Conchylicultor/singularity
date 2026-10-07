@@ -22,7 +22,10 @@ their raw names.
 
 - Description: Dynamic flags field type: config-render capability (options and their defaults resolved at render time from slot contributions, drawn as toggle chips, for config-v2.fields.renderer) plus the dynamicFlagsField factory.
 - Web:
-  - Slots: `DynamicFlags.Options` ← `conversations.model-provider`, `fields.dynamic-flags.config`
+  - Slots: `DynamicFlags.Options`
+  - Slot contributors:
+    - `DynamicFlags.Options` ← `conversations.model-provider`
+    - `DynamicFlags.Options` ← `fields.dynamic-flags.config`
   - Contributes:
     - `Fields.Renderer` "dynamic-flags" → `Rendered`
     - `Fields.Sample` "dynamic-flags"

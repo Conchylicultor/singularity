@@ -191,8 +191,15 @@ expandable JSON.
 - Description: Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table, list/get endpoints, a daily 7-day sweep, and the test-trigger verification endpoint.
 - Web:
   - Slots:
-    - `Trace.Lane` ← `debug.trace.boot`, `debug.trace.client-boot`, `debug.trace.contention`, `debug.trace.gates`, `debug.trace.spans`, `debug.trace.stall`
+    - `Trace.Lane`
     - `Trace.TriggerSummary`
+  - Slot contributors:
+    - `Trace.Lane` ← `debug.trace.boot`
+    - `Trace.Lane` ← `debug.trace.client-boot`
+    - `Trace.Lane` ← `debug.trace.contention`
+    - `Trace.Lane` ← `debug.trace.gates`
+    - `Trace.Lane` ← `debug.trace.spans`
+    - `Trace.Lane` ← `debug.trace.stall`
   - Contributes: `ConfigV2.WebRegister` "trace"
   - Uses:
     - `config_v2.ConfigV2`

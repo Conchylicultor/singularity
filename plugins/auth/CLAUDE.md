@@ -95,35 +95,32 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Load-bearing: yes
 - Web:
   - Slots:
-    - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.google-maps.setup-wizard`, `auth.hooktheory`, `auth.notion`
-    - `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `integrations.gmail`
+    - `Auth.Provider`
+    - `Auth.ScopeRequirement`
+    - `accountsPane.Actions`
+  - Slot contributors:
+    - `Auth.Provider` ← `auth.apple-signing.setup-wizard`
+    - `Auth.Provider` ← `auth.google`
+    - `Auth.Provider` ← `auth.google-maps.setup-wizard`
+    - `Auth.Provider` ← `auth.hooktheory`
+    - `Auth.Provider` ← `auth.notion`
+    - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
+    - `Auth.ScopeRequirement` ← `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
-  - Uses:
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
+    - `infra/endpoints` ×4
+    - `primitives/live-state` ×4
+    - `primitives/pane` ×3
     - `config_v2/settings.configNavPane`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.DialogDescription`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.useOpenPane`
     - `shell/notifications.toast`
     - `ui/icons.Icon`
   - Exports (types):

@@ -167,27 +167,18 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `Sonata.Section` "Recording" → `RecordingSection`
     - `Sonata.Effect` "ug-alignment-sync" → `UgAlignmentSync`
     - `SonataRecording.Refused` "ug-video-refused" → `ReportVideoRefused`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/collapsible` ×4
+    - `apps/sonata/recording` ×3
+    - `infra/endpoints` ×3
+    - `network/live` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps/sonata/document.useSongDocument`
-    - `apps/sonata/recording.RecordingVideo`
-    - `apps/sonata/recording.SonataRecording`
-    - `apps/sonata/recording.useMediaRefusal`
     - `apps/sonata/shell.Sonata`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
-    - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Input`
     - `primitives/loading.Loading`
 - Server:
   - Contributes:

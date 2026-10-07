@@ -120,17 +120,17 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
 - Description: Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.
 - Server:
   - Contributes:
-    - `resource.declare` "mail-labels"
     - `resource.declare` "mail-account"
+    - `resource.declare` "mail-labels"
+    - `fork-data-exclusion` "mail_attachments"
+    - `fork-data-exclusion` "mail_message_labels"
     - `fork-data-exclusion` "mail_messages"
     - `fork-data-exclusion` "mail_threads"
-    - `fork-data-exclusion` "mail_message_labels"
-    - `fork-data-exclusion` "mail_attachments"
-    - `backup-data-exclusion` "mail_messages"
-    - `backup-data-exclusion` "mail_threads"
-    - `backup-data-exclusion` "mail_message_labels"
     - `backup-data-exclusion` "mail_attachments"
+    - `backup-data-exclusion` "mail_message_labels"
+    - `backup-data-exclusion` "mail_messages"
     - `backup-data-exclusion` "mail_sync_state"
+    - `backup-data-exclusion` "mail_threads"
   - Uses:
     - `database.db`
     - `database/admin.ExcludeFromBackup`

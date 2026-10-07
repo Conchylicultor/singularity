@@ -122,31 +122,18 @@ not yet supported — see the open question in
 
 - Description: Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 - Web:
-  - Uses:
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×12
+    - `primitives/hover-reveal` ×2
+    - `primitives/sortable-list` ×2
     - `layouts/route-fallback.DeferredRouteFallback`
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/auto-scroll.scrollChildIntoView`
     - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/pane.MatchEntry`
-    - `primitives/pane.PaneBasePathContext`
-    - `primitives/pane.PaneBox`
-    - `primitives/pane.PaneInstanceContext`
-    - `primitives/pane.PaneLayoutContext`
-    - `primitives/pane.paneOwnerFor`
-    - `primitives/pane.PaneStore`
-    - `primitives/pane.paneThemeScope`
-    - `primitives/pane.usePaneMatch`
-    - `primitives/pane.usePaneStore`
-    - `primitives/pane.usePaneTitle`
-    - `primitives/pane.useRoute`
     - `primitives/scope/surface-id.useSurfaceTabId`
-    - `primitives/sortable-list.SortableItem`
-    - `primitives/sortable-list.SortableList`
     - `primitives/ui-context.UiRegion`
     - `ui/icons.Icon`
   - Exports (values):

@@ -23,7 +23,26 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
 - Description: Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
 - Web:
   - Slots:
-    - `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`, `plugin-meta.facets.cross-refs.render-detail`, `plugin-meta.facets.db-schema.render-detail`, `plugin-meta.facets.exemptions.render-detail`, `plugin-meta.facets.exports.render-detail`, `plugin-meta.facets.registrations.render-detail`, `plugin-meta.facets.resources.render-detail`, `plugin-meta.facets.routes.render-detail`, `plugin-meta.facets.slots.render-detail`, `plugin-meta.facets.structure.render-detail`, `plugin-meta.plugin-health`, `plugin-meta.plugin-view.dependencies`, `plugin-meta.plugin-view.file-tree`, `plugin-meta.plugin-view.inclusion`, `plugin-meta.plugin-view.runtimes`, `plugin-meta.plugin-view.source-path`, `plugin-meta.plugin-view.sub-plugins`
+    - `PluginViewSlots.Section`
+    - `pluginViewPane.Actions`
+  - Slot contributors:
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.cross-refs.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.db-schema.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.exemptions.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.exports.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.registrations.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.resources.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.routes.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.slots.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.structure.render-detail`
+    - `PluginViewSlots.Section` ← `plugin-meta.plugin-health`
+    - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.dependencies`
+    - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.file-tree`
+    - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.inclusion`
+    - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.runtimes`
+    - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.source-path`
+    - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.sub-plugins`
     - `pluginViewPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "plugin-view"
   - Uses:
@@ -76,29 +95,10 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `getPluginFacetsTree`
     - `getPluginTree`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta` ×19
+    - `apps` ×2
     - `active-data/plugin-link`
-    - `apps/studio/compositions/closure-tree`
-    - `apps/studio/explorer`
-    - `plugin-meta/contributions-table`
-    - `plugin-meta/facets/contributions/render-detail`
-    - `plugin-meta/facets/cross-refs/render-detail`
-    - `plugin-meta/facets/db-schema/render-detail`
-    - `plugin-meta/facets/exemptions/render-detail`
-    - `plugin-meta/facets/exports/render-detail`
-    - `plugin-meta/facets/registrations/render-detail`
-    - `plugin-meta/facets/resources/render-detail`
-    - `plugin-meta/facets/routes/render-detail`
-    - `plugin-meta/facets/slots/render-detail`
-    - `plugin-meta/facets/structure/render-contributions`
-    - `plugin-meta/facets/structure/render-detail`
-    - `plugin-meta/plugin-health`
-    - `plugin-meta/plugin-view/dependencies`
-    - `plugin-meta/plugin-view/file-tree`
-    - `plugin-meta/plugin-view/inclusion`
-    - `plugin-meta/plugin-view/runtimes`
-    - `plugin-meta/plugin-view/source-path`
-    - `plugin-meta/plugin-view/sub-plugins`
 - Sub-plugins:
   - **`dependencies`** — Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and…
   - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.

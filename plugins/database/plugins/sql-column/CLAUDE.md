@@ -295,24 +295,13 @@ export const bytea = (name: string) =>
 
 - Description: Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
 - Cross-plugin:
-  - Imported by:
-    - `apps/chord/curriculum`
-    - `apps/chord/progress`
-    - `apps/chord/song-index`
-    - `apps/chord/video-availability`
-    - `apps/deploy/analytics/collect`
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×5
+    - `conversations` ×3
+    - `fields` ×3
+    - `infra` ×3
+    - `debug` ×2
     - `backup`
-    - `conversations/agents`
-    - `conversations/conversation-category`
-    - `conversations/question-relay`
-    - `debug/latency-ledger`
-    - `debug/profiling/op-log/op-store`
-    - `fields/json/storage`
-    - `fields/tags/storage`
-    - `fields/text/storage`
-    - `infra/events`
-    - `infra/jobs`
-    - `infra/trash`
     - `network/live`
     - `page/editor`
     - `primitives/collab-doc`

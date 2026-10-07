@@ -230,30 +230,13 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `listDatabases`
     - `openShortLivedClient`
 - Cross-plugin:
-  - Imported by:
-    - `apps/chord/song-index`
-    - `apps/mail/mail-core`
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×7
+    - `infra` ×6
+    - `database` ×5
+    - `apps` ×2
+    - `build` ×2
     - `backup/sources/databases`
-    - `build/run-ledger`
-    - `build/serve-composition`
-    - `database/change-feed`
-    - `database/db-test-fixture/sweep`
-    - `database/fork`
-    - `database/live-state-snapshot`
-    - `database/query`
-    - `debug/boot-profile`
-    - `debug/latency-ledger`
-    - `debug/slow-ops`
-    - `debug/slow-ops/cluster`
-    - `debug/timeline`
-    - `debug/trace/engine`
-    - `debug/worktree-cleanup`
-    - `infra/claude-cli`
-    - `infra/events-test`
-    - `infra/jobs`
-    - `infra/jobs/supervised-job`
-    - `infra/launcher`
-    - `infra/worktree/reclaim`
     - `reports`
     - `shell/notifications`
 - Test helpers:

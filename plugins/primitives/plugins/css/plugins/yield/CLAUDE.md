@@ -65,29 +65,14 @@ declared as its main axis. The disagreement is the design, not an oversight.
 
 - Description: Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
 - Cross-plugin:
-  - Imported by:
-    - `apps/chord/curriculum`
-    - `apps/chord/trainer`
-    - `apps/pages/page-tree`
-    - `apps/sonata/track-mixer`
-    - `conversations/conversation-view/jsonl-viewer/attachment/environment`
-    - `conversations/conversation-view/jsonl-viewer/collapsible-card`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-    - `debug/profiling/runtime`
-    - `debug/slow-ops/cluster`
-    - `debug/slow-ops/pane`
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×7
+    - `apps` ×4
+    - `conversations` ×3
+    - `debug` ×3
+    - `ui` ×3
     - `history/dialog`
-    - `primitives/adaptive-bar`
-    - `primitives/app-shell`
-    - `primitives/css/fill`
-    - `primitives/data-view`
-    - `primitives/overlay/image-viewer`
-    - `primitives/prompt-editor`
-    - `primitives/text-editor`
     - `search/quick-find`
-    - `ui/sidebar-framing/floating`
-    - `ui/sidebar-framing/flush`
-    - `ui/sidebar-framing/inset`
 - Web:
   - Exports (types): `YieldAxis`
   - Exports (values): `yieldClass`

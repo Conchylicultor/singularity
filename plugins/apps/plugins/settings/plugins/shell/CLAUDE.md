@@ -7,7 +7,13 @@
 - Description: App shell for Settings. Registers the /settings app entry, defines the Settings.Sidebar + Settings.RailBadge slots, and surfaces an attention dot on the rail icon.
 - Web:
   - Slots:
-    - `Settings.Sidebar` ← `apps.settings.accounts`, `apps.settings.appearance`, `apps.settings.config`, `infra.deps`
+    - `Settings.Sidebar`
+    - `Settings.RailBadge`
+  - Slot contributors:
+    - `Settings.Sidebar` ← `apps.settings.accounts`
+    - `Settings.Sidebar` ← `apps.settings.appearance`
+    - `Settings.Sidebar` ← `apps.settings.config`
+    - `Settings.Sidebar` ← `infra.deps`
     - `Settings.RailBadge` ← `apps.settings.config`
   - Contributes: `Apps.App` "Settings" → `SettingsLayout`
   - Uses:

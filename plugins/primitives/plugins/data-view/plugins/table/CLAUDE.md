@@ -51,36 +51,12 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses:
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×19
+    - `primitives/data-table` ×6
+    - `primitives/rank-reorder` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/data-table.ColumnDef`
-    - `primitives/data-table.DATA_TABLE_VIRTUALIZE_THRESHOLD`
-    - `primitives/data-table.DataTable`
-    - `primitives/data-table.DataTableGroup`
-    - `primitives/data-table.DataTableRowDecoration`
-    - `primitives/data-table.SortState`
-    - `primitives/data-view.DATA_VIEW_HEADER_OFFSET_VAR`
-    - `primitives/data-view.DataViewAggregateConfig`
-    - `primitives/data-view.DataViewGroupHeader`
-    - `primitives/data-view.DataViewRenderProps`
-    - `primitives/data-view.DataViewSection`
-    - `primitives/data-view.DataViewSlots`
-    - `primitives/data-view.FieldCell`
-    - `primitives/data-view.FieldValue`
-    - `primitives/data-view.ItemActionsDescriptor`
-    - `primitives/data-view.ManualOrderConfig`
-    - `primitives/data-view.pickPrimaryField`
-    - `primitives/data-view.resolveBodyFields`
-    - `primitives/data-view.SectionBody`
-    - `primitives/data-view.SortRule`
-    - `primitives/data-view.useDataViewSections`
-    - `primitives/data-view.useItemActionZones`
-    - `primitives/data-view.useResolveCell`
-    - `primitives/data-view.useResolveCellEditor`
-    - `primitives/data-view.useResolveOperatorSet`
-    - `primitives/rank-reorder.RankReorderProvider`
-    - `primitives/rank-reorder.useRankSortableItem`
   - Exports (types): `TableViewOptions`
 - Core:
   - Exports (types): `TableViewOptions`

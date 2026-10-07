@@ -25,7 +25,15 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
 - Description: Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
 - Web:
   - Slots:
-    - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.excluded`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`
+    - `Explorer.TreeRowBadge`
+    - `Explorer.TreeRowAccent`
+    - `explorerPane.Actions`
+  - Slot contributors:
+    - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`
+    - `Explorer.TreeRowBadge` ← `apps.studio.explorer.collapsed`
+    - `Explorer.TreeRowBadge` ← `apps.studio.explorer.excluded`
+    - `Explorer.TreeRowBadge` ← `apps.studio.explorer.load-bearing`
+    - `Explorer.TreeRowBadge` ← `apps.studio.explorer.membership`
     - `Explorer.TreeRowAccent` ← `apps.studio.explorer.membership`
     - `explorerPane.Actions` ← `primitives.pane`
   - Contributes:

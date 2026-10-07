@@ -68,8 +68,8 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
 - Server:
   - Contributes:
     - `resource.declare` "pages-origin"
-    - `resource.declare` "pages-origin:rows"
     - `resource.declare` "pages-origin:groups"
+    - `resource.declare` "pages-origin:rows"
     - `page.editor.block.afterCreate`
   - Uses:
     - `database.db`

@@ -34,10 +34,11 @@
 - Description: Persistent bell-button notifications backed by the DB.
 - Web:
   - Contributes: `ActionBar.Item` → `BellButton`
-  - Uses:
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/endpoints` ×2
+    - `primitives/cursor-pagination` ×2
+    - `primitives/live-state` ×2
     - `apps-core/tabs.navigate`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -50,11 +51,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`
-    - `primitives/cursor-pagination.InfiniteScrollFooter`
-    - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.RelativeTime`
@@ -66,9 +63,9 @@
 - Server:
   - Contributes:
     - `resource.declare` "notifications"
-    - `resource.declare` "notifications:rows"
-    - `resource.declare` "notifications:groups"
     - `resource.declare` "notifications.unread"
+    - `resource.declare` "notifications:groups"
+    - `resource.declare` "notifications:rows"
     - `fork-data-exclusion` "notifications"
   - Uses:
     - `database.db`
@@ -100,41 +97,18 @@
     - `POST /api/notifications/mark-all-read`
     - `POST /api/notifications/:id/dismiss`
 - Cross-plugin:
-  - Imported by:
-    - `apps/prototypes/gallery`
-    - `apps/studio/compositions/release/release-logs`
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×15
+    - `tasks` ×5
+    - `apps` ×2
+    - `build` ×2
+    - `debug` ×2
+    - `reports` ×2
+    - `screenshot` ×2
     - `auth`
-    - `build`
-    - `build/build-logs`
-    - `conversations`
-    - `conversations/conversation-view/branch`
-    - `conversations/conversation-view/dependencies`
-    - `conversations/conversation-view/drop-and-exit`
-    - `conversations/conversation-view/drop-dependents`
-    - `conversations/conversation-view/exit`
-    - `conversations/conversation-view/hold-and-exit`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-    - `conversations/conversation-view/launch-prompts`
-    - `conversations/conversation-view/prompt-input`
-    - `conversations/conversation-view/push-and-exit`
-    - `conversations/conversation-view/resume`
-    - `conversations/conversation-view/rewind`
-    - `conversations/model-provider/catalog`
-    - `conversations/summary`
-    - `debug/boot-profile`
-    - `debug/queue`
     - `history/dialog`
     - `infra/events-test`
     - `page/inline-date`
-    - `reports`
-    - `reports/mutation-errors`
-    - `screenshot`
-    - `screenshot/draw-on-app`
-    - `tasks/automations`
-    - `tasks/task-draft-form`
-    - `tasks/task-effort`
-    - `tasks/task-preprompt`
-    - `tasks/task-track`
 - Exemptions:
   - Exempts itself from:
     - `endpoints/no-void-fetch-endpoint` — `web/components/bell-button.tsx` (sanctioned)

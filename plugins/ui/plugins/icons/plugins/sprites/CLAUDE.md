@@ -56,9 +56,9 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `ui/icons.useWantedStyleKeys`
 - Server:
   - Contributes:
-    - `resource.declare` "icons.sprites"
     - `resource.declare` "icons.saved-icons-changed"
     - `resource.declare` "icons.saved-sprites"
+    - `resource.declare` "icons.sprites"
   - Uses:
     - `network/live.serveValue`
     - `ui/icons.IconBody`

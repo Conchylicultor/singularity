@@ -76,10 +76,10 @@ totals equals the same report from raw rows — pinned by the parity test in
 - Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
-    - `change-feed-exclusion` "analytics_visits"
     - `change-feed-exclusion` "analytics_hits"
-    - `change-feed-exclusion` "analytics_visitor_links"
     - `change-feed-exclusion` "analytics_visit_members"
+    - `change-feed-exclusion` "analytics_visitor_links"
+    - `change-feed-exclusion` "analytics_visits"
   - Uses:
     - `apps/deploy/analytics/host-only.hostOnly`
     - `apps/deploy/analytics/host-only.requestClientIp`

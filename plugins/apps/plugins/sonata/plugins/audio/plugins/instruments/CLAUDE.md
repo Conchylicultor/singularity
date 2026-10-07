@@ -40,7 +40,10 @@ the slot; it registers no instrument itself.
 
 - Description: Sonata audio Instrument axis: the SonataAudio.Instrument slot and its voice contracts (InstrumentVoices, ScheduledNote) — an audio contract a host with an AudioContext can consume without importing the Sonata app shell.
 - Web:
-  - Slots: `SonataAudio.Instrument` ← `apps.sonata.audio.piano`, `apps.sonata.audio.soundfont`
+  - Slots: `SonataAudio.Instrument`
+  - Slot contributors:
+    - `SonataAudio.Instrument` ← `apps.sonata.audio.piano`
+    - `SonataAudio.Instrument` ← `apps.sonata.audio.soundfont`
   - Exports (types):
     - `InstrumentVoices`
     - `ScheduledNote`

@@ -10,6 +10,7 @@
 docs/plugins-compact.md                       merge=regen-generated
 docs/plugins-details.md                       merge=regen-generated
 docs/routes.md                                merge=regen-generated
+plugins/**/REFERENCE.md                       merge=regen-generated
 
 # Per-plugin CLAUDE.md (mixed: hand-written prose + autogen block)
 plugins/**/CLAUDE.md                          merge=regen-claudemd

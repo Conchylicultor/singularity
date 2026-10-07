@@ -80,14 +80,20 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
 
 - Description: The background-shell surfaces: every background Bash shell of a conversation and its state (useConversationShells, folded from the transcript the view already holds), its live output tail (useShellOutput), the one state chip every surface shows, and the read-only output pane that streams it. Serves the live tail of one background shell's output file: resolves the file from the conversation's own transcript (never from the browser), checks its shape, reads its last 64 KB per change, and watches it with a per-write (kqueue) file watcher while subscribed.
 - Web:
-  - Slots: `shellOutputPane.Actions` ← `primitives.pane`
+  - Slots: `shellOutputPane.Actions`
+  - Slot contributors: `shellOutputPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "shell-output"
     - `TaskNotification.Open` "background-shell"
-  - Uses:
-    - `conversations.useConversationById`
-    - `conversations/conversation-view.conversationPane`
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×4
+    - `primitives/live-state` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/dom/auto-scroll` ×2
+    - `primitives/relative-time` ×2
     - `conversations/conversation-view/jsonl-viewer/task-notification.TaskNotification`
+    - `conversations/conversation-view.conversationPane`
+    - `conversations.useConversationById`
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
@@ -97,23 +103,10 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/dom/auto-scroll.JumpToBottomButton`
-    - `primitives/dom/auto-scroll.useStickyScroll`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
-    - `primitives/relative-time.ElapsedTime`
-    - `primitives/relative-time.formatElapsed`
   - Exports (types):
     - `ConversationShells`
     - `ShellStateDisplay`

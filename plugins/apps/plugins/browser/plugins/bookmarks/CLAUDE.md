@@ -52,8 +52,8 @@ Bookmarks section reads the same collection).
 - Server:
   - Contributes:
     - `resource.declare` "browser-bookmarks"
-    - `resource.declare` "browser-bookmarks:rows"
     - `resource.declare` "browser-bookmarks:groups"
+    - `resource.declare` "browser-bookmarks:rows"
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`

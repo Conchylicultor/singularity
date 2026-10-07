@@ -137,17 +137,14 @@ remote health gate.
     - `DeploymentDetail.Section` "Deploy to server" → `RemoteDeploySection`
     - `DeploymentDetail.Section` "Output" → `OutputSection`
     - `Deployments.Fields` "release" → `ReleaseField`
-  - Uses:
-    - `apps/deploy/deployments.DeploymentDetail`
-    - `apps/deploy/deployments.Deployments`
-    - `apps/deploy/deployments.useBlockedReason`
-    - `apps/deploy/deployments.useDeploymentsListServerId`
-    - `apps/deploy/health.ServerHealthRow`
-    - `apps/deploy/health.useServerHealth`
-    - `apps/deploy/health.useServerHealthMap`
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×7
+    - `apps/deploy/deployments` ×4
+    - `primitives/setup-steps` ×4
+    - `apps/deploy/health` ×3
+    - `network/live` ×2
+    - `primitives/view-switcher` ×2
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/cluster.Cluster`
@@ -157,22 +154,9 @@ remote health gate.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.GateInput`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/log-channels.LiveLogChannel`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/setup-steps.Step`
-    - `primitives/setup-steps.StepNote`
-    - `primitives/setup-steps.Steps`
-    - `primitives/setup-steps.StepState`
-    - `primitives/view-switcher.useActiveViewId`
-    - `primitives/view-switcher.ViewSwitcher`
     - `ui/icons.Icon`
 - Core:
   - Exports (types):

@@ -83,7 +83,9 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 - Web:
-  - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `database.query-deadline`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.stuck-spans`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.check-thread-stall`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.resource-errors`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+  - Slots: `Reports.KindView`
+  - Slot contributors: 28 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×28
   - Contributes: `ConfigV2.WebRegister` "reports"
   - Uses:
     - `config_v2.ConfigV2`
@@ -98,8 +100,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Server:
   - Contributes:
     - `resource.declare` "reports.list"
-    - `resource.declare` "reports.list:rows"
     - `resource.declare` "reports.list:groups"
+    - `resource.declare` "reports.list:rows"
     - `ConfigV2.Register` "reports"
     - `change-producer` "reports"
     - `fork-data-exclusion` "reports"
@@ -179,56 +181,14 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×18
+    - `debug` ×17
+    - `conversations` ×7
+    - `database` ×3
+    - `infra` ×2
     - `backup`
-    - `conversations`
-    - `conversations/conversation-view/pending-turn`
-    - `conversations/model-provider`
-    - `conversations/model-provider/catalog`
-    - `conversations/pane-restore`
-    - `conversations/runtime-tmux`
-    - `conversations/transcript-watcher`
-    - `database/db-test-fixture/sweep`
-    - `database/fork`
-    - `database/query-deadline`
-    - `debug/boot-budget`
-    - `debug/boot-watchdog`
-    - `debug/config-orphans`
-    - `debug/duress-shed`
-    - `debug/live-state-churn/monitor`
-    - `debug/op-rate`
-    - `debug/queue-health`
-    - `debug/read-set-shrink`
-    - `debug/report-storm`
-    - `debug/reports`
-    - `debug/sentinel`
-    - `debug/session-divergence`
-    - `debug/slow-ops`
-    - `debug/stall-monitor`
-    - `debug/stuck-spans`
-    - `debug/trace/engine`
-    - `debug/worktree-cleanup`
-    - `infra/boot-snapshot`
-    - `infra/jobs/deadline-audit`
     - `page/place/google`
-    - `reports/adaptive-bar`
-    - `reports/caret-flight`
-    - `reports/check-thread-stall`
-    - `reports/collab-hydration`
-    - `reports/crash`
-    - `reports/endpoint-errors`
-    - `reports/launch-fix`
-    - `reports/live-state-stale-drop`
-    - `reports/noise-rules`
-    - `reports/optimistic-divergence`
-    - `reports/outbox`
-    - `reports/page-undo-conflict`
-    - `reports/plugin-load-errors`
-    - `reports/render-loop`
-    - `reports/resource-errors`
-    - `reports/theme-resolution`
-    - `reports/turn-unconfirmed`
-    - `reports/viewport-escape`
     - `stats/cost`
     - `tasks/reports-investigation`
     - `upstream`

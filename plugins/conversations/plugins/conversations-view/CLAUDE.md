@@ -9,29 +9,20 @@
   - Contributes:
     - `Shell.Sidebar` "New conversation" → `LaunchSidebarItem`
     - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-  - Uses:
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
+    - `conversations/pane-restore` ×2
+    - `primitives/css/fill` ×2
+    - `primitives/launch` ×2
+    - `primitives/pane` ×2
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversations-view/data-view.ConversationsSidebarDataView`
     - `conversations/model-provider.useDefaultModel`
-    - `conversations/pane-restore.loadRouteForConversation`
-    - `conversations/pane-restore.reportCorruptSavedRoute`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.insetClass`
     - `primitives/css/status-dot.StatusDot`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.DropdownMenu`
-    - `primitives/css/ui-kit.DropdownMenuTrigger`
-    - `primitives/css/ui-kit.SidebarMenu`
-    - `primitives/css/ui-kit.SidebarMenuButton`
-    - `primitives/css/ui-kit.SidebarMenuItem`
     - `primitives/icon-button.IconButton`
-    - `primitives/launch.LaunchModelMenuContent`
-    - `primitives/launch.useLaunchConversation`
-    - `primitives/pane.useOpenPane`
-    - `primitives/pane.usePaneStore`
     - `shell.Shell`
     - `ui/icons.Icon`
 - Sub-plugins:

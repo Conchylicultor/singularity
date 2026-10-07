@@ -6,36 +6,28 @@
 
 - Description: Composable color picker primitive: a fitted (always-in-gamut) OKLCH ColorArea, HueSlider, AlphaSlider, per-channel ColorValueFields (HEX / OKLCH / HSL), SwatchGrid with named suggestions, and ColorPicker / ColorPickerPopover with before/after, Reset, eyedropper and a shared Recent row. The Color math (parse, convert, gamut) is in core.
 - Web:
-  - Uses:
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
+    - `primitives/css/coords` ×2
+    - `primitives/css/fill` ×2
+    - `primitives/css/text` ×2
+    - `primitives/usage-rank` ×2
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
-    - `primitives/css/coords.pct`
-    - `primitives/css/coords.Placed`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/grid.Grid`
     - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.Popover`
-    - `primitives/css/ui-kit.PopoverContent`
-    - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/persistent-draft.useDraft`
-    - `primitives/usage-rank.recordUsage`
-    - `primitives/usage-rank.useRecentUsage`
   - Exports (types):
     - `AlphaSliderProps`
     - `ColorAreaProps`

@@ -13,27 +13,18 @@ what is contributed or configured: no tab bar, and the railless framing.
 - Load-bearing: yes
 - Web:
   - Contributes: `Core.Root` → `AppsLayout`
-  - Uses:
-    - `apps-core.Apps`
-    - `apps-core.defaultApp`
-    - `apps-core.matchAppForPath`
-    - `apps-core.useActiveApp`
-    - `apps-core.usePathname`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core` ×5
+    - `apps-core/tabs` ×3
+    - `primitives/pane` ×3
+    - `primitives/css/ui-kit` ×2
     - `apps-core/tab-surface.AppTabsBody`
-    - `apps-core/tabs.navigate`
-    - `apps-core/tabs.TabsProvider`
-    - `apps-core/tabs.useTabs`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.TooltipProvider`
     - `primitives/embed.isChromelessDocument`
     - `primitives/loading.Loading`
-    - `primitives/pane.setBasePath`
-    - `primitives/pane.useRenderSync`
-    - `primitives/pane.useSyncPaneRegistry`
     - `primitives/slot-render.renderIsolated`
 - Exemptions:
   - Exempts itself from: `apps-core/no-raw-history-nav` — `web/components/apps-layout.tsx` (sanctioned)

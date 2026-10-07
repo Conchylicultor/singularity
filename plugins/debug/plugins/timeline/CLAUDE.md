@@ -142,25 +142,18 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
 - Description: Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, streamed pull-only from the timeline endpoint. Cross-worktree unified timeline endpoint: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and streams them as NDJSON — pull-only, never live or polled.
 - Web:
   - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
-  - Uses:
-    - `debug/profiling.formatDuration`
-    - `debug/profiling.GanttContainer`
-    - `debug/profiling.minBarSize`
-    - `debug/profiling.MultiSpanLane`
-    - `debug/profiling.useGanttContainerContext`
-    - `debug/trace/pane.groupIncidents`
-    - `debug/trace/pane.IncidentBadge`
-    - `debug/trace/pane.incidentColorClass`
-    - `debug/trace/pane.SlowEvents`
-    - `debug/trace/pane.traceDetailPane`
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug/profiling` ×5
+    - `debug/trace/pane` ×5
+    - `primitives/css/coords` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/ndjson-stream.readNdjson`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
-    - `primitives/css/coords.pct`
-    - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/grow.growClass`
     - `primitives/css/line.Line`
@@ -168,13 +161,9 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`

@@ -36,27 +36,13 @@ its table/filter capabilities from `number` via the identity `extends` chain.
     - `intField`
     - `intSample`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×11
+    - `infra` ×3
+    - `apps` ×2
+    - `conversations` ×2
     - `apps-core/surface/floating/wallpaper`
-    - `apps/events/events-core`
-    - `apps/mail/mail-core`
-    - `conversations`
-    - `conversations/summary`
-    - `debug/boot-budget`
-    - `debug/boot-monitor`
-    - `debug/boot-watchdog`
-    - `debug/live-state-churn/monitor`
-    - `debug/op-rate`
-    - `debug/paging-probe`
-    - `debug/queue-health`
-    - `debug/sentinel`
-    - `debug/session-divergence`
-    - `debug/slow-ops`
-    - `debug/trace/engine`
     - `fields/object/config`
-    - `infra/claude-cli`
-    - `infra/events`
-    - `infra/host/duress`
     - `reports`
     - `tasks/automations`
 

@@ -6,15 +6,19 @@
 
 - Description: Inspect and debug the jobs queue, events emission log, and active triggers.
 - Web:
-  - Slots: `queuePane.Actions` ← `primitives.pane`
+  - Slots: `queuePane.Actions`
+  - Slot contributors: `queuePane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "queue"
     - `DebugApp.Sidebar` "Queue"
-  - Uses:
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×3
+    - `primitives/live-state` ×3
+    - `network/live` ×2
+    - `primitives/cursor-pagination` ×2
+    - `primitives/filter-chips` ×2
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
-    - `network/live.LiveListResult`
-    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -26,18 +30,8 @@
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/viewport-overlay.ViewportOverlay`
-    - `primitives/cursor-pagination.InfiniteScrollFooter`
-    - `primitives/cursor-pagination.useInfiniteScroll`
-    - `primitives/filter-chips.FilterChip`
-    - `primitives/filter-chips.useChipFilter`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourcePaging`
-    - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `primitives/pane.Pane`
     - `shell/notifications.toast`

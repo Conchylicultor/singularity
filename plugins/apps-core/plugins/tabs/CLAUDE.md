@@ -158,42 +158,13 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 - Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
 - Web:
-  - Uses:
-    - `apps-core.ActiveApp`
-    - `apps-core.Apps`
-    - `apps-core.defaultApp`
-    - `apps-core.resolveAppForPath`
-    - `apps-core.setFocusedApp`
-    - `apps-core.useActiveApp`
-    - `primitives/embed.embedMode`
-    - `primitives/embed.embedUrl`
-    - `primitives/embed.isEmbeddedDocument`
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×16
+    - `primitives/scope/app-instance` ×7
+    - `apps-core` ×6
+    - `primitives/embed` ×3
+    - `primitives/link-gesture` ×2
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/link-gesture.LinkGestureProps`
-    - `primitives/link-gesture.linkProps`
-    - `primitives/pane.appNavSink`
-    - `primitives/pane.createPaneStore`
-    - `primitives/pane.currentRoutePath`
-    - `primitives/pane.HistoryAdapter`
-    - `primitives/pane.LocationChange`
-    - `primitives/pane.PaneHistoryState`
-    - `primitives/pane.PaneOptions`
-    - `primitives/pane.PaneSlot`
-    - `primitives/pane.PaneStore`
-    - `primitives/pane.ParsedRoute`
-    - `primitives/pane.parseUrl`
-    - `primitives/pane.RouteState`
-    - `primitives/pane.SerializedSlot`
-    - `primitives/pane.setHistoryAdapter`
-    - `primitives/pane.setLiveStore`
-    - `primitives/pane.stripBasePath`
-    - `primitives/scope/app-instance.appInstanceKey`
-    - `primitives/scope/app-instance.getAppInstanceId`
-    - `primitives/scope/app-instance.getNavigationType`
-    - `primitives/scope/app-instance.legacyInstanceKey`
-    - `primitives/scope/app-instance.mayAdoptLegacyPayload`
-    - `primitives/scope/app-instance.readAppInstance`
-    - `primitives/scope/app-instance.stampAppInstance`
     - `primitives/scope/install-sink.defineInstallSink`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/shortcuts.setFocusedSurfaceId`
@@ -223,35 +194,14 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by:
-    - `apps-core/app-launcher`
-    - `apps-core/app-rail`
-    - `apps-core/layout`
-    - `apps-core/surface`
-    - `apps-core/surface/floating`
-    - `apps-core/surface/solo`
-    - `apps-core/tab-bar`
-    - `apps-core/tab-surface`
-    - `apps-core/theme-scope`
-    - `apps/deploy/composition`
-    - `apps/home/app-cards`
-    - `apps/mail/shell`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/present`
-    - `apps/sonata/sources/midi/file-preview`
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core` ×9
+    - `debug` ×8
+    - `apps` ×6
+    - `shell` ×2
     - `build`
     - `config_v2/config-link`
-    - `debug/config-orphans`
-    - `debug/op-rate`
-    - `debug/queue-health`
-    - `debug/reports`
-    - `debug/slow-ops`
-    - `debug/slow-ops/pane`
-    - `debug/stall-monitor`
-    - `debug/stuck-spans`
     - `primitives/metrics`
-    - `shell/global-action-bar`
-    - `shell/notifications`
     - `tasks/worktree-identity`
     - `ui/theme-engine/quick-theme`
 

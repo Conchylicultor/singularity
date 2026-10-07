@@ -265,6 +265,9 @@ torch.
 - Description: Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request, the pushed deps.states live value says absent / installing / ready / failed for every declared dependency, the install/remove endpoints back Settings → Dependencies. The daily deps.sweep is its sweep sub-plugin.
 - Web:
   - Slots:
+    - `item-actions`
+    - `dependencies.actions`
+  - Slot contributors:
     - `item-actions` ← `infra.deps`
     - `dependencies.actions` ← `primitives.pane`
   - Contributes:

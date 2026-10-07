@@ -67,7 +67,8 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
 
 - Description: History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
 - Web:
-  - Slots: `DeployRunItemActions` ← `apps.deploy.deploy-history.investigate-failure`
+  - Slots: `DeployRunItemActions`
+  - Slot contributors: `DeployRunItemActions` ← `apps.deploy.deploy-history.investigate-failure`
   - Contributes: `DeploymentDetail.Section` "History" → `DeployHistorySection`
   - Uses:
     - `apps/deploy/deployments.DeploymentDetail`

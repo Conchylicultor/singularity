@@ -6,7 +6,8 @@
 
 - Description: Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
 - Web:
-  - Slots: `buildProfileDetailPane.Actions` ← `primitives.pane`
+  - Slots: `buildProfileDetailPane.Actions`
+  - Slot contributors: `buildProfileDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Profiling.Section` → `BuildSection`
     - `Pane.Register` "debug-profiling-build-detail"

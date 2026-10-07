@@ -6,7 +6,10 @@
 
 - Description: Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
 - Web:
-  - Slots: `filePeekPane.Actions` ← `conversations.conversation-view.code.file-pane`, `primitives.pane`
+  - Slots: `filePeekPane.Actions`
+  - Slot contributors:
+    - `filePeekPane.Actions` ← `conversations.conversation-view.code.file-pane`
+    - `filePeekPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "file-peek"
     - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`

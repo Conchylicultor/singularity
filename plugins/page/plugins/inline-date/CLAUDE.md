@@ -23,28 +23,21 @@
     - `defineJob('page.reminders.reconcile')`
     - `defineJob('page.reminders.fire')`
 - Web:
-  - Uses:
-    - `page/editor.BlockTextPluginProps`
-    - `page/editor.blockTextTokenExtension`
-    - `page/editor.registerBlockTextExtension`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/text-editor/caret-trigger` ×4
+    - `page/editor` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/date-picker.DatePickerPanel`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/text-editor/caret-trigger.atWordBoundary`
-    - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
-    - `primitives/text-editor/caret-trigger.useCaretMenu`
-    - `primitives/text-editor/caret-trigger.useCaretQuery`
     - `ui/icons.Icon`
 - Core:
   - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`

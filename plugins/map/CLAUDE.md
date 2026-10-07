@@ -50,6 +50,9 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
 - Description: Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType.
 - Web:
   - Slots:
+    - `GeoMap.Renderer`
+    - `GeoMap.Pin`
+  - Slot contributors:
     - `GeoMap.Renderer` ← `map.google`
     - `GeoMap.Pin` ← `page.place.map-layer`
   - Uses:

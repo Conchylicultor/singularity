@@ -93,8 +93,8 @@ questions.
 - Server:
   - Contributes:
     - `resource.declare` "question-relay.pending"
-    - `resource.declare` "question-relay.pending:rows"
     - `resource.declare` "question-relay.pending:groups"
+    - `resource.declare` "question-relay.pending:rows"
   - Uses:
     - `conversations.QuestionHold`
     - `conversations.QuestionHolds`

@@ -469,8 +469,8 @@ for the `checkpoints` plugin's end-of-turn job.
 - Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
 - Server:
   - Contributes:
-    - `resource.declare` "prototypes.list"
     - `resource.declare` "prototypes.history"
+    - `resource.declare` "prototypes.list"
     - `resource.declare` "prototypes.picks"
     - `resource.declare` "prototypes.statuses"
   - Uses:

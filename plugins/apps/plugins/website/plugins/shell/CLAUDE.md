@@ -68,8 +68,23 @@ hover.
 - Description: App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears.
 - Web:
   - Slots:
-    - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.hero`, `apps.website.landing.layers`, `apps.website.landing.screenshot`, `apps.website.landing.story-link`
-    - `WebsiteHeader` ← `apps.website.improve`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.pages.vision`, `apps.website.shell`, `primitives.pane`
+    - `Website.Section`
+    - `WebsiteHeader`
+  - Slot contributors:
+    - `Website.Section` ← `apps.website.landing.contact`
+    - `Website.Section` ← `apps.website.landing.hero`
+    - `Website.Section` ← `apps.website.landing.layers`
+    - `Website.Section` ← `apps.website.landing.screenshot`
+    - `Website.Section` ← `apps.website.landing.story-link`
+    - `WebsiteHeader` ← `apps.website.improve`
+    - `WebsiteHeader` ← `apps.website.pages.apps`
+    - `WebsiteHeader` ← `apps.website.pages.download`
+    - `WebsiteHeader` ← `apps.website.pages.foundations`
+    - `WebsiteHeader` ← `apps.website.pages.guide`
+    - `WebsiteHeader` ← `apps.website.pages.story`
+    - `WebsiteHeader` ← `apps.website.pages.vision`
+    - `WebsiteHeader` ← `apps.website.shell`
+    - `WebsiteHeader` ← `primitives.pane`
   - Contributes:
     - `Apps.App` "equin" → `WebsiteLayout`
     - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
@@ -78,7 +93,11 @@ hover.
     - `ThemeEngine.Theme` "equin"
     - `ThemeEngine.SubTheme` "equin document"
     - `ThemeEngine.SubTheme` "equin page heading"
-  - Uses:
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×6
+    - `primitives/css/spacing` ×3
+    - `primitives/css/ui-kit` ×3
+    - `primitives/css/text` ×2
     - `apps-core.Apps`
     - `apps/deploy/analytics/collect.AnalyticsTracker`
     - `layouts/full-pane.FullPane`
@@ -86,22 +105,8 @@ hover.
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.insetClass`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
-    - `primitives/css/text.TextVariant`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.subThemeScope`
     - `primitives/icon-button.IconButton`
-    - `primitives/pane.AnyPane`
-    - `primitives/pane.definePaneHeaderSlot`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`

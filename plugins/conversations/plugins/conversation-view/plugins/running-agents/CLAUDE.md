@@ -165,35 +165,23 @@ value (`band-view.ts`: `showAll` + `open`).
   - Contributes:
     - `Conversation.AbovePromptInput` → `RunningAgentsBand`
     - `TranscriptStats.Item` "agents" → `AgentsStat`
-  - Uses:
-    - `conversations/conversation-view.Conversation`
-    - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
-    - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
-    - `conversations/conversation-view/jsonl-viewer.useTranscriptSubject`
-    - `conversations/conversation-view/jsonl-viewer/background-shells.shellOutputPane`
-    - `conversations/conversation-view/jsonl-viewer/background-shells.shellStateDisplay`
-    - `conversations/conversation-view/jsonl-viewer/background-shells.useConversationShells`
-    - `conversations/conversation-view/jsonl-viewer/background-shells.useShellOutput`
-    - `conversations/conversation-view/jsonl-viewer/subagents.SubagentDuration`
-    - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/conversation-view/jsonl-viewer/background-shells` ×4
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
+    - `conversations/conversation-view/jsonl-viewer` ×3
+    - `primitives/collapsible` ×3
+    - `conversations/conversation-view/jsonl-viewer/subagents` ×2
+    - `primitives/css/fill` ×2
+    - `primitives/data-view` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
-    - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
-    - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
-    - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.useCollapsible`
-    - `primitives/collapsible.UseCollapsibleReturn`
+    - `conversations/conversation-view.Conversation`
     - `primitives/css/clip.Clip`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.useOpenPane`
     - `primitives/persistent-draft.useDraft`

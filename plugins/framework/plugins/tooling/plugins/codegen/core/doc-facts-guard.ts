@@ -1,5 +1,8 @@
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
-import type { DocFact } from "@plugins/plugin-meta/plugins/facets/core";
+import {
+  docFactValues,
+  type DocFact,
+} from "@plugins/plugin-meta/plugins/facets/core";
 
 // A repo path or `@plugins/…` specifier inside a rendered fact value. Facts
 // render paths in backticks (`plugins/x/server/tables.ts`) and specifiers bare
@@ -18,7 +21,7 @@ const PATH_TOKEN_RE = /@?plugins\/[\w./@-]+/g;
 export function testCodeInFacts(facts: readonly DocFact[]): string[] {
   const hits = new Set<string>();
   for (const fact of facts) {
-    for (const value of fact.values) {
+    for (const value of docFactValues(fact)) {
       for (const [token] of value.matchAll(PATH_TOKEN_RE)) {
         if (isTestCodePath(token.split("/"))) hits.add(token);
       }

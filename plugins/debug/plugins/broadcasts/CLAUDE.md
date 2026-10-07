@@ -6,14 +6,16 @@
 
 - Description: View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
 - Web:
-  - Slots: `broadcastsPane.Actions` ← `primitives.pane`
+  - Slots: `broadcastsPane.Actions`
+  - Slot contributors: `broadcastsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-broadcasts"
     - `DebugApp.Sidebar` "Broadcasts"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×3
+    - `primitives/pane` ×3
+    - `infra/endpoints` ×2
     - `apps/debug/shell.DebugApp`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
@@ -23,14 +25,8 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `ui/icons.Icon`
   - Exports (values): `broadcastsPane`
 - Server:

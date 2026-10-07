@@ -380,9 +380,20 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
 - Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
 - Web:
   - Slots:
-    - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`, `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
+    - `DeploymentDetail.Section`
+    - `Deployments.Fields`
+    - `DeploymentItemActions`
+    - `deploymentDetailPane.Actions`
+  - Slot contributors:
+    - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`
+    - `DeploymentDetail.Section` ← `apps.deploy.composition`
+    - `DeploymentDetail.Section` ← `apps.deploy.deploy-history`
+    - `DeploymentDetail.Section` ← `apps.deploy.deployments`
+    - `DeploymentDetail.Section` ← `apps.deploy.local-serve`
+    - `DeploymentDetail.Section` ← `apps.deploy.remote-deploy`
     - `Deployments.Fields` ← `apps.deploy.remote-deploy`
-    - `DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
+    - `DeploymentItemActions` ← `apps.deploy.deployments`
+    - `DeploymentItemActions` ← `apps.deploy.local-serve`
     - `deploymentDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
@@ -390,17 +401,15 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DeploymentDetail.Section` "Overview" → `DeploymentOverview`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses:
-    - `apps/deploy/health.ServerHealthRow`
-    - `apps/deploy/health.useServerHealth`
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×9
+    - `primitives/data-view` ×7
+    - `primitives/pane` ×5
+    - `infra/endpoints` ×4
+    - `network/live` ×3
+    - `primitives/live-state` ×3
+    - `apps/deploy/health` ×2
     - `apps/deploy/servers.ServerDetail`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
-    - `network/live.LiveRowResult`
-    - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
@@ -408,35 +417,11 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.DialogDescription`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/css/ui-kit.Select`
-    - `primitives/css/ui-kit.SelectContent`
-    - `primitives/css/ui-kit.SelectItem`
-    - `primitives/css/ui-kit.SelectTrigger`
-    - `primitives/css/ui-kit.SelectValue`
-    - `primitives/data-view.CreateOption`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineFieldExtensions`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.FieldDef`
-    - `primitives/data-view.ItemActionProps`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.resolveRow`
-    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
   - Exports (values):
@@ -449,35 +434,27 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
 - Server:
   - Contributes:
     - `resource.declare` "deploy.deployments"
-    - `resource.declare` "deploy.deployments:rows"
     - `resource.declare` "deploy.deployments:groups"
-    - `resource.declare` "deploy.runs"
+    - `resource.declare` "deploy.deployments:rows"
     - `resource.declare` "deploy.run-history"
-    - `resource.declare` "deploy.run-history:rows"
     - `resource.declare` "deploy.run-history:groups"
-  - Uses:
+    - `resource.declare` "deploy.run-history:rows"
+    - `resource.declare` "deploy.runs"
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/jobs` ×3
+    - `infra/endpoints` ×2
+    - `infra/jobs/supervised-job` ×2
+    - `infra/paths` ×2
+    - `network/live` ×2
+    - `release/bundles` ×2
+    - `release` ×2
     - `apps/deploy/health.serverHealth`
     - `apps/deploy/servers._deployServers`
     - `config_v2.getConfig`
-    - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `infra/jobs.isSuspendSignal`
-    - `infra/jobs.JobCtx`
-    - `infra/jobs.NonRetryableError`
-    - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `infra/jobs/supervised-job.RunStep`
-    - `infra/paths.REPO_ROOT`
-    - `infra/paths.worktreeArtifacts`
+    - `database.db`
     - `infra/retention.defineRetention`
-    - `network/live.serveCollection`
-    - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
-    - `release.awaitRelease`
-    - `release.enqueueRelease`
-    - `release/bundles.compareToHead`
-    - `release/bundles.resolveBundle`
   - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
   - Exports (values):
     - `_deployDeployments`

@@ -206,23 +206,19 @@ instrument grouping — while `convert` itself stays pure.
     - `SonataPlayer.Display` "Notation" → `LazyBoundary`
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "notation"
-  - Uses:
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/session` ×2
+    - `apps/sonata/track-mixer` ×2
+    - `config_v2` ×2
+    - `primitives/css/spacing` ×2
     - `apps/sonata/document.useSongDocument`
     - `apps/sonata/player.SonataPlayer`
-    - `apps/sonata/session.useCursorApi`
-    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/track-mixer.useHiddenTrackIds`
-    - `apps/sonata/track-mixer.useTrackMixerEntries`
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`

@@ -41,7 +41,11 @@ Ordering for both surfaces lives in
 
 - Description: Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
 - Web:
-  - Slots: `TaskLaunch.Option` ← `tasks.auto-start.launch-option`, `tasks.task-effort`, `tasks.task-preprompt`
+  - Slots: `TaskLaunch.Option`
+  - Slot contributors:
+    - `TaskLaunch.Option` ← `tasks.auto-start.launch-option`
+    - `TaskLaunch.Option` ← `tasks.task-effort`
+    - `TaskLaunch.Option` ← `tasks.task-preprompt`
   - Uses:
     - `primitives/css/spacing.Stack`
     - `primitives/error-boundary.PluginErrorBoundary`

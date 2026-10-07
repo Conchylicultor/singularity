@@ -7,19 +7,26 @@
 - Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to onOpenFile; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
 - Web:
   - Slots:
+    - `filesHomePane.Actions`
+    - `filesAtPane.Actions`
+    - `FileBrowserSlots.Fields`
+    - `FileBrowserSlots.Lens`
+  - Slot contributors:
     - `filesHomePane.Actions` ← `primitives.pane`
     - `filesAtPane.Actions` ← `primitives.pane`
     - `FileBrowserSlots.Fields` ← `apps.file-explorer.git`
     - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
   - Contributes:
-    - `Pane.Register` "files-home"
     - `Pane.Register` "files-at"
+    - `Pane.Register` "files-home"
     - `ThemeEngine.SubTheme` "Files document"
-  - Uses:
-    - `infra/endpoints.endpointQueryKey`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×7
+    - `primitives/data-view` ×5
+    - `primitives/file-viewer` ×5
+    - `infra/endpoints` ×4
+    - `primitives/pane` ×4
+    - `primitives/path-bar` ×2
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
@@ -31,32 +38,9 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.ResizableHandle`
-    - `primitives/css/ui-kit.ResizablePanel`
-    - `primitives/css/ui-kit.ResizablePanelGroup`
-    - `primitives/css/ui-kit.subThemeScope`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineFieldExtensions`
-    - `primitives/data-view.FieldDef`
-    - `primitives/data-view.HierarchyConfig`
     - `primitives/file-type.FileTypeIcon`
-    - `primitives/file-viewer.FileContent`
-    - `primitives/file-viewer.FileTabs`
-    - `primitives/file-viewer.useFileRenderers`
-    - `primitives/file-viewer.useIsInArchive`
-    - `primitives/file-viewer.useOpenHostFile`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.SurfaceChromeContext`
-    - `primitives/pane.useOpenPane`
-    - `primitives/path-bar.PathBar`
-    - `primitives/path-bar.PathTarget`
     - `primitives/persistent-draft.useDraft`
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/surface-id.useSurfaceTabId`

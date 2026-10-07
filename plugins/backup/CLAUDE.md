@@ -107,6 +107,10 @@ row with a rising count and a new source starting to fail mints its own.
 - Description: Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised job's `run` body, so a backend restart mid-`tar` no longer kills the backup.
 - Web:
   - Slots:
+    - `BackupRunDetail.Section`
+    - `backupPane.Actions`
+    - `backupRunPane.Actions`
+  - Slot contributors:
     - `BackupRunDetail.Section` ← `backup.runs-arm`
     - `backupPane.Actions` ← `primitives.pane`
     - `backupRunPane.Actions` ← `primitives.pane`

@@ -61,8 +61,8 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
 - Server:
   - Contributes:
     - `resource.declare` "task-tracks"
-    - `resource.declare` "task-tracks:rows"
     - `resource.declare` "task-tracks:groups"
+    - `resource.declare` "task-tracks:rows"
   - Uses:
     - `database.db`
     - `database.DbExecutor`

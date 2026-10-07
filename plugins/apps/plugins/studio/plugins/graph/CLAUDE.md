@@ -6,24 +6,21 @@
 
 - Description: Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
 - Web:
-  - Slots: `graphCanvasPane.Actions` ← `primitives.pane`
+  - Slots: `graphCanvasPane.Actions`
+  - Slot contributors: `graphCanvasPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "graph"
     - `Studio.Sidebar` "Plugin Graph"
-  - Uses:
-    - `apps/studio/membership-tint.STATE_LEGEND`
-    - `apps/studio/membership-tint.STATE_TINT`
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta/composition` ×4
+    - `primitives/pane` ×3
+    - `apps/studio/membership-tint` ×2
+    - `primitives/css/spacing` ×2
     - `apps/studio/shell.Studio`
-    - `plugin-meta/composition.useActiveComposition`
-    - `plugin-meta/composition.useActiveMembership`
-    - `plugin-meta/composition.useCompositionData`
-    - `plugin-meta/composition.useGraph`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
@@ -31,9 +28,6 @@
     - `primitives/graph-canvas.GraphCanvas`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/search.SearchInput`
   - Exports (values): `graphCanvasPane`
 - Cross-plugin:

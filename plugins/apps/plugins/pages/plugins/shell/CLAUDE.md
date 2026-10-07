@@ -6,7 +6,11 @@
 
 - Description: App shell for Pages. Registers the /pages app entry, defines the Pages.Sidebar slot (headed by the standard app-shell brand header), and contributes the app's own theme (Ink), which Pages selects.
 - Web:
-  - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.trash`
+  - Slots: `Pages.Sidebar`
+  - Slot contributors:
+    - `Pages.Sidebar` ← `apps.pages.content-search`
+    - `Pages.Sidebar` ← `apps.pages.page-tree`
+    - `Pages.Sidebar` ← `apps.pages.trash`
   - Contributes:
     - `Apps.App` "Pages" → `PagesLayout`
     - `ThemeEngine.Theme` "Ink"

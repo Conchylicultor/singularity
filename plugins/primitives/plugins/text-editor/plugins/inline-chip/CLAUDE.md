@@ -150,7 +150,14 @@ rendered chip out of a read surface puts the token back on the clipboard.
 
 - Description: Inline chips for every text surface: inlineChip() declares one (a self-certifying pattern, the surfaces it belongs on, and the component that renders it) and records it in a module registry; one generic Lexical node renders any declared chip, and inlineChipExtension(surface) hands a Lexical host that surface's chips as a single token extension. renderInlineChip(token) is the one rendering of a matched token, inside its own error boundary. Server-side referents of inline tokens: chip families contribute InlineTokenReferentSource (their chip's pattern + a resolve to the referent's title), and expandInlineTokenReferents rewrites a text's tokens as `<kind id title/>` so a model reads what the chip shows instead of an opaque id; inlineTokensAsText replaces them with the bare title, for text a person reads.
 - Web:
-  - Slots: `InlineChip.Tag` ← `active-data.attempt`, `active-data.conv`, `active-data.page-link`, `active-data.prototype`, `active-data.task-link`, `primitives.ui-context.element-picker`
+  - Slots: `InlineChip.Tag`
+  - Slot contributors:
+    - `InlineChip.Tag` ← `active-data.attempt`
+    - `InlineChip.Tag` ← `active-data.conv`
+    - `InlineChip.Tag` ← `active-data.page-link`
+    - `InlineChip.Tag` ← `active-data.prototype`
+    - `InlineChip.Tag` ← `active-data.task-link`
+    - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`

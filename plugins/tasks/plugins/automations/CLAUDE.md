@@ -113,69 +113,51 @@ lands in the bell, linking to the automation's detail pane.
 - Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default; and the History of the tasks it filed), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own, and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
 - Web:
   - Slots:
-    - `Automations.Config` ← `infra.deps.updates`, `tasks.reports-investigation`
+    - `Automations.Config`
+    - `Automations.Section`
+    - `automations.actions`
+    - `automation-detail.actions`
+  - Slot contributors:
+    - `Automations.Config` ← `infra.deps.updates`
+    - `Automations.Config` ← `tasks.reports-investigation`
     - `Automations.Section` ← `tasks.reports-investigation`
     - `automations.actions` ← `primitives.pane`
     - `automation-detail.actions` ← `primitives.pane`
   - Contributes:
     - `DynamicEnum.Options` "Model"
-    - `Pane.Register` "automations"
     - `Pane.Register` "automation-detail"
+    - `Pane.Register` "automations"
     - `Shell.Sidebar` "Automations"
     - `Tasks.Fields` "origin" → `OriginField`
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfigResult`
-    - `config_v2.useSetConfig`
-    - `conversations/model-provider.ModelSelect`
-    - `conversations/model-provider.useModelChoiceOptions`
+  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×7
+    - `primitives/live-state` ×5
+    - `primitives/pane` ×5
+    - `config_v2` ×3
+    - `primitives/data-view` ×3
+    - `tasks/task-status` ×3
+    - `conversations/model-provider` ×2
+    - `infra/background/catalog` ×2
+    - `infra/endpoints` ×2
+    - `primitives/css/control-panel` ×2
     - `fields/dynamic-enum/config.DynamicEnum`
-    - `infra/background/catalog.NextRun`
-    - `infra/background/catalog.useBackgroundEntry`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/app-shell.opensPane`
     - `primitives/css/badge.Badge`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/css/ui-kit.Select`
-    - `primitives/css/ui-kit.SelectContent`
-    - `primitives/css/ui-kit.SelectItem`
-    - `primitives/css/ui-kit.SelectTrigger`
-    - `primitives/css/ui-kit.SelectValue`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.FieldDef`
     - `primitives/editable-field.useEditableField`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.resolveFrom`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`
     - `shell.Shell`
-    - `tasks.useTasksById`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-list.Tasks`
-    - `tasks/task-status.STATUS_META`
-    - `tasks/task-status.StatusIcon`
-    - `tasks/task-status.StatusSignal`
+    - `tasks.useTasksById`
     - `ui/icons.Icon`
   - Exports (values):
     - `automationConfigContributions`
@@ -184,31 +166,22 @@ lands in the bell, linking to the automation's detail pane.
   - Contributes:
     - `resource.declare` "automations.catalog"
     - `resource.declare` "automations.tasks"
-    - `resource.declare` "automations.tasks:rows"
     - `resource.declare` "automations.tasks:groups"
+    - `resource.declare` "automations.tasks:rows"
     - `trigger` "automations.task-status"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.getConfig`
-    - `config_v2.watchConfig`
-    - `database.db`
-    - `database.DbExecutor`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×5
+    - `config_v2` ×3
+    - `database` ×2
+    - `infra/jobs` ×2
+    - `network/live` ×2
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
-    - `infra/jobs.defineJob`
-    - `infra/jobs.refreshJobSchedules`
     - `infra/warmup.defineWarmup`
-    - `network/live.serveCollection`
-    - `network/live.serveValue`
     - `primitives/log-channels.Log`
     - `shell/notifications.recordNotification`
-    - `tasks.armTaskAutoStart`
     - `tasks/task-category.setTaskCategory`
-    - `tasks/tasks-core._tasks`
-    - `tasks/tasks-core.createTask`
-    - `tasks/tasks-core.getTask`
-    - `tasks/tasks-core.taskStatusChanged`
-    - `tasks/tasks-core.tasksView`
+    - `tasks.armTaskAutoStart`
   - DB schema: `plugins/tasks/plugins/automations/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_origin`)
   - Exports (types):

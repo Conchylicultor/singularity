@@ -78,23 +78,28 @@ renderer, which only the running app has.
 - Description: Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.
 - Web:
   - Slots:
+    - `configNavPane.Actions`
+    - `configDetailPane.Actions`
+    - `ConfigDetailSlots.ConflictAction`
+    - `ConfigNavSlots.Notice`
+  - Slot contributors:
     - `configNavPane.Actions` ← `primitives.pane`
     - `configDetailPane.Actions` ← `primitives.pane`
     - `ConfigDetailSlots.ConflictAction` ← `config_v2.settings.conflict-agent`
     - `ConfigNavSlots.Notice` ← `debug.config-orphans`
   - Contributes:
-    - `Pane.Register` "config-v2-nav"
     - `Pane.Register` "config-v2-detail"
-  - Uses:
-    - `apps-core.Apps`
+    - `Pane.Register` "config-v2-nav"
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×5
+    - `config_v2/fields` ×4
+    - `primitives/data-view` ×4
+    - `primitives/pane` ×4
+    - `infra/endpoints` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps-core/app-icon.AppIconView`
+    - `apps-core.Apps`
     - `config_v2.useConfigRegistrations`
-    - `config_v2/fields.ConfigFieldAdornments`
-    - `config_v2/fields.ConfigFieldAdornmentsProvider`
-    - `config_v2/fields.ConfigFieldContext`
-    - `config_v2/fields.FieldRenderer`
-    - `infra/endpoints.useEndpoint`
-    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -111,26 +116,11 @@ renderer, which only the running app has.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.FieldDef`
-    - `primitives/data-view.HierarchyConfig`
     - `primitives/diff-view.TextDiff`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useEndpointResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/syntax-highlight.HighlightedCode`
     - `shell/toast.showToast`

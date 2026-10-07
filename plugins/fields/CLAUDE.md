@@ -101,70 +101,18 @@ tokens, so anything that imports the barrels back would cycle.
 
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
-  - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.dynamic-flags`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.rank`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
+  - Slots: `Fields.Identity`
+  - Slot contributors: 24 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Identity` ×24
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by:
-    - `apps/browser/bookmarks`
-    - `apps/events/events-core`
-    - `apps/events/sources/url-extract`
-    - `apps/mail/mail-core`
-    - `apps/sonata/library`
-    - `apps/sonata/sources/ultimate-guitar/alignment`
-    - `apps/sonata/track-mixer`
+  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×45
+    - `apps` ×7
+    - `debug` ×3
+    - `infra` ×3
     - `config_v2`
     - `conversations/summary`
-    - `debug/boot-profile`
-    - `debug/slow-ops`
-    - `debug/trace/engine`
-    - `fields/avatar`
-    - `fields/avatar/config`
-    - `fields/bool`
-    - `fields/bool/config`
-    - `fields/color`
-    - `fields/color/config`
-    - `fields/date`
-    - `fields/date/config`
-    - `fields/directory-path`
-    - `fields/directory-path/config`
-    - `fields/dynamic-enum`
-    - `fields/dynamic-enum/config`
-    - `fields/dynamic-flags`
-    - `fields/dynamic-flags/config`
-    - `fields/enum`
-    - `fields/enum/config`
-    - `fields/float`
-    - `fields/float/config`
-    - `fields/image`
-    - `fields/int`
-    - `fields/int/config`
-    - `fields/json`
-    - `fields/json/config`
-    - `fields/list`
-    - `fields/list/config`
-    - `fields/multiline-text`
-    - `fields/multiline-text/config`
-    - `fields/number`
-    - `fields/object`
-    - `fields/object/config`
-    - `fields/rank`
-    - `fields/rank/config`
-    - `fields/reorder-tree`
-    - `fields/reorder-tree/config`
-    - `fields/secret`
-    - `fields/string-list`
-    - `fields/string-list/config`
-    - `fields/tags`
-    - `fields/tags/config`
-    - `fields/text`
-    - `fields/text/config`
-    - `fields/uuid`
-    - `fields/uuid/config`
-    - `fields/variant`
-    - `fields/variant/config`
-    - `infra/claude-cli`
-    - `infra/entities`
-    - `infra/events`
     - `plugin-meta/plugin-health`
     - `primitives/data-view`
     - `tasks/tasks-core`

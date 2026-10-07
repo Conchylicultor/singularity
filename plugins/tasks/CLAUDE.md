@@ -21,47 +21,25 @@
     - `useTask`
     - `useTasksById`
 - Server:
-  - Uses:
-    - `conversations.launchTaskNow`
-    - `conversations.maybeLaunchTaskJob`
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×15
+    - `conversations` ×2
+    - `infra/claude-cli/availability` ×2
+    - `infra/endpoints` ×2
+    - `primitives/rank` ×2
+    - `tasks/auto-start` ×2
+    - `tasks/launch-options` ×2
+    - `tasks/task-title` ×2
+    - `tasks/task-track` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `infra/attachments.getAttachment`
-    - `infra/claude-cli/availability.assertClaudeCodeReady`
-    - `infra/claude-cli/availability.onClaudeCodeReady`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
     - `infra/mcp.Mcp`
     - `infra/paths.GIT`
     - `infra/warmup.defineWarmup`
     - `infra/worktree.ensureMainWorktreeRoot`
-    - `primitives/rank.rankAdjacentTo`
-    - `primitives/rank.rankAfterSibling`
-    - `tasks/auto-start.listArmedTaskIds`
-    - `tasks/auto-start.setTaskAutoStart`
-    - `tasks/launch-options.inheritLaunchOptions`
-    - `tasks/launch-options.resolveLaunchOptions`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-source-url.setTaskSourceUrl`
-    - `tasks/task-title.scheduleTaskTitleUpdate`
-    - `tasks/task-title.synthesiseTitleFallback`
-    - `tasks/task-track.listSidequestIds`
-    - `tasks/task-track.setTaskTrack`
-    - `tasks/tasks-core._tasks`
-    - `tasks/tasks-core.addTaskDependency`
-    - `tasks/tasks-core.createTask`
-    - `tasks/tasks-core.DbExecutor`
-    - `tasks/tasks-core.getConversation`
-    - `tasks/tasks-core.getTask`
-    - `tasks/tasks-core.getTaskDependencyIds`
-    - `tasks/tasks-core.isDescendant`
-    - `tasks/tasks-core.listDependentIds`
-    - `tasks/tasks-core.listTasks`
-    - `tasks/tasks-core.removeTaskDependency`
-    - `tasks/tasks-core.taskAttachments`
-    - `tasks/tasks-core.unionTaskClusters`
-    - `tasks/tasks-core.updateTask`
-    - `tasks/tasks-core.withTaskStatusBatch`
   - Exports (values): `armTaskAutoStart`
   - Register:
     - `mcpTool('add_task')`

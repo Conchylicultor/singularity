@@ -141,18 +141,34 @@ it, so an id means the same thing wherever it is clicked.
 - Description: Sidebar page-tree plus the page-detail pane (header, editor, sections slot) and the block-detail pane (one block of a page, opened as a page of its own) for the Pages app, with useBlockTarget — the one resolver of a bare block id to the pane that shows it.
 - Web:
   - Slots:
+    - `PageDetail.HeaderTool`
+    - `PageDetail.UnderTitle`
+    - `PageDetail.Section`
+    - `PageDetail.Overlay`
+    - `PageTree.RowActions`
+    - `PageTree.Fields`
+    - `pageDetailPane.Actions`
+    - `blockDetailPane.Actions`
+    - `pagesTreePane.Actions`
+  - Slot contributors:
     - `PageDetail.HeaderTool` ← `apps.pages.page-tree`
     - `PageDetail.UnderTitle` ← `apps.pages.page-tree`
-    - `PageDetail.Section`
     - `PageDetail.Overlay` ← `apps.pages.page-outline`
-    - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`
-    - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
-    - `pageDetailPane.Actions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.page-author`, `apps.pages.page-tree`, `apps.pages.starred`, `primitives.pane`
+    - `PageTree.RowActions` ← `apps.pages.page-tree`
+    - `PageTree.RowActions` ← `apps.pages.starred`
+    - `PageTree.Fields` ← `apps.pages.agent-origin`
+    - `PageTree.Fields` ← `apps.pages.starred`
+    - `pageDetailPane.Actions` ← `apps.pages.copy-id`
+    - `pageDetailPane.Actions` ← `apps.pages.history`
+    - `pageDetailPane.Actions` ← `apps.pages.page-author`
+    - `pageDetailPane.Actions` ← `apps.pages.page-tree`
+    - `pageDetailPane.Actions` ← `apps.pages.starred`
+    - `pageDetailPane.Actions` ← `primitives.pane`
     - `blockDetailPane.Actions` ← `primitives.pane`
     - `pagesTreePane.Actions` ← `primitives.pane`
   - Contributes:
-    - `Pane.Register` "page-detail"
     - `Pane.Register` "block-detail"
+    - `Pane.Register` "page-detail"
     - `Pane.Register` "pages-tree"
     - `Pages.Sidebar` "Pages" → `PagesSidebar`
     - `Pages.Sidebar` "New page" → `NewPageItem`
@@ -163,35 +179,29 @@ it, so an id means the same thing wherever it is clicked.
     - `pageDetailPane.Actions` "edited" → `EditedLabel`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses:
+  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×9
+    - `page/editor` ×7
+    - `primitives/data-view` ×5
+    - `primitives/css/ui-kit` ×4
+    - `primitives/live-state` ×4
+    - `infra/endpoints` ×3
+    - `page/page-reference` ×3
+    - `primitives/overlay/image-viewer` ×3
+    - `apps/pages/shell` ×2
+    - `primitives/breadcrumb` ×2
+    - `primitives/css/control-panel` ×2
+    - `primitives/hover-reveal` ×2
+    - `primitives/usage-rank` ×2
     - `apps/pages/auto-icon.RegenerateIconAction`
-    - `apps/pages/shell.Pages`
-    - `apps/pages/shell.PagesSidebarRow`
     - `infra/attachments.uploadAttachment`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpoint`
-    - `infra/endpoints.useEndpointMutation`
     - `infra/trash.useUndoableTrash`
     - `network/live.useLive`
-    - `page/editor.blockContentScope`
-    - `page/editor.BlockEditor`
-    - `page/editor.BlockEditorHandle`
-    - `page/editor.CaretSurface`
-    - `page/editor.Editor`
-    - `page/editor.PageContentColumn`
-    - `page/editor.PageIcon`
     - `page/links.Backlinks`
-    - `page/page-reference.PageNavigation`
-    - `page/page-reference.PageNavigationProvider`
-    - `page/page-reference.usePageReferenceTint`
     - `primitives/app-shell.SidebarItem`
-    - `primitives/breadcrumb.Breadcrumb`
-    - `primitives/breadcrumb.BreadcrumbSegment`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/grid.Grid`
     - `primitives/css/grow.growClass`
     - `primitives/css/inline.Inline`
@@ -201,48 +211,19 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.Separator`
     - `primitives/css/yield.yieldClass`
-    - `primitives/data-view.CreateOption`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineFieldExtensions`
-    - `primitives/data-view.defineItemActions`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/editable-field.useEditableField`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
-    - `primitives/overlay/image-viewer.ImageLoadState`
-    - `primitives/overlay/image-viewer.MissingImage`
-    - `primitives/overlay/image-viewer.useImageLoad`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.PaneIconAction`
-    - `primitives/pane.resolveFrom`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.useCurrentPane`
-    - `primitives/pane.useOpenPane`
-    - `primitives/pane.usePaneStore`
-    - `primitives/pane.useSurfaceAppId`
     - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `primitives/tree.useOptionalRowControls`
     - `primitives/undo-redo.useUndoRedo`
-    - `primitives/usage-rank.recordUsage`
-    - `primitives/usage-rank.useRecentUsage`
     - `shell/toast.showToast`
-    - `ui/icons.Icon`
     - `ui/icons/emoji.EmojiPicker`
+    - `ui/icons.Icon`
   - Exports (types):
     - `BlockTarget`
     - `PageSeedBlock`

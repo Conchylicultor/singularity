@@ -151,7 +151,13 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 
 - Description: Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / run hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources and run-ledger collections.
 - Web:
-  - Slots: `EventSources.Type` ← `apps.events.sources.coworkmeet`, `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
+  - Slots: `EventSources.Type`
+  - Slot contributors:
+    - `EventSources.Type` ← `apps.events.sources.coworkmeet`
+    - `EventSources.Type` ← `apps.events.sources.dmda`
+    - `EventSources.Type` ← `apps.events.sources.manual`
+    - `EventSources.Type` ← `apps.events.sources.salsanueva`
+    - `EventSources.Type` ← `apps.events.sources.url-extract`
   - Uses:
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveListResult`
@@ -173,12 +179,12 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useUpdateEventSource`
 - Server:
   - Contributes:
-    - `resource.declare` "events.sources"
-    - `resource.declare` "events.sources:rows"
-    - `resource.declare` "events.sources:groups"
     - `resource.declare` "events.source-runs"
-    - `resource.declare` "events.source-runs:rows"
     - `resource.declare` "events.source-runs:groups"
+    - `resource.declare` "events.source-runs:rows"
+    - `resource.declare` "events.sources"
+    - `resource.declare` "events.sources:groups"
+    - `resource.declare` "events.sources:rows"
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`

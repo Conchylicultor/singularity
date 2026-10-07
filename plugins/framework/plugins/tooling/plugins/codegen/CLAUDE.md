@@ -6,84 +6,28 @@
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses:
-    - `config_v2.APP_SCOPE_DIR`
-    - `config_v2.computeHash`
-    - `config_v2.configFileOwner`
-    - `config_v2.effective`
-    - `config_v2.hasReviewMarker`
-    - `config_v2.propagate`
-    - `config_v2.readonlyProxy`
-    - `config_v2.readTypedConfig`
-    - `config_v2.REVIEW_MARKER`
-    - `config_v2.stringifyConfigValue`
-    - `config_v2.withOverrideLegend`
-    - `config_v2/ledger.AppliedConfigMigration`
-    - `config_v2/ledger.applyConfigMigrations`
+  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework/plugin-id` ×12
+    - `plugin-meta/parse-utils` ×12
+    - `config_v2` ×11
+    - `plugin-meta/barrel-import` ×6
+    - `plugin-meta/facets` ×5
+    - `plugin-meta/closure` ×4
+    - `plugin-meta/composition` ×4
+    - `plugin-meta/plugin-tree` ×4
+    - `framework/slot-declaration` ×3
+    - `framework/tooling/resource-vocabulary` ×3
+    - `config_v2/ledger` ×2
+    - `framework/tooling/format` ×2
+    - `framework/tooling` ×2
+    - `packages/macrotask-yield` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
-    - `framework/plugin-id.asPath`
-    - `framework/plugin-id.asPluginId`
-    - `framework/plugin-id.isTestCodePath`
-    - `framework/plugin-id.packageNameFor`
-    - `framework/plugin-id.PLUGIN_FOLDERS`
-    - `framework/plugin-id.PluginFolder`
-    - `framework/plugin-id.PluginId`
-    - `framework/plugin-id.RUNTIME_FOLDERS`
-    - `framework/plugin-id.RuntimeFolder`
-    - `framework/plugin-id.TESTING_FOLDER`
-    - `framework/plugin-id.TESTS_DIR`
-    - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
-    - `framework/slot-declaration.declaredSlotSources`
-    - `framework/slot-declaration.declarePluginSlots`
-    - `framework/slot-declaration.findUndeclaredSlots`
-    - `framework/tooling.loadRepoFiles`
-    - `framework/tooling.RepoFiles`
-    - `framework/tooling/format.formatIfFormattable`
-    - `framework/tooling/format.SourceBytes`
     - `framework/tooling/lint.loadLintContributions`
-    - `framework/tooling/resource-vocabulary.isResourceVocabularyOwner`
-    - `framework/tooling/resource-vocabulary.PreloadFlag`
-    - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
     - `infra/namespace.MAIN_COMPOSITION_ID`
-    - `packages/macrotask-yield.createTimeSlicer`
-    - `packages/macrotask-yield.yieldMacrotask`
     - `packages/semaphore.createSemaphore`
-    - `plugin-meta/barrel-import.AUTO_STUB_CSS`
-    - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
-    - `plugin-meta/barrel-import.AutoStubEntry`
-    - `plugin-meta/barrel-import.importBarrel`
-    - `plugin-meta/barrel-import.registerBarrelStubs`
-    - `plugin-meta/barrel-import.setPreBarrelImportGuard`
-    - `plugin-meta/closure.classifyEdges`
-    - `plugin-meta/closure.EdgeGraph`
-    - `plugin-meta/closure.flattenManifest`
-    - `plugin-meta/closure.resolveComposition`
-    - `plugin-meta/composition.assertCompositionName`
-    - `plugin-meta/composition.CompositionManifestItem`
-    - `plugin-meta/composition.compositionsConfig`
-    - `plugin-meta/composition.manifestItemToManifest`
-    - `plugin-meta/facets.DocFact`
-    - `plugin-meta/facets.Facet`
-    - `plugin-meta/facets.getFacet`
     - `plugin-meta/facets/contributions.contributionsFacetDef`
     - `plugin-meta/facets/exemptions.exemptionsFacetDef`
     - `plugin-meta/facets/slots.slotsFacetDef`
-    - `plugin-meta/parse-utils.findImports`
-    - `plugin-meta/parse-utils.findMarkerCalls`
-    - `plugin-meta/parse-utils.FsSnapshot`
-    - `plugin-meta/parse-utils.lineAt`
-    - `plugin-meta/parse-utils.markerCallSpans`
-    - `plugin-meta/parse-utils.maskSource`
-    - `plugin-meta/parse-utils.parseBarrelExports`
-    - `plugin-meta/parse-utils.parseStaticCallId`
-    - `plugin-meta/parse-utils.parseStringField`
-    - `plugin-meta/parse-utils.readIfExists`
-    - `plugin-meta/parse-utils.unresolvableCallIdMessage`
-    - `plugin-meta/parse-utils.walkFilesAsync`
-    - `plugin-meta/plugin-tree.buildPluginTree`
-    - `plugin-meta/plugin-tree.buildStructureTreeOnce`
-    - `plugin-meta/plugin-tree.PluginNode`
-    - `plugin-meta/plugin-tree.PluginTree`
   - Exports (types):
     - `AuthoredOverrideSeedResult`
     - `CodegenStep`
@@ -162,6 +106,7 @@
     - `pluginClaudeMdPath`
     - `pluginCompactDocPath`
     - `pluginDetailsDocPath`
+    - `pluginReferenceMdPath`
     - `postWebManifests`
     - `preBarrelManifests`
     - `propagateConfigToUser`
@@ -182,6 +127,7 @@
     - `renderFieldsEagerManifest`
     - `renderIconManifest`
     - `renderPluginClaudeMd`
+    - `renderPluginReferenceMd`
     - `renderReorderableSlotsManifest`
     - `renderSpaceRamp`
     - `renderTokenGroupVarsManifest`

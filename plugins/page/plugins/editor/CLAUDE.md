@@ -4010,94 +4010,63 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
 - Description: Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 - Web:
   - Slots:
-    - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.map`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.table`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
-    - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
-    - `Editor.TurnInto` ← `page.turn-into-page`
+    - `Editor.Block`
+    - `Editor.BlockFrame`
+    - `Editor.TurnInto`
+    - `Editor.BlockMenuItem`
+    - `Editor.FormatAction`
+    - `Editor.InsertAction`
+  - Slot contributors: 49 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Editor.Block` ×30
+    - `Editor.BlockFrame` ×7
+    - `Editor.FormatAction` ×7
+    - `Editor.InsertAction` ×3
     - `Editor.BlockMenuItem` ← `page.open-as-page`
-    - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
-    - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`, `page.annotations.instructions.instructions-page`, `page.turn-into-page`
-  - Uses:
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
-    - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
+    - `Editor.TurnInto` ← `page.turn-into-page`
+  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×5
+    - `primitives/text-editor/caret-trigger` ×5
+    - `primitives/css/spacing` ×4
+    - `primitives/css/ui-kit` ×4
+    - `primitives/dom/dom-selection` ×4
+    - `primitives/slot-render` ×4
+    - `primitives/css/control-panel` ×3
+    - `primitives/css/coords` ×3
+    - `primitives/multi-select` ×3
+    - `primitives/optimistic-mutation` ×3
+    - `primitives/text-editor/caret-motion` ×3
+    - `primitives/undo-redo` ×3
+    - `reorder` ×3
+    - `infra/endpoints` ×2
+    - `network/live` ×2
+    - `primitives/latest-ref` ×2
+    - `primitives/persistent-draft` ×2
     - `primitives/announce.announce`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelPopover`
-    - `primitives/css/control-panel.ControlPanelPopoverProps`
-    - `primitives/css/coords.Placed`
-    - `primitives/css/coords.placedClasses`
-    - `primitives/css/coords.placedStyle`
     - `primitives/css/inline.Inline`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.insetClass`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/dom/auto-scroll.useEdgeAutoScroll`
-    - `primitives/dom/dom-selection.hasBox`
-    - `primitives/dom/dom-selection.selectionIsCollapsed`
-    - `primitives/dom/dom-selection.selectionRange`
-    - `primitives/dom/dom-selection.selectionRect`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.liveStateSocketKind`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
-    - `primitives/multi-select.MultiSelectProvider`
-    - `primitives/multi-select.SelectionBar`
-    - `primitives/multi-select.useMultiSelect`
     - `primitives/networking.subscribeWsStatus`
-    - `primitives/optimistic-mutation.enqueueResourceWrite`
-    - `primitives/optimistic-mutation.OpNoLongerApplies`
-    - `primitives/optimistic-mutation.useOptimisticResource`
-    - `primitives/persistent-draft.readDraft`
-    - `primitives/persistent-draft.writeDraft`
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/select-scope.ContentScope`
-    - `primitives/slot-render.defineDispatchSlot`
-    - `primitives/slot-render.defineOrderedDispatchSlot`
-    - `primitives/slot-render.defineRenderSlot`
-    - `primitives/slot-render.OrderedDispatchContribution`
     - `primitives/sync-status.useReportSync`
-    - `primitives/text-editor/caret-motion.announceCaretCrossing`
-    - `primitives/text-editor/caret-motion.CARET_CROSSED_COMMAND`
-    - `primitives/text-editor/caret-motion.crossCaret`
-    - `primitives/text-editor/caret-trigger.atWordBoundary`
-    - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
-    - `primitives/text-editor/caret-trigger.useCaretMenu`
-    - `primitives/text-editor/caret-trigger.useCaretQuery`
-    - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
     - `primitives/text-editor/token-extension/node.TokenPastePlugin`
-    - `primitives/undo-redo.surfaceUndoProps`
-    - `primitives/undo-redo.usePendingFlush`
-    - `primitives/undo-redo.useScopedUndoRedo`
-    - `reorder.isNodeData`
-    - `reorder.TopLevelEntry`
-    - `reorder.useReorderedEntries`
     - `shell/toast.showToast`
-    - `ui/icons.Icon`
     - `ui/icons/emoji.EmojiGlyph`
+    - `ui/icons.Icon`
   - Exports (types):
     - `BlockAnchorProps`
     - `BlockChrome`
@@ -4206,9 +4175,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useVoidCaret`
 - Server:
   - Contributes:
-    - `resource.declare` "pages"
     - `resource.declare` "page-blocks"
     - `resource.declare` "page-edited-at"
+    - `resource.declare` "pages"
     - `page.block-data` "page"
     - `page.block-annotation`
   - Uses:
@@ -4473,82 +4442,12 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `xmlTextContentLength`
     - `xmlTextToRuns`
 - Cross-plugin:
-  - Imported by:
-    - `active-data`
-    - `active-data/attempt`
-    - `active-data/conv`
-    - `active-data/page-link`
-    - `active-data/prototype`
-    - `active-data/task-link`
-    - `apps/pages/agent-origin`
-    - `apps/pages/auto-icon`
-    - `apps/pages/content-search`
-    - `apps/pages/history`
-    - `apps/pages/page-outline`
-    - `apps/pages/page-tree`
-    - `apps/pages/starred`
-    - `apps/pages/welcome/recent-pages`
-    - `page/annotations`
-    - `page/annotations/agent-access`
-    - `page/annotations/agent-notes`
-    - `page/annotations/agent-notes/agent-page`
-    - `page/annotations/agent-notes/authorship`
-    - `page/annotations/human-notes`
-    - `page/annotations/instructions`
-    - `page/annotations/instructions/instructions-page`
-    - `page/annotations/private-notes`
-    - `page/annotations/todo`
-    - `page/annotations/todo/task-link`
-    - `page/attachment-block`
-    - `page/audio`
-    - `page/block-text-write`
-    - `page/bookmark`
-    - `page/bulleted-list`
-    - `page/callout`
-    - `page/code-block`
-    - `page/container`
-    - `page/divider`
-    - `page/editor-collab`
-    - `page/embed`
-    - `page/file`
-    - `page/formatting/bold`
-    - `page/formatting/code`
-    - `page/formatting/color`
-    - `page/formatting/italic`
-    - `page/formatting/link`
-    - `page/formatting/strikethrough`
-    - `page/formatting/underline`
-    - `page/heading/heading-1`
-    - `page/heading/heading-2`
-    - `page/heading/heading-3`
-    - `page/image`
-    - `page/inline-date`
-    - `page/inline-page-link`
-    - `page/links`
-    - `page/map`
-    - `page/markdown-apply`
-    - `page/math/equation`
-    - `page/math/inline`
-    - `page/numbered-list`
-    - `page/open-as-page`
-    - `page/page-link`
-    - `page/place`
-    - `page/prompt/block`
-    - `page/quote`
-    - `page/read-only-view`
-    - `page/sub-page`
-    - `page/table`
-    - `page/text`
-    - `page/to-do`
-    - `page/toggle`
-    - `page/turn-into-page`
-    - `page/url-paste`
-    - `page/video`
-    - `primitives/css/ui-kit`
-    - `primitives/date-picker`
-    - `reports/caret-flight`
-    - `reports/collab-hydration`
-    - `reports/page-undo-conflict`
+  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page` ×56
+    - `apps` ×8
+    - `active-data` ×6
+    - `reports` ×3
+    - `primitives` ×2
   - Extended by:
     - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
     - `apps/pages/agent-origin` (table `editor_ext_origin`)

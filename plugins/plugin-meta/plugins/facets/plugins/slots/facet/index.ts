@@ -1,5 +1,8 @@
 import { join } from "path";
-import { createFacet } from "@plugins/plugin-meta/plugins/facets/core";
+import {
+  createFacet,
+  type DocFact,
+} from "@plugins/plugin-meta/plugins/facets/core";
 import {
   collectSlots,
   declaredSlotSources,
@@ -275,23 +278,30 @@ export default createFacet<SlotDef[]>({
 
   renderDoc(data) {
     if (data.length === 0) return [];
-    return [
-      {
-        folder: "web",
-        key: "Slots",
-        values: data.map((s) => {
-          // A slot with no `Group.Member` spelling (its id is templated, so
-          // neither the barrel exports nor source text name it) carries the id
-          // in both fields — print it once rather than `id.id`.
-          const label =
-            s.groupName === s.memberName
-              ? s.groupName
-              : `${s.groupName}.${s.memberName}`;
-          const head = `\`${label}\``;
-          if (s.contributors.length === 0) return head;
-          return `${head} ← ${s.contributors.map((id) => `\`${id}\``).join(", ")}`;
-        }),
-      },
+    // A slot with no `Group.Member` spelling (its id is templated, so neither
+    // the barrel exports nor source text name it) carries the id in both
+    // fields — print it once rather than `id.id`.
+    const labelOf = (s: (typeof data)[number]): string =>
+      `\`${s.groupName === s.memberName ? s.groupName : `${s.groupName}.${s.memberName}`}\``;
+    const facts: DocFact[] = [
+      { folder: "web", key: "Slots", values: data.map(labelOf) },
     ];
+    // Who fills each slot, one contributor per line, grouped by slot so the doc
+    // can summarize a slot half the repo contributes to (`Pane.Register`) as
+    // one count.
+    const groups = data
+      .filter((s) => s.contributors.length > 0)
+      .map((s) => ({
+        label: labelOf(s),
+        values: s.contributors.map((id) => `${labelOf(s)} ← \`${id}\``),
+      }));
+    if (groups.length > 0)
+      facts.push({
+        folder: "web",
+        key: "Slot contributors",
+        noun: "contributors",
+        groups,
+      });
+    return facts;
   },
 });

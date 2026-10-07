@@ -73,42 +73,25 @@ and
 
 - Description: SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
 - Web:
-  - Slots: `SshProvider` ← `apps.deploy.ssh-setup.hetzner`
+  - Slots: `SshProvider`
+  - Slot contributors: `SshProvider` ← `apps.deploy.ssh-setup.hetzner`
   - Contributes: `ServerDetail.Section` "Set up SSH access" → `SshSetupSection`
-  - Uses:
-    - `apps/deploy/health.useServerVerified`
-    - `apps/deploy/health.VerifyConnectionBody`
-    - `apps/deploy/servers.generateSshKeypair`
-    - `apps/deploy/servers.importSshPrivateKey`
-    - `apps/deploy/servers.Server`
-    - `apps/deploy/servers.ServerDetail`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.CollapsibleTrigger`
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/setup-steps` ×7
+    - `apps/deploy/servers` ×4
+    - `primitives/collapsible` ×4
+    - `infra/endpoints` ×3
+    - `primitives/css/ui-kit` ×3
+    - `apps/deploy/health` ×2
+    - `primitives/live-state` ×2
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.DialogDescription`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
-    - `primitives/setup-steps.Step`
-    - `primitives/setup-steps.StepCommand`
-    - `primitives/setup-steps.StepDone`
-    - `primitives/setup-steps.StepLink`
-    - `primitives/setup-steps.StepNote`
-    - `primitives/setup-steps.Steps`
-    - `primitives/setup-steps.StepState`
     - `ui/icons.Icon`
   - Exports (types):
     - `SshConsoleProps`

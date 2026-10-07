@@ -77,18 +77,16 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
 - Description: Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH: resolves the deployment's server and pinned SSH target, curls the install's host-only report through its own gateway on the loopback port, and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
 - Web:
   - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`
-  - Uses:
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/endpoints` ×2
+    - `network/live` ×2
+    - `primitives/css/coords` ×2
+    - `primitives/css/text` ×2
     - `apps/deploy/deployments.DeploymentDetail`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
     - `plugin-meta/composition.useCompositionIncludes`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
     - `primitives/css/cluster.Cluster`
-    - `primitives/css/coords.pct`
-    - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/inline.Inline`
@@ -97,8 +95,6 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/switch.Switch`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.Button`
     - `primitives/icon-button.IconButton`

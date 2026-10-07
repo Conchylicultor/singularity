@@ -9,27 +9,20 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
     - `ConfigV2.WebRegister` "config"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×4
+    - `config_v2` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/overlay/floating-action` ×2
+    - `primitives/usage-rank` ×2
     - `config_v2/config-link.ConfigGearButton`
-    - `conversations.useConversationById`
-    - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/pending-turn.sendConversationTurn`
+    - `conversations/conversation-view.conversationPane`
+    - `conversations.useConversationById`
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.ButtonGroup`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/overlay/floating-action.FloatingAction`
-    - `primitives/overlay/floating-action.FloatingActionFadeIn`
     - `primitives/prompt-editor.PromptEditorSlots`
-    - `primitives/usage-rank.recordUsage`
-    - `primitives/usage-rank.useUsageOrder`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `ConfigV2.Register` "config"

@@ -189,10 +189,15 @@ return is `useMemo`'d because it is now a context value.
 
 - Description: Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 - Web:
-  - Slots: `Tree.Disclosure` ← `ui.tree-disclosure`
-  - Uses:
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.ExpandAllButton`
+  - Slots: `Tree.Disclosure`
+  - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
+    - `primitives/multi-select` ×3
+    - `primitives/collapsible` ×2
+    - `primitives/rank-reorder` ×2
+    - `primitives/row-actions` ×2
+    - `primitives/search` ×2
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
@@ -201,26 +206,11 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.DropdownMenu`
-    - `primitives/css/ui-kit.DropdownMenuContent`
-    - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/dom/auto-scroll.KeepScrollAcross`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
-    - `primitives/multi-select.MultiSelectProvider`
-    - `primitives/multi-select.SelectionBar`
-    - `primitives/multi-select.SelectionCheckbox`
-    - `primitives/rank-reorder.RankReorderDndContext`
-    - `primitives/rank-reorder.useRankReorderItem`
-    - `primitives/row-actions.RowActions`
-    - `primitives/row-actions.rowActionsAnchor`
-    - `primitives/search.filterTree`
-    - `primitives/search.SearchInput`
     - `primitives/slot-render.renderIsolated`
     - `primitives/virtual-rows.VirtualRows`
     - `ui/icons.Icon`

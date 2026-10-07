@@ -51,27 +51,20 @@ plain wrap; tempo changes follow the existing loop-aware `retime` path.
     - `Sonata.TransportEdge` "loop" → `LoopRollEdge`
     - `sonataPlayerPane.Actions` "loop-toggle" → `LoopToggle`
     - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
-  - Uses:
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/session` ×3
+    - `apps/sonata/progress/scrubber` ×2
+    - `apps/sonata/shell` ×2
+    - `primitives/css/coords` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/hover-reveal` ×2
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/player.usePlayerView`
-    - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
-    - `apps/sonata/progress/scrubber.SonataProgress`
-    - `apps/sonata/session.useCursorApi`
-    - `apps/sonata/session.useCursorSelector`
-    - `apps/sonata/session.useSession`
-    - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useLaneInsets`
-    - `primitives/css/coords.pct`
-    - `primitives/css/coords.Placed`
     - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/auto-scroll.useEdgeAutoScroll`
-    - `primitives/hover-reveal.hoverRevealClass`
-    - `primitives/hover-reveal.useHoverReveal`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/shortcuts.useSurfaceShortcuts`

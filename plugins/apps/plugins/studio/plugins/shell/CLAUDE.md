@@ -9,8 +9,13 @@ App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar
 - Description: App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
 - Web:
   - Slots:
-    - `Studio.Sidebar` ← `apps.studio.compositions`, `apps.studio.contributions`, `apps.studio.explorer`, `apps.studio.graph`
+    - `Studio.Sidebar`
     - `Studio.Toolbar`
+  - Slot contributors:
+    - `Studio.Sidebar` ← `apps.studio.compositions`
+    - `Studio.Sidebar` ← `apps.studio.contributions`
+    - `Studio.Sidebar` ← `apps.studio.explorer`
+    - `Studio.Sidebar` ← `apps.studio.graph`
   - Contributes: `Apps.App` "Studio" → `StudioLayout`
   - Uses:
     - `apps-core.Apps`

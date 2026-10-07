@@ -66,16 +66,22 @@ top-level and untouched by this; only the Studio UI lives here.
 - Description: Release sections of the Studio composition detail pane (target picker + Run, and this composition's run history), plus the run-detail pane hosting the info / logs / artifact sections.
 - Web:
   - Slots:
-    - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
+    - `ReleaseDetail.Section`
+    - `releaseDetailPane.Actions`
+  - Slot contributors:
+    - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`
+    - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-info`
+    - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-logs`
     - `releaseDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "release-detail"
     - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
     - `CompositionDetail.Section` "Release history" → `ReleaseHistorySection`
-  - Uses:
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×4
+    - `primitives/pane` ×3
+    - `build/serve-composition` ×2
     - `apps/studio/compositions.CompositionDetail`
-    - `build/serve-composition.ServeTargetPanel`
-    - `build/serve-composition.useServeStatus`
     - `config_v2.useConfigResult`
     - `infra/endpoints.useEndpointMutation`
     - `plugin-meta/composition.useManifestItems`
@@ -87,15 +93,8 @@ top-level and untouched by this; only the Studio UI lives here.
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.FieldDef`
-    - `primitives/data-view.liveDataSource`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/live-state.matchResource`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
   - Exports (values):

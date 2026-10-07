@@ -7,11 +7,12 @@
 - Description: Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also serves a title-only lookup (/api/link-meta, no image downloads) for the pasted-link Mention, and registers the bookmark `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
-  - Uses:
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×3
+    - `primitives/css/ui-kit` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/hover-reveal` ×2
     - `infra/endpoints.fetchEndpoint`
-    - `page/editor.BlockRendererProps`
-    - `page/editor.Editor`
-    - `page/editor.useBlockActivate`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -19,14 +20,7 @@
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.useImageLoad`
     - `primitives/text-editor/paste-images.attachmentUrl`

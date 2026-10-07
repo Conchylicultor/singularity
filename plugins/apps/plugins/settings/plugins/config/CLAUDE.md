@@ -6,7 +6,8 @@
 
 - Description: Config settings surface: the config nav as the Settings app's default pane, its sidebar entry, and the rail-icon conflict dot.
 - Web:
-  - Slots: `settings-config-index.actions` ← `primitives.pane`
+  - Slots: `settings-config-index.actions`
+  - Slot contributors: `settings-config-index.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "settings-config-index"
     - `Settings.Sidebar` "Config"

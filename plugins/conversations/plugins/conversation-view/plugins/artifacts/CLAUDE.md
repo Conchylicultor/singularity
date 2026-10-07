@@ -138,29 +138,30 @@ here.
 
 - Description: Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (a pure extractor over transcript events plus its own section), the aggregation over the already-open jsonl-events subscription, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind.
 - Web:
-  - Slots: `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.page`, `conversations.conversation-view.artifacts.prototype`, `conversations.conversation-view.artifacts.research`, `conversations.conversation-view.artifacts.screenshot`, `conversations.conversation-view.artifacts.skill`
+  - Slots: `ConversationArtifacts.Kind`
+  - Slot contributors:
+    - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.page`
+    - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.prototype`
+    - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.research`
+    - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.screenshot`
+    - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.skill`
   - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
-  - Uses:
-    - `conversations/conversation-view.conversationPane`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×3
+    - `primitives/css/text` ×2
+    - `primitives/css/ui-kit` ×2
+    - `reorder` ×2
     - `conversations/conversation-view/action-bar.Conversation`
+    - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.formatRelativeTime`
     - `primitives/slot-render.defineRenderSlot`
-    - `reorder.isNodeData`
-    - `reorder.useReorderedEntries`
     - `ui/icons.Icon`
   - Exports (types):
     - `ArtifactKind`

@@ -48,7 +48,10 @@ itself stays a pane concern — this surface only follows the choice made there.
 
 - Description: Quick-switch theme popover on the global action bar: contributed quick sections (the theme picker, the light/dark switch), every component variant picker, and a hand-off to the full customizer pane — so a theme change never costs the user their current context.
 - Web:
-  - Slots: `QuickTheme.Section` ← `ui.theme-engine.theme-gallery`, `ui.theme-toggle`
+  - Slots: `QuickTheme.Section`
+  - Slot contributors:
+    - `QuickTheme.Section` ← `ui.theme-engine.theme-gallery`
+    - `QuickTheme.Section` ← `ui.theme-toggle`
   - Contributes: `ActionBar.Item` → `QuickThemeButton`
   - Uses:
     - `apps-core.useActiveApp`

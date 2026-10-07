@@ -240,59 +240,37 @@ piano.
 
 - Description: The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per practised chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
 - Web:
-  - Slots: `chord-trainer.actions` ← `primitives.pane`
+  - Slots: `chord-trainer.actions`
+  - Slot contributors: `chord-trainer.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "chord-trainer"
-  - Uses:
-    - `apps/chord/curriculum.ChordsSection`
-    - `apps/chord/curriculum.StandingLookup`
-    - `apps/chord/curriculum.useCatalog`
-    - `apps/chord/curriculum.useCurriculum`
-    - `apps/chord/piano.PianoCard`
-    - `apps/chord/piano.SoundChannelControl`
-    - `apps/chord/piano.usePiano`
-    - `apps/chord/piano.useSoundMix`
+  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `integrations/youtube` ×5
+    - `apps/chord/curriculum` ×4
+    - `apps/chord/piano` ×4
+    - `primitives/live-state` ×4
+    - `primitives/css/coords` ×3
+    - `primitives/pane` ×3
+    - `apps/chord/vocabulary` ×2
+    - `infra/endpoints` ×2
+    - `music/chord-box` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/latest-ref` ×2
     - `apps/chord/song-index.SongIndexGate`
-    - `apps/chord/vocabulary.ChordNumeral`
-    - `apps/chord/vocabulary.chordToneStyle`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpointMutation`
-    - `integrations/youtube.useYouTubePlayer`
-    - `integrations/youtube.useYouTubePlayerState`
-    - `integrations/youtube.useYouTubePlayhead`
-    - `integrations/youtube.YouTubePlayer`
-    - `integrations/youtube.YouTubePlayerController`
-    - `music/chord-box.ChordBox`
-    - `music/chord-box.chordPaint`
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
-    - `primitives/css/coords.pct`
-    - `primitives/css/coords.placedClasses`
-    - `primitives/css/coords.placedStyle`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/overlay/tooltip.Kbd`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `shell/toast.showToast`
     - `ui/icons.Icon`

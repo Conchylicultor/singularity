@@ -8,7 +8,8 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
 
 - Description: Browse Claude Code auto-memory files for the current project.
 - Web:
-  - Slots: `memoryPane.Actions` ← `primitives.pane`
+  - Slots: `memoryPane.Actions`
+  - Slot contributors: `memoryPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-memory"
     - `DebugApp.Sidebar` "Memory"

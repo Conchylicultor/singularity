@@ -54,7 +54,8 @@ that have run since boot appear.
 
 - Description: Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
 - Web:
-  - Slots: `readSetPane.Actions` ← `primitives.pane`
+  - Slots: `readSetPane.Actions`
+  - Slot contributors: `readSetPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-read-set"
     - `DebugApp.Sidebar` "Read-set"

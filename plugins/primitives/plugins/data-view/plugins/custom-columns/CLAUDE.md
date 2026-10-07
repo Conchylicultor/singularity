@@ -93,27 +93,15 @@ how the caller obtained it.
   - Contributes:
     - `DataViewSlots.FieldExtension` "custom-columns" → `CustomColumnFieldExtension`
     - `DataViewSlots.Setting` "custom-columns" → `CustomColumnsFieldsSetting`
-  - Uses:
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×9
+    - `primitives/live-state` ×3
+    - `config_v2` ×2
+    - `primitives/css/control-panel` ×2
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/ui-kit.Input`
-    - `primitives/data-view.DataViewId`
-    - `primitives/data-view.DataViewSlots`
-    - `primitives/data-view.getDataViewDescriptor`
-    - `primitives/data-view.useDataViewControls`
-    - `primitives/data-view.useFieldIdentities`
-    - `primitives/data-view.useResolveColumnConfig`
-    - `primitives/data-view.useResolveColumnDerive`
-    - `primitives/data-view.useResolveOperatorSet`
-    - `primitives/data-view.useResolveValueCodec`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
     - `ui/icons.Icon`
   - Exports (types):
     - `CustomColumnDefsController`
@@ -126,8 +114,8 @@ how the caller obtained it.
     - `useSetCustomColumnValue`
 - Server:
   - Contributes:
-    - `resource.declare` "data-view-custom-values"
     - `resource.declare` "data-view-custom-column-defs"
+    - `resource.declare` "data-view-custom-values"
     - `live.columns.scoped` "custom"
   - Uses:
     - `database.db`

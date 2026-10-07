@@ -650,35 +650,18 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
+    - `page` ×4
+    - `primitives` ×4
+    - `config_v2` ×2
+    - `tasks` ×2
+    - `ui` ×2
     - `apps-core/surface`
-    - `apps/events/sources`
-    - `apps/events/sources/source-detail/settings`
-    - `apps/pages/auto-icon`
-    - `apps/pages/page-author`
-    - `apps/pages/page-tree`
-    - `apps/prototypes/canvas`
-    - `apps/sonata/audio/metronome`
-    - `apps/sonata/piano-roll`
-    - `apps/sonata/view-options`
-    - `config_v2/fields`
-    - `config_v2/settings`
     - `fields/date/filter`
     - `fullscreen`
-    - `page/annotations/instructions`
-    - `page/callout`
-    - `page/container`
-    - `page/editor`
-    - `primitives/avatar`
-    - `primitives/data-view`
-    - `primitives/data-view/custom-columns`
-    - `primitives/data-view/view-core`
     - `reorder/edit-mode`
     - `shell/global-action-bar`
-    - `tasks/automations`
-    - `tasks/reports-investigation`
-    - `ui/theme-engine/quick-theme`
-    - `ui/theme-toggle`
 - Exemptions:
   - Exempts itself from: `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)
   - Exempted by:

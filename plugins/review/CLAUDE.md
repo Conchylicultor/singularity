@@ -26,7 +26,11 @@ contributions: [
 - Description: Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
 - Web:
   - Slots:
-    - `ReviewSlots.Section` ← `review.code-review`, `review.plugin-changes`
+    - `ReviewSlots.Section`
+    - `convReviewPane.Actions`
+  - Slot contributors:
+    - `ReviewSlots.Section` ← `review.code-review`
+    - `ReviewSlots.Section` ← `review.plugin-changes`
     - `convReviewPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conv-review"

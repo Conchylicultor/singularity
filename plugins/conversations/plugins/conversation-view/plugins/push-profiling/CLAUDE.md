@@ -6,7 +6,8 @@
 
 - Description: Toolbar button showing the op Gantt scoped to the conversation's worktree.
 - Web:
-  - Slots: `conv-push-profiling.actions` ← `primitives.pane`
+  - Slots: `conv-push-profiling.actions`
+  - Slot contributors: `conv-push-profiling.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conv-push-profiling"
     - `Conversation.ActionBar` → `PushProfilingButton`

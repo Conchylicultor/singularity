@@ -46,37 +46,23 @@ reads what is on screen rather than a per-app flag.
 - Description: Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
 - Web:
   - Slots:
+    - `AppShell.Framing`
+    - `AppShell.Brand`
+  - Slot contributors:
     - `AppShell.Framing` ← `ui.sidebar-framing`
     - `AppShell.Brand` ← `apps-core.app-launcher`
-  - Uses:
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×13
+    - `primitives/pane` ×4
+    - `primitives/collapsible` ×2
+    - `primitives/slot-render` ×2
     - `primitives/bar.Bar`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.useCollapsible`
     - `primitives/css/clip.Clip`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Sidebar`
-    - `primitives/css/ui-kit.SidebarGroup`
-    - `primitives/css/ui-kit.SidebarGroupContent`
-    - `primitives/css/ui-kit.SidebarGroupLabel`
-    - `primitives/css/ui-kit.SidebarHeader`
-    - `primitives/css/ui-kit.SidebarInset`
-    - `primitives/css/ui-kit.SidebarMenu`
-    - `primitives/css/ui-kit.SidebarMenuButton`
-    - `primitives/css/ui-kit.SidebarMenuItem`
-    - `primitives/css/ui-kit.SidebarProvider`
-    - `primitives/css/ui-kit.SidebarToggleIcons`
-    - `primitives/css/ui-kit.SidebarTrigger`
     - `primitives/css/yield.yieldClass`
-    - `primitives/pane.PaneObject`
-    - `primitives/pane.SurfaceChromeContext`
-    - `primitives/pane.useOpenPane`
-    - `primitives/pane.useRoute`
     - `primitives/scope/surface-id.useSurfaceTabId`
-    - `primitives/slot-render.renderIsolated`
-    - `primitives/slot-render.RenderSlot`
     - `ui/icons.Icon`
   - Exports (types):
     - `AppShellBrandForm`
@@ -99,27 +85,12 @@ reads what is on screen rather than a per-app flag.
     - `SidebarPaneSection`
     - `useBrandDrawnOn`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×14
+    - `conversations` ×2
+    - `tasks` ×2
     - `apps-core/app-launcher`
-    - `apps/agent-manager/shell`
-    - `apps/browser/shell`
-    - `apps/chord/shell`
-    - `apps/debug/shell`
-    - `apps/deploy/shell`
-    - `apps/events/shell`
-    - `apps/file-explorer/shell`
-    - `apps/mail/shell`
-    - `apps/pages/page-tree`
-    - `apps/pages/shell`
-    - `apps/prototypes/shell`
-    - `apps/settings/shell`
-    - `apps/sonata/shell`
-    - `apps/studio/shell`
-    - `conversations/agents`
-    - `conversations/all-conversations`
     - `stats`
-    - `tasks/automations`
-    - `tasks/task-detail`
     - `ui/sidebar-framing`
 - Core:
   - Exports (types): `SidebarFramingProps`

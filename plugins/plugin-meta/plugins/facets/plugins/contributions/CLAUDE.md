@@ -66,18 +66,16 @@ last write lives here, not on the slots
 facet, because the join needs both facets in scope and the reverse import edge
 would close a collected-dir dependency cycle.
 
-`renderDoc()` prints one line per contribution, except that a run of >12 entries
-into ONE slot, all of them label-only (a `doc.label`, no `doc.detail`, no
-`componentName`), folds onto a single `` `Slot` ×N: "label1", "label2", … `` —
-every label listed, never truncated, so each id stays greppable. The label-only
-gate is what keeps the fold lossless: the folded line holds one field per member,
-so a group carrying details or component names renders per-line instead. The
-folded line's ids are **sorted**, because that line denotes a set and the array
-order behind it is a runtime declaration order that varies between processes —
-left unsorted it would make the generated doc depend on process history rather
-than on the checkout, so `plugins-doc-in-sync` would pass alone and fail in a
-full run. Groups keep their first member's position, and the per-line path keeps
-its original order, so the regenerated doc's diff stays honest.
+`renderDoc()` prints one line per contribution, grouped by slot (a grouped
+`DocFact`), so docgen can summarize a long list as one count per slot
+(`` `ConfigV2.Register` ×226 ``) and list it in full in the plugin's
+`REFERENCE.md`. A group of label-only entries (a `doc.label`, no `doc.detail`,
+no `componentName`) is a set and is printed **sorted**, because the array order
+behind it is a runtime declaration order that varies between processes — left
+unsorted it would make the generated doc depend on process history rather than
+on the checkout, so `plugins-doc-in-sync` would pass alone and fail in a full
+run. Groups keep their first member's position, and other groups their original
+order, so the regenerated doc's diff stays honest.
 
 Browser rendering lives in the `render-diff` / `render-detail` / `render-catalog`
 sub-plugins, each reading `node.facets["contributions"]` and contributing to an

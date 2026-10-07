@@ -9,20 +9,14 @@
   - Contributes:
     - `ReviewSlots.Section` "Code Review" → `CodeReviewSection`
     - `ConfigV2.WebRegister` "config"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/collapsible` ×6
+    - `config_v2` ×2
+    - `conversations/conversation-view/code` ×2
+    - `primitives/live-state` ×2
     - `conversations.useConversationById`
-    - `conversations/conversation-view/code.gitStatusBadge`
-    - `conversations/conversation-view/code.useEditedFiles`
     - `infra/endpoints.useEndpoint`
     - `network/live.useLive`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.CollapsibleTrigger`
-    - `primitives/collapsible.ExpandAllButton`
-    - `primitives/collapsible.useExpandAll`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -35,8 +29,6 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/diff-view.DiffOrImageView`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `review.ReviewSlots`
     - `ui/icons.Icon`

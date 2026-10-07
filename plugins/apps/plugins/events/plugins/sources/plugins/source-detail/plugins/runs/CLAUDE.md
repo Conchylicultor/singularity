@@ -42,40 +42,29 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
 - Web:
   - Slots:
     - `RunActions`
-    - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.caveats`, `apps.events.sources.source-detail.runs.extracted-events`, `apps.events.sources.source-detail.runs.model-call`
+    - `EventSourceRunDetail.Section`
+    - `eventSourceRunPane.Actions`
+  - Slot contributors:
+    - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.caveats`
+    - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.extracted-events`
+    - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.model-call`
     - `eventSourceRunPane.Actions` ← `primitives.pane`
   - Contributes:
     - `EventSourceDetail.Section` "Runs" → `SourceRunsSection`
     - `Pane.Register` "event-source-run"
-  - Uses:
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/events/sources` ×7
+    - `primitives/pane` ×6
+    - `primitives/data-view` ×5
+    - `primitives/css/spacing` ×2
     - `apps/events/events-core.useEventSourceRun`
-    - `apps/events/sources.describeRun`
-    - `apps/events/sources.EventSourceDetail`
-    - `apps/events/sources.eventSourceDetailRoute`
-    - `apps/events/sources.formatDuration`
-    - `apps/events/sources.RUN_OUTCOME_LABEL`
-    - `apps/events/sources.RUN_OUTCOME_OPTIONS`
-    - `apps/events/sources.RUN_OUTCOME_VARIANT`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.FieldDef`
-    - `primitives/data-view.liveDataSource`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.resolveRow`
-    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
   - Exports (values):

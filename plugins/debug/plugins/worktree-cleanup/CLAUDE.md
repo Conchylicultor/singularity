@@ -73,14 +73,16 @@ the panel until it is given something to say.
 
 - Description: Audit and remove stale git worktrees and their Postgres DB forks.
 - Web:
-  - Slots: `worktreeCleanupPane.Actions` ← `primitives.pane`
+  - Slots: `worktreeCleanupPane.Actions`
+  - Slot contributors: `worktreeCleanupPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "worktree-cleanup"
     - `DebugApp.Sidebar` "Worktree Cleanup"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×3
+    - `primitives/pane` ×3
+    - `infra/endpoints` ×2
     - `apps/debug/shell.DebugApp`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
     - `infra/ndjson-stream.readNdjson`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.fillClasses`
@@ -90,46 +92,24 @@ the panel until it is given something to say.
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `ui/icons.Icon`
   - Exports (values): `worktreeCleanupPane`
 - Server:
   - Contributes: `report-kind` "worktree-reap-failed"
-  - Uses:
-    - `database/admin.databaseExists`
-    - `database/admin.dropDatabase`
-    - `database/admin.listDatabases`
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/worktree` ×8
+    - `infra/worktree/reclaim` ×4
+    - `database/admin` ×3
+    - `tasks/tasks-core` ×3
+    - `infra/host/host-read-pool` ×2
+    - `infra/paths` ×2
     - `infra/endpoints.implement`
-    - `infra/host/host-read-pool.heavyReadSlotCount`
-    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/ndjson-stream.ndjsonResponse`
-    - `infra/paths.GIT`
-    - `infra/paths.worktreesDir`
-    - `infra/worktree.ensureMainWorktreeRoot`
-    - `infra/worktree.gitWorktreesDir`
-    - `infra/worktree.hasCompositionMarker`
-    - `infra/worktree.isCanonicalWorktreePath`
-    - `infra/worktree.removeWorktree`
-    - `infra/worktree.removeWorktreeSpec`
-    - `infra/worktree.WorktreeGitTimeoutError`
-    - `infra/worktree.worktreePathFor`
-    - `infra/worktree/reclaim.listCompositionNamespaces`
-    - `infra/worktree/reclaim.namespacesOwnedByCheckout`
-    - `infra/worktree/reclaim.OwnedNamespace`
-    - `infra/worktree/reclaim.reclaimNamespace`
     - `primitives/log-channels.defineLogSink`
     - `reports.ReportKind`
-    - `tasks/tasks-core.getAttempt`
-    - `tasks/tasks-core.listAttempts`
-    - `tasks/tasks-core.listTasks`
   - Register: `defineSupervisedJob('worktree-cleanup.reap-stale')`
   - Routes:
     - `GET /api/debug/worktrees`

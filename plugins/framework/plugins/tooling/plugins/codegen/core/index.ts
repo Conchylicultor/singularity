@@ -13,9 +13,11 @@ export {
   pluginClaudeMdPath,
   pluginCompactDocPath,
   pluginDetailsDocPath,
+  pluginReferenceMdPath,
   renderCompactDoc,
   renderDetailsDoc,
   renderPluginClaudeMd,
+  renderPluginReferenceMd,
   type GenerateDocsOptions,
 } from "./docgen";
 

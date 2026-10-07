@@ -22,68 +22,17 @@ stability-independent and is suppressed at the site with an inline disable.)
 
 - Description: Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
 - Cross-plugin:
-  - Imported by:
-    - `apps-core/surface/floating`
-    - `apps-core/tabs`
-    - `apps/chord/piano`
-    - `apps/chord/trainer`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/present`
-    - `apps/sonata/audio/engine`
-    - `apps/sonata/audio/live-play`
-    - `apps/sonata/audio/metronome`
-    - `apps/sonata/controls`
-    - `apps/sonata/library`
-    - `apps/sonata/notation`
-    - `apps/sonata/piano-roll`
-    - `apps/sonata/player`
-    - `apps/sonata/primitives/inertial-drag`
-    - `apps/sonata/primitives/keyboard`
-    - `apps/sonata/progress/loop`
-    - `apps/sonata/recording`
-    - `apps/sonata/session`
-    - `apps/sonata/track-mixer`
+  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×31
+    - `apps` ×18
+    - `page` ×3
+    - `apps-core` ×2
+    - `conversations` ×2
     - `build/serve-composition`
-    - `conversations/conversation-view/prompt-input`
-    - `conversations/conversation-view/push-and-exit`
     - `debug/slow-ops`
     - `integrations/youtube`
     - `layouts/miller`
     - `map/google`
-    - `page/code-block`
-    - `page/editor`
-    - `page/url-paste`
-    - `primitives/action-presentation`
-    - `primitives/css/color-picker`
-    - `primitives/css/ui-kit`
-    - `primitives/data-view`
-    - `primitives/data-view/custom-columns`
-    - `primitives/data-view/tree`
-    - `primitives/data-view/view-core`
-    - `primitives/data-view/view-order`
-    - `primitives/dom/auto-scroll`
-    - `primitives/dom/element-size`
-    - `primitives/dom/in-view`
-    - `primitives/dom/scroll-reveal`
-    - `primitives/editable-field`
-    - `primitives/live-state`
-    - `primitives/markdown`
-    - `primitives/networking`
-    - `primitives/optimistic-mutation`
-    - `primitives/outline/scroll-spy`
-    - `primitives/overlay/image-viewer`
-    - `primitives/pane`
-    - `primitives/path-bar`
-    - `primitives/prompt-editor/voice-input`
-    - `primitives/scope/scoped-store`
-    - `primitives/shortcuts`
-    - `primitives/sync-status`
-    - `primitives/terminal`
-    - `primitives/text-editor`
-    - `primitives/text-editor/caret-trigger`
-    - `primitives/text-editor/token-extension/node`
-    - `primitives/ui-context/element-picker`
-    - `primitives/undo-redo`
     - `reorder`
     - `screenshot`
 - Web:

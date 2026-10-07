@@ -6,34 +6,22 @@
 
 - Description: Synthetic no-op live-state push emitter: drives N pushes/sec for a chosen resource so churn-driven render/DOM bugs reproduce deterministically, surfaced as the Debug → Live-State Emit pane and the window.__liveStateEmit API. Synthetic no-op live-state push emitter: drives N triggerResourcePush calls/sec for a chosen resource on a bounded setInterval (hard auto-stop cap), so churn-driven render/DOM bugs reproduce deterministically. Surfaced as the Debug → Live-State Emit pane. The /api/resources/_debug route powering the resource dropdown is served by the kernel, not here.
 - Web:
-  - Slots: `liveStateEmitPane.Actions` ← `primitives.pane`
+  - Slots: `liveStateEmitPane.Actions`
+  - Slot contributors: `liveStateEmitPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-live-state-emit"
     - `DebugApp.Sidebar` "Live-State Emit"
     - `Core.Root` → `EmitInstaller`
-  - Uses:
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×7
+    - `infra/endpoints` ×4
+    - `primitives/pane` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/css/text` ×2
     - `apps/debug/shell.DebugApp`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
-    - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/css/ui-kit.Select`
-    - `primitives/css/ui-kit.SelectContent`
-    - `primitives/css/ui-kit.SelectItem`
-    - `primitives/css/ui-kit.SelectTrigger`
-    - `primitives/css/ui-kit.SelectValue`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `ui/icons.Icon`
   - Exports (values): `liveStateEmitPane`
 - Server:

@@ -96,52 +96,46 @@ are no per-interaction round-trips.
 - Description: Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
 - Web:
   - Slots:
-    - `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`, `apps.studio.compositions.contributors`, `apps.studio.compositions.draft-actions`, `apps.studio.compositions.entry-points`, `apps.studio.compositions.membership-summary`, `apps.studio.compositions.release`
+    - `CompositionDetail.Section`
+    - `item-actions`
+    - `compositionsPane.Actions`
+    - `compositionDetailPane.Actions`
+    - `comparePane.Actions`
+  - Slot contributors:
+    - `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`
+    - `CompositionDetail.Section` ← `apps.studio.compositions.contributors`
+    - `CompositionDetail.Section` ← `apps.studio.compositions.draft-actions`
+    - `CompositionDetail.Section` ← `apps.studio.compositions.entry-points`
+    - `CompositionDetail.Section` ← `apps.studio.compositions.membership-summary`
+    - `CompositionDetail.Section` ← `apps.studio.compositions.release`
     - `item-actions` ← `apps.studio.compositions`
     - `compositionsPane.Actions` ← `primitives.pane`
     - `compositionDetailPane.Actions` ← `primitives.pane`
     - `comparePane.Actions` ← `primitives.pane`
   - Contributes:
-    - `Pane.Register` "compositions"
-    - `Pane.Register` "composition-detail"
     - `Pane.Register` "composition-compare"
+    - `Pane.Register` "composition-detail"
+    - `Pane.Register` "compositions"
     - `item-actions` "delete" → `DeleteAction`
     - `Studio.Sidebar` "Compositions"
-  - Uses:
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta/composition` ×8
+    - `primitives/pane` ×5
+    - `primitives/data-view` ×3
+    - `build/serve-composition` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/text` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps/studio/explorer/membership.DIFF_LEGEND`
     - `apps/studio/shell.Studio`
-    - `build/serve-composition.useDeleteComposition`
-    - `build/serve-composition.useServeComposition`
-    - `plugin-meta/composition.setActiveComposition`
-    - `plugin-meta/composition.setCompareComposition`
-    - `plugin-meta/composition.useActiveComposition`
-    - `plugin-meta/composition.useCompareComposition`
-    - `plugin-meta/composition.useCompositionData`
-    - `plugin-meta/composition.useDiffMap`
-    - `plugin-meta/composition.useManifestActions`
-    - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineItemActions`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
   - Exports (values):
     - `comparePane`

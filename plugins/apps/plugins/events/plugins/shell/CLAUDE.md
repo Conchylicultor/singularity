@@ -24,7 +24,11 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 - Description: App shell for Events. Registers the /events app entry, defines the Events.Sidebar slot, and renders the landing pane.
 - Web:
   - Slots:
-    - `Events.Sidebar` ← `apps.events.event-list`, `apps.events.sources`
+    - `Events.Sidebar`
+    - `events-root.actions`
+  - Slot contributors:
+    - `Events.Sidebar` ← `apps.events.event-list`
+    - `Events.Sidebar` ← `apps.events.sources`
     - `events-root.actions` ← `primitives.pane`
   - Contributes:
     - `Apps.App` "Events" → `EventsLayout`

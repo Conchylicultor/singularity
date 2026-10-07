@@ -195,49 +195,14 @@ count accumulates across drops.
     - `getLogChannels`
     - `MAX_EMIT_LINES`
 - Cross-plugin:
-  - Imported by:
-    - `apps/chord/song-index`
-    - `apps/chord/video-availability`
-    - `apps/deploy/deployments`
-    - `apps/deploy/remote-deploy`
-    - `apps/events/refresh`
-    - `apps/mail/sync`
-    - `apps/sonata/piano-roll`
-    - `apps/sonata/sources/ultimate-guitar/alignment`
-    - `apps/studio/compositions/release/release-logs`
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×12
+    - `apps` ×9
+    - `infra` ×8
+    - `database` ×7
+    - `conversations` ×3
+    - `build` ×2
     - `backup`
-    - `build`
-    - `build/build-logs`
-    - `conversations/conversation-view/rewind`
-    - `conversations/model-provider/catalog`
-    - `conversations/transcript-retention`
-    - `database`
-    - `database/change-feed`
-    - `database/derived-tables`
-    - `database/derived-views`
-    - `database/fork`
-    - `database/live-state-snapshot`
-    - `database/migrations`
-    - `debug/boot-events`
-    - `debug/boot-watchdog`
-    - `debug/health-monitor`
-    - `debug/latency-ledger`
-    - `debug/logs`
-    - `debug/op-rate`
-    - `debug/paging-probe`
-    - `debug/render-profiler`
-    - `debug/sentinel`
-    - `debug/slow-ops`
-    - `debug/timeline`
-    - `debug/worktree-cleanup`
-    - `infra/attachments`
-    - `infra/audio-analysis`
-    - `infra/deps`
-    - `infra/deps/sweep`
-    - `infra/events-test`
-    - `infra/host-fs/image`
-    - `infra/host/duress`
-    - `infra/jobs`
     - `integrations/youtube/audio-fetch`
     - `network/live`
     - `page/annotations/agent-access`

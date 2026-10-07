@@ -45,21 +45,16 @@ preview, then the same in Sonata after Open in Sonata.
 - Description: Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi host files) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
 - Web:
   - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
-  - Uses:
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/player` ×4
+    - `apps/sonata/sources/midi` ×4
+    - `primitives/file-viewer` ×4
+    - `apps/sonata/document` ×2
+    - `apps/sonata/session` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps-core/tabs.navigate`
-    - `apps/sonata/document.useLoadDocument`
-    - `apps/sonata/document.useSongDocument`
     - `apps/sonata/library.sonataSongLink`
-    - `apps/sonata/player.PlayerDisplay`
-    - `apps/sonata/player.PlayerTransport`
-    - `apps/sonata/player.PlayToggle`
-    - `apps/sonata/player.SonataPlayerScope`
-    - `apps/sonata/session.useCursorApi`
-    - `apps/sonata/session.useSession`
-    - `apps/sonata/sources/midi.deriveMidiSongMeta`
-    - `apps/sonata/sources/midi.importMidiBytes`
-    - `apps/sonata/sources/midi.MIDI_SOURCE_ID`
-    - `apps/sonata/sources/midi.MidiSongMeta`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
@@ -67,15 +62,7 @@ preview, then the same in Sonata after Open in Sonata.
     - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/file-viewer.fileBytesUnavailableMessage`
-    - `primitives/file-viewer.FileRendererProps`
-    - `primitives/file-viewer.FileViewer`
-    - `primitives/file-viewer.useFileBytes`
     - `primitives/loading.Loading`
     - `primitives/relative-time.formatElapsed`
     - `shell/toast.showToast`

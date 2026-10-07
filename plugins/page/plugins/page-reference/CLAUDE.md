@@ -88,8 +88,12 @@ carrying the same actions — a separate feature.
 - Description: The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, and the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip. Owns no reference, no action and no decoration of its own.
 - Web:
   - Slots:
+    - `PageReference.Actions`
+    - `PageReference.Decoration`
+  - Slot contributors:
     - `PageReference.Actions` ← `page.page-reference.open-aside`
-    - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`, `page.annotations.instructions.instructions-page`
+    - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`
+    - `PageReference.Decoration` ← `page.annotations.instructions.instructions-page`
   - Uses:
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`

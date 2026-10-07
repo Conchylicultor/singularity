@@ -7,10 +7,21 @@
 - Description: App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, and exports the <Favicon> component.
 - Web:
   - Slots:
+    - `Browser.TabStrip`
+    - `Browser.NavControls`
+    - `Browser.Omnibox`
+    - `Browser.Actions`
+    - `Browser.SubBar`
+    - `Browser.Viewport`
+    - `Browser.StartPage`
+    - `Browser.Effects`
+  - Slot contributors:
     - `Browser.TabStrip` ← `apps.browser.tabs`
     - `Browser.NavControls` ← `apps.browser.navigation`
     - `Browser.Omnibox` ← `apps.browser.omnibox`
-    - `Browser.Actions` ← `apps.browser.bookmarks`, `apps.browser.proxy`, `apps.browser.webview`
+    - `Browser.Actions` ← `apps.browser.bookmarks`
+    - `Browser.Actions` ← `apps.browser.proxy`
+    - `Browser.Actions` ← `apps.browser.webview`
     - `Browser.SubBar` ← `apps.browser.bookmarks`
     - `Browser.Viewport` ← `apps.browser.webview`
     - `Browser.StartPage` ← `apps.browser.start-page`

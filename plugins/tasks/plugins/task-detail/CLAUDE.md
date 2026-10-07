@@ -7,12 +7,23 @@
 - Description: Owns the /tasks pane host and the right-pane detail view for a selected task. Defines the TaskDetail.Section slot and the flush-registry context that section sub-plugins share.
 - Web:
   - Slots:
-    - `TaskDetailSlots.Section` ← `apps.pages.prompt-origin`, `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`
+    - `TaskDetailSlots.Section`
+    - `tasksRootPane.Actions`
+    - `taskDetailPane.Actions`
+  - Slot contributors:
+    - `TaskDetailSlots.Section` ← `apps.pages.prompt-origin`
+    - `TaskDetailSlots.Section` ← `tasks.task-attachments`
+    - `TaskDetailSlots.Section` ← `tasks.task-dependencies`
+    - `TaskDetailSlots.Section` ← `tasks.task-deps-tree`
+    - `TaskDetailSlots.Section` ← `tasks.task-description`
+    - `TaskDetailSlots.Section` ← `tasks.task-events`
+    - `TaskDetailSlots.Section` ← `tasks.task-graph`
+    - `TaskDetailSlots.Section` ← `tasks.task-header`
     - `tasksRootPane.Actions` ← `primitives.pane`
     - `taskDetailPane.Actions` ← `primitives.pane`
   - Contributes:
-    - `Pane.Register` "tasks-root"
     - `Pane.Register` "task-detail"
+    - `Pane.Register` "tasks-root"
     - `Shell.Sidebar` "Tasks"
   - Uses:
     - `primitives/app-shell.opensPane`

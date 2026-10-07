@@ -87,12 +87,12 @@ filesystem event; the 30 s tick is what notices it.
 - Description: Op-store web presence: eagerly registers the boot-critical op-store.in-flight live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
 - Server:
   - Contributes:
-    - `resource.declare` "op-store.in-flight"
-    - `resource.declare` "op-store.in-flight:rows"
-    - `resource.declare` "op-store.in-flight:groups"
     - `resource.declare` "op-store.history"
-    - `resource.declare` "op-store.history:rows"
     - `resource.declare` "op-store.history:groups"
+    - `resource.declare` "op-store.history:rows"
+    - `resource.declare` "op-store.in-flight"
+    - `resource.declare` "op-store.in-flight:groups"
+    - `resource.declare` "op-store.in-flight:rows"
   - Uses:
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`

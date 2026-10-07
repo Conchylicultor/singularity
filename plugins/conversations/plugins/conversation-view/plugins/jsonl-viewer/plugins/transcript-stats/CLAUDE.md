@@ -6,7 +6,11 @@
 
 - Description: The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it.
 - Web:
-  - Slots: `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`, `conversations.conversation-view.jsonl-viewer.transcript-stats.usage`, `conversations.conversation-view.running-agents`
+  - Slots: `TranscriptStats.Item`
+  - Slot contributors:
+    - `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
+    - `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.usage`
+    - `TranscriptStats.Item` ← `conversations.conversation-view.running-agents`
   - Contributes: `JsonlViewer.Overlay` "transcript-stats" → `TranscriptStatsStrip`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`

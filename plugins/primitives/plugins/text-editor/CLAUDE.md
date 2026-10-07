@@ -82,7 +82,8 @@ registry readers are headless.
 
 - Description: Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
 - Web:
-  - Slots: `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`
+  - Slots: `TextEditorSlots.Plugin`
+  - Slot contributors: `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`
   - Uses:
     - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`

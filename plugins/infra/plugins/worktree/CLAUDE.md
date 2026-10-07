@@ -153,30 +153,17 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×5
+    - `infra` ×5
+    - `tasks` ×3
+    - `build` ×2
+    - `conversations` ×2
+    - `stats` ×2
     - `backup/sources/databases`
-    - `build`
-    - `build/serve-composition`
     - `code-explorer`
-    - `conversations`
-    - `conversations/runtime-tmux`
-    - `debug/broadcasts`
-    - `debug/memory`
-    - `debug/profiling/op-log`
-    - `debug/profiling/op-log/op-store`
-    - `debug/worktree-cleanup`
-    - `infra/deps/sweep`
-    - `infra/git/git-watcher`
-    - `infra/launcher`
-    - `infra/worktree/reclaim`
-    - `infra/worktree/spare-pool`
     - `plugin-meta/plugin-health`
     - `release/source-checkout`
-    - `stats/commits`
-    - `stats/cost`
-    - `tasks`
-    - `tasks/attempt-work`
-    - `tasks/tasks-core`
 - Core:
   - Exports (types):
     - `OpKind`

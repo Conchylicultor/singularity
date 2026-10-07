@@ -47,52 +47,31 @@ draws `ThemeCard`, `list` draws `ThemeSwatch`.
 
 - Description: The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry first). Shown as the customizer's first section (cards, with rename and delete on saved themes) and in the quick-theme popover (compact rows).
 - Web:
-  - Slots: `item-actions` ← `ui.theme-engine.theme-gallery`
+  - Slots: `item-actions`
+  - Slot contributors: `item-actions` ← `ui.theme-engine.theme-gallery`
   - Contributes:
     - `ThemeCustomizer.Section` "Theme" → `ThemeGalleryPicker`
     - `QuickTheme.Section` "Theme" → `QuickThemePicker`
     - `item-actions` "rename" → `RenameThemeAction`
     - `item-actions` "delete" → `DeleteThemeAction`
-  - Uses:
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/theme-engine` ×8
+    - `primitives/data-view` ×7
+    - `primitives/css/ui-kit` ×5
+    - `infra/endpoints` ×3
+    - `primitives/live-state` ×3
+    - `config_v2` ×2
     - `apps-core.Apps`
-    - `config_v2.useConfigResult`
-    - `config_v2.useSetConfig`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.appThemeScope`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.DataViewDensity`
-    - `primitives/data-view.DataViewId`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.ItemActionProps`
-    - `primitives/data-view.ItemActionsDescriptor`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.GateInput`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/syntax-highlight.useDarkMode`
-    - `ui/theme-engine.ThemeEngine`
-    - `ui/theme-engine.ThemeSourceContribution`
-    - `ui/theme-engine.ThemeSourceEntry`
-    - `ui/theme-engine.ThemeSourceFailure`
-    - `ui/theme-engine.transformValues`
-    - `ui/theme-engine.useThemes`
-    - `ui/theme-engine.useThemeScopeId`
-    - `ui/theme-engine.useThemeSelections`
     - `ui/theme-engine/quick-theme.QuickTheme`
     - `ui/theme-engine/saved-themes.removeSavedTheme`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

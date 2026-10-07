@@ -83,34 +83,20 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
 
 - Description: The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
 - Cross-plugin:
-  - Imported by:
-    - `apps/browser/bookmarks`
-    - `apps/deploy/deployments`
-    - `apps/deploy/deployments/runs-arm`
-    - `apps/events/event-list`
-    - `apps/events/events-core`
-    - `apps/mail/reading-pane`
-    - `apps/mail/threads`
-    - `apps/sonata/library`
-    - `apps/sonata/playback-history`
-    - `apps/sonata/sources/midi`
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×10
+    - `conversations` ×3
+    - `infra` ×2
+    - `release` ×2
+    - `tasks` ×2
     - `backup/runs-arm`
     - `build/runs-arm`
-    - `conversations/all-conversations`
-    - `conversations/question-relay`
-    - `conversations/summary`
     - `debug/profiling/op-log/op-store`
-    - `infra/claude-cli`
-    - `infra/trash`
     - `network/live`
     - `primitives/usage-rank`
-    - `release`
-    - `release/runs-arm`
     - `reports`
     - `runs`
     - `shell/notifications`
-    - `tasks/automations`
-    - `tasks/tasks-core`
 - Server:
   - Exports (values):
     - `filterSql`

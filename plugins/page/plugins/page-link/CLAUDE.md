@@ -7,25 +7,15 @@
 - Description: Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
 - Web:
   - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
-  - Uses:
-    - `page/editor.BlockRendererProps`
-    - `page/editor.Editor`
-    - `page/editor.PageIcon`
-    - `page/editor.PageOptionsList`
-    - `page/editor.useBlockActivate`
-    - `page/editor.usePageOptions`
-    - `page/page-reference.usePageNavigation`
-    - `page/page-reference.usePageReferenceActions`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×6
+    - `primitives/live-state` ×5
+    - `page/page-reference` ×2
     - `primitives/css/center.Center`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceError`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`

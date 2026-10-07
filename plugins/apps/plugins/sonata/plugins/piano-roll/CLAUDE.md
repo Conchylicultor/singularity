@@ -6,33 +6,30 @@
 
 - Description: Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays. Server registration of the piano-roll config (Synthesia-style note-name labels).
 - Web:
-  - Slots: `PianoRollFx` ← `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`
+  - Slots: `PianoRollFx`
+  - Slot contributors:
+    - `PianoRollFx` ← `apps.sonata.piano-roll.fx-comets`
+    - `PianoRollFx` ← `apps.sonata.piano-roll.fx-core`
+    - `PianoRollFx` ← `apps.sonata.piano-roll.fx-ripples`
+    - `PianoRollFx` ← `apps.sonata.piano-roll.fx-shatter`
   - Contributes:
     - `SonataPlayer.Display` "Piano Roll" → `LazyBoundary`
     - `sonataPlayerPane.Actions` "spread" → `SpreadWheel`
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "piano-roll"
-  - Uses:
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/track-mixer` ×3
+    - `config_v2` ×3
+    - `apps/sonata/player` ×2
+    - `apps/sonata/session` ×2
+    - `apps/sonata/shell` ×2
+    - `primitives/css/control-panel` ×2
     - `apps/sonata/document.useSongDocument`
     - `apps/sonata/library.sonataPlayerPane`
-    - `apps/sonata/player.SonataPlayer`
-    - `apps/sonata/player.usePlayerView`
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
     - `apps/sonata/primitives/jog-wheel.JogWheel`
-    - `apps/sonata/session.useCursorApi`
-    - `apps/sonata/session.useSession`
-    - `apps/sonata/shell.LaneInsetsProvider`
-    - `apps/sonata/shell.Sonata`
-    - `apps/sonata/track-mixer.accidentalColor`
-    - `apps/sonata/track-mixer.useHiddenTrackIds`
-    - `apps/sonata/track-mixer.useTrackColorMap`
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/coords.Placed`
     - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`

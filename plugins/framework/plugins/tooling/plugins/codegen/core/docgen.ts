@@ -1,10 +1,11 @@
 import { existsSync, readFileSync, unlinkSync } from "fs";
-import { join } from "path";
+import { join, relative } from "path";
 import {
   type PluginNode,
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  docFactValues,
   getFacet,
   type Facet,
   type DocFact,
@@ -18,6 +19,12 @@ import { buildEnrichedTree } from "./enriched-tree";
 import { assertNoTestCodeInFacts } from "./doc-facts-guard";
 import { collectTestHelpers, renderTestHelpers } from "./test-helpers-doc";
 import { capDescription, joinDescriptions } from "./description-text";
+import {
+  DOC_LIST_MAX,
+  isSummarized,
+  summaryCount,
+  summaryLines,
+} from "./fact-summary";
 
 /**
  * Marker appended to a plugin's `name — description` line when the app's own
@@ -61,17 +68,20 @@ function capitalize(s: string): string {
  * a single entry is added. A lone value stays inline (it is already on its own
  * line; nesting it would only add noise).
  *
- * Facts whose folder a runtime declares undocumented are dropped here — the one
- * place every generated doc funnels through, so no facet has to know (or repeat)
- * the policy, and this renderer never names a folder.
+ * A list too long to print in full (`isSummarized`) prints one count per group
+ * instead, still one per line, and links `referenceLink` — the plugin's
+ * `REFERENCE.md`, where `renderPluginReferenceMd` lists it in full.
  */
-function renderDocFacts(facts: DocFact[], bodyIndent: string): string[] {
+function renderDocFacts(
+  facts: DocFact[],
+  bodyIndent: string,
+  referenceLink: string,
+): string[] {
   const subIndent = `${bodyIndent}  `;
   const valueIndent = `${subIndent}  `;
   const lines: string[] = [];
   const folders = new Map<string, DocFact[]>();
   for (const f of facts) {
-    if (UNDOCUMENTED_RUNTIME_FOLDERS.has(f.folder)) continue;
     let group = folders.get(f.folder);
     if (!group) {
       group = [];
@@ -82,13 +92,22 @@ function renderDocFacts(facts: DocFact[], bodyIndent: string): string[] {
   for (const [folder, group] of folders) {
     const content: string[] = [];
     for (const fact of group) {
-      if (fact.values.length === 0) continue;
-      if (fact.values.length === 1) {
-        content.push(`${subIndent}- ${fact.key}: ${fact.values[0]}`);
+      if (isSummarized(fact)) {
+        content.push(
+          `${subIndent}- ${fact.key}: ${summaryCount(fact)} — full list in ${referenceLink}`,
+        );
+        for (const line of summaryLines(fact))
+          content.push(`${valueIndent}- ${line}`);
+        continue;
+      }
+      const values = docFactValues(fact);
+      if (values.length === 0) continue;
+      if (values.length === 1) {
+        content.push(`${subIndent}- ${fact.key}: ${values[0]}`);
         continue;
       }
       content.push(`${subIndent}- ${fact.key}:`);
-      for (const value of fact.values) content.push(`${valueIndent}- ${value}`);
+      for (const value of values) content.push(`${valueIndent}- ${value}`);
     }
     if (content.length > 0) {
       lines.push(`${bodyIndent}- ${capitalize(folder)}:`);
@@ -98,13 +117,17 @@ function renderDocFacts(facts: DocFact[], bodyIndent: string): string[] {
   return lines;
 }
 
-function renderPluginFacts(
+/**
+ * Every fact the facets document about `p`. Facts whose folder a runtime
+ * declares undocumented are dropped here — the one place every generated doc
+ * funnels through, so no facet has to know (or repeat) the policy, and this
+ * renderer never names a folder.
+ */
+function collectPluginFacts(
   p: PluginNode,
   facets: Facet[],
-  bodyIndent: string,
   root: string,
-  lines: string[],
-): void {
+): DocFact[] {
   const allFacts: DocFact[] = [];
   for (const facet of facets) {
     const data = getFacet(p, facet.def);
@@ -114,7 +137,53 @@ function renderPluginFacts(
       allFacts.push(...facts);
     }
   }
-  lines.push(...renderDocFacts(allFacts, bodyIndent));
+  return allFacts.filter((f) => !UNDOCUMENTED_RUNTIME_FOLDERS.has(f.folder));
+}
+
+function renderPluginFacts(
+  p: PluginNode,
+  facets: Facet[],
+  bodyIndent: string,
+  root: string,
+  referenceLink: string,
+  lines: string[],
+): void {
+  lines.push(
+    ...renderDocFacts(
+      collectPluginFacts(p, facets, root),
+      bodyIndent,
+      referenceLink,
+    ),
+  );
+}
+
+/**
+ * The plugin's `REFERENCE.md`: every list its CLAUDE.md summarizes, in full,
+ * one value per line — or null when nothing was summarized (no file). Not named
+ * `CLAUDE*.md`, so it is never auto-loaded: agents open it when they need a
+ * list, instead of paying for it on every read of the plugin.
+ */
+export function renderPluginReferenceMd(
+  p: PluginNode,
+  root: string,
+  facets: Facet[],
+): string | null {
+  const summarized = collectPluginFacts(p, facets, root).filter(isSummarized);
+  if (summarized.length === 0) return null;
+  const lines = [
+    `# ${p.name} — full reference lists`,
+    "",
+    "The lists this plugin's `CLAUDE.md` summarizes, in full. Generated by `./singularity build` — do not edit.",
+  ];
+  for (const fact of summarized) {
+    lines.push(
+      "",
+      `## ${capitalize(fact.folder)} — ${fact.key} (${summaryCount(fact)})`,
+      "",
+    );
+    for (const value of docFactValues(fact)) lines.push(`- ${value}`);
+  }
+  return lines.join("\n") + "\n";
 }
 
 type RenderMode = "detail" | "compact";
@@ -185,7 +254,15 @@ function renderPluginTreeMd(
 
   const includeBody = mode === "detail";
   if (includeBody) {
-    renderPluginFacts(p, facets, bodyIndent, root, lines);
+    const refPath = relative(join(root, "docs"), pluginReferenceMdPath(p));
+    renderPluginFacts(
+      p,
+      facets,
+      bodyIndent,
+      root,
+      `[\`${relative(root, pluginReferenceMdPath(p))}\`](${refPath})`,
+      lines,
+    );
     lines.push(...renderTestHelpers(collectTestHelpers(p), bodyIndent));
   }
 
@@ -228,7 +305,8 @@ const COMPACT_HEADER =
 
 const DETAILS_HEADER =
   "# Plugins (details)\n\n" +
-  "Full reference for every plugin. Read this on demand (e.g. before writing a helper or a test fixture, to check whether one already exists). A plugin's *Test helpers* item lists its `<runtime>/testing/` barrels: shared fixtures that only test code may import. The slim always-loaded index is [`plugins-compact.md`](./plugins-compact.md).\n\n";
+  "Full reference for every plugin. Read this on demand (e.g. before writing a helper or a test fixture, to check whether one already exists). A plugin's *Test helpers* item lists its `<runtime>/testing/` barrels: shared fixtures that only test code may import. The slim always-loaded index is [`plugins-compact.md`](./plugins-compact.md).\n\n" +
+  `A list longer than ${DOC_LIST_MAX} values (importers, uses, contributions) is summarized here and in the plugin's CLAUDE.md as one count per group; the linked \`REFERENCE.md\` beside the plugin lists it in full.\n\n`;
 
 export async function renderCompactDoc({
   root,
@@ -263,7 +341,14 @@ function renderPluginClaudeAutogen(
       main.negated.has(p.id) ? "- Excluded: yes" : "- Excluded: cascade",
     );
   }
-  renderPluginFacts(p, facets, "", root, lines);
+  renderPluginFacts(
+    p,
+    facets,
+    "",
+    root,
+    "[REFERENCE.md](./REFERENCE.md)",
+    lines,
+  );
   lines.push(...renderTestHelpers(collectTestHelpers(p), ""));
   if (p.children.length > 0) {
     if (p.collapsed) {
@@ -353,6 +438,10 @@ export function pluginClaudeMdPath(p: PluginNode): string {
   return join(p.dir, "CLAUDE.md");
 }
 
+export function pluginReferenceMdPath(p: PluginNode): string {
+  return join(p.dir, "REFERENCE.md");
+}
+
 function legacyPluginDocsPath(root: string): string {
   return join(root, "docs", "plugins.md");
 }
@@ -384,6 +473,15 @@ export async function generatePluginDocs({
       file,
       content: renderPluginClaudeMd(info, existing, root, tree.facets, main),
     });
+    // Written only for a plugin whose CLAUDE.md summarizes a list, and removed
+    // once none does, so the file's presence tracks the source either way.
+    const refFile = pluginReferenceMdPath(info);
+    const reference = renderPluginReferenceMd(info, root, tree.facets);
+    if (reference !== null) {
+      await writeGenerated({ file: refFile, content: reference });
+    } else if (existsSync(refFile)) {
+      unlinkSync(refFile);
+    }
   }
 
   const legacy = legacyPluginDocsPath(root);

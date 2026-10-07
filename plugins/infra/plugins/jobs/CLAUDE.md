@@ -500,10 +500,10 @@ connection and every statement on it gives up after 60 s with no reply, and the
 - Load-bearing: yes
 - Server:
   - Contributes:
-    - `resource.declare` "jobs-list"
     - `resource.declare` "dead-jobs"
-    - `resource.declare` "dead-jobs:rows"
     - `resource.declare` "dead-jobs:groups"
+    - `resource.declare` "dead-jobs:rows"
+    - `resource.declare` "jobs-list"
     - `fork-schema-data-exclusion` "graphile_worker"
   - Uses:
     - `database.db`
@@ -665,70 +665,19 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
-  - Imported by:
-    - `apps/deploy/analytics/collect`
-    - `apps/deploy/analytics/ip-country`
-    - `apps/deploy/deployments`
-    - `apps/events/reanchor`
-    - `apps/events/refresh`
-    - `apps/events/sources/coworkmeet`
-    - `apps/events/sources/dmda`
-    - `apps/events/sources/salsanueva`
-    - `apps/events/sources/url-extract`
-    - `apps/mail/sync`
-    - `apps/pages/auto-icon`
-    - `apps/pages/content-search`
-    - `apps/pages/history`
-    - `apps/prototypes/checkpoints`
-    - `apps/prototypes/thumbnails`
-    - `apps/sonata/sources/midi/folders`
-    - `apps/sonata/sources/ultimate-guitar/alignment`
+  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×17
+    - `conversations` ×12
+    - `infra` ×11
+    - `debug` ×9
+    - `database` ×3
+    - `page` ×3
+    - `tasks` ×3
     - `build`
-    - `conversations`
-    - `conversations/conversation-category`
-    - `conversations/conversation-preprompt`
-    - `conversations/conversation-progress`
-    - `conversations/conversation-view/push-and-exit`
-    - `conversations/conversation-view/rewind`
-    - `conversations/conversation-view/turn-summary`
-    - `conversations/conversations-view/queue`
-    - `conversations/hibernation`
-    - `conversations/model-provider/catalog`
-    - `conversations/runtime-tmux`
-    - `conversations/transcript-retention`
-    - `database/db-test-fixture/sweep`
-    - `database/fork`
-    - `database/live-state-snapshot`
-    - `debug/boot-budget`
-    - `debug/boot-monitor`
-    - `debug/boot-watchdog`
-    - `debug/live-state-churn/monitor`
-    - `debug/op-rate`
-    - `debug/queue-health`
-    - `debug/read-set-shrink`
-    - `debug/session-divergence`
-    - `debug/slow-ops`
     - `improve`
-    - `infra/attachments`
-    - `infra/audio-analysis`
-    - `infra/deps/sweep`
-    - `infra/events`
-    - `infra/events-test`
-    - `infra/host-fs/image`
-    - `infra/jobs/background-arm`
-    - `infra/jobs/deadline-audit`
-    - `infra/jobs/supervised-job`
-    - `infra/retention`
-    - `infra/worktree/spare-pool`
     - `integrations/youtube/audio-fetch`
-    - `page/attachment-block`
-    - `page/inline-date`
-    - `page/links`
     - `shell/notifications`
     - `stats/cost`
-    - `tasks/auto-start`
-    - `tasks/automations`
-    - `tasks/task-title`
     - `upstream`
 - Exemptions:
   - Exempts itself from:

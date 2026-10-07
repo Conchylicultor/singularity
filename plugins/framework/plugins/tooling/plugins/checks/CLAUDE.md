@@ -317,49 +317,20 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./singularity check
 - Core:
-  - Uses:
-    - `framework/tooling.assertRepoPath`
-    - `framework/tooling.loadRepoFiles`
-    - `framework/tooling.pathsUnder`
-    - `framework/tooling.RepoFiles`
-    - `framework/tooling.repoFilesOver`
-    - `framework/tooling/collected-dir.defineCollectedDir`
-    - `framework/tooling/collected-dir.loadCollectedDir`
-    - `framework/tooling/exempt.createExemptionIndex`
-    - `framework/tooling/exempt.describeExemption`
-    - `framework/tooling/exempt.ExemptionIndex`
-    - `framework/tooling/exempt.exemptionInputPaths`
-    - `framework/tooling/exempt.isInAnyCategory`
-    - `framework/tooling/exempt.loadExemptions`
-    - `framework/tooling/exempt.ResolvedExemption`
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework/tooling/exempt` ×7
+    - `reports/check-thread-stall` ×7
+    - `framework/tooling` ×5
+    - `infra/stack-sampler` ×5
+    - `infra/paths` ×3
+    - `infra/spawn` ×3
+    - `plugin-meta/parse-utils` ×3
+    - `framework/tooling/collected-dir` ×2
+    - `packages/macrotask-yield` ×2
+    - `reports/outbox` ×2
     - `infra/file-sink.defineFileSink`
-    - `infra/paths.pruneWorktreeCheckArtifacts`
-    - `infra/paths.REPO_ROOT`
-    - `infra/paths.worktreeArtifacts`
-    - `infra/spawn.getWorktreeRoot`
-    - `infra/spawn.spawnCaptured`
-    - `infra/spawn.SpawnResult`
-    - `infra/stack-sampler.claimStackSampler`
-    - `infra/stack-sampler.frameKey`
-    - `infra/stack-sampler.StackFrame`
-    - `infra/stack-sampler.StackSampler`
-    - `infra/stack-sampler.ThreadActivity`
-    - `packages/macrotask-yield.createTimeSlicer`
-    - `packages/macrotask-yield.createTurnQueue`
     - `packages/semaphore.createSemaphore`
-    - `plugin-meta/parse-utils.findImports`
-    - `plugin-meta/parse-utils.lineAt`
-    - `plugin-meta/parse-utils.maskSource`
     - `plugin-meta/plugin-tree.buildStructureTreeOnce`
-    - `reports/check-thread-stall.CHECK_THREAD_STALL_KIND`
-    - `reports/check-thread-stall.checkThreadStallMessage`
-    - `reports/check-thread-stall.CheckThreadStallOwner`
-    - `reports/check-thread-stall.CheckThreadStallPayload`
-    - `reports/check-thread-stall.NO_SAMPLES_OWNER`
-    - `reports/check-thread-stall.STALL_REPORT_MS`
-    - `reports/check-thread-stall.TOTAL_REPORT_MS`
-    - `reports/outbox.fileReportFromProcess`
-    - `reports/outbox.mergeBaseWithMain`
   - Exports (types):
     - `CandidateSource`
     - `CheckCache`

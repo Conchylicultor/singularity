@@ -112,7 +112,8 @@ It must **never** be imported by the mail `shell` (that would cycle) — the
 
 - Description: The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter — read as a live segmented scroll of the `mail.threads` collection, scoped to the connected account. Threads DataView server: serves the `mail.threads` live collection over mail_threads — the active tab's whole filter (mailbox scope included) and the pane's account scope compile into each window tuple, and the routed change feed refills exactly the threads a write touches.
 - Web:
-  - Slots: `mailThreadsPane.Actions` ← `primitives.pane`
+  - Slots: `mailThreadsPane.Actions`
+  - Slot contributors: `mailThreadsPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "mail-threads"
   - Uses:
     - `apps/mail/reading-pane.threadPane`
@@ -137,8 +138,8 @@ It must **never** be imported by the mail `shell` (that would cycle) — the
 - Server:
   - Contributes:
     - `resource.declare` "mail.threads"
-    - `resource.declare` "mail.threads:rows"
     - `resource.declare` "mail.threads:groups"
+    - `resource.declare` "mail.threads:rows"
   - Uses:
     - `apps/mail/mail-core._mailThreads`
     - `network/live.serveCollection`

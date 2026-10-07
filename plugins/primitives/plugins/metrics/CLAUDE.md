@@ -135,7 +135,13 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `POST /api/metrics/query`
     - `POST /api/metrics/details`
 - Web:
-  - Uses:
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×9
+    - `primitives/css/ui-kit` ×7
+    - `primitives/data-view/view-core` ×4
+    - `primitives/metrics/chart-kit` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/css/toggle-chip` ×2
     - `apps-core/tabs.navigate`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
@@ -147,36 +153,9 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `primitives/css/inline.Inline`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.Sheet`
-    - `primitives/css/ui-kit.SheetContent`
-    - `primitives/css/ui-kit.SheetDescription`
-    - `primitives/css/ui-kit.SheetHeader`
-    - `primitives/css/ui-kit.SheetTitle`
-    - `primitives/data-view/view-core.buildViewConfigContributions`
-    - `primitives/data-view/view-core.buildViewDescriptors`
-    - `primitives/data-view/view-core.EditableViewSwitcher`
-    - `primitives/data-view/view-core.useViewModel`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.PagedResourceResult`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useEndpointResource`
-    - `primitives/live-state.useInfiniteQueryResource`
-    - `primitives/live-state.useQueryResource`
     - `primitives/loading.Loading`
-    - `primitives/metrics/chart-kit.ChartOrTable`
-    - `primitives/metrics/chart-kit.ChartState`
-    - `primitives/metrics/chart-kit.Sparkline`
     - `primitives/outline/rail.OutlineRail`
     - `primitives/persistent-draft.useDraft`
     - `ui/icons.Icon`

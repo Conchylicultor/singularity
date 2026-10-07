@@ -57,37 +57,31 @@ composes primitives.
 - Description: Mail on-demand search: a Search sidebar entry opening a query surface over GET /api/mail/search (Gmail relevance order, reaching mail older than the sync window), plus a lazily-hydrated reader pane for a selected message.
 - Web:
   - Slots:
+    - `mail-search.actions`
+    - `mail-message.actions`
+  - Slot contributors:
     - `mail-search.actions` ← `primitives.pane`
     - `mail-message.actions` ← `primitives.pane`
   - Contributes:
     - `Mail.Sidebar` "Search"
-    - `Pane.Register` "mail-search"
     - `Pane.Register` "mail-message"
-  - Uses:
+    - `Pane.Register` "mail-search"
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×5
+    - `infra/endpoints` ×3
+    - `primitives/cursor-pagination` ×3
+    - `primitives/css/spacing` ×2
     - `apps/mail/shell.Mail`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
-    - `primitives/cursor-pagination.InfiniteScrollFooter`
-    - `primitives/cursor-pagination.InfiniteScrollHandle`
-    - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.type`
-    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`

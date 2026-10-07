@@ -70,39 +70,25 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-  - Uses:
-    - `conversations/conversation-view.conversationPane`
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×9
+    - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
+    - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
+    - `conversations/conversation-view/pending-turn` ×2
+    - `infra/endpoints` ×2
+    - `primitives/css/selection-indicator` ×2
+    - `primitives/persistent-draft` ×2
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-    - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
-    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
-    - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
-    - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
-    - `conversations/conversation-view/pending-turn.defineTurnDelivery`
-    - `conversations/conversation-view/pending-turn.sendConversationTurn`
     - `conversations/conversation-view/rewind.useGoBackToMessage`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpointMutation`
+    - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/selection-indicator.CheckboxIndicator`
-    - `primitives/css/selection-indicator.RadioIndicator`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.DropdownMenu`
-    - `primitives/css/ui-kit.DropdownMenuContent`
-    - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/css/ui-kit.DropdownMenuTrigger`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/css/ui-kit.Textarea`
     - `primitives/live-state.ResourceErrorInline`
-    - `primitives/persistent-draft.useDraft`
-    - `primitives/persistent-draft.writeDraft`
     - `shell/notifications.toast`
     - `ui/icons.Icon`
   - Exports (types):

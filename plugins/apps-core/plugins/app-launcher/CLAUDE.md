@@ -48,37 +48,24 @@ never draw their own header (the shell places it; see
   - Contributes:
     - `AppShell.Brand` "Brand" → `AppBrand`
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
-  - Uses:
-    - `apps-core.ActiveApp`
-    - `apps-core.Apps`
-    - `apps-core.defaultApp`
-    - `apps-core.useActiveApp`
-    - `apps-core/app-icon.AppIconTile`
-    - `apps-core/app-icon.AppIconView`
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core/tabs` ×5
+    - `apps-core` ×4
+    - `apps-core/app-icon` ×2
+    - `primitives/app-shell` ×2
+    - `primitives/css/fill` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/data-view` ×2
+    - `reorder` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
-    - `apps-core/tabs.appLinkProps`
-    - `apps-core/tabs.navigate`
-    - `apps-core/tabs.useActivateApp`
-    - `apps-core/tabs.useSurfaceMode`
-    - `apps-core/tabs.useTabs`
-    - `primitives/app-shell.AppShell`
-    - `primitives/app-shell.useBrandDrawnOn`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
     - `primitives/embed.isChromelessDocument`
     - `primitives/link-gesture.linkProps`
     - `primitives/overlay/hover-popover.HoverPopover`
     - `primitives/pane.currentRoutePath`
-    - `reorder.isNodeData`
-    - `reorder.useReorderedEntries`
     - `ui/icons.Icon`
   - Exports (values): `appFields`
 - Cross-plugin:

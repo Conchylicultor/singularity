@@ -114,48 +114,33 @@ silently destroy work in progress — hence a request type rather than an `initi
 
 - Description: Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
 - Web:
-  - Slots: `TaskDraftFormSlots.Action` ← `improve.element-picker`
+  - Slots: `TaskDraftFormSlots.Action`
+  - Slot contributors: `TaskDraftFormSlots.Action` ← `improve.element-picker`
   - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses:
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/launch-options` ×5
+    - `primitives/css/ui-kit` ×3
+    - `primitives/overlay/tooltip` ×3
+    - `primitives/sortable-list` ×3
+    - `primitives/text-editor/composer` ×3
+    - `config_v2` ×2
+    - `infra/endpoints` ×2
+    - `primitives/live-state` ×2
+    - `primitives/shortcuts` ×2
     - `apps-core.useCurrentAppId`
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/overlay/tooltip.Kbd`
-    - `primitives/overlay/tooltip.TooltipDoc`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/persistent-draft.useDraft`
-    - `primitives/shortcuts.getFocusedSurfaceId`
-    - `primitives/shortcuts.subscribeFocusedSurface`
     - `primitives/slot-render.defineRenderSlot`
-    - `primitives/sortable-list.arrayMove`
-    - `primitives/sortable-list.SortableItem`
-    - `primitives/sortable-list.SortableList`
-    - `primitives/text-editor/composer.ComposerAttachButton`
-    - `primitives/text-editor/composer.ComposerField`
-    - `primitives/text-editor/composer.ComposerRule`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `primitives/text-editor/paste-images.extractAttachmentIds`
     - `shell/notifications.toast`
-    - `tasks/launch-options.LaunchOptionInfo`
-    - `tasks/launch-options.LaunchOptionPills`
-    - `tasks/launch-options.launchOptionValue`
-    - `tasks/launch-options.LaunchOptionValues`
-    - `tasks/launch-options.TaskLaunch`
     - `ui/icons.Icon`
   - Exports (types):
     - `ActiveRelateContext`

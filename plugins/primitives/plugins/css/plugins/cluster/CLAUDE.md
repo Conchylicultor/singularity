@@ -38,61 +38,16 @@ defined in exactly one place. The distinct export buys two things:
   - Exports (types): `ClusterProps`
   - Exports (values): `Cluster`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×18
+    - `debug` ×12
+    - `conversations` ×6
+    - `plugin-meta` ×6
+    - `primitives` ×6
+    - `fields` ×2
+    - `page` ×2
     - `apps-core/surface/floating`
-    - `apps/deploy/analytics/dashboard`
-    - `apps/deploy/composition`
-    - `apps/deploy/deploy-history`
-    - `apps/deploy/remote-deploy`
-    - `apps/mail/reading-pane`
-    - `apps/mail/search`
-    - `apps/pages/prompt-origin`
-    - `apps/prototypes/canvas`
-    - `apps/sonata/sources/midi/file-preview`
-    - `apps/studio/compositions`
-    - `apps/studio/compositions/entry-points`
-    - `apps/studio/compositions/membership-summary`
-    - `apps/studio/compositions/release`
-    - `apps/studio/compositions/release/release-artifact`
-    - `apps/studio/explorer/membership`
-    - `apps/studio/graph`
-    - `apps/website/improve`
-    - `apps/website/shell`
     - `config_v2/fields`
-    - `conversations/conversation-view/artifacts/skill`
-    - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-    - `conversations/conversation-view/prompt-templates`
-    - `debug/claude-cli-calls`
-    - `debug/profiling/ops`
-    - `debug/profiling/ops/op-gantt`
-    - `debug/queue`
-    - `debug/read-set`
-    - `debug/render-profiler`
-    - `debug/reports`
-    - `debug/sentinel`
-    - `debug/timeline`
-    - `debug/trace/boot`
-    - `debug/trace/contention`
-    - `debug/trace/gates`
-    - `fields/dynamic-flags/config`
-    - `fields/tags/inline`
-    - `page/annotations/todo/task-link`
-    - `page/prompt/block`
-    - `plugin-meta/facets/cross-refs/render-detail`
-    - `plugin-meta/facets/routes/render-detail`
-    - `plugin-meta/facets/slots/render-contributions`
-    - `plugin-meta/facets/slots/render-detail`
-    - `plugin-meta/plugin-view`
-    - `plugin-meta/plugin-view/inclusion`
-    - `primitives/avatar`
-    - `primitives/css/color-picker`
-    - `primitives/date-picker`
-    - `primitives/metrics`
-    - `primitives/metrics/chart-kit`
-    - `primitives/text-editor/composer`
     - `stats/commits`
     - `tasks/task-dependencies`
     - `ui/tokens/shadow`

@@ -7,9 +7,15 @@
 - Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, child-count, launch-agent).
 - Web:
   - Slots:
-    - `Tasks.TaskActions` ← `tasks.auto-start`, `tasks.task-list`
+    - `Tasks.TaskActions`
     - `Tasks.ListActions`
-    - `Tasks.Fields` ← `tasks.automations`, `tasks.task-category`, `tasks.task-track`
+    - `Tasks.Fields`
+  - Slot contributors:
+    - `Tasks.TaskActions` ← `tasks.auto-start`
+    - `Tasks.TaskActions` ← `tasks.task-list`
+    - `Tasks.Fields` ← `tasks.automations`
+    - `Tasks.Fields` ← `tasks.task-category`
+    - `Tasks.Fields` ← `tasks.task-track`
   - Contributes:
     - `Tasks.TaskActions` "child-count" → `ChildCountAction`
     - `Tasks.TaskActions` "delete" → `DeleteTaskAction`

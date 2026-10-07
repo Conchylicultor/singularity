@@ -106,39 +106,17 @@ declares the token. This plugin renders chips; it owns none.
 
 - Description: Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
 - Web:
-  - Uses:
-    - `page/editor.BLOCK_INDENT`
-    - `page/editor.BLOCK_INSET`
-    - `page/editor.BlockDecoration`
-    - `page/editor.BlockFootProps`
-    - `page/editor.blockTextRenderableExtensions`
-    - `page/editor.colorCssValue`
-    - `page/editor.Editor`
-    - `page/editor.FRAME_PAD_X`
-    - `page/editor.FRAME_PAD_Y`
-    - `page/editor.FrameGeometry`
-    - `page/editor.FrameHoverProvider`
-    - `page/editor.PageIcon`
-    - `page/editor.TextBlockLayout`
-    - `page/editor.useBlockDecorations`
-    - `page/editor.useBlockFeet`
-    - `page/editor.useFramedBlockTypes`
-    - `page/editor.useFrameGeometry`
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×17
+    - `primitives/overlay/image-viewer` ×4
+    - `primitives/css/spacing` ×3
+    - `primitives/css/text` ×2
     - `primitives/css/inline.Inline`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
     - `primitives/css/selection-indicator.CheckboxIndicator`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.insetClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
-    - `primitives/css/text.Text`
-    - `primitives/css/text.TextVariant`
     - `primitives/css/ui-kit.cn`
-    - `primitives/overlay/image-viewer.ImageGallery`
-    - `primitives/overlay/image-viewer.MissingImage`
-    - `primitives/overlay/image-viewer.useImageLoad`
-    - `primitives/overlay/image-viewer.useImageViewerTrigger`
     - `primitives/syntax-highlight.HighlightedCode`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `ui/icons.Icon`

@@ -413,36 +413,25 @@ remote is built here.
 - Description: Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
 - Server:
   - Contributes:
-    - `resource.declare` "release.runs:rows"
-    - `resource.declare` "release.history"
-    - `resource.declare` "release.history:rows"
-    - `resource.declare` "release.history:groups"
     - `resource.declare` "release.candidate"
+    - `resource.declare` "release.history"
+    - `resource.declare` "release.history:groups"
+    - `resource.declare` "release.history:rows"
     - `resource.declare` "release.previews"
-  - Uses:
-    - `database.db`
+    - `resource.declare` "release.runs:rows"
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `release/bundles` ×6
+    - `infra/jobs/supervised-job` ×3
+    - `infra/endpoints` ×2
+    - `infra/launcher` ×2
+    - `infra/paths` ×2
+    - `network/live` ×2
     - `database/sql-column.parsedText`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
+    - `database.db`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/git/git-watcher.refHeadServed`
-    - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `infra/jobs/supervised-job.runEnded`
-    - `infra/jobs/supervised-job.RunEndedPayload`
-    - `infra/launcher.gatewayPidFile`
-    - `infra/launcher.teardownSelfContainedApp`
-    - `infra/paths.REPO_ROOT`
-    - `infra/paths.worktreeArtifacts`
     - `infra/spawn/daemon.defineDaemon`
-    - `network/live.serveCollection`
-    - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
-    - `release/bundles.bundleSignature`
-    - `release/bundles.compareToHead`
-    - `release/bundles.newReleaseRunId`
-    - `release/bundles.readHeadSha`
-    - `release/bundles.releaseOutDir`
-    - `release/bundles.resolveBundle`
   - DB schema: `plugins/release/server/internal/tables.ts`
   - Exports (types):
     - `ReleaseEnded`

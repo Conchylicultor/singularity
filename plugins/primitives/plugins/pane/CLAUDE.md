@@ -789,146 +789,139 @@ See "Open questions" in the design doc.
 - Description: Unified pane primitive: Pane.define and chrome components.
 - Load-bearing: yes
 - Web:
-  - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.file-explorer.browser`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.download`, `apps.website.pages.foundations`, `apps.website.pages.guide`, `apps.website.pages.story`, `apps.website.pages.vision`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.explorer`, `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.background.catalog`, `infra.deps`, `infra.events-test`, `integrations.google-maps`, `plugin-meta.exhibits`, `plugin-meta.plugin-view`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.automations`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
-  - Contributes:
-    - `plugin-conv-side.actions` "title" → `PaneTitleItem`
-    - `welcomePane.Actions` "title" → `PaneTitleItem`
-    - `chord-trainer.actions` "title" → `PaneTitleItem`
-    - `deploymentDetailPane.Actions` "title" → `PaneTitleItem`
-    - `serversRootPane.Actions` "title" → `PaneTitleItem`
-    - `serverDetailPane.Actions` "title" → `PaneTitleItem`
-    - `eventListPane.Actions` "title" → `PaneTitleItem`
-    - `events-root.actions` "title" → `PaneTitleItem`
-    - `eventSourcesPane.Actions` "title" → `PaneTitleItem`
-    - `eventSourceDetailPane.Actions` "title" → `PaneTitleItem`
-    - `eventSourceRunPane.Actions` "title" → `PaneTitleItem`
-    - `filesHomePane.Actions` "title" → `PaneTitleItem`
-    - `filesAtPane.Actions` "title" → `PaneTitleItem`
-    - `threadPane.Actions` "title" → `PaneTitleItem`
-    - `mail-search.actions` "title" → `PaneTitleItem`
-    - `mail-message.actions` "title" → `PaneTitleItem`
-    - `mail-root.actions` "title" → `PaneTitleItem`
-    - `mailThreadsPane.Actions` "title" → `PaneTitleItem`
-    - `pageDetailPane.Actions` "title" → `PaneTitleItem`
-    - `blockDetailPane.Actions` "title" → `PaneTitleItem`
-    - `pagesTreePane.Actions` "title" → `PaneTitleItem`
-    - `pages-root.actions` "title" → `PaneTitleItem`
-    - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
-    - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
-    - `prototypes-present.actions` "title" → `PaneTitleItem`
-    - `prototypes-present-canvas.actions` "title" → `PaneTitleItem`
-    - `settings-config-index.actions` "title" → `PaneTitleItem`
-    - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
-    - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
-    - `compositionsPane.Actions` "title" → `PaneTitleItem`
-    - `compositionDetailPane.Actions` "title" → `PaneTitleItem`
-    - `comparePane.Actions` "title" → `PaneTitleItem`
-    - `releaseDetailPane.Actions` "title" → `PaneTitleItem`
-    - `contributions.actions` "title" → `PaneTitleItem`
-    - `tableDetailPane.Actions` "title" → `PaneTitleItem`
-    - `explorerPane.Actions` "title" → `PaneTitleItem`
-    - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
+  - Slots: `Pane.Register`
+  - Slot contributors: 88 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×88
+  - Contributes: 106 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`
+    - `agentDetailPane.Actions` "title" → `PaneTitleItem`
+    - `agentReportPane.Actions` "title" → `PaneTitleItem`
+    - `agentSidePane.Actions` "title" → `PaneTitleItem`
+    - `agentsRootPane.Actions` "title" → `PaneTitleItem`
+    - `allConversationsPane.Actions` "title" → `PaneTitleItem`
+    - `app-preview.actions` "title" → `PaneTitleItem`
     - `appleSetupPane.Actions` "title" → `PaneTitleItem`
-    - `googleMapsSetupPane.Actions` "title" → `PaneTitleItem`
-    - `googleSetupPane.Actions` "title" → `PaneTitleItem`
+    - `attemptPane.Actions` "title" → `PaneTitleItem`
+    - `automation-detail.actions` "title" → `PaneTitleItem`
+    - `automations.actions` "title" → `PaneTitleItem`
+    - `background-entry.actions` "title" → `PaneTitleItem`
+    - `background.actions` "title" → `PaneTitleItem`
     - `backupPane.Actions` "title" → `PaneTitleItem`
     - `backupRunPane.Actions` "title" → `PaneTitleItem`
-    - `buildPane.Actions` "title" → `PaneTitleItem`
+    - `blockDetailPane.Actions` "title" → `PaneTitleItem`
+    - `broadcastsPane.Actions` "title" → `PaneTitleItem`
     - `buildDetailPane.Actions` "title" → `PaneTitleItem`
+    - `buildPane.Actions` "title" → `PaneTitleItem`
+    - `buildProfileDetailPane.Actions` "title" → `PaneTitleItem`
+    - `chord-trainer.actions` "title" → `PaneTitleItem`
+    - `claudeCliCallsPane.Actions` "title" → `PaneTitleItem`
     - `commitDetailPane.Actions` "title" → `PaneTitleItem`
-    - `configNavPane.Actions` "title" → `PaneTitleItem`
+    - `comparePane.Actions` "title" → `PaneTitleItem`
+    - `compositionDetailPane.Actions` "title" → `PaneTitleItem`
+    - `compositionsPane.Actions` "title" → `PaneTitleItem`
     - `configDetailPane.Actions` "title" → `PaneTitleItem`
-    - `agentsRootPane.Actions` "title" → `PaneTitleItem`
-    - `agentDetailPane.Actions` "title" → `PaneTitleItem`
-    - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
-    - `agentSidePane.Actions` "title" → `PaneTitleItem`
-    - `allConversationsPane.Actions` "title" → `PaneTitleItem`
-    - `conversationPane.Actions` "title" → `PaneTitleItem`
-    - `filePeekPane.Actions` "title" → `PaneTitleItem`
+    - `configNavPane.Actions` "title" → `PaneTitleItem`
+    - `configOrphansPane.Actions` "title" → `PaneTitleItem`
+    - `contributions.actions` "title" → `PaneTitleItem`
     - `conv-commits-graph.actions` "title" → `PaneTitleItem`
     - `conv-file-tree.actions` "title" → `PaneTitleItem`
-    - `shellOutputPane.Actions` "title" → `PaneTitleItem`
-    - `agentReportPane.Actions` "title" → `PaneTitleItem`
-    - `workflow-node.actions` "title" → `PaneTitleItem`
-    - `app-preview.actions` "title" → `PaneTitleItem`
     - `conv-push-profiling.actions` "title" → `PaneTitleItem`
-    - `conv-terminal.actions` "title" → `PaneTitleItem`
-    - `recoveryPane.Actions` "title" → `PaneTitleItem`
     - `conv-summary.actions` "title" → `PaneTitleItem`
-    - `debug-boot-profile.actions` "title" → `PaneTitleItem`
+    - `conv-terminal.actions` "title" → `PaneTitleItem`
+    - `convReviewPane.Actions` "title" → `PaneTitleItem`
+    - `conversationPane.Actions` "title" → `PaneTitleItem`
     - `debug-boot-profile-detail.actions` "title" → `PaneTitleItem`
+    - `debug-boot-profile.actions` "title" → `PaneTitleItem`
     - `debug-boot-profiles-list.actions` "title" → `PaneTitleItem`
-    - `broadcastsPane.Actions` "title" → `PaneTitleItem`
-    - `claudeCliCallsPane.Actions` "title" → `PaneTitleItem`
-    - `configOrphansPane.Actions` "title" → `PaneTitleItem`
+    - `dependencies.actions` "title" → `PaneTitleItem`
+    - `deploymentDetailPane.Actions` "title" → `PaneTitleItem`
+    - `eventListPane.Actions` "title" → `PaneTitleItem`
+    - `eventSourceDetailPane.Actions` "title" → `PaneTitleItem`
+    - `eventSourceRunPane.Actions` "title" → `PaneTitleItem`
+    - `eventSourcesPane.Actions` "title" → `PaneTitleItem`
+    - `events-root.actions` "title" → `PaneTitleItem`
+    - `eventsTestPane.Actions` "title" → `PaneTitleItem`
+    - `exhibits.actions` "title" → `PaneTitleItem`
+    - `explorerPane.Actions` "title" → `PaneTitleItem`
+    - `filePeekPane.Actions` "title" → `PaneTitleItem`
+    - `filesAtPane.Actions` "title" → `PaneTitleItem`
+    - `filesHomePane.Actions` "title" → `PaneTitleItem`
+    - `google-maps-live-map-setup.actions` "title" → `PaneTitleItem`
+    - `googleMapsSetupPane.Actions` "title" → `PaneTitleItem`
+    - `googleSetupPane.Actions` "title" → `PaneTitleItem`
+    - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
     - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
     - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
     - `liveStateEmitPane.Actions` "title" → `PaneTitleItem`
     - `liveStateHealthPane.Actions` "title" → `PaneTitleItem`
-    - `logsPane.Actions` "title" → `PaneTitleItem`
     - `logChannelPane.Actions` "title" → `PaneTitleItem`
+    - `logsPane.Actions` "title" → `PaneTitleItem`
+    - `mail-message.actions` "title" → `PaneTitleItem`
+    - `mail-root.actions` "title" → `PaneTitleItem`
+    - `mail-search.actions` "title" → `PaneTitleItem`
+    - `mailThreadsPane.Actions` "title" → `PaneTitleItem`
     - `memoryPane.Actions` "title" → `PaneTitleItem`
-    - `profilingPane.Actions` "title" → `PaneTitleItem`
-    - `buildProfileDetailPane.Actions` "title" → `PaneTitleItem`
     - `opDetailPane.Actions` "title" → `PaneTitleItem`
+    - `pageDetailPane.Actions` "title" → `PaneTitleItem`
+    - `pages-root.actions` "title" → `PaneTitleItem`
+    - `pagesTreePane.Actions` "title" → `PaneTitleItem`
+    - `plugin-conv-side.actions` "title" → `PaneTitleItem`
+    - `pluginViewPane.Actions` "title" → `PaneTitleItem`
+    - `profilingPane.Actions` "title" → `PaneTitleItem`
+    - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
+    - `prototypes-present-canvas.actions` "title" → `PaneTitleItem`
+    - `prototypes-present.actions` "title" → `PaneTitleItem`
+    - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
     - `queuePane.Actions` "title" → `PaneTitleItem`
     - `readSetPane.Actions` "title" → `PaneTitleItem`
+    - `recoveryPane.Actions` "title" → `PaneTitleItem`
+    - `releaseDetailPane.Actions` "title" → `PaneTitleItem`
     - `renderProfilerPane.Actions` "title" → `PaneTitleItem`
-    - `reportsPane.Actions` "title" → `PaneTitleItem`
     - `reportDetailPane.Actions` "title" → `PaneTitleItem`
-    - `slowEventsPane.Actions` "title" → `PaneTitleItem`
-    - `traceDetailPane.Actions` "title" → `PaneTitleItem`
-    - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-    - `background.actions` "title" → `PaneTitleItem`
-    - `background-entry.actions` "title" → `PaneTitleItem`
-    - `dependencies.actions` "title" → `PaneTitleItem`
-    - `eventsTestPane.Actions` "title" → `PaneTitleItem`
-    - `google-maps-live-map-setup.actions` "title" → `PaneTitleItem`
-    - `exhibits.actions` "title" → `PaneTitleItem`
-    - `pluginViewPane.Actions` "title" → `PaneTitleItem`
-    - `convReviewPane.Actions` "title" → `PaneTitleItem`
+    - `reportsPane.Actions` "title" → `PaneTitleItem`
     - `screenshotPane.Actions` "title" → `PaneTitleItem`
+    - `serverDetailPane.Actions` "title" → `PaneTitleItem`
+    - `serversRootPane.Actions` "title" → `PaneTitleItem`
+    - `settings-config-index.actions` "title" → `PaneTitleItem`
+    - `shellOutputPane.Actions` "title" → `PaneTitleItem`
+    - `slowEventsPane.Actions` "title" → `PaneTitleItem`
+    - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
+    - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
     - `statsPane.Actions` "title" → `PaneTitleItem`
-    - `attemptPane.Actions` "title" → `PaneTitleItem`
-    - `automations.actions` "title" → `PaneTitleItem`
-    - `automation-detail.actions` "title" → `PaneTitleItem`
-    - `tasksRootPane.Actions` "title" → `PaneTitleItem`
+    - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
+    - `tableDetailPane.Actions` "title" → `PaneTitleItem`
     - `taskDetailPane.Actions` "title" → `PaneTitleItem`
+    - `tasksRootPane.Actions` "title" → `PaneTitleItem`
     - `themeCustomizerPane.Actions` "title" → `PaneTitleItem`
-  - Uses:
+    - `threadPane.Actions` "title" → `PaneTitleItem`
+    - `traceDetailPane.Actions` "title" → `PaneTitleItem`
+    - `welcomePane.Actions` "title" → `PaneTitleItem`
+    - `workflow-node.actions` "title" → `PaneTitleItem`
+    - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×4
+    - `primitives/live-state` ×3
+    - `primitives/slot-render` ×3
+    - `primitives/css/scroll` ×2
+    - `primitives/link-gesture` ×2
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/scroll.Scroll`
-    - `primitives/css/scroll.ScrollProps`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.appThemeScope`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/dom/in-view.useInView`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/link-gesture.LinkGestureProps`
-    - `primitives/link-gesture.linkProps`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/scope/install-sink.defineInstallSink`
     - `primitives/scope/surface-id.SurfaceIdContext`
     - `primitives/select-scope.ContentScope`
-    - `primitives/slot-render.defineRenderSlot`
-    - `primitives/slot-render.registerSlotItemMiddleware`
-    - `primitives/slot-render.RenderSlot`
     - `ui/icons.Icon`
   - Exports (types):
     - `AnyPane`
@@ -1016,166 +1009,28 @@ See "Open questions" in the design doc.
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
 - Cross-plugin:
-  - Imported by:
-    - `active-data/attempt`
-    - `active-data/commit-link`
-    - `active-data/plugin-link`
-    - `active-data/prototype`
-    - `active-data/task`
-    - `active-data/task-link`
-    - `apps-core`
-    - `apps-core/app-launcher`
-    - `apps-core/layout`
-    - `apps-core/tab-surface`
-    - `apps-core/tabs`
-    - `apps/agent-manager/shell`
-    - `apps/agent-manager/welcome`
-    - `apps/browser/shell`
-    - `apps/chord/shell`
-    - `apps/chord/trainer`
-    - `apps/debug/shell`
-    - `apps/deploy/analytics/collect`
-    - `apps/deploy/deployments`
-    - `apps/deploy/servers`
-    - `apps/deploy/shell`
-    - `apps/events/event-list`
-    - `apps/events/shell`
-    - `apps/events/sources`
-    - `apps/events/sources/source-detail/runs`
-    - `apps/file-explorer/browser`
-    - `apps/file-explorer/shell`
-    - `apps/home/shell`
-    - `apps/mail/reading-pane`
-    - `apps/mail/search`
-    - `apps/mail/shell`
-    - `apps/mail/threads`
-    - `apps/pages/content-search`
-    - `apps/pages/page-tree`
-    - `apps/pages/prompt-origin`
-    - `apps/pages/shell`
-    - `apps/pages/welcome`
-    - `apps/pages/welcome/quick-create`
-    - `apps/pages/welcome/recent-pages`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/compare/route`
-    - `apps/prototypes/gallery`
-    - `apps/prototypes/present`
-    - `apps/prototypes/shell`
-    - `apps/settings/accounts`
-    - `apps/settings/config`
-    - `apps/settings/shell`
-    - `apps/sonata/library`
-    - `apps/sonata/shell`
-    - `apps/studio/compositions`
-    - `apps/studio/compositions/closure-tree`
-    - `apps/studio/compositions/draft-actions`
-    - `apps/studio/compositions/release`
-    - `apps/studio/contributions`
-    - `apps/studio/contributions/tables`
-    - `apps/studio/explorer`
-    - `apps/studio/explorer/membership`
-    - `apps/studio/graph`
-    - `apps/studio/shell`
-    - `apps/website/landing/layers`
-    - `apps/website/landing/story-link`
-    - `apps/website/pages/apps`
-    - `apps/website/pages/download`
-    - `apps/website/pages/foundations`
-    - `apps/website/pages/guide`
-    - `apps/website/pages/story`
-    - `apps/website/pages/vision`
-    - `apps/website/shell`
-    - `auth`
-    - `auth/apple-signing/setup-wizard`
-    - `auth/google`
-    - `auth/google-maps/setup-wizard`
-    - `auth/google/setup-wizard`
+  - Imported by: 160 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×57
+    - `conversations` ×29
+    - `debug` ×23
+    - `tasks` ×8
+    - `active-data` ×6
+    - `plugin-meta` ×6
+    - `apps-core` ×5
+    - `auth` ×5
+    - `layouts` ×4
+    - `infra` ×3
+    - `primitives` ×2
+    - `stats` ×2
     - `backup`
     - `build`
     - `code-explorer/commit-detail`
     - `config_v2/settings`
-    - `conversations`
-    - `conversations/agents`
-    - `conversations/all-conversations`
-    - `conversations/conversation-view`
-    - `conversations/conversation-view/artifacts/prototype`
-    - `conversations/conversation-view/artifacts/research`
-    - `conversations/conversation-view/artifacts/skill`
-    - `conversations/conversation-view/code/file-pane`
-    - `conversations/conversation-view/commits-graph`
-    - `conversations/conversation-view/explorer`
-    - `conversations/conversation-view/jsonl-viewer/background-shells`
-    - `conversations/conversation-view/jsonl-viewer/file-path`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-    - `conversations/conversation-view/markdown-extensions`
-    - `conversations/conversation-view/op-status`
-    - `conversations/conversation-view/open-app`
-    - `conversations/conversation-view/push-profiling`
-    - `conversations/conversation-view/running-agents`
-    - `conversations/conversation-view/terminal-pane`
-    - `conversations/conversation-view/vscode`
-    - `conversations/conversations-view`
-    - `conversations/pane-restore`
-    - `conversations/recover`
-    - `conversations/summary`
-    - `debug/boot-profile`
-    - `debug/broadcasts`
-    - `debug/claude-cli-calls`
-    - `debug/config-orphans`
-    - `debug/health-monitor`
-    - `debug/heap-snapshot`
-    - `debug/latency-ledger`
-    - `debug/live-state-churn/emit`
-    - `debug/live-state-health`
-    - `debug/logs`
-    - `debug/memory`
-    - `debug/profiling`
-    - `debug/profiling/build`
-    - `debug/profiling/ops`
-    - `debug/queue`
-    - `debug/read-set`
-    - `debug/render-profiler`
-    - `debug/reports`
-    - `debug/slow-ops`
-    - `debug/timeline`
-    - `debug/trace/engine`
-    - `debug/trace/pane`
-    - `debug/worktree-cleanup`
-    - `infra/background/catalog`
-    - `infra/deps`
-    - `infra/events-test`
     - `integrations/google-maps`
-    - `layouts/full-pane`
-    - `layouts/host`
-    - `layouts/miller`
-    - `layouts/route-fallback`
-    - `plugin-meta/contributions-table`
-    - `plugin-meta/exhibits`
-    - `plugin-meta/plugin-view`
-    - `plugin-meta/plugin-view/dependencies`
-    - `plugin-meta/plugin-view/file-tree`
-    - `plugin-meta/plugin-view/sub-plugins`
-    - `primitives/app-shell`
-    - `primitives/launch`
     - `reports`
     - `review`
     - `runs`
     - `screenshot`
-    - `stats`
-    - `stats/cost`
-    - `tasks/attempt-view`
-    - `tasks/automations`
-    - `tasks/task-dependencies`
-    - `tasks/task-deps-tree`
-    - `tasks/task-detail`
-    - `tasks/task-graph`
-    - `tasks/task-header`
-    - `tasks/tasks-core`
     - `ui/theme-engine/theme-customizer`
 - Exemptions:
   - Exempts itself from: `pane/no-core-define-route-in-web` — `.` (sanctioned)

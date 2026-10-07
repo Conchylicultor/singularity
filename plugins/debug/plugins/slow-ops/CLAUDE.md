@@ -143,30 +143,20 @@ bar).
     - `report-kind` "slow-op"
     - `change-feed-exclusion` "slow_ops"
     - `fork-data-exclusion` "slow_ops"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.watchConfig`
-    - `database.db`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/jobs` ×4
+    - `infra/entities` ×3
+    - `config_v2` ×2
+    - `infra/host/contention` ×2
+    - `infra/host/duress` ×2
+    - `primitives/log-channels` ×2
+    - `reports` ×2
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
+    - `database.db`
     - `debug/trace/engine.captureTrace`
     - `infra/endpoints.implement`
-    - `infra/entities.defaultNow`
-    - `infra/entities.defaultRandom`
-    - `infra/entities.defineEntity`
-    - `infra/host/contention.ContentionSnapshot`
-    - `infra/host/contention.getContentionSnapshot`
-    - `infra/host/duress.createShedBuffer`
-    - `infra/host/duress.ShedSummary`
-    - `infra/jobs.ceilingMsFor`
-    - `infra/jobs.getJobHold`
-    - `infra/jobs.getJobSlowThresholdMs`
-    - `infra/jobs.HOLD_CLASSES`
     - `infra/retention.defineRetention`
-    - `primitives/log-channels.defineLogSink`
-    - `primitives/log-channels.readChannelJson`
-    - `reports.recordReport`
-    - `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
   - Exports (types): `RecordSlowOpInput`
   - Exports (values):

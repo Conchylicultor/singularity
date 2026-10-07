@@ -7,26 +7,19 @@
 - Description: Browser start page: the empty-state landing shown in the viewport when no URL is loaded — a centered hero (wordmark + search), curated quick links, and the live bookmarks and recents sections.
 - Web:
   - Contributes: `Browser.StartPage` "Start page" → `StartPage`
-  - Uses:
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/browser/shell` ×3
+    - `primitives/css/ui-kit` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/css/text` ×2
+    - `primitives/live-state` ×2
     - `apps/browser/bookmarks.browserBookmarks`
     - `apps/browser/history.browserRecents`
     - `apps/browser/omnibox.normalizeInput`
-    - `apps/browser/shell.Browser`
-    - `apps/browser/shell.Favicon`
-    - `apps/browser/shell.useBrowserNav`
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/grid.Grid`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.SingleLineProvider`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/relative-time.RelativeTime`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`

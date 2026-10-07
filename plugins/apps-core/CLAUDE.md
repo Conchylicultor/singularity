@@ -45,7 +45,28 @@ keeps reading the old location until then.
 - Load-bearing: yes
 - Web:
   - Slots:
-    - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.chord.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.events.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.studio.shell`, `apps.website.shell`
+    - `Apps.App`
+    - `Apps.RailFraming`
+    - `Apps.Surface`
+    - `Apps.TabBar`
+    - `Apps.TabBarActions`
+    - `Apps.Overlay`
+  - Slot contributors:
+    - `Apps.App` ← `apps.agent-manager.shell`
+    - `Apps.App` ← `apps.browser.shell`
+    - `Apps.App` ← `apps.chord.shell`
+    - `Apps.App` ← `apps.debug.shell`
+    - `Apps.App` ← `apps.deploy.shell`
+    - `Apps.App` ← `apps.events.shell`
+    - `Apps.App` ← `apps.file-explorer.shell`
+    - `Apps.App` ← `apps.home.shell`
+    - `Apps.App` ← `apps.mail.shell`
+    - `Apps.App` ← `apps.pages.shell`
+    - `Apps.App` ← `apps.prototypes.shell`
+    - `Apps.App` ← `apps.settings.shell`
+    - `Apps.App` ← `apps.sonata.shell`
+    - `Apps.App` ← `apps.studio.shell`
+    - `Apps.App` ← `apps.website.shell`
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
     - `Apps.TabBar` ← `apps-core.tab-bar`
@@ -77,43 +98,13 @@ keeps reading the old location until then.
     - `useFocusedAppId`
     - `usePathname`
 - Cross-plugin:
-  - Imported by:
-    - `apps-core/app-launcher`
-    - `apps-core/app-rail`
-    - `apps-core/app-rail-framing`
-    - `apps-core/layout`
-    - `apps-core/surface`
-    - `apps-core/surface/floating`
-    - `apps-core/tab-bar`
-    - `apps-core/tab-surface`
-    - `apps-core/tabs`
-    - `apps-core/theme-scope`
-    - `apps/agent-manager/shell`
-    - `apps/browser/shell`
-    - `apps/chord/shell`
-    - `apps/debug/shell`
-    - `apps/deploy/shell`
-    - `apps/events/shell`
-    - `apps/file-explorer/shell`
-    - `apps/home/app-cards`
-    - `apps/home/shell`
-    - `apps/mail/shell`
-    - `apps/pages/shell`
-    - `apps/prototypes/compare/route`
-    - `apps/prototypes/shell`
-    - `apps/settings/shell`
-    - `apps/sonata/shell`
-    - `apps/studio/shell`
-    - `apps/website/shell`
-    - `config_v2/config-link`
-    - `config_v2/settings`
+  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×17
+    - `apps-core` ×10
+    - `ui` ×5
+    - `config_v2` ×2
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
-    - `ui/theme-engine`
-    - `ui/theme-engine/quick-theme`
-    - `ui/theme-engine/theme-customizer`
-    - `ui/theme-engine/theme-gallery`
-    - `ui/tokens/icons`
 - Exemptions:
   - Exempted by: `apps-core/layout` (0 debt)
 - Core:

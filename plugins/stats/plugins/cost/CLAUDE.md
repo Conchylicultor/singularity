@@ -195,13 +195,12 @@ override where it survives.
     - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
     - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
     - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `stats/commits` ×9
+    - `config_v2` ×3
+    - `infra/endpoints` ×2
+    - `stats` ×2
     - `conversations/conversation-view.conversationPane`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
     - `primitives/css/grid.Grid`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
@@ -209,22 +208,11 @@ override where it survives.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`
     - `primitives/pane.useOpenPane`
-    - `stats.Stats`
-    - `stats.useShowEmptyDays`
-    - `stats/commits.axisProps`
-    - `stats/commits.barCursor`
-    - `stats/commits.ChartState`
-    - `stats/commits.fillGaps`
-    - `stats/commits.gridProps`
-    - `stats/commits.lineCursor`
-    - `stats/commits.tooltipContentStyle`
-    - `stats/commits.tooltipLabelStyle`
-    - `stats/commits.yAxisFormatter`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "config"
-    - `report-kind` "cost-unpriced-model"
     - `report-kind` "cost-archive-shrink"
+    - `report-kind` "cost-unpriced-model"
   - Uses:
     - `config_v2.ConfigV2`
     - `database.db`

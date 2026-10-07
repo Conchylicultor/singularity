@@ -178,41 +178,23 @@ contributions each surface passes in, and per-entry plugin id
 
 - Description: Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
 - Web:
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfigResult`
-    - `config_v2.useSetConfig`
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×13
+    - `config_v2` ×3
+    - `primitives/css/control-panel` ×2
+    - `primitives/hover-reveal` ×2
+    - `primitives/live-state` ×2
+    - `primitives/sortable-list` ×2
     - `config_v2/fields.FieldRenderer`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/fill.Fill`
     - `primitives/css/grow.growClass`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.DropdownMenu`
-    - `primitives/css/ui-kit.DropdownMenuContent`
-    - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/css/ui-kit.DropdownMenuSection`
-    - `primitives/css/ui-kit.DropdownMenuSeparator`
-    - `primitives/css/ui-kit.DropdownMenuSub`
-    - `primitives/css/ui-kit.DropdownMenuSubContent`
-    - `primitives/css/ui-kit.DropdownMenuSubTrigger`
-    - `primitives/css/ui-kit.DropdownMenuTrigger`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/hover-reveal.hoverRevealClass`
-    - `primitives/hover-reveal.useHoverReveal`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceError`
     - `primitives/overlay/popup-open.PopupOpenScope`
-    - `primitives/sortable-list.SortableItem`
-    - `primitives/sortable-list.SortableList`
     - `primitives/view-switcher.useActiveViewId`
     - `ui/icons.Icon`
   - Exports (types):

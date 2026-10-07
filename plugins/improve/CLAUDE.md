@@ -6,7 +6,8 @@
 
 - Description: Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Companion actions join it as segments of one split pill via ImproveSlots.Segment. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
 - Web:
-  - Slots: `ImproveSlots.Segment` ← `improve.element-picker`
+  - Slots: `ImproveSlots.Segment`
+  - Slot contributors: `ImproveSlots.Segment` ← `improve.element-picker`
   - Contributes: `ActionBar.Item` → `ImproveButton`
   - Uses:
     - `primitives/css/ui-kit.Button`

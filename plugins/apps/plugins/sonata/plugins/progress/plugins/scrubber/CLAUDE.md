@@ -6,7 +6,12 @@
 
 - Description: Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).
 - Web:
-  - Slots: `SonataProgress.Marker` ← `apps.sonata.progress.bars`, `apps.sonata.progress.keys`, `apps.sonata.progress.loop`, `apps.sonata.progress.sections`
+  - Slots: `SonataProgress.Marker`
+  - Slot contributors:
+    - `SonataProgress.Marker` ← `apps.sonata.progress.bars`
+    - `SonataProgress.Marker` ← `apps.sonata.progress.keys`
+    - `SonataProgress.Marker` ← `apps.sonata.progress.loop`
+    - `SonataProgress.Marker` ← `apps.sonata.progress.sections`
   - Contributes: `SonataPlayer.Transport` "progress-bar" → `ProgressBar`
   - Uses:
     - `apps/sonata/player.SonataPlayer`

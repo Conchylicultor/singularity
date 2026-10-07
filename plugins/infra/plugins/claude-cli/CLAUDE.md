@@ -90,8 +90,8 @@ serves it with `serveCollection(claudeCliCalls, { from: _claudeCliCalls })`.
 - Server:
   - Contributes:
     - `resource.declare` "claude-cli-calls"
-    - `resource.declare` "claude-cli-calls:rows"
     - `resource.declare` "claude-cli-calls:groups"
+    - `resource.declare` "claude-cli-calls:rows"
     - `fork-data-exclusion` "claude_cli_calls"
   - Uses:
     - `conversations/model-provider/catalog.getModelCatalog`

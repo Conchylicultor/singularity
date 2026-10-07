@@ -70,8 +70,8 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
 - Server:
   - Contributes:
     - `resource.declare` "prompt-block-tasks"
-    - `resource.declare` "prompt-block-tasks:rows"
     - `resource.declare` "prompt-block-tasks:groups"
+    - `resource.declare` "prompt-block-tasks:rows"
     - `taskCategory` "pages"
   - Uses:
     - `infra/endpoints.implement`

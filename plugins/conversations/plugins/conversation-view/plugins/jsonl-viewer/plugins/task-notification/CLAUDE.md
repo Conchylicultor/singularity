@@ -23,7 +23,10 @@ pane by the sub-agent's own id), `background-shells` against its shells
 
 - Description: Renders background task completion notifications in the JSONL viewer, with a button onto the finished task that the owning plugin contributes through TaskNotification.Open (first claim wins).
 - Web:
-  - Slots: `TaskNotification.Open` ← `conversations.conversation-view.jsonl-viewer.background-shells`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`
+  - Slots: `TaskNotification.Open`
+  - Slot contributors:
+    - `TaskNotification.Open` ← `conversations.conversation-view.jsonl-viewer.background-shells`
+    - `TaskNotification.Open` ← `conversations.conversation-view.jsonl-viewer.tool-call.agent`
   - Contributes: `JsonlViewer.EventRenderer` "task-notification" → `TaskNotificationRow`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.EventLine`

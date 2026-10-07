@@ -41,8 +41,15 @@ directly — it is no longer re-exported here.)
 - Description: Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
 - Web:
   - Slots:
-    - `Item.Chips` ← `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view.dependent-count`, `conversations.conversation-view.op-status`
-    - `Item.Avatar` ← `conversations.agents`, `conversations.conversation-category`
+    - `Item.Chips`
+    - `Item.Avatar`
+  - Slot contributors:
+    - `Item.Chips` ← `conversations.conversation-preprompt`
+    - `Item.Chips` ← `conversations.conversation-progress`
+    - `Item.Chips` ← `conversations.conversation-view.dependent-count`
+    - `Item.Chips` ← `conversations.conversation-view.op-status`
+    - `Item.Avatar` ← `conversations.agents`
+    - `Item.Avatar` ← `conversations.conversation-category`
   - Uses:
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`

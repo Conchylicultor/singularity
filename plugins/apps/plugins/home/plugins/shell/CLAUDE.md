@@ -9,7 +9,8 @@ App shell for the Home launcher. Registers the `/home` app entry and defines the
 
 - Description: App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
 - Web:
-  - Slots: `Home.Section` ← `apps.home.app-cards`
+  - Slots: `Home.Section`
+  - Slot contributors: `Home.Section` ← `apps.home.app-cards`
   - Contributes:
     - `Apps.App` "Home" → `HomeLayout`
     - `ThemeEngine.Theme` "Home"

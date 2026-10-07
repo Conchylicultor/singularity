@@ -7,43 +7,49 @@
 - Description: Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
 - Web:
   - Slots:
-    - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.place-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+    - `ThemeCustomizer.Section`
+    - `themeCustomizerPane.Actions`
+  - Slot contributors:
+    - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`
+    - `ThemeCustomizer.Section` ← `ui.tokens.categorical`
+    - `ThemeCustomizer.Section` ← `ui.tokens.chart`
+    - `ThemeCustomizer.Section` ← `ui.tokens.chord-palette`
+    - `ThemeCustomizer.Section` ← `ui.tokens.color-adjust`
+    - `ThemeCustomizer.Section` ← `ui.tokens.color-palette`
+    - `ThemeCustomizer.Section` ← `ui.tokens.density`
+    - `ThemeCustomizer.Section` ← `ui.tokens.file-type-palette`
+    - `ThemeCustomizer.Section` ← `ui.tokens.font-family`
+    - `ThemeCustomizer.Section` ← `ui.tokens.icons`
+    - `ThemeCustomizer.Section` ← `ui.tokens.place-palette`
+    - `ThemeCustomizer.Section` ← `ui.tokens.scrollbar`
+    - `ThemeCustomizer.Section` ← `ui.tokens.shadow`
+    - `ThemeCustomizer.Section` ← `ui.tokens.shape`
+    - `ThemeCustomizer.Section` ← `ui.tokens.sidebar-metrics`
+    - `ThemeCustomizer.Section` ← `ui.tokens.sidebar-palette`
+    - `ThemeCustomizer.Section` ← `ui.tokens.type-scale`
+    - `ThemeCustomizer.Section` ← `ui.tweakcn.community-browser`
     - `themeCustomizerPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "theme-customizer"
-  - Uses:
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
+    - `ui/theme-engine` ×5
+    - `primitives/pane` ×3
+    - `config_v2` ×2
+    - `infra/endpoints` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/live-state` ×2
     - `apps-core.useCurrentAppId`
-    - `config_v2.useConfigResult`
-    - `config_v2.useScopeMembership`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.useEndpointMutation`
     - `primitives/css/color-picker.ColorPickerPopover`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.DropdownMenu`
-    - `primitives/css/ui-kit.DropdownMenuContent`
-    - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/detail-sections.defineDetailSections`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`
-    - `ui/theme-engine.ThemeEngine`
-    - `ui/theme-engine.ThemeScopeProvider`
-    - `ui/theme-engine.useResolvedTheme`
-    - `ui/theme-engine.useThemes`
-    - `ui/theme-engine.useThemeScopeId`
     - `ui/theme-engine/saved-themes.useEditTheme`
   - Exports (types):
     - `ColorAdjustEditor`

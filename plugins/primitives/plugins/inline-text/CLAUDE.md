@@ -42,7 +42,10 @@ Walkers register elsewhere (the primitive itself contributes none):
 
 - Description: Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
 - Web:
-  - Slots: `InlineTextWalkerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
+  - Slots: `InlineTextWalkerSlot`
+  - Slot contributors:
+    - `InlineTextWalkerSlot` ← `active-data`
+    - `InlineTextWalkerSlot` ← `conversations.conversation-view.markdown-extensions`
   - Exports (types):
     - `InlineTextWalker`
     - `StackedInlineWalkers`

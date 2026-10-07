@@ -54,34 +54,13 @@ different need, extend the primitive rather than allowlisting a copy.
     - `useElementSize`
     - `useResizeObserver`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×17
+    - `apps` ×5
+    - `shell` ×2
     - `apps-core/surface/floating`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/present`
-    - `apps/sonata/notation`
-    - `apps/sonata/piano-roll`
-    - `apps/sonata/primitives/keyboard`
-    - `primitives/adaptive-bar`
-    - `primitives/breadcrumb`
-    - `primitives/collapsible-wrap`
-    - `primitives/css/sticky/stack`
-    - `primitives/css/ui-kit`
-    - `primitives/data-table`
-    - `primitives/data-view`
-    - `primitives/data-view/gallery`
-    - `primitives/data-view/icons`
-    - `primitives/data-view/tree`
-    - `primitives/expandable`
-    - `primitives/graph-canvas`
-    - `primitives/metrics/chart-kit`
-    - `primitives/outline/rail`
-    - `primitives/overlay/floating-action`
-    - `primitives/overlay/image-viewer`
-    - `primitives/terminal`
     - `reorder`
     - `screenshot`
-    - `shell/global-action-bar`
-    - `shell/toast`
 - Exemptions:
   - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
 

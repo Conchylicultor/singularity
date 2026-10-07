@@ -6,9 +6,11 @@ import {
   pluginClaudeMdPath,
   pluginCompactDocPath,
   pluginDetailsDocPath,
+  pluginReferenceMdPath,
   renderCompactDoc,
   renderDetailsDoc,
   renderPluginClaudeMd,
+  renderPluginReferenceMd,
   formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -30,7 +32,7 @@ async function readIfPresent(file: string): Promise<string | null> {
 const check: Check = {
   id: "plugins-doc-in-sync",
   description:
-    "docs/plugins-compact.md, docs/plugins-details.md, and every plugin's CLAUDE.md AUTOGEN block match the current plugin source",
+    "docs/plugins-compact.md, docs/plugins-details.md, every plugin's CLAUDE.md AUTOGEN block, and every plugin's REFERENCE.md (present exactly when a list is summarized) match the current plugin source",
   async run() {
     const root = await getWorktreeRoot();
 
@@ -101,6 +103,27 @@ const check: Check = {
         return {
           ok: false,
           message: `${file.replace(`${root}/`, "")} AUTOGEN block is out of sync with plugin source`,
+          hint: "Run `./singularity build` and commit the regenerated file.",
+        };
+      }
+
+      const refFile = pluginReferenceMdPath(info);
+      const reference = renderPluginReferenceMd(info, root, tree.facets);
+      const refExisting = await readIfPresent(refFile);
+      const refExpected =
+        reference === null
+          ? null
+          : await formatGenerated({ file: refFile, content: reference });
+      if (refExisting !== refExpected) {
+        const rel = refFile.replace(`${root}/`, "");
+        return {
+          ok: false,
+          message:
+            refExpected === null
+              ? `${rel} is stale: the plugin's CLAUDE.md summarizes no list`
+              : refExisting === null
+                ? `${rel} is missing`
+                : `${rel} is out of sync with plugin source`,
           hint: "Run `./singularity build` and commit the regenerated file.",
         };
       }

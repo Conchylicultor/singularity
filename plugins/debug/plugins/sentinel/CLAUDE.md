@@ -313,44 +313,18 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `resource.declare` "sentinel.status"
     - `resource.declare` "sentinel.vitals"
     - `ConfigV2.Register` "sentinel"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.getConfig`
-    - `config_v2.watchConfig`
-    - `database/embedded.PG_PORT`
-    - `database/embedded.PG_SOCKET_DIR`
-    - `database/embedded.PG_USER`
-    - `debug/sentinel/status-file.createStatusWriter`
-    - `debug/sentinel/status-file.readSentinelVitals`
-    - `debug/sentinel/status-file.readSentinelWatch`
-    - `debug/sentinel/status-file.sentinelStatusDir`
-    - `debug/sentinel/status-file.STATUS_FILENAME`
-    - `debug/sentinel/status-file.VITALS_FILENAME`
-    - `debug/sentinel/status-file.writeSentinelVitals`
-    - `debug/trace/engine.captureTrace`
-    - `debug/trace/engine.defineTraceEventClass`
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/file-watcher.FileWatcher`
-    - `infra/host/duress/latch.clearDuress`
-    - `infra/host/duress/latch.duressLatchDir`
-    - `infra/host/duress/latch.isUnderDuress`
-    - `infra/host/duress/latch.LATCH_FILENAME`
-    - `infra/host/duress/latch.readDuress`
-    - `infra/host/duress/latch.readFreshDuress`
-    - `infra/host/duress/latch.refreshDuress`
-    - `infra/host/duress/latch.setDuress`
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/host/duress/latch` ×8
+    - `debug/sentinel/status-file` ×7
+    - `infra/spawn/daemon` ×5
+    - `config_v2` ×3
+    - `database/embedded` ×3
+    - `primitives/log-channels` ×3
+    - `debug/trace/engine` ×2
+    - `infra/file-watcher` ×2
+    - `reports` ×2
     - `infra/paths.isHostSingleton`
-    - `infra/spawn/daemon.DaemonDecl`
-    - `infra/spawn/daemon.DaemonTransition`
-    - `infra/spawn/daemon.DEFAULT_BACKOFF`
-    - `infra/spawn/daemon.defineDaemon`
-    - `infra/spawn/daemon.WorkerDaemonInstance`
     - `network/live.serveValue`
-    - `primitives/log-channels.defineLogSink`
-    - `primitives/log-channels.readChannelEntries`
-    - `primitives/log-channels.readChannelJson`
-    - `reports.recordReport`
-    - `reports.ReportKind`
   - Exports (values): `readDuressEpisodes`
   - Register:
     - `defineFileWatcher('sentinel.status')`

@@ -69,159 +69,29 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `Badge`
     - `formatStatusLabel`
 - Cross-plugin:
-  - Imported by:
-    - `apps-core/layout`
-    - `apps-core/surface/floating`
-    - `apps/deploy/analytics/dashboard`
-    - `apps/deploy/composition`
-    - `apps/deploy/deploy-history`
-    - `apps/deploy/deployments`
-    - `apps/deploy/deployments/runs-arm`
-    - `apps/deploy/remote-deploy`
-    - `apps/deploy/ssh-setup`
-    - `apps/events/event-list`
-    - `apps/events/sources`
-    - `apps/events/sources/source-detail/runs`
-    - `apps/events/sources/source-detail/runs/extracted-events`
-    - `apps/events/sources/source-detail/status`
-    - `apps/file-explorer/git`
-    - `apps/mail/attachments`
-    - `apps/mail/search`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/compare`
-    - `apps/prototypes/compare/exhibit`
-    - `apps/prototypes/compare/route`
-    - `apps/prototypes/gallery`
-    - `apps/prototypes/present`
-    - `apps/prototypes/thumbnails`
-    - `apps/sonata/sources/midi/folders`
-    - `apps/sonata/sources/ultimate-guitar`
-    - `apps/studio/compositions`
-    - `apps/studio/compositions/entry-points`
-    - `apps/studio/compositions/membership-summary`
-    - `apps/studio/compositions/release`
-    - `apps/studio/compositions/release/release-info`
-    - `apps/studio/contributions`
-    - `apps/website/improve`
-    - `apps/website/landing/layers`
-    - `apps/website/pages/apps`
-    - `auth`
-    - `auth/apple-signing/setup-wizard`
+  - Imported by: 152 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×34
+    - `apps` ×33
+    - `conversations` ×23
+    - `reports` ×10
+    - `plugin-meta` ×8
+    - `primitives` ×8
+    - `tasks` ×7
+    - `build` ×5
+    - `review` ×4
+    - `fields` ×3
+    - `apps-core` ×2
+    - `auth` ×2
+    - `infra` ×2
+    - `page` ×2
+    - `runs` ×2
     - `backup/runs-arm`
-    - `build/build-info`
-    - `build/build-status`
-    - `build/deployment`
-    - `build/runs-arm`
-    - `build/serve-composition`
     - `config_v2/settings`
-    - `conversations/conversation-preprompt`
-    - `conversations/conversation-ui/item`
-    - `conversations/conversation-view/allow-monitor`
-    - `conversations/conversation-view/artifacts/skill`
-    - `conversations/conversation-view/dependent-count`
-    - `conversations/conversation-view/header`
-    - `conversations/conversation-view/jsonl-viewer/subagents`
-    - `conversations/conversation-view/jsonl-viewer/tool-call`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
-    - `conversations/conversation-view/launch-prompts`
-    - `conversations/conversation-view/status`
-    - `conversations/summary`
-    - `conversations/transcript-watcher`
     - `database/query-deadline`
-    - `debug/boot-budget`
-    - `debug/boot-watchdog`
-    - `debug/broadcasts`
-    - `debug/claude-cli-calls`
-    - `debug/config-orphans`
-    - `debug/duress-shed`
-    - `debug/health-monitor`
-    - `debug/live-state-churn/emit`
-    - `debug/live-state-churn/monitor`
-    - `debug/live-state-health`
-    - `debug/memory`
-    - `debug/op-rate`
-    - `debug/profiling/ops`
-    - `debug/queue`
-    - `debug/queue-health`
-    - `debug/read-set`
-    - `debug/read-set-shrink`
-    - `debug/render-profiler`
-    - `debug/report-storm`
-    - `debug/reports`
-    - `debug/sentinel`
-    - `debug/session-divergence`
-    - `debug/slow-ops`
-    - `debug/slow-ops/cluster`
-    - `debug/stall-monitor`
-    - `debug/stuck-spans`
-    - `debug/timeline`
-    - `debug/trace/boot`
-    - `debug/trace/client-boot`
-    - `debug/trace/contention`
-    - `debug/trace/gates`
-    - `debug/trace/pane`
-    - `debug/trace/stall`
-    - `debug/worktree-cleanup`
-    - `fields/enum/table`
-    - `fields/tags/inline`
-    - `fields/tags/table`
-    - `infra/deps`
-    - `infra/events-test`
-    - `page/annotations/instructions/instructions-page`
-    - `page/editor`
-    - `plugin-meta/exhibits`
-    - `plugin-meta/facets/exports/render-contributions`
-    - `plugin-meta/facets/exports/render-detail`
-    - `plugin-meta/facets/structure/render-detail`
-    - `plugin-meta/plugin-view`
-    - `plugin-meta/plugin-view/dependencies`
-    - `plugin-meta/plugin-view/inclusion`
-    - `plugin-meta/plugin-view/runtimes`
-    - `primitives/commit-list`
-    - `primitives/css/link-chip`
-    - `primitives/css/toggle-chip`
-    - `primitives/data-view/gallery`
-    - `primitives/data-view/list`
-    - `primitives/data-view/table`
-    - `primitives/file-links`
-    - `primitives/overlay/image-viewer`
     - `release/runs-arm`
     - `reorder`
-    - `reports/adaptive-bar`
-    - `reports/caret-flight`
-    - `reports/collab-hydration`
-    - `reports/live-state-stale-drop`
-    - `reports/optimistic-divergence`
-    - `reports/page-undo-conflict`
-    - `reports/render-loop`
-    - `reports/resource-errors`
-    - `reports/theme-resolution`
-    - `reports/viewport-escape`
-    - `review/code-review`
-    - `review/plugin-changes`
-    - `review/plugin-changes/api-changes`
-    - `review/plugin-changes/file-changes`
-    - `runs`
-    - `runs/run-outcome`
     - `shell/notifications`
     - `stats/responsiveness`
-    - `tasks/attempt-status`
-    - `tasks/attempt-view`
-    - `tasks/auto-start`
-    - `tasks/automations`
-    - `tasks/task-deps-tree`
-    - `tasks/task-status`
-    - `tasks/task-track`
 - Core:
   - Exports (types): `BadgeVariant`
 

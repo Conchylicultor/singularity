@@ -6,40 +6,31 @@
 
 - Description: Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
 - Web:
-  - Slots: `agentReportPane.Actions` ← `primitives.pane`
+  - Slots: `agentReportPane.Actions`
+  - Slot contributors: `agentReportPane.Actions` ← `primitives.pane`
   - Contributes:
     - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
     - `Pane.Register` "agent-report"
     - `TaskNotification.Open` "sub-agent"
-  - Uses:
-    - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
-    - `conversations/conversation-view/jsonl-viewer/subagents.SubagentDuration`
-    - `conversations/conversation-view/jsonl-viewer/subagents.SubagentLastStep`
-    - `conversations/conversation-view/jsonl-viewer/subagents.SubagentPaneBody`
-    - `conversations/conversation-view/jsonl-viewer/subagents.subagentStateDisplay`
-    - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
-    - `conversations/conversation-view/jsonl-viewer/subagents.useSubagentStatus`
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/conversation-view/jsonl-viewer/subagents` ×6
+    - `primitives/pane` ×4
+    - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
+    - `primitives/css/spacing` ×2
     - `conversations/conversation-view/jsonl-viewer/task-notification.TaskNotification`
-    - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
-    - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+    - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.familyClass`
     - `primitives/css/badge.Badge`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/markdown.Markdown`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
   - Exports (values): `agentReportPane`
 - Cross-plugin:

@@ -9,8 +9,8 @@
   - Contributes:
     - `FileExplorer.Sidebar` "Places" → `PlacesSidebar`
     - `FileExplorer.Sidebar` "Storage" → `StorageMeter`
-    - `FileExplorer.Places` "home"
     - `FileExplorer.Places` "downloads"
+    - `FileExplorer.Places` "home"
     - `FileExplorer.Places` "singularity"
     - `FileExplorer.Places` "startup-volume"
     - `FileExplorer.Places` "trash"

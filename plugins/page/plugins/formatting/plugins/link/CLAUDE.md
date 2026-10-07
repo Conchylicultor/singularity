@@ -39,14 +39,9 @@ the link.
 - Description: Inline links in the page editor: the selection toolbar's link control (⌘K), and a hover card under any link showing its URL with Copy and Edit (URL + title, Remove link).
 - Web:
   - Contributes: `Editor.FormatAction` → `LinkButton`
-  - Uses:
-    - `page/editor.BlockTextPluginProps`
-    - `page/editor.Editor`
-    - `page/editor.normalizeLinkUrl`
-    - `page/editor.OPEN_LINK_POPOVER_COMMAND`
-    - `page/editor.registerBlockTextExtension`
-    - `page/editor.useBlockEditor`
-    - `page/editor.useFormatToolbar`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×7
+    - `primitives/css/ui-kit` ×3
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
@@ -54,9 +49,6 @@ the link.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.Input`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/floating-surface.FloatingSurface`
     - `primitives/overlay/popover.InlinePopover`

@@ -98,39 +98,23 @@ every build — including a composition this plugin is not in.
 - Description: Chrome-inspector-style element picker: <ElementPicker> arms a full-screen overlay, the user hovers and clicks any element, and onPick receives its <ui-context> metadata (plugin/slot lineage, selector, source). Also declares the <ui-context> inline chip, so whatever can make the token can display it, and stamps every slot contribution with its lineage while in the composition.
 - Web:
   - Contributes: `InlineChip.Tag` "ui-context" → `UiContextTag`
-  - Uses:
-    - `primitives/css/coords.Placed`
-    - `primitives/css/coords.placedClasses`
-    - `primitives/css/coords.placedStyle`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
+    - `primitives/ui-context` ×5
+    - `primitives/css/coords` ×3
+    - `primitives/css/fill` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/icon-button` ×2
+    - `primitives/overlay/tooltip` ×2
+    - `primitives/slot-render` ×2
+    - `primitives/text-editor/inline-chip` ×2
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.PortalForwardProvider`
-    - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/viewport-overlay.ViewportOverlay`
-    - `primitives/icon-button.IconButton`
-    - `primitives/icon-button.IconButtonProps`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/overlay/tooltip.Kbd`
-    - `primitives/overlay/tooltip.TooltipDoc`
-    - `primitives/slot-render.registerSlotItemAttrs`
-    - `primitives/slot-render.registerSlotItemMiddleware`
-    - `primitives/text-editor/inline-chip.inlineChip`
-    - `primitives/text-editor/inline-chip.InlineChip`
-    - `primitives/ui-context.appendLineage`
-    - `primitives/ui-context.collectLineage`
-    - `primitives/ui-context.collectMeta`
-    - `primitives/ui-context.contributionNodeAttrs`
-    - `primitives/ui-context.LINEAGE_ATTR`
     - `ui/icons.Icon`
   - Exports (types): `ElementPickerProps`
   - Exports (values):

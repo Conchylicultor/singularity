@@ -8,8 +8,8 @@
 - Server:
   - Contributes:
     - `resource.declare` "queue-ranks"
-    - `resource.declare` "queue-ranks:rows"
     - `resource.declare` "queue-ranks:groups"
+    - `resource.declare` "queue-ranks:rows"
     - `trigger` "queue.seed-rank"
     - `trigger` "queue.task-status-rerank"
   - Uses:

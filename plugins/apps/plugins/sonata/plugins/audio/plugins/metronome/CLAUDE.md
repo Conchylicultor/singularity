@@ -32,24 +32,14 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
     - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
     - `Sonata.Hud` "count-in" → `CountInOverlay`
     - `ConfigV2.WebRegister` "sonata.metronome"
-  - Uses:
-    - `apps/sonata/audio/engine.LoopWindowBeats`
-    - `apps/sonata/audio/engine.ScheduleHandle`
-    - `apps/sonata/audio/engine.scheduleOrigin`
-    - `apps/sonata/audio/engine.startScheduling`
-    - `apps/sonata/audio/engine.useAudioGraph`
-    - `apps/sonata/audio/engine.useDriftCorrection`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/audio/engine` ×6
+    - `apps/sonata/session` ×3
+    - `config_v2` ×3
+    - `primitives/css/control-panel` ×2
     - `apps/sonata/library.sonataPlayerPane`
-    - `apps/sonata/session.SonataSession`
-    - `apps/sonata/session.useCursorApi`
-    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
     - `primitives/css/center.Center`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/slider.Slider`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/viewport-overlay.ViewportOverlay`

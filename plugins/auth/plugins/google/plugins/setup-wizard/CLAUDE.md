@@ -6,31 +6,21 @@
 
 - Description: Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
 - Web:
-  - Slots: `googleSetupPane.Actions` ← `primitives.pane`
+  - Slots: `googleSetupPane.Actions`
+  - Slot contributors: `googleSetupPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "google-setup"
-  - Uses:
-    - `auth.accountsRoute`
-    - `auth.currentWorktreeName`
-    - `auth.startConnectFlow`
-    - `auth.useAccountStatus`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/setup-steps` ×6
+    - `auth` ×4
+    - `primitives/css/ui-kit` ×2
+    - `primitives/live-state` ×2
+    - `primitives/pane` ×2
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/setup-steps.Step`
-    - `primitives/setup-steps.StepCommand`
-    - `primitives/setup-steps.StepDone`
-    - `primitives/setup-steps.StepLink`
-    - `primitives/setup-steps.StepNote`
-    - `primitives/setup-steps.Steps`
   - Exports (values): `googleSetupPane`
 - Cross-plugin:
   - Imported by: `auth/google`

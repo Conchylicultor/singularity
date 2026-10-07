@@ -103,16 +103,14 @@ plus a per-song reset.
   - Contributes:
     - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
     - `Sonata.Section` "Tracks" → `TrackMixerPanel`
-  - Uses:
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/document` ×8
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/live-state` ×2
+    - `primitives/overlay/floating-action` ×2
+    - `primitives/search` ×2
     - `apps/sonata/audio/instruments.SonataAudio`
-    - `apps/sonata/document.defineSongSetting`
-    - `apps/sonata/document.SonataDocument`
-    - `apps/sonata/document.SongSetting`
-    - `apps/sonata/document.useFailSongSetting`
-    - `apps/sonata/document.useLibrarySong`
-    - `apps/sonata/document.useMountedSongId`
-    - `apps/sonata/document.useSongSetting`
-    - `apps/sonata/document.useWriteSongSetting`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `infra/endpoints.fetchEndpoint`
@@ -124,23 +122,13 @@ plus a per-song reset.
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/slider.Slider`
-    - `primitives/css/spacing.insetClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/optimistic-mutation.enqueueResourceWrite`
-    - `primitives/overlay/floating-action.FloatingAction`
-    - `primitives/overlay/floating-action.FloatingActionFadeIn`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/search.SearchInput`
-    - `primitives/search.useTextFilter`
     - `ui/icons.Icon`
   - Exports (types): `TrackMixerEntry`
   - Exports (values):

@@ -7,7 +7,11 @@
 - Description: Landing surface for the Pages app (shown at bare `/pages`): a quick-create + recent-pages launchpad rendered through the PagesWelcome.Section slot.
 - Web:
   - Slots:
-    - `PagesWelcome.Section` ← `apps.pages.welcome.quick-create`, `apps.pages.welcome.recent-pages`
+    - `PagesWelcome.Section`
+    - `pages-root.actions`
+  - Slot contributors:
+    - `PagesWelcome.Section` ← `apps.pages.welcome.quick-create`
+    - `PagesWelcome.Section` ← `apps.pages.welcome.recent-pages`
     - `pages-root.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "pages-root"
   - Uses:

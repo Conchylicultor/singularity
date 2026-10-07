@@ -184,69 +184,21 @@ genuine transient-chrome list escapes with
     - `Row`
     - `SectionHeaderRow`
 - Cross-plugin:
-  - Imported by:
-    - `apps/browser/bookmarks`
-    - `apps/browser/start-page`
-    - `apps/browser/tabs`
-    - `apps/chord/curriculum`
-    - `apps/deploy/analytics/dashboard`
-    - `apps/mail/reading-pane`
-    - `apps/mail/search`
-    - `apps/pages/content-search`
-    - `apps/pages/shell`
-    - `apps/pages/trash`
-    - `apps/sonata/sources/ultimate-guitar`
-    - `apps/sonata/track-mixer`
-    - `apps/studio/compositions`
-    - `apps/studio/compositions/entry-points`
-    - `apps/studio/graph`
+  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×15
+    - `ui` ×11
+    - `page` ×9
+    - `primitives` ×9
+    - `conversations` ×5
+    - `plugin-meta` ×3
+    - `tasks` ×3
     - `code-explorer/file-resolve`
     - `config_v2/settings`
-    - `conversations/agents`
-    - `conversations/conversation-ui/row`
-    - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/dependencies`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `debug/trace/pane`
     - `history/dialog`
-    - `page/annotations/todo`
-    - `page/editor`
-    - `page/inline-date`
-    - `page/open-as-page`
-    - `page/page-link`
-    - `page/place`
-    - `page/sub-page`
-    - `page/turn-into-page`
-    - `page/url-paste`
-    - `plugin-meta/facets/exports/render-detail`
-    - `plugin-meta/plugin-view/dependencies`
-    - `plugin-meta/plugin-view/sub-plugins`
-    - `primitives/action-presentation`
-    - `primitives/data-view`
-    - `primitives/data-view/list`
-    - `primitives/data-view/view-core`
-    - `primitives/folder-picker`
-    - `primitives/log-channels`
-    - `primitives/metrics`
-    - `primitives/outline/rail`
-    - `primitives/section-card`
     - `reorder/editor`
     - `search/quick-find`
     - `shell/health-report`
-    - `tasks/task-attachments`
-    - `tasks/task-dependencies`
-    - `tasks/task-events`
-    - `ui/theme-engine/theme-customizer`
-    - `ui/tokens/color-palette`
-    - `ui/tokens/density`
-    - `ui/tokens/font-family`
-    - `ui/tokens/icons`
-    - `ui/tokens/scrollbar`
-    - `ui/tokens/shadow`
-    - `ui/tokens/shape`
-    - `ui/tokens/sidebar-metrics`
-    - `ui/tokens/sidebar-palette`
-    - `ui/tokens/type-scale`
 - Exemptions:
   - Exempts itself from:
     - `row/no-adhoc-row` — `web` (sanctioned)

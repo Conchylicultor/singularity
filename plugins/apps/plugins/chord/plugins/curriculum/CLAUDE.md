@@ -197,8 +197,8 @@ A round nothing was typed into reads exactly like the next one, so after
 - Description: The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, how many other chords a loop may hold), useCatalog (the live chord.catalog), useCurriculumWrites (chords, blanks, extras; refusals as toasts), and <ChordsSection> — the trainer side panel's collapsible Chords section: Clear / Undo clear, the Blanks and Other-chords-per-loop pills, and every chord of the song index in tracks and sections, each chip cycling off → hear → practise, one chip per section's rare chords, and a footer giving the exact numbers of the chip under the pointer. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, and the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index.
 - Server:
   - Contributes:
-    - `resource.declare` "chord.curriculum"
     - `resource.declare` "chord.catalog"
+    - `resource.declare` "chord.curriculum"
   - Uses:
     - `apps/chord/song-index.countTokenSets`
     - `apps/chord/song-index.loadReadyIndexIdentity`
@@ -221,23 +221,16 @@ A round nothing was typed into reads exactly like the next one, so after
     - `POST /api/chord/curriculum/blanks`
     - `POST /api/chord/curriculum/extras`
 - Web:
-  - Uses:
-    - `apps/chord/vocabulary.ChordNumeral`
-    - `apps/chord/vocabulary.chordToneStyle`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
-    - `music/chord-box.chordPaint`
-    - `music/chord-box.ChordPaint`
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/collapsible` ×4
+    - `primitives/css/coords` ×3
+    - `apps/chord/vocabulary` ×2
+    - `infra/endpoints` ×2
+    - `music/chord-box` ×2
+    - `primitives/hover-reveal` ×2
     - `network/live.useLive`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
-    - `primitives/css/coords.pct`
-    - `primitives/css/coords.placedClasses`
-    - `primitives/css/coords.placedStyle`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
@@ -248,8 +241,6 @@ A round nothing was typed into reads exactly like the next one, so after
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
-    - `primitives/hover-reveal.hoverRevealClass`
-    - `primitives/hover-reveal.useHoverReveal`
     - `primitives/persistent-draft.useDraft`
     - `shell/toast.showToast`
     - `ui/icons.Icon`

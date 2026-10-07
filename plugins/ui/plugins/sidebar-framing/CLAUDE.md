@@ -6,7 +6,11 @@
 
 - Description: Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
 - Web:
-  - Slots: `SidebarFraming.Variant` ← `ui.sidebar-framing.floating`, `ui.sidebar-framing.flush`, `ui.sidebar-framing.inset`
+  - Slots: `SidebarFraming.Variant`
+  - Slot contributors:
+    - `SidebarFraming.Variant` ← `ui.sidebar-framing.floating`
+    - `SidebarFraming.Variant` ← `ui.sidebar-framing.flush`
+    - `SidebarFraming.Variant` ← `ui.sidebar-framing.inset`
   - Contributes:
     - `ConfigV2.WebRegister` "sidebar-framing"
     - `DynamicEnum.Options` "Sidebar framing variant"

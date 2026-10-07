@@ -8,8 +8,15 @@
 - Load-bearing: yes
 - Web:
   - Slots:
-    - `Shell.Sidebar` ← `conversations.agents`, `conversations.all-conversations`, `conversations.conversations-view`, `stats`, `tasks.automations`, `tasks.task-detail`
+    - `Shell.Sidebar`
     - `Shell.Toolbar`
+  - Slot contributors:
+    - `Shell.Sidebar` ← `conversations.agents`
+    - `Shell.Sidebar` ← `conversations.all-conversations`
+    - `Shell.Sidebar` ← `conversations.conversations-view`
+    - `Shell.Sidebar` ← `stats`
+    - `Shell.Sidebar` ← `tasks.automations`
+    - `Shell.Sidebar` ← `tasks.task-detail`
   - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports (values): `Shell`
 - Cross-plugin:

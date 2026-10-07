@@ -6,7 +6,10 @@
 
 - Description: Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources and name their rows through SidebarConversationItem, which reads the Conversation list title setting (conversation / task / short task title). Registers the conversation list's config (which title each row shows) so the Settings → Config value persists.
 - Web:
-  - Slots: `SidebarSources` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
+  - Slots: `SidebarSources`
+  - Slot contributors:
+    - `SidebarSources` ← `conversations.conversations-view.data-view.history`
+    - `SidebarSources` ← `conversations.conversations-view.data-view.queue`
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
     - `config_v2.ConfigV2`

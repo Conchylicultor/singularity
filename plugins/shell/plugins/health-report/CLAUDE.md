@@ -104,15 +104,20 @@ detail is rendered through `renderIsolated`.
 
 - Description: Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
 - Web:
-  - Slots: `HealthReport.Row` ← `database.query-deadline`, `debug.queue-health`, `debug.sentinel`, `infra.claude-cli.availability`, `infra.health`, `reports.resource-errors`, `tasks.worktree-identity`
-  - Uses:
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.useCollapsibleContext`
-    - `primitives/css/activity-ring.Activity`
-    - `primitives/css/activity-ring.ActivityRing`
-    - `primitives/css/activity-ring.ActivityState`
+  - Slots: `HealthReport.Row`
+  - Slot contributors:
+    - `HealthReport.Row` ← `database.query-deadline`
+    - `HealthReport.Row` ← `debug.queue-health`
+    - `HealthReport.Row` ← `debug.sentinel`
+    - `HealthReport.Row` ← `infra.claude-cli.availability`
+    - `HealthReport.Row` ← `infra.health`
+    - `HealthReport.Row` ← `reports.resource-errors`
+    - `HealthReport.Row` ← `tasks.worktree-identity`
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/collapsible` ×4
+    - `primitives/css/activity-ring` ×3
+    - `primitives/css/ui-kit` ×3
+    - `primitives/error-boundary` ×2
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -121,11 +126,6 @@ detail is rendered through `renderIsolated`.
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/error-boundary.boundaryReportSink`
-    - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/row-actions.RowActions`
     - `primitives/scope/scoped-store.defineScopedStore`

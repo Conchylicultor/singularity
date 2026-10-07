@@ -256,7 +256,11 @@ CLAUDE.md ("Row tone").
 - Description: Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
 - Web:
   - Contributes: `DataViewSlots.View` "Tree" → `TreeView`
-  - Uses:
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×25
+    - `primitives/tree` ×9
+    - `primitives/css/ui-kit` ×2
+    - `primitives/latest-ref` ×2
     - `primitives/collapsible.ExpandAllButton`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
@@ -264,46 +268,8 @@ CLAUDE.md ("Row tone").
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/data-view.DATA_VIEW_HEADER_OFFSET_VAR`
-    - `primitives/data-view.DataViewRenderProps`
-    - `primitives/data-view.DataViewSlots`
-    - `primitives/data-view.FieldCell`
-    - `primitives/data-view.FieldDef`
-    - `primitives/data-view.GroupedSections`
-    - `primitives/data-view.HierarchyConfig`
-    - `primitives/data-view.ItemActionProps`
-    - `primitives/data-view.ItemActionsDescriptor`
-    - `primitives/data-view.leadingSlot`
-    - `primitives/data-view.makeSortComparator`
-    - `primitives/data-view.partitionIntoSections`
-    - `primitives/data-view.pickLeadingField`
-    - `primitives/data-view.pickPrimaryField`
-    - `primitives/data-view.readFallback`
-    - `primitives/data-view.resolveBodyFields`
-    - `primitives/data-view.RowTone`
-    - `primitives/data-view.rowToneClass`
-    - `primitives/data-view.SortRule`
-    - `primitives/data-view.useGroupingRegistry`
-    - `primitives/data-view.useItemActionZones`
-    - `primitives/data-view.useResolveCell`
-    - `primitives/data-view.useResolveCellEditor`
-    - `primitives/data-view.useResolveOperatorSet`
-    - `primitives/data-view.useRowFilter`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
-    - `primitives/tree.flatExpandAll`
-    - `primitives/tree.RowChrome`
-    - `primitives/tree.RowChromeMenuHelpers`
-    - `primitives/tree.RowMenuItem`
-    - `primitives/tree.TreeItem`
-    - `primitives/tree.TreeList`
-    - `primitives/tree.useFlatExpandAll`
-    - `primitives/tree.useTreeListContext`
-    - `primitives/tree.useTreeRow`
     - `ui/icons.Icon`
   - Exports (types): `TreeViewOptions`
 

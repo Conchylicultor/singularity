@@ -21,6 +21,11 @@ Auth state and affordances come only from
 - Description: App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.
 - Web:
   - Slots:
+    - `Mail.Sidebar`
+    - `Mail.Banner`
+    - `Mail.RailBadge`
+    - `mail-root.actions`
+  - Slot contributors:
     - `Mail.Sidebar` ← `apps.mail.search`
     - `Mail.Banner` ← `apps.mail.sync-status`
     - `Mail.RailBadge` ← `apps.mail.sync-status`

@@ -127,6 +127,9 @@ embedded document): a reload reopens the canvas the link carries.
 - Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare.
 - Web:
   - Slots:
+    - `prototypes-present.actions`
+    - `prototypes-present-canvas.actions`
+  - Slot contributors:
     - `prototypes-present.actions` ← `primitives.pane`
     - `prototypes-present-canvas.actions` ← `primitives.pane`
   - Contributes:
@@ -135,34 +138,13 @@ embedded document): a reload reopens the canvas the link carries.
     - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
     - `PrototypeFrameActions` "present" → `PresentMenu`
     - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-  - Uses:
-    - `apps-core/tabs.navigate`
-    - `apps-core/tabs.useSurfaceFocused`
-    - `apps/prototypes/canvas.CanvasFrame`
-    - `apps/prototypes/canvas.CanvasFrameView`
-    - `apps/prototypes/canvas.decodeCanvas`
-    - `apps/prototypes/canvas.encodeCanvas`
-    - `apps/prototypes/canvas.frameA`
-    - `apps/prototypes/canvas.FrameActionRow`
-    - `apps/prototypes/canvas.FrameId`
-    - `apps/prototypes/canvas.FrameResolution`
-    - `apps/prototypes/canvas.FrameSource`
-    - `apps/prototypes/canvas.layoutFrames`
-    - `apps/prototypes/canvas.letterOf`
-    - `apps/prototypes/canvas.OptionsPill`
-    - `apps/prototypes/canvas.PageExtent`
-    - `apps/prototypes/canvas.pageHeightOf`
-    - `apps/prototypes/canvas.PrototypeCanvas`
-    - `apps/prototypes/canvas.prototypeDetailPane`
-    - `apps/prototypes/canvas.PrototypeDetailProvider`
-    - `apps/prototypes/canvas.PrototypeFrame`
-    - `apps/prototypes/canvas.PrototypeFrameActions`
-    - `apps/prototypes/canvas.sameExtent`
-    - `apps/prototypes/canvas.SizeChip`
-    - `apps/prototypes/canvas.useFrameNames`
-    - `apps/prototypes/canvas.usePrototypeDetail`
-    - `apps/prototypes/canvas.useWindowSize`
-    - `apps/prototypes/canvas.VersionStepper`
+  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/prototypes/canvas` ×25
+    - `primitives/css/ui-kit` ×8
+    - `apps-core/tabs` ×2
+    - `primitives/hover-reveal` ×2
+    - `primitives/latest-ref` ×2
+    - `primitives/pane` ×2
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.fillClasses`
@@ -170,30 +152,16 @@ embedded document): a reload reopens the canvas the link carries.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.DropdownMenu`
-    - `primitives/css/ui-kit.DropdownMenuContent`
-    - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/css/ui-kit.DropdownMenuSection`
-    - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/embed.embedUrl`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.matchResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/overlay/surface-overlay.SurfaceOverlay`
     - `primitives/overlay/tooltip.Kbd`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/icons.Icon`
 

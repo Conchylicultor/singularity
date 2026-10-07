@@ -67,7 +67,8 @@ the refusal.
 
 - Description: Sonata recording: RecordingVideo — a song's YouTube video with its volume (on/off + slider) below it, for whoever shows the song's recording to render. When the open score is timed on that video (Score.meta.recording) it is registered as the session's transport driver while mounted and ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo — with a sync offset slider; otherwise it plays on its own with YouTube's controls, labelled not synced. The video's sound, level and the offset persist in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config.
 - Web:
-  - Slots: `SonataRecording.Refused` ← `apps.sonata.sources.ultimate-guitar.alignment`
+  - Slots: `SonataRecording.Refused`
+  - Slot contributors: `SonataRecording.Refused` ← `apps.sonata.sources.ultimate-guitar.alignment`
   - Contributes: `ConfigV2.WebRegister` "sonata.recording"
   - Uses:
     - `apps/sonata/session.useSession`

@@ -161,8 +161,8 @@ surfaces as an unhandled rejection, which the reports plugin itself files.
 - Server:
   - Contributes:
     - `report-kind` "job-deadline-exceeded"
-    - `report-kind` "job-zombie"
     - `report-kind` "job-slot-floor"
+    - `report-kind` "job-zombie"
   - Uses:
     - `infra/jobs.JOB_SLOT_FLOOR_KIND`
     - `infra/jobs.JobDeadlineEvent`

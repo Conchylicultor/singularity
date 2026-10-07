@@ -174,7 +174,9 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses:
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×22
+    - `primitives/rank-reorder` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.clipClasses`
@@ -185,31 +187,7 @@ conditional hook.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/data-view.DataViewAggregateConfig`
-    - `primitives/data-view.DataViewRenderProps`
-    - `primitives/data-view.DataViewRowEntry`
-    - `primitives/data-view.DataViewSection`
-    - `primitives/data-view.DataViewSlots`
-    - `primitives/data-view.FieldCell`
-    - `primitives/data-view.GroupedSections`
-    - `primitives/data-view.ItemActionsDescriptor`
-    - `primitives/data-view.leadingSlot`
-    - `primitives/data-view.ManualOrderConfig`
-    - `primitives/data-view.pickLeadingField`
-    - `primitives/data-view.pickPrimaryField`
-    - `primitives/data-view.readFallback`
-    - `primitives/data-view.resolveBodyFields`
-    - `primitives/data-view.rowToneClass`
-    - `primitives/data-view.SectionBody`
-    - `primitives/data-view.useDataViewSections`
-    - `primitives/data-view.useIsChipField`
-    - `primitives/data-view.useItemActionZones`
-    - `primitives/data-view.useResolveCell`
-    - `primitives/data-view.useResolveCellEditor`
-    - `primitives/data-view.useResolveOperatorSet`
     - `primitives/link-gesture.activationProps`
-    - `primitives/rank-reorder.RankReorderProvider`
-    - `primitives/rank-reorder.useRankSortableItem`
     - `primitives/tree.TreeRowChrome`
     - `primitives/virtual-rows.VirtualRows`
   - Exports (types): `ListViewOptions`

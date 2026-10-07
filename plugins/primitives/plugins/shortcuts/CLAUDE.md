@@ -25,7 +25,11 @@ exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
 - Description: Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
 - Load-bearing: yes
 - Web:
-  - Slots: `Shortcuts.Shortcut` ← `apps-core.surface.floating`, `apps-core.surface.solo`, `reorder.edit-mode`
+  - Slots: `Shortcuts.Shortcut`
+  - Slot contributors:
+    - `Shortcuts.Shortcut` ← `apps-core.surface.floating`
+    - `Shortcuts.Shortcut` ← `apps-core.surface.solo`
+    - `Shortcuts.Shortcut` ← `reorder.edit-mode`
   - Contributes: `Core.Root` → `ShortcutManager`
   - Uses:
     - `primitives/latest-ref.useLatestRef`
@@ -42,27 +46,10 @@ exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
     - `useFocusedSurfaceId`
     - `useSurfaceShortcuts`
 - Cross-plugin:
-  - Imported by:
-    - `apps-core/surface/floating`
-    - `apps-core/surface/solo`
-    - `apps-core/tabs`
-    - `apps/chord/trainer`
-    - `apps/file-explorer/browser`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/present`
-    - `apps/sonata/controls`
-    - `apps/sonata/progress/loop`
-    - `apps/website/pages/apps`
-    - `primitives/action-presentation`
-    - `primitives/css/ui-kit`
-    - `primitives/data-view/capsule-toolbar`
-    - `primitives/file-viewer/media`
-    - `primitives/icon-button`
-    - `primitives/launch`
-    - `primitives/overlay/image-viewer`
-    - `primitives/overlay/imperative-dialog/confirm`
-    - `primitives/path-bar`
-    - `primitives/undo-redo`
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×10
+    - `apps` ×7
+    - `apps-core` ×3
     - `reorder/edit-mode`
     - `tasks/task-draft-form`
 - Exemptions:

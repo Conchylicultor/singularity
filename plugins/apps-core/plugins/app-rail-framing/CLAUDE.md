@@ -6,7 +6,10 @@
 
 - Description: App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
 - Web:
-  - Slots: `AppRailFraming.Variant` ← `apps-core.app-rail-framing.hidden`, `apps-core.app-rail-framing.rail`
+  - Slots: `AppRailFraming.Variant`
+  - Slot contributors:
+    - `AppRailFraming.Variant` ← `apps-core.app-rail-framing.hidden`
+    - `AppRailFraming.Variant` ← `apps-core.app-rail-framing.rail`
   - Contributes:
     - `ConfigV2.WebRegister` "app-rail-framing"
     - `DynamicEnum.Options` "App rail variant"

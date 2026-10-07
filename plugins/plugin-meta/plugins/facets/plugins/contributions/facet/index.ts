@@ -9,6 +9,7 @@ import {
   createFacet,
   getFacet,
   type DocFact,
+  type DocFactGroup,
   type ExtractContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import {
@@ -326,13 +327,15 @@ export default createFacet<ContributionsFacetData>({
       facts.push({
         folder: "web",
         key: "Contributes",
-        values: renderValues(web),
+        noun: "contributions",
+        groups: renderGroups(web),
       });
     if (server.length > 0)
       facts.push({
         folder: "server",
         key: "Contributes",
-        values: renderValues(server),
+        noun: "contributions",
+        groups: renderGroups(server),
       });
     return facts;
   },
@@ -413,15 +416,6 @@ function fillPaneIds(tree: PluginTree): void {
   }
 }
 
-/**
- * How many same-slot entries it takes before the run is folded onto one line.
- * Purely a readability threshold, NOT a correctness one: below it the output is
- * per-line, above it the output is folded, and both spell exactly the same set.
- * 12 is where a run stops reading as a list and starts reading as noise —
- * reorder mints 212 config directives into one slot, sonata ~100 instruments.
- */
-const FOLD_THRESHOLD = 12;
-
 /** One contribution, one line — the long-standing format. */
 const fmt = (c: DocMetaContribution): string => {
   const parts = [`\`${c.slotDisplayName ?? c.slotId}\``];
@@ -435,24 +429,30 @@ const fmt = (c: DocMetaContribution): string => {
 const slotKeyOf = (c: DocMetaContribution): string =>
   c.slotDisplayName ?? c.slotId;
 
+/** Whether a contribution's only distinguishing content is its label. */
+const isLabelOnly = (c: DocMetaContribution): boolean =>
+  typeof c.doc.label === "string" &&
+  c.doc.label.length > 0 &&
+  !c.doc.detail &&
+  !c.componentName;
+
 /**
- * Render one runtime's contributions, folding a long run of same-slot entries
- * onto a single line.
+ * One runtime's contributions, one line each, grouped by slot — so the doc can
+ * summarize a long list as one count per slot (reorder mints ~226 config
+ * directives into one slot, sonata ~127 instruments).
  *
- * The fold is gated on the group being **label-only** — every member has a
- * `doc.label` and neither a `doc.detail` nor a `componentName` — because the
- * folded line has room for exactly one field per member. A group carrying
- * details or component names would have to drop them to fold, and a doc line
- * that quietly loses the component name is worse than 200 repetitive ones. So
- * the fold is only ever taken where it is lossless: same ids, one line instead
- * of N, listed in sorted order. Every id is listed in full, never truncated, so
- * `grep <config-id> docs/plugins-details.md` still finds it.
+ * Groups keep their first member's position, and members their declared order:
+ * the output reflects what the plugin declares, not a re-ordering the renderer
+ * invented. The exception is a group of label-only entries, which denotes a SET
+ * and is spelled sorted: its array order is a runtime DECLARATION order (reorder
+ * mints one config directive per reorderable slot from a
+ * `subscribeSlotsDeclared` callback, in whatever order barrels happened to be
+ * imported in that process), which is not stable across processes. Unsorted,
+ * the generated doc stops being a pure function of the checkout:
+ * `plugins-doc-in-sync` passes when run alone and FAILS inside a full
+ * check/build run, on bytes that record process history rather than any edit.
  */
-function renderValues(contributions: DocMetaContribution[]): string[] {
-  // Group by slot key, keeping each group anchored at its FIRST member's
-  // position and members in their original relative order: the per-line output
-  // must reflect what the plugin actually declares, not a re-ordering the
-  // renderer invented. (The folded line is the one exception — see below.)
+function renderGroups(contributions: DocMetaContribution[]): DocFactGroup[] {
   const groups = new Map<string, DocMetaContribution[]>();
   for (const c of contributions) {
     const key = slotKeyOf(c);
@@ -460,40 +460,9 @@ function renderValues(contributions: DocMetaContribution[]): string[] {
     if (!group) groups.set(key, (group = []));
     group.push(c);
   }
-
-  const values: string[] = [];
-  for (const [key, group] of groups) {
-    const foldable =
-      group.length > FOLD_THRESHOLD &&
-      group.every(
-        (c) =>
-          typeof c.doc.label === "string" &&
-          c.doc.label.length > 0 &&
-          !c.doc.detail &&
-          !c.componentName,
-      );
-    if (foldable) {
-      // The folded line collapses N entries whose only distinguishing content
-      // is the label, so it denotes a SET — and a set has to be spelled in a
-      // canonical order. The array order it would otherwise inherit is a
-      // runtime DECLARATION order (reorder mints one config directive per
-      // reorderable slot from a `subscribeSlotsDeclared` callback, in whatever
-      // order barrels happened to be imported in that process), which is not
-      // stable across processes. Unsorted, the generated doc stops being a pure
-      // function of the checkout: `plugins-doc-in-sync` passes when run alone
-      // and FAILS inside a full check/build run, on bytes that record process
-      // history rather than any edit. `map` already yields a fresh array, so
-      // the sort never touches the grouped one the per-line path renders.
-      const labels = group
-        .map((c) => `"${c.doc.label}"`)
-        .sort()
-        .join(", ");
-      values.push(`\`${key}\` ×${group.length}: ${labels}`);
-    } else {
-      // Includes every group of 1 — 1 <= FOLD_THRESHOLD — so an ordinary
-      // plugin's output is byte-identical to what it has always been.
-      for (const c of group) values.push(fmt(c));
-    }
-  }
-  return values;
+  return [...groups].map(([key, group]) => {
+    const values = group.map(fmt);
+    if (group.every(isLabelOnly)) values.sort();
+    return { label: `\`${key}\``, values };
+  });
 }

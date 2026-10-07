@@ -104,62 +104,48 @@ last desktop creates a new one; moving before the first clamps).
     - `Surface.Placement`
     - `ConfigV2.WebRegister` "floating-chrome"
     - `ThemeEngine.VariantGroup` "Window titlebar" → `TitlebarStylePicker`
-    - `Shortcuts.Shortcut` ×14: "floating.close (mod+w)", "floating.cycle-next (mod+`)", "floating.cycle-prev (mod+shift+~)", "floating.cycle-prev-backquote (mod+shift+`)", "floating.desktop-next (ctrl+alt+pagedown)", "floating.desktop-prev (ctrl+alt+pageup)", "floating.minimize (mod+m)", "floating.snap-down (ctrl+alt+arrowdown)", "floating.snap-left (ctrl+alt+arrowleft)", "floating.snap-right (ctrl+alt+arrowright)", "floating.snap-up (ctrl+alt+arrowup)", "floating.toggle-pin (ctrl+alt+p)", "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-  - Uses:
+    - `Shortcuts.Shortcut` "floating.close (mod+w)"
+    - `Shortcuts.Shortcut` "floating.cycle-next (mod+`)"
+    - `Shortcuts.Shortcut` "floating.cycle-prev (mod+shift+~)"
+    - `Shortcuts.Shortcut` "floating.cycle-prev-backquote (mod+shift+`)"
+    - `Shortcuts.Shortcut` "floating.desktop-next (ctrl+alt+pagedown)"
+    - `Shortcuts.Shortcut` "floating.desktop-prev (ctrl+alt+pageup)"
+    - `Shortcuts.Shortcut` "floating.minimize (mod+m)"
+    - `Shortcuts.Shortcut` "floating.snap-down (ctrl+alt+arrowdown)"
+    - `Shortcuts.Shortcut` "floating.snap-left (ctrl+alt+arrowleft)"
+    - `Shortcuts.Shortcut` "floating.snap-right (ctrl+alt+arrowright)"
+    - `Shortcuts.Shortcut` "floating.snap-up (ctrl+alt+arrowup)"
+    - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
+    - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
+    - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
+  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×9
+    - `apps-core/surface` ×4
+    - `apps-core/tabs` ×3
+    - `config_v2` ×3
+    - `primitives/scope/app-instance` ×3
+    - `primitives/shortcuts` ×3
+    - `apps-core/app-icon` ×2
+    - `apps-core/surface/floating/wallpaper` ×2
+    - `primitives/css/layer` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/hover-reveal` ×2
+    - `primitives/overlay/cursor-menu` ×2
+    - `ui/tab-bar` ×2
+    - `ui/theme-engine` ×2
     - `apps-core.Apps`
-    - `apps-core/app-icon.AppIconView`
-    - `apps-core/app-icon.DEFAULT_APP_ICON`
-    - `apps-core/surface.PlacementChromeProps`
-    - `apps-core/surface.PlacementDef`
-    - `apps-core/surface.Surface`
-    - `apps-core/surface.usePlacementStyle`
-    - `apps-core/surface/floating/wallpaper.DesktopContextMenu`
-    - `apps-core/surface/floating/wallpaper.WallpaperAttribution`
-    - `apps-core/tabs.getSurfaceMode`
-    - `apps-core/tabs.Tab`
-    - `apps-core/tabs.useTabs`
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
-    - `primitives/css/layer.Layer`
-    - `primitives/css/layer.layerClasses`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.DropdownMenuCheckboxItem`
-    - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/css/ui-kit.DropdownMenuSeparator`
-    - `primitives/css/ui-kit.DropdownMenuShortcut`
-    - `primitives/css/ui-kit.DropdownMenuSub`
-    - `primitives/css/ui-kit.DropdownMenuSubContent`
-    - `primitives/css/ui-kit.DropdownMenuSubTrigger`
     - `primitives/dom/element-size.useElementSize`
-    - `primitives/hover-reveal.hoverRevealClass`
-    - `primitives/hover-reveal.useHoverReveal`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/overlay/cursor-menu.CursorAnchor`
-    - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
     - `primitives/overlay/tooltip.WithTooltip`
-    - `primitives/scope/app-instance.appInstanceKey`
-    - `primitives/scope/app-instance.legacyInstanceKey`
-    - `primitives/scope/app-instance.mayAdoptLegacyPayload`
     - `primitives/scope/install-sink.defineInstallSink`
-    - `primitives/shortcuts.defineShortcut`
-    - `primitives/shortcuts.formatShortcutLabel`
-    - `primitives/shortcuts.getFocusedSurfaceId`
     - `ui/icons.Icon`
-    - `ui/tab-bar.Tab`
-    - `ui/tab-bar.TabIcon`
-    - `ui/theme-engine.ThemeEngine`
-    - `ui/theme-engine.useThemeScopeId`
 - Server:
   - Contributes: `ConfigV2.Register` "floating-chrome"
   - Uses: `config_v2.ConfigV2`

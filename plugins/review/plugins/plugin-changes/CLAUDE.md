@@ -20,8 +20,21 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
 - Excluded: yes
 - Web:
   - Slots:
-    - `PluginChangesSlots.Section` ← `review.plugin-changes.api-changes`, `review.plugin-changes.file-changes`
-    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`, `plugin-meta.facets.cross-refs.render-diff`, `plugin-meta.facets.db-schema.render-diff`, `plugin-meta.facets.exemptions.render-diff`, `plugin-meta.facets.exports.render-diff`, `plugin-meta.facets.registrations.render-diff`, `plugin-meta.facets.resources.render-diff`, `plugin-meta.facets.routes.render-diff`, `plugin-meta.facets.slots.render-diff`, `plugin-meta.facets.structure.render-diff`
+    - `PluginChangesSlots.Section`
+    - `PluginChangesSlots.DiffRenderer`
+  - Slot contributors:
+    - `PluginChangesSlots.Section` ← `review.plugin-changes.api-changes`
+    - `PluginChangesSlots.Section` ← `review.plugin-changes.file-changes`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.cross-refs.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.db-schema.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.exemptions.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.exports.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.registrations.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.resources.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.routes.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.slots.render-diff`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.structure.render-diff`
   - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
   - Uses:
     - `infra/endpoints.useEndpoint`

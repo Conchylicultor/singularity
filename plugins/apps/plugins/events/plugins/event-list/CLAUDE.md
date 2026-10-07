@@ -127,6 +127,9 @@ ascending), `All`, and `By category` (grouped). The surface is the collection's
 - Description: The events DataView: the live `events.list` collection (a segmented scroll kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the `events.list` live collection over the events table joined to its source (a required lookup, routed in reverse: a source write refills that source's events, gated on the columns the list reads), with soft-deleted events and a disabled source's events hidden by default.
 - Web:
   - Slots:
+    - `EventList.Fields`
+    - `eventListPane.Actions`
+  - Slot contributors:
     - `EventList.Fields` ← `apps.events.sources.source-field`
     - `eventListPane.Actions` ← `primitives.pane`
   - Contributes:
@@ -159,8 +162,8 @@ ascending), `All`, and `By category` (grouped). The surface is the collection's
 - Server:
   - Contributes:
     - `resource.declare` "events.list"
-    - `resource.declare` "events.list:rows"
     - `resource.declare` "events.list:groups"
+    - `resource.declare` "events.list:rows"
   - Uses:
     - `apps/events/events-core._eventSources`
     - `apps/events/events-core.eventsTable`

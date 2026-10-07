@@ -22,8 +22,8 @@
 - Server:
   - Contributes:
     - `resource.declare` "plugin-health-reviews"
-    - `resource.declare` "plugin-health-reviews:rows"
     - `resource.declare` "plugin-health-reviews:groups"
+    - `resource.declare` "plugin-health-reviews:rows"
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`

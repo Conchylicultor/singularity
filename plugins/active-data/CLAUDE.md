@@ -125,32 +125,22 @@ Behavior:
 
 - Description: Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute block (tag) and code (claimed code-span) renderers, and declare inline chips through primitives/text-editor/inline-chip; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
 - Web:
-  - Slots: `ActiveData.Tag` ← `active-data.commit-link`, `active-data.plugin-link`, `active-data.task`
+  - Slots: `ActiveData.Tag`
+  - Slot contributors:
+    - `ActiveData.Tag` ← `active-data.commit-link`
+    - `ActiveData.Tag` ← `active-data.plugin-link`
+    - `ActiveData.Tag` ← `active-data.task`
   - Contributes:
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-  - Uses:
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/markdown` ×5
+    - `primitives/text-editor/inline-chip` ×5
+    - `primitives/inline-text` ×4
+    - `infra/endpoints` ×2
+    - `page/editor` ×2
+    - `primitives/live-state` ×2
     - `network/live.useLive`
-    - `page/editor.blockTextTokenExtension`
-    - `page/editor.registerBlockTextExtensionSource`
-    - `primitives/inline-text.InlineTextWalker`
-    - `primitives/inline-text.InlineTextWalkerContext`
-    - `primitives/inline-text.InlineTextWalkerSlot`
-    - `primitives/inline-text.useInlineTextWalker`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/markdown.InlineCode`
-    - `primitives/markdown.MarkdownEnhancement`
-    - `primitives/markdown.MarkdownEnhancementContext`
-    - `primitives/markdown.MarkdownEnhancerSlot`
-    - `primitives/markdown.useMarkdownEnhancement`
-    - `primitives/text-editor/inline-chip.InlineChipContribution`
-    - `primitives/text-editor/inline-chip.inlineChipExtension`
-    - `primitives/text-editor/inline-chip.inlineChips`
-    - `primitives/text-editor/inline-chip.inlineChipWebNode`
-    - `primitives/text-editor/inline-chip.renderInlineChip`
   - Exports (types):
     - `ActiveDataBindingHandle`
     - `ActiveDataBlockContribution`

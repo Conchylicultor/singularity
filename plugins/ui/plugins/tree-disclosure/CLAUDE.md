@@ -6,7 +6,11 @@
 
 - Description: Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
 - Web:
-  - Slots: `TreeDisclosure.Variant` ← `ui.tree-disclosure.column`, `ui.tree-disclosure.dimmed-leaf`, `ui.tree-disclosure.merged`
+  - Slots: `TreeDisclosure.Variant`
+  - Slot contributors:
+    - `TreeDisclosure.Variant` ← `ui.tree-disclosure.column`
+    - `TreeDisclosure.Variant` ← `ui.tree-disclosure.dimmed-leaf`
+    - `TreeDisclosure.Variant` ← `ui.tree-disclosure.merged`
   - Contributes:
     - `ConfigV2.WebRegister` "tree-disclosure"
     - `DynamicEnum.Options` "Tree disclosure variant"

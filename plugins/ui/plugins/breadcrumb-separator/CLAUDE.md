@@ -6,7 +6,10 @@
 
 - Description: Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
 - Web:
-  - Slots: `BreadcrumbSeparator.Variant` ← `ui.breadcrumb-separator.chevron`, `ui.breadcrumb-separator.slash`
+  - Slots: `BreadcrumbSeparator.Variant`
+  - Slot contributors:
+    - `BreadcrumbSeparator.Variant` ← `ui.breadcrumb-separator.chevron`
+    - `BreadcrumbSeparator.Variant` ← `ui.breadcrumb-separator.slash`
   - Contributes:
     - `ConfigV2.WebRegister` "breadcrumb-separator"
     - `DynamicEnum.Options` "Breadcrumb separator variant"

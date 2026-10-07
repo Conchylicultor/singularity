@@ -84,24 +84,20 @@ Verify with `e2e/improve-verify.ts` after `./singularity build`.
 - Description: The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
 - Web:
   - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×3
+    - `apps/website/shell` ×2
+    - `primitives/css/spacing` ×2
     - `apps/deploy/analytics/collect.track`
-    - `apps/website/shell.WebsiteHeader`
-    - `apps/website/shell.WebsiteNavLink`
     - `primitives/action-presentation.useActionForm`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
-    - `primitives/css/spacing.insetClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/text-editor.TextEditor`
     - `primitives/ui-context/element-picker.ElementPicker`

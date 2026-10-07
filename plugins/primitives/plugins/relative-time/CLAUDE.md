@@ -11,65 +11,21 @@ dense-list spelling for a trailing time column, where "ago" is implied.
 
 - Description: Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×23
+    - `debug` ×11
+    - `conversations` ×8
+    - `build` ×3
+    - `tasks` ×3
+    - `infra` ×2
     - `active-data/commit-link`
-    - `apps/browser/start-page`
-    - `apps/deploy/analytics/dashboard`
-    - `apps/deploy/deploy-history`
-    - `apps/deploy/deployments`
-    - `apps/deploy/health`
-    - `apps/deploy/remote-deploy`
-    - `apps/events/event-list`
-    - `apps/events/sources/source-detail/runs`
-    - `apps/events/sources/source-detail/status`
-    - `apps/mail/reading-pane`
-    - `apps/mail/search`
-    - `apps/mail/threads`
-    - `apps/pages/page-tree`
-    - `apps/pages/trash`
-    - `apps/pages/welcome/recent-pages`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/gallery`
-    - `apps/sonata/library`
-    - `apps/sonata/playback-history`
-    - `apps/sonata/player`
-    - `apps/sonata/sources/midi/file-preview`
-    - `apps/studio/compositions/release`
-    - `apps/studio/compositions/release/release-info`
-    - `build`
-    - `build/build-info`
-    - `build/serve-composition`
-    - `conversations/all-conversations`
-    - `conversations/conversation-ui/item`
-    - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/background-shells`
-    - `conversations/conversation-view/jsonl-viewer/subagents`
-    - `conversations/conversation-view/op-status`
-    - `conversations/conversation-view/running-agents`
-    - `debug/boot-profile`
-    - `debug/claude-cli-calls`
-    - `debug/config-orphans`
-    - `debug/health-monitor`
-    - `debug/live-state-health`
-    - `debug/profiling/ops`
-    - `debug/reports`
-    - `debug/sentinel`
-    - `debug/slow-ops/cluster`
-    - `debug/slow-ops/pane`
-    - `debug/trace/pane`
     - `fields/date/table`
     - `history/dialog`
-    - `infra/background/catalog`
-    - `infra/deps`
     - `page/annotations/agent-notes/authorship`
     - `plugin-meta/plugin-health`
     - `primitives/sync-status`
     - `runs`
     - `shell/notifications`
-    - `tasks/automations`
-    - `tasks/task-header`
-    - `tasks/task-list`
 - Web:
   - Exports (types): `RelativeTimeFormat`
   - Exports (values):

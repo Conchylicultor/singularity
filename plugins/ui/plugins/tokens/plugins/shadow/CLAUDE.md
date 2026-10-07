@@ -9,28 +9,22 @@
   - Contributes:
     - `ThemeEngine.TokenGroup` "Shadow"
     - `ThemeCustomizer.Section` "Shadow" → `ShadowSection`
-  - Uses:
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleContent`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/theme-engine/theme-customizer` ×3
+    - `primitives/collapsible` ×2
+    - `primitives/css/row` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
     - `primitives/css/cluster.Cluster`
     - `primitives/css/color-picker.ColorPickerPopover`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/row.Row`
-    - `primitives/css/row.SectionHeaderRow`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
-    - `ui/theme-engine/theme-customizer.FillFromMenu`
-    - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-    - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
 - Core:
   - Uses:
     - `ui/theme-engine.both`

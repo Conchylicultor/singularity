@@ -149,25 +149,31 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 - Description: The Events app's Sources surface: the sidebar entry, the sources DataView with a registry-driven `+` menu, and the per-source side-pane whose sections are contributions. Renders every source type's configuration form generically from its `configFields`, so a source type ships no form code.
 - Web:
   - Slots:
-    - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.runs`, `apps.events.sources.source-detail.schedule`, `apps.events.sources.source-detail.settings`, `apps.events.sources.source-detail.status`
+    - `EventSourceDetail.Section`
+    - `EventSourceActions`
+    - `eventSourcesPane.Actions`
+    - `eventSourceDetailPane.Actions`
+  - Slot contributors:
+    - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.runs`
+    - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.schedule`
+    - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.settings`
+    - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.status`
     - `EventSourceActions` ← `apps.events.sources`
-    - `eventSourcesPane.Actions` ← `apps.events.sources.refresh-all`, `primitives.pane`
+    - `eventSourcesPane.Actions` ← `apps.events.sources.refresh-all`
+    - `eventSourcesPane.Actions` ← `primitives.pane`
     - `eventSourceDetailPane.Actions` ← `primitives.pane`
   - Contributes:
-    - `Pane.Register` "event-sources"
     - `Pane.Register` "event-source-detail"
+    - `Pane.Register` "event-sources"
     - `Events.Sidebar` "Sources"
     - `EventSourceActions` "open" → `SourceOpenAction`
     - `EventSourceActions` "enabled" → `SourceToggleAction`
     - `EventSourceActions` "delete" → `SourceDeleteAction`
-  - Uses:
-    - `apps/events/events-core.EventSources`
-    - `apps/events/events-core.useCreateEventSource`
-    - `apps/events/events-core.useDeleteEventSource`
-    - `apps/events/events-core.useEventSourceOrigin`
-    - `apps/events/events-core.useEventSourceRow`
-    - `apps/events/events-core.useEventSources`
-    - `apps/events/events-core.useUpdateEventSource`
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/events/events-core` ×7
+    - `primitives/data-view` ×5
+    - `primitives/pane` ×5
+    - `primitives/css/ui-kit` ×4
     - `apps/events/shell.Events`
     - `config_v2/fields.FieldRenderer`
     - `infra/endpoints.getEndpointErrorMessage`
@@ -180,25 +186,11 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.DialogDescription`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/data-view.CreateOption`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.FieldDef`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.matchResource`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/overlay/tooltip.WithTooltip`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
   - Exports (types):
     - `ConfigValues`

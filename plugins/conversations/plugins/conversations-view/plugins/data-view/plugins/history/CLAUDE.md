@@ -6,7 +6,8 @@
 
 - Description: Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.
 - Web:
-  - Slots: `history-actions` ← `conversations.conversations-view.data-view.history`
+  - Slots: `history-actions`
+  - Slot contributors: `history-actions` ← `conversations.conversations-view.data-view.history`
   - Contributes:
     - `SidebarSources` "History" → `HistorySource`
     - `history-actions` "close" → `CloseConvAction`

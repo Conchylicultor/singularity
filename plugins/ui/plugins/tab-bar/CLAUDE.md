@@ -18,7 +18,11 @@ needing a DOM handle wraps `<Tab>` in its own element.
 
 - Description: Themable tab bar: chip / underline / connected variants.
 - Web:
-  - Slots: `TabBarSlots.Variant` ← `ui.tab-bar.chip`, `ui.tab-bar.connected`, `ui.tab-bar.underline`
+  - Slots: `TabBarSlots.Variant`
+  - Slot contributors:
+    - `TabBarSlots.Variant` ← `ui.tab-bar.chip`
+    - `TabBarSlots.Variant` ← `ui.tab-bar.connected`
+    - `TabBarSlots.Variant` ← `ui.tab-bar.underline`
   - Contributes:
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Tab bar variant"

@@ -7,25 +7,18 @@
 - Description: Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages with restore and permanent-delete actions.
 - Web:
   - Contributes: `Pages.Sidebar` "Trash" → `PagesTrash`
-  - Uses:
-    - `apps/pages/shell.Pages`
-    - `apps/pages/shell.PagesSidebarRow`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
+    - `apps/pages/shell` ×2
+    - `network/live` ×2
+    - `primitives/cursor-pagination` ×2
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.LiveListResult`
-    - `network/live.useLive`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Dialog`
-    - `primitives/css/ui-kit.DialogContent`
-    - `primitives/css/ui-kit.DialogDescription`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/cursor-pagination.InfiniteScrollFooter`
-    - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`

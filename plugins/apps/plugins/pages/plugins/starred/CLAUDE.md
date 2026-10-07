@@ -65,8 +65,8 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
 - Server:
   - Contributes:
     - `resource.declare` "pages-starred"
-    - `resource.declare` "pages-starred:rows"
     - `resource.declare` "pages-starred:groups"
+    - `resource.declare` "pages-starred:rows"
   - Uses:
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`

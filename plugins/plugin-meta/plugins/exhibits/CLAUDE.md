@@ -104,7 +104,8 @@ the `Specimens.Specimen` dispatch slot — so there is one id namespace for both
 
 - Description: Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() / useExhibit(id) answer loading / found / missing / ambiguous; <ExhibitView exhibit width?/> renders any arm inside its own error boundary. Debug → Exhibits is the gallery: every exhibit grouped by id prefix, at each of its widths, badged by runtime (isolated / region / app) and geometry.
 - Web:
-  - Slots: `exhibits.actions` ← `primitives.pane`
+  - Slots: `exhibits.actions`
+  - Slot contributors: `exhibits.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "exhibits"
     - `DebugApp.Sidebar` "Exhibits"

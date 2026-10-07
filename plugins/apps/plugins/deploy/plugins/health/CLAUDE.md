@@ -36,29 +36,18 @@ verdict is loading, and the SSH-setup card seeds open.
   - Contributes:
     - `Servers.Fields` "status" → `StatusField`
     - `ServerDetail.Section` "Status" → `ServerStatusSection`
-  - Uses:
-    - `apps/deploy/servers.Server`
-    - `apps/deploy/servers.ServerDetail`
-    - `apps/deploy/servers.servers`
-    - `apps/deploy/servers.Servers`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×5
+    - `apps/deploy/servers` ×4
+    - `network/live` ×4
+    - `primitives/setup-steps` ×2
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.LiveRowResult`
-    - `network/live.mapRow`
-    - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/setup-steps.StepDone`
-    - `primitives/setup-steps.StepNote`
   - Exports (types):
     - `ServerHealthRow`
     - `ServerStatus`
@@ -75,8 +64,8 @@ verdict is loading, and the SSH-setup card seeds open.
 - Server:
   - Contributes:
     - `resource.declare` "deploy.server-health"
-    - `resource.declare` "deploy.server-health:rows"
     - `resource.declare` "deploy.server-health:groups"
+    - `resource.declare` "deploy.server-health:rows"
   - Uses:
     - `apps/deploy/servers._deployServers`
     - `apps/deploy/servers.getServerSshPrivateKey`

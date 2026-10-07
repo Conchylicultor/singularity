@@ -66,8 +66,8 @@ the ranked things are config entries with no parent row to cascade from.
 - Server:
   - Contributes:
     - `resource.declare` "usage-stats"
-    - `resource.declare` "usage-stats:rows"
     - `resource.declare` "usage-stats:groups"
+    - `resource.declare` "usage-stats:rows"
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`

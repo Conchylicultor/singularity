@@ -17,7 +17,12 @@ pads the whole box (`padComposer`) can drop the row's own inset.
 
 - Description: Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
 - Web:
-  - Slots: `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.exit-menu`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `primitives.prompt-editor.voice-input`
+  - Slots: `PromptEditorSlots.FloatingAction`
+  - Slot contributors:
+    - `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.exit-menu`
+    - `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.prompt-templates`
+    - `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.push-and-exit`
+    - `PromptEditorSlots.FloatingAction` ← `primitives.prompt-editor.voice-input`
   - Uses:
     - `primitives/css/fill.fillClasses`
     - `primitives/css/grow-relay.GrowRelay`

@@ -8,10 +8,10 @@ Generic side-by-side / text diff renderer. The domain-agnostic diff-rendering cl
 
 - Description: Generic side-by-side / text diff renderer primitive. Exposes TextDiff (two in-memory strings), DiffView/DiffOrImageView (worktree file vs a git ref), DiffRenderer, and the shiki token helpers.
 - Web:
-  - Uses:
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpoint`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/overlay/image-viewer` ×5
+    - `primitives/syntax-highlight` ×5
+    - `infra/endpoints` ×3
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`
@@ -22,16 +22,6 @@ Generic side-by-side / text diff renderer. The domain-agnostic diff-rendering cl
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/dom-selection.selectionRange`
     - `primitives/loading.Loading`
-    - `primitives/overlay/image-viewer.ImageLoad`
-    - `primitives/overlay/image-viewer.ImageProbeState`
-    - `primitives/overlay/image-viewer.MissingImage`
-    - `primitives/overlay/image-viewer.useImageLoad`
-    - `primitives/overlay/image-viewer.useImageProbe`
-    - `primitives/syntax-highlight.getHighlighter`
-    - `primitives/syntax-highlight.languageForPath`
-    - `primitives/syntax-highlight.SHIKI_LANGS`
-    - `primitives/syntax-highlight.themeForMode`
-    - `primitives/syntax-highlight.useDarkMode`
   - Exports (types):
     - `DiffTokens`
     - `FileDiffState`

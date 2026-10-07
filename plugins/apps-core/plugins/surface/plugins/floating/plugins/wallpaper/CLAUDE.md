@@ -16,15 +16,17 @@ entry carries the move — `server/internal/store.ts` spells neither path.
 
 - Description: Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, search/import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
 - Web:
-  - Slots: `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.from-url`, `apps-core.surface.floating.wallpaper.openverse`, `apps-core.surface.floating.wallpaper.upload`
+  - Slots: `Wallpaper.Provider`
+  - Slot contributors:
+    - `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.from-url`
+    - `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.openverse`
+    - `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.upload`
   - Contributes: `ConfigV2.WebRegister` "wallpaper"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpoint`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `config_v2` ×3
+    - `infra/endpoints` ×3
+    - `primitives/css/ui-kit` ×2
+    - `primitives/overlay/cursor-menu` ×2
     - `primitives/css/grid.Grid`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
@@ -33,11 +35,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/loading.Loading`
-    - `primitives/overlay/cursor-menu.CursorAnchor`
-    - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`

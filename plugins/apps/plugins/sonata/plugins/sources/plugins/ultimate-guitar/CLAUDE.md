@@ -239,15 +239,12 @@ surfacing as crash tasks, not just toasts.
     - `Library.Source` "ultimate-guitar"
     - `Sonata.Section` "Ultimate Guitar" → `UltimateGuitarEditorSection`
     - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
-  - Uses:
-    - `apps/sonata/document.SonataDocument`
-    - `apps/sonata/document.useSongDocument`
-    - `apps/sonata/library.Library`
-    - `apps/sonata/library.openSongImperative`
-    - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSonataApp`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpointMutation`
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×4
+    - `apps/sonata/document` ×2
+    - `apps/sonata/library` ×2
+    - `apps/sonata/shell` ×2
+    - `infra/endpoints` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
@@ -257,10 +254,6 @@ surfacing as crash tasks, not just toasts.
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.DialogDescription`
-    - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/css/ui-kit.ScrollArea`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`

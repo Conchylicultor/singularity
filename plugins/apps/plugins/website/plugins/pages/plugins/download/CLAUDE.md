@@ -24,19 +24,14 @@ installer beside another's source. The installer's steps are written out in
   - Contributes:
     - `Pane.Register` "website-download"
     - `WebsiteHeader` "download" → `DownloadNavItem`
-  - Uses:
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/website/shell` ×6
+    - `primitives/collapsible` ×4
+    - `primitives/css/spacing` ×3
+    - `primitives/pane` ×3
+    - `primitives/css/ui-kit` ×2
     - `apps/deploy/analytics/collect.track`
     - `apps/website/pages/guide.guidePane`
-    - `apps/website/shell.WebsiteArrow`
-    - `apps/website/shell.WebsiteBand`
-    - `apps/website/shell.WebsiteChrome`
-    - `apps/website/shell.WebsiteHeader`
-    - `apps/website/shell.WebsiteHero`
-    - `apps/website/shell.WebsiteNavLink`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
@@ -44,16 +39,8 @@ installer beside another's source. The installer's steps are written out in
     - `primitives/css/grid.Grid`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.insetClass`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
   - Exports (values): `downloadPane`
 - Cross-plugin:

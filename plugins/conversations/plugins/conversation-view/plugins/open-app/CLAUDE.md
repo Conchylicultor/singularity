@@ -6,7 +6,10 @@
 
 - Description: Opens the conversation's namespace (`http://<id>.localhost:9000`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside the chat when the Open app in setting says so (⌘/middle-click takes the other way). The pane's header actions reload the frame, show or hide the framed app's own chrome, and open it in a browser tab. Disabled until the worktree has a successful build (op-store build history). Server registration of the Open app config (new tab or pane on plain click).
 - Web:
-  - Slots: `app-preview.actions` ← `conversations.conversation-view.open-app`, `primitives.pane`
+  - Slots: `app-preview.actions`
+  - Slot contributors:
+    - `app-preview.actions` ← `conversations.conversation-view.open-app`
+    - `app-preview.actions` ← `primitives.pane`
   - Contributes:
     - `ConfigV2.WebRegister` "config"
     - `Conversation.ActionBar` → `OpenAppButton`

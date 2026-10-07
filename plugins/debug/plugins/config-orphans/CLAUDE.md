@@ -6,7 +6,8 @@
 
 - Description: Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live, plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply. Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live. Files one rolling `config-orphans-stranded` report at boot when any real user override is stranded.
 - Web:
-  - Slots: `configOrphansPane.Actions` ← `primitives.pane`
+  - Slots: `configOrphansPane.Actions`
+  - Slot contributors: `configOrphansPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "config-orphans"
     - `DebugApp.Sidebar` "Config Orphans"

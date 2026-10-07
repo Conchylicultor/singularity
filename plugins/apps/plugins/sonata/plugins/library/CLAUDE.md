@@ -154,11 +154,29 @@ the title — a chord-grid save endpoint physically cannot carry one.
 - Description: Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by the columns other plugins contribute). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
 - Web:
   - Slots:
-    - `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
+    - `Library.Source`
+    - `Library.SongActions`
+    - `Library.Fields`
+    - `sonataLibraryPane.Actions`
+    - `sonataPlayerPane.Actions`
+  - Slot contributors:
+    - `Library.Source` ← `apps.sonata.sources.chord-grid`
+    - `Library.Source` ← `apps.sonata.sources.midi`
+    - `Library.Source` ← `apps.sonata.sources.ultimate-guitar`
     - `Library.SongActions` ← `apps.sonata.library`
-    - `Library.Fields` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`
+    - `Library.Fields` ← `apps.sonata.playback-history`
+    - `Library.Fields` ← `apps.sonata.sources.midi`
+    - `Library.Fields` ← `apps.sonata.sources.midi.folders`
     - `sonataLibraryPane.Actions` ← `primitives.pane`
-    - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`, `apps.sonata.audio.metronome`, `apps.sonata.library`, `apps.sonata.pedal.indicator`, `apps.sonata.piano-roll`, `apps.sonata.progress.loop`, `apps.sonata.transport-bar`, `apps.sonata.transpose`, `primitives.pane`
+    - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`
+    - `sonataPlayerPane.Actions` ← `apps.sonata.audio.metronome`
+    - `sonataPlayerPane.Actions` ← `apps.sonata.library`
+    - `sonataPlayerPane.Actions` ← `apps.sonata.pedal.indicator`
+    - `sonataPlayerPane.Actions` ← `apps.sonata.piano-roll`
+    - `sonataPlayerPane.Actions` ← `apps.sonata.progress.loop`
+    - `sonataPlayerPane.Actions` ← `apps.sonata.transport-bar`
+    - `sonataPlayerPane.Actions` ← `apps.sonata.transpose`
+    - `sonataPlayerPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Sonata.Home` "library" → `SongLibrary`
     - `sonataPlayerPane.Actions` "back" → `BackToLibrary`
@@ -167,25 +185,20 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses:
-    - `apps/sonata/document.SonataDocument`
-    - `apps/sonata/document.useLibrarySong`
-    - `apps/sonata/document.useLoadDocument`
-    - `apps/sonata/document.useSongDocument`
-    - `apps/sonata/player.PlayerDisplay`
-    - `apps/sonata/player.PlayerTransport`
-    - `apps/sonata/player.PlayToggle`
-    - `apps/sonata/player.SonataPlayer`
-    - `apps/sonata/player.usePlayerView`
+  - Uses: 62 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×10
+    - `primitives/css/ui-kit` ×6
+    - `primitives/data-view` ×6
+    - `apps/sonata/player` ×5
+    - `apps/sonata/document` ×4
+    - `network/live` ×4
+    - `apps/sonata/shell` ×3
+    - `primitives/css/spacing` ×2
+    - `primitives/css/text` ×2
+    - `primitives/latest-ref` ×2
+    - `primitives/live-state` ×2
     - `apps/sonata/session.useSession`
-    - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.SonataSectionItem`
-    - `apps/sonata/shell.useSonataApp`
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.LiveRowResult`
-    - `network/live.mapRow`
-    - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
@@ -193,40 +206,10 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSize`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/css/ui-kit.useControlSize`
-    - `primitives/data-view.CreateOption`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineFieldExtensions`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.liveDataSource`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkProps`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Hint`
-    - `primitives/pane.openPane`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.resolveRow`
-    - `primitives/pane.type`
-    - `primitives/pane.useOpenPane`
-    - `primitives/pane.usePaneStore`
     - `primitives/persistent-draft.useDraft`
     - `primitives/relative-time.formatRelativeTime`
     - `ui/icons.Icon`
@@ -241,8 +224,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
 - Server:
   - Contributes:
     - `resource.declare` "sonata.songs"
-    - `resource.declare` "sonata.songs:rows"
     - `resource.declare` "sonata.songs:groups"
+    - `resource.declare` "sonata.songs:rows"
   - Uses:
     - `database.db`
     - `infra/attachments.Attachments`

@@ -40,13 +40,20 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
 - Description: Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
 - Web:
   - Slots:
+    - `reportsPane.Actions`
+    - `reportDetailPane.Actions`
+  - Slot contributors:
     - `reportsPane.Actions` ← `primitives.pane`
     - `reportDetailPane.Actions` ← `primitives.pane`
   - Contributes:
-    - `Pane.Register` "reports"
     - `Pane.Register` "report-detail"
+    - `Pane.Register` "reports"
     - `DebugApp.Sidebar` "Reports"
-  - Uses:
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×5
+    - `primitives/data-view` ×3
+    - `primitives/css/ui-kit` ×2
+    - `reports` ×2
     - `apps-core/tabs.navigate`
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
@@ -57,23 +64,11 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.liveDataSource`
     - `primitives/launch.LaunchAgentPopover`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.resolveRow`
-    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/tab-id.getTabId`
-    - `reports.investigate`
-    - `reports.Reports`
     - `ui/icons.Icon`
   - Exports (values):
     - `reportDetailPane`

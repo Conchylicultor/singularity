@@ -80,25 +80,13 @@ moved (see `apps/prototypes/files`).
 
 - Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry.
 - Cross-plugin:
-  - Imported by:
-    - `apps/file-explorer/git`
-    - `apps/prototypes/files`
-    - `apps/sonata/sources/midi/folders`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×6
+    - `infra` ×5
+    - `apps` ×3
+    - `debug` ×2
     - `config_v2`
-    - `conversations/conversation-view/allow-monitor`
-    - `conversations/conversation-view/code`
-    - `conversations/conversation-view/jsonl-viewer/background-shells`
-    - `conversations/model-provider/catalog`
-    - `conversations/runtime-tmux`
-    - `conversations/transcript-watcher`
-    - `debug/profiling/op-log/op-store`
-    - `debug/sentinel`
     - `framework/cli/await`
-    - `infra/corpus-index`
-    - `infra/deps`
-    - `infra/file-watcher/background-arm`
-    - `infra/git/git-watcher`
-    - `infra/jobs/supervised-job`
     - `integrations/google-maps`
     - `plugin-meta/plugin-tree`
     - `reports/outbox`

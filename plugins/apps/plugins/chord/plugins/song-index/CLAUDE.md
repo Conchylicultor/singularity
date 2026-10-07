@@ -264,14 +264,14 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `resource.declare` "chord.index-status"
     - `song-videos.source` "hooktheory"
     - `backup.source` "Chord song index snapshot"
-    - `fork-data-exclusion` "chord_sections"
-    - `fork-data-exclusion` "chord_loop_windows"
     - `fork-data-exclusion` "chord_index_state"
-    - `backup-data-exclusion` "chord_sections"
-    - `backup-data-exclusion` "chord_loop_windows"
+    - `fork-data-exclusion` "chord_loop_windows"
+    - `fork-data-exclusion` "chord_sections"
     - `backup-data-exclusion` "chord_index_state"
-    - `change-feed-exclusion` "chord_sections"
+    - `backup-data-exclusion` "chord_loop_windows"
+    - `backup-data-exclusion` "chord_sections"
     - `change-feed-exclusion` "chord_loop_windows"
+    - `change-feed-exclusion` "chord_sections"
   - Uses:
     - `apps/chord/video-availability.chordVideoStatus`
     - `apps/chord/video-availability.ensureVideoStatus`

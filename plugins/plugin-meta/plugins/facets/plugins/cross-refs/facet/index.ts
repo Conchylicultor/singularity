@@ -12,7 +12,11 @@ import {
   type RuntimeFolder,
   asPath,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { walkFiles, readIfExists, findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  walkFiles,
+  readIfExists,
+  findImports,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type CrossRefsData, type RawUse, crossRefsFacetDef } from "../core";
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -64,9 +68,13 @@ function parseRawUses(runtimeDir: string): RawUse[] {
       }
       // A default alongside named ones (`import Foo, { a, b } from …`) is a
       // default — record it without a symbol (mirrors the namedRe m[1] branch).
-      if (/[A-Za-z_$][\w$]*\s*,/.test(clause.slice(0, braceIdx))) add(imp.specifier);
+      if (/[A-Za-z_$][\w$]*\s*,/.test(clause.slice(0, braceIdx)))
+        add(imp.specifier);
       const closeIdx = clause.indexOf("}", braceIdx);
-      const names = clause.slice(braceIdx + 1, closeIdx < 0 ? clause.length : closeIdx);
+      const names = clause.slice(
+        braceIdx + 1,
+        closeIdx < 0 ? clause.length : closeIdx,
+      );
       for (const part of names.split(",")) {
         let s = part.trim();
         if (!s) continue;
@@ -78,6 +86,25 @@ function parseRawUses(runtimeDir: string): RawUse[] {
     }
   }
   return uses;
+}
+
+/**
+ * `items` grouped by `labelOf`, each group at its first member's position. Both
+ * lists this facet groups are sorted with the label as their prefix, so the
+ * groups' concatenation is the input order.
+ */
+function groupInOrder<T>(
+  items: readonly T[],
+  labelOf: (item: T) => string,
+): { label: string; items: T[] }[] {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const label = labelOf(item);
+    let group = groups.get(label);
+    if (!group) groups.set(label, (group = []));
+    group.push(item);
+  }
+  return [...groups].map(([label, grouped]) => ({ label, items: grouped }));
 }
 
 function emptyByRuntime<T>(): Record<RuntimeFolder, T[]> {
@@ -171,20 +198,38 @@ export default createFacet<CrossRefsData>({
     const facts: DocFact[] = [];
     for (const rt of RUNTIME_FOLDERS) {
       if (data.apiUses[rt].length > 0) {
+        // Grouped by the plugin used: summarized, a heavy consumer reads as
+        // "which plugins, how many symbols each".
         facts.push({
           folder: rt,
           key: "Uses",
-          values: data.apiUses[rt].map(
-            (u) => `\`${asPath(u.plugin)}${u.symbol ? "." + u.symbol : ""}\``,
-          ),
+          noun: "symbols",
+          groups: groupInOrder(
+            data.apiUses[rt],
+            (u) => `\`${asPath(u.plugin)}\``,
+          ).map(({ label, items }) => ({
+            label,
+            values: items.map(
+              (u) => `\`${asPath(u.plugin)}${u.symbol ? "." + u.symbol : ""}\``,
+            ),
+          })),
         });
       }
     }
     if (data.importedBy.length > 0) {
+      // Grouped by the importer's top-level umbrella: 200 importers are not
+      // actionable, "apps 88, conversations 40" is.
       facts.push({
         folder: "cross-plugin",
         key: "Imported by",
-        values: data.importedBy.map((id) => `\`${asPath(id)}\``),
+        noun: "plugins",
+        groups: groupInOrder(
+          data.importedBy,
+          (id) => `\`${asPath(id).split("/")[0]}\``,
+        ).map(({ label, items }) => ({
+          label,
+          values: items.map((id) => `\`${asPath(id)}\``),
+        })),
       });
     }
     return facts;

@@ -93,7 +93,10 @@ hand-roll a *button* inside the body. It just has no card to own.
 - Description: Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses:
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×20
+    - `primitives/css/ui-kit` ×2
+    - `primitives/row-actions` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
@@ -102,32 +105,8 @@ hand-roll a *button* inside the body. It just has no card to own.
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/data-view.CreateOption`
-    - `primitives/data-view.DataViewAggregateConfig`
-    - `primitives/data-view.DataViewRenderProps`
-    - `primitives/data-view.DataViewSection`
-    - `primitives/data-view.DataViewSlots`
-    - `primitives/data-view.FieldCell`
-    - `primitives/data-view.FieldDef`
-    - `primitives/data-view.GroupedSections`
-    - `primitives/data-view.ItemActionsDescriptor`
-    - `primitives/data-view.leadingSlot`
-    - `primitives/data-view.pickLeadingField`
-    - `primitives/data-view.pickPrimaryField`
-    - `primitives/data-view.resolveBodyFields`
-    - `primitives/data-view.rowToneClass`
-    - `primitives/data-view.SectionBody`
-    - `primitives/data-view.useDataViewSections`
-    - `primitives/data-view.useItemActionZones`
-    - `primitives/data-view.useResolveCell`
-    - `primitives/data-view.useResolveCellEditor`
-    - `primitives/data-view.useResolveOperatorSet`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/link-gesture.activationProps`
-    - `primitives/row-actions.RowActions`
-    - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.VirtualRows`
     - `ui/icons.Icon`
   - Exports (types):

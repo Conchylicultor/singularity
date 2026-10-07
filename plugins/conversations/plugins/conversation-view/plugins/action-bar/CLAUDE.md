@@ -6,7 +6,20 @@
 
 - Description: Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
 - Web:
-  - Slots: `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`, `conversations.conversation-view.artifacts`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.explorer`, `conversations.conversation-view.jsonl-viewer.event-counter`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.tasks-panel`, `conversations.conversation-view.terminal-pane`, `conversations.conversation-view.vscode`, `review`, `tasks.attempt-view`
+  - Slots: `Conversation.ActionBar`
+  - Slot contributors:
+    - `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`
+    - `Conversation.ActionBar` ← `conversations.conversation-view.artifacts`
+    - `Conversation.ActionBar` ← `conversations.conversation-view.commits-graph`
+    - `Conversation.ActionBar` ← `conversations.conversation-view.explorer`
+    - `Conversation.ActionBar` ← `conversations.conversation-view.jsonl-viewer.event-counter`
+    - `Conversation.ActionBar` ← `conversations.conversation-view.open-app`
+    - `Conversation.ActionBar` ← `conversations.conversation-view.push-profiling`
+    - `Conversation.ActionBar` ← `conversations.conversation-view.tasks-panel`
+    - `Conversation.ActionBar` ← `conversations.conversation-view.terminal-pane`
+    - `Conversation.ActionBar` ← `conversations.conversation-view.vscode`
+    - `Conversation.ActionBar` ← `review`
+    - `Conversation.ActionBar` ← `tasks.attempt-view`
   - Uses:
     - `primitives/css/spacing.Stack`
     - `primitives/slot-render.defineRenderSlot`

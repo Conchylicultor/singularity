@@ -131,7 +131,10 @@ canvas redesign `research/2026-09-23-apps-prototypes-frame-canvas.md`.
 
 - Description: The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and contributed as a FrameSource, so the canvas shows it beside the prototype at the canvas's size. Each kind of counterpart (an exhibit from the exhibit catalog, the running app at a route) is a child plugin.
 - Web:
-  - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.exhibit`, `apps.prototypes.compare.route`
+  - Slots: `Counterpart.Kind`
+  - Slot contributors:
+    - `Counterpart.Kind` ← `apps.prototypes.compare.exhibit`
+    - `Counterpart.Kind` ← `apps.prototypes.compare.route`
   - Contributes: `FrameSource` "Real app" → `RealAppSource`
   - Uses:
     - `apps/prototypes/canvas.FrameSource`

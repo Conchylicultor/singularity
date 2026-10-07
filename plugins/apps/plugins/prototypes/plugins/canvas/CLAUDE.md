@@ -328,8 +328,18 @@ navigation, so it starts from nothing remembered.
 - Description: The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.
 - Web:
   - Slots:
-    - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`, `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
-    - `PrototypeFrameActions` ← `apps.prototypes.canvas`, `apps.prototypes.present`
+    - `prototypeDetailPane.Actions`
+    - `PrototypeFrameActions`
+    - `FrameSource`
+    - `PrototypeVersionActions`
+  - Slot contributors:
+    - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`
+    - `prototypeDetailPane.Actions` ← `apps.prototypes.copy-id`
+    - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`
+    - `prototypeDetailPane.Actions` ← `apps.prototypes.present`
+    - `prototypeDetailPane.Actions` ← `primitives.pane`
+    - `PrototypeFrameActions` ← `apps.prototypes.canvas`
+    - `PrototypeFrameActions` ← `apps.prototypes.present`
     - `FrameSource` ← `apps.prototypes.compare`
     - `PrototypeVersionActions` ← `apps.prototypes.canvas`
   - Contributes:
@@ -341,20 +351,30 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses:
+  - Uses: 70 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
+    - `primitives/data-view` ×6
+    - `primitives/hover-reveal` ×3
+    - `primitives/persistent-draft` ×3
+    - `primitives/action-presentation` ×2
+    - `primitives/css/control-panel` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/toggle-chip` ×2
+    - `primitives/dom/auto-scroll` ×2
+    - `primitives/dom/element-size` ×2
+    - `primitives/latest-ref` ×2
+    - `primitives/live-state` ×2
+    - `primitives/optimistic-mutation` ×2
+    - `primitives/pane` ×2
     - `apps-core/tabs.appLinkProps`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
-    - `primitives/action-presentation.ActionFormShield`
-    - `primitives/action-presentation.useActionForm`
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/color-picker.ColorPicker`
     - `primitives/css/column.Column`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
@@ -364,49 +384,15 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/slider.Slider`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.Popover`
-    - `primitives/css/ui-kit.PopoverContent`
-    - `primitives/css/ui-kit.PopoverTrigger`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.FieldDef`
-    - `primitives/data-view.FieldOption`
-    - `primitives/data-view.ItemActionProps`
-    - `primitives/dom/auto-scroll.captureDocumentScroll`
-    - `primitives/dom/auto-scroll.restoreDocumentScroll`
-    - `primitives/dom/element-size.useElementSize`
-    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/embed.isEmbeddedDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
-    - `primitives/hover-reveal.hoverRevealTargetInAnchor`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/optimistic-mutation.OptimisticSettled`
-    - `primitives/optimistic-mutation.useOptimisticResource`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/persistent-draft.DraftOptions`
-    - `primitives/persistent-draft.readDraft`
-    - `primitives/persistent-draft.writeDraft`
     - `primitives/relative-time.RelativeTime`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `primitives/slot-render.defineDispatchSlot`

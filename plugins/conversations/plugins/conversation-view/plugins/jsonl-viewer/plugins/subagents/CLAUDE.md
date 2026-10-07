@@ -430,30 +430,23 @@ downstream can widen the set, because nothing downstream resolves one.
     - `subagent-activity` (push)
     - `subagent-transcript` (push)
 - Web:
-  - Uses:
-    - `conversations.useConversationById`
-    - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-    - `conversations/conversation-view/jsonl-viewer.TranscriptView`
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×4
+    - `primitives/relative-time` ×3
+    - `conversations/conversation-view/jsonl-viewer` ×2
+    - `primitives/css/spacing` ×2
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+    - `conversations.useConversationById`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
-    - `primitives/relative-time.ElapsedTime`
-    - `primitives/relative-time.formatElapsed`
-    - `primitives/relative-time.useNow`
     - `ui/icons.Icon`
   - Exports (types):
     - `SubagentEntry`

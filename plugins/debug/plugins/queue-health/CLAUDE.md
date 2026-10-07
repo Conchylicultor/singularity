@@ -389,45 +389,20 @@ them to include 1, which would put the warning on the same instant as the abort.
   - Contributes:
     - `ConfigV2.Register` "queue-health"
     - `resource.declare` "queue-health.pulse"
-    - `report-kind` "queue-dead-job"
     - `report-kind` "queue-backlog"
-    - `report-kind` "queue-slot-hog"
-    - `report-kind` "queue-slot-blocked"
     - `report-kind` "queue-class-starved"
+    - `report-kind` "queue-dead-job"
+    - `report-kind` "queue-slot-blocked"
+    - `report-kind` "queue-slot-hog"
     - `report-kind` "queue-wedged"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.getConfig`
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/jobs` ×24
+    - `config_v2` ×2
+    - `reports` ×2
     - `infra/background/timer.defineTimer`
     - `infra/endpoints.implement`
-    - `infra/jobs.ceilingMsFor`
-    - `infra/jobs.deadlineMsFor`
-    - `infra/jobs.getForfeitedSlots`
-    - `infra/jobs.getOccupiedSlots`
-    - `infra/jobs.getPickupStats`
-    - `infra/jobs.HOLD_CLASSES`
-    - `infra/jobs.HOLD_SPECS`
-    - `infra/jobs.HoldClass`
-    - `infra/jobs.LEGACY_JOB_TASK`
-    - `infra/jobs.onQueueActivity`
-    - `infra/jobs.PICKUP_WINDOW_MS`
-    - `infra/jobs.queryBacklogByJobName`
-    - `infra/jobs.queryDeadJobStats`
-    - `infra/jobs.queryOldestWaiting`
-    - `infra/jobs.queryQueueBacklog`
-    - `infra/jobs.queryQueuePulse`
-    - `infra/jobs.queryRecentDeadJobs`
-    - `infra/jobs.queryRunningJobs`
-    - `infra/jobs.QueueBacklogStat`
-    - `infra/jobs.QueueClassBacklogStat`
-    - `infra/jobs.reachableSlots`
-    - `infra/jobs.RUNNERS`
-    - `infra/jobs.RunningJobStat`
-    - `infra/jobs.TOTAL_JOB_SLOTS`
     - `infra/mcp.Mcp`
     - `network/live.serveValue`
-    - `reports.recordReport`
-    - `reports.ReportKind`
     - `tasks/tasks-core.getConversation`
   - Exports (values): `queueHealthTickOnce`
   - Register:

@@ -31,7 +31,8 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
 
 - Description: Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
 - Web:
-  - Slots: `eventsTestPane.Actions` ← `primitives.pane`
+  - Slots: `eventsTestPane.Actions`
+  - Slot contributors: `eventsTestPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "events-test"
     - `DebugApp.Sidebar` "Events Test"

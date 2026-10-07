@@ -121,27 +121,14 @@ never be clobbered.
   - Exports (types): `SurfaceProps`
   - Exports (values): `Surface`
 - Cross-plugin:
-  - Imported by:
-    - `apps-core/surface/floating`
-    - `apps-core/surface/floating/wallpaper`
-    - `apps/browser/webview`
-    - `apps/events/sources/source-detail/runs/caveats`
-    - `apps/events/sources/source-detail/runs/model-call`
-    - `apps/mail/reading-pane`
-    - `apps/studio/graph`
-    - `apps/website/pages/apps`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×6
+    - `primitives` ×5
+    - `page` ×4
+    - `apps-core` ×2
     - `conversations/agents`
     - `fields/json/config`
     - `infra/events-test`
-    - `page/editor`
-    - `page/map`
-    - `page/place`
-    - `page/read-only-view`
-    - `primitives/collapsible-wrap`
-    - `primitives/css/card`
-    - `primitives/data-view/capsule-toolbar`
-    - `primitives/metrics/chart-kit`
-    - `primitives/row-actions`
     - `stats`
 - Exemptions:
   - Exempted by: `primitives/css/ui-kit` (0 debt)

@@ -27,7 +27,12 @@ hide itself based on conversation state.
 
 - Description: Ghost icon button next to Push & Exit that opens a menu of exit actions (hold, exit, drop, drop dependents). Hosts the ExitMenu.Item slot each action contributes to.
 - Web:
-  - Slots: `ExitMenu.Item` ← `conversations.conversation-view.drop-and-exit`, `conversations.conversation-view.drop-dependents`, `conversations.conversation-view.exit`, `conversations.conversation-view.hold-and-exit`
+  - Slots: `ExitMenu.Item`
+  - Slot contributors:
+    - `ExitMenu.Item` ← `conversations.conversation-view.drop-and-exit`
+    - `ExitMenu.Item` ← `conversations.conversation-view.drop-dependents`
+    - `ExitMenu.Item` ← `conversations.conversation-view.exit`
+    - `ExitMenu.Item` ← `conversations.conversation-view.hold-and-exit`
   - Contributes: `PromptEditorSlots.FloatingAction` → `ExitMenuButton`
   - Uses:
     - `conversations.useConversationById`

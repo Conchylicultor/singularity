@@ -6,7 +6,8 @@
 
 - Description: Toolbar button that opens a right pane attaching to the conversation's tmux session.
 - Web:
-  - Slots: `conv-terminal.actions` ← `primitives.pane`
+  - Slots: `conv-terminal.actions`
+  - Slot contributors: `conv-terminal.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conv-terminal"
     - `Conversation.ActionBar` → `TerminalButton`

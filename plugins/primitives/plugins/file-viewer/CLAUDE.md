@@ -28,7 +28,17 @@ checkout file.
 
 - Description: Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
 - Web:
-  - Slots: `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`, `primitives.file-viewer.code`, `primitives.file-viewer.diff`, `primitives.file-viewer.fallback`, `primitives.file-viewer.html`, `primitives.file-viewer.image`, `primitives.file-viewer.markdown`, `primitives.file-viewer.media`, `primitives.file-viewer.pdf`
+  - Slots: `FileViewer.Renderer`
+  - Slot contributors:
+    - `FileViewer.Renderer` ← `apps.sonata.sources.midi.file-preview`
+    - `FileViewer.Renderer` ← `primitives.file-viewer.code`
+    - `FileViewer.Renderer` ← `primitives.file-viewer.diff`
+    - `FileViewer.Renderer` ← `primitives.file-viewer.fallback`
+    - `FileViewer.Renderer` ← `primitives.file-viewer.html`
+    - `FileViewer.Renderer` ← `primitives.file-viewer.image`
+    - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
+    - `FileViewer.Renderer` ← `primitives.file-viewer.media`
+    - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`

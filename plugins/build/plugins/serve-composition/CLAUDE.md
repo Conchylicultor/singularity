@@ -236,22 +236,15 @@ code, that is the bug this section exists to prevent.
 
 - Description: Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
 - Web:
-  - Uses:
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
-    - `infra/endpoints.useEndpointMutation`
-    - `network/live.LiveListResult`
-    - `network/live.useLive`
-    - `plugin-meta/composition.useManifestActions`
-    - `plugin-meta/composition.useManifestItems`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/endpoints` ×4
+    - `primitives/css/toggle-chip` ×3
+    - `network/live` ×2
+    - `plugin-meta/composition` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/toggle-chip.SegmentedOption`
-    - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.foldResource`

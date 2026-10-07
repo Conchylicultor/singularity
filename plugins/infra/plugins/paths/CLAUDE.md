@@ -313,58 +313,22 @@ run everywhere.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×10
+    - `build` ×7
+    - `infra` ×7
+    - `backup` ×4
+    - `framework` ×4
+    - `conversations` ×3
+    - `primitives` ×3
+    - `release` ×3
+    - `code-explorer` ×2
+    - `plugin-meta` ×2
+    - `stats` ×2
     - `apps/deploy/deployments`
-    - `backup`
-    - `backup/sources/claude-settings`
-    - `backup/sources/project-memory`
-    - `backup/targets/local`
-    - `build`
-    - `build/build-commits`
-    - `build/build-logs`
-    - `build/build-profiling`
-    - `build/deployment`
-    - `build/serve-composition`
-    - `build/server-build-id`
-    - `code-explorer`
-    - `code-explorer/file-resolve`
     - `config_v2`
-    - `conversations/conversation-progress`
-    - `conversations/runtime-tmux`
-    - `conversations/transcript-watcher`
-    - `debug/boot-watchdog`
-    - `debug/health-monitor`
-    - `debug/heap-snapshot`
-    - `debug/memory`
-    - `debug/paging-probe`
-    - `debug/profiling/build`
-    - `debug/sentinel`
-    - `debug/session-divergence`
-    - `debug/timeline`
-    - `debug/worktree-cleanup`
-    - `framework/cli/op-runtime`
-    - `framework/cli/test`
-    - `framework/tooling/checks`
-    - `framework/tooling/guards`
-    - `infra/claude-cli/availability`
-    - `infra/git/git-watcher`
-    - `infra/host-fs`
-    - `infra/jobs/supervised-job`
-    - `infra/launcher`
-    - `infra/worktree`
-    - `infra/worktree/reclaim`
-    - `plugin-meta/plugin-health`
-    - `plugin-meta/plugin-tree`
-    - `primitives/commit-list`
-    - `primitives/log-channels`
-    - `primitives/terminal`
-    - `release`
-    - `release/bundles`
-    - `release/source-checkout`
     - `reports/outbox`
     - `review/plugin-changes`
-    - `stats/commits`
-    - `stats/cost`
     - `tasks`
     - `toolchain`
 - Exemptions:

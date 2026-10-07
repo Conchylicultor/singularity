@@ -34,56 +34,18 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `Clip`
     - `clipClasses`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×15
+    - `conversations` ×7
+    - `debug` ×7
+    - `primitives` ×7
+    - `page` ×5
+    - `fields` ×2
+    - `review` ×2
     - `apps-core/surface`
-    - `apps/browser/shell`
-    - `apps/chord/curriculum`
-    - `apps/chord/song-index`
-    - `apps/chord/trainer`
-    - `apps/file-explorer/places`
-    - `apps/pages/page-tree`
-    - `apps/pages/welcome/recent-pages`
-    - `apps/sonata/piano-roll`
-    - `apps/sonata/player`
-    - `apps/sonata/primitives/jog-wheel`
-    - `apps/sonata/primitives/keyboard`
-    - `apps/sonata/progress/scrubber`
-    - `apps/sonata/recording`
-    - `apps/sonata/sources/midi/file-preview`
-    - `apps/studio/graph`
     - `build/build-logs`
     - `config_v2/settings`
-    - `conversations/conversation-ui/item`
-    - `conversations/conversation-view`
-    - `conversations/conversation-view/dependencies`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
-    - `conversations/conversation-view/op-status`
-    - `conversations/conversation-view/running-agents`
-    - `conversations/conversation-view/terminal-pane`
-    - `debug/profiling`
-    - `debug/profiling/build`
-    - `debug/profiling/ops`
-    - `debug/queue`
-    - `debug/sentinel`
-    - `debug/slow-ops/cluster`
-    - `debug/timeline`
-    - `fields/tags/inline`
-    - `fields/tags/table`
-    - `page/bookmark`
-    - `page/code-block`
-    - `page/links`
-    - `page/map`
-    - `page/math/equation`
     - `plugin-meta/plugin-view/file-tree`
-    - `primitives/app-shell`
-    - `primitives/css/color-picker`
-    - `primitives/data-view/gallery`
-    - `primitives/data-view/list`
-    - `primitives/diff-view`
-    - `primitives/outline/rail`
-    - `primitives/overlay/image-viewer`
-    - `review/plugin-changes`
-    - `review/plugin-changes/file-changes`
     - `screenshot`
     - `tasks/task-graph`
 

@@ -107,33 +107,21 @@ over:
 
 - Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane. Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key + optional Map ID) as a live value, with its write/clear endpoints.
 - Web:
-  - Slots: `google-maps-live-map-setup.actions` ← `primitives.pane`
+  - Slots: `google-maps-live-map-setup.actions`
+  - Slot contributors: `google-maps-live-map-setup.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "google-maps-live-map-setup"
-  - Uses:
-    - `auth.accountsRoute`
-    - `auth.useAuthState`
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/setup-steps` ×7
+    - `primitives/live-state` ×3
+    - `primitives/pane` ×3
+    - `auth` ×2
+    - `infra/endpoints` ×2
+    - `primitives/css/ui-kit` ×2
     - `auth/google-maps/setup-wizard.googleMapsSetupPane`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
     - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceError`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.useOpenPane`
-    - `primitives/setup-steps.Step`
-    - `primitives/setup-steps.StepCommand`
-    - `primitives/setup-steps.StepDone`
-    - `primitives/setup-steps.StepLink`
-    - `primitives/setup-steps.StepNote`
-    - `primitives/setup-steps.Steps`
-    - `primitives/setup-steps.StepState`
   - Exports (types):
     - `MapsAccess`
     - `MapsAccessBlocker`

@@ -7,7 +7,14 @@
 - Description: Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
 - Web:
   - Slots:
-    - `TableDetail.Section` ← `apps.studio.contributions.tables.columns`, `apps.studio.contributions.tables.foreign-keys`, `apps.studio.contributions.tables.indexes`, `apps.studio.contributions.tables.row-count`, `apps.studio.contributions.tables.sample-rows`
+    - `TableDetail.Section`
+    - `tableDetailPane.Actions`
+  - Slot contributors:
+    - `TableDetail.Section` ← `apps.studio.contributions.tables.columns`
+    - `TableDetail.Section` ← `apps.studio.contributions.tables.foreign-keys`
+    - `TableDetail.Section` ← `apps.studio.contributions.tables.indexes`
+    - `TableDetail.Section` ← `apps.studio.contributions.tables.row-count`
+    - `TableDetail.Section` ← `apps.studio.contributions.tables.sample-rows`
     - `tableDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "table-detail"

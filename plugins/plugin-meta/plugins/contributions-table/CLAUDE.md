@@ -20,8 +20,21 @@ wires clicks by matching a table's `facetId` to a `RowClick` handler.
 - Description: Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.
 - Web:
   - Slots:
-    - `Contributions.FacetTable` ← `plugin-meta.facets.contributions.render-contributions`, `plugin-meta.facets.cross-refs.render-contributions`, `plugin-meta.facets.db-schema.render-contributions`, `plugin-meta.facets.exemptions.render-contributions`, `plugin-meta.facets.exports.render-contributions`, `plugin-meta.facets.registrations.render-contributions`, `plugin-meta.facets.resources.render-contributions`, `plugin-meta.facets.routes.render-contributions`, `plugin-meta.facets.slots.render-contributions`, `plugin-meta.facets.structure.render-contributions`
-    - `Contributions.RowClick` ← `apps.studio.contributions.tables`, `plugin-meta.facets.structure.render-contributions`
+    - `Contributions.FacetTable`
+    - `Contributions.RowClick`
+  - Slot contributors:
+    - `Contributions.FacetTable` ← `plugin-meta.facets.contributions.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.cross-refs.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.db-schema.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.exemptions.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.exports.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.registrations.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.resources.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.routes.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.slots.render-contributions`
+    - `Contributions.FacetTable` ← `plugin-meta.facets.structure.render-contributions`
+    - `Contributions.RowClick` ← `apps.studio.contributions.tables`
+    - `Contributions.RowClick` ← `plugin-meta.facets.structure.render-contributions`
   - Uses:
     - `plugin-meta/plugin-view.pluginViewPane`
     - `primitives/css/link-chip.LinkChip`

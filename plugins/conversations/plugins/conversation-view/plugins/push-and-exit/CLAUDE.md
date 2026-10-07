@@ -9,24 +9,16 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `conversations.useConversationById`
-    - `conversations.useHasActiveSiblingInWorktree`
-    - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view.isDraftEmpty`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/conversation-view/pending-turn` ×3
+    - `infra/endpoints` ×3
+    - `config_v2` ×2
+    - `conversations/conversation-view` ×2
+    - `conversations` ×2
+    - `primitives/css/ui-kit` ×2
     - `conversations/conversation-view/code.useEditedFiles`
-    - `conversations/conversation-view/pending-turn.defineTurnDelivery`
-    - `conversations/conversation-view/pending-turn.sendConversationTurn`
-    - `conversations/conversation-view/pending-turn.usePendingTurns`
     - `conversations/conversation-view/prompt-input.CONVERSATION_PROMPT_DRAFT_KEY`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
     - `network/live.useLive`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.useCombinedResources`
     - `primitives/persistent-draft.useDraft`

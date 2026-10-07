@@ -6,7 +6,12 @@
 
 - Description: Pluggable segmented progress bar with switchable visual variants.
 - Web:
-  - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.arc`, `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.pie`, `ui.segmented-progress-bar.segmented`
+  - Slots: `SegmentedProgressBarSlots.Variant`
+  - Slot contributors:
+    - `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.arc`
+    - `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.dots`
+    - `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.pie`
+    - `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.segmented`
   - Contributes:
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Progress bar variant"

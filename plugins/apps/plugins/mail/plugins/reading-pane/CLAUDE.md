@@ -67,11 +67,14 @@ parses MIME or HTML itself.
 
 - Description: Mail reading pane: the threadPane Miller column showing a thread's newest messages oldest→newest (a live window, with Load older messages for a longer thread), each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: serves the thread-messages live collection (threadMessages) over mail_messages, so a reply/flag/hydration in an open thread pushes automatically.
 - Web:
-  - Slots: `threadPane.Actions` ← `primitives.pane`
+  - Slots: `threadPane.Actions`
+  - Slot contributors: `threadPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "mail-thread"
-  - Uses:
-    - `apps/mail/attachments.AttachmentChip`
-    - `apps/mail/attachments.useMailAttachment`
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×3
+    - `apps/mail/attachments` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps/mail/mail-html.MailHtml`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
@@ -84,26 +87,19 @@ parses MIME or HTML itself.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
   - Exports (values): `threadPane`
 - Server:
   - Contributes:
     - `resource.declare` "mail-thread-messages"
-    - `resource.declare` "mail-thread-messages:rows"
     - `resource.declare` "mail-thread-messages:groups"
+    - `resource.declare` "mail-thread-messages:rows"
   - Uses:
     - `apps/mail/mail-core._mailMessages`
     - `network/live.serveCollection`

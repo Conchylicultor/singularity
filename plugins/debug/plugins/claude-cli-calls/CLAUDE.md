@@ -6,17 +6,19 @@
 
 - Description: Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
 - Web:
-  - Slots: `claudeCliCallsPane.Actions` ← `primitives.pane`
+  - Slots: `claudeCliCallsPane.Actions`
+  - Slot contributors: `claudeCliCallsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "claude-cli-calls"
     - `DebugApp.Sidebar` "Claude CLI Calls"
-  - Uses:
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/filter-chips` ×3
+    - `primitives/pane` ×3
+    - `conversations/model-provider` ×2
+    - `network/live` ×2
+    - `primitives/cursor-pagination` ×2
     - `apps/debug/shell.DebugApp`
-    - `conversations/model-provider.familyClass`
-    - `conversations/model-provider.useModelCatalog`
     - `infra/claude-cli.ClaudeCliCallDetail`
-    - `network/live.LiveListResult`
-    - `network/live.useLive`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -26,16 +28,8 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/cursor-pagination.InfiniteScrollFooter`
-    - `primitives/cursor-pagination.useInfiniteScroll`
-    - `primitives/filter-chips.FilterChip`
-    - `primitives/filter-chips.FilterGroup`
-    - `primitives/filter-chips.useChipFilter`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
   - Exports (values): `claudeCliCallsPane`

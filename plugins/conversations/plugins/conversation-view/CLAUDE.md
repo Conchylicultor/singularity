@@ -7,31 +7,45 @@
 - Description: Conversation pane host. The header is the pane's own Actions slot (title plus chips); the prompt bar is slot-driven.
 - Web:
   - Slots:
-    - `Conversation.PromptBar` ← `conversations.conversation-view.branch`, `conversations.conversation-view.dependencies`, `conversations.conversation-view.fork-conversation`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.notes`
+    - `Conversation.PromptBar`
+    - `Conversation.PromptInput`
+    - `Conversation.AbovePromptInput`
+    - `conversationPane.Actions`
+  - Slot contributors:
+    - `Conversation.PromptBar` ← `conversations.conversation-view.branch`
+    - `Conversation.PromptBar` ← `conversations.conversation-view.dependencies`
+    - `Conversation.PromptBar` ← `conversations.conversation-view.fork-conversation`
+    - `Conversation.PromptBar` ← `conversations.conversation-view.launch-prompts`
+    - `Conversation.PromptBar` ← `conversations.conversation-view.notes`
     - `Conversation.PromptInput` ← `conversations.conversation-view.prompt-input`
-    - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`, `conversations.conversation-view.op-status`, `conversations.conversation-view.running-agents`, `conversations.conversation-view.turn-summary`
-    - `conversationPane.Actions` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`, `conversations.conversation-view.track`, `primitives.pane`
+    - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`
+    - `Conversation.AbovePromptInput` ← `conversations.conversation-view.op-status`
+    - `Conversation.AbovePromptInput` ← `conversations.conversation-view.running-agents`
+    - `Conversation.AbovePromptInput` ← `conversations.conversation-view.turn-summary`
+    - `conversationPane.Actions` ← `conversations.agents`
+    - `conversationPane.Actions` ← `conversations.conversation-preprompt`
+    - `conversationPane.Actions` ← `conversations.conversation-progress`
+    - `conversationPane.Actions` ← `conversations.conversation-view.allow-monitor`
+    - `conversationPane.Actions` ← `conversations.conversation-view.model`
+    - `conversationPane.Actions` ← `conversations.conversation-view.status`
+    - `conversationPane.Actions` ← `conversations.conversation-view.track`
+    - `conversationPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "conversation"
-  - Uses:
-    - `conversations.useConversationById`
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×4
+    - `infra/endpoints` ×2
+    - `primitives/live-state` ×2
     - `conversations/conversation-view/action-bar.ActionBarView`
     - `conversations/conversation-view/jsonl-viewer.JsonlPane`
     - `conversations/hibernation.markConversationViewed`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
+    - `conversations.useConversationById`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.useOpenPane`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
@@ -50,67 +64,14 @@
     - `usePromptComposer`
     - `useRegisterPromptComposer`
 - Cross-plugin:
-  - Imported by:
-    - `active-data/attempt`
-    - `active-data/conv`
-    - `active-data/plugin-link`
-    - `active-data/task`
-    - `conversations/agents`
-    - `conversations/all-conversations`
-    - `conversations/conversation-preprompt`
-    - `conversations/conversation-progress`
-    - `conversations/conversation-ui/chip`
-    - `conversations/conversation-ui/row`
-    - `conversations/conversation-view/allow-monitor`
-    - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/artifacts/research`
-    - `conversations/conversation-view/artifacts/screenshot`
-    - `conversations/conversation-view/artifacts/skill`
-    - `conversations/conversation-view/branch`
-    - `conversations/conversation-view/code/file-pane`
-    - `conversations/conversation-view/commits-graph`
-    - `conversations/conversation-view/dependencies`
-    - `conversations/conversation-view/exit-menu`
-    - `conversations/conversation-view/explorer`
-    - `conversations/conversation-view/fork-conversation`
-    - `conversations/conversation-view/fork-session`
-    - `conversations/conversation-view/jsonl-viewer/assistant-text`
-    - `conversations/conversation-view/jsonl-viewer/background-shells`
-    - `conversations/conversation-view/jsonl-viewer/event-counter`
-    - `conversations/conversation-view/jsonl-viewer/file-path`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-    - `conversations/conversation-view/launch-prompts`
-    - `conversations/conversation-view/markdown-extensions`
-    - `conversations/conversation-view/model`
-    - `conversations/conversation-view/new-child-task`
-    - `conversations/conversation-view/notes`
-    - `conversations/conversation-view/op-status`
-    - `conversations/conversation-view/open-app`
-    - `conversations/conversation-view/prompt-input`
-    - `conversations/conversation-view/prompt-templates`
-    - `conversations/conversation-view/push-and-exit`
-    - `conversations/conversation-view/push-profiling`
-    - `conversations/conversation-view/rewind`
-    - `conversations/conversation-view/running-agents`
-    - `conversations/conversation-view/selection-actions`
-    - `conversations/conversation-view/status`
-    - `conversations/conversation-view/tasks-panel`
-    - `conversations/conversation-view/terminal-pane`
-    - `conversations/conversation-view/track`
-    - `conversations/conversation-view/turn-summary`
-    - `conversations/conversation-view/vscode`
-    - `conversations/conversations-view`
-    - `conversations/summary`
+  - Imported by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×50
+    - `active-data` ×4
+    - `tasks` ×2
     - `debug/profiling/ops`
     - `primitives/launch`
     - `review`
     - `stats/cost`
-    - `tasks/attempt-view`
-    - `tasks/task-events`
 - Exemptions:
   - Exempts itself from: `live/no-legacy-resource-spelling` — `web/panes.tsx` (debt)
 - Sub-plugins:
