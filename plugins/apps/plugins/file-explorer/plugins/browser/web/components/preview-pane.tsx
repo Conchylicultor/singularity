@@ -1,11 +1,14 @@
 import { useState, type ReactNode } from "react";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
+  cn,
   ControlSizeProvider,
   subThemeScope,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -75,7 +78,12 @@ export function PreviewPane({
           // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's 10px header gap, between the ramp's 8px and 12px
           className="gap-[10px] pl-lg"
         >
-          <FileTypeIcon name={name} className="size-5" />
+          {/* The mockup's 20px icon box holding a 14px glyph: the Seti
+              glyphs are cropped to fill their box, so the box alone would
+              draw them half again too large. */}
+          <Center className={cn(rigidClass(), "size-5")}>
+            <FileTypeIcon name={name} className="size-3.5" />
+          </Center>
           <Fill>
             <Stack gap="none">
               <Text

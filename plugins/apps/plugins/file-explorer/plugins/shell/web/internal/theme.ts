@@ -3,6 +3,7 @@ import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-pale
 import { sidebarPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/core";
 import { sidebarMetricsGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-metrics/core";
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
+import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
 import { iconsGroup } from "@plugins/ui/plugins/tokens/plugins/icons/core";
@@ -182,6 +183,15 @@ const typeScale = typeScaleGroup.fragment(
   }),
 );
 
+/**
+ * The mockup's glyph rendering: antialiased, so light-on-dark text keeps the
+ * font's own weight instead of macOS's thickened stems. The faces stay the
+ * bundled defaults (Inter, Cascadia), so Files reads the same on every system.
+ */
+const fontFamily = fontFamilyGroup.fragment(
+  both({ fontSmoothing: "antialiased" }),
+);
+
 /** 6px corners on rows, controls and the filter field. */
 const shape = shapeGroup.fragment(
   both({
@@ -227,6 +237,7 @@ export const filesTheme = defineTheme({
     sidebarMetrics,
     density,
     typeScale,
+    fontFamily,
     shape,
     icons,
     fileTypePalette,

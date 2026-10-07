@@ -406,7 +406,10 @@ function Listing({
               if (up !== null) nav.navigate(up, open);
             }}
           />
-          <Fill className="px-xs">
+          {/* The mockup sets the first crumb's text 18px past Up and leaves
+              only the bar's 4px gap before Filter: the crumbs' own insets
+              (border + 2px + 2px) plus this 8px lead. */}
+          <Fill className="pl-sm">
             <PathBar
               path={dir}
               source={source}
