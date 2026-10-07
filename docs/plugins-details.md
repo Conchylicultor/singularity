@@ -23521,7 +23521,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `VideoIdSchema`
           - `youtubeVideoId`
       - Plugins:
-        - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable); a download of the video that failed in a way that may clear (an HTTP 403 on its stream) throws YouTubeAudioDownloadError — isYouTubeAudioError answers 'the video's failure, not the machine's' for both. The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
+        - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable); a stream YouTube refuses (HTTP 403, intermittent) is re-extracted with a freshly signed URL and retried up to 3 times; still refused, or another download error of the video, throws YouTubeAudioDownloadError — isYouTubeAudioError answers 'the video's failure, not the machine's' for both. A bot check, rate limit or unreachable YouTube throws YouTubeAccessError (retryable, the machine's failure). Failures come back from the Python module as a classified document, never a traceback. The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
           - Server:
             - Uses:
               - `infra/jobs.defineJob`
@@ -23533,6 +23533,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `fetchYouTubeAudio`
               - `isYouTubeAudioError`
+              - `YouTubeAccessError`
             - Register: `defineJob('youtube-audio.sweep')`
           - Cross-plugin:
             - Imported by:
@@ -23540,7 +23541,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/audio-analysis`
           - Test helpers:
             - Server: `@plugins/integrations/plugins/youtube/plugins/audio-fetch/server/testing`
-              - `YouTubeAudioDownloadError` — This video's download failed in a way that may clear later (an HTTP 403 on its stream, a broken format) — a failure of the video, not of the machine: a bot check or a network that is down is a plain crash, since every video would fail alike.
+              - `YouTubeAccessError` — This machine cannot get audio from YouTube right now, whatever the video: a bot check or rate limit on its IP (`blocked`), or YouTube cannot be reached (`network`).
+              - `YouTubeAudioDownloadError` — This video's download failed in a way that may clear later: YouTube still refused its audio stream (HTTP 403) after re-extracting it, or another download error on this video (a broken format).
               - `YouTubeAudioUnavailableError` — YouTube will not serve this video to anyone: unavailable, private, removed, age-gated.
         - **`song-videos`** — Which YouTube videos are this song? The SongVideos.Source contribution (a source's find(query, exec) → answered videos | unavailable) and findSongVideos(query, exec): every source asked at once, their answers merged per video, the ones oEmbed says will not play in an embed dropped (and untitled ones named from oEmbed), the rest ranked towards the studio recording. Names no source.
           - Server:
