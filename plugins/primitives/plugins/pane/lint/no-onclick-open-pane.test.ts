@@ -22,6 +22,7 @@ const ruleTester = new RuleTester({
 });
 
 const error = { messageId: "onClickOpenPane" } as const;
+const rowError = { messageId: "rowActivateOpenPane" } as const;
 
 // `RuleTester.run` drives the test harness itself (it calls the ambient
 // describe/it that bun:test provides), so it must run at module top level —
@@ -70,6 +71,15 @@ ruleTester.run(
       { code: `<Button onClick={() => store.openPaneImpl(p, {})} />;` },
       // A handler passed by reference is not inspected.
       { code: `<Button onClick={open} />;` },
+      // DataView rows: the data form is the fix.
+      {
+        code: `<DataView rowActivation={(r) => openPane.to(p, { id: r.id }, { mode: "push" })} />;`,
+      },
+      // A row activation that is not navigation.
+      { code: `<DataView onRowActivate={(r) => toggle(r.id)} />;` },
+      {
+        code: `<DataView rowActivation={(r) => (r.ok ? () => grant(r) : undefined)} />;`,
+      },
     ],
     invalid: [
       {
@@ -97,6 +107,15 @@ ruleTester.run(
       {
         code: `const entry = { "onClick": () => openPane(p, {}, { mode: "root" }) };`,
         errors: [error],
+      },
+      // DataView rows whose activation only opens a pane.
+      {
+        code: `<DataView onRowActivate={(r) => openPane(p, { id: r.id }, { mode: "push" })} />;`,
+        errors: [rowError],
+      },
+      {
+        code: `<DataView rowActivation={(r) => () => openPane(p, { id: r.id }, { mode: "push" })} />;`,
+        errors: [rowError],
       },
     ],
   },

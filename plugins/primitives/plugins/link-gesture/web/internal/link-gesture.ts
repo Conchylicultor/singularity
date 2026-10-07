@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react";
+import type { Activation, LinkTarget } from "../../core";
 
 /**
  * Handler props that give any control the browser's own link gestures:
@@ -43,17 +44,26 @@ export interface LinkGestureProps {
  * against the screen the user clicked on, not the one this control rendered in.
  * It returns an app path (`/agents/c/42`), resolved against this origin.
  */
-export function linkProps({
-  open,
-  href,
-}: {
-  open: () => void;
-  href: () => string;
-}): LinkGestureProps {
+export function linkProps({ open, href }: LinkTarget): LinkGestureProps {
   return linkGestureProps(({ elsewhere }) => {
     if (elsewhere) openInBrowserTab(href());
     else open();
   });
+}
+
+/**
+ * The click props of an {@link Activation}: a {@link LinkTarget} gets the full
+ * {@link linkProps} gestures, a plain action only `onClick`, and `undefined`
+ * nothing at all — so a component that infers "is this a button" from
+ * `onClick` (`Row`) still sees a non-activating element as a plain container.
+ * Spread it; never wrap the activation in a closure first.
+ */
+export function activationProps(
+  activation: Activation | undefined,
+): Partial<LinkGestureProps> {
+  if (activation === undefined) return {};
+  if (typeof activation === "function") return { onClick: activation };
+  return linkProps(activation);
 }
 
 /**

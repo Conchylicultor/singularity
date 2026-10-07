@@ -58,8 +58,8 @@ export function ServersList() {
       readiness={result}
       itemActions={ServerItemActions}
       selectedRowId={selectedId}
-      onRowActivate={(s) =>
-        openPane(serverDetailPane, { serverId: s.id }, { mode: "push" })
+      rowActivation={(s) =>
+        openPane.to(serverDetailPane, { serverId: s.id }, { mode: "push" })
       }
       actions={
         <Button

@@ -39,6 +39,11 @@ import {
 } from "@plugins/primitives/plugins/rank-reorder/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  activationHref,
+  runActivation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import type { ListViewOptions } from "../../core";
 
 /**
@@ -267,6 +272,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     const cellFields = [...subtitleFields, ...trailingFields];
     const hasCells =
       cellFields.length > 0 || (aggregateCount != null && aggregateCount > 1);
+    const activation = props.rowActivation?.(row);
     return (
       <TreeRowChrome
         key={key}
@@ -275,7 +281,11 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         isOpen={false}
         leafChevron={false}
         selected={key === props.selectedRowId}
-        onSelect={props.rowActivation?.(row)}
+        // `undefined` stays `undefined`: a non-activating row is no button.
+        onSelect={
+          activation === undefined ? undefined : () => runActivation(activation)
+        }
+        selectHref={activationHref(activation)}
         icon={leadingSlot({
           field: leadingField,
           row,
@@ -343,8 +353,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         // `Row` infers its element from `onClick`, so a closure is never null and
         // every row becomes a `<button>` that then nests whatever `renderRow`
         // put inside it. A non-activating row is a plain container, which is
-        // what lets its body hold a real control.
-        onClick={props.rowActivation?.(row)}
+        // what lets its body hold a real control. A link row also gets its
+        // middle- / ⌘-click (`Row` forwards the gesture handlers).
+        {...activationProps(props.rowActivation?.(row))}
         icon={leadingSlot({
           field: leadingField,
           row,

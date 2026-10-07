@@ -40,6 +40,10 @@ import {
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  activationHref,
+  runActivation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -588,8 +592,16 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const activateById = useEventCallback((id: string): boolean => {
     const original = originalById.get(id);
     if (original === undefined) return false;
-    props.rowActivation?.(original)?.();
+    const activation = props.rowActivation?.(original);
+    if (activation !== undefined) runActivation(activation);
     return true;
+  });
+  // A row whose activation is a link is a link row: its ⌘/middle-click opens
+  // the link's URL in a browser tab (TreeList resolves this at click time).
+  const selectHref = useEventCallback((id: string) => {
+    const original = originalById.get(id);
+    if (original === undefined) return undefined;
+    return activationHref(props.rowActivation?.(original));
   });
   useEffect(() => {
     const pending = pendingActivationRef.current;
@@ -710,6 +722,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         // does resolve now supersedes a held one.
         pendingActivationRef.current = activateById(id) ? null : id;
       }}
+      selectHref={props.rowActivation ? selectHref : undefined}
       setExpanded={setExpanded}
       onMove={onMove}
       onCreate={hierOnCreate ? wrappedOnCreate : undefined}

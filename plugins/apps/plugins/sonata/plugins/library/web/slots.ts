@@ -13,7 +13,7 @@ import type { Song } from "../core";
  *    contributes how it persists/hydrates a song, so the library stays fully
  *    source-agnostic (the collection–consumer separation). `hydrate(songId)`
  *    returns that source's client raw for the song (or `undefined` if it has
- *    none); `useOpenSong` collects every source's raw and loads them in one shot.
+ *    none); `useSongLink` collects every source's raw and loads them in one shot.
  *    The optional `createOption` is a data-view {@link CreateOption} — an "add a
  *    song of this source" affordance the library maps into the gallery's
  *    `creators` (a toolbar "+" menu, since there are N sources). Its `onSelect`

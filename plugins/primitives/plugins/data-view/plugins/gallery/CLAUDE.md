@@ -125,6 +125,7 @@ hand-roll a *button* inside the body. It just has no card to own.
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/link-gesture.activationProps`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.VirtualRows`

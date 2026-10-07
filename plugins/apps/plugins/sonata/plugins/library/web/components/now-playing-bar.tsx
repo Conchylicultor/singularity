@@ -13,7 +13,8 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useOpenSong } from "../hooks";
+import { useSongLink } from "../hooks";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useCurrentSong } from "../use-current-song";
 import type { Song } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -32,7 +33,7 @@ const musicNoteIcon = symbol("music-note");
  */
 export function NowPlayingBar() {
   const current = useCurrentSong();
-  const openSong = useOpenSong();
+  const songLink = useSongLink();
   // While the open song's row loads — pressing Play on another song mints a
   // new point read — the bar STAYS and only its title waits (a shimmer, or the
   // read's error over the row as last seen), so a song change never blinks the
@@ -63,7 +64,7 @@ export function NowPlayingBar() {
             <button
               type="button"
               aria-label={`Open ${song.title} in player`}
-              onClick={() => openSong({ id: song.id, title: song.title })}
+              {...linkProps(songLink({ id: song.id, title: song.title }))}
               className="w-44 text-left hover:underline"
             >
               <NowPlayingTitle>

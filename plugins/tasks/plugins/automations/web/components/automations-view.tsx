@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   DataView,
   defineDataView,
@@ -39,10 +40,11 @@ const openOf = (r: AutomationView): OpenState =>
  */
 export function AutomationsView({
   selectedId,
-  onOpen,
+  linkTo,
 }: {
   selectedId: string | undefined;
-  onOpen: (automationId: string) => void;
+  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
+  linkTo: (automationId: string) => LinkTarget;
 }): ReactElement {
   const result = useAutomations();
   const rows = foldResource(result, {
@@ -106,7 +108,7 @@ export function AutomationsView({
       storageKey={AUTOMATIONS_VIEW}
       readiness={result}
       selectedRowId={selectedId}
-      onRowActivate={(r) => onOpen(r.entry.id)}
+      rowActivation={(r) => linkTo(r.entry.id)}
       searchAccessor={(r) => `${r.entry.label} ${r.entry.description}`}
       searchPlaceholder="Search automations…"
       viewOptions={{

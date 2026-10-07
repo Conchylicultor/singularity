@@ -53,8 +53,8 @@ function AllConversationsView(): ReactElement {
         fields={fields}
         views={["table", "list"]}
         source={allConversationsSource}
-        onRowActivate={(c) =>
-          openPane(conversationPane, { convId: c.id }, { mode: "push" })
+        rowActivation={(c) =>
+          openPane.to(conversationPane, { convId: c.id }, { mode: "push" })
         }
       />
     </PaneChrome>

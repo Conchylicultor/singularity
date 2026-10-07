@@ -269,6 +269,49 @@ describe("data-view table inline cell editing", () => {
     expect(getByLabelText("cell-editor")).toBeTruthy();
   });
 
+  it("makes a link row's ⌘- / middle-click open its href in a browser tab", () => {
+    const open = vi.fn();
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
+    const { getByText } = render(
+      <PluginProvider plugins={[plugin]}>
+        <TableView
+          {...({
+            ...renderProps([
+              {
+                id: "name",
+                label: "Name",
+                type: "text",
+                value: (r: Row) => r.name,
+              },
+            ]),
+            rowActivation: (r: Row) => ({
+              open: () => open(r.id),
+              href: () => `/rows/${r.id}`,
+            }),
+          } as DataViewRenderProps<unknown>)}
+        />
+      </PluginProvider>,
+    );
+    const row = getByText("alpha").closest<HTMLElement>("[role='button']")!;
+
+    fireEvent.click(row);
+    expect(open).toHaveBeenCalledWith("1");
+    expect(windowOpen).not.toHaveBeenCalled();
+
+    fireEvent.click(row, { metaKey: true });
+    fireEvent(row, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(windowOpen).toHaveBeenCalledTimes(2);
+    expect(String(windowOpen.mock.calls[1]![0])).toBe(
+      `${window.location.origin}/rows/1`,
+    );
+
+    // Keyboard activation runs the plain open.
+    fireEvent.keyDown(row, { key: "Enter" });
+    expect(open).toHaveBeenCalledTimes(2);
+    windowOpen.mockRestore();
+  });
+
   it("never enters edit mode for a multi-value field without onEditValues", () => {
     const { getByText, queryByLabelText } = render(
       <PluginProvider plugins={[plugin]}>

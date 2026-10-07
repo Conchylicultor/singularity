@@ -14,6 +14,16 @@
  *
  * and, for an `AppShell` sidebar entry, its `opens: { pane, params }` arm.
  *
+ * A DataView row is the same control: `onRowActivate={(r) => openPane(…)}` (or a
+ * `rowActivation` resolver handing back `() => openPane(…)`) makes a row whose
+ * middle-click does nothing. Its fix is the open's DATA form, returned from the
+ * resolver, which the views wire to every gesture:
+ *
+ * ```tsx
+ * <DataView onRowActivate={(r) => openPane(p, { id: r.id }, { mode: "push" })} />  // ✗
+ * <DataView rowActivation={(r) => openPane.to(p, { id: r.id }, { mode: "push" })} /> // ✓
+ * ```
+ *
  * Fires on a JSX `onClick={…}` attribute, and an object property `onClick: …`
  * (a contribution's data), whose value is a function whose body IS a call to
  * `openPane` / `<x>.openPane`, or whose block's SOLE statement is one. A handler
@@ -65,6 +75,16 @@ function onlyOpensPane(node: TSESTree.Node): boolean {
   return false;
 }
 
+/** A resolver `(row) => () => openPane(…)` — a row activation that only opens. */
+function resolvesToOnlyOpen(node: TSESTree.Node): boolean {
+  if (
+    node.type !== AST_NODE_TYPES.ArrowFunctionExpression ||
+    node.body.type === AST_NODE_TYPES.BlockStatement
+  )
+    return false;
+  return onlyOpensPane(node.body);
+}
+
 export default createRule({
   name: "no-onclick-open-pane",
   meta: {
@@ -77,6 +97,9 @@ export default createRule({
       onClickOpenPane:
         "This click handler only opens a pane, so the control is a link — but a bare onClick drops ⌘/Ctrl- and middle-click. " +
         "Spread `{...openPane.link(target, params, opts)}` (same arguments) instead, or use `opens: { pane, params }` for a sidebar entry.",
+      rowActivateOpenPane:
+        "This row activation only opens a pane, so the row is a link — but a bare callback drops ⌘/Ctrl- and middle-click. " +
+        "Return the open's data form instead: `rowActivation={(row) => openPane.to(target, params, opts)}` (same arguments).",
     },
     schema: [],
   },
@@ -85,11 +108,23 @@ export default createRule({
     return {
       JSXAttribute(node) {
         if (node.name.type !== AST_NODE_TYPES.JSXIdentifier) return;
-        if (node.name.name !== "onClick") return;
         const value = node.value;
         if (value?.type !== AST_NODE_TYPES.JSXExpressionContainer) return;
-        if (onlyOpensPane(value.expression))
-          context.report({ node, messageId: "onClickOpenPane" });
+        const expr = value.expression;
+        switch (node.name.name) {
+          case "onClick":
+            if (onlyOpensPane(expr))
+              context.report({ node, messageId: "onClickOpenPane" });
+            return;
+          case "onRowActivate":
+            if (onlyOpensPane(expr))
+              context.report({ node, messageId: "rowActivateOpenPane" });
+            return;
+          case "rowActivation":
+            if (resolvesToOnlyOpen(expr))
+              context.report({ node, messageId: "rowActivateOpenPane" });
+            return;
+        }
       },
       Property(node) {
         const key = node.key;

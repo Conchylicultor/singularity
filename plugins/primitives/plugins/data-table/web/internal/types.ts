@@ -111,6 +111,13 @@ export interface DataTableProps<TRow> {
   /** When provided, rows become clickable and fire this on click/Enter/Space. */
   onRowClick?: (row: TRow) => void;
   /**
+   * Makes a row's click a LINK: the thunk of the app path a ⌘/Ctrl- or
+   * middle-click on that row opens in a new browser tab instead of firing
+   * `onRowClick` (evaluated at click time), or `undefined` for a row whose click
+   * is not navigation. Keyboard activation always fires `onRowClick`.
+   */
+  rowHref?: (row: TRow) => (() => string) | undefined;
+  /**
    * The open gesture: double-click a row, or Enter on a focused row (Space then
    * still fires `onRowClick`). Distinct from the click — a file browser's
    * "click selects, double-click opens". Present → rows are focusable.

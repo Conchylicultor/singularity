@@ -64,8 +64,9 @@ function DepsTreeSectionLoaded({
   // Selecting a task in the tree re-roots this pane in place, so the URL stays
   // truthful and the new root is shareable.
   const openPane = useOpenPane();
-  const onNavigate = useCallback(
-    (id: string) => openPane(taskDetailPane, { taskId: id }, { mode: "swap" }),
+  const linkTo = useCallback(
+    (id: string) =>
+      openPane.to(taskDetailPane, { taskId: id }, { mode: "swap" }),
     [openPane],
   );
 
@@ -93,7 +94,7 @@ function DepsTreeSectionLoaded({
     <MergedDataView
       storageKey={DEPS_TREE_VIEW}
       sources={DepsSources}
-      hostProps={{ taskId, allTasks, memberIds, onNavigate }}
+      hostProps={{ taskId, allTasks, memberIds, linkTo }}
       defaultView="deps"
     />
   );

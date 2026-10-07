@@ -18,7 +18,7 @@ import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songLibrary, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
-import { useOpenSong } from "../hooks";
+import { useSongLink } from "../hooks";
 import { songLibrarySource } from "../source";
 import { formatDuration } from "../format-duration";
 import { NowPlayingBar } from "./now-playing-bar";
@@ -34,7 +34,7 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * The Sonata landing surface: the saved-song collection rendered through the
  * `data-view` primitive (gallery of cards + sortable/searchable table). Opening
  * a song hydrates every source that has data for it via the generic
- * `Library.Source` registry (see `useOpenSong`) and switches to the player —
+ * `Library.Source` registry (see `useSongLink`) and switches to the player —
  * the library never names MIDI (or any source). Each source's create affordance
  * (`Library.Source.createOption`, a data-view `CreateOption`) is mapped into the
  * DataView's `creators` — rendered as a toolbar "+" menu (N sources). The list
@@ -46,7 +46,7 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * schema, plus a `leading` music-note block. Everything the old `SongCard` drew
  * is now declared once and honoured by BOTH views — Play/Delete as
  * `Library.SongActions` contributions, the currently-loaded ring as
- * `selectedRowId`, and opening a song as `onRowActivate`.
+ * `selectedRowId`, and opening a song as `rowActivation` (a link).
  *
  * Extra fields (e.g. play-count / last-played from `playback-history`) are
  * injected via the `Library.Fields` extension factory passed as
@@ -64,7 +64,7 @@ export function SongLibrary() {
     error: () => false,
     ready: (rows) => rows.length === 0,
   });
-  const openSong = useOpenSong();
+  const songLink = useSongLink();
   // The background-playing song (if any) — highlights its table row and feeds
   // the now-playing footer below.
   const { currentSongId } = useSonataApp();
@@ -201,7 +201,7 @@ export function SongLibrary() {
             creators={sources
               .map((s) => s.createOption)
               .filter((c): c is CreateOption => Boolean(c))}
-            onRowActivate={(s) => void openSong(s)}
+            rowActivation={songLink}
             emptyState={<>No songs match.</>}
             viewOptions={{
               gallery: {

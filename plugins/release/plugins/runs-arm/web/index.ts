@@ -14,8 +14,8 @@ export default {
       // The run-detail pane is keyed by run id alone — which is exactly what the
       // ledger row carries — so a release row activates from the merged list the
       // same way it does from a composition's release history.
-      open: (run, { openPane }) =>
-        openPane(releaseDetailPane, { runId: run.id }, { mode: "push" }),
+      link: (run, { openPane }) =>
+        openPane.to(releaseDetailPane, { runId: run.id }, { mode: "push" }),
     }),
     Runs.Fields({
       id: RELEASE_RUN_KIND,

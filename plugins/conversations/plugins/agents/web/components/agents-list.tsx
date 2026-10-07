@@ -141,10 +141,10 @@ export function AgentsList({
         views={["tree"]}
         storageKey={AGENTS_LIST_VIEW}
         selectedRowId={selectedId}
-        onRowActivate={(a) =>
+        rowActivation={(a) =>
           onSelect
-            ? onSelect(a.id)
-            : openPane(agentDetailPane, { id: a.id }, { mode: "push" })
+            ? () => onSelect(a.id)
+            : openPane.to(agentDetailPane, { id: a.id }, { mode: "push" })
         }
         // No expand hooks: expand/collapse is per-(surface, view-instance, row)
         // device-local render state owned by the data-view primitive, never a

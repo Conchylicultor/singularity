@@ -310,3 +310,49 @@ describe("data-view tree: aligned columns", () => {
     expect(container.querySelector("[data-aligned-cell]")).toBeNull();
   });
 });
+
+describe("data-view tree: a link row", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const treeRowOf = (label: HTMLElement) =>
+    label.closest<HTMLElement>("[data-tree-row]")!;
+
+  it("opens in place on a click, and its href in a browser tab on ⌘- / middle-click", () => {
+    const open = vi.fn();
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
+    const { getByText } = renderTree({
+      rowActivation: (r) => ({
+        open: () => open(r.id),
+        href: () => `/files/${r.id}`,
+      }),
+    });
+    const row = treeRowOf(getByText("README.md"));
+
+    fireEvent.click(row, { detail: 1 });
+    expect(open).toHaveBeenCalledWith("readme");
+    expect(windowOpen).not.toHaveBeenCalled();
+
+    fireEvent.click(row, { detail: 1, metaKey: true });
+    fireEvent(row, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(windowOpen).toHaveBeenCalledTimes(2);
+    expect(String(windowOpen.mock.calls[0]![0])).toBe(
+      `${window.location.origin}/files/readme`,
+    );
+  });
+
+  it("a row whose click toggles expansion is no link", () => {
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
+    const setExpanded = vi.fn();
+    const { getByText } = renderTree({
+      setExpanded,
+      rowActivation: (r) => ({ open: () => {}, href: () => `/files/${r.id}` }),
+      options: { expandOnActivate: (r: Row) => r.isDir },
+    });
+    fireEvent(
+      treeRowOf(getByText("src")),
+      new MouseEvent("auxclick", { bubbles: true, button: 1 }),
+    );
+    expect(windowOpen).not.toHaveBeenCalled();
+  });
+});

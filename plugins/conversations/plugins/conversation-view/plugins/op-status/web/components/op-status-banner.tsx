@@ -490,8 +490,8 @@ export function OpStatusBanner({
           itemActions={OpQueueItemActions}
           // Every op has a detail pane — in flight included — with its wait
           // timeline and step breakdown.
-          onRowActivate={(r) =>
-            openPane(opDetailPane, { opId: r.row.opId }, { mode: "push" })
+          rowActivation={(r) =>
+            openPane.to(opDetailPane, { opId: r.row.opId }, { mode: "push" })
           }
           viewOptions={{ table: { columnHeader: "first-group" } }}
           emptyState={

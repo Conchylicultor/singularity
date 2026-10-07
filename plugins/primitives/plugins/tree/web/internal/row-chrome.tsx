@@ -75,6 +75,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     isSelected,
     toggleExpanded,
     select,
+    selectHref,
     isDragging,
     isOverChild,
     beforeRef,
@@ -211,6 +212,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
             selected={isSelected}
             onToggle={toggleExpanded}
             onSelect={select}
+            selectHref={selectHref}
             onOpen={open}
             clickOpens={clickOpens}
             guides={ctx.guides}

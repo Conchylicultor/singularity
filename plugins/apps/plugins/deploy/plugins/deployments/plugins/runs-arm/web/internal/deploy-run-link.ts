@@ -1,4 +1,5 @@
 import type { OpenPaneFn } from "@plugins/primitives/plugins/pane/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import type { RunRowProps } from "@plugins/runs/web";
 import { deploymentDetailPane } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { deployRunColumns } from "../../core";
@@ -19,16 +20,20 @@ import { deployRunColumns } from "../../core";
  * It lives here rather than in the barrel because a barrel may hold only
  * imports, re-exports, type aliases and the single default export.
  */
-export function openDeployRun(
+export function deployRunLink(
   run: RunRowProps["run"],
   openPane: OpenPaneFn,
-): void {
+): LinkTarget {
   // A deploy row always carries its slice (the handle throws otherwise), and
   // both ids are NOT NULL there. Not a deploy row is a caller bug.
   const own = deployRunColumns.read(run);
   if (own === null) {
-    throw new Error(`openDeployRun: run ${run.runKey} is not a deploy run.`);
+    throw new Error(`deployRunLink: run ${run.runKey} is not a deploy run.`);
   }
   const { serverId, deploymentId } = own;
-  openPane(deploymentDetailPane, { serverId, deploymentId }, { mode: "push" });
+  return openPane.to(
+    deploymentDetailPane,
+    { serverId, deploymentId },
+    { mode: "push" },
+  );
 }

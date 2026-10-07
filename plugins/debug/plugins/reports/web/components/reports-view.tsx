@@ -1,4 +1,5 @@
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { useStaleFrontend } from "@plugins/build/web";
@@ -31,10 +32,11 @@ const reportsSource = liveDataSource(reportsList, {
 
 export function ReportsView({
   selectedId,
-  onSelect,
+  linkTo,
 }: {
   selectedId?: string;
-  onSelect: (id: string) => void;
+  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
+  linkTo: (id: string) => LinkTarget;
 }) {
   return (
     <DataView<Report>
@@ -43,7 +45,7 @@ export function ReportsView({
       defaultView="table"
       storageKey={REPORTS_VIEW}
       selectedRowId={selectedId}
-      onRowActivate={(r) => onSelect(r.id)}
+      rowActivation={(r) => linkTo(r.id)}
       emptyState={<>No reports recorded yet.</>}
       source={reportsSource}
     />

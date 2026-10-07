@@ -97,8 +97,8 @@ function BootProfileTable({
       views={["list"]}
       storageKey={BOOT_PROFILES_VIEW}
       readiness={readiness}
-      onRowActivate={(r) =>
-        openPane(bootProfileDetailPane, { id: r.id }, { mode: "push" })
+      rowActivation={(r) =>
+        openPane.to(bootProfileDetailPane, { id: r.id }, { mode: "push" })
       }
       emptyState={
         <>

@@ -61,6 +61,13 @@ export type TreeListProps<T extends TreeItem> = {
   rootId?: string;
   onSelect: (id: string) => void;
   /**
+   * Makes a row's select click a LINK: for an id it returns the thunk of the URL
+   * a ⌘/Ctrl- or middle-click on that row opens in a new browser tab (evaluated
+   * at click time), or `undefined` when that row's select is not navigation.
+   * Keyboard and programmatic selects always run `onSelect`.
+   */
+  selectHref?: (id: string) => (() => string) | undefined;
+  /**
    * Apply a whole batch of expand/collapse changes. Batch-shaped on purpose: a
    * single gesture (expand-all, the reveal-on-select ancestor walk, a drop into
    * a collapsed folder) touches N rows, and every layer below must apply them in
@@ -176,6 +183,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     selectedId,
     rootId,
     onSelect,
+    selectHref,
     setExpanded,
     onMove,
     onCreate,
@@ -445,6 +453,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       setPendingFocus: setPendingFocusId,
       clearPendingFocus,
       onSelect,
+      selectHref,
       setExpanded,
       subtreeAllExpanded: subtreeIndex.getAllExpanded,
       toggleSubtreeExpanded,
@@ -468,6 +477,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       pendingFocusId,
       clearPendingFocus,
       onSelect,
+      selectHref,
       setExpanded,
       subtreeIndex,
       toggleSubtreeExpanded,

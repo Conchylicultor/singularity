@@ -4,12 +4,18 @@ import {
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
 import { type ReactNode } from "react";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  runActivation,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export interface DataCardProps {
   /** Card click + Enter/Space (role=button, tabIndex=0). */
-  onActivate?: () => void;
+  /** A plain action, or a link (middle- / ⌘-click open it in a browser tab). */
+  onActivate?: Activation;
   /** Top region: cover image / icon block. */
   media?: ReactNode;
   /** Leading block rendered BESIDE the body (icon / avatar / status dot), the
@@ -66,13 +72,13 @@ export function DataCard(props: DataCardProps) {
       interactive={activates}
       role={activates ? "button" : undefined}
       tabIndex={activates ? 0 : undefined}
-      onClick={onActivate}
+      {...activationProps(onActivate)}
       onKeyDown={
         activates
           ? (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                onActivate();
+                runActivation(onActivate);
               }
             }
           : undefined

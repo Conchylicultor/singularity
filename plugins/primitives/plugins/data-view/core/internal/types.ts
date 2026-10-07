@@ -22,6 +22,7 @@ import type {
   ToolbarArrangement,
 } from "./toolbar-arrangement";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import type { LiveDataSource } from "./live-data-source";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
@@ -796,14 +797,20 @@ export interface DataViewRenderProps<TRow> {
    * row does not activate. Resolved once by the host from `rowActivation` /
    * `onRowActivate`, so a view never sees the two.
    *
-   * A view MUST pass the result straight through to its row element's `onClick`
-   * — `undefined` and all — never wrap it in a closure. `Row` infers its element
-   * from `onClick` (`row.tsx`), so a closure is never null and every row becomes
-   * a `<button>` whose `renderRow` children are then nested inside it. That is
-   * invalid DOM for any interactive content a row body holds, and it makes a
-   * list where nothing activates announce every row as a button.
+   * The handler is an {@link Activation}: a plain action, or a link
+   * (`{ open, href }`) whose ⌘/Ctrl- and middle-click open `href()` in a new
+   * browser tab. A view spreads `activationProps(result)` (link-gesture) onto
+   * its row element's click props, and runs `runActivation(result)` from any
+   * keyboard or programmatic path — never switching on the union itself.
+   *
+   * A view MUST hand the result straight to those helpers — `undefined` and
+   * all — never wrap it in a closure. `Row` infers its element from `onClick`
+   * (`row.tsx`), so a closure is never null and every row becomes a `<button>`
+   * whose `renderRow` children are then nested inside it. That is invalid DOM
+   * for any interactive content a row body holds, and it makes a list where
+   * nothing activates announce every row as a button.
    */
-  rowActivation?: (row: TRow) => (() => void) | undefined;
+  rowActivation?: (row: TRow) => Activation | undefined;
   /**
    * The OPEN gesture — double-click a row, or Enter on a focused row — threaded
    * from `DataViewProps.onRowOpen`. Distinct from `rowActivation` (a single
@@ -1270,8 +1277,13 @@ export interface DataViewBaseProps<TRow> {
    *
    * Reach for it when one list holds rows of different kinds: a merged run list
    * where builds open a detail pane and backups offer a Grant-access button.
+   *
+   * **A row that opens a pane returns a link**, so middle- and ⌘-click open it
+   * in a new browser tab as on any link:
+   * `rowActivation={(r) => openPane.to(detailPane, { id: r.id }, { mode: "push" })}`.
+   * A plain `() => void` is for activation that is not navigation.
    */
-  rowActivation?: (row: TRow) => (() => void) | undefined;
+  rowActivation?: (row: TRow) => Activation | undefined;
   /**
    * The OPEN gesture: double-click a row, or press Enter on a focused one —
    * distinct from activation (a single click). A file browser's "click selects,

@@ -207,6 +207,7 @@ conditional hook.
     - `primitives/data-view.useResolveCell`
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`
+    - `primitives/link-gesture.activationProps`
     - `primitives/rank-reorder.RankReorderProvider`
     - `primitives/rank-reorder.useRankSortableItem`
     - `primitives/tree.TreeRowChrome`

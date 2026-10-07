@@ -170,8 +170,8 @@ export function PrototypeGallery() {
       readiness={result}
       itemActions={PrototypeCardActions}
       rowTone={(p) => (p.done ? "muted" : "default")}
-      onRowActivate={(p) =>
-        openPane(prototypeDetailPane, { name: p.name }, { mode: "push" })
+      rowActivation={(p) =>
+        openPane.to(prototypeDetailPane, { name: p.name }, { mode: "push" })
       }
       actions={newButton}
       emptyState="No prototypes yet. New prototype mints one and launches an agent to design it."

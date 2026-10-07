@@ -80,8 +80,8 @@ function TasksRoot(): ReactElement {
       <div className="rail-lg">
         <TasksListView
           selectedId={selectedId}
-          onSelect={(id) =>
-            openPane(taskDetailPane, { taskId: id }, { mode: "push" })
+          linkTo={(id) =>
+            openPane.to(taskDetailPane, { taskId: id }, { mode: "push" })
           }
         />
       </div>

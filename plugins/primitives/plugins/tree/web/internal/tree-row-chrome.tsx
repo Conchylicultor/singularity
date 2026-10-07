@@ -19,6 +19,7 @@ import {
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import type { TreeDisclosureProps } from "../../core";
 import { Tree } from "../slots";
 import { TreeDisclosureToggle } from "./tree-disclosure-toggle";
@@ -38,6 +39,12 @@ export type TreeRowChromeProps = {
   onToggle?: () => void;
   /** Row click. */
   onSelect?: () => void;
+  /**
+   * Makes the row click a LINK: ⌘/Ctrl- and middle-click open `selectHref()`
+   * in a new browser tab instead of running `onSelect` (link-gesture). Absent →
+   * every click selects, as before.
+   */
+  selectHref?: () => string;
   /**
    * The open gesture: double-click, or Enter while the row has focus. Present →
    * the row is focusable, and the second click of a double-click does not fire
@@ -163,6 +170,7 @@ export function TreeRowChrome({
   selected,
   onToggle,
   onSelect,
+  selectHref,
   onOpen,
   clickOpens = false,
   children,
@@ -190,6 +198,13 @@ export function TreeRowChrome({
     expandable,
     onToggle,
   };
+  // A link row's select click reads its gestures (⌘-click opens the href in a
+  // browser tab); the aux/mousedown halves catch the middle button.
+  const selectLink =
+    onSelect && selectHref
+      ? linkProps({ open: onSelect, href: selectHref })
+      : undefined;
+  const selectClick = selectLink?.onClick ?? onSelect;
   return (
     <Stack
       direction="row"
@@ -206,10 +221,13 @@ export function TreeRowChrome({
               if (e.detail > 1) return;
               firstClickTarget = e.currentTarget;
               if (clickOpens) onOpen();
+              else if (selectLink) selectLink.onClick(e);
               else onSelect?.();
             }
-          : onSelect
+          : selectClick
       }
+      onAuxClick={selectLink?.onAuxClick}
+      onMouseDown={selectLink?.onMouseDown}
       onDoubleClick={
         onOpen && !clickOpens
           ? (e: MouseEvent) => {

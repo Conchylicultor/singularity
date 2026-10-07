@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   defineDataView,
   defineDataViewSources,
@@ -15,7 +16,8 @@ import {
  */
 export interface ConversationSidebarProps {
   activeId: string | null;
-  onNavigate: (id: string) => void;
+  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
+  linkTo: (id: string) => LinkTarget;
   onCloseConversation: (id: string, e: MouseEvent) => Promise<void>;
 }
 

@@ -143,8 +143,8 @@ export function SourceRunsSection({
       // slot to the left and the push inherits it from the route. It is passed
       // because the type asks for the chained set, and because a card that knows
       // which source it is drawing should not be the one deciding that.
-      onRowActivate={(run) =>
-        openPane(
+      rowActivation={(run) =>
+        openPane.to(
           eventSourceRunPane,
           { sourceId, runId: run.id },
           { mode: "push", side: "right" },

@@ -26,7 +26,7 @@ export function QueueSource({
   hostProps,
   render,
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
-  const { activeId, onNavigate, onCloseConversation } = hostProps;
+  const { activeId, linkTo, onCloseConversation } = hostProps;
   const { rows, dispatchReorder, readiness } = useQueueRows();
   const fields = useQueueFields();
 
@@ -38,7 +38,7 @@ export function QueueSource({
         rowKey: (c) => c.id,
         readiness,
         selectedRowId: activeId ?? undefined,
-        onRowActivate: (r) => onNavigate(r.id),
+        rowActivation: (r) => linkTo(r.id),
         viewOptions: {
           list: {
             // A blocked task's row is muted: it is waiting on another task,

@@ -5,6 +5,7 @@ import {
   type DataViewDensity,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { runRowKey, runs, type RunRow } from "../../core";
 import { useRunFields } from "../internal/fields";
 import { Runs } from "../internal/slots";
@@ -43,7 +44,7 @@ export interface RunsDataViewProps {
   selectedRun?: { kind: string; id: string };
   /**
    * Fires when a row is clicked, IN ADDITION to the arm's own
-   * `Runs.Kind.open` — never instead of it.
+   * `Runs.Kind.link` — never instead of it.
    *
    * The arm still owns where the click goes; this is for the host's own business
    * with its own chrome (the build popover closing itself, so it does not hang
@@ -91,7 +92,7 @@ export function RunsDataView({
   const openers = useMemo(
     () =>
       new Map(
-        kinds.flatMap((k) => (k.open ? [[k.kind, k.open] as const] : [])),
+        kinds.flatMap((k) => (k.link ? [[k.kind, k.link] as const] : [])),
       ),
     [kinds],
   );
@@ -117,14 +118,22 @@ export function RunsDataView({
   //
   // Two independent reasons a click matters (the arm's navigation and the host's
   // own side effect), so a row activates if EITHER is present and runs both when
-  // both are.
+  // both are. An arm's navigation is a link, so its row stays one (middle- /
+  // ⌘-click open the run in a browser tab) with the host's effect folded into
+  // the plain click.
   const resolveActivation = useCallback(
-    (run: RunRow): (() => void) | undefined => {
-      const open = openers.get(run.kind);
-      if (!open && !onRowActivate) return undefined;
-      return () => {
-        open?.(run, { openPane });
-        onRowActivate?.(run);
+    (run: RunRow): Activation | undefined => {
+      const linkOf = openers.get(run.kind);
+      if (!linkOf) {
+        return onRowActivate ? () => onRowActivate(run) : undefined;
+      }
+      const link = linkOf(run, { openPane });
+      return {
+        open: () => {
+          link.open();
+          onRowActivate?.(run);
+        },
+        href: link.href,
       };
     },
     [openers, onRowActivate, openPane],

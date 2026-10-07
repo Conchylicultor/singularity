@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   ResourceErrorInline,
   foldResource,
@@ -44,10 +45,11 @@ const NO_ENTRIES: BackgroundEntry[] = [];
  */
 export function BackgroundView({
   selectedKey,
-  onOpen,
+  linkTo,
 }: {
   selectedKey: string | undefined;
-  onOpen: (entry: BackgroundEntry) => void;
+  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
+  linkTo: (entry: BackgroundEntry) => LinkTarget;
 }): ReactElement {
   const { worktree: result, central } = useCatalogHalves();
   const worktreeRows = foldResource(result, {
@@ -168,7 +170,7 @@ export function BackgroundView({
         storageKey={BACKGROUND_VIEW}
         readiness={result}
         selectedRowId={selectedKey}
-        onRowActivate={onOpen}
+        rowActivation={linkTo}
         searchAccessor={(r) => `${r.description} ${r.name} ${r.group}`}
         searchPlaceholder="Search what runs…"
         viewOptions={{

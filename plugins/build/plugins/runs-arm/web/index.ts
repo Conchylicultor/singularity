@@ -15,8 +15,8 @@ export default {
       // The run-detail pane already exists and is already reached by run id
       // alone — the merged row carries everything it needs, so a build row
       // activates from the merged list exactly as it does from the build pane.
-      open: (run, { openPane }) =>
-        openPane(buildDetailPane, { runId: run.id }, { mode: "push" }),
+      link: (run, { openPane }) =>
+        openPane.to(buildDetailPane, { runId: run.id }, { mode: "push" }),
     }),
     Runs.Leading({ match: BUILD_RUN_KIND, component: BuildRunLeading }),
     Runs.Fields({

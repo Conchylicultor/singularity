@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -38,7 +39,7 @@ export function AppRail() {
               // Icon-only button: the tooltip is invisible to the a11y tree, so
               // the app name must ALSO be the accessible name.
               aria-label={entry.app.name}
-              onClick={() => activate(entry)}
+              {...activationProps(activate(entry))}
               // Idle apps are dim and step up on hover; the selected app sits
               // one step further (`accent`) in full text colour. Monochrome on
               // purpose: the only accent on screen belongs to the app itself.

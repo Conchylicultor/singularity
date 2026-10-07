@@ -2,6 +2,7 @@ import {
   useResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DataView,
@@ -22,10 +23,11 @@ const TASKS_LIST_VIEW = defineDataView("tasks-list");
 
 export function TasksListView({
   selectedId,
-  onSelect,
+  linkTo,
 }: {
   selectedId?: string;
-  onSelect: (id: string) => void;
+  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
+  linkTo: (id: string) => LinkTarget;
 }) {
   const result = useResource(tasksResource);
   return (
@@ -39,7 +41,7 @@ export function TasksListView({
           defaultView="tree"
           storageKey={TASKS_LIST_VIEW}
           selectedRowId={selectedId}
-          onRowActivate={(t) => onSelect(t.id)}
+          rowActivation={(t) => linkTo(t.id)}
           selection={{}}
           hierarchy={taskHierarchy}
           viewOptions={{ tree: buildTreeOptions({}), list: {} }}

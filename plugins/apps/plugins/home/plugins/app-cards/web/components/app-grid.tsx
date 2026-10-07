@@ -150,7 +150,7 @@ export function AppGrid() {
       storageKey={HOME_APPS_VIEW}
       // The grid only renders inside the visible (focused) Home tab, so the
       // launcher navigates that tab into the picked app in place.
-      onRowActivate={activate}
+      rowActivation={activate}
       creators={creators}
       // Every install has apps, so an empty grid is a search that matched
       // nothing — which is when building the missing app is the useful offer.

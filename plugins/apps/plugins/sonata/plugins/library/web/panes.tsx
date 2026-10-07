@@ -131,7 +131,7 @@ function useSongTitle(
 
 /**
  * Resolve hook: hydrate every registered source's raw for `songId` and gate the
- * pane on the song existing. Lifted out of `useOpenSong` so hydration also runs
+ * pane on the song existing. Lifted out of `useSongLink` so hydration also runs
  * on direct navigation / reload (a deep-linked `/sonata/song/:id`), not only on a
  * library click. Source-agnostic: a source with no data for the song returns
  * `undefined` and is skipped.

@@ -1158,11 +1158,22 @@ twin for tags. `FieldDef.data?: (row) => unknown` is the third projection:
 => (() => void) | null` says which ones do — the handler's **presence** is the
 fact, so there is no predicate beside it to disagree with. Passing both throws.
 
-The host folds either into ONE `DataViewRenderProps.rowActivation: (row) =>
-(() => void) | undefined`, so a view never sees the two.
+The handler is an `Activation` (`link-gesture/core`): a plain `() => void`, or a
+**link** `{ open, href }`. A row that opens a pane returns one —
+`rowActivation={(r) => openPane.to(detailPane, { id: r.id }, { mode: "push" })}`
+— so its middle- and ⌘/Ctrl-click open `href()` in a new browser tab, exactly
+like a link; plain click and Enter run `open()`. The `pane/no-onclick-open-pane`
+lint rule flags an `onRowActivate` whose only job is `openPane(...)`.
 
-**A view must pass that result straight to its row element's `onClick` —
-`undefined` and all, never wrapped in a closure.** `Row` infers its element from
+The host folds either into ONE `DataViewRenderProps.rowActivation: (row) =>
+Activation | undefined`, so a view never sees the two. A view never switches on
+the union: it spreads `activationProps(act)` (`link-gesture/web`) onto the
+clicked element, runs `runActivation(act)` from keyboard / programmatic paths,
+and hands primitives that own their own click (`DataTable.rowHref`,
+`TreeList.selectHref`, `TreeRowChrome.selectHref`) `activationHref(act)`.
+
+**A view must pass that result straight through — `undefined` and all, never
+wrapped in a closure.** `Row` infers its element from
 `onClick` (`row.tsx`), and a closure is never null, so wrapping makes every row a
 `<button>` with the `renderRow` children nested inside it: invalid DOM for any
 control a row body holds, the outer row eating the press, and a list where

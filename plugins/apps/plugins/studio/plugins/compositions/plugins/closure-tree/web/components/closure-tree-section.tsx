@@ -49,8 +49,12 @@ export function ClosureTreeSection(): ReactElement {
         plugins={data!.plugins}
         storageKey={CLOSURE_TREE_VIEW}
         selected={selected}
-        onSelect={(pluginId) =>
-          openPane(pluginViewPane, { pluginId }, { mode: "push", side: "right" })
+        linkTo={(pluginId) =>
+          openPane.to(
+            pluginViewPane,
+            { pluginId },
+            { mode: "push", side: "right" },
+          )
         }
       />
     </Scroll>

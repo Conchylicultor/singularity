@@ -24,6 +24,8 @@ export type TreeListContextValue<T extends TreeItem> = {
   setPendingFocus: (id: string) => void;
   clearPendingFocus: () => void;
   onSelect: (id: string) => void;
+  /** See `TreeListProps.selectHref`. */
+  selectHref?: (id: string) => (() => string) | undefined;
   /** Batched expand write (see `TreeListProps.setExpanded`) — a single-row
    *  toggle wraps itself in a 1-element array. */
   setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>;
@@ -148,6 +150,8 @@ export type RowControls = {
   shouldAutoFocus: boolean;
   consumeAutoFocus: () => void;
   select: () => void;
+  /** The URL a ⌘/middle-click on the row opens; absent → the row is no link. */
+  selectHref?: () => string;
   /** The open gesture for this row (double-click / Enter), or `undefined` when
    *  the tree has none — so the row can tell whether to listen at all. */
   open: (() => void) | undefined;
@@ -263,6 +267,24 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
     }
     ctx.onSelect(node.id);
   }, [ctx, node, toggleExpanded]);
+  // A row whose click toggles expansion is not navigating, so it is no link.
+  // Presence is read now; the URL is resolved again at click time, so the thunk
+  // keeps one identity across renders (this object is a context value).
+  const isLink =
+    !ctx.expandOnActivate?.(node) && ctx.selectHref?.(node.id) !== undefined;
+  const resolveHref = ctx.selectHref;
+  const selectHref = useMemo(
+    () =>
+      isLink && resolveHref
+        ? () => {
+            const href = resolveHref(node.id);
+            if (!href)
+              throw new Error(`tree row ${node.id} is no longer a link`);
+            return href();
+          }
+        : undefined,
+    [isLink, resolveHref, node.id],
+  );
   const consumeAutoFocus = useCallback(() => ctx.clearPendingFocus(), [ctx]);
   // Distinct from `select`: no `expandOnActivate` diversion. Opening a folder IS
   // what a double-click on it asks for, whatever a single click does there.
@@ -328,6 +350,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
       shouldAutoFocus,
       consumeAutoFocus,
       select,
+      selectHref,
       open,
       clickOpens,
       toggleExpanded,
@@ -351,6 +374,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
       shouldAutoFocus,
       consumeAutoFocus,
       select,
+      selectHref,
       open,
       clickOpens,
       toggleExpanded,

@@ -4839,6 +4839,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/link-gesture.linkProps`
               - `primitives/live-state.foldResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
@@ -4862,7 +4863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `sonataPlayerPane`
               - `sonataSongLink`
               - `useCurrentSong`
-              - `useOpenSong`
+              - `useSongLink`
           - Server:
             - Contributes:
               - `resource.declare` "sonata.songs"
@@ -7623,6 +7624,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
+          - `primitives/link-gesture.activationProps`
           - `primitives/overlay/tooltip.WithTooltip`
         - Exports (values): `AppRail`
       - Cross-plugin:
@@ -31604,6 +31606,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/dom/element-size.useElementSize`
+          - `primitives/link-gesture.linkProps`
           - `primitives/row-actions.RowActions`
           - `primitives/row-actions.rowActionsAnchor`
           - `primitives/virtual-rows.useVirtualRows`
@@ -32175,6 +32178,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/link-gesture.activationProps`
               - `primitives/row-actions.RowActions`
               - `primitives/row-actions.rowActionsAnchor`
               - `primitives/virtual-rows.VirtualRows`
@@ -32219,6 +32223,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/link-gesture.activationProps`
               - `primitives/rank-reorder.RankReorderProvider`
               - `primitives/rank-reorder.useRankSortableItem`
               - `primitives/virtual-rows.VirtualRows`
@@ -32258,6 +32263,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
+              - `primitives/link-gesture.activationProps`
               - `primitives/rank-reorder.RankReorderProvider`
               - `primitives/rank-reorder.useRankSortableItem`
               - `primitives/tree.TreeRowChrome`
@@ -33542,15 +33548,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-launcher`
+          - `apps-core/app-rail`
           - `apps-core/tabs`
+          - `apps/sonata/library`
           - `conversations/conversation-view/open-app`
+          - `primitives/data-table`
+          - `primitives/data-view/gallery`
+          - `primitives/data-view/icons`
+          - `primitives/data-view/list`
           - `primitives/pane`
+          - `primitives/tree`
       - Web:
         - Exports (types): `LinkGestureProps`
         - Exports (values):
+          - `activationProps`
           - `linkGestureProps`
           - `linkProps`
           - `openInBrowserTab`
+      - Core:
+        - Exports (types):
+          - `Activation`
+          - `LinkTarget`
+        - Exports (values):
+          - `activationHref`
+          - `afterOpen`
+          - `runActivation`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.
       - Web:
         - Uses:
@@ -36546,6 +36568,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/dom/auto-scroll.KeepScrollAcross`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.linkProps`
           - `primitives/loading.Loading`
           - `primitives/multi-select.MultiSelectProvider`
           - `primitives/multi-select.SelectionBar`

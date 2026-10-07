@@ -461,19 +461,17 @@ export function RunningAgentsBand({
         rowActivation={(row) => {
           switch (row.kind) {
             case "agent":
-              return () =>
-                openPane(
-                  agentReportPane,
-                  { by: "agent", key: row.key },
-                  { mode: "push" },
-                );
+              return openPane.to(
+                agentReportPane,
+                { by: "agent", key: row.key },
+                { mode: "push" },
+              );
             case "shell":
-              return () =>
-                openPane(
-                  shellOutputPane,
-                  { shellId: row.shellId },
-                  { mode: "push" },
-                );
+              return openPane.to(
+                shellOutputPane,
+                { shellId: row.shellId },
+                { mode: "push" },
+              );
             case "workflow":
               return undefined;
           }

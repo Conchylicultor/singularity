@@ -33,8 +33,8 @@ function BackgroundBody(): ReactElement {
     <PaneChrome pane={backgroundPane}>
       <BackgroundView
         selectedKey={open === undefined ? undefined : backgroundEntryKey(open)}
-        onOpen={(e) =>
-          openPane(
+        linkTo={(e) =>
+          openPane.to(
             backgroundEntryPane,
             { kind: e.kind, name: e.name },
             { mode: "push" },

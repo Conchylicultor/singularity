@@ -58,8 +58,8 @@ function ReportsBody() {
     <PaneChrome pane={reportsPane}>
       <ReportsView
         selectedId={selectedId}
-        onSelect={(id) =>
-          openPane(reportDetailPane, { reportId: id }, { mode: "push" })
+        linkTo={(id) =>
+          openPane.to(reportDetailPane, { reportId: id }, { mode: "push" })
         }
       />
     </PaneChrome>

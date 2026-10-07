@@ -135,4 +135,49 @@ describe("list row activation", () => {
     fireEvent.click(rowOf(getByText("backup row")));
     expect(activate).toHaveBeenCalledTimes(1);
   });
+
+  describe("a link row", () => {
+    function linkList() {
+      const open = vi.fn();
+      const windowOpen = vi
+        .spyOn(window, "open")
+        .mockImplementation(() => null);
+      const utils = renderList({
+        rowActivation: (r) =>
+          r.kind === "build"
+            ? { open: () => open(r.id), href: () => `/runs/${r.id}` }
+            : undefined,
+      });
+      const row = rowOf(utils.getByText("build row"));
+      return { open, windowOpen, row, utils };
+    }
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it("opens in place on a plain click", () => {
+      const { open, windowOpen, row } = linkList();
+      fireEvent.click(row);
+      expect(open).toHaveBeenCalledWith("b1");
+      expect(windowOpen).not.toHaveBeenCalled();
+    });
+
+    it("opens its href in a new browser tab on ⌘-click and middle-click, staying put", () => {
+      const { open, windowOpen, row } = linkList();
+      fireEvent.click(row, { metaKey: true });
+      fireEvent.click(row, { ctrlKey: true });
+      fireEvent(row, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+      expect(open).not.toHaveBeenCalled();
+      expect(windowOpen).toHaveBeenCalledTimes(3);
+      for (const call of windowOpen.mock.calls) {
+        expect(String(call[0])).toBe(`${window.location.origin}/runs/b1`);
+        expect(call[1]).toBe("_blank");
+      }
+    });
+
+    it("is still a single button, and its non-link neighbour still none", () => {
+      const { utils } = linkList();
+      expect(utils.container.querySelectorAll("button")).toHaveLength(1);
+      expect(utils.getByText("backup row").closest("button")).toBeNull();
+    });
+  });
 });

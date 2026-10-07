@@ -12,7 +12,8 @@
  * - `<RunsDataView>`'s own wiring, mounted over a stubbed DataView (how rows
  *   draw is the primitive's tested behaviour): the host's empty line reaches
  *   it, a selected `{ kind, id }` highlights its row key, and activation is per
- *   kind — a kind with no `open` does not activate, unless the host asked.
+ *   kind — a kind with no `link` does not activate, unless the host asked, and
+ *   a kind's link keeps its href so the row stays a link.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,6 +34,11 @@ import { RunDuration } from "../components/run-duration";
 import { RunsDataView } from "../components/runs-data-view";
 import { useRunFields } from "../internal/fields";
 import type { RunKindContribution } from "../internal/slots";
+import {
+  activationHref,
+  runActivation,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 
 /** What the stubbed seams hold for the `<RunsDataView>` suite. */
 const stub = vi.hoisted(() => ({
@@ -163,21 +169,27 @@ const row = (kind: string, id: string): RunRow =>
   ({ kind, id, runKey: runRowKey({ kind, id }) }) as unknown as RunRow;
 
 /** The stubbed DataView's `rowActivation`, as the primitive calls it. */
-function activationOf(run: RunRow): (() => void) | undefined {
+function activationOf(run: RunRow): Activation | undefined {
   const resolve = stub.props!.rowActivation as (
     r: RunRow,
-  ) => (() => void) | undefined;
+  ) => Activation | undefined;
   return resolve(run);
 }
 
 describe("<RunsDataView>", () => {
-  const openBuild = vi.fn<NonNullable<RunKindContribution["open"]>>();
+  const openBuild = vi.fn<() => void>();
+  const linkBuild = vi.fn<NonNullable<RunKindContribution["link"]>>();
 
   beforeEach(() => {
     stub.props = undefined;
     openBuild.mockReset();
+    linkBuild.mockReset();
+    linkBuild.mockImplementation(() => ({
+      open: openBuild,
+      href: () => "/build/run/1",
+    }));
     stub.kinds = [
-      { kind: "build", label: "Build", open: openBuild },
+      { kind: "build", label: "Build", link: linkBuild },
       { kind: "release", label: "Release" },
     ] satisfies RunKindContribution[];
   });
@@ -201,13 +213,16 @@ describe("<RunsDataView>", () => {
     expect(stub.props!.selectedRowId).toBe("build:b:1");
   });
 
-  it("a row activates through its own kind's `open`; a kind with none does not activate", () => {
+  it("a row activates through its own kind's `link`; a kind with none does not activate", () => {
     render(<RunsDataView emptyState="none" />);
     const build = row("build", "1");
-    activationOf(build)!();
+    const activation = activationOf(build)!;
+    runActivation(activation);
     expect(openBuild).toHaveBeenCalledTimes(1);
-    expect(openBuild.mock.calls[0]![0]).toBe(build);
-    expect(openBuild.mock.calls[0]![1].openPane).toBe(stub.openPane);
+    expect(linkBuild.mock.calls[0]![0]).toBe(build);
+    expect(linkBuild.mock.calls[0]![1].openPane).toBe(stub.openPane);
+    // Still a link: a middle- / ⌘-click opens the arm's URL.
+    expect(activationHref(activation)?.()).toBe("/build/run/1");
     expect(activationOf(row("release", "1"))).toBeUndefined();
     // A kind nobody registered is no different.
     expect(activationOf(row("mystery", "1"))).toBeUndefined();
@@ -222,9 +237,9 @@ describe("<RunsDataView>", () => {
         onRowActivate={(r) => calls.push(`host:${r.kind}`)}
       />,
     );
-    activationOf(row("build", "1"))!();
+    runActivation(activationOf(row("build", "1"))!);
     expect(calls).toEqual(["arm", "host:build"]);
-    activationOf(row("release", "2"))!();
+    runActivation(activationOf(row("release", "2"))!);
     expect(calls).toEqual(["arm", "host:build", "host:release"]);
   });
 });

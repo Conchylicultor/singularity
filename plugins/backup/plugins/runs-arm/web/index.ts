@@ -24,8 +24,8 @@ export default {
     Runs.Kind({
       kind: BACKUP_RUN_KIND,
       label: "Backup",
-      open: (run, { openPane }) =>
-        openPane(backupRunPane, { runId: run.id }, { mode: "push" }),
+      link: (run, { openPane }) =>
+        openPane.to(backupRunPane, { runId: run.id }, { mode: "push" }),
     }),
     Runs.Fields({
       id: BACKUP_RUN_KIND,

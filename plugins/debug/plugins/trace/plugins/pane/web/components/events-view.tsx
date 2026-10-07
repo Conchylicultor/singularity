@@ -161,8 +161,8 @@ export function EventsView(): ReactElement {
       // A failed read returned above; here the list is loading or ready.
       readiness={isLoading ? { status: "loading" } : { status: "ready" }}
       selectedRowId={selectedId}
-      onRowActivate={(r) =>
-        openPane(traceDetailPane, { id: r.id }, { mode: "push" })
+      rowActivation={(r) =>
+        openPane.to(traceDetailPane, { id: r.id }, { mode: "push" })
       }
       actions={
         <Button

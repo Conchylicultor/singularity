@@ -1,4 +1,5 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   loadRouteForConversation,
   reportCorruptSavedRoute,
@@ -27,17 +28,36 @@ export function ConversationList() {
     await fetchEndpoint(closeConversation, { id });
   };
 
-  const navigate = (id: string) => {
-    const result = loadRouteForConversation(id);
-    // A corrupt saved route (parse failure or unrecognized shape) is a real
-    // fault — surface it as a deduped crash task rather than silently opening a
-    // fresh pane as if nothing had been saved. Navigation still proceeds below.
-    if (result.kind === "corrupt") reportCorruptSavedRoute(result.reason);
-    if (result.kind === "restored" && result.slots.length > 1) {
-      store.restoreRoute(result.slots);
-    } else {
-      openPane(conversationPane, { convId: id }, { mode: "root" });
-    }
+  // A row is a link: a plain click brings back the conversation's saved
+  // layout (or opens it fresh), and a middle- / ⌘-click opens THAT SAME layout
+  // in a new browser tab.
+  const linkTo = (id: string): LinkTarget => {
+    const fresh = openPane.to(
+      conversationPane,
+      { convId: id },
+      { mode: "root" },
+    );
+    return {
+      open: () => {
+        const result = loadRouteForConversation(id);
+        // A corrupt saved route (parse failure or unrecognized shape) is a real
+        // fault — surface it as a deduped crash task rather than silently
+        // opening a fresh pane as if nothing had been saved. Navigation still
+        // proceeds below.
+        if (result.kind === "corrupt") reportCorruptSavedRoute(result.reason);
+        if (result.kind === "restored" && result.slots.length > 1) {
+          store.restoreRoute(result.slots);
+        } else {
+          fresh.open();
+        }
+      },
+      href: () => {
+        const result = loadRouteForConversation(id);
+        return result.kind === "restored" && result.slots.length > 1
+          ? store.restoredRouteUrl(result.slots)
+          : fresh.href();
+      },
+    };
   };
 
   // The merged DataView surface owns its own full-height root, so it fills
@@ -45,7 +65,7 @@ export function ConversationList() {
   return (
     <ConversationsSidebarDataView
       activeId={activeId}
-      onNavigate={navigate}
+      linkTo={linkTo}
       onCloseConversation={handleCloseConversation}
     />
   );

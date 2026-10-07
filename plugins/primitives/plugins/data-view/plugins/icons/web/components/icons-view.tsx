@@ -1,4 +1,6 @@
 import { useState, type KeyboardEvent, type ReactNode } from "react";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -267,13 +269,14 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
         onFocus={activate ? () => setFocusedKey(key) : undefined}
         // Straight through, `undefined` and all: a non-activating tile is a
         // plain container, not a button that does nothing.
-        onClick={activate}
+        // A link tile also gets its middle- / ⌘-click.
+        {...activationProps(activate)}
         onKeyDown={
           activate
             ? (e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  activate();
+                  runActivation(activate);
                 }
               }
             : undefined

@@ -65,6 +65,7 @@ import { DataViewToolbar } from "./toolbar/data-view-toolbar";
 import { HostedOptions } from "./toolbar/hosted-options";
 import { hostedCreators } from "./creators-control";
 import { ViewSection } from "./view-section";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
@@ -320,7 +321,7 @@ function DataViewBodyInner<TRow>(
   // asserting whether a row activates can disagree — so it throws rather than
   // picking a winner.
   const resolveRowActivation = useMemo<
-    ((row: TRow) => (() => void) | undefined) | undefined
+    ((row: TRow) => Activation | undefined) | undefined
   >(() => {
     if (rowActivation && onRowActivate) {
       throw new Error(

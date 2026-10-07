@@ -16,7 +16,7 @@ export { Library } from "./slots";
 // (`sonataPlayerPane.Actions`), so every plugin contributing a control to that
 // header — transport, volume, metronome, transpose, … — reaches it through here.
 export { sonataLibraryPane, sonataPlayerPane, sonataSongLink } from "./panes";
-export { useOpenSong } from "./hooks";
+export { useSongLink } from "./hooks";
 export { openSongImperative } from "./open-song";
 export { useCurrentSong } from "./use-current-song";
 

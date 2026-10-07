@@ -177,8 +177,8 @@ export function SourcesList(): ReactNode {
       creators={creators}
       itemActions={EventSourceActions}
       selectedRowId={selectedId}
-      onRowActivate={(s) =>
-        openPane(eventSourceDetailPane, { sourceId: s.id }, { mode: "push" })
+      rowActivation={(s) =>
+        openPane.to(eventSourceDetailPane, { sourceId: s.id }, { mode: "push" })
       }
       // A switched-off source reads "off" from the whole line, before a single
       // word is read — which is what lets the row spend its one chip on the

@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   Stack,
@@ -98,8 +99,8 @@ export function CompositionsList(): ReactElement {
             items={items}
             selectedId={selectedId ?? null}
             onSetMode={setMode}
-            onSelect={(item) =>
-              openPane(
+            linkTo={(item) =>
+              openPane.to(
                 compositionDetailPane,
                 { id: item.id },
                 { mode: "push", side: "right" },
@@ -116,7 +117,7 @@ export function CompositionsList(): ReactElement {
  * The named compositions as a DataView `list`, grouped by `category` (the group
  * order — Profiles / Apps / Subsystems / Packs / Other — is the enum field's
  * `options` order; the section engine renders enum groups in options order). Each
- * row opens the composition's detail pane (`onRowActivate`); the entry /
+ * row opens the composition's detail pane (`rowActivation`, a link); the entry /
  * contributor / extends counts are typed `int` fields (trailing chips, replacing
  * the old summary badge) so they come with sort / filter for free. A per-row
  * Delete lives in the hover-trailing item-actions slot; the `category` field is a
@@ -127,12 +128,13 @@ export function CompositionsList(): ReactElement {
 function CompositionsDataView({
   items,
   selectedId,
-  onSelect,
+  linkTo,
   onSetMode,
 }: {
   items: CompositionManifestItem[];
   selectedId: string | null;
-  onSelect: (item: CompositionManifestItem) => void;
+  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
+  linkTo: (item: CompositionManifestItem) => LinkTarget;
   onSetMode: (id: string, mode: string) => void;
 }) {
   const fields = useMemo<FieldDef<CompositionManifestItem>[]>(
@@ -296,7 +298,7 @@ function CompositionsDataView({
       views={["list"]}
       storageKey={COMPOSITIONS_VIEW}
       selectedRowId={selectedId ?? undefined}
-      onRowActivate={onSelect}
+      rowActivation={linkTo}
       itemActions={CompositionItemActions}
       emptyState={<>No named compositions yet. Create one with New.</>}
     />

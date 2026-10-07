@@ -74,7 +74,7 @@ export function HistorySource({
   hostProps,
   render,
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
-  const { activeId, onNavigate, onCloseConversation } = hostProps;
+  const { activeId, linkTo, onCloseConversation } = hostProps;
   const fields = useConversationFieldDefs();
 
   return (
@@ -83,7 +83,7 @@ export function HistorySource({
         fields,
         source: historySource,
         selectedRowId: activeId ?? undefined,
-        onRowActivate: (c) => onNavigate(c.id),
+        rowActivation: (c) => linkTo(c.id),
         viewOptions: {
           list: {
             renderRow: (c: ConversationListRow) => (

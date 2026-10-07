@@ -12,8 +12,7 @@ export function ExplorerView() {
   const { data: treeData, isLoading, error } = useEndpoint(getPluginTree, {});
 
   const openPane = useOpenPane();
-  const selectedId =
-    pluginViewPane.useRouteEntry()?.params.pluginId ?? null;
+  const selectedId = pluginViewPane.useRouteEntry()?.params.pluginId ?? null;
 
   if (isLoading) {
     return (
@@ -54,7 +53,9 @@ export function ExplorerView() {
       <PluginTree
         plugins={plugins}
         selected={selectedId}
-        onSelect={(id) => openPane(pluginViewPane, { pluginId: id }, { mode: "push" })}
+        linkTo={(id) =>
+          openPane.to(pluginViewPane, { pluginId: id }, { mode: "push" })
+        }
       />
     </>
   );

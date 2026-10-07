@@ -10,7 +10,7 @@
  *     addressed by its own role, so the collision cannot happen.
  *  2. **Nested buttons.** A backup row holds two real controls (the disclosure
  *     and, on a failed target, Grant access). Those are only legal because the
- *     backup arm contributes no `open`, so `rowActivation` resolves the row to a
+ *     backup arm contributes no `link`, so `rowActivation` resolves the row to a
  *     plain container instead of a `<button>`. That is a DOM fact and needs the
  *     DOM to check.
  *  3. **Paging across an arm boundary.** The keyset cursor walks from one
@@ -228,7 +228,7 @@ await withBrowser(async (h) => {
 
   // The specific defect the per-row-activation work was for, asserted on an
   // ORDINARY row rather than a constructed one: a backup row must resolve to a
-  // plain container, because the backup arm contributes no `open`. If it had
+  // plain container, because the backup arm contributes no `link`. If it had
   // resolved to a `<button>`, that button would be an ANCESTOR of the row's own
   // disclosure trigger — so "no button ancestor" is exactly the claim, and it is
   // true of all 524 rows rather than of one seeded one.

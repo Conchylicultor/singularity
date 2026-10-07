@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   defineDataViewSources,
   type DataViewSourceProps,
@@ -25,7 +26,8 @@ export interface DepsHostProps {
   taskId: string;
   allTasks: readonly TaskListItem[];
   memberIds: ReadonlySet<string>;
-  onNavigate: (id: string) => void;
+  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
+  linkTo: (id: string) => LinkTarget;
 }
 
 /**
@@ -67,7 +69,7 @@ export function DepsSource({
   hostProps,
   render,
 }: DataViewSourceProps<DepsHostProps>): ReactElement {
-  const { taskId, allTasks, memberIds, onNavigate } = hostProps;
+  const { taskId, allTasks, memberIds, linkTo } = hostProps;
   const rows = useMemo(
     () => buildDepsTree(allTasks, memberIds),
     [allTasks, memberIds],
@@ -82,7 +84,7 @@ export function DepsSource({
         viewOptions: { tree: depsTreeOptions },
         itemActions: DepsActions,
         selectedRowId: taskId,
-        onRowActivate: (r) => onNavigate(r.id),
+        rowActivation: (r) => linkTo(r.id),
       })}
     </>
   );
@@ -97,7 +99,7 @@ export function CreatedSource({
   hostProps,
   render,
 }: DataViewSourceProps<DepsHostProps>): ReactElement {
-  const { taskId, allTasks, memberIds, onNavigate } = hostProps;
+  const { taskId, allTasks, memberIds, linkTo } = hostProps;
   // The rows are already the exact member set, so no subtree scoping —
   // out-of-set parents make their children render as roots (the creation forest).
   const rows = useMemo(
@@ -119,7 +121,7 @@ export function CreatedSource({
         selection: {},
         itemActions: Tasks.TaskActions,
         selectedRowId: taskId,
-        onRowActivate: (t) => onNavigate(t.id),
+        rowActivation: (t) => linkTo(t.id),
       })}
     </>
   );

@@ -237,8 +237,8 @@ function DeploymentsBody({
         itemActions={DeploymentItemActions}
         creators={creators}
         selectedRowId={selectedId}
-        onRowActivate={(d) =>
-          openPane(
+        rowActivation={(d) =>
+          openPane.to(
             deploymentDetailPane,
             { serverId, deploymentId: d.id },
             { mode: "push", side: "right" },

@@ -37,6 +37,7 @@ import {
   linkProps,
   type LinkGestureProps,
 } from "@plugins/primitives/plugins/link-gesture/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { definePaneHeaderSlot, type PaneHeaderSlot } from "./header-slot";
 import type { ResolveResult } from "./resolve";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
@@ -697,6 +698,12 @@ export interface PaneStore {
    * browser tab must be given to boot into the same layout.
    */
   routeUrl(route: PaneSlot[]): string;
+  /**
+   * The {@link routeUrl} of the route `restoreRoute(slots)` would put on
+   * screen — the href half of a restore that is a link (a sidebar entry that
+   * brings back a conversation's saved layout).
+   */
+  restoredRouteUrl(slots: Parameters<PaneStore["restoreRoute"]>[0]): string;
   /** Open a pane (non-positional). Used by `promote` and the open hooks. */
   openPaneImpl(
     internal: PaneInternal,
@@ -742,6 +749,16 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
   function routeUrl(route: PaneSlot[]): string {
     return applyBasePath(buildRouteUrl(route));
+  }
+
+  function restoredRouteUrl(
+    slots: Parameters<PaneStore["restoreRoute"]>[0],
+  ): string {
+    return routeUrl(
+      slots.map((s) =>
+        createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid),
+      ),
+    );
   }
 
   function setRoute(route: PaneSlot[], replace = false): void {
@@ -1063,6 +1080,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     handleLocationChange,
     reorderRoute,
     restoreRoute,
+    restoredRouteUrl,
     clearRoute,
     resolveRoute,
     setBasePath,
@@ -2033,9 +2051,9 @@ export interface PaneRouteEntry<OwnParams = Record<string, string>> {
  */
 export type PromoteAction =
   /** Hand off to another app — this pane is being hosted away from home. */
-  | { kind: "cross-app"; app: AppRef; open(): void; href(): string }
+  | ({ kind: "cross-app"; app: AppRef } & LinkTarget)
   /** Re-root here: drop the ancestors, stay in the app already hosting us. */
-  | { kind: "re-root"; open(): void; href(): string };
+  | ({ kind: "re-root" } & LinkTarget);
 
 export interface PaneObject<
   FullParams = {},
@@ -3028,6 +3046,26 @@ export interface OpenPaneFn {
     params: NoInfer<Params>,
     opts: OpenPaneOpts<Options, HintT>,
   ): LinkGestureProps;
+  /**
+   * The same open as DATA — the {@link LinkTarget} `link` spreads: `open()` is
+   * the call, `href()` the URL its ⌘/middle-click opens. For a surface that
+   * activates things without a mouse event as well (a DataView row's Enter, a
+   * tree's activation of a row it just created), so it cannot be handed event
+   * handlers:
+   *
+   * ```tsx
+   * <DataView rowActivation={(r) => openPane.to(traceDetailPane, { id: r.id }, { mode: "push" })} />
+   * ```
+   */
+  to<
+    Params = Record<string, string>,
+    Options extends object = NoOptions,
+    HintT extends object = NoHint,
+  >(
+    target: PaneObject<Params, any, Options, HintT>,
+    params: NoInfer<Params>,
+    opts: OpenPaneOpts<Options, HintT>,
+  ): LinkTarget;
 }
 
 /** The `opts` of an {@link OpenPaneFn} open, typed against the target pane. */
@@ -3067,20 +3105,24 @@ export function useOpenPane(): OpenPaneFn {
       const next = compute(store, target, params, opts);
       if (next.changed) store.setRoute(next.route, next.replace);
     };
+    const to = (
+      target: AnyPane,
+      params: Record<string, string>,
+      opts: OpenRequest,
+    ): LinkTarget => ({
+      open: () => open(target, params, opts),
+      // Unchanged ⇒ the destination is already on screen, and the current
+      // route's URL is exactly it.
+      href: () => {
+        const store = resolveStore();
+        return store.routeUrl(compute(store, target, params, opts).route);
+      },
+    });
     const link = (
       target: AnyPane,
       params: Record<string, string>,
       opts: OpenRequest,
-    ): LinkGestureProps =>
-      linkProps({
-        open: () => open(target, params, opts),
-        // Unchanged ⇒ the destination is already on screen, and the current
-        // route's URL is exactly it.
-        href: () => {
-          const store = resolveStore();
-          return store.routeUrl(compute(store, target, params, opts).route);
-        },
-      });
-    return Object.assign(open, { link }) as OpenPaneFn;
+    ): LinkGestureProps => linkProps(to(target, params, opts));
+    return Object.assign(open, { link, to }) as OpenPaneFn;
   }, [resolveStore, callerInstanceId]);
 }

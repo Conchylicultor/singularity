@@ -3,7 +3,7 @@
 ## Navigation (the Sonata panes live here)
 
 Sonata navigation is URL-driven via the pane router — this plugin owns both
-panes (it is the natural owner: it already holds `useOpenSong`, the
+panes (it is the natural owner: it already holds `useSongLink`, the
 `Library.Source` registry, and contributes `Sonata.Home`; the shell can't own
 them without a `shell → library` import that would cycle with the existing
 `library → shell` dependency on `useSonataApp`).
@@ -30,7 +30,7 @@ them without a `shell → library` import that would cycle with the existing
   is a fresh `mode:"root"` instance) and composes the player parts
   (`PlayerTransport`, `PlayerDisplay`) with the `SectionPane`.
 
-`useOpenSong` opens the player with `openPane(sonataPlayerPane, { songId },
+`useSongLink` opens the player with `openPane(sonataPlayerPane, { songId },
 { mode: "root", hint: { title } })`. The ← Library button calls `clearRoute()`
 (empty route → the index pane), which also works for deep-linked players. The
 shell mounts `<FullPane/>`, which paints the active pane full-surface.
@@ -45,11 +45,11 @@ toolbar "+" menu (N sources → menu, not a trailing card). The library stays
 source-agnostic: it threads an opaque `s.createOption` and never names MIDI.
 
 Because a `CreateOption.onSelect` is plain data (no component, no hooks), the
-open-after-create step can't use the `useOpenSong` hook. Sources call
+open-after-create step can't use the `useSongLink` hook. Sources call
 `openSongImperative(song)` instead — the imperative twin exported from this
 plugin's web barrel (`open-song.ts`), which writes to the live pane store via the
-imperative `openPane` (mirroring `useOpenSong`'s exact `mode:"root"` + `input`
-call). `useOpenSong` is kept for `SongLibrary`'s `onRowActivate`, which runs
+imperative `openPane` (mirroring `useSongLink`'s exact `mode:"root"` + `input`
+call). `useSongLink` is kept for `SongLibrary`'s `rowActivation`, which runs
 inside a component where the caller-aware context store is correct.
 
 ## One surface, no bespoke card
@@ -211,6 +211,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/link-gesture.linkProps`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
@@ -234,7 +235,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `sonataPlayerPane`
     - `sonataSongLink`
     - `useCurrentSong`
-    - `useOpenSong`
+    - `useSongLink`
 - Server:
   - Contributes:
     - `resource.declare` "sonata.songs"

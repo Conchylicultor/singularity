@@ -182,8 +182,8 @@ function ReleaseHistory({
       views={["list", "table"]}
       defaultView="list"
       selectedRowId={selectedRunId}
-      onRowActivate={(r) =>
-        openPane(releaseDetailPane, { runId: r.id }, { mode: "push" })
+      rowActivation={(r) =>
+        openPane.to(releaseDetailPane, { runId: r.id }, { mode: "push" })
       }
       emptyState={<>No releases yet.</>}
       source={source}

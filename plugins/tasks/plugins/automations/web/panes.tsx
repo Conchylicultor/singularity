@@ -72,8 +72,12 @@ function AutomationsBody(): ReactElement {
       <div className="rail-lg">
         <AutomationsView
           selectedId={selectedId}
-          onOpen={(automationId) =>
-            openPane(automationDetailPane, { automationId }, { mode: "push" })
+          linkTo={(automationId) =>
+            openPane.to(
+              automationDetailPane,
+              { automationId },
+              { mode: "push" },
+            )
           }
         />
       </div>

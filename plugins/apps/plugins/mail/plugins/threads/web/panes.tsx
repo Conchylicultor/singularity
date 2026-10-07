@@ -119,8 +119,8 @@ function MailThreadsList({
         },
       }}
       source={source}
-      onRowActivate={(t) =>
-        openPane(threadPane, { threadId: t.id }, { mode: "push" })
+      rowActivation={(t) =>
+        openPane.to(threadPane, { threadId: t.id }, { mode: "push" })
       }
     />
   );

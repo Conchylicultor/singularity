@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import {
   DataView,
@@ -31,7 +32,8 @@ const hierarchy: HierarchyConfig<ExplorerRow> = {
 interface PluginTreeProps {
   plugins: PluginNode[];
   selected: string | null;
-  onSelect: (pluginId: string) => void;
+  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
+  linkTo: (pluginId: string) => LinkTarget;
   /**
    * Which surface's view/filter/sort config this tree reads and writes. Defaults
    * to the Explorer pane's own. A second surface rendering this tree MUST pass
@@ -43,7 +45,7 @@ interface PluginTreeProps {
 export function PluginTree({
   plugins,
   selected,
-  onSelect,
+  linkTo,
   storageKey = EXPLORER_VIEW,
 }: PluginTreeProps) {
   const rows = useMemo(() => flattenPluginTree(plugins), [plugins]);
@@ -127,7 +129,7 @@ export function PluginTree({
       storageKey={storageKey}
       hierarchy={hierarchy}
       selectedRowId={selected ?? undefined}
-      onRowActivate={(r) => onSelect(r.id)}
+      rowActivation={(r) => linkTo(r.id)}
       searchAccessor={(r) => r.searchText}
       viewOptions={{ tree: treeOptions }}
     />

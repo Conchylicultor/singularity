@@ -29,6 +29,7 @@ import type {
   DataTableRowDecoration,
 } from "./types";
 import { useDataTable } from "./use-data-table";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
@@ -85,6 +86,7 @@ export function DataTable<TRow>({
   sortState: controlledSort,
   onToggleSort,
   onRowClick,
+  rowHref,
   onRowOpen,
   rowActions,
   rowPersistentActions,
@@ -217,6 +219,7 @@ export function DataTable<TRow>({
       rowKey={rowKey}
       selectedRowId={selectedRowId}
       onRowClick={onRowClick}
+      rowHref={rowHref}
       onRowOpen={onRowOpen}
       rowActions={rowActions}
       rowPersistentActions={rowPersistentActions}
@@ -301,6 +304,7 @@ function DataTableRow<TRow>({
   rowKey,
   selectedRowId,
   onRowClick,
+  rowHref,
   onRowOpen,
   rowActions,
   rowPersistentActions,
@@ -314,6 +318,7 @@ function DataTableRow<TRow>({
   rowKey: (row: TRow, index: number) => string;
   selectedRowId: string | undefined;
   onRowClick: ((row: TRow) => void) | undefined;
+  rowHref: ((row: TRow) => (() => string) | undefined) | undefined;
   onRowOpen: ((row: TRow) => void) | undefined;
   rowActions: ((row: TRow, index: number) => ReactNode) | undefined;
   rowPersistentActions: ((row: TRow, index: number) => ReactNode) | undefined;
@@ -325,6 +330,13 @@ function DataTableRow<TRow>({
   rowPad: "py-row" | "py-row-compact";
 }): ReactNode {
   const decoration = useRowDecoration(row, index);
+  // A row whose click navigates reads the link gestures: ⌘/middle-click open
+  // its href in a browser tab rather than firing `onRowClick`.
+  const href = onRowClick ? rowHref?.(row) : undefined;
+  const link =
+    onRowClick && href
+      ? linkProps({ open: () => onRowClick(row), href })
+      : undefined;
   const key = rowKey(row, index);
   // Destructure-and-rename so render never does inline `decoration.ref` member
   // access on the hook output (react-hooks/refs flags member access on a ref
@@ -365,10 +377,13 @@ function DataTableRow<TRow>({
           ? (e) => {
               // The second click of a double-click belongs to `onRowOpen`.
               if (onRowOpen && e.detail > 1) return;
-              onRowClick(row);
+              if (link) link.onClick(e);
+              else onRowClick(row);
             }
           : undefined
       }
+      onAuxClick={link?.onAuxClick}
+      onMouseDown={link?.onMouseDown}
       onDoubleClick={onRowOpen ? () => onRowOpen(row) : undefined}
       role={onRowClick || onRowOpen ? "button" : undefined}
       tabIndex={onRowClick || onRowOpen ? 0 : undefined}

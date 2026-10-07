@@ -166,8 +166,8 @@ export function ConfigNav() {
     (row: ConfigNavRow) => {
       // Narrowing only — `expandOnActivate` routes every registration-less row
       // to a toggle, so activation never reaches one.
-      if (!row.registration) return;
-      openPane(
+      if (!row.registration) return undefined;
+      return openPane.to(
         configDetailPane,
         { configPath: encodeURIComponent(row.registration.storePath) },
         { mode: "push" },
@@ -225,7 +225,7 @@ export function ConfigNav() {
       defaultExpanded: true,
       // Group / multi-config header rows have no config of their own, so a body
       // click has nothing to open — it was inert. Route it to the chevron
-      // instead; `onRowActivate` then only ever sees a real config row.
+      // instead; `rowActivation` then only ever sees a real config row.
       expandOnActivate: (r) => !r.registration,
       trailing: (r) => (
         <ConfigRowBadge
@@ -248,7 +248,7 @@ export function ConfigNav() {
       readiness={readiness}
       hierarchy={configHierarchy}
       selectedRowId={selectedRowId}
-      onRowActivate={handleActivate}
+      rowActivation={handleActivate}
       searchAccessor={(r) => r.searchText}
       viewOptions={{ tree: treeOptions }}
     />

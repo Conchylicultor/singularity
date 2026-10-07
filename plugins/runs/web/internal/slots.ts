@@ -1,4 +1,5 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { defineFieldExtensions } from "@plugins/primitives/plugins/data-view/web";
 import type { OpenPaneFn } from "@plugins/primitives/plugins/pane/web";
@@ -19,15 +20,17 @@ export interface RunRowProps {
  * options are derived from the registered kinds rather than from the loaded
  * window. This is that registration.
  *
- * `open` receives the caller's own `openPane`, so the arm navigates from the
- * surface the row is rendered in rather than always at the root. An arm with no
+ * `link` receives the caller's own `openPane`, so the arm navigates from the
+ * surface the row is rendered in rather than always at the root. It returns a
+ * {@link LinkTarget} (`openPane.to(...)`), not a bare open, so a row is a link:
+ * middle- and ⌘-click open the run's pane in a new browser tab. An arm with no
  * detail surface omits it, and its rows simply do not activate — which is the
  * honest behaviour, not a click that quietly does nothing.
  */
 export interface RunKindContribution {
   kind: string;
   label: string;
-  open?: (run: RunRow, ctx: { openPane: OpenPaneFn }) => void;
+  link?: (run: RunRow, ctx: { openPane: OpenPaneFn }) => LinkTarget;
 }
 
 /**

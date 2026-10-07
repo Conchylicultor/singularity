@@ -210,6 +210,7 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/dom/auto-scroll.KeepScrollAcross`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `primitives/multi-select.MultiSelectProvider`
     - `primitives/multi-select.SelectionBar`

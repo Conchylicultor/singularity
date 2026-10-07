@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 import {
+  activationHref,
+  runActivation,
+} from "@plugins/primitives/plugins/link-gesture/core";
+import {
   DataTable,
   DATA_TABLE_VIRTUALIZE_THRESHOLD,
   type ColumnDef,
@@ -221,7 +225,14 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // its own plain-container element the way a list row does. Per-row here
     // means a `DataTable` change, which is its own.
     onRowClick: props.rowActivation
-      ? (row: unknown) => props.rowActivation?.(row)?.()
+      ? (row: unknown) => {
+          const activation = props.rowActivation?.(row);
+          if (activation !== undefined) runActivation(activation);
+        }
+      : undefined,
+    // A link row's middle- / ⌘-click opens its URL in a browser tab.
+    rowHref: props.rowActivation
+      ? (row: unknown) => activationHref(props.rowActivation?.(row))
       : undefined,
     onRowOpen: props.onRowOpen,
     selectedRowId: props.selectedRowId,

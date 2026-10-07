@@ -225,8 +225,8 @@ export function PagesSidebar() {
           fieldExtensions={PageTree.Fields}
           creators={creators}
           selectedRowId={selectedId}
-          onRowActivate={(b) =>
-            openPane(pageDetailPane, { pageId: b.id }, { mode: openMode })
+          rowActivation={(b) =>
+            openPane.to(pageDetailPane, { pageId: b.id }, { mode: openMode })
           }
           hierarchy={{
             // The page hierarchy is `pageId` (the denormalized nearest PAGE

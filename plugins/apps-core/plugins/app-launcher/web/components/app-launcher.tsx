@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   Apps,
@@ -174,10 +175,7 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
             searchPlaceholder="Search apps"
             storageKey={LAUNCHER_VIEW}
             selectedRowId={activeId}
-            onRowActivate={(entry) => {
-              close();
-              activate(entry);
-            }}
+            rowActivation={(entry) => afterOpen(activate(entry), close)}
             emptyState="No app matches."
           />
         </FooterContext.Provider>

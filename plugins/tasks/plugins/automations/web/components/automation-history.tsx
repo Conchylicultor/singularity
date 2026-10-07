@@ -160,8 +160,8 @@ export function AutomationHistory({
         storageKey={HISTORY_VIEW}
         readiness={result}
         toolbar={HISTORY_TOOLBAR}
-        onRowActivate={(r) =>
-          openPane(
+        rowActivation={(r) =>
+          openPane.to(
             taskDetailPane,
             { taskId: r.origin.taskId },
             { mode: "push" },

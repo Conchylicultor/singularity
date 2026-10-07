@@ -91,6 +91,7 @@ drag is in flight the lane holding the drag source is kept mounted.
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/link-gesture.activationProps`
     - `primitives/rank-reorder.RankReorderProvider`
     - `primitives/rank-reorder.useRankSortableItem`
     - `primitives/virtual-rows.VirtualRows`
