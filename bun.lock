@@ -3555,6 +3555,10 @@
       "name": "@singularity/plugin-infra-worktree-reclaim",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/worktree/plugins/spare-pool": {
+      "name": "@singularity/plugin-infra-worktree-spare-pool",
+      "version": "0.0.1",
+    },
     "plugins/integrations": {
       "name": "@singularity/plugin-integrations",
       "version": "0.0.1",
@@ -8009,6 +8013,8 @@
     "@singularity/plugin-infra-worktree": ["@singularity/plugin-infra-worktree@workspace:plugins/infra/plugins/worktree"],
 
     "@singularity/plugin-infra-worktree-reclaim": ["@singularity/plugin-infra-worktree-reclaim@workspace:plugins/infra/plugins/worktree/plugins/reclaim"],
+
+    "@singularity/plugin-infra-worktree-spare-pool": ["@singularity/plugin-infra-worktree-spare-pool@workspace:plugins/infra/plugins/worktree/plugins/spare-pool"],
 
     "@singularity/plugin-integrations": ["@singularity/plugin-integrations@workspace:plugins/integrations"],
 

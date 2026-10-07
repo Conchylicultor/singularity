@@ -10023,6 +10023,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/jobs.defineJob`
       - `infra/worktree.setupWorktree`
       - `infra/worktree.worktreePathFor`
+      - `infra/worktree/spare-pool.spareRefillJob`
       - `reports.recordReport`
       - `reports.ReportKind`
       - `reports.ReportRow`
@@ -22552,6 +22553,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs/deadline-audit`
           - `infra/jobs/supervised-job`
           - `infra/retention`
+          - `infra/worktree/spare-pool`
           - `integrations/youtube/audio-fetch`
           - `page/attachment-block`
           - `page/inline-date`
@@ -23640,6 +23642,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/sources/midi/folders`
           - `infra/corpus-index`
           - `infra/warmup/background-arm`
+          - `infra/worktree/spare-pool`
           - `page/links`
           - `plugin-meta/plugin-tree`
           - `reports`
@@ -23668,14 +23671,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.worktreesDir`
           - `packages/flock.flockTry`
         - Exports (types):
+          - `CheckoutSource`
           - `CompositionMarker`
           - `NamespaceClaimant`
           - `NamespaceProbe`
           - `WorktreeOp`
           - `WorktreeOpInfo`
           - `WorktreeOpMarker`
+          - `WorktreeSetup`
           - `WorktreeSpec`
         - Exports (values):
+          - `countReadySpares`
+          - `createSpareWorktree`
           - `ensureMainWorktreeRoot`
           - `gitWorktreesDir`
           - `hasCompositionMarker`
@@ -23688,6 +23695,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `namespaceCollision`
           - `probeNamespace`
           - `probeWorktreeOp`
+          - `pruneSpares`
           - `readCompositionMarker`
           - `removeWorktree`
           - `removeWorktreeSpec`
@@ -23714,6 +23722,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/git/git-watcher`
           - `infra/launcher`
           - `infra/worktree/reclaim`
+          - `infra/worktree/spare-pool`
           - `plugin-meta/plugin-health`
           - `release/source-checkout`
           - `stats/commits`
@@ -23758,6 +23767,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `build/serve-composition`
               - `debug/worktree-cleanup`
+        - **`spare-pool`** — Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under .claude/worktrees/spare-*, so setupWorktree claims it with a rename and a branch switch instead of a cold git worktree add.
+          - Server:
+            - Uses:
+              - `infra/jobs.defineJob`
+              - `infra/warmup.defineWarmup`
+              - `infra/worktree.countReadySpares`
+              - `infra/worktree.createSpareWorktree`
+              - `infra/worktree.pruneSpares`
+            - Exports (values): `spareRefillJob`
+            - Register:
+              - `defineJob('worktree.spare-refill')`
+              - `defineWarmup('worktree.spare-refill')`
+          - Cross-plugin:
+            - Imported by: `conversations`
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:

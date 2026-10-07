@@ -7,9 +7,16 @@ export {
   worktreePathFor,
   isCanonicalWorktreePath,
   setupWorktree,
+  type WorktreeSetup,
+  type CheckoutSource,
   removeWorktree,
   WorktreeGitTimeoutError,
 } from "./internal/worktree";
+export {
+  createSpareWorktree,
+  pruneSpares,
+  countReadySpares,
+} from "./internal/spare";
 export { withWorktreeMutateSlot } from "./internal/mutate-gate";
 export {
   type WorktreeOp,

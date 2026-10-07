@@ -227,6 +227,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`worktree`**
       - Plugins:
         - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind provenance guards, and the marker-driven ownership queries answer what a checkout or a composition owns — so a reclaim trigger asks rather than enumerating.
+        - **`spare-pool`** — Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under .claude/worktrees/spare-*, so setupWorktree claims it with a rename and a branch switch instead of a cold git worktree add.
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:

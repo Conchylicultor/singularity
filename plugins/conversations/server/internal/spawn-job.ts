@@ -3,6 +3,7 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { recordReport } from "@plugins/reports/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { setupWorktree } from "@plugins/infra/plugins/worktree/server";
+import { spareRefillJob } from "@plugins/infra/plugins/worktree/plugins/spare-pool/server";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { EffortLevelSchema } from "@plugins/conversations/plugins/effort-provider/core";
@@ -83,12 +84,16 @@ export const spawnConversationJob = defineJob({
         // that overruns stops holding one of the box's three worktree slots
         // instead of blocking checkouts on every other backend until the process
         // restarts (the 2026-08-17 shape).
-        await setupWorktree(
+        const { source } = await setupWorktree(
           attemptId,
           worktreePath,
           new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
           signal,
         );
+        // A checkout was made — from a spare (the pool is now one short) or
+        // cold (the pool was empty) — so top the pool back up for the next
+        // launch. Off the launch path: the refill is its own background job.
+        if (source !== "existing") await spareRefillJob.enqueue({});
       }
       step = "runtime";
       await Runtime.get(runtimeId).create(conversationId, worktreePath, create);

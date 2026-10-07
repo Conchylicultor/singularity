@@ -71,6 +71,7 @@
     - `infra/jobs.defineJob`
     - `infra/worktree.setupWorktree`
     - `infra/worktree.worktreePathFor`
+    - `infra/worktree/spare-pool.spareRefillJob`
     - `reports.recordReport`
     - `reports.ReportKind`
     - `reports.ReportRow`
