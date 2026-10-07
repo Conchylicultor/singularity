@@ -235,6 +235,7 @@ count accumulates across drops.
     - `infra/deps`
     - `infra/deps/sweep`
     - `infra/events-test`
+    - `infra/host-fs/image`
     - `infra/host/duress`
     - `infra/jobs`
     - `integrations/youtube/audio-fetch`

@@ -16,6 +16,10 @@ import { handleStat } from "./internal/stat";
 import { handleText } from "./internal/text";
 import { handleVolume } from "./internal/volume";
 
+export { inertHeaders } from "./internal/raw";
+export { listHostPath } from "./internal/list";
+export { resolveHostPath } from "./internal/path";
+export { openHostFile, type HostFileOpen } from "./internal/open-file";
 export { decodeTextBytes, type TextBytesResult } from "./internal/decode";
 export {
   defineArchiveFormat,

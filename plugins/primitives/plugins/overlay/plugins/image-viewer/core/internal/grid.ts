@@ -11,9 +11,10 @@ export const TILE_DEFAULT = 200;
 /** Below this tile width the captions (name, size) are dropped. */
 export const TILE_CAPTION_MIN = 140;
 
-/** `px` held inside the slider's range, rounded to a whole pixel. */
+/** `px` held inside the slider's range. Not rounded: a pinch moves it by
+ *  fractions of a pixel per event, and rounding each one would swallow them. */
 export function clampTile(px: number): number {
-  return Math.round(Math.max(TILE_MIN, Math.min(TILE_MAX, px)));
+  return Math.max(TILE_MIN, Math.min(TILE_MAX, px));
 }
 
 /** `+` / `−` in the grid: one step larger or smaller, proportional so the

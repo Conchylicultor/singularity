@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   fileRefName,
   fileUrl,
@@ -9,8 +10,22 @@ import {
   ImageViewer,
   MissingImage,
   useImageLoad,
+  type ViewerImage,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { useFolderImages } from "../internal/use-folder-images";
+
+/**
+ * What the preview draws: a resized copy covering the whole window (the
+ * preview never outgrows it) when the image offers one and is larger, else
+ * the original — so a camera photo's preview never decodes 30 megapixels.
+ */
+function previewSrc(image: ViewerImage | undefined, src: string): string {
+  if (!image?.resized || !image.width || !image.height) return src;
+  const edge =
+    Math.max(window.innerWidth, window.innerHeight) *
+    (window.devicePixelRatio || 1);
+  return Math.max(image.width, image.height) > edge ? image.resized(edge) : src;
+}
 
 /**
  * The fitted preview; a click opens the app's full-screen image viewer over
@@ -20,14 +35,26 @@ import { useFolderImages } from "../internal/use-folder-images";
 export function ImageView({ file }: FileRendererProps) {
   const src = fileUrl(file);
   const name = fileRefName(file);
-  const images = useFolderImages(file);
+  const { images, pending } = useFolderImages(file);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   // The image on screen, by address: the folder listing can change under an
   // open viewer, so an index would drift.
   const [viewing, setViewing] = useState<string | null>(null);
   const index =
     viewing === null ? -1 : images.findIndex((i) => i.src === viewing);
-  const { load, imgKey, imgProps, retry } = useImageLoad(src);
+  // A copy that fails to load falls back to the original, which then reports
+  // its own failure.
+  const [failedCopy, setFailedCopy] = useState<string | null>(null);
+  const copy = previewSrc(
+    images.find((i) => i.src === src),
+    src,
+  );
+  const shown = failedCopy === copy ? src : copy;
+  const { load, imgKey, imgProps, retry } = useImageLoad(shown);
+
+  // Until the folder's sizes are known, which copy to draw is not: waiting
+  // (a few ms) beats starting the original's full decode.
+  if (pending) return <Loading variant="spinner" />;
 
   return (
     <Center axis="both" className="h-full p-lg">
@@ -37,13 +64,16 @@ export function ImageView({ file }: FileRendererProps) {
         <img
           key={imgKey}
           ref={setImg}
-          src={src}
+          src={shown}
           alt={name}
           className="max-h-full max-w-full cursor-zoom-in object-contain"
           style={{ imageRendering: "pixelated" }}
           aria-haspopup="dialog"
           onClick={() => setViewing(src)}
-          onError={imgProps.onError}
+          onError={() => {
+            if (shown !== src) setFailedCopy(copy);
+            else imgProps.onError();
+          }}
           onLoad={(e) => {
             imgProps.onLoad(e);
             // restore crisp rendering only for small images

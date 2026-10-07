@@ -40,6 +40,13 @@ import {
   downloadImage,
   openOriginal,
 } from "../internal/file-actions";
+import { createDecodedCache, isLoadFailure } from "../internal/decoded-cache";
+import {
+  knownSize,
+  pickSrc,
+  pixelRatio,
+  shownEdge,
+} from "../internal/pick-src";
 import { createStageGestures } from "../internal/stage-gestures";
 import { sameImage, type ViewerImage } from "../internal/types";
 import { createViewController } from "../internal/view-controller";
@@ -78,8 +85,15 @@ export interface ImageViewerProps {
 const CLOSE_MS = 280;
 /** How long a fade takes (reduced motion, or nowhere to shrink back to). */
 const FADE_MS = 200;
-/** The fade-out before the next gallery image is swapped in. */
-const SWAP_MS = 90;
+/** How long a step may wait for its image before a spinner joins the old one. */
+const SLOW_SWAP_MS = 150;
+/** Decoded images a viewer keeps: the one on screen, its neighbours, a sharper copy. */
+const DECODED_MAX = 6;
+/** A zoom that outgrows its copy asks for this much more, so a slow zoom does
+ *  not fetch every size on the way. */
+const SHARPEN_HEADROOM = 1.5;
+/** Quiet time after a preference change before it is saved. */
+const PREFS_SETTLE_MS = 400;
 /** Quiet time before the controls fade while zoomed. */
 const IDLE_MS = 2200;
 /** How long the "Image copied" pill stays up. */
@@ -127,6 +141,31 @@ function loadedSize(el: Element | null): Size | null {
   return el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0
     ? { width: el.naturalWidth, height: el.naturalHeight }
     : null;
+}
+
+/** What the stage draws: which image, from which URL (a copy of at least
+ *  `edge` device pixels, or the original: `Infinity`), at what natural size,
+ *  and how it got there — the open (fades / grows in once loaded), a step
+ *  (decoded, painted at once), or a sharper copy of the same image. */
+interface Shown {
+  image: ViewerImage;
+  url: string;
+  edge: number;
+  natural: Size | null;
+  via: "open" | "swap" | "sharper";
+}
+
+/** The copy the stage draws `image` with, fitted to the window. A copy only
+ *  when the original's size is known: the zoom is computed from it. */
+function stageCopy(image: ViewerImage): Pick<Shown, "image" | "url" | "edge"> {
+  const size = knownSize(image);
+  if (!size) return { image, url: image.src, edge: Infinity };
+  const edge = shownEdge(size, {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+  const url = pickSrc(image, edge, true);
+  return { image, url, edge: url === image.src ? Infinity : edge };
 }
 
 /** Write the store's view onto the image element: the per-frame path that
@@ -305,30 +344,117 @@ function ViewerFrame({
   );
 
   // --- the image on screen -------------------------------------------------
-  // `shown` trails `current` by a short fade, so ← / → reads as a swap, not a
-  // jump. Rapid presses keep moving `index` (the counter follows at once); the
-  // swap then lands on whichever image is current when the fade ends.
-  const [shown, setShown] = useState({ image: current, generation: 0 });
+  // `shown` is what the stage draws. A new `current` replaces it only once its
+  // stage copy is loaded AND decoded, then in one frame: the old image stays up
+  // until that moment (a spinner joins it if the wait is long), so ← / → never
+  // passes through a blank or a fade. Rapid presses keep moving `index` (the
+  // counter follows at once); whichever image is current when a decode lands
+  // is the one shown.
+  const [decoded] = useState(() => createDecodedCache(DECODED_MAX));
+  const [shown, setShown] = useState<Shown>(() => {
+    const natural = knownSize(current) ?? loadedSize(originOf?.(index) ?? null);
+    return { ...stageCopy(current), natural, via: "open" };
+  });
   const swapping = !sameImage(current, shown.image);
   const currentRef = useEventCallback(() => current);
+  const [slowSwap, setSlowSwap] = useState<string | null>(null);
   useEffect(() => {
     if (!swapping) return;
-    store.setState((s) => ({ ...s, imageVisible: false }));
-    const id = later(() => {
-      const image = currentRef();
-      setShown((prev) => ({ image, generation: prev.generation + 1 }));
-    }, SWAP_MS);
-    return () => cancel(id);
-  }, [swapping, store, later, cancel, currentRef]);
+    const image = currentRef();
+    const copy = stageCopy(image);
+    let live = true;
+    const slow = later(() => setSlowSwap(image.src), SLOW_SWAP_MS);
+    decoded.load(copy.url).then(
+      (size) => {
+        if (!live) return;
+        // A copy's pixels are not the original's: its size comes from the caller.
+        const natural = copy.url === image.src ? size : knownSize(image);
+        setShown({ ...copy, natural, via: "swap" });
+      },
+      (err: unknown) => {
+        if (!live) return;
+        if (!isLoadFailure(err)) throw err;
+        // Let the stage load the original itself: it shows the loading state,
+        // then the image — or, if the original fails too, says so.
+        setShown({
+          image,
+          url: image.src,
+          edge: Infinity,
+          natural: knownSize(image),
+          via: "open",
+        });
+      },
+    );
+    return () => {
+      live = false;
+      cancel(slow);
+    };
+  }, [swapping, current.src, current.name, currentRef, decoded, later, cancel]);
 
-  const seedFor = useEventCallback((image: ViewerImage): Size | null =>
-    image.width && image.height
-      ? { width: image.width, height: image.height }
-      : loadedSize(originOf?.(index) ?? null),
-  );
   useLayoutEffect(() => {
-    ctl.showImage(seedFor(shown.image));
-  }, [ctl, seedFor, shown]);
+    if (shown.via === "swap" && shown.natural) ctl.swapTo(shown.natural);
+    else if (shown.via === "open") ctl.showImage(shown.natural);
+    // "sharper": the same image at more pixels, nothing to re-fit.
+  }, [ctl, shown]);
+
+  // A zoom past the copy's pixels swaps in a larger one (or the original),
+  // decoded first, in the same element box — so it sharpens, never flashes.
+  const shownRef = useEventCallback(() => shown);
+  useEffect(() => {
+    let wanted: string | null = null;
+    return store.subscribe(() => {
+      const now = shownRef();
+      const { natural, view } = store.getState();
+      if (!natural || now.url === now.image.src) return;
+      const need =
+        Math.max(natural.width, natural.height) * view.scale * pixelRatio();
+      if (need <= now.edge) return;
+      const edge = need * SHARPEN_HEADROOM;
+      const url = pickSrc(now.image, edge, true);
+      if (url === now.url || url === wanted) return;
+      wanted = url;
+      decoded.load(url).then(
+        () => {
+          const latest = shownRef();
+          if (wanted !== url || !sameImage(latest.image, now.image)) return;
+          setShown({
+            ...latest,
+            url,
+            edge: url === now.image.src ? Infinity : edge,
+            via: "sharper",
+          });
+        },
+        (err: unknown) => {
+          // A larger copy that fails leaves the smaller one on screen.
+          if (!isLoadFailure(err)) throw err;
+        },
+      );
+    });
+  }, [store, shownRef, decoded]);
+
+  // The neighbours a step lands on next are decoded ahead: both sides, plus
+  // one further in the direction of travel (the slideshow mostly moves on).
+  const lastIndex = useRef(index);
+  useEffect(() => {
+    const dir = index >= lastIndex.current ? 1 : -1;
+    lastIndex.current = index;
+    const n = images.length;
+    if (n < 2) return;
+    const around = new Set([
+      (index + 1) % n,
+      (index - 1 + n) % n,
+      (index + 2 * dir + 2 * n) % n,
+    ]);
+    around.delete(index);
+    for (const i of around) {
+      const image = images[i];
+      if (!image) continue;
+      decoded.load(stageCopy(image).url).catch((err: unknown) => {
+        // A neighbour that fails is found out when it is stepped to.
+        if (!isLoadFailure(err)) throw err;
+      });
+    }
+  }, [index, images, decoded]);
 
   // The element writer: every store change that moves or shows the image is
   // written straight onto the <img>, animated only when the change asked to be.
@@ -525,14 +651,29 @@ function ViewerFrame({
   }, [ctl]);
 
   // --- device-local preferences: the strip and the tile size ---------------
+  // Written once a change settles (and on close), not on every tick of a
+  // slider drag or a pinch.
   useEffect(() => {
     let last = store.getState();
-    return store.subscribe(() => {
+    let timer: number | null = null;
+    const save = () => {
+      timer = null;
+      writeViewPrefs({ strip: last.strip, tile: Math.round(last.tile) });
+    };
+    const unsubscribe = store.subscribe(() => {
       const s = store.getState();
-      if (s.strip !== last.strip || s.tile !== last.tile)
-        writeViewPrefs({ strip: s.strip, tile: s.tile });
+      if (s.strip === last.strip && s.tile === last.tile) return;
       last = s;
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(save, PREFS_SETTLE_MS);
     });
+    return () => {
+      unsubscribe();
+      if (timer !== null) {
+        window.clearTimeout(timer);
+        save();
+      }
+    };
   }, [store]);
 
   const run = useEventCallback((action: ViewerAction) => {
@@ -616,7 +757,6 @@ function ViewerFrame({
   const layout = ViewStore.useSelector((s) => s.layout, []);
   const slideshow = ViewStore.useSelector((s) => s.slideshow, []);
   const strip = ViewStore.useSelector((s) => s.strip, []);
-  const tile = ViewStore.useSelector((s) => s.tile, []);
   const area = ViewStore.useSelector((s) => s.area, []);
   const single = layout === "single";
   const stripShown = strip && single && !slideshow && navigable;
@@ -685,7 +825,8 @@ function ViewerFrame({
           }}
           onPointerCancel={(e) => gestures.pointerCancel(e.nativeEvent)}
         >
-          {natural === null && !failed && (
+          {((natural === null && !failed) ||
+            (swapping && slowSwap === current.src)) && (
             <Center className="size-full">
               <Loading variant="spinner" />
             </Center>
@@ -696,18 +837,35 @@ function ViewerFrame({
             </Center>
           )}
           <img
-            key={shown.generation}
             ref={setImg}
-            src={shown.image.src}
+            data-viewer-stage
+            src={shown.url}
             alt={shown.image.alt ?? shown.image.name}
             draggable={false}
             onLoad={(e) =>
-              ctl.loaded({
-                width: e.currentTarget.naturalWidth,
-                height: e.currentTarget.naturalHeight,
-              })
+              // A copy's own pixels are fewer: the original's size is the truth.
+              ctl.loaded(
+                shown.url !== shown.image.src && shown.natural
+                  ? shown.natural
+                  : {
+                      width: e.currentTarget.naturalWidth,
+                      height: e.currentTarget.naturalHeight,
+                    },
+              )
             }
-            onError={() => ctl.failedToLoad()}
+            onError={() => {
+              if (shown.url === shown.image.src) {
+                ctl.failedToLoad();
+                return;
+              }
+              // A copy the server could not make: the original instead.
+              setShown({
+                ...shown,
+                url: shown.image.src,
+                edge: Infinity,
+                via: "open",
+              });
+            }}
             className={cn(
               placedClasses(),
               "max-w-none origin-top-left cursor-zoom-out shadow-2xl will-change-transform",
@@ -726,12 +884,11 @@ function ViewerFrame({
           <ImageGrid
             images={images}
             index={index}
-            tile={tile}
             area={area}
             gridRef={gridRef}
+            ctl={ctl}
             onSelect={goTo}
             onOpen={openFromGrid}
-            onResize={(factor) => ctl.setTile(tile * factor)}
           />
         )}
         {stripShown && (

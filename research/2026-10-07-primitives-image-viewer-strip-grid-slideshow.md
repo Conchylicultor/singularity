@@ -139,6 +139,10 @@ caller's image list` rather than becoming a DataView.
 
 ## Known limits (stated, not solved here)
 
+> Update: the thumbnail limit below is solved by
+> `research/2026-10-07-primitives-image-viewer-fast-large-folders.md`
+> (resized copies from `infra/host-fs/image`).
+
 - Thumbnails are the full images, loaded lazily. No thumbnail service exists. A
   folder of hundreds of large JPEGs in the grid decodes what scrolls into view.
   `loading="lazy"` and `content-visibility: auto` on tiles bound the cost to the

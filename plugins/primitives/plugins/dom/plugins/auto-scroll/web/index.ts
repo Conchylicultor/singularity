@@ -25,6 +25,7 @@ export type {
   UseEdgeAutoScrollOptions,
 } from "./use-edge-auto-scroll";
 export { KeepScrollAcross } from "./keep-scroll-across";
+export { keepInPlace } from "./keep-in-place";
 export type { KeepScrollAcrossProps } from "./keep-scroll-across";
 export {
   captureDocumentScroll,
@@ -36,6 +37,6 @@ export type { FindScrollParentOptions } from "./internal/find-scroll-parent";
 
 export default {
   description:
-    "The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.",
+    "The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.",
   contributions: [],
 } satisfies PluginDefinition;

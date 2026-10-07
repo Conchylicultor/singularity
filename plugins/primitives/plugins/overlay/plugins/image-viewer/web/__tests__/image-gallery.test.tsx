@@ -15,6 +15,14 @@ import {
 
 afterEach(cleanup);
 
+// jsdom has no HTMLImageElement.decode(); the viewer decodes the next images
+// ahead. Like jsdom's loads, these decodes never finish.
+Object.defineProperty(HTMLImageElement.prototype, "decode", {
+  configurable: true,
+  writable: true,
+  value: () => new Promise<void>(() => {}),
+});
+
 // jsdom never loads images, so the viewer stays on its loading state — which
 // is all these tests need: they are about WHICH image is open, and in what
 // order ← / → walks, not about pixels.

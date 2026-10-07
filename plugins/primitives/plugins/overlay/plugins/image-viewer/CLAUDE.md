@@ -48,10 +48,37 @@ so `useImageLoad` asks the source once (`probeUrlStatus`, networking): 404 or 41
 attachment whose file left the disk), anything else is **unreadable** ("Couldn't load ·
 Retry"). With no `<img>` mounted the image also leaves its gallery, so ← / → skip it.
 
-`ViewerImage` is `{ src, name, sourceLabel?, alt?, width?, height? }`. `name` is the
+`ViewerImage` is `{ src, name, sourceLabel?, alt?, width?, height?, resized? }`. `name` is the
 top-bar title and the download's file name; `sourceLabel` is the small chip before
 it (`"Read"`, `"Pasted"`, `"Markdown"`, `"Attached"`). Pass `width` / `height` when
 you know them — otherwise they are measured on load.
+
+## Large images: copies, and swaps that never go blank
+
+`resized(edge)` is the caller's way to offer smaller copies of an image (the
+Files app gives every host photo one, from `infra/host-fs/image`). The viewer
+then never draws a 30-megapixel original where a copy will do
+(`web/internal/pick-src.ts`):
+
+- **Strip and grid** tiles ask for a copy at their own size (`ThumbImg`); a grid
+  tile's request only grows, by powers of two, while the grid is open.
+- **The stage** draws a copy fitted to the window, but only when `width` /
+  `height` are known — fit, 1:1 and the zoom % are computed from the
+  original's size. A zoom past the copy's pixels swaps in a larger copy (or the
+  original), decoded first, in the same box.
+- **A step (← / →, a strip or grid pick, the slideshow)** never fades. The next
+  image is loaded and decoded (`web/internal/decoded-cache.ts`), and only then
+  replaces the current one, in one frame; the old one stays up meanwhile, with a
+  spinner after 150 ms. The neighbours (both sides, plus one further in the
+  direction of travel) are decoded ahead, so a step is normally instant.
+- A copy that fails to load (the server could not make one) falls back to
+  `src`; `src` stays the original for copy / download / open.
+
+**Grid resize** (slider, + / −, ⌘-scroll, pinch) renders no tile: the grid
+writes `--tile` straight onto its element from a store subscription, tiles are
+memoized, captions are a container query, wheel factors are applied once a
+frame, the tile under the pointer (or the selected one) keeps its place on
+screen, and the preference is saved once the change settles.
 
 A `ViewerThumbnail`'s `children` are painted over it, outside its open button —
 that is where an attachment chip's Remove button goes (`<Pin>` it to a corner; the
@@ -130,6 +157,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/yield.yieldClass`
+    - `primitives/dom/auto-scroll.keepInPlace`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/hover-reveal.hoverRevealGroup`

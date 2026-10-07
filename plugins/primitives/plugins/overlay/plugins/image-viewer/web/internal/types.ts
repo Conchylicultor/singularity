@@ -14,6 +14,15 @@ export interface ViewerImage {
    *  once the image loads. */
   width?: number;
   height?: number;
+  /**
+   * A URL of this same image, smaller: its long edge at least `edge` px (the
+   * provider may round up), or the original's when that is smaller. The viewer
+   * asks for one at thumbnail size for the strip and the grid, and at screen
+   * size for the stage — where it is used only when `width` / `height` are
+   * known, since the zoom is computed from the original's size. A URL that
+   * fails to load falls back to `src`. Omitted: `src` everywhere.
+   */
+  resized?: (edge: number) => string;
 }
 
 /** "Is this still the picture on screen?" — two entries with the same address

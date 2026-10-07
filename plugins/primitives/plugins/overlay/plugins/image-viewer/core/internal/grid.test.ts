@@ -5,12 +5,13 @@ describe("clampTile / stepTile", () => {
   it("holds the tile size inside the slider's range", () => {
     expect(clampTile(10)).toBe(TILE_MIN);
     expect(clampTile(10_000)).toBe(TILE_MAX);
-    expect(clampTile(200.4)).toBe(200);
+    expect(clampTile(200.4)).toBe(200.4);
   });
 
   it("steps proportionally and stops at the ends", () => {
     expect(stepTile(200, 1)).toBe(250);
     expect(stepTile(200, -1)).toBe(160);
+    expect(stepTile(201, 1)).toBe(251.25);
     expect(stepTile(TILE_MAX, 1)).toBe(TILE_MAX);
     expect(stepTile(TILE_MIN, -1)).toBe(TILE_MIN);
   });

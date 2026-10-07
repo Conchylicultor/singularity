@@ -6,8 +6,14 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { STRIP_HEIGHT, thumbnailShape } from "../../core";
+import { pixelRatio } from "../internal/pick-src";
 import type { ViewerImage } from "../internal/types";
+import { ThumbImg } from "./thumb-img";
 import { PANEL } from "./viewer-chrome";
+
+/** The long edge, CSS px, a strip thumbnail's copy needs: its box is 80 px
+ *  wide (`w-20`) and covered, so a 2:3 portrait's long side runs to 120. */
+const THUMB_EDGE = 120;
 
 /** One image in the strip. Its own component so each owns its reveal: the
  *  current one scrolls into view when it becomes current (and on mount, so
@@ -47,12 +53,9 @@ function StripThumb({
         current && "border-primary opacity-100",
       )}
     >
-      <img
-        src={image.src}
-        alt=""
-        draggable={false}
-        loading="lazy"
-        decoding="async"
+      <ThumbImg
+        image={image}
+        edge={THUMB_EDGE * pixelRatio()}
         className={cn(
           "pointer-events-none block size-full object-cover object-top",
           tiny && "object-contain p-sm [image-rendering:pixelated]",

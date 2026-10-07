@@ -185,6 +185,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `primitives/diff-view`
     - `primitives/file-viewer/code`
     - `primitives/file-viewer/html`
+    - `primitives/file-viewer/image`
     - `primitives/file-viewer/markdown`
     - `primitives/folder-picker`
     - `primitives/icon-picker`

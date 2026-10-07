@@ -162,6 +162,22 @@ export function createViewController(
       tryOpen();
     },
 
+    /**
+     * Another image, already decoded, replaces the one on screen in the same
+     * frame: fitted at `natural`, and painted at once — the old one stays up
+     * until this moment, so nothing in between is ever blank.
+     */
+    swapTo(natural: Size) {
+      patch({
+        natural,
+        failed: false,
+        atFit: true,
+        ...(get().phase === "open" ? { imageVisible: true } : {}),
+      });
+      settle();
+      tryOpen();
+    },
+
     /** The image element finished loading at `natural`. */
     loaded(natural: Size) {
       const had = get().natural;

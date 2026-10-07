@@ -56,7 +56,7 @@ export function parseRange(header: string | null, size: number): RangeRequest {
  * ever shown — it renders in the browser's own isolated origin, never as a
  * document on the app's, so the sandbox would protect nothing.
  */
-function inertHeaders(
+export function inertHeaders(
   path: string,
   contentType: string,
 ): Record<string, string> {

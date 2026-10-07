@@ -712,6 +712,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `infra/deps/sweep`
     - `infra/events`
     - `infra/events-test`
+    - `infra/host-fs/image`
     - `infra/jobs/background-arm`
     - `infra/jobs/deadline-audit`
     - `infra/jobs/supervised-job`

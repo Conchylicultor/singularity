@@ -37,6 +37,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps", id: "infra.deps", loader: () => import("@plugins/infra/plugins/deps/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/python", id: "infra.deps.python", loader: () => import("@plugins/infra/plugins/deps/plugins/python/data-dirs"), dependsOn: [] },
+  { pluginPath: "infra/plugins/host-fs/plugins/image", id: "infra.host-fs.image", loader: () => import("@plugins/infra/plugins/host-fs/plugins/image/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/host/plugins/duress/plugins/latch", id: "infra.host.duress.latch", loader: () => import("@plugins/infra/plugins/host/plugins/duress/plugins/latch/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/host/plugins/host-admission", id: "infra.host.host-admission", loader: () => import("@plugins/infra/plugins/host/plugins/host-admission/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/data-dirs"), dependsOn: [] },

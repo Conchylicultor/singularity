@@ -35,7 +35,7 @@ await withBrowser(async (h) => {
   const dialog = page.getByRole("dialog", { name: /^Image viewer/ });
   await dialog.waitFor({ timeout: 5000 });
   await page.waitForTimeout(600);
-  const stageImg = dialog.locator("img").first();
+  const stageImg = dialog.locator("img[data-viewer-stage]");
   const counter = () => dialog.getByText(/^\d+ \/ \d+$/).textContent();
   const pressed = (name: string) =>
     dialog
@@ -88,8 +88,8 @@ await withBrowser(async (h) => {
   const grid = dialog.getByRole("group", { name: "All images" });
   const tiles = grid.locator("[data-grid-tile]");
   r.ok("G opens the grid of every image", (await tiles.count()) >= 3);
-  // Every tile on screen should finish loading — these are the full images,
-  // so on a folder of large photos this is the cost the grid puts on the host.
+  // Every tile on screen should finish loading quickly: tiles draw resized
+  // copies, never the originals.
   const loadStart = Date.now();
   const visibleLoaded = () =>
     grid.evaluate((el) => {
@@ -108,11 +108,41 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(250);
     loaded = await visibleLoaded();
   }
+  const loadMs = Date.now() - loadStart;
   r.ok(
-    "every tile on screen loads",
-    loaded.done === loaded.total,
-    `${loaded.done}/${loaded.total} in ${Date.now() - loadStart} ms`,
+    "every tile on screen loads within 2 s",
+    loaded.done === loaded.total && loadMs < 2000,
+    `${loaded.done}/${loaded.total} in ${loadMs} ms`,
   );
+  const originals = await grid.evaluate(
+    (el) =>
+      [...el.querySelectorAll("img")].filter(
+        (img) =>
+          // A lazy tile far off screen has not picked a source yet.
+          img.currentSrc !== "" &&
+          !img.currentSrc.includes("/api/host-fs/image/resized"),
+      ).length,
+  );
+  r.eq("every grid tile draws a resized copy", originals, 0);
+
+  // ⌘-scroll over a tile resizes the grid around it: the tile stays put.
+  const anchorTile = tiles.nth(1);
+  const anchorBox = await anchorTile.boundingBox();
+  if (anchorBox) {
+    await page.mouse.move(anchorBox.x + 20, anchorBox.y + 20);
+    await page.keyboard.down("Meta");
+    for (let i = 0; i < 6; i++) await page.mouse.wheel(0, -20);
+    await page.keyboard.up("Meta");
+    await page.waitForTimeout(200);
+    const after = await anchorTile.boundingBox();
+    r.ok(
+      "⌘-scroll grows the tiles and keeps the tile under the pointer in place",
+      !!after &&
+        after.width > anchorBox.width &&
+        Math.abs(after.y - anchorBox.y) < 4,
+      `before=${JSON.stringify(anchorBox)} after=${JSON.stringify(after)}`,
+    );
+  }
   r.eq(
     "the slider replaces the zoom controls",
     await dialog.getByRole("slider", { name: "Thumbnail size" }).count(),
@@ -149,6 +179,59 @@ await withBrowser(async (h) => {
     (await counter())?.startsWith("2 /") ?? false,
     `${await counter()}`,
   );
+
+  // --- an instant step --------------------------------------------------------
+  // With the neighbours decoded ahead, → swaps the image in the same frame or
+  // the next, and the stage never goes transparent in between.
+  const stripCopies = await strip.evaluate(
+    (el) =>
+      [...el.querySelectorAll("img")].filter(
+        (img) =>
+          img.currentSrc !== "" &&
+          !img.currentSrc.includes("/api/host-fs/image/resized"),
+      ).length,
+  );
+  r.eq("every strip thumbnail draws a resized copy", stripCopies, 0);
+  await page.waitForTimeout(1500);
+  const step = await page.evaluate(
+    () =>
+      new Promise<{ ms: number; srcMs: number; minOpacity: number }>((resolve) => {
+        const img = document.querySelector<HTMLImageElement>(
+          "img[data-viewer-stage]",
+        )!;
+        const from = img.getAttribute("src");
+        const t0 = performance.now();
+        let minOpacity = 1;
+        let srcMs = Infinity;
+        new MutationObserver(() => {
+          srcMs = Math.min(srcMs, performance.now() - t0);
+        }).observe(img, { attributes: true, attributeFilter: ["src"] });
+        const sample = () => {
+          minOpacity = Math.min(
+            minOpacity,
+            Number(getComputedStyle(img).opacity),
+          );
+          if (img.getAttribute("src") !== from && img.complete) {
+            resolve({ ms: performance.now() - t0, srcMs, minOpacity });
+            return;
+          }
+          if (performance.now() - t0 > 5000)
+            resolve({ ms: Infinity, srcMs, minOpacity });
+          else requestAnimationFrame(sample);
+        };
+        document.activeElement?.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+        );
+        requestAnimationFrame(sample);
+      }),
+  );
+  r.ok(
+    "→ paints the next image within 100 ms, with no fade",
+    step.ms < 100 && step.minOpacity === 1,
+    `painted ${step.ms.toFixed(0)} ms (src set at ${step.srcMs.toFixed(0)} ms), min opacity ${step.minOpacity}`,
+  );
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForTimeout(300);
 
   // --- slideshow -----------------------------------------------------------
   await page.keyboard.press("f");
