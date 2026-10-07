@@ -71,14 +71,14 @@ describe("SearchInput appearance", () => {
     expect(input.className).not.toContain("bg-muted");
   });
 
-  it("filled draws the muted well, a primary border on focus, no ring", () => {
+  it("filled draws the muted well, the quiet field border on focus, no ring", () => {
     render(<Controlled appearance="filled" initial="" />);
     const input = screen.getByPlaceholderText("Search");
     const cls = input.className.split(/\s+/);
     expect(cls).toContain("bg-muted");
     expect(cls).toContain("border-transparent");
     expect(cls).not.toContain("border-input");
-    expect(cls).toContain("focus:border-primary");
+    expect(cls).toContain("focus-border");
     expect(cls).toContain("focus:bg-background");
     expect(cls).toContain("focus-visible:ring-0");
     // Still the field shape: a leading icon box, the input itself the box.

@@ -25,7 +25,7 @@ const MultilineTextRenderer = defineFieldShape({
           onFocus={draft.onFocus}
           onBlur={draft.onBlur}
           onChange={(e) => draft.onChange(e.target.value)}
-          className="focus-ring w-full resize-y rounded-lg border border-input bg-transparent px-sm py-xs text-body placeholder:text-muted-foreground dark:bg-input/30"
+          className="focus-border w-full resize-y rounded-lg border border-input bg-transparent px-sm py-xs text-body placeholder:text-muted-foreground dark:bg-input/30"
         />
       ),
     };

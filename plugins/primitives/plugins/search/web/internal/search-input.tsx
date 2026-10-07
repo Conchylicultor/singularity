@@ -28,14 +28,14 @@ const searchIcon = symbol("search");
  *   Escape clears the query and leaves the field.
  * - `filled` — the `field` box drawn as a quiet grey well: the muted fill, no
  *   visible border, the theme radius, its icon and placeholder in the faint
- *   tier. Focus lifts it onto the surface colour with a primary border instead
- *   of the ring — a toolbar filter that should recede until it is used.
+ *   tier. Focus lifts it onto the surface colour with the fields' quiet border instead
+ *   of the halo — a toolbar filter that should recede until it is used.
  */
 export type SearchInputAppearance = "field" | "bare" | "filled";
 
 /** What `filled` changes on the `field` box: the well, and how focus shows. */
 const FILLED_INPUT =
-  "border-transparent bg-muted dark:bg-muted placeholder:text-faint-foreground focus:border-primary focus:bg-background dark:focus:bg-background focus-visible:ring-0";
+  "border-transparent bg-muted dark:bg-muted placeholder:text-faint-foreground focus:bg-background dark:focus:bg-background focus-visible:ring-0";
 
 // The `field` appearance is a compact field by construction: it declares the
 // `sm` control size itself (as `Bar` does), so its height still follows the

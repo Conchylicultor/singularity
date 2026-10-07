@@ -235,11 +235,20 @@
   }
 }
 
-/* The quiet answer, for a field that is focused most of the time — the prompt
- * editor box. A halo there is on screen almost permanently, so focus instead
- * lifts the resting border a notch toward the foreground: visible, never loud.
- * It does not turn the border the ring hue (see `focus-ring`), so a saturated
- * theme `--ring` cannot double the stroke. */
+/* The quiet answer, for text fields — Input, Textarea and the prompt editor
+ * box. A field is where focus sits while you type, so a halo there is on screen
+ * almost permanently; focus instead lifts the resting border a notch toward the
+ * foreground: visible, never loud. It does not turn the border the ring hue
+ * (see `focus-ring`), so a saturated theme `--ring` cannot double the stroke.
+ * `focus-border` is the field's own focus, `focus-border-within` a wrapper's. */
+@utility focus-border {
+  /* twmerge: standalone -- State-scoped border-color under :focus-visible; must coexist with the resting border-* class, not replace it. */
+  @apply outline-none;
+  &:focus-visible {
+    border-color: color-mix(in oklch, var(--color-input), var(--color-foreground) 18%);
+  }
+}
+
 @utility focus-border-within {
   /* twmerge: standalone -- State-scoped border-color under :has(); must coexist with the resting border-* class, not replace it. */
   &:has(:focus-visible) {

@@ -12,6 +12,7 @@ import type { RegistryEntry } from "./custom-utilities-types";
 
 export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["focus-ring", "focus-ring-within"], standalone: true, reason: "Additive box-shadow/outline; no single-value built-in group to conflict with." },
+  { classes: ["focus-border"], standalone: true, reason: "State-scoped border-color under :focus-visible; must coexist with the resting border-* class, not replace it." },
   { classes: ["focus-border-within"], standalone: true, reason: "State-scoped border-color under :has(); must coexist with the resting border-* class, not replace it." },
   { classes: ["focus-ring-from"], standalone: true, reason: "Additive box-shadow/outline; no single-value built-in group to conflict with." },
   { classes: ["rounded-checkbox", "rounded-squircle", "rounded-card", "rounded-control", "rounded-popover"], extend: "rounded" },

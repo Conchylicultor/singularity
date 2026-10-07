@@ -81,7 +81,7 @@ export function PromptSection({
               onFocus={draft.onFocus}
               onBlur={draft.onBlur}
               onChange={(e) => draft.onChange(e.target.value)}
-              className="focus-ring w-full resize-y rounded-lg border border-input bg-transparent px-sm py-xs font-mono text-caption dark:bg-input/30"
+              className="focus-border w-full resize-y rounded-lg border border-input bg-transparent px-sm py-xs font-mono text-caption dark:bg-input/30"
             />
             {unknown.length > 0 ? (
               <Text variant="caption" tone="destructive">
