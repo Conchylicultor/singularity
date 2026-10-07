@@ -53,12 +53,21 @@ export async function automationOfTask(taskId: string): Promise<string | null> {
   return row === undefined ? null : row.automationId;
 }
 
-/** What an automation files: one task. */
+/**
+ * What an automation files: one task. Its description is the automation's
+ * prompt template filled with `variables` (the registry adds `pushPolicy`).
+ */
 export interface AutomationFiling {
   title: string;
-  description: string;
+  /** A value for every `{{variable}}` the automation declares. */
+  variables: Readonly<Record<string, string>>;
   /** The sources the task covers (stored on its origin row). */
   sourceKeys: readonly string[];
+  /**
+   * Called with the filed task's id once it exists — e.g. to link the records
+   * it covers to it. A failure throws out of the run after the task is filed.
+   */
+  onFiled?: (taskId: string) => Promise<void>;
 }
 
 /**
@@ -70,15 +79,16 @@ export async function fileAutomationTask(args: {
   automationId: string;
   categoryId: string;
   filing: AutomationFiling;
+  description: string;
 }): Promise<string> {
-  const { automationId, categoryId, filing } = args;
+  const { automationId, categoryId, filing, description } = args;
   return db.transaction(async (tx) => {
     const task = await createTask(
       {
         title: filing.title,
         titleAuto: false,
         author: `automation:${automationId}`,
-        description: filing.description,
+        description,
       },
       tx,
     );

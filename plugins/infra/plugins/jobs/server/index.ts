@@ -35,7 +35,11 @@ export {
   getJobHold,
 } from "./internal/registry";
 export { listRegisteredJobs, resolveJobCron } from "./internal/registry";
-export { nextScheduledRun } from "./internal/worker";
+export {
+  nextScheduledRun,
+  onJobSchedulesChanged,
+  refreshJobSchedules,
+} from "./internal/worker";
 export { cronRanges } from "./internal/cron-schedule";
 export type { CronRanges } from "./internal/cron-schedule";
 export {

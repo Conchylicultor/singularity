@@ -1,28 +1,7 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
-import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
-
-/**
- * How an automation behaves, as the person set it. The registry declares a
- * default for every field; a saved config item replaces them all at once
- * (`resolveAutomationSettings`).
- *
- * - `enabled` — Off / Auto-launch. Off, the automation's job still ticks but
- *   files nothing.
- * - `autoPush` — the filed task's agent may push by itself once its checks
- *   pass. Each automation decides what "checks pass" means in its prompt.
- * - `model` — the model the filed task's agent launches with.
- * - `excludedSources` — the ids of the sources that do not take part. A source
- *   added later takes part until it is excluded.
- */
-export const AutomationSettingsSchema = z.object({
-  enabled: z.boolean(),
-  autoPush: z.boolean(),
-  model: ModelChoiceSchema,
-  excludedSources: z.array(z.string()),
-});
-export type AutomationSettings = z.infer<typeof AutomationSettingsSchema>;
+import { TRIGGER_KINDS } from "./settings";
 
 /** One thing an automation watches (a dependency updater, …), which the person
  * can include or exclude. */
@@ -33,17 +12,36 @@ export const AutomationSourceSchema = z.object({
 export type AutomationSource = z.infer<typeof AutomationSourceSchema>;
 
 /**
- * When the automation runs. `jobName` is the job it owns — the key its entry
- * has in Background activity (`kind: "job"`), so Run now and the next run are
- * read there. `cron` is the schedule it resolved to, `null` when a setting
- * turned it off (it then runs only when started by hand).
+ * How the automation can be woken and what it is woken by now.
+ *
+ * - `kinds` — the trigger kinds it supports, in its preferred order; the person
+ *   picks one (its config's `trigger`) when there are several.
+ * - `eventLabel` — what its event is, in words ("When a report is filed");
+ *   `null` for an automation that supports only a schedule.
+ * - `jobName` — the job it owns: the key its entry has in Background activity
+ *   (`kind: "job"`), so Run now and the next run are read there.
+ * - `current` — the kind its config picks now.
+ * - `words` — when it runs, in the person's words ("Mondays at 06:00", or the
+ *   event label).
+ * - `cron` — the UTC crontab installed for it now: `null` while it is off, on
+ *   its event, or its schedule is invalid (`scheduleError` says why).
  */
 export const AutomationTriggerSchema = z.object({
-  kind: z.literal("schedule"),
+  kinds: z.array(z.enum(TRIGGER_KINDS)).min(1),
+  current: z.enum(TRIGGER_KINDS),
+  words: z.string(),
+  eventLabel: z.string().nullable(),
   jobName: z.string(),
   cron: z.string().nullable(),
+  scheduleError: z.string().nullable(),
 });
 export type AutomationTrigger = z.infer<typeof AutomationTriggerSchema>;
+
+/** A `{{variable}}` its prompt template may use. */
+export const PromptVariableSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+});
 
 // The icon crosses the wire as the `SymbolRef` the server authored with
 // `symbol("…")` — a tsc-checked literal the icon manifest collected. The check
@@ -59,7 +57,10 @@ const SymbolRefSchema: ZodParser<SymbolRef> = z.custom<SymbolRef>(
 
 /**
  * One registered automation, as the Automations pane lists it. Declared in code
- * (`defineAutomation`), so the set is bounded by the composition.
+ * (`defineAutomation`), so the set is bounded by the composition. Its settings
+ * are its config document (`defineAutomationConfig`, named by its id), read
+ * with the config hooks; `enabled` and the trigger are repeated here, as the
+ * server resolves them, for the list.
  *
  * `openTaskId` is the task it filed that is neither done nor dropped — at most
  * one, since an automation never files beside an open task.
@@ -70,9 +71,10 @@ export const AutomationEntrySchema = z.object({
   icon: SymbolRefSchema,
   description: z.string(),
   categoryId: z.string(),
+  enabled: z.boolean(),
   trigger: AutomationTriggerSchema,
   sources: z.array(AutomationSourceSchema),
-  defaults: AutomationSettingsSchema,
+  promptVariables: z.array(PromptVariableSchema),
   openTaskId: z.string().nullable(),
 });
 export type AutomationEntry = z.infer<typeof AutomationEntrySchema>;

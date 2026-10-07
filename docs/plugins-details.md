@@ -9423,7 +9423,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.recording`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.open-app`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.selection-actions`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.deps.updates`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.automations`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.recording`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.open-app`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.selection-actions`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.deps.updates`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.reports-investigation`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -9651,7 +9651,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `fields/secret/config`
       - `framework/tooling/codegen`
       - `infra/audio-analysis`
-      - `infra/deps/updates`
       - `infra/host/duress`
       - `integrations/gmail`
       - `plugin-meta/composition`
@@ -9665,6 +9664,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stats/commits`
       - `stats/cost`
       - `tasks/automations`
+      - `tasks/reports-investigation`
       - `tasks/task-draft-form`
       - `ui/segmented-progress-bar`
       - `ui/tab-bar`
@@ -17354,6 +17354,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/stall-monitor`
               - `debug/trace/engine`
               - `infra/host/duress`
+              - `tasks/automations`
               - `tasks/tasks-core`
         - **`data-view-codec`** — Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text).
           - Web:
@@ -17741,6 +17742,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/look`
               - `apps/sonata/pitch-layout`
               - `plugin-meta/composition`
+              - `tasks/automations`
               - `ui/theme-engine`
         - **`data-view-group`** — Enum field type: data-view grouping strategy (bucket by value, labelled and ordered by `field.options`).
           - Web:
@@ -17905,6 +17907,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events`
               - `infra/host/duress`
               - `reports`
+              - `tasks/automations`
         - **`storage`** — Integer field type: DB storage capability — maps to a Postgres integer column.
           - Server:
             - Contributes: `fields.storage` "int"
@@ -18053,7 +18056,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `multilineTextField`
               - `multilineTextSample`
           - Cross-plugin:
-            - Imported by: `fields/list/config`
+            - Imported by:
+              - `fields/list/config`
+              - `tasks/automations`
     - **`number`** — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "number"
@@ -18370,7 +18375,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stringListField`
               - `stringListSample`
           - Cross-plugin:
-            - Imported by: `plugin-meta/composition`
+            - Imported by:
+              - `plugin-meta/composition`
+              - `tasks/automations`
     - **`tags`** — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "tags"
@@ -18964,6 +18971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-tree`
           - `plugin-meta/relocate`
+          - `tasks/automations`
       - Core:
         - Exports (types):
           - `LeafFolder`
@@ -20847,18 +20855,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/worktree.listWorktreePaths`
               - `primitives/log-channels.Log`
             - Register: `defineJob('deps.sweep')`
-        - **`updates`** — Registers the dependency-upgrade schedule (the Dependency upgrades automation's cron, weekly by default) for Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on a config cron, weekly by default): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and, with Push when checks pass on, pushes on an `upgraded` verdict.
+        - **`updates`** — Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on the schedule its config sets — weekly by default — editable live from the Automations pane): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and pushes on an `upgraded` verdict as far as its Push setting allows.
           - Web:
-            - Contributes: `ConfigV2.WebRegister` "config"
-            - Uses: `config_v2.ConfigV2`
+            - Contributes:
+              - `ConfigV2.WebRegister` "deps-upgrades"
+              - `Automations.Config` "deps-upgrades"
+            - Uses: `tasks/automations.automationConfigContributions`
           - Server:
             - Contributes:
-              - `ConfigV2.Register` "config"
+              - `ConfigV2.Register` "deps-upgrades"
               - `taskCategory` "dependencies"
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.getConfig`
               - `database.db`
+              - `tasks/automations.automationConfigRegistration`
               - `tasks/automations.defineAutomation`
               - `tasks/task-category.TaskCategory`
               - `tasks/task-category.tasksCategory`
@@ -20884,7 +20893,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `UpdaterHold`
               - `UpdaterSmoke`
             - Exports (values):
-              - `upgradeTaskDescription`
+              - `DEPS_UPGRADE_PROMPT`
+              - `outdatedSections`
               - `upgradeTaskTitle`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
@@ -21131,6 +21141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
           - `tasks/automations`
           - `tasks/launch-options`
+          - `tasks/reports-investigation`
           - `tasks/task-attachments`
           - `tasks/task-category`
           - `tasks/task-dependencies`
@@ -22058,6 +22069,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `nextScheduledRun`
           - `NonRetryableError`
           - `onJobRunsChanged`
+          - `onJobSchedulesChanged`
           - `onQueueActivity`
           - `PICKUP_WINDOW_MS`
           - `pickupTargetMsFor`
@@ -22074,6 +22086,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readJobRunStats`
           - `readRecentJobRuns`
           - `RECENT_RUNS_RING`
+          - `refreshJobSchedules`
           - `resolveJobCron`
           - `RUNNERS`
           - `runningJobStarts`
@@ -22216,6 +22229,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/jobs.listRegisteredJobs`
               - `infra/jobs.nextScheduledRun`
               - `infra/jobs.onJobRunsChanged`
+              - `infra/jobs.onJobSchedulesChanged`
               - `infra/jobs.readJobRunStats`
               - `infra/jobs.readRecentJobRuns`
               - `infra/jobs.RegisteredJob`
@@ -28964,6 +28978,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder/edit-mode`
               - `shell/global-action-bar`
               - `tasks/automations`
+              - `tasks/reports-investigation`
               - `ui/theme-engine/quick-theme`
               - `ui/theme-toggle`
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
@@ -30976,6 +30991,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/tasks`
               - `tasks/attempt-view`
               - `tasks/automations`
+              - `tasks/reports-investigation`
               - `tasks/task-attachments`
               - `tasks/task-dependencies`
               - `tasks/task-description`
@@ -31591,6 +31607,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/attempt-status`
               - `tasks/attempt-view`
               - `tasks/automations`
+              - `tasks/reports-investigation`
               - `tasks/task-dependencies`
               - `tasks/task-deps-tree`
               - `tasks/task-description`
@@ -32958,6 +32975,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/notes`
           - `fields/multiline-text/config`
           - `fields/text/config`
+          - `tasks/automations`
           - `tasks/task-description`
           - `tasks/task-header`
     - **`embed`** — The declared embedded-document signal: embedMode() reads the `?embed=` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read) — `?embed=1` opens one route with no app chrome, `?embed=chrome` opens the whole app, chrome included — and embedUrl(path, mode) builds an in-app URL that opens that way. isChromelessDocument() is read by the apps layout (no tab bar, no rail) and the floating action bar (hidden); isEmbeddedDocument() by the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame in either mode never evicts the host tab's own state.
@@ -33992,6 +34010,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/attempt-work`
           - `tasks/auto-start`
           - `tasks/automations`
+          - `tasks/reports-investigation`
           - `tasks/task-category`
           - `tasks/task-dependencies`
           - `tasks/task-deps-tree`
@@ -34217,6 +34236,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
           - `tasks/attempt-view`
           - `tasks/automations`
+          - `tasks/reports-investigation`
           - `tasks/task-dependencies`
           - `tasks/task-description`
           - `tasks/task-draft-form`
@@ -36294,6 +36314,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/action-bar`
           - `shell/health-report`
           - `stats`
+          - `tasks/automations`
           - `tasks/launch-options`
           - `tasks/task-draft-form`
           - `tasks/task-list`
@@ -37223,7 +37244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×226: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "automation-detail.actions", "automations.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "exhibits.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "glance", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.WebRegister` ×227: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "automation-detail.actions", "automation-section", "automations.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "exhibits.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "glance", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -37253,7 +37274,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×225: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "automation-detail.actions", "automations.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "exhibits.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "glance", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.Register` ×226: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "app-preview.actions", "apple-setup.actions", "attempt.actions", "automation-detail.actions", "automation-section", "automations.actions", "background-entry.actions", "background.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "dependencies.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "exhibits.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "files-at.actions", "files-home.actions", "floating-action", "format-action", "frame-actions", "glance", "google-maps-live-map-setup.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-tool", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "shell-output.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "under-title", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -37428,11 +37449,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (values):
       - `DEFAULT_REPORT_DEBOUNCE_MS`
       - `isReportKindRegistered`
+      - `linkReportsToTask`
       - `recordReport`
       - `recordReportDebounced`
+      - `renderReportTask`
       - `reportInvestigationSink`
       - `ReportKind`
       - `ReportNoiseRule`
+      - `reportRecordedSignal`
+      - `uninvestigatedReportCounts`
+      - `uninvestigatedReports`
     - Register:
       - `defineWarmup('reports.backfill-noise')`
       - `defineJob('retention.reports')`
@@ -39130,13 +39156,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/model-provider.ModelChoiceSchema`
               - `tasks/launch-options.defineLaunchOption`
             - Exports (values): `autoStartLaunchOption`
-    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — schedule in words, next run, on/off, open task), the detail pane (Run now through Background activity, the Behavior settings — enabled, push when checks pass, model — the included sources, and the History of the tasks it filed), the `origin` Automation field in every task DataView, and the per-automation settings registered for Settings → Config. Automations registry: defineAutomation declares something that files a task and launches its agent on its own, and owns its job (automation.<id>) — settings resolution (automationsConfig over declared defaults: enabled, autoPush, model, excluded sources), the one-open-task dedupe, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
+    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default; and the History of the tasks it filed), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own, and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
       - Web:
         - Slots:
+          - `Automations.Config` ← `infra.deps.updates`, `tasks.reports-investigation`
+          - `Automations.Section` ← `tasks.reports-investigation`
           - `automations.actions` ← `primitives.pane`
           - `automation-detail.actions` ← `primitives.pane`
         - Contributes:
-          - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Model"
           - `Pane.Register` "automations"
           - `Pane.Register` "automation-detail"
@@ -39165,9 +39192,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.Input`
+          - `primitives/css/ui-kit.Select`
+          - `primitives/css/ui-kit.SelectContent`
+          - `primitives/css/ui-kit.SelectItem`
+          - `primitives/css/ui-kit.SelectTrigger`
+          - `primitives/css/ui-kit.SelectValue`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/data-view.FieldDef`
+          - `primitives/editable-field.useEditableField`
           - `primitives/live-state.combineResources`
           - `primitives/live-state.foldResource`
           - `primitives/live-state.mapResource`
@@ -39180,6 +39214,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.ResolveResult`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
+          - `primitives/slot-render.defineRenderSlot`
           - `shell.Shell`
           - `tasks.useTasksById`
           - `tasks/task-detail.taskDetailPane`
@@ -39188,9 +39223,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-status.StatusIcon`
           - `tasks/task-status.StatusSignal`
           - `ui/icons.Icon`
+        - Exports (values):
+          - `automationConfigContributions`
+          - `Automations`
       - Server:
         - Contributes:
-          - `ConfigV2.Register` "config"
           - `resource.declare` "automations.catalog"
           - `resource.declare` "automations.tasks"
           - `resource.declare` "automations.tasks:rows"
@@ -39199,13 +39236,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
+          - `config_v2.watchConfig`
           - `database.db`
           - `database.DbExecutor`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
-          - `infra/jobs.listRegisteredJobs`
-          - `infra/jobs.resolveJobCron`
+          - `infra/jobs.refreshJobSchedules`
           - `infra/warmup.defineWarmup`
           - `network/live.serveCollection`
           - `network/live.serveValue`
@@ -39225,7 +39262,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AutomationDetectCtx`
           - `AutomationFiling`
           - `AutomationSpec`
-        - Exports (values): `defineAutomation`
+        - Exports (values):
+          - `automationConfigRegistration`
+          - `defineAutomation`
         - Register: `defineJob('automations.task-status')`
         - Resources:
           - `automations.catalog` (push)
@@ -39234,24 +39273,47 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `automations.tasks:rows` (keyed, point)
       - Core:
         - Uses:
+          - `config_v2.ConfigValues`
+          - `config_v2.defineConfig`
+          - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
           - `conversations/model-provider.ModelChoiceSchema`
+          - `conversations/model-provider.normalizeModelChoice`
+          - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
+          - `fields/dynamic-enum/config.dynamicEnumField`
+          - `fields/enum/config.enumField`
+          - `fields/int/config.intField`
           - `fields/json/config.jsonField`
+          - `fields/multiline-text/config.multilineTextField`
+          - `fields/string-list/config.stringListField`
           - `fields/text/config.textField`
+          - `framework/plugin-id.asPluginId`
           - `infra/entity-extensions.defineExtensionShape`
           - `network/live.liveCollection`
           - `network/live.liveValue`
           - `network/live/filter.liveText`
           - `primitives/pane.defineRoute`
         - Exports (types):
+          - `AutomationConfigDefaults`
+          - `AutomationConfigFields`
           - `AutomationEntry`
           - `AutomationSettings`
           - `AutomationSource`
           - `AutomationTaskRow`
           - `AutomationTrigger`
+          - `Cadence`
+          - `CadenceCron`
+          - `PromptVariable`
+          - `PushPolicy`
+          - `RenderedPrompt`
+          - `ScheduleSettings`
+          - `TriggerKind`
+          - `Weekday`
         - Exports (values):
           - `automationDetailRoute`
           - `AutomationEntrySchema`
+          - `automationModelField`
+          - `AUTOMATIONS_CONFIG_PLUGIN_ID`
           - `automationsCatalog`
           - `AutomationSettingsSchema`
           - `AutomationSourceSchema`
@@ -39259,9 +39321,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AutomationTaskRowSchema`
           - `automationTasks`
           - `AutomationTriggerSchema`
+          - `CADENCE_LABELS`
+          - `cadenceCron`
+          - `CADENCES`
+          - `cadenceWords`
+          - `defineAutomationConfig`
+          - `labeledOptions`
+          - `PromptVariableSchema`
+          - `PUSH_POLICIES`
+          - `PUSH_POLICY_LABELS`
+          - `PUSH_POLICY_TEXT`
+          - `PUSH_POLICY_VARIABLE`
+          - `readAutomationSettings`
+          - `renderPrompt`
+          - `ScheduleSettingsSchema`
+          - `SETTLE_MAX_WAIT_FACTOR`
           - `taskOriginShape`
+          - `templateVariables`
+          - `TRIGGER_KIND_LABELS`
+          - `TRIGGER_KINDS`
+          - `unknownTemplateVariables`
+          - `WEEKDAY_LABELS`
+          - `WEEKDAYS`
       - Cross-plugin:
-        - Imported by: `infra/deps/updates`
+        - Imported by:
+          - `infra/deps/updates`
+          - `tasks/reports-investigation`
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
       - Web:
         - Slots: `TaskLaunch.Option` ← `tasks.auto-start.launch-option`, `tasks.task-effort`, `tasks.task-preprompt`
@@ -39311,15 +39396,46 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
-    - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.
-      - Server:
-        - Contributes: `taskCategory` "reports"
+    - **`reports-investigation`** — The Report investigations automation in the Automations pane: registers its config (trigger, push policy, model, prompt, scope) and contributes its Which reports section — severity, recurrence threshold, kind by kind with the uninvestigated reports that match right now. Files reports' investigation tasks: owns the Reports task category, registers the task-creating handler into reports' investigation sink (Investigate), and declares the Report investigations automation (off by default) — woken when a report nobody investigated is recorded (once the burst settles) or on a schedule, it files ONE task for the batch of in-scope reports (severity, recurrence, kind), links them to it, and launches an agent to find and fix the root cause.
+      - Web:
+        - Contributes:
+          - `ConfigV2.WebRegister` "report-investigations"
+          - `Automations.Config` "report-investigations"
+          - `Automations.Section` "report-investigations" → `ReportScopeSection`
         - Uses:
+          - `config_v2.useConfigResult`
+          - `config_v2.useSetConfig`
+          - `infra/endpoints.useEndpoint`
+          - `primitives/css/control-panel.ControlPanel`
+          - `primitives/css/control-panel.ControlPanelPane`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Input`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
+          - `tasks/automations.automationConfigContributions`
+          - `tasks/automations.Automations`
+      - Server:
+        - Contributes:
+          - `taskCategory` "reports"
+          - `ConfigV2.Register` "report-investigations"
+        - Uses:
+          - `infra/endpoints.implement`
+          - `reports.linkReportsToTask`
+          - `reports.renderReportTask`
           - `reports.reportInvestigationSink`
+          - `reports.ReportKind`
+          - `reports.reportRecordedSignal`
+          - `reports.ReportRow`
+          - `reports.uninvestigatedReportCounts`
+          - `reports.uninvestigatedReports`
+          - `tasks/automations.automationConfigRegistration`
+          - `tasks/automations.defineAutomation`
           - `tasks/task-category.setTaskCategory`
           - `tasks/task-category.TaskCategory`
           - `tasks/tasks-core.createTask`
           - `tasks/tasks-core.getTask`
+        - Register: `defineAutomation('report-investigations')`
+        - Routes: `GET /api/report-investigations/scope`
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`

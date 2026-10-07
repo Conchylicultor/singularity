@@ -3,50 +3,66 @@ import {
   serveValue,
 } from "@plugins/network/plugins/live/server";
 import {
-  listRegisteredJobs,
-  resolveJobCron,
-} from "@plugins/infra/plugins/jobs/server";
-import {
   automationsCatalog,
   automationTasks,
+  cadenceWords,
+  PUSH_POLICY_VARIABLE,
   type AutomationEntry,
+  type AutomationSettings,
+  type AutomationTrigger,
 } from "../../core";
 import { openAutomationTaskIds } from "./origin";
-import { registeredAutomations } from "./registry";
+import { registeredAutomations, type AutomationSpec } from "./registry";
+import { automationCron, automationSettings } from "./settings";
 import { tasksOrigin } from "./tables";
 
-/** The schedule a registered job resolves to now — the one reading the cron
- * install uses too. Throws for a job this backend did not register. */
-function jobCron(jobName: string): string | null {
-  const job = listRegisteredJobs().find((j) => j.name === jobName);
-  if (job === undefined) {
-    throw new Error(
-      `[automations] job "${jobName}" is not registered — an automation registers its own job`,
-    );
-  }
-  return resolveJobCron(job);
+function triggerOf(
+  spec: AutomationSpec,
+  jobName: string,
+  settings: AutomationSettings,
+): AutomationTrigger {
+  const { cron, error } = automationCron(spec);
+  const eventLabel =
+    "eventLabel" in spec.triggers ? spec.triggers.eventLabel : null;
+  return {
+    kinds: [...spec.triggers.kinds],
+    current: settings.trigger,
+    words:
+      settings.trigger === "event"
+        ? (eventLabel ?? "On its event")
+        : cadenceWords(settings.schedule),
+    eventLabel,
+    jobName,
+    cron,
+    scheduleError: error,
+  };
 }
 
 async function loadCatalog(): Promise<AutomationEntry[]> {
   const open = await openAutomationTaskIds();
-  return registeredAutomations().map(({ spec, jobName }) => ({
-    id: spec.id,
-    label: spec.label,
-    icon: spec.icon,
-    description: spec.description,
-    categoryId: spec.categoryId,
-    trigger: { kind: "schedule", jobName, cron: jobCron(jobName) },
-    sources: spec.sources?.() ?? [],
-    defaults: spec.defaults,
-    openTaskId: open.get(spec.id) ?? null,
-  }));
+  return registeredAutomations().map(({ spec, jobName }) => {
+    const settings = automationSettings(spec);
+    return {
+      id: spec.id,
+      label: spec.label,
+      icon: spec.icon,
+      description: spec.description,
+      categoryId: spec.categoryId,
+      enabled: settings.enabled,
+      trigger: triggerOf(spec, jobName, settings),
+      sources: spec.sources?.() ?? [],
+      promptVariables: [...spec.promptVariables, PUSH_POLICY_VARIABLE],
+      openTaskId: open.get(spec.id) ?? null,
+    };
+  });
 }
 
 /**
- * The catalog, pushed. External: the declarations are process state, and the
- * one DB-derived field (`openTaskId`) moves only when an automation files a
- * task or one of its tasks changes status — both say so (`notify`). Bounded by
- * the declared set.
+ * The catalog, pushed. External: the declarations are process state, the
+ * installed schedule moves when an automation's config changes, and the one
+ * DB-derived field (`openTaskId`) moves only when an automation files a task
+ * or one of its tasks changes status — each says so (`notify`). Bounded by the
+ * declared set.
  */
 export const automationsCatalogServed = serveValue(automationsCatalog, {
   source: "external",

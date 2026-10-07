@@ -206,6 +206,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `stats/commits`
     - `tasks/attempt-view`
     - `tasks/automations`
+    - `tasks/reports-investigation`
     - `tasks/task-dependencies`
     - `tasks/task-description`
     - `tasks/task-draft-form`

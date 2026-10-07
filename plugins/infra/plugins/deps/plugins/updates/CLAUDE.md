@@ -3,13 +3,16 @@
 The `Updater` contract, the gated runner (`./singularity deps upgrade`) and the
 **Dependency upgrades automation** (`deps-upgrades`, declared with
 `tasks/automations`' `defineAutomation` in `server/internal/detect-job.ts`).
-The automation owns its job, `automation.deps-upgrades` (the cron is
-`depsUpdatesConfig.detectCron`, weekly by default; run history from before the
-move stays under the old `deps.detect-outdated` name in Background activity).
-Its `detect` asks every INCLUDED updater for what is newer and returns ONE
-batched filing; the task text comes from `upgradeTaskDescription(batch, {
-autoPush })`, which carries the push authorization only when the automation's
-"Push when checks pass" is on. Upgrade tasks filed before origins were stored
+The automation owns its job, `automation.deps-upgrades`, scheduled by its
+config document `depsUpgradesConfig` (`shared/config.ts`, a
+`defineAutomationConfig` stored as
+`config/tasks/automations/deps-upgrades.origin.jsonc`: weekly, Monday 06:00
+local by default, editable live from the Automations pane; run history from
+before the move stays under the old `deps.detect-outdated` name in Background
+activity). Its `detect` asks every INCLUDED updater for what is newer and
+returns ONE batched filing whose `{{outdated}}` variable fills the config's
+prompt template (default `DEPS_UPGRADE_PROMPT`); `{{pushPolicy}}` carries what
+the Push setting allows (default: push once checks pass). Upgrade tasks filed before origins were stored
 (author `deps.*`, Dependencies category) are adopted through `adoptLegacy` —
 delete it once none can be open.
 
@@ -17,18 +20,19 @@ delete it once none can be open.
 
 ## Plugin reference
 
-- Description: Registers the dependency-upgrade schedule (the Dependency upgrades automation's cron, weekly by default) for Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on a config cron, weekly by default): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and, with Push when checks pass on, pushes on an `upgraded` verdict.
+- Description: Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on the schedule its config sets — weekly by default — editable live from the Automations pane): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and pushes on an `upgraded` verdict as far as its Push setting allows.
 - Web:
-  - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses: `config_v2.ConfigV2`
+  - Contributes:
+    - `ConfigV2.WebRegister` "deps-upgrades"
+    - `Automations.Config` "deps-upgrades"
+  - Uses: `tasks/automations.automationConfigContributions`
 - Server:
   - Contributes:
-    - `ConfigV2.Register` "config"
+    - `ConfigV2.Register` "deps-upgrades"
     - `taskCategory` "dependencies"
   - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.getConfig`
     - `database.db`
+    - `tasks/automations.automationConfigRegistration`
     - `tasks/automations.defineAutomation`
     - `tasks/task-category.TaskCategory`
     - `tasks/task-category.tasksCategory`
@@ -54,7 +58,8 @@ delete it once none can be open.
     - `UpdaterHold`
     - `UpdaterSmoke`
   - Exports (values):
-    - `upgradeTaskDescription`
+    - `DEPS_UPGRADE_PROMPT`
+    - `outdatedSections`
     - `upgradeTaskTitle`
 - Cli:
   - Exports (values): `upgradeThisWorktree`

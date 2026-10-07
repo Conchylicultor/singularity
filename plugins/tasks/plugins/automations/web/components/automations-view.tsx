@@ -13,24 +13,22 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import {
-  useAutomations,
-  type AutomationView,
-} from "../internal/use-automations";
-import { NextRunWords, ScheduleWords, useAutomationJob } from "./schedule";
+import type { AutomationEntry } from "../../core";
+import { useAutomations } from "../internal/use-automations";
+import { NextRunWords, useAutomationJob } from "./schedule";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const AUTOMATIONS_VIEW = defineDataView("tasks.automations");
 
-const NO_ROWS: AutomationView[] = [];
+const NO_ROWS: AutomationEntry[] = [];
 
 type AutomationState = "on" | "off";
 type OpenState = "open" | "none";
 
-const stateOf = (r: AutomationView): AutomationState =>
-  r.settings.enabled ? "on" : "off";
-const openOf = (r: AutomationView): OpenState =>
-  r.entry.openTaskId === null ? "none" : "open";
+const stateOf = (r: AutomationEntry): AutomationState =>
+  r.enabled ? "on" : "off";
+const openOf = (r: AutomationEntry): OpenState =>
+  r.openTaskId === null ? "none" : "open";
 
 /**
  * Every automation — what files a task and launches its agent with nobody
@@ -53,14 +51,14 @@ export function AutomationsView({
     ready: (d) => d,
   });
 
-  const fields = useMemo<FieldDef<AutomationView>[]>(
+  const fields = useMemo<FieldDef<AutomationEntry>[]>(
     () => [
       {
         id: "label",
         label: "Automation",
         type: "text",
         primary: true,
-        value: (r) => r.entry.label,
+        value: (r) => r.label,
         sortable: true,
       },
       {
@@ -92,7 +90,7 @@ export function AutomationsView({
         id: "description",
         label: "What it does",
         type: "text",
-        value: (r) => r.entry.description,
+        value: (r) => r.description,
         visible: false,
       },
     ],
@@ -100,21 +98,21 @@ export function AutomationsView({
   );
 
   return (
-    <DataView<AutomationView>
+    <DataView<AutomationEntry>
       rows={rows}
       fields={fields}
-      rowKey={(r) => r.entry.id}
+      rowKey={(r) => r.id}
       views={["list"]}
       storageKey={AUTOMATIONS_VIEW}
       readiness={result}
       selectedRowId={selectedId}
-      rowActivation={(r) => linkTo(r.entry.id)}
-      searchAccessor={(r) => `${r.entry.label} ${r.entry.description}`}
+      rowActivation={(r) => linkTo(r.id)}
+      searchAccessor={(r) => `${r.label} ${r.description}`}
       searchPlaceholder="Search automations…"
       viewOptions={{
         list: {
-          leading: (r: AutomationView) => <Icon icon={r.entry.icon} />,
-          renderRow: (r: AutomationView) => <AutomationRowBody view={r} />,
+          leading: (r: AutomationEntry) => <Icon icon={r.icon} />,
+          renderRow: (r: AutomationEntry) => <AutomationRowBody entry={r} />,
         },
       }}
       emptyState={<>No automation is installed.</>}
@@ -127,22 +125,25 @@ export function AutomationsView({
  * state. Each line is its own line container, so a long schedule ellipsizes
  * instead of pushing the chips out.
  */
-function AutomationRowBody({ view }: { view: AutomationView }): ReactElement {
-  const { entry, settings } = view;
+function AutomationRowBody({
+  entry,
+}: {
+  entry: AutomationEntry;
+}): ReactElement {
   const job = useAutomationJob(entry.trigger);
   return (
     <>
       <Fill>
         <Stack gap="none">
           <Line>
-            <Text variant="label" tone={settings.enabled ? "default" : "muted"}>
+            <Text variant="label" tone={entry.enabled ? "default" : "muted"}>
               {entry.label}
             </Text>
           </Line>
           <Line>
             <Text variant="caption" tone="muted">
-              <ScheduleWords trigger={entry.trigger} job={job} />
-              {settings.enabled ? (
+              {entry.trigger.words}
+              {entry.enabled && entry.trigger.current === "schedule" ? (
                 <NextRunWords job={job} prefix=" · " />
               ) : null}
             </Text>
@@ -153,7 +154,7 @@ function AutomationRowBody({ view }: { view: AutomationView }): ReactElement {
         {entry.openTaskId !== null ? (
           <Badge variant="info">Task open</Badge>
         ) : null}
-        {settings.enabled ? (
+        {entry.enabled ? (
           <Badge variant="success">On</Badge>
         ) : (
           <Badge variant="muted">Off</Badge>

@@ -11,6 +11,7 @@ export type {
 export type { GateResult } from "./internal/compare";
 export type { OutdatedUpdater } from "./internal/upgrade-prompt";
 export {
-  upgradeTaskDescription,
+  DEPS_UPGRADE_PROMPT,
+  outdatedSections,
   upgradeTaskTitle,
 } from "./internal/upgrade-prompt";

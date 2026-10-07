@@ -324,6 +324,7 @@ the outcome too, with no separate code path.
     - `shell/action-bar`
     - `shell/health-report`
     - `stats`
+    - `tasks/automations`
     - `tasks/launch-options`
     - `tasks/task-draft-form`
     - `tasks/task-list`

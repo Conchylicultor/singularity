@@ -1,13 +1,17 @@
-import { defineConfig } from "@plugins/config_v2/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { defineAutomationConfig } from "@plugins/tasks/plugins/automations/core";
+import { DEPS_UPGRADE_PROMPT } from "../core";
 
-export const depsUpdatesConfig = defineConfig({
-  fields: {
-    detectCron: textField({
-      default: "0 6 * * 1",
-      label: "Dependency upgrade check (cron)",
-      description:
-        "5-field crontab (m h dom mon dow, UTC) for the Dependency upgrades automation, which files ONE task upgrading every outdated dependency. Default weekly, Mondays 06:00 UTC. Empty = never (run `./singularity deps upgrade` by hand). Takes effect on the next server restart.",
-    }),
-  },
+/**
+ * The Dependency upgrades automation's config: on, weekly on Monday at 06:00
+ * local, pushing once checks pass, with the upgrade prompt as its template.
+ * Stored as `config/tasks/automations/deps-upgrades.origin.jsonc`.
+ */
+export const depsUpgradesConfig = defineAutomationConfig("deps-upgrades", {
+  enabled: true,
+  push: "checks",
+  trigger: "schedule",
+  cadence: "week",
+  weekday: "mon",
+  at: "06:00",
+  prompt: DEPS_UPGRADE_PROMPT,
 });

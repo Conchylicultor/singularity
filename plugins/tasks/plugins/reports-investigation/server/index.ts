@@ -1,10 +1,27 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import { REPORTS_CATEGORY_ID, registerReportsInvestigation } from "./internal/register";
+import { automationConfigRegistration } from "@plugins/tasks/plugins/automations/server";
+import { reportInvestigationsConfig } from "../shared/config";
+import { getReportScope } from "../shared/endpoints";
+import {
+  REPORTS_CATEGORY_ID,
+  registerReportsInvestigation,
+} from "./internal/register";
+import { reportInvestigationsAutomation } from "./internal/automation";
+import { handleGetReportScope } from "./internal/handle-scope";
 
 export default {
   description:
-    "Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.",
-  contributions: [TaskCategory({ id: REPORTS_CATEGORY_ID, label: "Reports", order: 4 })],
-  onReady: registerReportsInvestigation,
+    "Files reports' investigation tasks: owns the Reports task category, registers the task-creating handler into reports' investigation sink (Investigate), and declares the Report investigations automation (off by default) — woken when a report nobody investigated is recorded (once the burst settles) or on a schedule, it files ONE task for the batch of in-scope reports (severity, recurrence, kind), links them to it, and launches an agent to find and fix the root cause.",
+  contributions: [
+    TaskCategory({ id: REPORTS_CATEGORY_ID, label: "Reports", order: 4 }),
+    automationConfigRegistration(reportInvestigationsConfig),
+  ],
+  httpRoutes: {
+    [getReportScope.route]: handleGetReportScope,
+  },
+  register: [reportInvestigationsAutomation],
+  onReady: () => {
+    registerReportsInvestigation(() => reportInvestigationsAutomation.fire());
+  },
 } satisfies ServerPluginDefinition;

@@ -1,5 +1,0 @@
-// @hash 0a6b0c72c557
-{
-  // 5-field crontab (m h dom mon dow, UTC) for the Dependency upgrades automation, which files ONE task upgrading every outdated dependency. Default weekly, Mondays 06:00 UTC. Empty = never (run `./singularity deps upgrade` by hand). Takes effect on the next server restart.
-  "detectCron": "0 6 * * 1"
-}

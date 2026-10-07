@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ConfigV2 } from "@plugins/config_v2/web";
-import { depsUpdatesConfig } from "../shared/config";
+import { automationConfigContributions } from "@plugins/tasks/plugins/automations/web";
+import { depsUpgradesConfig } from "../shared/config";
 
 export default {
   description:
-    "Registers the dependency-upgrade schedule (the Dependency upgrades automation's cron, weekly by default) for Settings → Config.",
-  contributions: [ConfigV2.WebRegister({ descriptor: depsUpdatesConfig })],
+    "Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config.",
+  contributions: [...automationConfigContributions(depsUpgradesConfig)],
 } satisfies PluginDefinition;

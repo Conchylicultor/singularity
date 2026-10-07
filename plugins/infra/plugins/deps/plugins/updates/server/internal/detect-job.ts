@@ -1,20 +1,18 @@
 import { and, eq, like } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { getConfig } from "@plugins/config_v2/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksCategory } from "@plugins/tasks/plugins/task-category/server";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
-import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
 import {
-  upgradeTaskDescription,
+  outdatedSections,
   upgradeTaskTitle,
   type OutdatedUpdater,
   type Updater,
 } from "../../core";
-import { depsUpdatesConfig } from "../../shared/config";
+import { depsUpgradesConfig } from "../../shared/config";
 
 /** The task category every upgrade task is filed under. */
 export const DEPS_CATEGORY_ID = "dependencies";
@@ -56,7 +54,7 @@ async function legacyUpgradeTaskIds(): Promise<string[]> {
  * what is newer than its lock records and, when anything is, file ONE
  * auto-started task covering all of it, whose agent runs
  * `./singularity deps upgrade` (every updater at once) in its own worktree —
- * and pushes on an `upgraded` verdict when "Push when checks pass" is on.
+ * and pushes on an `upgraded` verdict as far as the Push setting allows.
  *
  * Detection only — it installs nothing and moves no lock. One updater failing
  * to detect does not stop the others: the task still covers the ones that
@@ -69,21 +67,19 @@ export const depsUpgradesAutomation = defineAutomation({
   description:
     "Checks each tracked toolchain for a newer release and files one upgrade task covering every outdated one.",
   categoryId: DEPS_CATEGORY_ID,
-  // The user-configured cron; empty disables. Read once at worker startup (a
-  // change takes effect on the next restart).
-  schedule: {
-    cron: () => getConfig(depsUpdatesConfig).detectCron.trim() || null,
-  },
+  config: depsUpgradesConfig,
+  triggers: { kinds: ["schedule"] },
   inProcess:
     "A read-only detection pass (one release query per updater, then at most one task insert) that a restart can abort and the next scheduled tick simply repeats; each query is bounded by its own spawn timeout.",
   sources: () => declaredUpdaters().map((u) => ({ id: u.id, label: u.id })),
-  defaults: {
-    enabled: true,
-    autoPush: true,
-    model: DEFAULT_MODEL_CHOICE,
-    excludedSources: [],
-  },
-  detect: async ({ sources, settings, partialFailure }) => {
+  promptVariables: [
+    {
+      name: "outdated",
+      description:
+        "Each outdated updater, its holds file and every release move it found",
+    },
+  ],
+  detect: async ({ sources, partialFailure }) => {
     const included = new Set(sources.map((s) => s.id));
     const batch: OutdatedUpdater[] = [];
     for (const updater of declaredUpdaters()) {
@@ -103,9 +99,7 @@ export const depsUpgradesAutomation = defineAutomation({
     if (batch.length === 0) return null;
     return {
       title: upgradeTaskTitle(batch),
-      description: upgradeTaskDescription(batch, {
-        autoPush: settings.autoPush,
-      }),
+      variables: { outdated: outdatedSections(batch) },
       sourceKeys: batch.map((u) => u.updaterId),
     };
   },

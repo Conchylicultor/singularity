@@ -1,5 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { onJobRunsChanged } from "@plugins/infra/plugins/jobs/server";
+import {
+  onJobRunsChanged,
+  onJobSchedulesChanged,
+} from "@plugins/infra/plugins/jobs/server";
 import { jobsBackgroundKind } from "./internal/provider";
 
 export default {
@@ -9,5 +12,7 @@ export default {
   onReady: () => {
     // For the life of the process: the catalog value throttles the pushes.
     onJobRunsChanged((jobName) => jobsBackgroundKind.changed(jobName));
+    // A schedule a setting decides moved: every job's next firing reads again.
+    onJobSchedulesChanged(() => jobsBackgroundKind.changed());
   },
 } satisfies ServerPluginDefinition;

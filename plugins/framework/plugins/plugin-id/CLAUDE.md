@@ -18,6 +18,7 @@
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
     - `plugin-meta/relocate`
+    - `tasks/automations`
 - Core:
   - Exports (types):
     - `LeafFolder`

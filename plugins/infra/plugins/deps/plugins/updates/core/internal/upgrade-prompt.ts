@@ -20,34 +20,40 @@ function formatOutdated(o: Outdated): string {
 }
 
 /**
- * The standing instructions of the batched upgrade task. Fixed text: the agent
- * never improvises the gate, it runs the one command that implements it.
- *
- * `autoPush` (the automation's "Push when checks pass" setting) decides step 2:
- * on, the agent is authorized to push, scoped to exactly that command's
- * `upgraded` verdict and an `ok` build; off, it stops there and raises a flag,
- * and the repo-wide default — never push unless told — applies.
+ * The `{{outdated}}` variable of the upgrade prompt: each outdated updater, the
+ * file its holds live in, and every release move it found.
  */
-export function upgradeTaskDescription(
-  batch: readonly OutdatedUpdater[],
-  opts: { autoPush: boolean },
-): string {
-  const sections = batch.map(
-    (u) =>
-      `\`${u.updaterId}\` (holds in \`${u.holdsFile}\`):\n${u.outdated.map((o) => `- ${formatOutdated(o)}`).join("\n")}`,
-  );
-  return `Newer releases are available (seen on main by the Dependency upgrades automation):
+export function outdatedSections(batch: readonly OutdatedUpdater[]): string {
+  return batch
+    .map(
+      (u) =>
+        `\`${u.updaterId}\` (holds in \`${u.holdsFile}\`):\n${u.outdated.map((o) => `- ${formatOutdated(o)}`).join("\n")}`,
+    )
+    .join("\n\n");
+}
 
-${sections.join("\n\n")}
+/**
+ * The default prompt template of the batched upgrade task — what the build
+ * commits as the Dependency upgrades config's `prompt`. Fixed steps: the agent
+ * never improvises the gate, it runs the one command that implements it.
+ * `{{pushPolicy}}` is what the automation's Push setting allows, scoped by
+ * step 2 to an `upgraded` verdict and an `ok` build.
+ */
+export const DEPS_UPGRADE_PROMPT = `Newer releases are available (seen on main by the Dependency upgrades automation):
 
-Move this worktree to them${opts.autoPush ? " and land it" : ""}, all in this one task. You own proving it works.
+{{outdated}}
+
+Move this worktree to them, all in this one task. You own proving it works.
 
 1. Run \`./singularity deps upgrade\` (in the background — it runs the full check and test suites twice).
    With no updater named it moves EVERY updater together, behind one baseline and one candidate run: it compares
    every check, test and the moved inputs' smoke tests on the current releases against the new ones, and writes its
    verdict to \`deps-upgrade.json\` in this worktree's data dir (the command prints the path).
 
-${landStep(opts.autoPush)}
+2. Verdict \`upgraded\`: run \`./singularity build\` and confirm \`build-status.json\` says \`ok\`. Then:
+   {{pushPolicy}}
+   A push's message names the moves: \`chore(deps): <updater> <name> <from> → <to>, …\`. Any authorization to push
+   covers the lock moves and any fix or hold you made for them, nothing else.
 
 3. Verdict \`regressed\`: every lock was put back. Find the release responsible — one updater at a time
    (\`./singularity deps upgrade <updater>\`), then one input at a time within it
@@ -61,18 +67,3 @@ ${landStep(opts.autoPush)}
 
 If you cannot reach a clear verdict (the command itself fails, a regression you cannot attribute, a flaky gate that
 never settles), do NOT push: raise a flag describing what you saw.`;
-}
-
-/** Step 2 of the task: what to do on an `upgraded` verdict. */
-function landStep(autoPush: boolean): string {
-  const build =
-    "2. Verdict `upgraded`: run `./singularity build` and confirm `build-status.json` says `ok`.";
-  if (!autoPush) {
-    return `${build} Then stop: do NOT push.
-   Raise a flag for review saying which releases moved and that the verdict is \`upgraded\` and the build \`ok\`.`;
-  }
-  return `${build} Then push with
-   \`./singularity push -m "chore(deps): <updater> <name> <from> → <to>, …"\`.
-   **You are authorized to push this task's change without asking**, as long as the verdict is \`upgraded\`
-   and the build is \`ok\`. This authorization covers the lock moves and any fix or hold you made for them, nothing else.`;
-}

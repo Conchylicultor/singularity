@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   NextRun,
   useBackgroundEntry,
@@ -17,33 +16,6 @@ export function useAutomationJob(
   trigger: AutomationTrigger,
 ): ResourceResult<BackgroundEntry | null> {
   return useBackgroundEntry("job", trigger.jobName);
-}
-
-/**
- * When it runs, in words — read from its job's Background activity entry, so it
- * says exactly what the scheduler says. A schedule a setting turned off says so.
- */
-export function ScheduleWords({
-  trigger,
-  job,
-}: {
-  trigger: AutomationTrigger;
-  job: ResourceResult<BackgroundEntry | null>;
-}): ReactElement {
-  if (trigger.cron === null) return <>Only when started by hand</>;
-  switch (job.status) {
-    case "loading":
-      return <Loading variant="text" label="Reading its schedule…" />;
-    case "error":
-      return <>{trigger.cron} (UTC)</>;
-    case "ready":
-      break;
-  }
-  const entry = job.data;
-  if (entry === null || entry.trigger.kind !== "cron") {
-    return <>{trigger.cron} (UTC)</>;
-  }
-  return <>{entry.trigger.words}</>;
 }
 
 /**

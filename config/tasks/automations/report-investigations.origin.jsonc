@@ -1,0 +1,38 @@
+// @hash 86508071f28a
+{
+  // Off, it files nothing.
+  "enabled": false,
+  // What the agent may do with its finished work: never push, push only an uncontroversial change, or push once checks pass.
+  // Allowed values: "never", "safe", "checks"
+  "push": "safe",
+  // The model every agent this automation launches runs with.
+  "model": "opus",
+  // The sources that do not take part.
+  "excludedSources": [],
+  // Run on a schedule, or when its event fires.
+  // Allowed values: "schedule", "event"
+  "trigger": "event",
+  // hour, day (at), days (every N days at), week (weekday at), or cron.
+  // Allowed values: "hour", "day", "days", "week", "cron"
+  "cadence": "day",
+  // Local time, HH:MM.
+  "at": "09:00",
+  "everyDays": 2,
+  // Allowed values: "mon", "tue", "wed", "thu", "fri", "sat", "sun"
+  "weekday": "mon",
+  // 5-field crontab in UTC (m h dom mon dow), for the cron schedule.
+  "cron": "0 6 * * *",
+  // An event-triggered run starts this long after the last event of a burst — at most 6× it after the first.
+  "settleMinutes": 10,
+  // The filed task's description. {{variable}} placeholders are filled per run; {{pushPolicy}} says what the Push setting allows.
+  "prompt": "These reports were filed and nobody has investigated them yet. They arrived together, so they may share one root cause — check that first.\n\n{{reports}}\n\nBefore debugging, read the `debug` skill (`.claude/skills/debug/SKILL.md`) — the map of logs, profiling, slow-ops, crashes and DB surfaces.\n\n1. Find the root cause. Reproduce it if you can, and quote the evidence (log lines, trace, query) that pins it.\n2. Fix the cause, not the symptom — take the highest rung of the fix ladder in CLAUDE.md.\n3. Run `./singularity build` and confirm the reports stop recurring.\n4. If you cannot find or fix the cause, write up what you learned and raise a flag.\n\n{{pushPolicy}}",
+  // Which reports qualify by their kind's severity: errors, errors and warnings, or everything.
+  // Allowed values: "error", "warning", "everything"
+  "severity": "error",
+  // A report qualifies once it has happened this many times; 1 = on its first occurrence.
+  "minCount": 3,
+  // Report kinds that never qualify.
+  "excludedKinds": [
+    "report-storm"
+  ]
+}

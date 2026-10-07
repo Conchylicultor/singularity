@@ -583,6 +583,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `nextScheduledRun`
     - `NonRetryableError`
     - `onJobRunsChanged`
+    - `onJobSchedulesChanged`
     - `onQueueActivity`
     - `PICKUP_WINDOW_MS`
     - `pickupTargetMsFor`
@@ -599,6 +600,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `readJobRunStats`
     - `readRecentJobRuns`
     - `RECENT_RUNS_RING`
+    - `refreshJobSchedules`
     - `resolveJobCron`
     - `RUNNERS`
     - `runningJobStarts`

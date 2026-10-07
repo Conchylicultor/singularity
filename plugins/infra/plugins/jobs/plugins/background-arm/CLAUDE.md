@@ -33,6 +33,7 @@ the catalog.
     - `infra/jobs.listRegisteredJobs`
     - `infra/jobs.nextScheduledRun`
     - `infra/jobs.onJobRunsChanged`
+    - `infra/jobs.onJobSchedulesChanged`
     - `infra/jobs.readJobRunStats`
     - `infra/jobs.readRecentJobRuns`
     - `infra/jobs.RegisteredJob`

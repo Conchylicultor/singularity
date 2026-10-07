@@ -119,6 +119,7 @@ self-echo behavior that must keep holding.
     - `conversations/conversation-view/notes`
     - `fields/multiline-text/config`
     - `fields/text/config`
+    - `tasks/automations`
     - `tasks/task-description`
     - `tasks/task-header`
 

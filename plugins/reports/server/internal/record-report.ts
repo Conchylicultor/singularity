@@ -22,6 +22,7 @@ import { reportsProducer } from "./producer";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise-rules";
 import { ReportKind } from "./report-kinds";
+import { reportRecordedSignal } from "./recorded-signal";
 import { createFanOutGate, type StormSummary } from "./fan-out";
 import type { ReportInput } from "../../shared/types";
 
@@ -328,6 +329,10 @@ export async function recordReport(
     throw new Error(
       `recordReport: upsert returned no row for fingerprint "${fp}" (kind "${kind}")`,
     );
+  }
+
+  if (row.taskId === null && !row.noise) {
+    reportRecordedSignal.emit({ reportId: row.id });
   }
 
   // Gate on the per-call `limited`, NOT the persisted `row.rateLimited`. The

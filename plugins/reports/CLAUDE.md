@@ -135,11 +135,16 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Exports (values):
     - `DEFAULT_REPORT_DEBOUNCE_MS`
     - `isReportKindRegistered`
+    - `linkReportsToTask`
     - `recordReport`
     - `recordReportDebounced`
+    - `renderReportTask`
     - `reportInvestigationSink`
     - `ReportKind`
     - `ReportNoiseRule`
+    - `reportRecordedSignal`
+    - `uninvestigatedReportCounts`
+    - `uninvestigatedReports`
   - Register:
     - `defineWarmup('reports.backfill-noise')`
     - `defineJob('retention.reports')`

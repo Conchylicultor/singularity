@@ -145,10 +145,40 @@ export function getWorkerUtils(): Promise<WorkerUtils> {
 // resolver may read another plugin's config (populated in its onReady).
 const scheduledCronItems: ParsedCronItem[] = [];
 
+// Whether the onAllReady install has run: before it, a schedule resolver may
+// read config that is not loaded yet, so a refresh must not install early.
+let cronItemsInstalled = false;
+const scheduleListeners = new Set<() => void>();
+
 // (Re)build cron items from the registry into the live array. Call once after
-// the onAllReady barrier; safe to call again to refresh.
+// the onAllReady barrier; `refreshJobSchedules` calls it again.
 export function installScheduledCronItems(): void {
   scheduledCronItems.splice(0, scheduledCronItems.length, ...buildCronItems());
+  cronItemsInstalled = true;
+  for (const listener of scheduleListeners) listener();
+}
+
+/**
+ * Re-read every resolver-form schedule now and install the result, so a
+ * schedule a setting decides changes without a restart. graphile re-reads the
+ * live cron-item array each tick, so the next tick already uses it. Before the
+ * onAllReady install it does nothing: that install reads the same resolvers.
+ */
+export function refreshJobSchedules(): void {
+  if (!cronItemsInstalled) return;
+  installScheduledCronItems();
+}
+
+/**
+ * Be told when the installed schedules were (re)built — a display of a job's
+ * next firing reads again. Returns the unsubscribe. Listeners must be cheap
+ * (a live value's `notify()`).
+ */
+export function onJobSchedulesChanged(listener: () => void): () => void {
+  scheduleListeners.add(listener);
+  return () => {
+    scheduleListeners.delete(listener);
+  };
 }
 
 // The one spelling of a job's cron identifier (graphile's known_crontabs key).

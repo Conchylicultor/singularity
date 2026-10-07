@@ -1,49 +1,86 @@
 # automations
 
 Things that file a task and launch its agent with nobody clicking anything.
-Design: `research/2026-10-07-global-automations.md`.
+Design: `research/2026-10-07-global-automations.md`; triggers, prompt and
+Report investigations: `research/2026-10-07-global-automations-triggers-and-reports-v2.md`.
 
 ## Declaring one
 
 ```ts
-// server/internal/… of the plugin that knows what to watch
+// shared/config.ts of the plugin that knows what to watch (both runtimes)
+export const depsUpgradesConfig = defineAutomationConfig("deps-upgrades", {
+  enabled: true, push: "checks", trigger: "schedule",
+  cadence: "week", weekday: "mon", at: "06:00",
+  prompt: DEPS_UPGRADE_PROMPT, // `{{outdated}}` … `{{pushPolicy}}`
+}, /* optional fields of its own */);
+
+// server/internal/…
 export const depsUpgradesAutomation = defineAutomation({
-  id: "deps-upgrades",
-  label: "Dependency upgrades",
-  icon: symbol("upgrade"),
-  description: "…",
-  categoryId: DEPS_CATEGORY_ID,
-  schedule: { cron: () => getConfig(depsUpdatesConfig).detectCron.trim() || null },
+  id: "deps-upgrades", label: "Dependency upgrades", icon: symbol("upgrade"),
+  description: "…", categoryId: DEPS_CATEGORY_ID,
+  config: depsUpgradesConfig,
+  triggers: { kinds: ["schedule"] },        // or { kinds: ["event", "schedule"], eventLabel }
   inProcess: "<why detect may hold a job slot for minutes>",
   sources: () => declaredUpdaters().map((u) => ({ id: u.id, label: u.id })),
-  defaults: { enabled: true, autoPush: true, model: DEFAULT_MODEL_CHOICE, excludedSources: [] },
-  detect: async ({ sources, settings, signal, partialFailure }) =>
-    /* null, or */ ({ title, description, sourceKeys }),
-  adoptLegacy: async () => [/* task ids filed before origins existed */],
+  promptVariables: [{ name: "outdated", description: "…" }],
+  detect: async ({ sources, settings, config, signal, partialFailure }) =>
+    /* null, or */ ({ title, variables: { outdated }, sourceKeys, onFiled? }),
 });
-// register: [depsUpgradesAutomation]
+// server: contributions: [automationConfigRegistration(depsUpgradesConfig)], register: [depsUpgradesAutomation]
+// web:    contributions: [...automationConfigContributions(depsUpgradesConfig)]
 ```
 
-**The automation owns its job** (`automation.<id>`, singleton, `hold:
-"minutes"`, main-only like every schedule), so nothing can file around its
-settings. Each run:
+**Its config is one document per automation**, named by its id and stored under
+this plugin's tree whichever plugin declares it:
+`config/tasks/automations/<id>.origin.jsonc` is the committed default (the
+prompt template included), the person's edits are their own override. Both
+registrations are required (`config-v2:registrations-paired` catches a missing
+half); the pane finds the document through `Automations.Config`. The common
+fields are `enabled`, `push` (`never` | `safe` = only an uncontroversial change |
+`checks`), `model` (one shared field object, so one `DynamicEnum.Options`),
+`excludedSources`, `trigger` + the schedule (`cadence` hour/day/days/week/cron,
+`at` local HH:MM, `everyDays`, `weekday`, `cron` UTC) + `settleMinutes`, and
+`prompt`.
 
-1. Resolves the settings: the `automationsConfig.settings` item for this id
-   replaces the declared `defaults` as a whole; no item ⇒ the defaults
-   (`shared/settings.ts`). Disabled ⇒ logs and stops.
+**The automation owns its job** (`automation.<id>`, singleton, `hold:
+"minutes"`, main-only), so nothing can file around its settings.
+
+- **Schedule.** The job's cron resolver reads the config (`automationCron`,
+  `cadenceCron` converting the local time with the current UTC offset). A config
+  change re-installs every schedule at once (`watchConfig` →
+  `refreshJobSchedules`), no restart. Off, set to its event, or an invalid
+  schedule ⇒ no cron (the catalog's `scheduleError` says why).
+- **Event.** The declaring plugin calls the handle's `fire()` from the hot path
+  that sees the event. While on and set to its event, it enqueues the singleton
+  job with `runAt = min(now + settle, burstStart + 6 × settle)` — graphile's
+  `replace` key mode moves the one pending row, so a burst is one run (re-queued
+  at most every 30 s). Main only.
+
+Each run:
+
+1. Reads the config. Disabled ⇒ logs and stops.
 2. Adopts `adoptLegacy`'s tasks (idempotent), then **dedupes**: a task this
-   automation filed that is neither done nor dropped (held and attempted count
-   as open) ⇒ stops. One indexed read of `tasks_ext_origin` joined to `tasks_v`.
-3. Calls `detect` with only the INCLUDED sources and the resolved settings
-   (`autoPush` is the detector's to honour in the prompt it writes). `null` ⇒
-   stops. A source that fails calls `partialFailure(err)`: the run still files
-   what the others found, then throws every failure together.
-4. In ONE transaction: `createTask` (author `automation:<id>`), its category,
-   and its origin row — a task without its origin would escape the dedupe.
-5. `armTaskAutoStart` with the chosen model (`cause: automation:<id>`, which
-   lands in the conversation's `spawnedBy`).
+   automation filed that is neither done nor dropped ⇒ stops. So an event
+   storm while its agent works files nothing; the next run picks up what still
+   qualifies.
+3. Calls `detect` with only the INCLUDED sources, the settings and the whole
+   config. `null` ⇒ stops. A source that fails calls `partialFailure(err)`.
+4. Fills the prompt template with the filing's `variables` + `pushPolicy`
+   (`PUSH_POLICY_TEXT`). A placeholder with no value throws — never a blank.
+5. In ONE transaction: `createTask` (author `automation:<id>`), its category,
+   its origin row. Then `onFiled(taskId)`, then `armTaskAutoStart` with the
+   chosen model.
 
 Every run logs one line to the `automations` log channel.
+
+## The pane
+
+Behavior (Enabled, Model, Push), Trigger (kind, schedule presets / cron, or the
+settle wait), the `Automations.Section` contributions for this automation (a
+render slot keyed by `automationId` — e.g. Report investigations' Which reports),
+Sources, Prompt (the template; "Customized" when the user layer supplies it,
+Reset to default through config_v2's `resetConfigField`; a template naming an
+unknown variable is not saved), History.
 
 ## Where a task came from
 
@@ -56,32 +93,31 @@ by `automationId` (newest first), and point reads by task id.
 ## Reads
 
 - `automationsCatalog` (`automations.catalog`, external) — every registered
-  automation with its trigger (`jobName` — the key of its Background activity
-  entry, for Run now and the next run — and its resolved `cron`), sources,
-  declared defaults and `openTaskId`. Re-pushed when an automation files a task
+  automation with `enabled`, its trigger (supported kinds, current kind, words,
+  `jobName`, installed `cron`, `scheduleError`), sources, prompt variables and
+  `openTaskId`. Re-pushed when an automation's config changes, it files a task,
   or one of its tasks changes status.
 - `automationTasks` — see above.
-- `automationsRoute` / `automationDetailRoute` (`automation/:automationId`) — the panes
-  in the agent manager.
+- `automationsRoute` / `automationDetailRoute` (`automation/:automationId`).
 
 ## The person's attention
 
 A trigger on `tasks.statusChanged` (`automations.task-status`): when a task
 with an origin row moves to `need_action` / `attempted` / `held`, a warning
-lands in the bell, linking to the automation's detail pane — one row per task,
-re-surfaced on every such transition.
+lands in the bell, linking to the automation's detail pane.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — schedule in words, next run, on/off, open task), the detail pane (Run now through Background activity, the Behavior settings — enabled, push when checks pass, model — the included sources, and the History of the tasks it filed), the `origin` Automation field in every task DataView, and the per-automation settings registered for Settings → Config. Automations registry: defineAutomation declares something that files a task and launches its agent on its own, and owns its job (automation.<id>) — settings resolution (automationsConfig over declared defaults: enabled, autoPush, model, excluded sources), the one-open-task dedupe, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
+- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default; and the History of the tasks it filed), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own, and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
 - Web:
   - Slots:
+    - `Automations.Config` ← `infra.deps.updates`, `tasks.reports-investigation`
+    - `Automations.Section` ← `tasks.reports-investigation`
     - `automations.actions` ← `primitives.pane`
     - `automation-detail.actions` ← `primitives.pane`
   - Contributes:
-    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model"
     - `Pane.Register` "automations"
     - `Pane.Register` "automation-detail"
@@ -110,9 +146,16 @@ re-surfaced on every such transition.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.Input`
+    - `primitives/css/ui-kit.Select`
+    - `primitives/css/ui-kit.SelectContent`
+    - `primitives/css/ui-kit.SelectItem`
+    - `primitives/css/ui-kit.SelectTrigger`
+    - `primitives/css/ui-kit.SelectValue`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
+    - `primitives/editable-field.useEditableField`
     - `primitives/live-state.combineResources`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
@@ -125,6 +168,7 @@ re-surfaced on every such transition.
     - `primitives/pane.ResolveResult`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
+    - `primitives/slot-render.defineRenderSlot`
     - `shell.Shell`
     - `tasks.useTasksById`
     - `tasks/task-detail.taskDetailPane`
@@ -133,9 +177,11 @@ re-surfaced on every such transition.
     - `tasks/task-status.StatusIcon`
     - `tasks/task-status.StatusSignal`
     - `ui/icons.Icon`
+  - Exports (values):
+    - `automationConfigContributions`
+    - `Automations`
 - Server:
   - Contributes:
-    - `ConfigV2.Register` "config"
     - `resource.declare` "automations.catalog"
     - `resource.declare` "automations.tasks"
     - `resource.declare` "automations.tasks:rows"
@@ -144,13 +190,13 @@ re-surfaced on every such transition.
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `config_v2.watchConfig`
     - `database.db`
     - `database.DbExecutor`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
-    - `infra/jobs.listRegisteredJobs`
-    - `infra/jobs.resolveJobCron`
+    - `infra/jobs.refreshJobSchedules`
     - `infra/warmup.defineWarmup`
     - `network/live.serveCollection`
     - `network/live.serveValue`
@@ -170,7 +216,9 @@ re-surfaced on every such transition.
     - `AutomationDetectCtx`
     - `AutomationFiling`
     - `AutomationSpec`
-  - Exports (values): `defineAutomation`
+  - Exports (values):
+    - `automationConfigRegistration`
+    - `defineAutomation`
   - Register: `defineJob('automations.task-status')`
   - Resources:
     - `automations.catalog` (push)
@@ -179,24 +227,47 @@ re-surfaced on every such transition.
     - `automations.tasks:rows` (keyed, point)
 - Core:
   - Uses:
+    - `config_v2.ConfigValues`
+    - `config_v2.defineConfig`
+    - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
     - `conversations/model-provider.ModelChoiceSchema`
+    - `conversations/model-provider.normalizeModelChoice`
+    - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/dynamic-enum/config.dynamicEnumField`
+    - `fields/enum/config.enumField`
+    - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `fields/multiline-text/config.multilineTextField`
+    - `fields/string-list/config.stringListField`
     - `fields/text/config.textField`
+    - `framework/plugin-id.asPluginId`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`
     - `network/live.liveValue`
     - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
   - Exports (types):
+    - `AutomationConfigDefaults`
+    - `AutomationConfigFields`
     - `AutomationEntry`
     - `AutomationSettings`
     - `AutomationSource`
     - `AutomationTaskRow`
     - `AutomationTrigger`
+    - `Cadence`
+    - `CadenceCron`
+    - `PromptVariable`
+    - `PushPolicy`
+    - `RenderedPrompt`
+    - `ScheduleSettings`
+    - `TriggerKind`
+    - `Weekday`
   - Exports (values):
     - `automationDetailRoute`
     - `AutomationEntrySchema`
+    - `automationModelField`
+    - `AUTOMATIONS_CONFIG_PLUGIN_ID`
     - `automationsCatalog`
     - `AutomationSettingsSchema`
     - `AutomationSourceSchema`
@@ -204,8 +275,31 @@ re-surfaced on every such transition.
     - `AutomationTaskRowSchema`
     - `automationTasks`
     - `AutomationTriggerSchema`
+    - `CADENCE_LABELS`
+    - `cadenceCron`
+    - `CADENCES`
+    - `cadenceWords`
+    - `defineAutomationConfig`
+    - `labeledOptions`
+    - `PromptVariableSchema`
+    - `PUSH_POLICIES`
+    - `PUSH_POLICY_LABELS`
+    - `PUSH_POLICY_TEXT`
+    - `PUSH_POLICY_VARIABLE`
+    - `readAutomationSettings`
+    - `renderPrompt`
+    - `ScheduleSettingsSchema`
+    - `SETTLE_MAX_WAIT_FACTOR`
     - `taskOriginShape`
+    - `templateVariables`
+    - `TRIGGER_KIND_LABELS`
+    - `TRIGGER_KINDS`
+    - `unknownTemplateVariables`
+    - `WEEKDAY_LABELS`
+    - `WEEKDAYS`
 - Cross-plugin:
-  - Imported by: `infra/deps/updates`
+  - Imported by:
+    - `infra/deps/updates`
+    - `tasks/reports-investigation`
 
 <!-- AUTOGENERATED:END -->

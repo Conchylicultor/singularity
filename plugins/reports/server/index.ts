@@ -22,6 +22,13 @@ import { appendFatalReportSync } from "./internal/buffer";
 import { submitReport, investigateReport } from "../shared/endpoints";
 
 export { reportInvestigationSink } from "./internal/investigation-sink";
+export { reportRecordedSignal } from "./internal/recorded-signal";
+export {
+  linkReportsToTask,
+  renderReportTask,
+  uninvestigatedReportCounts,
+  uninvestigatedReports,
+} from "./internal/uninvestigated";
 export type { InvestigationTaskRequest } from "./internal/investigation-sink";
 export { recordReport } from "./internal/record-report";
 export { recordReportDebounced } from "./internal/record-report-debounced";

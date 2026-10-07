@@ -595,6 +595,7 @@ to reconcile them; they never needed reconciling.
     - `stats/tasks`
     - `tasks/attempt-view`
     - `tasks/automations`
+    - `tasks/reports-investigation`
     - `tasks/task-attachments`
     - `tasks/task-dependencies`
     - `tasks/task-description`
