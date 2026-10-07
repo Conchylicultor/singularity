@@ -492,7 +492,11 @@ function SubagentTranscript({
       conversationId={conversationId}
       // The surface tab is appended by the view — name only the subject here.
       persistKey={`subagent-scroll:${subagent.by}:${subagent.key}`}
-      empty={<span>This sub-agent&apos;s transcript is empty so far.</span>}
+      empty={
+        <Text as="div" variant="caption" tone="muted">
+          This sub-agent&apos;s transcript is empty so far.
+        </Text>
+      }
       // The same pinned readings the conversation carries (token usage, the
       // outline, task progress). Overlays fold over the transcript the view
       // draws, so here they report the sub-agent's own numbers.

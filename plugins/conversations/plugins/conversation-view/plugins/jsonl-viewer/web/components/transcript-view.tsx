@@ -13,7 +13,6 @@ import {
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
@@ -57,13 +56,7 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
   );
 }
 
-function EventSections({
-  events,
-  children,
-}: {
-  events: JsonlEvent[];
-  children?: ReactNode;
-}) {
+function EventSections({ events }: { events: JsonlEvent[] }) {
   const sections = useMemo(() => {
     const result: { start: number; end: number }[] = [];
     let sectionStart = 0;
@@ -91,34 +84,31 @@ function EventSections({
   };
 
   return (
-    <Stack gap="sm" className="mx-auto max-w-reading p-sm pb-2xl">
-      {/* One ← / → set per pane, over the transcript's own images only: the
-          trailing children (working indicator, pending prompt and turns) and
-          the composer below the pane hold nothing that was sent yet. */}
-      <ImageGallery>
-        {sections.map((section) => {
-          const firstEvent = events[section.start]!;
-          if (firstEvent.kind !== "user-text") {
-            return (
-              <Fragment key={section.start}>
-                {Array.from({ length: section.end - section.start }, (_, j) =>
-                  renderEvent(section.start + j),
-                )}
-              </Fragment>
-            );
-          }
+    // One ← / → set per pane, over the transcript's own images only: the
+    // trailing children (working indicator, pending prompt and turns) and the
+    // composer below the pane hold nothing that was sent yet.
+    <ImageGallery>
+      {sections.map((section) => {
+        const firstEvent = events[section.start]!;
+        if (firstEvent.kind !== "user-text") {
           return (
-            <Stack key={section.start} gap="sm">
-              <StickyUserHeader>{renderEvent(section.start)}</StickyUserHeader>
-              {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
-                renderEvent(section.start + 1 + j),
+            <Fragment key={section.start}>
+              {Array.from({ length: section.end - section.start }, (_, j) =>
+                renderEvent(section.start + j),
               )}
-            </Stack>
+            </Fragment>
           );
-        })}
-      </ImageGallery>
-      {children}
-    </Stack>
+        }
+        return (
+          <Stack key={section.start} gap="sm">
+            <StickyUserHeader>{renderEvent(section.start)}</StickyUserHeader>
+            {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
+              renderEvent(section.start + 1 + j),
+            )}
+          </Stack>
+        );
+      })}
+    </ImageGallery>
   );
 }
 
@@ -148,8 +138,10 @@ export interface TranscriptViewProps {
    */
   followKey?: number | string | boolean;
   /**
-   * Shown in place of the rows when the transcript holds no events. It sits in
-   * a column that fills the pane: give it `growClass()` to take the height.
+   * Shown in place of the rows when the transcript holds no visible events,
+   * ahead of `children`. It sits in the reading column, which fills the pane:
+   * give it `growClass()` to take the height. It is styled by the caller — the
+   * view applies no typography of its own.
    */
   empty?: ReactNode;
   /**
@@ -231,24 +223,24 @@ function TranscriptViewInner({
         data-pane-scroll
         className={`h-full transition-opacity ${dimmed ? "opacity-50" : ""}`}
       >
-        {events.length === 0 ? (
-          // Fills the scroller, so an `empty` that grows (`growClass()`) can
-          // centre itself in the pane rather than sit on its first line.
-          <Text
-            as="div"
-            variant="caption"
-            className="h-full text-muted-foreground"
-          >
-            <Stack gap="none" className="min-h-full px-md py-sm">
-              {empty}
-              {children}
-            </Stack>
-          </Text>
-        ) : (
-          <LastAssistantProvider event={lastAssistantEvent}>
-            <EventSections events={visibleEvents}>{children}</EventSections>
-          </LastAssistantProvider>
-        )}
+        {/* The reading column — ONE container whether or not there are rows,
+            so `children` sit in the same place either way (a pending turn sent
+            into an empty transcript lands where its real row will). It fills
+            the scroller, so an `empty` that grows (`growClass()`) can centre
+            itself in the pane rather than sit on its first line. */}
+        <Stack
+          gap="sm"
+          className="mx-auto min-h-full max-w-reading p-sm pb-2xl"
+        >
+          {visibleEvents.length === 0 ? (
+            empty
+          ) : (
+            <LastAssistantProvider event={lastAssistantEvent}>
+              <EventSections events={visibleEvents} />
+            </LastAssistantProvider>
+          )}
+          {children}
+        </Stack>
         {/* Must stay the last child: it marks the true end of the content. */}
         {bottomSentinel}
       </Scroll>
