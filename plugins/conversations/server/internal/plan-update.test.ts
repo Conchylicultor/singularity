@@ -409,7 +409,7 @@ describe("planConversationUpdate — no live session", () => {
       patch: { status: "waiting", waitingFor: null },
       adoptedSessionId: null,
       taskTitle: null,
-      questionOpened: false,
+      menuOpened: false,
     });
   });
 

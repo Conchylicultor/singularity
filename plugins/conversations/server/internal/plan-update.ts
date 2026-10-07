@@ -284,6 +284,6 @@ function settleToWaiting(): UpdatePlan {
     patch: { status: "waiting", waitingFor: null },
     adoptedSessionId: null,
     taskTitle: null,
-    questionOpened: false,
+    menuOpened: false,
   };
 }
