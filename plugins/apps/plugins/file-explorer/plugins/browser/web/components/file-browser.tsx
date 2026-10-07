@@ -322,10 +322,10 @@ function Listing({
   };
   const onActivate = (row: EntryRow) => {
     setSelected(row.path);
-    if (row.kind !== "dir") openFile(row.path);
+    if (!row.browsable) openFile(row.path);
   };
   const onOpen = (row: EntryRow) => {
-    if (row.kind === "dir") nav.navigate(row.path, open);
+    if (row.browsable) nav.navigate(row.path, open);
     else openFile(row.path);
   };
 

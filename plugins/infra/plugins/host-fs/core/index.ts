@@ -9,8 +9,10 @@ export {
   hostFsStat,
   hostFsText,
   hostFsVolume,
+  isBrowsable,
 } from "./internal/endpoints";
 export type {
+  HostFsArchiveReason,
   HostFsCompleteResult,
   HostFsEntry,
   HostFsEntryKind,
@@ -19,4 +21,5 @@ export type {
   HostFsStatResult,
   HostFsTextResult,
   HostFsVolumeResult,
+  HostFsWithin,
 } from "./internal/endpoints";

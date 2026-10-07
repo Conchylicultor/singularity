@@ -1,12 +1,30 @@
 import type { Stats } from "node:fs";
 import { lstat, readlink, stat } from "node:fs/promises";
 import type { HostFsEntry, HostFsEntryKind } from "../../core";
+import { archiveFormatFor } from "./archive/registry";
 import { classifyFsError, isHiddenName } from "./path";
+
+/** How every listing orders its entries: by name, numbers compared as numbers. */
+export const byName = (a: { name: string }, b: { name: string }): number =>
+  a.name.localeCompare(b.name, undefined, { numeric: true });
 
 function kindOf(st: Stats): HostFsEntryKind {
   if (st.isDirectory()) return "dir";
   if (st.isFile()) return "file";
   return "other";
+}
+
+/**
+ * The `archive` mark of a file named `name`: present when a registered format
+ * claims it. A name check only, so a listing costs no extra I/O.
+ */
+function archiveMark(
+  kind: HostFsEntryKind,
+  name: string,
+): Pick<HostFsEntry, "archive"> {
+  if (kind !== "file") return {};
+  const format = archiveFormatFor(name);
+  return format === undefined ? {} : { archive: { format: format.id } };
 }
 
 /**
@@ -26,12 +44,14 @@ export async function describeEntry(
   const own = await lstat(path);
   const hidden = isHiddenName(name);
   if (!own.isSymbolicLink()) {
+    const kind = kindOf(own);
     return {
       name,
-      kind: kindOf(own),
+      kind,
       size: own.size,
       mtimeMs: own.mtimeMs,
       hidden,
+      ...archiveMark(kind, name),
     };
   }
   const symlinkTarget = await readlink(path);
@@ -47,13 +67,15 @@ export async function describeEntry(
     };
   }
   const st = target.stats;
+  const kind = kindOf(st);
   return {
     name,
-    kind: kindOf(st),
+    kind,
     size: st.size,
     mtimeMs: st.mtimeMs,
     hidden,
     symlinkTarget,
+    ...archiveMark(kind, name),
   };
 }
 

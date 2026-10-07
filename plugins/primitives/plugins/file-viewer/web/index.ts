@@ -12,7 +12,11 @@ export type {
 export { FileView } from "./components/file-view";
 export { FileContent } from "./components/file-content";
 export { FileTabs } from "./components/file-tabs";
-export { NoPreview, useOpenHostFile } from "./components/no-preview";
+export {
+  NoPreview,
+  useIsInArchive,
+  useOpenHostFile,
+} from "./components/no-preview";
 export {
   useFileRenderers,
   type FileRenderersHandle,

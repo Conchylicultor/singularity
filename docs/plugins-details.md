@@ -2871,6 +2871,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/file-viewer.FileContent`
               - `primitives/file-viewer.FileTabs`
               - `primitives/file-viewer.useFileRenderers`
+              - `primitives/file-viewer.useIsInArchive`
               - `primitives/file-viewer.useOpenHostFile`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
@@ -21684,6 +21685,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling/boot-bench`
               - `debug/worktree-cleanup`
               - `infra/corpus-index`
+              - `infra/host-fs`
               - `infra/warmup`
               - `plugin-meta/plugin-tree`
               - `review/plugin-changes`
@@ -21710,9 +21712,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/paths.HOME_DIR`
-        - Exports (types): `TextBytesResult`
-        - Exports (values): `decodeTextBytes`
+        - Exports (types):
+          - `ArchiveFormat`
+          - `ArchiveIndexResult`
+          - `ArchiveMember`
+          - `MemberBytes`
+          - `TextBytesResult`
+        - Exports (values):
+          - `decodeTextBytes`
+          - `defineArchiveFormat`
         - Routes:
           - `GET /api/host-fs/list`
           - `GET /api/host-fs/stat`
@@ -21726,6 +21736,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
         - Exports (types):
+          - `HostFsArchiveReason`
           - `HostFsCompleteResult`
           - `HostFsEntry`
           - `HostFsEntryKind`
@@ -21734,6 +21745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HostFsStatResult`
           - `HostFsTextResult`
           - `HostFsVolumeResult`
+          - `HostFsWithin`
         - Exports (values):
           - `HOST_FS_COMPLETE_LIMIT`
           - `HOST_FS_TEXT_MAX_BYTES`
@@ -21745,10 +21757,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `hostFsStat`
           - `hostFsText`
           - `hostFsVolume`
+          - `isBrowsable`
       - Cross-plugin:
         - Imported by:
           - `code-explorer`
+          - `infra/host-fs/zip`
           - `primitives/file-viewer`
+      - Plugins:
+        - **`zip`** — Zip as a host-fs archive format: a native reader of the zip central directory (zip64, UTF-8 / CP437 / Info-ZIP Unicode names, extended timestamps) registered through defineArchiveFormat, so a .zip browses like a folder — members stored or deflated, encrypted and other methods typed as unreadable.
+          - Server:
+            - Uses:
+              - `infra/host-fs.ArchiveIndexResult`
+              - `infra/host-fs.ArchiveMember`
+              - `infra/host-fs.defineArchiveFormat`
+              - `infra/host-fs.MemberBytes`
+            - Register: `defineArchiveFormat('zip')`
     - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
       - Cross-plugin:
         - Imported by: `apps/prototypes/files`
@@ -32774,6 +32797,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useFileBytes`
           - `useFileRenderers`
           - `useFileText`
+          - `useIsInArchive`
           - `useOpenHostFile`
       - Core:
         - Uses:

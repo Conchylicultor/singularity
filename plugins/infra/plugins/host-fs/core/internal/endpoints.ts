@@ -28,8 +28,47 @@ export const HostFsEntrySchema = z.object({
   hidden: z.boolean(),
   /** The link's own text (`readlink`), present iff the entry is a symlink. */
   symlinkTarget: z.string().optional(),
+  /**
+   * Present on a real file whose name a registered archive format claims
+   * (`.zip`, …): it stays a `file`, and can also be browsed like a folder —
+   * `list` of its path lists the archive's root. Never set on an entry inside
+   * an archive (archives within archives are not browsed).
+   */
+  archive: z.object({ format: z.string() }).optional(),
 });
 export type HostFsEntry = z.infer<typeof HostFsEntrySchema>;
+
+/**
+ * Whether an entry can be opened like a folder: a directory, or an archive
+ * file. The one test every "does this expand?" decision makes — a consumer
+ * that wants real directories only (a folder picker) tests `kind === "dir"`.
+ */
+export function isBrowsable(
+  entry: Pick<HostFsEntry, "kind" | "archive">,
+): boolean {
+  return entry.kind === "dir" || entry.archive !== undefined;
+}
+
+/**
+ * Set on a `list` / `stat` answer whose path lies INSIDE an archive: the path
+ * is virtual (`…/photos.zip/2022/a.jpg`), so it has no git status, cannot be
+ * opened with its default app, and is revealed as the archive file itself.
+ */
+export const HostFsWithinSchema = z.object({
+  /** The archive file on disk, absolute. */
+  archive: z.string(),
+  format: z.string(),
+});
+export type HostFsWithin = z.infer<typeof HostFsWithinSchema>;
+
+/** Why an archive (or one member of it) cannot be read. */
+export const HostFsArchiveReasonSchema = z.enum([
+  "corrupt",
+  "encrypted",
+  "unsupported-method",
+  "too-many-entries",
+]);
+export type HostFsArchiveReason = z.infer<typeof HostFsArchiveReasonSchema>;
 
 /** The path does not exist (ENOENT, or a component of it is not a directory). */
 const Missing = z.object({ kind: z.literal("missing"), path: z.string() });
@@ -37,11 +76,23 @@ const Missing = z.object({ kind: z.literal("missing"), path: z.string() });
 const Denied = z.object({ kind: z.literal("denied"), path: z.string() });
 const NotADir = z.object({ kind: z.literal("not-a-dir"), path: z.string() });
 const NotAFile = z.object({ kind: z.literal("not-a-file"), path: z.string() });
+/** The path crosses into an archive that cannot be read (or a member that cannot be decoded). */
+const UnreadableArchive = z.object({
+  kind: z.literal("unreadable-archive"),
+  path: z.string(),
+  /** The archive file on disk. */
+  archive: z.string(),
+  reason: HostFsArchiveReasonSchema,
+});
 
 /**
  * Every host-fs read takes an absolute path or one starting with `~`
  * (expanded to the user's home). A relative path, or one carrying a NUL, is a
  * 400 — there is no working directory a host path could be relative to.
+ *
+ * A path may cross into an archive (`~/Downloads/x.zip/photos/a.jpg`): `list`,
+ * `stat`, `text` and `raw` read the member; `complete` and `volume` stay on
+ * disk.
  */
 const PathQuery = z.object({ path: z.string().optional() });
 
@@ -56,16 +107,19 @@ export const HostFsListResultSchema = z.discriminatedUnion("kind", [
     parent: z.string().nullable(),
     /** Every entry, hidden ones included, sorted by name. */
     entries: z.array(HostFsEntrySchema),
+    within: HostFsWithinSchema.optional(),
   }),
   Missing,
   Denied,
   NotADir,
+  UnreadableArchive,
 ]);
 export type HostFsListResult = z.infer<typeof HostFsListResultSchema>;
 
 /**
  * List a host directory. With no `path`, lists the user's home directory.
- * A symlink to a directory lists the directory it points at.
+ * A symlink to a directory lists the directory it points at; an archive file
+ * (an entry carrying `archive`) lists the archive's root.
  */
 export const hostFsList = defineEndpoint({
   route: "GET /api/host-fs/list",
@@ -81,9 +135,11 @@ export const HostFsStatResultSchema = z.discriminatedUnion("kind", [
     path: z.string(),
     parent: z.string().nullable(),
     entry: HostFsEntrySchema,
+    within: HostFsWithinSchema.optional(),
   }),
   Missing,
   Denied,
+  UnreadableArchive,
 ]);
 export type HostFsStatResult = z.infer<typeof HostFsStatResultSchema>;
 
@@ -148,6 +204,7 @@ export const HostFsTextResultSchema = z.discriminatedUnion("kind", [
   Missing,
   Denied,
   NotAFile,
+  UnreadableArchive,
 ]);
 export type HostFsTextResult = z.infer<typeof HostFsTextResultSchema>;
 
@@ -166,7 +223,10 @@ export const hostFsText = defineEndpoint({
  * (`Content-Security-Policy: sandbox`, `nosniff`, `Cross-Origin-Resource-Policy:
  * same-site`) so an HTML or SVG file cannot run script on the app's origin. A PDF
  * drops `sandbox` (the browser's PDF viewer will not run in a sandboxed document).
- * 404 missing, 403 denied, 400 for a directory. Build URLs with `hostFileUrl`.
+ * 404 missing, 403 denied, 400 for a directory, 422 for an unreadable archive
+ * member. A member stored uncompressed honours `Range`; a compressed one is
+ * served whole (RFC 9110 lets a server ignore Range). Build URLs with
+ * `hostFileUrl`.
  */
 export const hostFsRaw = defineEndpoint({
   route: "GET /api/host-fs/raw",
@@ -208,6 +268,12 @@ export const hostFsVolume = defineEndpoint({
 
 export const HostFsOpenResultSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("opened"), path: z.string() }),
+  /** Open with default app on a file inside an archive: there is no file on disk to hand an app. */
+  z.object({
+    kind: z.literal("in-archive"),
+    path: z.string(),
+    archive: z.string(),
+  }),
   Missing,
   Denied,
 ]);
@@ -215,7 +281,8 @@ export type HostFsOpenResult = z.infer<typeof HostFsOpenResultSchema>;
 
 /**
  * Open a host path with its default app (`open <path>`), or reveal it in the
- * Finder (`reveal: true` → `open -R <path>`). The one side effect host-fs has:
+ * Finder (`reveal: true` → `open -R <path>`; a path inside an archive reveals
+ * the archive). The one side effect host-fs has:
  * a request whose `Origin` is not a `*.localhost` origin is refused (403).
  */
 export const hostFsOpen = defineEndpoint({

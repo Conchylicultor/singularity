@@ -2,8 +2,11 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { hostFsOpen } from "@plugins/infra/plugins/host-fs/core";
+import {
+  useEndpoint,
+  useEndpointMutation,
+} from "@plugins/infra/plugins/endpoints/web";
+import { hostFsOpen, hostFsStat } from "@plugins/infra/plugins/host-fs/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -26,7 +29,8 @@ function kindLabel(name: string): string {
 /**
  * The fallback body for a file no renderer can show: a large file icon, "No
  * preview for <kind> files", and — for a file on the host, which has a default
- * app — an Open with default app button. The fallback renderer shows it when
+ * app — an Open with default app button (not for a file inside an archive,
+ * which has no file of its own to hand an app). The fallback renderer shows it when
  * no other renderer is offered; the code renderer shows it when a read finds
  * the file binary.
  */
@@ -71,12 +75,29 @@ export function useOpenHostFile(): (
         description: path,
         variant: "error",
       });
+    } else if (result.kind === "in-archive") {
+      showToast({
+        title: "This file is inside an archive",
+        description: `Extract ${result.archive} to open it with its default app.`,
+        variant: "error",
+      });
     }
   };
 }
 
+/**
+ * Whether the host path `path` lies inside an archive (its stat says so):
+ * there is no file on disk to open with a default app. `false` until known.
+ */
+export function useIsInArchive(path: string): boolean {
+  const stat = useEndpoint(hostFsStat, {}, { query: { path } });
+  return stat.data?.kind === "ok" && stat.data.within !== undefined;
+}
+
 function OpenWithDefaultApp({ path }: { path: string }) {
   const openHostFile = useOpenHostFile();
+  const inArchive = useIsInArchive(path);
+  if (inArchive) return null;
   return (
     <Button variant="outline" onClick={() => openHostFile(path)}>
       <Icon icon={openIcon} />

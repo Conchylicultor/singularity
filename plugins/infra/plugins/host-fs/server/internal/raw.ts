@@ -2,6 +2,8 @@ import { constants } from "node:fs";
 import { access, stat } from "node:fs/promises";
 import { basename } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { locateHostPath, type HostLocation } from "./archive/locate";
+import { openArchiveMember } from "./archive/read";
 import { classifyFsError, resolveHostPath } from "./path";
 
 /** One satisfiable byte range, inclusive at both ends (as `Content-Range` spells it). */
@@ -80,7 +82,10 @@ export async function handleRaw(req: Request): Promise<Response> {
     const raw = new URL(req.url, "http://localhost").searchParams.get("path");
     if (raw === null) return new Response("Missing path", { status: 400 });
     const path = resolveHostPath(raw);
-    return await serveHostFile(path, req.headers.get("range"));
+    const located = await locateHostPath(path);
+    return located.kind === "archive"
+      ? await serveArchiveMember(path, located, req.headers.get("range"))
+      : await serveHostFile(path, req.headers.get("range"));
   } catch (err) {
     if (err instanceof HttpError)
       return new Response(err.message, { status: err.status });
@@ -130,4 +135,65 @@ export async function serveHostFile(
     });
   }
   return new Response(file, { headers });
+}
+
+/**
+ * Serve an archive member's bytes. A member stored uncompressed is a byte
+ * window of the archive file, so it honours `Range` like a disk file; a
+ * compressed one streams whole (200). The content type comes from the
+ * member's own name.
+ */
+export async function serveArchiveMember(
+  path: string,
+  at: Extract<HostLocation, { kind: "archive" }>,
+  rangeHeader: string | null,
+): Promise<Response> {
+  const opened = await openArchiveMember(path, at);
+  switch (opened.kind) {
+    case "missing":
+      return new Response(`Not found: ${path}`, { status: 404 });
+    case "denied":
+      return new Response(`Permission denied: ${path}`, { status: 403 });
+    case "not-a-file":
+      return new Response(`Not a file: ${path}`, { status: 400 });
+    case "unreadable-archive":
+      return new Response(
+        `Unreadable archive member (${opened.reason}): ${path}`,
+        {
+          status: 422,
+        },
+      );
+    case "ok":
+      break;
+  }
+  const { size, body } = opened;
+  const headers = inertHeaders(path, Bun.file(path).type);
+  if (!(body instanceof Blob)) {
+    return new Response(body, {
+      headers: {
+        ...headers,
+        "Accept-Ranges": "none",
+        "Content-Length": String(size),
+      },
+    });
+  }
+  const range = parseRange(rangeHeader, size);
+  if (range.kind === "unsatisfiable") {
+    return new Response(null, {
+      status: 416,
+      headers: { ...headers, "Content-Range": `bytes */${size}` },
+    });
+  }
+  if (range.kind === "range") {
+    const { start, end } = range.range;
+    return new Response(body.slice(start, end + 1), {
+      status: 206,
+      headers: {
+        ...headers,
+        "Content-Range": `bytes ${start}-${end}/${size}`,
+        "Content-Length": String(end - start + 1),
+      },
+    });
+  }
+  return new Response(body, { headers });
 }

@@ -18,6 +18,7 @@ import {
   FileContent,
   FileTabs,
   useFileRenderers,
+  useIsInArchive,
   useOpenHostFile,
 } from "@plugins/primitives/plugins/file-viewer/web";
 import type { FileViewerGit } from "@plugins/primitives/plugins/file-viewer/core";
@@ -55,6 +56,7 @@ export function PreviewPane({
     ...(git !== undefined ? { git } : {}),
   });
   const openHostFile = useOpenHostFile();
+  const inArchive = useIsInArchive(path);
   const name = baseName(path);
   return (
     <Column
@@ -86,12 +88,14 @@ export function PreviewPane({
             </Stack>
           </Fill>
           {renderers.resolved.length > 1 && <FileTabs {...renderers} />}
-          <IconButton
-            icon={openIcon}
-            label="Open with default app"
-            variant="ghost"
-            onClick={() => openHostFile(path)}
-          />
+          {!inArchive && (
+            <IconButton
+              icon={openIcon}
+              label="Open with default app"
+              variant="ghost"
+              onClick={() => openHostFile(path)}
+            />
+          )}
           <IconButton
             icon={closeIcon}
             label="Close (Esc)"
@@ -139,6 +143,8 @@ function PreviewMeta({
     parts.push("no longer exists");
   } else if (stat.data?.kind === "denied") {
     parts.push("permission denied");
+  } else if (stat.data?.kind === "unreadable-archive") {
+    parts.push(`unreadable archive (${stat.data.reason})`);
   }
   return (
     // The small caption rung (`2xs`), faint.

@@ -7,6 +7,7 @@ import {
   hostFsComplete,
   hostFsStat,
   hostFsVolume,
+  isBrowsable,
 } from "@plugins/infra/plugins/host-fs/core";
 import type {
   PathBarSource,
@@ -126,13 +127,19 @@ export function hostPathSource(
             };
           }
           return {
-            kind: result.entry.kind === "dir" ? "dir" : "file",
+            kind: isBrowsable(result.entry) ? "dir" : "file",
             path: displayPath(result.path, home),
           };
         case "missing":
           return { kind: "invalid", path, reason: "No such file or folder" };
         case "denied":
           return { kind: "invalid", path, reason: "Permission denied" };
+        case "unreadable-archive":
+          return {
+            kind: "invalid",
+            path,
+            reason: `Unreadable archive (${result.reason})`,
+          };
       }
     },
   };

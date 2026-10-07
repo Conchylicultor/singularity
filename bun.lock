@@ -3380,6 +3380,10 @@
       "name": "@singularity/plugin-infra-host-fs",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/host-fs/plugins/zip": {
+      "name": "@singularity/plugin-infra-host-fs-zip",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/host/plugins/contention": {
       "name": "@singularity/plugin-infra-host-contention",
       "version": "0.0.1",
@@ -7832,6 +7836,8 @@
     "@singularity/plugin-infra-host-duress-latch": ["@singularity/plugin-infra-host-duress-latch@workspace:plugins/infra/plugins/host/plugins/duress/plugins/latch"],
 
     "@singularity/plugin-infra-host-fs": ["@singularity/plugin-infra-host-fs@workspace:plugins/infra/plugins/host-fs"],
+
+    "@singularity/plugin-infra-host-fs-zip": ["@singularity/plugin-infra-host-fs-zip@workspace:plugins/infra/plugins/host-fs/plugins/zip"],
 
     "@singularity/plugin-infra-host-host-admission": ["@singularity/plugin-infra-host-host-admission@workspace:plugins/infra/plugins/host/plugins/host-admission"],
 

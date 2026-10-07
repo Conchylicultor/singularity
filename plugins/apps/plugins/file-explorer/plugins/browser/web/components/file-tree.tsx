@@ -13,7 +13,11 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import type { TreeChildrenState } from "@plugins/primitives/plugins/tree/core";
-import type { HostFsEntry } from "@plugins/infra/plugins/host-fs/core";
+import {
+  isBrowsable,
+  type HostFsEntry,
+  type HostFsListResult,
+} from "@plugins/infra/plugins/host-fs/core";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -47,9 +51,26 @@ function listingFailure(listing: Listing): string | null {
       return "This folder no longer exists";
     case "not-a-dir":
       return "Not a folder";
+    case "unreadable-archive":
+      return unreadableArchiveMessage(listing.result.reason);
     case "ok":
     case undefined:
       return null;
+  }
+}
+
+function unreadableArchiveMessage(
+  reason: Extract<HostFsListResult, { kind: "unreadable-archive" }>["reason"],
+): string {
+  switch (reason) {
+    case "corrupt":
+      return "This archive is damaged or not in a format it claims";
+    case "encrypted":
+      return "This archive is encrypted";
+    case "unsupported-method":
+      return "This archive uses a compression method that cannot be read";
+    case "too-many-entries":
+      return "This archive has too many entries to browse";
   }
 }
 
@@ -101,8 +122,9 @@ function buildRows(
         size: entry.size,
         mtimeMs: entry.mtimeMs,
         hidden: entry.hidden,
+        browsable: isBrowsable(entry),
       });
-      if (entry.kind === "dir") walk(path, path);
+      if (isBrowsable(entry)) walk(path, path);
     }
   };
   walk(root, null);
@@ -210,7 +232,7 @@ export interface FileTreeProps {
 /**
  * The folder's contents as a DataView tree: Name / Modified / Size in aligned
  * columns plus every `FileBrowserSlots.Fields` contribution, folders first, every folder lazily listed through host-fs on first
- * expand. Clicking a folder makes it the listing; clicking a file selects it
+ * expand — an archive file (a zip) expands like one. Clicking a folder makes it the listing; clicking a file selects it
  * (and opens it beside the listing). Double-click or Enter opens either.
  */
 export function FileTree({
@@ -238,7 +260,7 @@ export function FileTree({
       getParentId: (r) => r.parentId,
       getRank: (r) => r.rank,
       lazyChildren: {
-        hasChildren: (r) => r.kind === "dir",
+        hasChildren: (r) => r.browsable,
         state: (r) => childrenState(listings, r.path),
         load: (r) => request(r.path),
       },
@@ -280,7 +302,7 @@ export function FileTree({
           className="size-4"
         />
       ),
-      openOnActivate: (r) => r.kind === "dir",
+      openOnActivate: (r) => r.browsable,
       labelClassName: (r) =>
         r.path === openPath ? cn("font-semibold") : undefined,
     }),

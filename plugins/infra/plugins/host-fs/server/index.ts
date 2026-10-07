@@ -16,7 +16,14 @@ import { handleStat } from "./internal/stat";
 import { handleText } from "./internal/text";
 import { handleVolume } from "./internal/volume";
 
-export { decodeTextBytes, type TextBytesResult } from "./internal/text";
+export { decodeTextBytes, type TextBytesResult } from "./internal/decode";
+export {
+  defineArchiveFormat,
+  type ArchiveFormat,
+  type ArchiveIndexResult,
+  type ArchiveMember,
+  type MemberBytes,
+} from "./internal/archive/registry";
 
 export default {
   description:

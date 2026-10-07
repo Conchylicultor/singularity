@@ -16,7 +16,8 @@ import { isAppOrigin, openArgv } from "./open";
 import { classifyFsError, expandTilde, resolveHostPath } from "./path";
 import { parseRange, serveHostFile } from "./raw";
 import { statHostPath } from "./stat";
-import { decodeTextBytes, readHostText } from "./text";
+import { decodeTextBytes } from "./decode";
+import { readHostText } from "./text";
 
 // Fixture:
 //   root/

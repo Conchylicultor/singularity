@@ -3,6 +3,7 @@ import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { hostFsOpen, type HostFsOpenResult } from "../../core";
+import { locateHostPath } from "./archive/locate";
 import { classifyFsError, resolveHostPath } from "./path";
 
 // `open` hands the path to LaunchServices and returns at once; ten seconds is
@@ -31,13 +32,20 @@ export async function openHostPath(
   path: string,
   reveal: boolean,
 ): Promise<HostFsOpenResult> {
-  try {
-    await stat(path);
-  } catch (err) {
-    return { kind: classifyFsError(err), path };
+  const located = await locateHostPath(path);
+  if (located.kind === "archive") {
+    // A member has no file of its own: reveal shows the archive that holds it,
+    // and there is nothing on disk to hand a default app.
+    if (!reveal) return { kind: "in-archive", path, archive: located.file };
   }
-  await spawnExpectOk(openArgv(path, reveal), { timeoutMs: OPEN_TIMEOUT_MS });
-  return { kind: "opened", path };
+  const target = located.kind === "archive" ? located.file : path;
+  try {
+    await stat(target);
+  } catch (err) {
+    return { kind: classifyFsError(err), path: target };
+  }
+  await spawnExpectOk(openArgv(target, reveal), { timeoutMs: OPEN_TIMEOUT_MS });
+  return { kind: "opened", path: target };
 }
 
 export const handleOpen = implement(hostFsOpen, ({ body, req }) => {

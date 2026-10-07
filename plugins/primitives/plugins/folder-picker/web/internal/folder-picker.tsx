@@ -21,6 +21,7 @@ export const UNAVAILABLE_MESSAGE = {
   missing: "This folder does not exist.",
   denied: "Permission denied.",
   "not-a-dir": "Not a folder.",
+  "unreadable-archive": "This archive cannot be read.",
 } as const;
 
 export interface FolderPickerProps {

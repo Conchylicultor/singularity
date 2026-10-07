@@ -9,13 +9,13 @@ and build byte URLs with `hostFileUrl(path)`.
 
 | Endpoint | Answers |
 |---|---|
-| `GET /api/host-fs/list?path` (`hostFsList`) | `ok {path, parent, entries}` · `missing` · `denied` · `not-a-dir`. No path = home. |
-| `GET /api/host-fs/stat?path` (`hostFsStat`) | `ok {path, parent, entry}` · `missing` · `denied` |
+| `GET /api/host-fs/list?path` (`hostFsList`) | `ok {path, parent, entries, within?}` · `missing` · `denied` · `not-a-dir` · `unreadable-archive`. No path = home. |
+| `GET /api/host-fs/stat?path` (`hostFsStat`) | `ok {path, parent, entry, within?}` · `missing` · `denied` · `unreadable-archive` |
 | `GET /api/host-fs/complete?prefix` (`hostFsComplete`) | folder-only children of `dirname(prefix)` matching `basename(prefix)`, case-insensitive, capped at `HOST_FS_COMPLETE_LIMIT` (`truncated`) |
-| `GET /api/host-fs/text?path` (`hostFsText`) | `ok {content, size}` · `too-large` (> `HOST_FS_TEXT_MAX_BYTES`, 2 MiB) · `binary` (NUL in the first 8 KB) · `missing` · `denied` · `not-a-file` |
-| `GET /api/host-fs/raw?path` (`hostFsRaw`, `hostFileUrl`) | the bytes, streamed; `Range` (one range) → 206 / 416; 404 / 403 / 400 (a directory) |
+| `GET /api/host-fs/text?path` (`hostFsText`) | `ok {content, size}` · `too-large` (> `HOST_FS_TEXT_MAX_BYTES`, 2 MiB) · `binary` (NUL in the first 8 KB) · `missing` · `denied` · `not-a-file` · `unreadable-archive` |
+| `GET /api/host-fs/raw?path` (`hostFsRaw`, `hostFileUrl`) | the bytes, streamed; `Range` (one range) → 206 / 416; 404 / 403 / 400 (a directory) / 422 (an unreadable archive member) |
 | `GET /api/host-fs/volume?path` (`hostFsVolume`) | `ok {name, total, free}` · `missing` · `denied` |
-| `POST /api/host-fs/open {path, reveal?}` (`hostFsOpen`) | `opened` · `missing`; 403 off-origin, 501 off macOS |
+| `POST /api/host-fs/open {path, reveal?}` (`hostFsOpen`) | `opened` · `in-archive` · `missing`; 403 off-origin, 501 off macOS |
 
 Rules every endpoint shares:
 
@@ -30,6 +30,37 @@ Rules every endpoint shares:
   resolves to nothing readable. `other` is a socket / FIFO / device.
 - **Hidden is presentation.** `hidden` flags dotfiles; they are always listed.
   macOS's `UF_HIDDEN` flag (e.g. `~/Library`) is not read.
+
+## Archives browse like folders
+
+A path may cross into an archive file: `~/Downloads/photos.zip/2022/a.jpg`.
+`list` of the archive file lists its root, and `list` / `stat` / `text` /
+`raw` read its members; `complete` and `volume` stay on disk. Plan:
+[`research/2026-10-06-infra-host-fs-archive-browsing.md`](../../../../research/2026-10-06-infra-host-fs-archive-browsing.md).
+
+- **Formats are plugins.** `defineArchiveFormat({ id, claims, index })`
+  (server barrel) declares one, listed in its plugin's server `register`; a
+  member it indexes carries its own `open()`. host-fs names no format — zip is
+  the `zip` sub-plugin; tar / 7z are each one more.
+- **Disk wins.** A path that exists on disk is read from disk (a real folder
+  named `x.zip` is a folder); only a missing path is looked for inside the
+  nearest claimed ancestor that is a regular file. Archives inside archives
+  are not browsed (their members are `missing`).
+- **Marks, not new kinds.** An archive file is a `file` entry carrying
+  `archive: { format }`; `isBrowsable(entry)` (core) is the one "does this
+  open like a folder?" test — a folder picker still tests `kind === "dir"`.
+  A `list` / `stat` answer inside an archive carries `within { archive,
+  format }`: the path is virtual, so Open with default app answers
+  `in-archive` and reveal shows the archive itself.
+- **Members are normalised.** `\` reads as `/`, `.` and empty segments drop,
+  a name containing `..` is never listed, implied directories are
+  synthesised, and macOS's `__MACOSX/` is hidden like a dotfile.
+- **The index is cached, never stale.** Keyed by the archive's inode, size and
+  mtime (16 archives / 500k members, LRU); built single-flight under the
+  host-wide heavy-read slot; more than 200k members is `too-many-entries`.
+- **Bytes.** A member stored uncompressed is a `Blob` window of the archive and
+  honours `Range`; a compressed one streams whole (200, `Accept-Ranges: none`).
+  `text` gates the uncompressed size before decompressing.
 
 `decodeTextBytes` (server barrel) is the one size + binary gate for decoding
 file bytes as text; code-explorer's git-ref reads use it too.
@@ -73,9 +104,17 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.HOME_DIR`
-  - Exports (types): `TextBytesResult`
-  - Exports (values): `decodeTextBytes`
+  - Exports (types):
+    - `ArchiveFormat`
+    - `ArchiveIndexResult`
+    - `ArchiveMember`
+    - `MemberBytes`
+    - `TextBytesResult`
+  - Exports (values):
+    - `decodeTextBytes`
+    - `defineArchiveFormat`
   - Routes:
     - `GET /api/host-fs/list`
     - `GET /api/host-fs/stat`
@@ -89,6 +128,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
   - Exports (types):
+    - `HostFsArchiveReason`
     - `HostFsCompleteResult`
     - `HostFsEntry`
     - `HostFsEntryKind`
@@ -97,6 +137,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `HostFsStatResult`
     - `HostFsTextResult`
     - `HostFsVolumeResult`
+    - `HostFsWithin`
   - Exports (values):
     - `HOST_FS_COMPLETE_LIMIT`
     - `HOST_FS_TEXT_MAX_BYTES`
@@ -108,9 +149,13 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `hostFsStat`
     - `hostFsText`
     - `hostFsVolume`
+    - `isBrowsable`
 - Cross-plugin:
   - Imported by:
     - `code-explorer`
+    - `infra/host-fs/zip`
     - `primitives/file-viewer`
+- Sub-plugins:
+  - **`zip`** — Zip as a host-fs archive format: a native reader of the zip central directory (zip64, UTF-8 / CP437 / Info-ZIP Unicode names, extended timestamps) registered through defineArchiveFormat, so a .zip browses like a folder — members stored or deflated, encrypted and other methods typed as unreadable.
 
 <!-- AUTOGENERATED:END -->

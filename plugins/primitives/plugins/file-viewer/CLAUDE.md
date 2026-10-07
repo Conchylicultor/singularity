@@ -73,6 +73,7 @@ checkout file.
     - `useFileBytes`
     - `useFileRenderers`
     - `useFileText`
+    - `useIsInArchive`
     - `useOpenHostFile`
 - Core:
   - Uses:

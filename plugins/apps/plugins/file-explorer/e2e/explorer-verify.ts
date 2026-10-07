@@ -5,6 +5,7 @@
 //     notes.md      → a rendered Markdown preview
 //     blob.xyz      → binary, no preview: the fallback
 //     sub/inner.txt → a folder to expand lazily and to re-root into
+//     archive.zip   → photos/note.txt, browsed like a folder
 //
 //  1. /files opens on the home folder.
 //  2. ⌘L, type the folder's path minus its last letters, Tab completes it,
@@ -13,6 +14,8 @@
 //  4. Click `notes.md`: the preview renders its heading.
 //  5. Click `blob.xyz`: the preview says it has no preview.
 //  6. Double-click `sub`: it becomes the listing; Back returns.
+//  7. Expand `archive.zip`, then `photos` inside it; click `note.txt`: its
+//     text previews, with no Open with default app (it has no file of its own).
 //
 // Along the way it checks the Files look (prototype proto-1790864772-0r54) at
 // 1440×900: the brand reads "Files", the sidebar is 224px, the toolbar 48px
@@ -29,6 +32,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "playwright";
+import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
   arg,
   boot,
@@ -48,6 +52,17 @@ writeFileSync(
 writeFileSync(join(fixture, "blob.xyz"), Buffer.from([0, 1, 2, 0, 255, 0]));
 mkdirSync(join(fixture, "sub"));
 writeFileSync(join(fixture, "sub", "inner.txt"), "inner\n");
+const zipSrc = mkdtempSync(join(tmpdir(), "fx-e2e-zip-"));
+mkdirSync(join(zipSrc, "photos"));
+writeFileSync(join(zipSrc, "photos", "note.txt"), "A zipped note\n");
+await spawnExpectOk(
+  ["zip", "-q", "-r", join(fixture, "archive.zip"), "photos"],
+  {
+    cwd: zipSrc,
+    timeoutMs: 20_000,
+  },
+);
+rmSync(zipSrc, { recursive: true, force: true });
 
 /** An element's rendered box. */
 async function box(page: Page, selector: string) {
@@ -240,6 +255,33 @@ try {
     await snap(page, out, "6-rerooted");
     await page.getByRole("button", { name: "Back", exact: true }).click();
     r.ok("Back returns to the folder", await waitRow(page, "notes.md"));
+
+    // 7. A zip browses like a folder.
+    await row(page, "archive.zip").hover();
+    await row(page, "archive.zip")
+      .locator("button[aria-label='Expand']")
+      .click();
+    r.ok("expanding a zip lists its root", await waitRow(page, "photos"));
+    await row(page, "photos").hover();
+    await row(page, "photos").locator("button[aria-label='Expand']").click();
+    r.ok("a folder inside the zip expands", await waitRow(page, "note.txt"));
+    await row(page, "note.txt").click();
+    const zipped = page.getByText("A zipped note");
+    let previewed = true;
+    try {
+      await zipped.waitFor({ state: "visible", timeout: 10_000 });
+    } catch (err) {
+      if (!(err instanceof Error && err.name === "TimeoutError")) throw err;
+      previewed = false;
+    }
+    r.ok("a file inside the zip previews", previewed);
+    r.ok(
+      "a file inside the zip offers no Open with default app",
+      (await page
+        .getByRole("button", { name: "Open with default app" })
+        .count()) === 0,
+    );
+    await snap(page, out, "7-zip");
   });
 } finally {
   rmSync(fixture, { recursive: true, force: true });

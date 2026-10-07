@@ -6,11 +6,10 @@ import {
   type HostFsEntry,
   type HostFsListResult,
 } from "../../core";
-import { describeEntry } from "./entry";
+import { locateHostDir } from "./archive/locate";
+import { listArchiveDir } from "./archive/read";
+import { byName, describeEntry } from "./entry";
 import { classifyFsError, parentOf, resolveHostPath } from "./path";
-
-const byName = (a: { name: string }, b: { name: string }) =>
-  a.name.localeCompare(b.name, undefined, { numeric: true });
 
 /**
  * List the absolute directory `path`. A symlink to a directory lists its
@@ -57,6 +56,17 @@ async function describeChild(
   }
 }
 
+/**
+ * List the absolute host path `path`: a directory on disk, an archive file on
+ * disk (its root), or a directory inside an archive.
+ */
+export async function listHostPath(path: string): Promise<HostFsListResult> {
+  const located = await locateHostDir(path);
+  return located.kind === "archive"
+    ? listArchiveDir(path, located)
+    : listHostDir(path);
+}
+
 export const handleList = implement(hostFsList, ({ query }) =>
-  listHostDir(resolveHostPath(query.path)),
+  listHostPath(resolveHostPath(query.path)),
 );

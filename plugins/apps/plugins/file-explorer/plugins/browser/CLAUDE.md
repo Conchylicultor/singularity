@@ -47,6 +47,7 @@
     - `primitives/file-viewer.FileContent`
     - `primitives/file-viewer.FileTabs`
     - `primitives/file-viewer.useFileRenderers`
+    - `primitives/file-viewer.useIsInArchive`
     - `primitives/file-viewer.useOpenHostFile`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`

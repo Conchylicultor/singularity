@@ -185,6 +185,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
     - **`host-account`** — Host account, read: useHostAccount() — the OS account this backend runs as (login name and full name), loading until the value arrives. Host account: serves the host-account value — the OS account this backend runs as (login name, and its full name read once through spawnCaptured: macOS `id -F`, the passwd GECOS field elsewhere).
     - **`host-fs`** — The one host-filesystem API: list / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
+      - Plugins:
+        - **`zip`** — Zip as a host-fs archive format: a native reader of the zip central directory (zip64, UTF-8 / CP437 / Info-ZIP Unicode names, extended timestamps) registered through defineArchiveFormat, so a .zip browses like a folder — members stored or deflated, encrypted and other methods typed as unreadable.
     - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
     - **`jobs`** [load-bearing] [test helpers] — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Plugins:

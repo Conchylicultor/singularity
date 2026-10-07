@@ -58,6 +58,11 @@ function hostState(result: HostFsTextResult): FileTextState {
       return { kind: "unavailable", reason: result.kind };
     case "not-a-file":
       return { kind: "error", message: `Not a file: ${result.path}` };
+    case "unreadable-archive":
+      return {
+        kind: "error",
+        message: `Unreadable archive member (${result.reason}): ${result.path}`,
+      };
   }
 }
 

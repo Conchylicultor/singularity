@@ -16,4 +16,10 @@ export interface EntryRow {
   size: number;
   mtimeMs: number;
   hidden: boolean;
+  /**
+   * Opens like a folder: a directory, or an archive file (`isBrowsable`). An
+   * archive row is still `kind: "file"` — its size, icon and git status are a
+   * file's.
+   */
+  browsable: boolean;
 }
