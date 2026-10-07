@@ -21,6 +21,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["rounded-chip-compact"], extend: "rounded" },
   { classes: ["p-chip-header", "p-thread-card", "p-composer", "p-composer-text", "p-composer-actions", "p-tool-badge", "p-inline-code"], group: "sg-pad", excludes: ["p"], under: [] },
   { classes: ["px-split-arrow"], extend: "px" },
+  { classes: ["lead-icon-xs", "lead-icon-sm"], standalone: true, reason: "Spaces a child svg, not the element itself; no built-in group sets a child's margin." },
   { classes: ["rounded-tool-badge", "rounded-inline-code"], extend: "rounded" },
   { classes: ["hairline-tool-badge", "hairline-inline-code"], standalone: true, reason: "Role border width for one element that sets no other border width. Not named border-*: tailwind-merge files any border-<word> as a border COLOR, so a colour class beside it would silently drop it." },
   { classes: ["size-op-status-icon", "size-status-dot-xs", "size-status-dot-sm", "size-status-dot-md", "size-status-dot-lg"], extend: "size" },

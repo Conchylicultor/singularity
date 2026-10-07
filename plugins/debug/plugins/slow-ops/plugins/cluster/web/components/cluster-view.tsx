@@ -251,9 +251,10 @@ export function ClusterView(): ReactElement {
                 className="text-muted-foreground"
               >
                 {okCount} worktree{okCount === 1 ? "" : "s"} merged
+                {failed.length > 0 && " "}
                 {failed.length > 0 && (
                   <span
-                    className="ml-xs text-warning"
+                    className="text-warning"
                     title={failed
                       .map((f) => `${f.name}: ${f.error}`)
                       .join("\n")}

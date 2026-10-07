@@ -3,6 +3,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
@@ -131,8 +132,10 @@ function TransposeStepper({
             semitones === 0 && "text-muted-foreground opacity-40",
           )}
         >
-          {formatOffset(semitones)}
-          <span className="ml-2xs text-muted-foreground">st</span>
+          <Inline gap="2xs" align="baseline">
+            {formatOffset(semitones)}
+            <span className="text-muted-foreground">st</span>
+          </Inline>
         </Text>
       </button>
       <IconButton

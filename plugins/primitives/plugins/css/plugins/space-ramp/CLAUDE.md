@@ -63,6 +63,27 @@ classes; miss the token and `css-vars-supplied` fails.
   `<Sticky>` and `<Pin>`. The ramp declares no inset utilities.
 - **`SPACE_STEPS`** / **`RAMP_CLASSES`** — the raw data, to enumerate.
 
+## Spacing classes that exist — `no-dead-spacing`
+
+`lint/no-dead-spacing.ts` (`space-ramp/no-dead-spacing`) rejects a word-valued
+spacing class (`gap*`, `p*`, `m*`, `space-*`) unless it is either a Tailwind
+built-in word (`auto`, `px`, `reverse`) or a custom `@utility` app.css
+declares. app.css defines no `--spacing-*` theme key, so Tailwind accepts any
+other word silently and compiles it to nothing: `mb-xs`, `mx-2xl`, `p-mdd`,
+`gap-card`. The ramp deliberately has no margin classes.
+
+- The family list and the built-in words are plain data in
+  `core/internal/spacing-classes.ts`.
+- The declared set is the lint toolkit's `declaredUtilities`, read from app.css
+  when the lint config is built (`framework/tooling/lint/core/declared-utilities.ts`).
+  It is not a generated manifest: `build` regenerates manifests after loading the
+  lint rules, so an imported one would be stale. app.css is a lint-cache
+  trigger, so removing a `@utility` re-lints every file.
+
+The rule has no allowlist, and a disable comment is no escape, because the class
+would still do nothing. Declare the `@utility`, or restructure. Numeric and
+arbitrary values belong to `spacing/no-adhoc-spacing`.
+
 **Never build a class name.** Tailwind emits an `@utility` only for a literal
 token its scanner finds, so `` `pl-${step}` `` compiles to nothing and "works"
 only when another file happens to spell the same class. Pass the step to

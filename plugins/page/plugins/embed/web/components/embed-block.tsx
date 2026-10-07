@@ -102,14 +102,8 @@ function FilledEmbedBlock({
 }) {
   return (
     <div className="px-md py-xs">
-      <div className={hoverRevealGroup}>
-        <Stack
-          direction="row"
-          gap="sm"
-          align="center"
-          justify="end"
-          className="mb-xs"
-        >
+      <Stack gap="xs" className={hoverRevealGroup}>
+        <Stack direction="row" gap="sm" align="center" justify="end">
           <a
             href={url}
             target="_blank"
@@ -149,7 +143,7 @@ function FilledEmbedBlock({
             title="Embedded content"
           />
         </Overlay>
-      </div>
+      </Stack>
     </div>
   );
 }

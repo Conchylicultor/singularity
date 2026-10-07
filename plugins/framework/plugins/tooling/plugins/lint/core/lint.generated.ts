@@ -79,6 +79,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/css/plugins/radius", id: "primitives.css.radius", loader: () => import("@plugins/primitives/plugins/css/plugins/radius/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/rail", id: "primitives.css.rail", loader: () => import("@plugins/primitives/plugins/css/plugins/rail/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/row", id: "primitives.css.row", loader: () => import("@plugins/primitives/plugins/css/plugins/row/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/css/plugins/space-ramp", id: "primitives.css.space-ramp", loader: () => import("@plugins/primitives/plugins/css/plugins/space-ramp/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/spacing", id: "primitives.css.spacing", loader: () => import("@plugins/primitives/plugins/css/plugins/spacing/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/surface", id: "primitives.css.surface", loader: () => import("@plugins/primitives/plugins/css/plugins/surface/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/text", id: "primitives.css.text", loader: () => import("@plugins/primitives/plugins/css/plugins/text/lint"), dependsOn: [] },

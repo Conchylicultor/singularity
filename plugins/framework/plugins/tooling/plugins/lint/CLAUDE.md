@@ -69,6 +69,15 @@ can keep the latter as a runtime import, which breaks config loading under jiti.
 Tests run under Bun, so they build the rule with the real `lintToolkit`,
 imported from `@plugins/framework/plugins/tooling/plugins/lint/core/testing`.
 
+The toolkit also carries **`declaredUtilities`**: every custom `@utility` in
+app.css, read when the config is built (`core/declared-utilities.ts`), so a rule
+can tell a class that exists from one Tailwind would silently compile to
+nothing (`space-ramp/no-dead-spacing`). A rule must never import a generated
+manifest for such facts: `build` regenerates manifests after loading the rules,
+so an imported one would be stale (`cli:codegen-manifests-not-frozen`). A file
+a rule reads is listed in `LINT_DATA_FILES`, which the type-check cache treats
+as a global trigger.
+
 `class-token-walk-single-source` fails if a rule file declares `collectTokens` /
 `baseClass` / `CLASS_ATTRS` / `CLASS_BUILDERS` of its own. It replaced a check
 that held six hand-copied walks byte-identical: eleven *other* rules carried an
@@ -114,11 +123,12 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `collectTokens`
     - `findPluginDirs`
     - `isLintScopeExcluded`
+    - `LINT_DATA_FILES`
     - `LINT_SCOPE_EXCLUDE_GLOBS`
     - `lintCollectedDir`
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
-    - `lintToolkit` — The single toolkit instance handed to every class-rule factory.
+    - `lintToolkit`
 - Sub-plugins:
   - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
   - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role

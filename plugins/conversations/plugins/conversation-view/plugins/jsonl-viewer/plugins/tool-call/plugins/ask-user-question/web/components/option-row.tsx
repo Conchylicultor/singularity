@@ -33,13 +33,17 @@ function Indicator({
   // A checkbox (multi) and a radio (single) are semantic fixed shapes that must
   // stay a square / circle under every Shape preset. The selection-indicator
   // primitive owns those fixed shapes, so this just picks the right one.
-  // The `mt` nudges the indicator to align with the first line of multi-line
-  // label text.
-  const nudge = align === "start" ? "mt-2xs" : undefined;
-  return multi ? (
-    <CheckboxIndicator checked={selected} className={nudge} />
-  ) : (
-    <RadioIndicator checked={selected} className={nudge} />
+  // The wrapper's top padding nudges the indicator to align with the first line
+  // of multi-line label text — padding on a wrapper, since the indicator's own
+  // box is its drawn shape and the ramp has no margin classes.
+  return (
+    <Stack gap="none" className={align === "start" ? "pt-2xs" : undefined}>
+      {multi ? (
+        <CheckboxIndicator checked={selected} />
+      ) : (
+        <RadioIndicator checked={selected} />
+      )}
+    </Stack>
   );
 }
 

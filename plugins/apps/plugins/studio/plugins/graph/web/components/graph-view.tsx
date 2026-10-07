@@ -107,20 +107,23 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
                 onChange={(e) => setQuery(e.target.value)}
               />
               {query && (
-                <Surface
-                  level="overlay"
+                // The wrapper's top padding is the gap below the input — the
+                // ramp has no margin classes, and the panel's own box is drawn.
+                <div
                   // eslint-disable-next-line layout/no-adhoc-layout -- dropdown anchored below the input (top-full), outside Pin's in-parent anchor set
-                  className="absolute left-0 top-full z-overlay mt-2xs w-full p-2xs"
+                  className="absolute left-0 top-full z-overlay w-full pt-2xs"
                 >
-                  <FocusResults
-                    allIds={allIds}
-                    query={query}
-                    onPick={(id) => {
-                      setFocusId(id);
-                      setQuery("");
-                    }}
-                  />
-                </Surface>
+                  <Surface level="overlay" className="p-2xs">
+                    <FocusResults
+                      allIds={allIds}
+                      query={query}
+                      onPick={(id) => {
+                        setFocusId(id);
+                        setQuery("");
+                      }}
+                    />
+                  </Surface>
+                </div>
               )}
             </div>
 

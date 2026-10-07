@@ -535,6 +535,12 @@
 /* The icon-only end segment of a split control: its inline padding (density
  * `padSplitArrowX`, default the `xs` control pad). */
 @utility px-split-arrow { padding-inline: var(--pad-split-arrow-x); } /* twmerge: extend px */
+/* The space after an icon leading an inline text run whose children the caller
+ * supplies (a select / menu item label): the run must stay inline so `truncate`
+ * can ellipsize it, so a flex gap is not available, and the ramp has no margin
+ * classes. One step of the ramp each, so it tightens with the density preset. */
+@utility lead-icon-xs { & > svg { margin-inline-end: var(--space-xs); } } /* twmerge: standalone -- Spaces a child svg, not the element itself; no built-in group sets a child's margin. */
+@utility lead-icon-sm { & > svg { margin-inline-end: var(--space-sm); } } /* twmerge: standalone -- Spaces a child svg, not the element itself; no built-in group sets a child's margin. */
 /* Role corners and hairlines (shape group): a tool badge's and an inline code
  * span's. The widths default to 0 — no border, and no box change — so only a
  * theme that sets them draws one. */

@@ -43,14 +43,14 @@ ruleTester.run(
   {
     valid: [
       // The regression: the two digit-led named steps must be allowed across
-      // gap / padding (every axis) / margin.
+      // gap / padding (every axis). (Whether a word-valued class EXISTS — e.g.
+      // `mx-2xl`, which does not — is space-ramp/no-dead-spacing's call.)
       { code: `const el = <div className="gap-2xs" />;` },
       { code: `const el = <div className="gap-2xl" />;` },
       { code: `const el = <div className="py-2xs p-2xl" />;` },
-      { code: `const el = <div className="mx-2xl" />;` },
       { code: `const el = <span className={cn("gap-2xs", "p-2xl")} />;` },
       // The letter-led named steps are likewise fine.
-      { code: `const el = <div className="gap-sm p-md mt-lg" />;` },
+      { code: `const el = <div className="gap-sm p-md pt-lg" />;` },
       // Centering utilities are word-valued and untouched.
       { code: `const el = <div className="mx-auto my-auto" />;` },
       // A non-className string that merely mentions a banned class — the
@@ -83,6 +83,11 @@ ruleTester.run(
       // Arbitrary value.
       {
         code: `const el = <div className="p-[5px]" />;`,
+        errors: [{ messageId: "adhocSpacing" }],
+      },
+      // Tailwind v4's arbitrary custom-property shorthand.
+      {
+        code: `const el = <div className="mb-(--space-xs)" />;`,
         errors: [{ messageId: "adhocSpacing" }],
       },
       // Negative arbitrary margin — `baseClass` strips the leading `-`.

@@ -19,9 +19,10 @@ const createRule = ESLintUtils.RuleCreator(
  * This rule fires on ANY element (spacing is set everywhere) and bans raw
  * Tailwind spacing — numeric (`gap-2`, `px-3`, `m-4`, `space-y-2`) or arbitrary
  * (`gap-[7px]`, `p-[5px]`) — across gap, padding, margin, and space-between.
- * The named `*-<step>` utilities (word-valued) are NOT raw and are allowed,
- * exactly the `z-base` vs `z-10` distinction. `mx-auto`/`my-auto` (centering,
- * word-valued) are likewise untouched.
+ * Word values (`gap-sm`, `p-chip`, `mx-auto`) are NOT raw and are not this
+ * rule's concern — exactly the `z-base` vs `z-10` distinction. Whether a word
+ * value EXISTS is `space-ramp/no-dead-spacing`'s: the ramp has no margin
+ * classes, so `mb-xs` is not raw but compiles to nothing.
  *
  * No auto-fix: picking a role (and whether to restructure a margin into a
  * Stack gap / Inset pad) is a per-site judgement.
@@ -38,11 +39,11 @@ const createRule = ESLintUtils.RuleCreator(
 // can't just test "starts with a digit": that misfires on `gap-2xs`/`p-2xl`.
 // Instead, match digits NOT immediately followed by a letter (the `(?![a-z])`
 // guard) — so `gap-2`/`p-0.5`/`gap-2!` match while `gap-2xs`/`p-2xl` don't — or
-// an arbitrary `[`. Letter-led steps (`gap-sm`, `p-md`, `mx-auto`) never match.
-const GAP = /^gap(?:-[xy])?-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
-const PAD = /^p[xytrbl]?-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
-const MARGIN = /^m[xytrbl]?-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
-const SPACE = /^space-[xy]-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
+// an arbitrary `[` (`p-[5px]`) or `(` (v4's `p-(--x)` var shorthand). Letter-led steps (`gap-sm`, `p-md`, `mx-auto`) never match.
+const GAP = /^gap(?:-[xy])?-(?:\d+(?:\.\d+)?(?![a-z])|[[(])/;
+const PAD = /^p[xytrbl]?-(?:\d+(?:\.\d+)?(?![a-z])|[[(])/;
+const MARGIN = /^m[xytrbl]?-(?:\d+(?:\.\d+)?(?![a-z])|[[(])/;
+const SPACE = /^space-[xy]-(?:\d+(?:\.\d+)?(?![a-z])|[[(])/;
 
 export default function buildRule({
   collectTokens,
@@ -63,8 +64,8 @@ export default function buildRule({
         adhocSpacing:
           "Raw spacing class `{{token}}` is banned — set layout spacing through the " +
           "<Stack gap> / <Inset pad> primitives from @plugins/primitives/plugins/css/plugins/spacing/web, " +
-          "or a named `*-<step>` utility (none|2xs|xs|sm|md|lg|xl|2xl) from the density spacing scale. " +
-          "Margins should usually become a Stack gap or Inset pad rather than a raw margin.",
+          "or a `gap-<step>` / `p*-<step>` utility (none|2xs|xs|sm|md|lg|xl|2xl) from the density spacing scale. " +
+          "Margins become a Stack gap or Inset pad — the ramp has no margin classes.",
       },
     },
     defaultOptions: [],

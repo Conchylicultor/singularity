@@ -66,7 +66,7 @@ function CapsuleToolbar({
             {/* A 20px box the line centres; the rule stretches to fill it.
                 A fixed-height rule would itself be the flex item, where the
                 vertical Separator's own `self-stretch` pins it to the top. */}
-            <Center axis="horizontal" className={cn("mx-xs h-5", NARROW)}>
+            <Center axis="horizontal" className={cn("h-5 px-xs", NARROW)}>
               <Separator orientation="vertical" className="bg-input" />
             </Center>
             <Line className={cn("gap-2xs", NARROW)}>{controls}</Line>

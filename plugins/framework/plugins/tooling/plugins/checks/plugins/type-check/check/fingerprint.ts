@@ -10,6 +10,7 @@
 import { createHash } from "crypto";
 import { join } from "path";
 import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { LINT_DATA_FILES } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import type { ImportGraphs } from "./import-graph";
 import { safeRead } from "./import-graph";
 
@@ -43,6 +44,9 @@ function isGlobalTrigger(rel: string): boolean {
     if (segs.includes("lint")) return true;
   }
   if (rel.endsWith("lint.generated.ts")) return true;
+  // A file a class rule reads (app.css's declared @utility set): a change can
+  // flip the verdict on any file that uses one of its classes.
+  if (LINT_DATA_FILES.includes(rel)) return true;
   // Any tsconfig*.json — root or any plugin.
   const base = rel.split("/").pop()!;
   if (base.startsWith("tsconfig") && base.endsWith(".json")) return true;

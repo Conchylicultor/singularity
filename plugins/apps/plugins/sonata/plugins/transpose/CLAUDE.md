@@ -62,6 +62,7 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
     - `apps/sonata/session.useSession`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLiveRow`
+    - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Inset`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

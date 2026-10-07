@@ -178,8 +178,8 @@ export function OverlayPanel({
             // strip of the panel's block padding above the pinned header where
             // the scrolled items showed through.
             <div
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- -mt-1 bleeds the header through the panel's block padding; the contract has no block escape and no named negative-margin utility
-              className="sticky z-raised rail-bleed -mt-1 mb-xs border-b bg-popover py-xs"
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- -mt-1 bleeds the header through the panel's block padding (the contract has no block escape and no named negative-margin utility); mb-1 spaces the first item off the header's border, and the ramp has no margin classes — the children are the caller's, so there is no parent gap to own it
+              className="sticky z-raised rail-bleed -mt-1 mb-1 border-b bg-popover py-xs"
               style={HEADER_PIN_STYLE}
             >
               {header}

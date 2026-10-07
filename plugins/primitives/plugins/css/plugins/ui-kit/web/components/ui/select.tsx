@@ -243,7 +243,7 @@ function SelectItem({
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText className="min-w-0 truncate [&>svg]:mr-sm [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
+      <SelectPrimitive.ItemText className="min-w-0 truncate lead-icon-sm [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
         {children}
       </SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator

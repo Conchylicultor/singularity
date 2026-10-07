@@ -315,16 +315,27 @@ export interface LintToolkit {
   baseClass: typeof baseClass;
   CLASS_ATTRS: typeof CLASS_ATTRS;
   CLASS_BUILDERS: typeof CLASS_BUILDERS;
+  /**
+   * Every custom `@utility` class app.css declares, read when the lint config
+   * is built (see `declared-utilities.ts`) — so a rule can tell a class that
+   * exists from one Tailwind would accept and compile to nothing.
+   */
+  declaredUtilities: ReadonlySet<string>;
 }
 
-/** The single toolkit instance handed to every class-rule factory. */
-export const lintToolkit: LintToolkit = {
-  collectTokens,
-  collectTokenNodes,
-  baseClass,
-  CLASS_ATTRS,
-  CLASS_BUILDERS,
-};
+/** The toolkit handed to every class-rule factory, over the given stylesheet facts. */
+export function createLintToolkit(
+  declaredUtilities: ReadonlySet<string>,
+): LintToolkit {
+  return {
+    collectTokens,
+    collectTokenNodes,
+    baseClass,
+    CLASS_ATTRS,
+    CLASS_BUILDERS,
+    declaredUtilities,
+  };
+}
 
 /** A rule module that must be constructed with the shared toolkit. */
 export type ClassRuleFactory<TRule> = (toolkit: LintToolkit) => TRule;

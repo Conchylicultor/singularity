@@ -49,11 +49,16 @@ a call site passes the step and never builds the class.
 
 `lint/no-adhoc-spacing.ts` fails `./singularity check` on any class-name carrying
 a raw Tailwind spacing utility — numeric (`gap-2`, `px-3`, `mt-4`, `space-y-2`)
-or arbitrary (`gap-[7px]`, `p-[5px]`) — across gap, padding, margin, and
-space-between. The named `*-<step>` utilities and `mx-auto`/`my-auto` are
-allowed. Margins should usually be restructured into a Stack gap or Inset pad
-rather than re-expressed as a named margin (there are intentionally no named
-margin utilities).
+or arbitrary (`gap-[7px]`, `p-[5px]`, `p-(--x)`) — across gap, padding,
+margin, and space-between.
+
+A word value is not raw, but it must **exist**: `space-ramp/no-dead-spacing`
+rejects any word-valued spacing class that no app.css `@utility` declares and
+Tailwind cannot resolve itself (`auto`, `px`, `reverse`). There are
+intentionally **no margin or `space-*` classes** on the ramp, so `mb-xs` is
+such a class — it compiles to nothing. Restructure a margin into a Stack gap
+(`<Stack gap>` / `gap-<step>` on the parent) or padding (`<Inset pad>` /
+`p*-<step>`, on a wrapper when the element's own box is drawn).
 
 A large BURNDOWN allowlist in `lint/index.ts` grandfathers files that pre-date
 the rule; it drains to empty over time. A genuinely-fixed one-off escapes

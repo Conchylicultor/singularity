@@ -6488,6 +6488,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/session.useSession`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLiveRow`
+              - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Inset`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
@@ -19770,11 +19771,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `collectTokens`
               - `findPluginDirs`
               - `isLintScopeExcluded`
+              - `LINT_DATA_FILES`
               - `LINT_SCOPE_EXCLUDE_GLOBS`
               - `lintCollectedDir`
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
-              - `lintToolkit` — The single toolkit instance handed to every class-rule factory.
+              - `lintToolkit`
           - Plugins:
             - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
             - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
@@ -29135,6 +29137,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/sources/ultimate-guitar/alignment`
+              - `apps/sonata/transpose`
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
               - `apps/website/landing/hero`

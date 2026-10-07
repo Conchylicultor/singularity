@@ -294,7 +294,7 @@ function DropdownMenuCheckboxItem({
       checked={checked}
       {...props}
     >
-      <span className="min-w-0 truncate [&>svg]:mr-xs [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
+      <span className="min-w-0 truncate lead-icon-xs [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
         {children}
       </span>
       <span
@@ -336,7 +336,7 @@ function DropdownMenuRadioItem({
       )}
       {...props}
     >
-      <span className="min-w-0 truncate [&>svg]:mr-xs [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
+      <span className="min-w-0 truncate lead-icon-xs [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
         {children}
       </span>
       <span

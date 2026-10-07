@@ -32,7 +32,8 @@ import { NON_APP_FILE_GLOBS } from "./non-app-globs";
 // Relative, not `@plugins/*`: this file is dual-loaded, by jiti for the root
 // `eslint.config.ts` (which cannot resolve the alias) and by Bun for the worker.
 import { LINT_SCOPE_EXCLUDE_GLOBS } from "./lint-scope-exceptions";
-import { lintToolkit, type LintToolkit } from "./class-token-walk";
+import { createLintToolkit, type LintToolkit } from "./class-token-walk";
+import { readDeclaredUtilities } from "./declared-utilities";
 
 // Loaded lazily: importing anything from this module's barrel
 // (`lint/core/index.ts`) — even a leaf helper like `isLintScopeExcluded` —
@@ -126,6 +127,7 @@ function buildClassRules(
  * contribution silently stops enforcing its rules.
  */
 async function loadContributions(root: string): Promise<PluginContribution[]> {
+  const toolkit = createLintToolkit(readDeclaredUtilities(root));
   const results = await Promise.allSettled(
     lintEntries.map(
       (e) =>
@@ -155,11 +157,7 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
     }
     // Class-rule factories are constructed with the shared token walk, then
     // merged into the plugin's rule set — from here on they are ordinary rules.
-    const built = buildClassRules(
-      e.pluginPath,
-      def.classRules ?? {},
-      lintToolkit,
-    );
+    const built = buildClassRules(e.pluginPath, def.classRules ?? {}, toolkit);
     if ("error" in built) {
       failures.push(built.error);
       continue;
