@@ -9,6 +9,7 @@ import {
   agentCallsIn,
   agentCallJoin,
   describedSubagent,
+  agentResumeTimes,
   subagentActivity,
   subagentRunState,
   teammateIdleTimes,
@@ -165,6 +166,19 @@ export function useConversationSubagents(
   const agentCalls = agentCallsIn(eventList);
   const conversationStatus = conversation.status;
   const idleTimes = teammateIdleTimes(eventList);
+  const resumeTimes = agentResumeTimes(eventList);
+  // A resumed sub-agent's later notifications carry the resuming
+  // `SendMessage`'s tool-use id, so they join by its own id; and any completion
+  // older than its newest resume ended an earlier turn.
+  const resumeInputs = (
+    row: SubagentActivityRow | undefined,
+  ): Pick<SubagentRunStateInput, "agentId" | "resumedAt"> => {
+    if (row === undefined) return {};
+    const resumedAt = resumeTimes.get(row.agentId);
+    return resumedAt === undefined
+      ? { agentId: row.agentId }
+      : { agentId: row.agentId, resumedAt };
+  };
   // A teammate's idle notification names it by the name it was spawned with.
   // A name more than one row answers to refuses, exactly as the card join
   // does: either reading would put one teammate's idle on the other.
@@ -224,6 +238,7 @@ export function useConversationSubagents(
       conversationStatus,
       ...workflowInputs(row),
       ...teammateInputs(row),
+      ...resumeInputs(row),
     });
     return {
       row,
@@ -265,6 +280,7 @@ export function useConversationSubagents(
         conversationStatus,
         ...workflowInputs(row),
         ...teammateInputs(row),
+        ...resumeInputs(row),
       });
       const startedAt = row?.startedAt ?? agentToolEvent?.at ?? null;
       return {

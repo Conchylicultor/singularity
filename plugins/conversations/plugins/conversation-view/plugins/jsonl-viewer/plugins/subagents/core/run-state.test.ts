@@ -286,4 +286,67 @@ describe("subagentRunState", () => {
       ).toEqual({ kind: "ended-without-reporting" });
     });
   });
+
+  describe("a background sub-agent resumed with SendMessage", () => {
+    // conv-1791379404-0sgk: notified at 13:36 for its first run, resumed at
+    // 13:44 and 13:57 — each later notification carries the resuming
+    // SendMessage's tool-use id, and the first one used to finish it for good.
+    const AGENT_ID = "a1e0d7d9ad5e40dcd";
+    const notified = (
+      at: string,
+      toolUseId: string,
+    ): TaskNotificationEvent => ({
+      kind: "task-notification",
+      at,
+      taskId: AGENT_ID,
+      toolUseId,
+      status: "completed",
+      summary: "Agent finished",
+    });
+    const base = {
+      toolUseId: TOOL_USE_ID,
+      agentId: AGENT_ID,
+      agentToolEvent: agentCall(true),
+      requestShape: "background" as const,
+      turnEnded: false,
+      conversationStatus: "waiting" as const,
+    };
+
+    test("a notification older than the newest resume ended an earlier turn: running", () => {
+      expect(
+        subagentRunState({
+          ...base,
+          taskNotifications: [
+            notified("2026-10-07T13:36:41.413Z", TOOL_USE_ID),
+            notified("2026-10-07T13:48:10.518Z", "toolu_send_1"),
+          ],
+          resumedAt: "2026-10-07T13:57:10.551Z",
+        }),
+      ).toEqual({ kind: "running" });
+    });
+
+    test("the resumed turn's own notification, carrying the SendMessage's id, finishes it again", () => {
+      expect(
+        subagentRunState({
+          ...base,
+          taskNotifications: [
+            notified("2026-10-07T13:36:41.413Z", TOOL_USE_ID),
+            notified("2026-10-07T14:02:27.459Z", "toolu_send_2"),
+          ],
+          resumedAt: "2026-10-07T13:57:10.551Z",
+        }),
+      ).toEqual({ kind: "finished" });
+    });
+
+    test("a resumed foreground agent's tool_result is stale too", () => {
+      expect(
+        subagentRunState({
+          ...base,
+          requestShape: "foreground",
+          taskNotifications: [],
+          resumedAt: "2026-09-20T10:06:00.000Z",
+        }),
+      ).toEqual({ kind: "running" });
+    });
+  });
 });

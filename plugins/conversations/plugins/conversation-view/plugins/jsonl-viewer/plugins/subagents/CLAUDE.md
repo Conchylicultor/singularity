@@ -148,6 +148,15 @@ value with a fresh ETag.
 - **background** — that `tool_result` is an immediate launch acknowledgement and
   means nothing; completion is the `task-notification` carrying the same
   tool-use id.
+- **…unless it was resumed since.** A `SendMessage` to a stopped sub-agent
+  resumes it — a new turn in the same transcript, under the same agent id — and
+  Claude Code notifies again "each time this agent stops", the later
+  notifications carrying the `SendMessage`'s tool-use id with the agent's id as
+  `task-id`. So notifications also join by `task-id` = the row's `agentId`, and
+  any completion (notification or foreground result) older than the newest
+  resume (`agentResumeTimes`: a `SendMessage` whose result names
+  `resumedAgentId`) is stale. Without this the first notification finished the
+  agent for good and every resumed turn ran invisibly (conv-1791379404-0sgk).
 - **its own turn ended** — the harness streams an assistant message in pieces with
   `stop_reason: null`, and only the last piece of an ended turn carries
   `end_turn` / `stop_sequence`. The tail read records it as the row's `turnEnded`
@@ -484,6 +493,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `agentCallForSubagent`
     - `agentCallJoin`
     - `agentCallsIn`
+    - `agentResumeTimes`
     - `classifyLastStep`
     - `describedSubagent`
     - `DescribedSubagentSchema`
@@ -491,6 +501,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `lastStepOfLines`
     - `LastStepSchema`
     - `newestTurnLineAt`
+    - `SEND_MESSAGE_TOOL_NAME`
     - `subagentActivity`
     - `SubagentActivityPayloadSchema`
     - `SubagentActivityRowSchema`

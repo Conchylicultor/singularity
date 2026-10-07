@@ -27,6 +27,7 @@ export { AGENT_TOOL_NAME, agentCallsIn, agentCallForSubagent } from "./join";
 export { classifyLastStep, lastStepOfLines, formatLastStep } from "./last-step";
 export { newestTurnLineAt, turnEndedOfLines } from "./turn-end";
 export { teammateIdleTimes } from "./teammate-idle";
+export { SEND_MESSAGE_TOOL_NAME, agentResumeTimes } from "./resume";
 export type { SubagentRunState, SubagentRunStateInput } from "./run-state";
 export { subagentRunState } from "./run-state";
 export type { SubagentReport } from "./report";

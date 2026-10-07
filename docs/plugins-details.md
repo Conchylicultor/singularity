@@ -12074,6 +12074,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `agentCallForSubagent`
                   - `agentCallJoin`
                   - `agentCallsIn`
+                  - `agentResumeTimes`
                   - `classifyLastStep`
                   - `describedSubagent`
                   - `DescribedSubagentSchema`
@@ -12081,6 +12082,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `lastStepOfLines`
                   - `LastStepSchema`
                   - `newestTurnLineAt`
+                  - `SEND_MESSAGE_TOOL_NAME`
                   - `subagentActivity`
                   - `SubagentActivityPayloadSchema`
                   - `SubagentActivityRowSchema`

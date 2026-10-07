@@ -29,6 +29,19 @@ export interface SubagentRunStateInput {
   agentToolEvent: ToolCallEvent | undefined;
   /** Every `task-notification` in the parent transcript — the BACKGROUND completion signal. */
   taskNotifications: readonly TaskNotificationEvent[];
+  /**
+   * The sub-agent's own id (the row's `agentId`). A notification for a RESUMED
+   * turn carries the id of the `SendMessage` that resumed it, not the original
+   * `Agent` call's, so it joins by its `task-id` — which is this id. Absent =
+   * no row yet.
+   */
+  agentId?: string;
+  /**
+   * When the parent last resumed this sub-agent with a `SendMessage`
+   * (`agentResumeTimes`). A completion signal older than this is stale: the
+   * agent is working on the resumed turn. Absent = never resumed.
+   */
+  resumedAt?: string;
   /** From the sub-agent's meta file. `undefined` = it has not landed yet. */
   requestShape: SubagentRequestShape | undefined;
   /**
@@ -76,6 +89,11 @@ export interface SubagentRunStateInput {
  * - **unknown shape** (meta not landed) — neither signal can be trusted to mean
  *   completion, so fall through.
  *
+ * Either completion is withdrawn by a later resume: a `SendMessage` to a
+ * stopped sub-agent starts a new turn under the same id, and only the
+ * notification that turn ends with (the newest one, joined by the agent's own
+ * id since it carries the `SendMessage`'s tool-use id) finishes it again.
+ *
  * Then the sub-agent's OWN transcript: the harness streams an assistant message
  * in pieces with `stop_reason: null`, and only the last piece of an ended turn
  * carries `end_turn`. For a sub-agent started by ANOTHER sub-agent this is the
@@ -114,17 +132,27 @@ export function subagentRunState(
   input: SubagentRunStateInput,
 ): SubagentRunState {
   const { toolUseId, agentToolEvent, taskNotifications, requestShape } = input;
+  const { agentId, resumedAt } = input;
+  // A completion recorded before the newest resume ended an EARLIER turn.
+  const current = (at: string) =>
+    resumedAt === undefined || Date.parse(at) >= Date.parse(resumedAt);
 
   if (input.workflowReported === true) return { kind: "finished" };
   if (
     toolResultIsOutcome(requestShape) &&
-    agentToolEvent?.result !== undefined
+    agentToolEvent?.result !== undefined &&
+    current(agentToolEvent.result.at)
   ) {
     return { kind: "finished" };
   }
   if (
     requestShape === "background" &&
-    taskNotifications.some((n) => n.toolUseId === toolUseId)
+    taskNotifications.some(
+      (n) =>
+        (n.toolUseId === toolUseId ||
+          (agentId !== undefined && n.taskId === agentId)) &&
+        current(n.at),
+    )
   ) {
     return { kind: "finished" };
   }
