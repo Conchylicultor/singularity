@@ -29082,6 +29082,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-picker`
               - `primitives/loading`
               - `primitives/metrics`
+              - `primitives/overlay/image-viewer`
               - `screenshot`
               - `stats/cost`
               - `stats/responsiveness`
@@ -29912,6 +29913,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/log-channels`
               - `primitives/metrics`
               - `primitives/metrics/chart-kit`
+              - `primitives/overlay/image-viewer`
               - `primitives/pane`
               - `primitives/syntax-highlight`
               - `review`
@@ -29945,6 +29947,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/audio/metronome`
               - `apps/sonata/recording`
               - `apps/sonata/track-mixer`
+              - `primitives/overlay/image-viewer`
         - **`space-ramp`** — The spacing ramp's one declaration: the closed step set and the literal class each step-keyed @utility family gives each step, generated from app.css so a step that exists in TypeScript but has no @utility behind it is unspellable. Read by every consumer (Stack, Inset, Column, railClass, Sticky, Pin) instead of re-spelling the steps.
           - Cross-plugin:
             - Imported by: `primitives/css/rail`
@@ -32784,6 +32787,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/map`
               - `primitives/command-palette`
               - `primitives/outline/rail`
+              - `primitives/overlay/image-viewer`
               - `primitives/syntax-highlight`
               - `primitives/tree`
               - `search/quick-find`
@@ -34736,7 +34740,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `HoverIntent`
               - `HoverIntentOptions`
             - Exports (values): `createHoverIntent`
-        - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+        - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
             - Uses:
               - `primitives/announce.announce`
@@ -34747,11 +34751,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/coords.placedClasses`
               - `primitives/css/coords.placedStyle`
               - `primitives/css/fill.Fill`
+              - `primitives/css/grid.Grid`
               - `primitives/css/layer.Layer`
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/rigid.Rigid`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/slider.Slider`
               - `primitives/css/spacing.selfClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -34763,6 +34771,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/css/yield.yieldClass`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/dom/scroll-reveal.useRevealOnActive`
               - `primitives/hover-reveal.hoverRevealGroup`
               - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
               - `primitives/icon-button.IconButton`
@@ -34771,6 +34780,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/networking.probeUrlStatus`
               - `primitives/overlay/tooltip.Kbd`
               - `primitives/overlay/tooltip.WithTooltip`
+              - `primitives/persistent-draft.readDraft`
+              - `primitives/persistent-draft.writeDraft`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/shortcuts.formatShortcutLabel`
               - `ui/icons.Icon`
@@ -34812,6 +34823,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports (types):
               - `Area`
+              - `GridMove`
               - `ImageCapabilities`
               - `KeyInput`
               - `Minimap`
@@ -34821,11 +34833,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ThumbnailShape`
               - `View`
               - `ViewerAction`
+              - `ViewerChrome`
               - `ViewerKey`
+              - `ViewerMode`
               - `WheelInput`
             - Exports (values):
               - `areaCenter`
               - `centerOn`
+              - `clampTile`
               - `clampView`
               - `COMPACT_BELOW`
               - `dataUriToBlob`
@@ -34834,6 +34849,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `extensionLength`
               - `fitScale`
               - `fitView`
+              - `gridMove`
               - `imageCapabilities`
               - `isAtScale`
               - `isZoomed`
@@ -34845,7 +34861,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `panView`
               - `splitForMiddleTruncate`
               - `stepScale`
+              - `stepTile`
+              - `STRIP_HEIGHT`
               - `thumbnailShape`
+              - `TILE_CAPTION_MIN`
+              - `TILE_DEFAULT`
+              - `TILE_MAX`
+              - `TILE_MIN`
               - `VIEWER_GESTURES`
               - `VIEWER_KEYS`
               - `viewerArea`
@@ -35545,6 +35567,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/dom/auto-scroll`
           - `primitives/launch`
           - `primitives/metrics`
+          - `primitives/overlay/image-viewer`
           - `primitives/usage-rank`
           - `tasks/task-draft-form`
       - Web:

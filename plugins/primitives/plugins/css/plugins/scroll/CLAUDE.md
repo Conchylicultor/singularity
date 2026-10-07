@@ -121,6 +121,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `primitives/log-channels`
     - `primitives/metrics`
     - `primitives/metrics/chart-kit`
+    - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `primitives/syntax-highlight`
     - `review`

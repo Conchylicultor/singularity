@@ -39,6 +39,7 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
     - `page/map`
     - `primitives/command-palette`
     - `primitives/outline/rail`
+    - `primitives/overlay/image-viewer`
     - `primitives/syntax-highlight`
     - `primitives/tree`
     - `search/quick-find`

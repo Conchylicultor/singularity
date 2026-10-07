@@ -13,7 +13,20 @@ export type ViewerAction =
   | "previous"
   | "next"
   | "copy"
-  | "shortcuts";
+  | "shortcuts"
+  | "toggle-strip"
+  | "toggle-grid"
+  | "slideshow"
+  | "row-up"
+  | "row-down"
+  | "open-selected";
+
+/**
+ * What the viewer is showing, as far as the keyboard is concerned: one image
+ * with its controls, the grid of every image, or the control-less slideshow.
+ * A key acts only in the modes its row lists.
+ */
+export type ViewerMode = "single" | "grid" | "slideshow";
 
 export interface ViewerKey {
   readonly action: ViewerAction;
@@ -29,7 +42,15 @@ export interface ViewerKey {
   readonly caps: readonly string[];
   /** What it does, for the shortcut sheet. */
   readonly description: string;
+  /** The modes the key acts in. A row for the grid alone is listed under its
+   *  own heading on the sheet. */
+  readonly in: readonly ViewerMode[];
 }
+
+const ALL: readonly ViewerMode[] = ["single", "grid", "slideshow"];
+const WITH_CONTROLS: readonly ViewerMode[] = ["single", "grid"];
+const SINGLE: readonly ViewerMode[] = ["single"];
+const GRID: readonly ViewerMode[] = ["grid"];
 
 export const VIEWER_KEYS: readonly ViewerKey[] = [
   {
@@ -37,14 +58,16 @@ export const VIEWER_KEYS: readonly ViewerKey[] = [
     keys: ["+", "="],
     mod: false,
     caps: ["+"],
-    description: "Zoom in",
+    description: "Zoom in · larger thumbnails in the grid",
+    in: WITH_CONTROLS,
   },
   {
     action: "zoom-out",
     keys: ["-", "_"],
     mod: false,
     caps: ["−"],
-    description: "Zoom out",
+    description: "Zoom out · smaller thumbnails in the grid",
+    in: WITH_CONTROLS,
   },
   {
     action: "fit",
@@ -52,6 +75,7 @@ export const VIEWER_KEYS: readonly ViewerKey[] = [
     mod: false,
     caps: ["0"],
     description: "Fit to screen",
+    in: SINGLE,
   },
   {
     action: "actual-size",
@@ -59,6 +83,7 @@ export const VIEWER_KEYS: readonly ViewerKey[] = [
     mod: false,
     caps: ["1"],
     description: "Actual size (100%)",
+    in: SINGLE,
   },
   {
     action: "previous",
@@ -66,6 +91,7 @@ export const VIEWER_KEYS: readonly ViewerKey[] = [
     mod: false,
     caps: ["←"],
     description: "Previous image",
+    in: ALL,
   },
   {
     action: "next",
@@ -73,6 +99,55 @@ export const VIEWER_KEYS: readonly ViewerKey[] = [
     mod: false,
     caps: ["→"],
     description: "Next image",
+    in: ALL,
+  },
+  {
+    action: "toggle-strip",
+    keys: ["s"],
+    mod: false,
+    caps: ["S"],
+    description: "Thumbnail strip",
+    in: WITH_CONTROLS,
+  },
+  {
+    action: "toggle-grid",
+    keys: ["g"],
+    mod: false,
+    caps: ["G"],
+    description: "Grid of every image",
+    in: WITH_CONTROLS,
+  },
+  {
+    action: "slideshow",
+    keys: ["f"],
+    mod: false,
+    caps: ["F"],
+    description: "Slideshow — full screen, no controls",
+    in: ALL,
+  },
+  {
+    action: "row-up",
+    keys: ["ArrowUp"],
+    mod: false,
+    caps: ["↑"],
+    description: "Image above",
+    in: GRID,
+  },
+  {
+    action: "row-down",
+    keys: ["ArrowDown"],
+    mod: false,
+    caps: ["↓"],
+    description: "Image below",
+    in: GRID,
+  },
+  {
+    action: "open-selected",
+    keys: ["Enter"],
+    mod: false,
+    caps: ["↵"],
+    description: "Open the selected image",
+    in: GRID,
   },
   {
     action: "copy",
@@ -80,6 +155,7 @@ export const VIEWER_KEYS: readonly ViewerKey[] = [
     mod: true,
     caps: ["mod", "C"],
     description: "Copy image",
+    in: ALL,
   },
   {
     action: "shortcuts",
@@ -87,6 +163,7 @@ export const VIEWER_KEYS: readonly ViewerKey[] = [
     mod: false,
     caps: ["?"],
     description: "Show shortcuts",
+    in: WITH_CONTROLS,
   },
   {
     action: "close",
@@ -94,6 +171,7 @@ export const VIEWER_KEYS: readonly ViewerKey[] = [
     mod: false,
     caps: ["Esc"],
     description: "Close",
+    in: ALL,
   },
 ];
 
@@ -104,6 +182,7 @@ export const VIEWER_GESTURES: readonly {
   readonly description: string;
 }[] = [
   { cap: "Click", description: "Close — or back to fit when zoomed" },
+  { cap: "Click", description: "Next image, in the slideshow" },
   { cap: "Scroll", description: "Zoom around the pointer" },
   { cap: "Drag", description: "Pan when zoomed" },
 ];
@@ -116,15 +195,20 @@ export interface KeyInput {
   readonly altKey: boolean;
 }
 
-/** The action a keydown triggers, or `undefined` when the viewer has no use
- *  for that key (and the browser should keep it). */
-export function matchViewerKey(e: KeyInput): ViewerAction | undefined {
+/** The action a keydown triggers in `mode`, or `undefined` when the viewer
+ *  has no use for that key there (and the browser should keep it). */
+export function matchViewerKey(
+  e: KeyInput,
+  mode: ViewerMode,
+): ViewerAction | undefined {
   const mod = e.metaKey || e.ctrlKey;
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  const hit = VIEWER_KEYS.find((k) =>
-    k.mod
-      ? mod && k.keys.includes(key)
-      : !mod && !e.altKey && k.keys.includes(key),
+  const hit = VIEWER_KEYS.find(
+    (k) =>
+      k.in.includes(mode) &&
+      (k.mod
+        ? mod && k.keys.includes(key)
+        : !mod && !e.altKey && k.keys.includes(key)),
   );
   return hit?.action;
 }

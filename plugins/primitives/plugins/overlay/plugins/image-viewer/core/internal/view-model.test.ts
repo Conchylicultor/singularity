@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   MAX_SCALE,
+  STRIP_HEIGHT,
   centerOn,
   clampView,
   extensionLength,
@@ -25,7 +26,7 @@ import {
 // is 1440 − 2·76 = 1288 wide and 900 − 64 − 76 = 760 tall.
 const area: Area = viewerArea(
   { width: 1440, height: 900 },
-  { navigable: true },
+  { navigable: true, chrome: "bars" },
 );
 const room = { width: 1288, height: 760 };
 
@@ -50,11 +51,36 @@ describe("viewerArea", () => {
 
   it("uses narrower side insets without arrows, and on a narrow window", () => {
     expect(
-      viewerArea({ width: 1440, height: 900 }, { navigable: false }).side,
+      viewerArea(
+        { width: 1440, height: 900 },
+        { navigable: false, chrome: "bars" },
+      ).side,
     ).toBe(32);
     expect(
-      viewerArea({ width: 400, height: 800 }, { navigable: true }).side,
+      viewerArea(
+        { width: 400, height: 800 },
+        { navigable: true, chrome: "bars" },
+      ).side,
     ).toBe(12);
+  });
+
+  it("lifts the bottom inset above a docked thumbnail strip", () => {
+    const a = viewerArea(
+      { width: 1440, height: 900 },
+      { navigable: true, chrome: "bars-and-strip" },
+    );
+    expect(a.bottom).toBe(76 + STRIP_HEIGHT);
+    expect(a.top).toBe(64);
+    expect(a.side).toBe(76);
+  });
+
+  it("takes no insets in the slideshow: the image may fill the screen", () => {
+    expect(
+      viewerArea(
+        { width: 1440, height: 900 },
+        { navigable: true, chrome: "none" },
+      ),
+    ).toEqual({ width: 1440, height: 900, top: 0, bottom: 0, side: 0 });
   });
 });
 
@@ -84,7 +110,10 @@ describe("fitScale", () => {
     expect(
       fitScale(
         screenshot,
-        viewerArea({ width: 0, height: 0 }, { navigable: false }),
+        viewerArea(
+          { width: 0, height: 0 },
+          { navigable: false, chrome: "bars" },
+        ),
       ),
     ).toBeGreaterThan(0);
   });

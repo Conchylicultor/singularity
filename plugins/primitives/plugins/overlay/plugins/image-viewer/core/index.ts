@@ -3,6 +3,7 @@ export {
   DRAG_THRESHOLD,
   MAX_SCALE,
   MINIMAP_BOX,
+  STRIP_HEIGHT,
   ZOOM_LADDER,
   areaCenter,
   centerOn,
@@ -28,8 +29,19 @@ export {
   type Size,
   type ThumbnailShape,
   type View,
+  type ViewerChrome,
   type WheelInput,
 } from "./internal/view-model";
+export {
+  TILE_CAPTION_MIN,
+  TILE_DEFAULT,
+  TILE_MAX,
+  TILE_MIN,
+  clampTile,
+  gridMove,
+  stepTile,
+  type GridMove,
+} from "./internal/grid";
 export {
   dataUriToBlob,
   dataUriType,
@@ -45,4 +57,5 @@ export {
   type KeyInput,
   type ViewerAction,
   type ViewerKey,
+  type ViewerMode,
 } from "./internal/keys";

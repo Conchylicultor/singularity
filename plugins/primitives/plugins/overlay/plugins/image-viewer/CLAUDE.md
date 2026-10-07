@@ -5,6 +5,29 @@ of its thumbnail, fitted to the window. Click it again to close; scroll or pinch
 to zoom, drag to pan (a click on a zoomed image goes back to fit), ← / → for the
 other images, Esc to close. Design and decisions: `research/2026-09-11-primitives-image-viewer.md`.
 
+With more than one image, the toolbar offers two more views
+(`research/2026-10-07-primitives-image-viewer-strip-grid-slideshow.md`):
+
+- **Thumbnail strip** (S) — every image docked as a band along the bottom edge,
+  the current one ringed. The image refits into the room above it: the band's
+  height is `STRIP_HEIGHT` (`core/`), which is also the bottom inset
+  `viewerArea` takes for `chrome: "bars-and-strip"`, so the two cannot disagree.
+- **Grid** (G) — every image as tiles; the zoom controls become a tile-size
+  slider (+ / −, ⌘-scroll or pinch too). ← → ↑ ↓ move the selection, Enter or a
+  click opens it. The selection *is* the caller's `index`: there is no second
+  "current image".
+
+**Slideshow** (F, top bar) is the browser's full screen on the viewer itself,
+with no controls at all: the image edge to edge on black (`chrome: "none"`),
+← / → or a click to step (looping), Esc — the browser's — to leave. The viewer
+mirrors `fullscreenchange` rather than tracking it, so leaving by any route
+brings the controls back. A refused request (a frame without `allowfullscreen`)
+says so in the status pill.
+
+The strip choice and the tile size are device-local preferences
+(`web/internal/view-prefs.ts`, via `persistent-draft`); the grid and the
+slideshow start fresh on every open.
+
 ## Which piece to use
 
 | You have | Use |
@@ -77,7 +100,7 @@ handler, the `?` sheet and the button tooltips all read.
 
 ## Plugin reference
 
-- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
 - Web:
   - Uses:
     - `primitives/announce.announce`
@@ -88,11 +111,15 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/css/coords.placedClasses`
     - `primitives/css/coords.placedStyle`
     - `primitives/css/fill.Fill`
+    - `primitives/css/grid.Grid`
     - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.Rigid`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/slider.Slider`
     - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -104,6 +131,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
     - `primitives/icon-button.IconButton`
@@ -112,6 +140,8 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/networking.probeUrlStatus`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/persistent-draft.readDraft`
+    - `primitives/persistent-draft.writeDraft`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/shortcuts.formatShortcutLabel`
     - `ui/icons.Icon`
@@ -153,6 +183,7 @@ handler, the `?` sheet and the button tooltips all read.
 - Core:
   - Exports (types):
     - `Area`
+    - `GridMove`
     - `ImageCapabilities`
     - `KeyInput`
     - `Minimap`
@@ -162,11 +193,14 @@ handler, the `?` sheet and the button tooltips all read.
     - `ThumbnailShape`
     - `View`
     - `ViewerAction`
+    - `ViewerChrome`
     - `ViewerKey`
+    - `ViewerMode`
     - `WheelInput`
   - Exports (values):
     - `areaCenter`
     - `centerOn`
+    - `clampTile`
     - `clampView`
     - `COMPACT_BELOW`
     - `dataUriToBlob`
@@ -175,6 +209,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `extensionLength`
     - `fitScale`
     - `fitView`
+    - `gridMove`
     - `imageCapabilities`
     - `isAtScale`
     - `isZoomed`
@@ -186,7 +221,13 @@ handler, the `?` sheet and the button tooltips all read.
     - `panView`
     - `splitForMiddleTruncate`
     - `stepScale`
+    - `stepTile`
+    - `STRIP_HEIGHT`
     - `thumbnailShape`
+    - `TILE_CAPTION_MIN`
+    - `TILE_DEFAULT`
+    - `TILE_MAX`
+    - `TILE_MIN`
     - `VIEWER_GESTURES`
     - `VIEWER_KEYS`
     - `viewerArea`

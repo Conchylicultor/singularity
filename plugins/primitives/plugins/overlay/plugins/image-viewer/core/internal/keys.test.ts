@@ -4,19 +4,24 @@ import {
   matchViewerKey,
   viewerKey,
   type ViewerAction,
+  type ViewerMode,
 } from "./keys";
 
 const press = (
   key: string,
   mods: Partial<{ metaKey: boolean; ctrlKey: boolean; altKey: boolean }> = {},
+  mode: ViewerMode = "single",
 ) =>
-  matchViewerKey({
-    key,
-    metaKey: false,
-    ctrlKey: false,
-    altKey: false,
-    ...mods,
-  });
+  matchViewerKey(
+    {
+      key,
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      ...mods,
+    },
+    mode,
+  );
 
 describe("matchViewerKey", () => {
   it("maps each documented key to its action", () => {
@@ -29,6 +34,26 @@ describe("matchViewerKey", () => {
     expect(press("ArrowLeft")).toBe("previous");
     expect(press("ArrowRight")).toBe("next");
     expect(press("?")).toBe("shortcuts");
+    expect(press("s")).toBe("toggle-strip");
+    expect(press("G")).toBe("toggle-grid");
+    expect(press("f")).toBe("slideshow");
+  });
+
+  it("acts only in the modes a key's row lists", () => {
+    // ↑ / ↓ / Enter move and open in the grid; the single view leaves them alone.
+    expect(press("ArrowDown")).toBeUndefined();
+    expect(press("Enter")).toBeUndefined();
+    expect(press("ArrowDown", {}, "grid")).toBe("row-down");
+    expect(press("ArrowUp", {}, "grid")).toBe("row-up");
+    expect(press("Enter", {}, "grid")).toBe("open-selected");
+    // Fit and 1:1 mean nothing over a grid of tiles.
+    expect(press("0", {}, "grid")).toBeUndefined();
+    expect(press("+", {}, "grid")).toBe("zoom-in");
+    // The slideshow has no controls to toggle: only stepping, copy and leaving.
+    expect(press("ArrowRight", {}, "slideshow")).toBe("next");
+    expect(press("f", {}, "slideshow")).toBe("slideshow");
+    expect(press("g", {}, "slideshow")).toBeUndefined();
+    expect(press("+", {}, "slideshow")).toBeUndefined();
   });
 
   it("copies on ⌘C and Ctrl+C, but not on a bare C", () => {
@@ -61,6 +86,12 @@ describe("VIEWER_KEYS", () => {
       "next",
       "copy",
       "shortcuts",
+      "toggle-strip",
+      "toggle-grid",
+      "slideshow",
+      "row-up",
+      "row-down",
+      "open-selected",
     ];
     expect(VIEWER_KEYS.map((k) => k.action).sort()).toEqual(
       [...actions].sort(),
@@ -69,6 +100,7 @@ describe("VIEWER_KEYS", () => {
       const k = viewerKey(a);
       expect(k.caps.length).toBeGreaterThan(0);
       expect(k.description.length).toBeGreaterThan(0);
+      expect(k.in.length).toBeGreaterThan(0);
     }
   });
 });

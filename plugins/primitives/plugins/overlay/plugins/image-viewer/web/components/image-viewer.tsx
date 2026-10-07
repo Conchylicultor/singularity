@@ -25,12 +25,15 @@ import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/eleme
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   COMPACT_BELOW,
+  gridMove,
   imageCapabilities,
   isZoomed,
   matchViewerKey,
+  type GridMove,
   type Rect,
   type Size,
   type ViewerAction,
+  type ViewerMode,
 } from "../../core";
 import {
   copyImage,
@@ -41,6 +44,9 @@ import { createStageGestures } from "../internal/stage-gestures";
 import { sameImage, type ViewerImage } from "../internal/types";
 import { createViewController } from "../internal/view-controller";
 import { ViewStore, readMeta, type ViewState } from "../internal/view-store";
+import { writeViewPrefs } from "../internal/view-prefs";
+import { ImageGrid } from "./viewer-grid";
+import { ThumbnailStrip } from "./viewer-strip";
 import {
   BottomBar,
   HOVERED_CHROME,
@@ -160,6 +166,27 @@ function restoreFocus(origin: Element | null, previous: Element | null) {
   target?.focus({ preventScroll: true });
 }
 
+/** The keyboard's mode for a state: the slideshow outranks the layout. */
+function modeOf(s: ViewState): ViewerMode {
+  return s.slideshow ? "slideshow" : s.layout;
+}
+
+/** A focused control owns these keys itself: a button's Enter / Space click,
+ *  the slider's arrows. Only Esc still reaches the viewer from one. */
+function ownedByFocusedControl(e: ReactKeyboardEvent): boolean {
+  const t = e.target;
+  if (e.key === "Escape") return false;
+  if (t instanceof HTMLInputElement) return true;
+  return t instanceof HTMLButtonElement && (e.key === "Enter" || e.key === " ");
+}
+
+/** The grid's column count, read from the laid-out track list (the browser
+ *  decides how many `auto-fill` tracks fit). */
+function columnsOf(grid: HTMLElement | null): number {
+  if (!grid) return 1;
+  return getComputedStyle(grid).gridTemplateColumns.split(" ").length;
+}
+
 /** `images[index]`, or a loud failure: an index outside the list is a caller bug. */
 function imageAt(images: readonly ViewerImage[], index: number): ViewerImage {
   const image = images[index];
@@ -237,6 +264,8 @@ function ViewerFrame({
   // --- closing -------------------------------------------------------------
   const requestClose = useEventCallback(() => {
     if (store.getState().phase === "closing") return;
+    if (document.fullscreenElement === rootRef.current)
+      void document.exitFullscreen();
     ctl.beginClose();
     const shrinks = store.getState().imageVisible && !prefersReducedMotion();
     later(
@@ -247,8 +276,32 @@ function ViewerFrame({
       shrinks ? CLOSE_MS : FADE_MS,
     );
   });
+  const goTo = useEventCallback((next: number) => {
+    if (
+      next === index ||
+      next < 0 ||
+      next >= images.length ||
+      store.getState().phase === "closing"
+    )
+      return;
+    onIndexChange(next);
+  });
+  // The slideshow loops; the single view stops at either end (its spent arrow
+  // disappears).
+  const go = useEventCallback((delta: 1 | -1) => {
+    if (store.getState().slideshow && images.length > 1)
+      goTo((index + delta + images.length) % images.length);
+    else goTo(index + delta);
+  });
+
+  // A plain click closes — except in the slideshow, where it advances
+  // (wrapping round), as a slideshow's click does.
+  const plainClick = useEventCallback(() => {
+    if (store.getState().slideshow) goTo((index + 1) % images.length);
+    else requestClose();
+  });
   const [gestures] = useState(() =>
-    createStageGestures(ctl, store, requestClose),
+    createStageGestures(ctl, store, plainClick),
   );
 
   // --- the image on screen -------------------------------------------------
@@ -419,35 +472,104 @@ function ViewerFrame({
       openOriginal(shown.image.src, capabilities.open);
   });
 
-  const go = useEventCallback((delta: 1 | -1) => {
-    const next = index + delta;
-    if (
-      next < 0 ||
-      next >= images.length ||
-      store.getState().phase === "closing"
-    )
-      return;
-    onIndexChange(next);
+  // --- grid ----------------------------------------------------------------
+  const gridRef = useRef<HTMLElement | null>(null);
+  const moveInGrid = useEventCallback((move: GridMove) =>
+    goTo(gridMove(index, move, columnsOf(gridRef.current), images.length)),
+  );
+  const openFromGrid = useEventCallback((i: number) => {
+    goTo(i);
+    ctl.setLayout("single");
+    rootRef.current?.focus({ preventScroll: true });
   });
 
+  // --- slideshow: the browser's full screen, on the viewer itself ----------
+  const toggleSlideshow = useEventCallback(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+      return;
+    }
+    if (!document.fullscreenEnabled) {
+      feedback("Full screen isn't allowed here");
+      return;
+    }
+    root.requestFullscreen().catch((err: unknown) => {
+      // The one refusal a user can cause: the browser denies the request
+      // (no user activation, or a frame without allowfullscreen).
+      if (
+        err instanceof TypeError ||
+        (err instanceof DOMException && err.name === "NotAllowedError")
+      ) {
+        feedback("Full screen isn't allowed here");
+        return;
+      }
+      throw err;
+    });
+  });
+  // The browser owns leaving (Esc, a gesture): mirror its state, never assume.
+  useEffect(() => {
+    const sync = () =>
+      ctl.setSlideshow(
+        document.fullscreenElement !== null &&
+          document.fullscreenElement === rootRef.current,
+      );
+    const root = rootRef.current;
+    document.addEventListener("fullscreenchange", sync);
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      if (root && document.fullscreenElement === root)
+        void document.exitFullscreen();
+    };
+  }, [ctl]);
+
+  // --- device-local preferences: the strip and the tile size ---------------
+  useEffect(() => {
+    let last = store.getState();
+    return store.subscribe(() => {
+      const s = store.getState();
+      if (s.strip !== last.strip || s.tile !== last.tile)
+        writeViewPrefs({ strip: s.strip, tile: s.tile });
+      last = s;
+    });
+  }, [store]);
+
   const run = useEventCallback((action: ViewerAction) => {
+    const grid = store.getState().layout === "grid";
     switch (action) {
       case "close":
         if (store.getState().sheet) ctl.setSheet(false);
         else requestClose();
         return;
       case "zoom-in":
-        return ctl.step(1);
+        return grid ? ctl.stepTile(1) : ctl.step(1);
       case "zoom-out":
-        return ctl.step(-1);
+        return grid ? ctl.stepTile(-1) : ctl.step(-1);
       case "fit":
         return ctl.toFit(true);
       case "actual-size":
         return ctl.actualSize();
       case "previous":
-        return go(-1);
+        return grid ? moveInGrid("left") : go(-1);
       case "next":
-        return go(1);
+        return grid ? moveInGrid("right") : go(1);
+      case "row-up":
+        return moveInGrid("up");
+      case "row-down":
+        return moveInGrid("down");
+      case "open-selected":
+        return openFromGrid(index);
+      case "toggle-strip":
+        if (grid) {
+          ctl.setLayout("single");
+          ctl.setStrip(true);
+        } else ctl.setStrip(!store.getState().strip);
+        return;
+      case "toggle-grid":
+        return ctl.setLayout(grid ? "single" : "grid");
+      case "slideshow":
+        return toggleSlideshow();
       case "copy":
         void copy();
         return;
@@ -467,8 +589,8 @@ function ViewerFrame({
     if (store.getState().idle) flushSync(() => ctl.setIdle(false));
     if (e.key === "Tab") {
       if (rootRef.current) cycleFocus(e, rootRef.current);
-    } else {
-      const action = matchViewerKey(e);
+    } else if (!ownedByFocusedControl(e)) {
+      const action = matchViewerKey(e, modeOf(store.getState()));
       if (action) {
         e.preventDefault();
         run(action);
@@ -491,6 +613,22 @@ function ViewerFrame({
   const dragging = ViewStore.useSelector((s) => s.dragging, []);
   const natural = ViewStore.useSelector((s) => s.natural, []);
   const failed = ViewStore.useSelector((s) => s.failed, []);
+  const layout = ViewStore.useSelector((s) => s.layout, []);
+  const slideshow = ViewStore.useSelector((s) => s.slideshow, []);
+  const strip = ViewStore.useSelector((s) => s.strip, []);
+  const tile = ViewStore.useSelector((s) => s.tile, []);
+  const area = ViewStore.useSelector((s) => s.area, []);
+  const single = layout === "single";
+  const stripShown = strip && single && !slideshow && navigable;
+
+  // A view change can unmount the focused control (a strip thumbnail, a grid
+  // tile). Focus would fall to <body>, outside the viewer's key handler — so
+  // take it back to the viewer root.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (root && !root.contains(document.activeElement))
+      root.focus({ preventScroll: true });
+  }, [layout, stripShown, slideshow]);
 
   return (
     <ViewportOverlay
@@ -516,17 +654,25 @@ function ViewerFrame({
       <Layer
         className="dark group/viewer text-foreground"
         data-phase={phase}
-        data-chrome={phase !== "open" || idle ? "hidden" : "shown"}
+        data-chrome={phase !== "open" || idle || slideshow ? "hidden" : "shown"}
         data-zoomed={zoomed}
         data-dragging={dragging}
+        data-slideshow={slideshow}
       >
+        {/* The slideshow is the image alone on black, edge to edge. */}
         <Layer
           decorative
-          className="bg-background/95 opacity-0 transition-opacity duration-300 group-data-[phase=open]/viewer:opacity-100"
+          className="bg-background/95 opacity-0 transition-opacity duration-300 group-data-[phase=open]/viewer:opacity-100 group-data-[slideshow=true]/viewer:bg-black"
         />
         <Layer
           ref={stageRef}
-          className="touch-none select-none group-data-[zoomed=true]/viewer:cursor-grab group-data-[dragging=true]/viewer:cursor-grabbing"
+          // Kept laid out under the grid (invisible, not removed), so the stage
+          // stays measured and the image is where it was when the grid closes.
+          className={cn(
+            "touch-none select-none group-data-[zoomed=true]/viewer:cursor-grab group-data-[dragging=true]/viewer:cursor-grabbing",
+            "group-data-[slideshow=true]/viewer:cursor-none",
+            !single && "invisible",
+          )}
           onPointerDown={(e) =>
             gestures.pointerDown(e.nativeEvent, e.currentTarget, imgRef.current)
           }
@@ -566,6 +712,7 @@ function ViewerFrame({
               placedClasses(),
               "max-w-none origin-top-left cursor-zoom-out shadow-2xl will-change-transform",
               "group-data-[zoomed=true]/viewer:cursor-grab group-data-[dragging=true]/viewer:cursor-grabbing",
+              "group-data-[slideshow=true]/viewer:cursor-none group-data-[slideshow=true]/viewer:shadow-none",
             )}
             style={{
               ...placedStyle({ start: 0 }, { start: 0 }),
@@ -575,6 +722,21 @@ function ViewerFrame({
             }}
           />
         </Layer>
+        {layout === "grid" && (
+          <ImageGrid
+            images={images}
+            index={index}
+            tile={tile}
+            area={area}
+            gridRef={gridRef}
+            onSelect={goTo}
+            onOpen={openFromGrid}
+            onResize={(factor) => ctl.setTile(tile * factor)}
+          />
+        )}
+        {stripShown && (
+          <ThumbnailStrip images={images} index={index} onSelect={goTo} />
+        )}
         <ControlSizeProvider size="md">
           <TopBar
             image={shown.image}
@@ -585,16 +747,22 @@ function ViewerFrame({
             onOpen={open}
             onCopy={copy}
             onDownload={download}
+            onSlideshow={toggleSlideshow}
             onClose={requestClose}
           />
-          <NavArrows
-            index={index}
-            count={images.length}
-            onPrevious={() => go(-1)}
-            onNext={() => go(1)}
-          />
-          <BottomBar ctl={ctl} />
-          {!compact && <Minimap image={shown.image} ctl={ctl} />}
+          {single && (
+            <NavArrows
+              index={index}
+              count={images.length}
+              lifted={stripShown}
+              onPrevious={() => go(-1)}
+              onNext={() => go(1)}
+            />
+          )}
+          <BottomBar ctl={ctl} count={images.length} />
+          {!compact && single && (
+            <Minimap image={shown.image} ctl={ctl} lifted={stripShown} />
+          )}
         </ControlSizeProvider>
       </Layer>
     </ViewportOverlay>

@@ -55,6 +55,19 @@ export const ZOOM_LADDER: readonly number[] = [
   0.05, 0.1, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 12, 16,
 ];
 
+/** The docked thumbnail strip's height: the band's CSS height and the inset it
+ *  takes from the bottom of the stage are both this one number. */
+export const STRIP_HEIGHT = 84;
+
+/**
+ * What covers the stage's edges, and so how far in the image must stay:
+ *
+ * - `bars` — the top bar, the bottom toolbar (and side arrows when navigable);
+ * - `bars-and-strip` — the same, with the thumbnail strip docked below the toolbar;
+ * - `none` — the slideshow: nothing at all, the image may fill the screen.
+ */
+export type ViewerChrome = "bars" | "bars-and-strip" | "none";
+
 /** Below this stage width the viewer drops to its compact layout. */
 export const COMPACT_BELOW = 620;
 
@@ -75,8 +88,21 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
-/** The area for a stage of `stage` size. `navigable` = the side arrows show. */
-export function viewerArea(stage: Size, opts: { navigable: boolean }): Area {
+/** The area for a stage of `stage` size. `navigable` = the side arrows show;
+ *  `chrome` = what else covers the edges. */
+export function viewerArea(
+  stage: Size,
+  opts: { navigable: boolean; chrome: ViewerChrome },
+): Area {
+  if (opts.chrome === "none") {
+    return {
+      width: stage.width,
+      height: stage.height,
+      top: 0,
+      bottom: 0,
+      side: 0,
+    };
+  }
   const side =
     stage.width < COMPACT_BELOW
       ? INSETS.compactSide
@@ -87,7 +113,8 @@ export function viewerArea(stage: Size, opts: { navigable: boolean }): Area {
     width: stage.width,
     height: stage.height,
     top: INSETS.top,
-    bottom: INSETS.bottom,
+    bottom:
+      INSETS.bottom + (opts.chrome === "bars-and-strip" ? STRIP_HEIGHT : 0),
     side,
   };
 }

@@ -35,8 +35,9 @@ function distance(a: Point, b: Point): number {
 /**
  * Pointer and wheel input on the stage, turned into controller calls:
  *
- * - a click closes, on the image or the backdrop — unless zoomed, where a
- *   click on the image returns to fit and one on the backdrop is just a miss;
+ * - a plain click (on the image or the backdrop, not zoomed) goes to
+ *   `onPlainClick` — the viewer closes, or in the slideshow advances; zoomed,
+ *   a click on the image returns to fit and one on the backdrop is just a miss;
  * - a drag pans (only when zoomed: at fit there is nothing to pan to);
  * - two pointers pinch-zoom around their midpoint;
  * - the wheel zooms around the pointer.
@@ -47,7 +48,7 @@ function distance(a: Point, b: Point): number {
 export function createStageGestures(
   ctl: ViewController,
   store: ScopedStore<ViewState>,
-  onDismiss: () => void,
+  onPlainClick: () => void,
 ) {
   const pointers = new Map<number, Point>();
   let press: Press | null = null;
@@ -67,7 +68,7 @@ export function createStageGestures(
     const p = press;
     press = null;
     if (!p || p.moved || !isUp) return;
-    if (!ctl.isZoomed()) onDismiss();
+    if (!ctl.isZoomed()) onPlainClick();
     else if (p.onImage) ctl.toFit(true);
   }
 

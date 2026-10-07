@@ -25,8 +25,12 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import {
   MAX_SCALE,
+  STRIP_HEIGHT,
+  TILE_MAX,
+  TILE_MIN,
   VIEWER_GESTURES,
   VIEWER_KEYS,
   fitScale,
@@ -51,6 +55,11 @@ const closeIcon = symbol("close");
 const contentCopyIcon = symbol("content-copy");
 const downloadIcon = symbol("download");
 const fitScreenIcon = symbol("fit-screen");
+const gridIcon = symbol("grid-view");
+const gridSmallIcon = symbol("grid-on");
+const imageIcon = symbol("image");
+const slideshowIcon = symbol("slideshow");
+const stripIcon = symbol("view-carousel");
 const keyboardIcon = symbol("keyboard");
 const openInNewIcon = symbol("open-in-new");
 const removeIcon = symbol("remove");
@@ -62,7 +71,10 @@ const removeIcon = symbol("remove");
  * same `--popover` tone, so the surface's `--hover-fill` still tells the truth
  * about what a ghost button hovers to).
  */
-const PANEL = cn(SURFACE_LEVELS.overlay, "bg-popover/80 backdrop-blur-md");
+export const PANEL = cn(
+  SURFACE_LEVELS.overlay,
+  "bg-popover/80 backdrop-blur-md",
+);
 
 /**
  * Every control fades together: before the open settles, while closing, and
@@ -89,6 +101,7 @@ export function TopBar({
   onOpen,
   onCopy,
   onDownload,
+  onSlideshow,
   onClose,
 }: {
   image: ViewerImage;
@@ -99,6 +112,7 @@ export function TopBar({
   onOpen(): void;
   onCopy(): Promise<void>;
   onDownload(): void;
+  onSlideshow(): void;
   onClose(): void;
 }) {
   const natural = ViewStore.useSelector((s) => s.natural, []);
@@ -124,47 +138,61 @@ export function TopBar({
             )}
           </Line>
           <Fill />
-          {capabilities.open !== "none" ||
-          capabilities.copy ||
-          capabilities.download ? (
-            <Line
-              data-viewer-chrome
-              className={cn(PANEL, "pointer-events-auto gap-2xs p-2xs")}
-            >
-              {capabilities.open !== "none" && (
-                <IconButton
-                  icon={openInNewIcon}
-                  label="Open original in a new tab"
-                  onClick={onOpen}
-                />
-              )}
-              {capabilities.copy && (
-                <IconButton
-                  icon={contentCopyIcon}
-                  label="Copy image"
-                  tooltip={keyTooltip("Copy image", "copy")}
-                  disabled={natural === null}
-                  onClick={onCopy}
-                />
-              )}
-              {capabilities.download && (
-                <IconButton
-                  icon={downloadIcon}
-                  label="Download"
-                  onClick={onDownload}
-                />
-              )}
-            </Line>
-          ) : null}
-          {count > 1 && !compact && (
-            <Text variant="caption" tone="muted" className="tabular-nums">
-              {index + 1} / {count}
-            </Text>
-          )}
+          {/* One control group: where you are, what you can do with this
+              image, then leaving it — read left to right. */}
           <Line
             data-viewer-chrome
-            className={cn(PANEL, "pointer-events-auto p-2xs")}
+            className={cn(PANEL, "pointer-events-auto gap-2xs p-2xs")}
           >
+            {count > 1 && !compact && (
+              <>
+                <Text
+                  variant="caption"
+                  tone="muted"
+                  className="px-sm tabular-nums"
+                >
+                  {index + 1} / {count}
+                </Text>
+                <Separator orientation="vertical" className="h-4" />
+              </>
+            )}
+            {capabilities.open !== "none" && (
+              <IconButton
+                icon={openInNewIcon}
+                label="Open original in a new tab"
+                onClick={onOpen}
+              />
+            )}
+            {capabilities.copy && (
+              <IconButton
+                icon={contentCopyIcon}
+                label="Copy image"
+                tooltip={keyTooltip("Copy image", "copy")}
+                disabled={natural === null}
+                onClick={onCopy}
+              />
+            )}
+            {capabilities.download && (
+              <IconButton
+                icon={downloadIcon}
+                label="Download"
+                onClick={onDownload}
+              />
+            )}
+            {(capabilities.open !== "none" ||
+              capabilities.copy ||
+              capabilities.download) && (
+              <Separator orientation="vertical" className="h-4" />
+            )}
+            <IconButton
+              icon={slideshowIcon}
+              label="Slideshow"
+              tooltip={keyTooltip(
+                "Slideshow — full screen, no controls",
+                "slideshow",
+              )}
+              onClick={onSlideshow}
+            />
             <IconButton
               icon={closeIcon}
               label="Close"
@@ -190,21 +218,31 @@ export function TopBar({
 export function NavArrows({
   index,
   count,
+  lifted,
   onPrevious,
   onNext,
 }: {
   index: number;
   count: number;
+  /** The thumbnail strip is docked: centre on the room above it. */
+  lifted: boolean;
   onPrevious(): void;
   onNext(): void;
 }) {
   if (count < 2) return null;
+  const lift = lifted ? { marginTop: -STRIP_HEIGHT / 2 } : undefined;
   // A spent arrow disappears instead of greying out: there is nothing on that
   // side, and a dimmed arrow would still read as a way to go.
   const arrow = cn(PANEL, "disabled:opacity-0");
   return (
     <ControlSizeProvider size="lg">
-      <Pin to="left" offset="md" className={CHROME_FADE} data-viewer-chrome>
+      <Pin
+        to="left"
+        offset="md"
+        className={CHROME_FADE}
+        style={lift}
+        data-viewer-chrome
+      >
         <IconButton
           icon={chevronLeftIcon}
           label="Previous image"
@@ -215,7 +253,13 @@ export function NavArrows({
           onClick={onPrevious}
         />
       </Pin>
-      <Pin to="right" offset="md" className={CHROME_FADE} data-viewer-chrome>
+      <Pin
+        to="right"
+        offset="md"
+        className={CHROME_FADE}
+        style={lift}
+        data-viewer-chrome
+      >
         <IconButton
           icon={chevronRightIcon}
           label="Next image"
@@ -237,10 +281,121 @@ function fitOf(s: ViewState): number | null {
 
 const HINT = "Click to close · Scroll to zoom · Drag to pan";
 
-/** The zoom toolbar at the bottom: − 62% + | Fit 1:1 | ⌨, with the shortcut
- *  sheet and the first-open hint stacked above it. */
-export function BottomBar({ ctl }: { ctl: ViewController }) {
+/** The toolbar at the bottom: the view toggles (strip, grid) when there is
+ *  more than one image, then − 62% + | Fit 1:1 — or, over the grid, the
+ *  tile-size slider — then ⌨, with the shortcut sheet and the first-open hint
+ *  stacked above it. Rides above the thumbnail strip when that is docked. */
+export function BottomBar({
+  ctl,
+  count,
+}: {
+  ctl: ViewController;
+  count: number;
+}) {
   const hint = ViewStore.useSelector((s) => s.hint, []);
+  const layout = ViewStore.useSelector((s) => s.layout, []);
+  const strip = ViewStore.useSelector((s) => s.strip, []);
+  const tile = ViewStore.useSelector((s) => s.tile, []);
+  const grid = layout === "grid";
+  const stripShown = strip && !grid && count > 1;
+  const sheet = ViewStore.useSelector((s) => s.sheet, []);
+
+  return (
+    <Pin
+      to="bottom"
+      offset="lg"
+      decorative
+      className={cn(CHROME_FADE, "transition-[opacity,visibility,margin]")}
+      style={stripShown ? { marginBottom: STRIP_HEIGHT } : undefined}
+    >
+      <Stack gap="sm" align="center">
+        {sheet && <ShortcutSheet />}
+        {hint && !grid && (
+          <Text
+            variant="label"
+            className={cn(PANEL, "rounded-full px-md py-xs")}
+          >
+            {HINT}
+          </Text>
+        )}
+        <Line
+          data-viewer-chrome
+          className={cn(PANEL, "pointer-events-auto gap-2xs p-2xs")}
+        >
+          {count > 1 && (
+            <>
+              <IconButton
+                icon={stripIcon}
+                label="Thumbnail strip"
+                tooltip={keyTooltip("Thumbnail strip", "toggle-strip")}
+                aria-pressed={stripShown}
+                className="aria-pressed:bg-hover-fill"
+                onClick={() => {
+                  // From the grid the strip button means "one image, strip
+                  // docked": it never undocks on the way out of the grid.
+                  if (grid) {
+                    ctl.setLayout("single");
+                    ctl.setStrip(true);
+                  } else ctl.setStrip(!strip);
+                }}
+              />
+              <IconButton
+                icon={gridIcon}
+                label="Grid of every image"
+                tooltip={keyTooltip("Grid of every image", "toggle-grid")}
+                aria-pressed={grid}
+                className="aria-pressed:bg-hover-fill"
+                onClick={() => ctl.setLayout(grid ? "single" : "grid")}
+              />
+              <Separator orientation="vertical" className="h-4" />
+            </>
+          )}
+          {grid ? (
+            <>
+              <IconButton
+                icon={gridSmallIcon}
+                label="Smaller thumbnails"
+                tooltip={keyTooltip("Smaller thumbnails", "zoom-out")}
+                disabled={tile <= TILE_MIN}
+                onClick={() => ctl.stepTile(-1)}
+              />
+              <Slider
+                value={tile}
+                min={TILE_MIN}
+                max={TILE_MAX}
+                step={4}
+                aria-label="Thumbnail size"
+                className="w-28"
+                onValueChange={(v) => ctl.setTile(v)}
+              />
+              <IconButton
+                icon={imageIcon}
+                label="Larger thumbnails"
+                tooltip={keyTooltip("Larger thumbnails", "zoom-in")}
+                disabled={tile >= TILE_MAX}
+                onClick={() => ctl.stepTile(1)}
+              />
+            </>
+          ) : (
+            <ZoomControls ctl={ctl} />
+          )}
+          <Separator orientation="vertical" className="h-4" />
+          <IconButton
+            icon={keyboardIcon}
+            label="Keyboard shortcuts"
+            tooltip={keyTooltip("Keyboard shortcuts", "shortcuts")}
+            aria-pressed={sheet}
+            className="aria-pressed:bg-hover-fill"
+            onClick={() => ctl.setSheet(!sheet)}
+          />
+        </Line>
+      </Stack>
+    </Pin>
+  );
+}
+
+/** − 62% + | Fit 1:1 — the single image's zoom group. */
+function ZoomControls({ ctl }: { ctl: ViewController }) {
   const percent = ViewStore.useSelector(
     (s) => Math.round(s.view.scale * 100),
     [],
@@ -261,75 +416,48 @@ export function BottomBar({ ctl }: { ctl: ViewController }) {
     (s) => s.natural !== null && s.view.scale < MAX_SCALE - 1e-3,
     [],
   );
-  const sheet = ViewStore.useSelector((s) => s.sheet, []);
-
   return (
-    <Pin to="bottom" offset="lg" decorative className={CHROME_FADE}>
-      <Stack gap="sm" align="center">
-        {sheet && <ShortcutSheet />}
-        {hint && (
-          <Text
-            variant="label"
-            className={cn(PANEL, "rounded-full px-md py-xs")}
-          >
-            {HINT}
-          </Text>
-        )}
-        <Line
-          data-viewer-chrome
-          className={cn(PANEL, "pointer-events-auto gap-2xs p-2xs")}
+    <>
+      <IconButton
+        icon={removeIcon}
+        label="Zoom out"
+        tooltip={keyTooltip("Zoom out", "zoom-out")}
+        disabled={!canZoomOut}
+        onClick={() => ctl.step(-1)}
+      />
+      <Text variant="label" className="w-12 text-center tabular-nums">
+        {percent}%
+      </Text>
+      <IconButton
+        icon={addIcon}
+        label="Zoom in"
+        tooltip={keyTooltip("Zoom in", "zoom-in")}
+        disabled={!canZoomIn}
+        onClick={() => ctl.step(1)}
+      />
+      <Separator orientation="vertical" className="h-4" />
+      <WithTooltip content={keyTooltip("Fit to screen", "fit")}>
+        <Button
+          variant="ghost"
+          aria-pressed={atFit}
+          className="aria-pressed:bg-hover-fill"
+          onClick={() => ctl.toFit(true)}
         >
-          <IconButton
-            icon={removeIcon}
-            label="Zoom out"
-            tooltip={keyTooltip("Zoom out", "zoom-out")}
-            disabled={!canZoomOut}
-            onClick={() => ctl.step(-1)}
-          />
-          <Text variant="label" className="w-12 text-center tabular-nums">
-            {percent}%
-          </Text>
-          <IconButton
-            icon={addIcon}
-            label="Zoom in"
-            tooltip={keyTooltip("Zoom in", "zoom-in")}
-            disabled={!canZoomIn}
-            onClick={() => ctl.step(1)}
-          />
-          <Separator orientation="vertical" className="h-4" />
-          <WithTooltip content={keyTooltip("Fit to screen", "fit")}>
-            <Button
-              variant="ghost"
-              aria-pressed={atFit}
-              className="aria-pressed:bg-hover-fill"
-              onClick={() => ctl.toFit(true)}
-            >
-              <Icon icon={fitScreenIcon} />
-              Fit
-            </Button>
-          </WithTooltip>
-          <WithTooltip content={keyTooltip("Actual size", "actual-size")}>
-            <Button
-              variant="ghost"
-              aria-pressed={atActual}
-              className="tabular-nums aria-pressed:bg-hover-fill"
-              onClick={() => ctl.actualSize()}
-            >
-              1:1
-            </Button>
-          </WithTooltip>
-          <Separator orientation="vertical" className="h-4" />
-          <IconButton
-            icon={keyboardIcon}
-            label="Keyboard shortcuts"
-            tooltip={keyTooltip("Keyboard shortcuts", "shortcuts")}
-            aria-pressed={sheet}
-            className="aria-pressed:bg-hover-fill"
-            onClick={() => ctl.setSheet(!sheet)}
-          />
-        </Line>
-      </Stack>
-    </Pin>
+          <Icon icon={fitScreenIcon} />
+          Fit
+        </Button>
+      </WithTooltip>
+      <WithTooltip content={keyTooltip("Actual size", "actual-size")}>
+        <Button
+          variant="ghost"
+          aria-pressed={atActual}
+          className="tabular-nums aria-pressed:bg-hover-fill"
+          onClick={() => ctl.actualSize()}
+        >
+          1:1
+        </Button>
+      </WithTooltip>
+    </>
   );
 }
 
@@ -393,9 +521,12 @@ function sameSize(a: Size | null, b: Size | null): boolean {
 export function Minimap({
   image,
   ctl,
+  lifted,
 }: {
   image: ViewerImage;
   ctl: ViewController;
+  /** The thumbnail strip is docked: sit above it. */
+  lifted: boolean;
 }) {
   const store = ViewStore.useStoreApi();
   const size = ViewStore.useSelector(
@@ -442,6 +573,7 @@ export function Minimap({
       to="bottom-right"
       offset="lg"
       className={CHROME_FADE}
+      style={lifted ? { marginBottom: STRIP_HEIGHT } : undefined}
       data-viewer-chrome
     >
       <Clip

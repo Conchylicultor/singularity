@@ -1,5 +1,6 @@
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 import type { Area, Size, View } from "../../core";
+import { readViewPrefs } from "./view-prefs";
 
 /**
  * - `opening` — mounted; growing out of the thumbnail (or fading in).
@@ -40,6 +41,15 @@ export interface ViewState {
   readonly status: string | null;
   /** The first-open hint ("Click to close · …") is showing. */
   readonly hint: boolean;
+  /** One image on the stage, or every image as a grid of tiles. */
+  readonly layout: "single" | "grid";
+  /** The user wants the thumbnail strip docked below the single image. It
+   *  shows only in the single layout, outside the slideshow, with 2+ images. */
+  readonly strip: boolean;
+  /** Full screen with no controls — mirrors the browser's full-screen state. */
+  readonly slideshow: boolean;
+  /** The grid's tile width, px (the slider's value). */
+  readonly tile: number;
 }
 
 /** Rides on `setState(…, { meta })` so the element writer knows whether this
@@ -48,7 +58,9 @@ export interface ViewMeta {
   readonly animate: boolean;
 }
 
-export const ViewStore = defineScopedStore<ViewState>({
+// A factory, so each open viewer starts from the device's saved strip and
+// tile-size choices (read once, at mount).
+export const ViewStore = defineScopedStore<ViewState>(() => ({
   natural: null,
   failed: false,
   area: null,
@@ -61,7 +73,10 @@ export const ViewStore = defineScopedStore<ViewState>({
   sheet: false,
   status: null,
   hint: false,
-});
+  layout: "single",
+  slideshow: false,
+  ...readViewPrefs(),
+}));
 
 /** Read a store notification's meta back. */
 export function readMeta(meta: unknown): ViewMeta {

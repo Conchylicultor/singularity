@@ -95,6 +95,7 @@ Shared (both paths):
     - `primitives/icon-picker`
     - `primitives/loading`
     - `primitives/metrics`
+    - `primitives/overlay/image-viewer`
     - `screenshot`
     - `stats/cost`
     - `stats/responsiveness`

@@ -2,6 +2,8 @@ import type { ScopedStore } from "@plugins/primitives/plugins/scope/plugins/scop
 import {
   areaCenter,
   centerOn,
+  clampTile,
+  stepTile,
   clampView,
   fitScale,
   fitView,
@@ -15,6 +17,7 @@ import {
   type Rect,
   type Size,
   type View,
+  type ViewerChrome,
 } from "../../core";
 import type { ViewMeta, ViewState } from "./view-store";
 
@@ -51,21 +54,46 @@ export function createViewController(
     return natural && area ? { image: natural, area } : null;
   }
 
+  /** The last measured stage, kept so a layout change (the strip docking, the
+   *  slideshow starting) can recompute the area without a resize. */
+  let stage: { size: Size; navigable: boolean } | null = null;
+
+  /** What covers the stage's edges in the current state. */
+  function chrome(s: ViewState, navigable: boolean): ViewerChrome {
+    if (s.slideshow) return "none";
+    return s.strip && navigable && s.layout === "single"
+      ? "bars-and-strip"
+      : "bars";
+  }
+
   function setView(view: View, atFit: boolean, animate: boolean) {
     patch({ view, atFit }, { animate: animate && !env.reducedMotion() });
   }
 
   /** Re-fit a fitted image; re-clamp a zoomed one. For when the image or the
    *  stage changed size under the current view. */
-  function settle() {
+  function settle(animate = false) {
     const g = geometry();
     if (!g || get().phase === "opening") return;
     const { view, atFit } = get();
     setView(
       atFit ? fitView(g.image, g.area) : clampView(view, g.image, g.area),
       atFit,
-      false,
+      animate,
     );
+  }
+
+  /** Recompute the area from the last stage and the current state, then
+   *  settle the image into it. */
+  function relayout(animate: boolean) {
+    if (!stage) return;
+    patch({
+      area: viewerArea(stage.size, {
+        navigable: stage.navigable,
+        chrome: chrome(get(), stage.navigable),
+      }),
+    });
+    settle(animate);
   }
 
   /** Bumped by every {@link tryOpen}, so a later attempt cancels the frame
@@ -120,9 +148,9 @@ export function createViewController(
 
   return {
     /** The stage was measured or resized. `navigable` = the side arrows show. */
-    measure(stage: Size, navigable: boolean) {
-      patch({ area: viewerArea(stage, { navigable }) });
-      settle();
+    measure(size: Size, navigable: boolean) {
+      stage = { size, navigable };
+      relayout(false);
       tryOpen();
     },
 
@@ -163,7 +191,11 @@ export function createViewController(
     beginClose() {
       if (get().phase === "closing") return;
       const natural = get().natural;
-      const to = natural && !env.reducedMotion() ? env.originRect() : null;
+      // From the grid there is no image on the stage to shrink back: fade.
+      const to =
+        natural && !env.reducedMotion() && get().layout === "single"
+          ? env.originRect()
+          : null;
       patch({ phase: "closing", sheet: false, idle: false, dragging: false });
       if (to && natural) setView(viewOverRect(to, natural), false, true);
       else patch({ imageVisible: false });
@@ -230,6 +262,43 @@ export function createViewController(
     },
     setHint(hint: boolean) {
       if (get().hint !== hint) patch({ hint });
+    },
+
+    /** Dock or undock the thumbnail strip; the image refits into the room left. */
+    setStrip(strip: boolean) {
+      if (get().strip === strip) return;
+      patch({ strip });
+      relayout(true);
+    },
+    /** Switch between the one image and the grid of every image. Back in the
+     *  single layout the image opens fitted. */
+    setLayout(layout: "single" | "grid") {
+      if (get().layout === layout) return;
+      patch({
+        layout,
+        sheet: false,
+        idle: false,
+        dragging: false,
+        atFit: true,
+      });
+      relayout(false);
+    },
+    /** The browser entered or left full screen on the viewer. The slideshow
+     *  is always the single image, fitted to the whole screen. */
+    setSlideshow(slideshow: boolean) {
+      if (get().slideshow === slideshow) return;
+      patch({ slideshow, sheet: false, atFit: true });
+      if (slideshow && get().layout === "grid") patch({ layout: "single" });
+      relayout(false);
+    },
+    setTile(tile: number) {
+      const t = clampTile(tile);
+      if (get().tile !== t) patch({ tile: t });
+    },
+    /** `+` / `−` over the grid: one tile-size step. */
+    stepTile(dir: 1 | -1) {
+      const t = stepTile(get().tile, dir);
+      if (get().tile !== t) patch({ tile: t });
     },
   };
 }
