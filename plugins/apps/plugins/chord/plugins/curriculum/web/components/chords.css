@@ -53,9 +53,17 @@
 
 /* ── Tracks ───────────────────────────────────────────────────────────────── */
 .chord-track-head {
-  padding: 8px 2px;
+  /* The badge sits one inset in from the hover surface's edge; the title and
+     the track body below both start where the badge's gap ends. */
+  --chord-track-inset: 8px;
+  --chord-track-text: calc(var(--chord-track-inset) + 18px + var(--space-sm));
+  position: relative;
+  padding: 8px var(--chord-track-inset);
   border-radius: 10px;
   cursor: pointer;
+}
+.chord-track-head:has(.chord-track-cov) {
+  padding-bottom: 14px;
 }
 .chord-track-head:hover {
   background: color-mix(in srgb, var(--foreground) 4%, transparent);
@@ -78,8 +86,11 @@
   font-weight: 500;
 }
 .chord-track-cov {
+  position: absolute;
+  left: var(--chord-track-text);
+  right: calc(var(--chord-track-inset) + 22px);
+  bottom: 7px;
   height: 3px;
-  margin: -2px 24px 8px 28px;
   border-radius: 2px;
   background: var(--border);
 }
@@ -88,7 +99,7 @@
   opacity: 0.75;
 }
 .chord-track-body {
-  padding: 2px 0 12px 28px;
+  padding: 2px 0 12px calc(8px + 18px + var(--space-sm));
 }
 
 /* ── The section set control: None · Hear · Practise ─────────────────────── */

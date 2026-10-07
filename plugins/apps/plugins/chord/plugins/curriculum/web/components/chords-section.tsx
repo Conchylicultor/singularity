@@ -511,21 +511,23 @@ function Track({
           )}
         </Text>
         <CollapsibleChevron className="text-faint-foreground" />
+        {/* Inside the trigger, so the hover surface encloses it rather than
+            the bar poking into the highlight's bottom edge from outside. */}
+        {coverage !== null && (
+          <Clip
+            className="chord-track-cov"
+            title={`The chords you have on make up ${String(Math.round(coverage * 100))}% of the chords played in ${track.name} loops`}
+          >
+            <span
+              className={cn(
+                placedClasses({ decorative: true }),
+                "chord-track-cov-fill",
+              )}
+              style={placedStyle({ start: 0, size: pct(coverage) }, "fill")}
+            />
+          </Clip>
+        )}
       </CollapsibleTrigger>
-      {coverage !== null && (
-        <Clip
-          className="chord-track-cov relative"
-          title={`The chords you have on make up ${String(Math.round(coverage * 100))}% of the chords played in ${track.name} loops`}
-        >
-          <span
-            className={cn(
-              placedClasses({ decorative: true }),
-              "chord-track-cov-fill",
-            )}
-            style={placedStyle({ start: 0, size: pct(coverage) }, "fill")}
-          />
-        </Clip>
-      )}
       <CollapsibleContent>
         <Stack gap="lg" className="chord-track-body" aria-label={track.name}>
           {track.sections.map((section) => (
