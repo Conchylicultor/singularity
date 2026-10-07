@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
+- Description: Pre-configured prompts that launch a new background conversation in the same worktree.
 - Web:
   - Contributes:
     - `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`

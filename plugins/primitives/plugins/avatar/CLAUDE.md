@@ -111,7 +111,7 @@ color palette.
 
 ## Plugin reference
 
-- Description: Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
+- Description: Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
 - Web:
   - Uses:
     - `primitives/css/cluster.Cluster`

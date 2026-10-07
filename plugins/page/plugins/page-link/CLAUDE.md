@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
+- Description: Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
 - Web:
   - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
   - Uses:

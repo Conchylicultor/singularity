@@ -23,7 +23,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
 
 ## Plugin reference
 
-- Description: Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
+- Description: Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
 - Web:
   - Slots: `conv-commits-graph.actions` ← `primitives.pane`
   - Contributes:

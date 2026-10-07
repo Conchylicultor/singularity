@@ -28,7 +28,7 @@ key also writes the row's `ssh_public_key`, so no hand-notify exists.
 
 ## Plugin reference
 
-- Description: Server registry for the deployment platform. Server registry for the deployment platform.
+- Description: Server registry for the deployment platform.
 - Web:
   - Slots:
     - `ServerDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.health`, `apps.deploy.servers`, `apps.deploy.ssh-setup`

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
+- Description: Commit-based stats: commits and lines of change over time.
 - Web:
   - Contributes:
     - `Stats.Chart` "Commits" → `CommitsSection`

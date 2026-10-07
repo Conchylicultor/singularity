@@ -71,7 +71,7 @@ the panel until it is given something to say.
 
 ## Plugin reference
 
-- Description: Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
+- Description: Audit and remove stale git worktrees and their Postgres DB forks.
 - Web:
   - Slots: `worktreeCleanupPane.Actions` ← `primitives.pane`
   - Contributes:

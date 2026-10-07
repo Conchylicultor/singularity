@@ -27,7 +27,7 @@ migrate (Resources page item 3).
 
 ## Plugin reference
 
-- Description: Named agent definitions that launch conversations. Named agent definitions that launch conversations.
+- Description: Named agent definitions that launch conversations.
 - Web:
   - Slots:
     - `Agents.List`

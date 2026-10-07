@@ -31,7 +31,7 @@
 
 ## Plugin reference
 
-- Description: Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
+- Description: Persistent bell-button notifications backed by the DB.
 - Web:
   - Contributes: `ActionBar.Item` → `BellButton`
   - Uses:

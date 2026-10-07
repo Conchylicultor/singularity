@@ -6,7 +6,7 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
 
 ## Plugin reference
 
-- Description: Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
+- Description: Browse Claude Code auto-memory files for the current project.
 - Web:
   - Slots: `memoryPane.Actions` ← `primitives.pane`
   - Contributes:

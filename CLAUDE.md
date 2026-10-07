@@ -12,28 +12,26 @@ Singularity is a self-evolving app for the agentic era. The goal is to have an a
 
 ## Agent Workflow
 
-Agents work in isolated git worktrees automatically created before starting. The end-to-end flow:
+Agents work in isolated, auto-created git worktrees:
 
-1. Solve the request
-2. Run `./singularity build` to deploy (build both the frontend and server and register the gateway).
+1. Solve the request.
+2. Deploy with `./singularity build` (frontend + server + gateway registration).
 
-   **Use `run_in_background: true` and end your turn** — build/push/check median ~10 min, over the 600 s foreground cap. Background tasks re-invoke you on exit, so there is nothing to wait for and nothing to watch. They are not untimed — the harness stops one after its `timeout` (30 min default) — so every backgrounded `./singularity` call is rewritten to the 2 h ceiling. (Guards enforce all three.)
+   **Use `run_in_background: true` and end your turn** — build/push/check take ~10 min (median), over the 600 s foreground cap. The background task re-invokes you on exit; nothing to wait for or watch. Every backgrounded `./singularity` call is rewritten to the 2 h timeout ceiling (the 30 min default would kill it). Guards enforce all three.
 
-   **A SUBAGENT must not end its turn there** — it will never be re-invoked, because the harness files a subagent's completion notification under the parent session's queue and nothing delivers it. Background the op as usual, then call `./singularity await <op>` in the FOREGROUND: it blocks until the verdict is written and prints it, so the wake-up is that call's own result (exit 0 ok, 1 failed, 70 still running — just call it again). A stop hook refuses a subagent's turn that walks away from its own running op.
+   **A SUBAGENT must not end its turn there** — it is never re-invoked (its completion notification lands in the parent's queue). Background the op, then call `./singularity await <op>` in the FOREGROUND: it blocks until the verdict and prints it (exit 0 ok, 1 failed, 70 still running — call again). A stop hook refuses a subagent turn that walks away from its running op.
 
-3. The app becomes available at `http://<worktree>.localhost:9000` (always include `http://` so the URL is clickable)
+3. The app is served at `http://<worktree>.localhost:9000` (always write `http://` so it's clickable).
 
-   The build's authority on whether it deployed is the deploy receipt at `~/.singularity/worktrees/<worktree>/build-status.json` (`status: ok` ⇒ deployed). A build killed by a caller timeout prints no verdict and leaves `status: running` with a dead pid. **Never** infer a deploy from `ls -t ~/.singularity/worktrees/<wt>/build-*.log` — that file is written only at the END of a build, so it matches a PREVIOUS run's `BUILD OK`.
-
-4. Once changes are reviewed and ready, commit and run `./singularity push` to merge back to main (pulls main first, merges, pushes). NEVER run `git commit`, always use the CLI. NEVER push unless the user explicitly said so.
+4. Once reviewed, `./singularity push -m "…"` merges to main (pulls main, merges, pushes).
 
 RULES:
 
-- NEVER run `./singularity push` unless instructed to. The user needs to review your code first. (A Dependencies-category upgrade task — or a legacy Toolchain-category one — counts as that instruction: its own text says when it may push. See `plugins/infra/plugins/deps/plugins/updates`.)
-- NEVER commit files yourself (this will create branch conflicts). Always use `./singularity push -m "commit message"`
-- **Always rebase, never merge** (`git rebase origin/main`). Never `git merge origin/main`, and never `git reset` a branch onto `main` — that deletes the commits in between. One exception: `./singularity upstream merge` (see Upstream), where a rebase would replay the whole local history on every update.
-- NEVER run `drizzle-kit generate` or the migration runner manually — always go through `./singularity build`.
-- **Review diffs are against the worktree merge-base, not `main`.** Use `git diff $(git merge-base HEAD main)` — not `git diff main`, which includes unrelated commits merged into main after the branch point.
+- NEVER `./singularity push` unless instructed — the user reviews first. (A Dependencies-category upgrade task — or legacy Toolchain-category — counts as instruction; its text says when it may push. See `plugins/infra/plugins/deps/plugins/updates`.)
+- NEVER `git commit` yourself (branch conflicts). Always `./singularity push -m "commit message"`.
+- **Always rebase, never merge** (`git rebase origin/main`). Never `git merge origin/main`; never `git reset` a branch onto `main` (deletes the commits in between). Exception: `./singularity upstream merge` (see Upstream).
+- NEVER run `drizzle-kit generate` or the migration runner manually — `./singularity build` does it.
+- **Review diffs against the merge-base**: `git diff $(git merge-base HEAD main)`, not `git diff main` (which includes later main commits).
 
 ### MCP Tools
 
@@ -62,21 +60,21 @@ When a plugin collects sub-plugin contributions (e.g. facets, checks, collected 
 
 This pattern applies to *genuinely open* sets — ones where future plugins must add entries without editing your code. For a **closed list** both runtimes need (types, constants, a dropdown's options, a validation allowlist), prefer plain data in `core/` rather than introducing a slot and the web↔server codegen bridge it implies for a set you can enumerate today.
 
-### Plugin boundary rules (enforced by `./singularity check boundary-rules` and `./singularity check plugin-boundaries`)
+### Plugin boundary rules
 
-Two checks split the work. `boundary-rules` answers *which folder may import which*, from one table (`folders` in `plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts`); `plugin-boundaries` owns the import grammar, barrels and cycles (rules R1–R13). Details: [`boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/boundaries/CLAUDE.md) and [`plugin-boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/CLAUDE.md).
+Enforced by `./singularity check boundary-rules` (which folder may import which — the `folders` table in `plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts`) and `./singularity check plugin-boundaries` (import grammar, barrels, cycles; rules R1–R13). Details: [`boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/boundaries/CLAUDE.md), [`plugin-boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/CLAUDE.md).
 
-- **Every file sits in a known folder.** A plugin contains only the folders in the vocabulary in `plugins/framework/plugins/plugin-id/core` — barrel folders (`RUNTIME_FOLDERS`: `web`, `server`, `central`, `core`, `shared`, `e2e`, `provision`, `data-dirs`, `cli`, `deps`) and leaf folders (`LEAF_FOLDERS`: `check`, `lint`, `facet`, `bin`, `scripts`, `exhibits`, `vite`, `prewarm`, `python`, `exempt`) — plus `plugins/` for child plugins. A loose `.ts` at the plugin root, a folder outside the vocabulary, or a file under `plugins/` that no child plugin claims is a violation. A new kind of folder is one entry in that vocabulary plus its row in the table (tsc enforces the row).
-- **One import table, inside and across plugins.** Each folder's row lists the barrel folders it may import (e.g. `core` → `core` only; `web` → `web`, `core`, `shared`; `e2e` → `e2e`, `core`, `data-dirs`). It applies to relative imports inside your own plugin exactly as to `@plugins/…` imports of another: `core/` importing its own `../server/x` fails like importing `@plugins/other/server`. A leaf folder (`check/`, `lint/`, `bin/`, …) is never an import target. The channels between folders are `core/` (public) and `shared/` (plugin-private).
-- **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point. No `api.ts`, no deep paths.
-- **Cross-plugin import grammar.** A specifier must end at a barrel folder: `@plugins/<name>/<runtime>` for top-level plugins, or `@plugins/<name>/plugins/.../.../<runtime>` for any nesting depth — or at `<runtime>/testing`, a plugin's published test helpers. `shared/` is plugin-private — cross-plugin imports from `shared/` are forbidden (R10), and your own `shared/` is imported by relative path. Forbidden: paths that go *inside* a barrel (`/web/components/`, `/server/internal/`, etc.), workspace-name imports (`@singularity/plugin-shell`), and relative `../` escapes into another plugin's tree.
-- **Test code is its own dimension.** A file is test code if it is named `*.test.ts(x)`, sits under `__tests__/`, or sits under `<runtime>/testing/` (directly under a barrel folder, never under `e2e/`). It follows its folder's row. Only test code and `check/` may import it; everything else ships, `e2e/` included, and may not — even from the same folder. A public barrel publishes no test support: no `*ForTest(s)` names, nothing taken from a test-support module (R12), and no name whose every importer is test code (R13). Your own plugin's tests import the internal file by relative path; a helper other suites reuse goes in `<runtime>/testing/` (see Testing).
-- **No cross-plugin re-exports.** Import the source barrel directly — never proxy another plugin's symbols through your own barrel. Re-exports hide the real dependency. Right: `import { X } from "@plugins/tasks/plugins/task-draft-form/web"`. Wrong: re-exporting `X` from `@plugins/tasks/web` so others don't have to. This is enforced **transitively and name-level**: routing the proxy through an internal file (`export { X } from "./types"` where `./types` re-exports another plugin's `X`) or via import-then-reexport (`import { X } from "@plugins/other/core"; export { X };`) is caught the same as a direct re-export. There is no umbrella/parent→descendant exception.
-- **Barrel purity.** Each `index.ts` may only contain `import` statements, re-exports of the plugin's own internal files, type aliases, and a single `export default { … } satisfies PluginDefinition`. No `const`/`let`, no logic, no side effects.
-- **Registry exclusivity.** Default-export plugin imports (`import fooPlugin from "@plugins/foo/web"`) belong only in the autogenerated registry roots (`web.generated.ts` / `server.generated.ts` / `central.generated.ts` under `plugins/framework/plugins/{web-sdk,server-core,central-core}/core/`) and the `bin`/`App.tsx` composition roots — the exact exempt set is the `exclude` list in `plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts`. You never register a plugin by hand: create its `<runtime>/index.ts` and run `./singularity build`, which regenerates these files from the filesystem (the `plugins-registry-in-sync` check fails on drift).
-- **Exemptions are declared by the exempted plugin, never by the rule.** A file that may violate a lint rule or check says so in its own plugin's `plugins/<p>/exempt/index.ts` (`rule`, `paths` relative to the plugin, `kind: "sanctioned" | "debt"` with a `reason`, and a `task` for debt). Never hand-roll a path allowlist (`ALLOWED_FILES`, `ignores`, `.startsWith("plugins/…")`) in a rule or check — `exempt/no-path-allowlist` rejects it; a rule exempting a whole kind of file declares `outOfScope` categories instead. Who may violate what: `./singularity exempt list [--rule <id>] [--plugin <path>] [--debt]`; the same appears in the plugin docs (`[exempt]` marker, "Exempts itself from" / "Exempted by"). Details: [`exempt/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/exempt/CLAUDE.md).
-- **No cycles.** The cross-plugin import graph must be a DAG. Type-only imports count as edges.
-- **Before writing a helper (or a test fixture), search `docs/plugins-details.md` for it** — public exports, shared test helpers (`<runtime>/testing/` barrels, under *Test helpers*), contributions, server endpoints, and reverse indexes (who imports me, who contributes to my slots, who calls my endpoints) for every plugin. The slim `docs/plugins-compact.md` is auto-loaded by agents; read the full `plugins-details.md` on demand. Each plugin also has its own `plugins/<…>/CLAUDE.md` with hand-written prose plus an autogen reference block — open that one when working inside a specific plugin. All three are kept in sync by the `plugins-doc-in-sync` check.
+- **Known folders only** (vocabulary in `plugins/framework/plugins/plugin-id/core`): barrel folders `web`, `server`, `central`, `core`, `shared`, `e2e`, `provision`, `data-dirs`, `cli`, `deps`; leaf folders `check`, `lint`, `facet`, `bin`, `scripts`, `exhibits`, `vite`, `prewarm`, `python`, `exempt`; plus `plugins/` for children. No loose root `.ts`, no unclaimed file under `plugins/`. A new folder kind = a vocabulary entry + its table row (tsc enforces the row).
+- **One import table, inside and across plugins.** Each folder's row lists the barrel folders it may import (`core` → `core`; `web` → `web`, `core`, `shared`; `e2e` → `e2e`, `core`, `data-dirs`). Relative imports in your own plugin obey it too (`core/` → `../server/x` fails). Leaf folders are never import targets. `core/` is the public channel, `shared/` the plugin-private one.
+- **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point — no `api.ts`, no deep paths.
+- **Import grammar.** A specifier ends at a barrel folder (`@plugins/<name>/<runtime>`, `@plugins/<name>/plugins/…/<runtime>`) or at `<runtime>/testing`. Forbidden: cross-plugin `shared/` (R10; your own is imported relatively), paths inside a barrel (`/web/components/`, `/server/internal/`), workspace names (`@singularity/plugin-shell`), `../` escapes into another plugin.
+- **Test code** = `*.test.ts(x)`, `__tests__/`, or `<runtime>/testing/` (never under `e2e/`). It follows its folder's row; only test code and `check/` may import it (`e2e/` ships, so it may not). A public barrel publishes no test support: no `*ForTest(s)` names, nothing from a test-support module (R12), no name only tests import (R13). Own tests import by relative path; reusable helpers go in `<runtime>/testing/`.
+- **No cross-plugin re-exports** — import the source barrel directly (`@plugins/tasks/plugins/task-draft-form/web`, not a proxy via `@plugins/tasks/web`). Enforced transitively and by name (through an internal file, or import-then-export); no umbrella→descendant exception.
+- **Barrel purity.** `index.ts` holds only imports, re-exports of own files, type aliases, and one `export default { … } satisfies PluginDefinition`. No `const`/`let`, logic, or side effects.
+- **Registry exclusivity.** Default-export plugin imports live only in the generated registries (`{web,server,central}.generated.ts` under `plugins/framework/plugins/{web-sdk,server-core,central-core}/core/`) and the `bin`/`App.tsx` roots (the `exclude` list in `boundary-config.ts`). Never register by hand: create `<runtime>/index.ts` and `./singularity build` (`plugins-registry-in-sync` catches drift).
+- **Exemptions are declared by the exempted plugin**, in its `plugins/<p>/exempt/index.ts` (`rule`, plugin-relative `paths`, `kind: "sanctioned" | "debt"` + `reason`, `task` for debt). Never hand-roll an allowlist (`ALLOWED_FILES`, `ignores`, `.startsWith("plugins/…")`) in a rule — `exempt/no-path-allowlist` rejects it; exempt a whole kind of file with `outOfScope`. List: `./singularity exempt list [--rule <id>] [--plugin <path>] [--debt]`. Details: [`exempt/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/exempt/CLAUDE.md).
+- **No cycles.** The cross-plugin import graph is a DAG; type-only imports count.
+- **Search before writing a helper or fixture.** The plugin's own `CLAUDE.md` has an autogen reference (exports, uses, importers, contributions, test helpers); `docs/plugins-details.md` has it for every plugin, incl. reverse indexes (who imports me, contributes to my slots, calls my endpoints). Kept in sync by `plugins-doc-in-sync`.
 
 ### Folder Structure
 
@@ -114,77 +112,48 @@ The project uses bun workspaces (defined in root `package.json`). Run `bun insta
 
 ### Deploy
 
-Always deploy after all changes, fixes, implementations:
+Always deploy after changes: `./singularity build`, from the worktree directory (not the main repo root). It regenerates DB migrations from `schema.ts` (applied on server restart), builds frontend and server, restarts the server and registers the worktree with the gateway (`http://<worktree>.localhost:9000`).
 
-```bash
-./singularity build
-```
-
-> Run from the worktree directory (the primary working directory), not the main repo root.
-
-This will:
-
-- Regenerate DB migrations from `schema.ts` (server applies them on restart)
-- Build the frontend
-- Build and restart the server
-- Notify the gateway that the app is available for this worktree.
-
-The gateway serves the app automatically at `http://<worktree>.localhost:9000`.
-
-> **NEVER run `./singularity start` or `./singularity stop`** (compile and register the gateway as the machine's launchd service / stop it) unless the user explicitly asks — these are system-level operations, not part of the normal agent workflow.
+> **NEVER run `./singularity start` / `stop`** (install / stop the gateway as the machine's launchd service) unless the user explicitly asks.
 
 ### Check
 
-Run repo validation checks (e.g. `schema.ts` matches committed migrations):
-
 ```bash
-./singularity check                       # run all checks
-./singularity check --list                # list available checks
-./singularity check migrations-in-sync    # run a single check (check id as positional arg)
+./singularity check                       # all checks
+./singularity check --list                # list checks
+./singularity check migrations-in-sync    # one check (id as positional arg)
 ```
 
-Checks also run automatically as the first step of `push`, and (unless `--skip-checks` is passed) at the start of `build` after migration/doc generation. New built-in checks live in `plugins/framework/plugins/tooling/plugins/checks/core/` and are registered in `plugins/framework/plugins/tooling/plugins/checks/core/index.ts`.
+Checks run first in `push`, and in `build` after migration/doc generation (unless `--skip-checks`). Built-ins live in, and are registered in, `plugins/framework/plugins/tooling/plugins/checks/core/index.ts`. Plugins contribute their own (discovered at runtime, no registry edits):
 
-Plugins can also contribute their own checks (no codegen, no registry edits — discovered at runtime):
+- `plugins/<name>/lint/index.ts` — default-export `{ name: "<plugin-id>", rules: { ... } }` of ESLint v9 rules. Each rule is enabled as `error` **repo-wide** (`**/*.{ts,tsx}`), not just in the contributing subtree; the `eslint` check runs them.
+- `plugins/<name>/check/index.ts` — default-export `Check | Check[]` (same interface as built-ins), id `<plugin-name>:<check-id>`.
 
-- `plugins/<name>/lint/index.ts` — default-export `{ name: "<plugin-id>", rules: { ... } }` of ESLint v9 rule modules. The root `eslint.config.ts` walks every `lint/index.ts` and enables each rule as `error` repo-wide (`**/*.{ts,tsx}`) — a contributed lint rule applies everywhere, like a plugin-contributed check, not just within the contributing plugin's subtree. The `eslint` built-in check runs the resulting config.
-- `plugins/<name>/check/index.ts` — default-export `Check | Check[]` (the same `Check` interface as built-ins). Discovered automatically when `./singularity check` runs. Convention: id as `<plugin-name>:<check-id>` to avoid collisions with built-ins.
-
-Available built-in checks:
-
-- `migrations-in-sync` — fails if plugin `tables.ts` / `schema.ts` changes would generate a new migration not yet committed. Fix by running `./singularity build` and committing the generated file.
-- `type-check` — unified TypeScript + type-aware-ESLint check: builds the one repo TS program (the root `tsconfig.json`) once and reads both tsc diagnostics and lint results off it. Plugin-contributed rules in `plugins/<name>/lint/` are auto-registered into the shared lint config.
+Notable built-ins: `migrations-in-sync` (schema changes without a committed migration — fix with `./singularity build`), `type-check` (one repo TS program → tsc diagnostics + type-aware ESLint, plugin lint rules included).
 
 ### Push
 
-Once changes are committed and reviewed, merge back to main:
+`./singularity push -m "message"`:
 
-```bash
-./singularity push
-```
-
-This will:
-1. Run validation checks
-2. Check for uncommitted changes (fails if dirty)
-3. Push the worktree branch to remote
-4. Pull main (`--ff-only`) to ensure it's up to date
+1. Run checks
+2. Fail if dirty
+3. Push the branch
+4. Pull main (`--ff-only`)
 5. Merge the branch into main (from the main worktree)
-6. Push main to remote
-7. Main auto-builds and restarts — the `refs/heads/main` advance triggers it. You never build or redeploy main yourself, and it is not a caveat worth reporting.
+6. Push main
+7. Main auto-builds on the `refs/heads/main` advance — never build/redeploy main yourself, and don't report it as a caveat.
 
-> **CRITICAL — NEVER push or commit on your own initiative.** Wait for the user to ask.
-> NEVER use raw git commands (`git commit`, `git push`). Always use `./singularity push -m "message"`.
-> "push", "publish", "ship" all mean `./singularity push`.
+> **CRITICAL — NEVER push or commit on your own initiative.** No raw `git commit` / `git push`. "push", "publish", "ship" all mean `./singularity push`.
 
-Steps 3, 4 and 6 are the only network git in the repo, and they run only when this checkout may write to its remote — probed once, cached in `.git/config` (`plugins/infra/plugins/git/plugins/remotes`). A clone with no write access lands the same work on local `main`, which is what main's auto-build watches, and pushes nothing.
+Steps 3, 4, 6 (the only network git) run only when this checkout can write to its remote (probed once, cached in `.git/config`; `plugins/infra/plugins/git/plugins/remotes`). Without write access the work lands on local `main`, which main's auto-build watches.
 
 ### Upstream
 
-For a checkout cloned from someone else's repo, that repo is **upstream**: read, never written. A daily main-only job records one report when it has new commits (no task is filed — the report's Investigate button mints one on demand). An update is an ordinary task: `./singularity upstream merge` in a worktree, resolve, build, review, then the user lands it with `push`. See `plugins/upstream`. In this checkout — the one that owns the canonical repo — there is no upstream and the job does nothing.
+For a checkout cloned from someone else's repo, that repo is **upstream** (read-only). A daily main-only job records a report when it has new commits (no task; the report's Investigate button mints one). An update is an ordinary task: `./singularity upstream merge` in a worktree, resolve, build, review; the user lands it with `push`. See `plugins/upstream`. This checkout owns the canonical repo, so it has no upstream.
 
 ### `--from-main` (dangerous)
 
-`./singularity push --from-main -m "…"` commits and pushes straight from main, skipping the worktree-merge flow. **Agents must never pass this flag without explicit user approval in the current conversation** — not from memory, not from a prior session, not from a CLAUDE.md rule. The user must say so, in this conversation, for this push. If you're on main and no worktree branch exists for the changes, stop and ask rather than reaching for this flag.
+`./singularity push --from-main -m "…"` commits and pushes straight from main. **Never pass it without explicit user approval in the current conversation, for this push** — not from memory, a prior session, or a CLAUDE.md rule. On main with no worktree branch for the changes: stop and ask.
 
 ## Ports
 
@@ -193,19 +162,9 @@ For a checkout cloned from someone else's repo, that repo is **upstream**: read,
 
 ## Driving the app (screenshots & E2E)
 
-Chromium is an on-demand dependency (`infra/deps`): the first browser run on a
-machine installs it (~280 MB, progress on the terminal), every later run finds
-it at once. `./singularity build` first: every script resolves
-its own target by reading which deploy THIS checkout published — from the
-registry the build writes — and refuses when there is none. So never hand-write
-a `http://<worktree>.localhost:9000` URL: the name you would substitute there is
-the one thing the harness deliberately stopped guessing, because in an agent
-session it comes out as `singularity` and the run then drives main.
+`./singularity build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:9000` — in an agent session the name comes out as `singularity` and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
 
-For a snapshot, or to **verify behavior** (click something, confirm state), run
-[`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts).
-It prints the deploy it resolved and the matched button's state, and writes
-`-before.png` / `-after.png`:
+**Snapshot / verify behavior** (click, confirm state) with [`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts) — prints the resolved deploy and the matched button's state, writes `-before.png` / `-after.png`:
 
 ```bash
 ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/shot
@@ -213,46 +172,21 @@ It prints the deploy it resolved and the matched button's state, and writes
   --path /agents/c/<id> --click "Artifacts" --out /tmp/artifacts
 ```
 
-`--path <route>` picks the screen; `--viewport 1280x900`, `--wait <ms>` and
-`--color-scheme dark|light` do the rest. `--composition <id>` targets a
-composition this checkout built. `--url http://<namespace>.localhost:9000` is
-the escape hatch for a deploy it did not build — and the one form that skips the
-check that the app answering is the build you just made.
+Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme dark|light`, `--composition <id>` (a composition this checkout built), `--url http://<namespace>.localhost:9000` (escape hatch for a deploy you didn't build — skips the is-this-my-build check).
 
-To **compare a prototype mock against the real app** it declares it mocks
-(`<meta name="mocks">` — a route, the whole app, or one component by its
-exhibit id, `exhibit:<id>`), run
-[`compare-diff.ts`](plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts).
-It opens the prototype's canvas beside the Real app frame, photographs both
-frames at one size and 100% zoom, and writes the two captures, a red-on-grey diff and a side-by-side sheet, logging the
-differing-pixel ratio and a per-cell heatmap — plus a colour report that names
-the dominant colours, region means and luminance profiles of each half:
+**Compare a prototype against the real app** it mocks (`<meta name="mocks">`: a route, the whole app, or `exhibit:<id>`) with [`compare-diff.ts`](plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts): captures both frames at one size and 100% zoom, writes a red-on-grey diff and side-by-side sheet, logs the differing-pixel ratio, a per-cell heatmap and a colour report (dominant colours, region means, luminance profiles):
 
 ```bash
 ./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
   --name <proto-id> [--width 1280] [--options <name>=<value>,…] [--out /tmp/compare] [--fail-above 5]
 ```
 
-`--width` must be one of the canvas's size presets (omit it for the mock's declared viewport). A mock with variants is captured at its defaults unless `--options` picks the one the app was built from.
+`--width` must be a canvas size preset (omit for the mock's declared viewport); variants are captured at their defaults unless `--options` picks one.
 
-For a repeatable flow, write a standalone E2E script in the plugin it verifies,
-at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which the test runner
-would pick up. These are manual only; nothing runs them automatically.
+**Repeatable flows**: a standalone script at `plugins/<path>/e2e/<name>.ts` in the plugin it verifies — never `*.test.ts` (the test runner would pick it up). Manual only. Running an `e2e/` script is an op (host CPU grant, "E2E in progress" banner); other `./singularity run` scripts are not. `--headed` to watch.
 
-Running an `e2e/` script is itself an op: it takes a host CPU grant and shows in
-the conversation's op-status banner ("E2E in progress"), the same way a direct
-`./singularity check` does. Any other script run through `./singularity run` is
-not an op.
-
-```bash
-./singularity run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts --headed  # watch it run
-```
-
-- Shared helpers (argv, target, `withBrowser`, `report()`) come from
-  `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e` — extend it rather
-  than hand-rolling. Domain flows go in the owning plugin's `e2e/index.ts`.
-- `e2e` may import other plugins' `core` and `e2e` barrels only — it drives the
-  deployed app, not the code under test.
+- Shared helpers (argv, target, `withBrowser`, `report()`): `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e` — extend it, don't hand-roll. Domain flows go in the owning plugin's `e2e/index.ts`.
+- `e2e` imports only other plugins' `core` and `e2e` barrels — it drives the deployed app, not the code under test.
 
 ## Debugging
 
@@ -269,70 +203,33 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 
 ### Agent Workflow Rules
 
-- Most features first require a thoughtful design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
-- New features should be implemented as plugins in `plugins/`. See [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md) for how to create one.
-- When creating a new top-level app, use the `create-app` SKILL ([`.claude/skills/create-app/SKILL.md`](.claude/skills/create-app/SKILL.md)).
-- Before debugging, read the `debug` SKILL ([`.claude/skills/debug/SKILL.md`](.claude/skills/debug/SKILL.md)) — map of logs, profiling, crashes, DB, and queue surfaces.
-- Before any theming / token / design-standard work, read the `theme` SKILL ([`.claude/skills/theme/SKILL.md`](.claude/skills/theme/SKILL.md)) — design tokens, tweakcn, per-app config, and typography/radius/z-index enforcement.
-- Before any layout / structure / CSS-composition work, read the `css` SKILL ([`.claude/skills/css/SKILL.md`](.claude/skills/css/SKILL.md)) — the layout mental model (containers share space, leaves truncate) and the composable layout-primitive index; pairs with `theme` (tokens/color/preset).
-- Before writing or editing a prototype, read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes are **not** in the repo — they live in `~/.singularity/apps/prototypes/<name>/`, shared by every worktree, so a mock is live at `http://singularity.localhost:9000` with no build and nothing to commit. A prototype is one self-contained folder, and you design from the blank `_template/`: **never open another prototype's folder**, for any reason.
+- Most features need a design phase first: use the project `plan` SKILL (it puts the plan doc in the right place). Do NOT use `EnterPlanMode`.
+- New features are plugins in `plugins/` — see [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md).
+- Read the matching SKILL first: `create-app` (new top-level app), `debug` (before debugging — logs, profiling, crashes, DB, queues), `theme` (tokens, tweakcn, per-app config, typography/radius/z-index), `css` (layout mental model — containers share space, leaves truncate — and the layout-primitive index).
+- Before writing or editing a prototype, read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes live outside the repo in `~/.singularity/apps/prototypes/<name>/`, shared by every worktree and live at `http://singularity.localhost:9000` with no build or commit. Design from the blank `_template/`. Do not open other prototypes for inspiration.
 - Always edit files in your worktree, not the main branch.
-- **Avoid `find` for file searches.** Unbounded `find` in this repo has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'` instead. Only use `find` with `-maxdepth` or `-prune`.
-- **Run a script with `./singularity run <file>.ts`, never bare `bun <file>.ts`.** Bare `bun` finds its dependencies by walking UP the directory tree. So a worktree without its own `node_modules` runs against the main checkout's dependencies — or, when those are mid-install, against whatever npm published today. `./singularity run` installs this worktree's own dependencies from its own lock first, then runs the script. The `bun-script` PreToolUse guard blocks the bare form. Scripts the machine launches stay bare — install-time provisioning, the gateway's backend starts, the Claude Code guard hook — because they import no npm package.
-- **STOP on unexpected failures; never improvise around them.** If something fails in a way you don't fully understand, surface it and ask — do NOT route around it (e.g. falling back to curl after an MCP call fails). A loud failure is debuggable; a workaround built on a broken assumption is not.
-- **A rejected `AskUserQuestion` means stop immediately.** End the turn with NO text at all — no summary, no restated question, no proposed default. The rejection already means the user is about to answer; anything written is noise. Never guess a default or work around it.
-- **Subagents default to Sonnet.** When spawning any `Agent` call, always pass `model: "sonnet"` explicitly. Never omit the model and let it default to Opus. Only use Opus for load-bearing, complex implementation tasks — research, lookup, synthesis, and reporting are all Sonnet work.
-- **On breakage, rebase to HEAD first.** When the build fails to start or something is broken in an unexpected way, rebase the worktree branch onto `main` (`git fetch origin main && git rebase origin/main`) — the issue may already be fixed upstream.
-- **Don't memorize gotchas — report them so they get fixed structurally.** When you hit a footgun (a silent-`undefined` API, a "you must also update X" coupling, a boot-crash-if-misplaced rule, a build trap), do NOT write a memory file describing the workaround. A memory only documents the trap for one agent; the trap still exists for everyone else. Instead, surface it to the user (or `add_task` it) so it can be eliminated at the source, at the highest rung of the fix ladder under Coding Style. The right response to a footgun is to remove the footgun. Durable how-it-works knowledge belongs in the relevant `CLAUDE.md` / `docs/`, not in personal memory.
-- **When the user explicitly says "Exit"**, signal the outcome via exactly one MCP tool call, then write your final wrap-up message:
-  1. Call exactly one MCP tool to signal the outcome:
-     - `exit_clean` — everything went smoothly, nothing I need to know. The conversation will close automatically.
-     - `flag_raise({ reason })` — something needs my attention (caveats, partial outcomes, follow-ups, skipped work, or the push didn't land). Use `reason` for short bullets describing what I should know.
-  2. Write your final wrap up message, including things like summary, issues encountered, existing caveats, follow ups.
+- **No unbounded `find`** — it has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'`; `find` only with `-maxdepth` / `-prune`.
+- **Run scripts with `./singularity run <file>.ts`, never bare `bun <file>.ts`** — bare `bun` resolves dependencies by walking UP, so a worktree without `node_modules` runs against main's (or a mid-install npm state). `./singularity run` installs this worktree's lock first. The `bun-script` guard blocks the bare form (machine-launched scripts importing no npm package stay bare).
+- **STOP on unexpected failures; never improvise around them.** Surface it and ask — don't route around (e.g. curl after a failed MCP call). A loud failure is debuggable; a workaround on a broken assumption is not.
+- **Subagents: always pass `model: "sonnet"`** to `Agent`. Opus only for load-bearing, complex implementation; research, lookup, synthesis and reporting are Sonnet work.
+- **On breakage, rebase to HEAD first** (`git fetch origin main && git rebase origin/main`) — it may already be fixed.
+- **Don't memorize gotchas — report them so they get fixed structurally.** On a footgun (silent-`undefined` API, "you must also update X" coupling, boot-crash-if-misplaced, build trap), do NOT write a memory file; surface it to the user or `add_task` it, to be removed at the highest rung of the fix ladder (Coding Style). Durable how-it-works knowledge goes in `CLAUDE.md` / `docs/`, not personal memory.
+- **When the user explicitly says "Exit"**: call exactly one MCP tool — `exit_clean` (all smooth; the conversation closes) or `flag_raise({ reason })` (caveats, partial outcomes, follow-ups, skipped work, push didn't land; short bullets) — then write the final wrap-up (summary, issues, caveats, follow-ups).
 
 ### Testing
 
-Optional and manual — nothing runs them automatically. A test run is an op like
-a direct `./singularity check`: it takes a host CPU grant and shows in the
-conversation's op-status banner ("Test in progress") while it runs.
-
-**`./singularity test` is the ONLY way to run tests.** Paths only, no flags. It
-needs no setup: like every `./singularity` command it installs dependencies first
-when `node_modules` is missing or stale, so it works in a fresh worktree.
+**`./singularity test` is the ONLY way to run tests** — paths only, no flags, no setup (installs dependencies when stale). Never bare `bun test` / `vitest`. Optional and manual; a run is an op (host CPU grant, "Test in progress" banner).
 
 ```bash
 ./singularity test plugins/primitives/plugins/optimistic-mutation   # one plugin
 ./singularity test                                                  # everything
 ```
 
-Two runners sit underneath, split by file location: `*.test.ts(x)` next to its
-source is pure logic; `web/__tests__/` is jsdom/React (auto-discovered by the
-root `vitest.config.ts`, no per-plugin config). Never run a bare `bun test` /
-`vitest` — invoking a runner directly has caveats the CLI handles.
-
-A test of your own plugin imports the file under test (and any internal helper)
-by relative path — never through the public barrel just because it is there.
-Test helpers another test (or a check) reuses go in `<runtime>/testing/index.ts`,
-imported as `@plugins/<name>/<runtime>/testing` — never in the runtime's public
-barrel, never in `__tests__/` (that is where the jsdom runner looks for suites),
-never loose in the plugin or in `check/`. Pick the runtime by who uses the helper:
-`web/testing/` for web tests only, `server/testing/` for server tests only, and
-`core/testing/` for a helper both web and server tests use (both rows reach
-`core`). A testing barrel may also re-export a real function another plugin's
-test checks against. Only test code and `check/` may import a testing barrel.
-Before writing a fixture, search the *Test helpers* items in
-`docs/plugins-details.md` (plugins with one are marked `[test helpers]` in the
-compact index) — every testing barrel's exports are listed there.
-
-Every jsdom test starts on a pinned clock (fixed instant, `Date` only, still
-ticking), so a suite can never depend on the day it runs on — a suite needing a
-specific "today" pins its own. Every jsdom worker also runs in a pinned locale
-(`en-US`) and timezone (`UTC`), so a suite that formats a date gets the same
-result for every runner, whatever their `LANG`.
-
-The split itself (which runner owns which path, the pinned clock and locale, and the
-`test-layout:runner-split` check binding them) lives in
-[`plugins/framework/plugins/tooling/plugins/test-layout`](plugins/framework/plugins/tooling/plugins/test-layout).
+- Two runners, split by location: `*.test.ts(x)` beside its source = pure logic; `web/__tests__/` = jsdom/React (auto-discovered by root `vitest.config.ts`).
+- Your own plugin's tests import the file under test by relative path, never via the public barrel.
+- Reusable helpers go in `<runtime>/testing/index.ts` (imported as `@plugins/<name>/<runtime>/testing`) — never the public barrel, `__tests__/`, `check/`, or loose. Runtime by user: `web/testing/`, `server/testing/`, or `core/testing/` for both. A testing barrel may re-export a real function another plugin's test checks against. Only test code and `check/` may import it. Search `[test helpers]` / *Test helpers* in `docs/plugins-details.md` before writing a fixture.
+- jsdom tests run on a pinned clock (fixed instant, `Date` only, still ticking; pin your own "today" if needed), locale `en-US` and timezone `UTC`.
+- The split, pinning and `test-layout:runner-split` check live in [`plugins/framework/plugins/tooling/plugins/test-layout`](plugins/framework/plugins/tooling/plugins/test-layout).
 
 ### Coding Style
 

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Runtime HTTP/DB/loader profiling tables in the Gantt debug pane. Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
+- Description: Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
 - Web:
   - Contributes: `Profiling.Section` → `RuntimeSection`
   - Uses:

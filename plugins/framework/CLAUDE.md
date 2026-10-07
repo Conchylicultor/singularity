@@ -13,12 +13,12 @@ The plugin runtime itself — not where features go.
 - Sub-plugins:
   - **`central-core`**
   - **`cli`** — The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
-  - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other call).
+  - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other…
   - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
   - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
   - **`resource-runtime`**
   - **`server-core`**
-  - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
+  - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots`…
   - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
   - **`web-core`**
   - **`web-sdk`** — Web plugin runtime: slots, contributions, loader

@@ -112,7 +112,7 @@ silently destroy work in progress — hence a request type rather than an `initi
 
 ## Plugin reference
 
-- Description: Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
+- Description: Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
 - Web:
   - Slots: `TaskDraftFormSlots.Action` ← `improve.element-picker`
   - Contributes: `ConfigV2.WebRegister` "config"

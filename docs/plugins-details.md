@@ -2008,7 +2008,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shortSha`
               - `stalenessChipLabel`
               - `stalenessSentence`
-        - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
+        - **`servers`** — Server registry for the deployment platform.
           - Web:
             - Slots:
               - `ServerDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.health`, `apps.deploy.servers`, `apps.deploy.ssh-setup`
@@ -8648,7 +8648,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HOOKTHEORY_API_BASE`
           - `HOOKTHEORY_PROVIDER_ID`
           - `HOOKTHEORY_SIGN_UP_URL`
-    - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
+    - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Surfaces in Accounts pane; end-to-end smoke not yet validated.
       - Web:
         - Contributes:
           - `Auth.Provider` "Notion"
@@ -9540,7 +9540,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `active-data/commit-link`
           - `conversations/conversation-view/commits-graph`
-    - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
+    - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files.
       - Web:
         - Uses:
           - `infra/endpoints.useEndpoint`
@@ -10349,7 +10349,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `timer/no-unlisted-timer` — `server/internal/status-shadow-audit.ts` (debt)
       - `live/no-legacy-resource-spelling` — `web/use-conversations.ts` (debt)
   - Plugins:
-    - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
+    - **`agents`** — Named agent definitions that launch conversations.
       - Web:
         - Slots:
           - `Agents.List`
@@ -11256,7 +11256,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
                   - `conversations/conversation-view/markdown-extensions`
                   - `plugin-meta/plugin-view/file-tree`
-        - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
+        - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Web:
             - Slots: `conv-commits-graph.actions` ← `primitives.pane`
             - Contributes:
@@ -12873,7 +12873,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/overlay/image-viewer.ViewerThumbnail`
                   - `primitives/select-scope.ContentScope`
                   - `ui/icons.Icon`
-        - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
+        - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree.
           - Web:
             - Contributes:
               - `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`
@@ -15720,7 +15720,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `logChannelPane`
           - `logsPane`
-    - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
+    - **`memory`** — Browse Claude Code auto-memory files for the current project.
       - Web:
         - Slots: `memoryPane.Actions` ← `primitives.pane`
         - Contributes:
@@ -16169,7 +16169,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `waitLabel`
               - Cross-plugin:
                 - Imported by: `debug/profiling/ops`
-        - **`runtime`** — Runtime HTTP/DB/loader profiling tables in the Gantt debug pane. Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
+        - **`runtime`** — Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
           - Web:
             - Contributes: `Profiling.Section` → `RuntimeSection`
             - Uses:
@@ -17319,7 +17319,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `StallLeafSchema`
               - `StallSectionSchema`
               - `StallStackSchema`
-    - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
+    - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks.
       - Web:
         - Slots: `worktreeCleanupPane.Actions` ← `primitives.pane`
         - Contributes:
@@ -26613,7 +26613,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `scanPageLinkTokens`
       - Exemptions:
         - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-link-chip.tsx`, `web/components/page-link-inline-node.tsx` (debt)
-    - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
+    - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
       - Server:
         - Contributes:
           - `resource.declare` "page-backlinks"
@@ -26911,7 +26911,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/page-reference.usePageNavigation`
           - `primitives/css/row.Row`
           - `ui/icons.Icon`
-    - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
+    - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
         - Uses:
@@ -28743,7 +28743,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/sidebar-framing`
       - Core:
         - Exports (types): `SidebarFramingProps`
-    - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
+    - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
         - Uses:
           - `primitives/css/cluster.Cluster`
@@ -32578,7 +32578,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling/boot`
           - `primitives/data-view/table`
           - `primitives/metrics/chart-kit`
-    - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
+    - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Web:
         - Slots:
           - `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.icons`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`
@@ -36634,7 +36634,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/prompt-editor.PromptEditorSlots`
-    - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use rankAdjacentTo() from the server barrel to resolve a DnD move's anchor. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
+    - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use rankAdjacentTo() from the server barrel to resolve a DnD move's anchor. Never use floats or integers. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Server:
         - Uses: `database.db`
         - Exports (types):
@@ -38773,7 +38773,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `review/code-review`
       - `review/plugin-changes`
   - Plugins:
-    - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.
+    - **`code-review`** — File-by-file code review section for the review pane.
       - Web:
         - Contributes:
           - `ReviewSlots.Section` "Code Review" → `CodeReviewSection`
@@ -39296,7 +39296,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `mergeHealth`
           - `sortRows`
           - `verdictOf`
-    - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
+    - **`notifications`** — Persistent bell-button notifications backed by the DB.
       - Web:
         - Contributes: `ActionBar.Item` → `BellButton`
         - Uses:
@@ -39481,7 +39481,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stats/responsiveness`
       - `stats/tasks`
   - Plugins:
-    - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
+    - **`commits`** — Commit-based stats: commits and lines of change over time.
       - Web:
         - Contributes:
           - `Stats.Chart` "Commits" → `CommitsSection`
@@ -39707,7 +39707,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getTasksCumulative`
           - `getTasksDaily`
 
-- **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
+- **`tasks`** — Nested tasks with attempts linking to conversations.
   - Web:
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -40535,7 +40535,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-header`
       - Exemptions:
         - Exempts itself from: `live/no-legacy-resource-spelling` — `web/panes.tsx` (debt)
-    - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
+    - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
         - Slots: `TaskDraftFormSlots.Action` ← `improve.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"

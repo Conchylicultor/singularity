@@ -17,6 +17,7 @@ import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { buildEnrichedTree } from "./enriched-tree";
 import { assertNoTestCodeInFacts } from "./doc-facts-guard";
 import { collectTestHelpers, renderTestHelpers } from "./test-helpers-doc";
+import { capDescription, joinDescriptions } from "./description-text";
 
 /**
  * Marker appended to a plugin's `name — description` line when the app's own
@@ -46,8 +47,8 @@ function pluginDescription(p: PluginNode): string | undefined {
     p.descriptions.web,
     p.descriptions.server,
     p.descriptions.central,
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(" ") : p.description;
+  ].filter((d): d is string => Boolean(d));
+  return parts.length > 0 ? joinDescriptions(parts) : p.description;
 }
 
 function capitalize(s: string): string {
@@ -151,7 +152,8 @@ function renderPluginTreeMd(
   const bodyIndent = `${headerIndent}  `;
   const lines: string[] = [];
   const desc = pluginDescription(p);
-  const descStr = desc ? ` — ${desc}` : "";
+  const shown = desc && mode === "compact" ? capDescription(desc) : desc;
+  const descStr = shown ? ` — ${shown}` : "";
   const lbMarker = mode === "compact" && p.loadBearing ? " [load-bearing]" : "";
   // A collapsed entry hides its sub-tree, so it carries the marker when any
   // plugin inside it publishes helpers.
@@ -273,7 +275,7 @@ function renderPluginClaudeAutogen(
       lines.push("- Sub-plugins:");
       for (const c of p.children) {
         const cdesc = pluginDescription(c);
-        const cdescStr = cdesc ? ` — ${cdesc}` : "";
+        const cdescStr = cdesc ? ` — ${capDescription(cdesc)}` : "";
         const cExMarker = exclusionMarker(c, main);
         lines.push(`  - **\`${c.name}\`**${cExMarker}${cdescStr}`);
       }

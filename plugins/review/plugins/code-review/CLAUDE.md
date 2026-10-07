@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: File-by-file code review section for the review pane. File-by-file code review section for the review pane.
+- Description: File-by-file code review section for the review pane.
 - Web:
   - Contributes:
     - `ReviewSlots.Section` "Code Review" → `CodeReviewSection`

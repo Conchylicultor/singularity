@@ -10,7 +10,7 @@ A path that names an existing file answers `exact` with where its bytes live: `g
 
 ## Plugin reference
 
-- Description: Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
+- Description: Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 - Web:
   - Uses:
     - `infra/endpoints.useEndpoint`

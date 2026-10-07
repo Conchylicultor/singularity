@@ -2,5 +2,8 @@
   "name": "@singularity/plugin-infra",
   "description": "Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.",
   "private": true,
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "singularity": {
+    "collapsed": true
+  }
 }

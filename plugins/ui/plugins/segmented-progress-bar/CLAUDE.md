@@ -53,7 +53,7 @@
     - `ui/segmented-progress-bar/pie`
     - `ui/segmented-progress-bar/segmented`
 - Sub-plugins:
-  - **`arc`** — Arc progress: one unbroken arc on a faint ring, filled clockwise from the top through the current step (step 1 of 4 is a quarter, the last step the whole circle); one colour, no segments. Hover or click lists every step.
+  - **`arc`** — Arc progress: one unbroken arc on a faint ring, filled clockwise from the top through the current step (step 1 of 4 is a quarter, the last step the whole circle); one colour, no segments. Hover or…
   - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
   - **`pie`** — Pie progress: a small circle cut into one wedge per step, filled clockwise from the top in accent shades; hover lists every step.
   - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.

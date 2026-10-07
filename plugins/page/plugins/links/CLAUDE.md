@@ -40,7 +40,7 @@ a steady-state reboot writes nothing).
 
 ## Plugin reference
 
-- Description: Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
+- Description: Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
 - Server:
   - Contributes:
     - `resource.declare` "page-backlinks"
