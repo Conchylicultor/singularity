@@ -8,10 +8,12 @@ import {
 import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
   ChordNumeral,
-  chordPaint,
   chordToneStyle,
-  type ChordPaint,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
+import {
+  chordPaint,
+  type ChordPaint,
+} from "@plugins/music/plugins/chord-box/web";
 import {
   Collapsible,
   CollapsibleChevron,

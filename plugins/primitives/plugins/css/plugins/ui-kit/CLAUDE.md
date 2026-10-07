@@ -512,7 +512,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/chord/shell`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
-    - `apps/chord/vocabulary`
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
@@ -679,6 +678,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `layouts/miller`
     - `layouts/route-fallback`
     - `map`
+    - `music/chord-box`
     - `page/attachment-block`
     - `page/audio`
     - `page/bookmark`

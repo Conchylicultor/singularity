@@ -87,3 +87,6 @@ export {
   asKeySignature,
 } from "./key-context";
 export type { KeyEntry } from "./key-context";
+
+export { chordBars } from "./chord-bars";
+export type { ChordBar, ChordBarSegment } from "./chord-bars";

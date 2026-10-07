@@ -2,14 +2,15 @@ import {
   parseChordToken,
   type ChordToken,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import {
+  majorDegree,
+  type MajorDegree,
+} from "@plugins/music/plugins/chord-box/core";
 
 // ── Where a chord's root sits in the major scale ─────────────────────────────
 //
 // Tokens are relative to the tonic, so the degree is read straight off the
-// root: no key is needed.
-
-/** Semitones above the tonic of each major-scale degree, I to vii. */
-const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11] as const;
+// root: no key is needed (the tonic is pitch class 0).
 
 export type ChordFunction = "tonic" | "subdominant" | "dominant";
 
@@ -28,10 +29,8 @@ const FUNCTION_OF_DEGREE: readonly ChordFunction[] = [
 ];
 
 /** The root's major-scale degree, 0 (I) to 6 (vii); `null` for a root outside the scale (♭VII, ♭III, …). */
-export function chordDegree(token: ChordToken): number | null {
-  const { root } = parseChordToken(token);
-  const degree = MAJOR_SCALE.findIndex((pc) => pc === root);
-  return degree === -1 ? null : degree;
+export function chordDegree(token: ChordToken): MajorDegree | null {
+  return majorDegree(parseChordToken(token).root, 0);
 }
 
 /** The degree's function family; `null` for a root outside the major scale. */

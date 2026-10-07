@@ -123,7 +123,7 @@
 }
 
 /* ── A chord chip: off (ghost), hear (tint), practise (tile) ──────────────
- * The paints are vocabulary's (`chordPaint`, `STATE_PAINT` in the component):
+ * The paints are the chord box's (`chordPaint`, music/chord-box; `STATE_PAINT` in the component):
  * the very tile the trainer's boxes and "Your chords" wear. This file sizes
  * the chip and draws its state chrome (the suggested-next ring, the hover
  * lift, the mastery marks); it never names a chord colour. Tall enough for

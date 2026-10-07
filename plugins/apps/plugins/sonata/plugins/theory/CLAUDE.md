@@ -44,6 +44,7 @@
     - `qualitySymbol`
     - `qualityToIntervals`
     - `romanNumeral`
+    - `romanNumeralParts`
     - `tonicName`
     - `tonicPc`
     - `transposeChordText`

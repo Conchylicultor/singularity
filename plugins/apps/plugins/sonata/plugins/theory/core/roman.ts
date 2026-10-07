@@ -149,6 +149,37 @@ const STYLE: Record<string, RomanStyle> = {
   six9: { lower: false, figure: "6/9" },
 };
 
+/** The degree reading of `root` in `key`: its numeral and chromatic accidental. */
+function degreeOf(root: number, key: KeySignature): Degree {
+  const interval = pc12(root - tonicPc(key.tonic));
+  return (key.mode === "major" ? MAJOR_DEGREES : MINOR_DEGREES)[interval]!;
+}
+
+/**
+ * The Roman-numeral label for `chord` in `key` split in two, as a numeral is
+ * typeset: `numeral` (the accidental and the cased degree — `I`, `ii`, `♭VII`)
+ * and `mark` (the quality mark and figure set small beside it — `°`, `ø7`,
+ * `maj7`; `""` for a plain triad). `null` when the quality is outside the
+ * vocabulary. {@link romanNumeral} is the two joined.
+ */
+export function romanNumeralParts(
+  chord: Pick<ChordData, "root" | "quality">,
+  key: KeySignature,
+): { numeral: string; mark: string } | null {
+  const style = STYLE[chord.quality];
+  if (!style) return null;
+
+  const degree = degreeOf(chord.root, key);
+  const base = NUMERALS[degree.n - 1]!;
+  const numeral = style.lower ? base.toLowerCase() : base;
+  const accidental = degree.acc === undefined ? "" : degree.acc < 0 ? "♭" : "♯";
+
+  return {
+    numeral: accidental + numeral,
+    mark: (style.mark ?? "") + (style.figure ?? ""),
+  };
+}
+
 /**
  * The Roman-numeral label for `chord` in `key`, e.g. `{root:7,quality:"dom7"}`
  * in C major → `"V7"`, `{root:9,quality:"min"}` in C major → `"vi"`, a B♭ major
@@ -159,17 +190,8 @@ export function romanNumeral(
   chord: Pick<ChordData, "root" | "quality">,
   key: KeySignature,
 ): string | null {
-  const style = STYLE[chord.quality];
-  if (!style) return null;
-
-  const interval = pc12(chord.root - tonicPc(key.tonic));
-  const degree = (key.mode === "major" ? MAJOR_DEGREES : MINOR_DEGREES)[interval]!;
-
-  const base = NUMERALS[degree.n - 1]!;
-  const numeral = style.lower ? base.toLowerCase() : base;
-  const accidental = degree.acc === undefined ? "" : degree.acc < 0 ? "♭" : "♯";
-
-  return accidental + numeral + (style.mark ?? "") + (style.figure ?? "");
+  const parts = romanNumeralParts(chord, key);
+  return parts === null ? null : parts.numeral + parts.mark;
 }
 
 // ---------------------------------------------------------------------------
@@ -270,7 +292,9 @@ interface ResolvedHead {
  * whatever remains is the modifier tail handed to the shared grammar.
  */
 function resolveHead(lower: boolean, tail: string): ResolvedHead | null {
-  const markAlias = MARK_ALIASES.find(([spelling]) => tail.startsWith(spelling));
+  const markAlias = MARK_ALIASES.find(([spelling]) =>
+    tail.startsWith(spelling),
+  );
   const mark = markAlias ? markAlias[1] : "";
   const afterMark = markAlias ? tail.slice(markAlias[0].length) : tail;
 

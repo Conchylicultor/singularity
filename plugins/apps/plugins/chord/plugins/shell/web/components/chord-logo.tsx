@@ -1,10 +1,11 @@
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { chordColour } from "@plugins/music/plugins/chord-box/web";
 
 /**
  * Three rounded bars in the chord colours of V, IV and I (top to bottom) —
- * the mockup's mark. Painted from the theme's categorical tokens, so it
- * follows the chord palette. The app's brand mark (`Apps.App` `mark`), sized
+ * the mockup's mark. Painted from the chord-palette tokens, so it follows the
+ * chord colours. The app's brand mark (`Apps.App` `mark`), sized
  * by the launcher that draws it.
  */
 export function ChordLogo({ className }: { className?: string }) {
@@ -20,7 +21,7 @@ export function ChordLogo({ className }: { className?: string }) {
         width="16"
         height="4"
         rx="2"
-        className="fill-categorical-5"
+        style={{ fill: chordColour(4) }}
       />
       <rect
         x="3"
@@ -28,7 +29,7 @@ export function ChordLogo({ className }: { className?: string }) {
         width="12"
         height="4"
         rx="2"
-        className="fill-categorical-4"
+        style={{ fill: chordColour(3) }}
       />
       <rect
         x="3"
@@ -36,7 +37,7 @@ export function ChordLogo({ className }: { className?: string }) {
         width="16"
         height="4"
         rx="2"
-        className="fill-categorical-1"
+        style={{ fill: chordColour(0) }}
       />
     </svg>
   );

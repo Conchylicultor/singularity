@@ -109,6 +109,7 @@ without stopping.
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/live-play`
     - `apps/sonata/audio/metronome`
+    - `apps/sonata/chord-chart`
     - `apps/sonata/controls`
     - `apps/sonata/library`
     - `apps/sonata/notation`
@@ -122,6 +123,7 @@ without stopping.
     - `apps/sonata/progress/scrubber`
     - `apps/sonata/progress/sections`
     - `apps/sonata/recording`
+    - `apps/sonata/rich/chord-list`
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/rich/chord-progression`

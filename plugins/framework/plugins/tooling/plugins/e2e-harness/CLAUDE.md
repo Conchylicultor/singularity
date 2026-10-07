@@ -305,6 +305,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/prototypes/shell`
     - `apps/prototypes/thumbnails`
     - `apps/sonata`
+    - `apps/sonata/chord-chart`
     - `apps/sonata/library`
     - `apps/sonata/look`
     - `apps/sonata/piano-roll`

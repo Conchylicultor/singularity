@@ -5,12 +5,11 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { scrollChildIntoView } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import {
-  bars,
+  chordBars,
   effectiveKeyAt,
-  scoreEndBeat,
-  type Annotation,
-  type ChordData,
-  type Score,
+  type ChordAnnotation,
+  type ChordBar,
+  type ChordBarSegment,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { formatChordLabel } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { useChordDisplayMode } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
@@ -18,63 +17,6 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-
-type ChordAnn = Annotation<"chord", ChordData>;
-
-/** A chord's visible slice within one bar. */
-interface Seg {
-  chord: ChordAnn;
-  /** Beats this slice spans inside the bar — used as the chip's `fr` weight. */
-  grow: number;
-  /** True when the chord was struck in an earlier bar and is held into this one. */
-  isContinuation: boolean;
-}
-
-/** One bar's row in the strip: its slices plus the beat span that owns the playhead. */
-interface BarLine {
-  /** 1-based bar number in the full score (kept stable across head-trim). */
-  number: number;
-  startBeat: number;
-  endBeat: number;
-  segs: Seg[];
-}
-
-const EPS = 1e-6;
-
-/**
- * Slice every chord annotation against the score's bar grid. A chord occupies a
- * `fr`-weighted slot in each bar it overlaps, so within-bar groups (`(E E6)`)
- * split a bar, in-bar holds (`(C . . D)`) widen the held chord, and cross-bar
- * holds (`Cmaj7 . .`) carry the chord forward as ghosted continuation slices.
- * Source-agnostic: reads the canonical Score, so authored chord-grids and
- * analyzer-derived chords render identically. Empty (rest) bars at the head/tail
- * are trimmed so the strip starts and ends on a chord.
- */
-function buildBars(score: Score, chords: ChordAnn[]): BarLine[] {
-  if (chords.length === 0) return [];
-  const barList = bars(score);
-  const end = scoreEndBeat(score);
-
-  const lines: BarLine[] = barList.map((b, i) => {
-    const barStart = b.startBeat;
-    const barEnd = barList[i + 1]?.startBeat ?? Math.max(end, barStart + 1);
-    const segs: Seg[] = [];
-    for (const ch of chords) {
-      if (ch.end <= barStart + EPS || ch.start >= barEnd - EPS) continue;
-      const grow = Math.min(ch.end, barEnd) - Math.max(ch.start, barStart);
-      if (grow <= EPS) continue;
-      segs.push({ chord: ch, grow, isContinuation: ch.start < barStart - EPS });
-    }
-    segs.sort((a, z) => a.chord.start - z.chord.start);
-    return { number: b.index + 1, startBeat: barStart, endBeat: barEnd, segs };
-  });
-
-  let lo = 0;
-  let hi = lines.length - 1;
-  while (lo <= hi && lines[lo]!.segs.length === 0) lo++;
-  while (hi >= lo && lines[hi]!.segs.length === 0) hi--;
-  return lines.slice(lo, hi + 1);
-}
 
 /**
  * The chord-progression strip — the BODY of a `Sonata.Section` card whose chrome
@@ -98,11 +40,12 @@ export function ChordProgression() {
   const mode = useChordDisplayMode();
 
   const chords = useMemo(
-    () => score.annotations.filter((a): a is ChordAnn => a.type === "chord"),
+    () =>
+      score.annotations.filter((a): a is ChordAnnotation => a.type === "chord"),
     [score.annotations],
   );
 
-  const barLines = useMemo(() => buildBars(score, chords), [score, chords]);
+  const barLines = useMemo(() => chordBars(score), [score]);
 
   // The displayed label per chord under the active mode, resolved against the
   // key in force at each chord's onset (a chord's function follows the key, which
@@ -110,7 +53,7 @@ export function ChordProgression() {
   // reference so chips read it by identity, and memoized on the Score + mode so
   // it never recomputes on a cursor frame.
   const labelByChord = useMemo(() => {
-    const m = new Map<ChordAnn, string>();
+    const m = new Map<ChordAnnotation, string>();
     for (const c of chords) {
       m.set(
         c,
@@ -200,9 +143,9 @@ function BarRow({
   onSeek,
   rowRef,
 }: {
-  line: BarLine;
-  active: ChordAnn | undefined;
-  labelByChord: Map<ChordAnn, string>;
+  line: ChordBar;
+  active: ChordAnnotation | undefined;
+  labelByChord: Map<ChordAnnotation, string>;
   onSeek: (beat: number) => void;
   rowRef?: (el: HTMLDivElement | null) => void;
 }) {
@@ -241,9 +184,9 @@ function BarBody({
   labelByChord,
   onSeek,
 }: {
-  segs: Seg[];
-  active: ChordAnn | undefined;
-  labelByChord: Map<ChordAnn, string>;
+  segs: ChordBarSegment[];
+  active: ChordAnnotation | undefined;
+  labelByChord: Map<ChordAnnotation, string>;
   onSeek: (beat: number) => void;
 }) {
   if (segs.length === 0) {
@@ -295,7 +238,7 @@ function ChordChip({
   label,
   onSeek,
 }: {
-  seg: Seg;
+  seg: ChordBarSegment;
   /** Fraction of the bar's chord time this slice owns (0–1). */
   share: number;
   isActive: boolean;

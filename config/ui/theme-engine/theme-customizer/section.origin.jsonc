@@ -1,4 +1,4 @@
-// @hash 72b8533de71b
+// @hash bf8f90c7580e
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "ui.theme-engine.theme-gallery:themes",
     "ui.tokens.categorical:categorical",
     "ui.tokens.chart:chart",
+    "ui.tokens.chord-palette:chord-palette",
     "ui.tokens.color-adjust:color-adjust",
     "ui.tokens.color-palette:color-palette",
     "ui.tokens.density:density",

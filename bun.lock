@@ -726,6 +726,10 @@
         "smplr": "^0.26.0",
       },
     },
+    "plugins/apps/plugins/sonata/plugins/chord-chart": {
+      "name": "@singularity/plugin-apps-sonata-chord-chart",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/controls": {
       "name": "@singularity/plugin-apps-sonata-controls",
       "version": "0.0.1",
@@ -878,6 +882,10 @@
     },
     "plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label": {
       "name": "@singularity/plugin-apps-sonata-rich-chord-label",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/rich/plugins/chord-list": {
+      "name": "@singularity/plugin-apps-sonata-rich-chord-list",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/sonata/plugins/rich/plugins/chord-mode": {
@@ -3629,6 +3637,14 @@
         "@vis.gl/react-google-maps": "^1.10.1",
       },
     },
+    "plugins/music": {
+      "name": "@singularity/plugin-music",
+      "version": "0.0.1",
+    },
+    "plugins/music/plugins/chord-box": {
+      "name": "@singularity/plugin-music-chord-box",
+      "version": "0.0.1",
+    },
     "plugins/network": {
       "name": "@singularity/plugin-network",
       "version": "0.0.1",
@@ -5591,6 +5607,10 @@
       "name": "@singularity/plugin-ui-tokens-chart",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/chord-palette": {
+      "name": "@singularity/plugin-ui-tokens-chord-palette",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/color-adjust": {
       "name": "@singularity/plugin-ui-tokens-color-adjust",
       "version": "0.0.1",
@@ -6654,6 +6674,8 @@
 
     "@singularity/plugin-apps-sonata-audio-soundfont": ["@singularity/plugin-apps-sonata-audio-soundfont@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont"],
 
+    "@singularity/plugin-apps-sonata-chord-chart": ["@singularity/plugin-apps-sonata-chord-chart@workspace:plugins/apps/plugins/sonata/plugins/chord-chart"],
+
     "@singularity/plugin-apps-sonata-controls": ["@singularity/plugin-apps-sonata-controls@workspace:plugins/apps/plugins/sonata/plugins/controls"],
 
     "@singularity/plugin-apps-sonata-document": ["@singularity/plugin-apps-sonata-document@workspace:plugins/apps/plugins/sonata/plugins/document"],
@@ -6721,6 +6743,8 @@
     "@singularity/plugin-apps-sonata-rich-chord-analyzer": ["@singularity/plugin-apps-sonata-rich-chord-analyzer@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-analyzer"],
 
     "@singularity/plugin-apps-sonata-rich-chord-label": ["@singularity/plugin-apps-sonata-rich-chord-label@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label"],
+
+    "@singularity/plugin-apps-sonata-rich-chord-list": ["@singularity/plugin-apps-sonata-rich-chord-list@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-list"],
 
     "@singularity/plugin-apps-sonata-rich-chord-mode": ["@singularity/plugin-apps-sonata-rich-chord-mode@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-mode"],
 
@@ -8048,6 +8072,10 @@
 
     "@singularity/plugin-map-google": ["@singularity/plugin-map-google@workspace:plugins/map/plugins/google"],
 
+    "@singularity/plugin-music": ["@singularity/plugin-music@workspace:plugins/music"],
+
+    "@singularity/plugin-music-chord-box": ["@singularity/plugin-music-chord-box@workspace:plugins/music/plugins/chord-box"],
+
     "@singularity/plugin-network": ["@singularity/plugin-network@workspace:plugins/network"],
 
     "@singularity/plugin-network-live": ["@singularity/plugin-network-live@workspace:plugins/network/plugins/live"],
@@ -8955,6 +8983,8 @@
     "@singularity/plugin-ui-tokens-categorical": ["@singularity/plugin-ui-tokens-categorical@workspace:plugins/ui/plugins/tokens/plugins/categorical"],
 
     "@singularity/plugin-ui-tokens-chart": ["@singularity/plugin-ui-tokens-chart@workspace:plugins/ui/plugins/tokens/plugins/chart"],
+
+    "@singularity/plugin-ui-tokens-chord-palette": ["@singularity/plugin-ui-tokens-chord-palette@workspace:plugins/ui/plugins/tokens/plugins/chord-palette"],
 
     "@singularity/plugin-ui-tokens-color-adjust": ["@singularity/plugin-ui-tokens-color-adjust@workspace:plugins/ui/plugins/tokens/plugins/color-adjust"],
 

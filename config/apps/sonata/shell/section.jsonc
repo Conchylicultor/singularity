@@ -1,4 +1,4 @@
-// @hash 0a34462542c3
+// @hash d040d334c10a
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -12,6 +12,7 @@
     "apps.sonata.track-mixer:track-mixer",
     "apps.sonata.rich.chord-progression:chord-progression",
     "apps.sonata.rich.chord-readout:chord-readout",
+    "apps.sonata.rich.chord-list:chord-list",
     "apps.sonata.rich.chord-mode:chord-mode",
     "apps.sonata.rich.rhythm-controls:rhythm",
     "apps.sonata.rich.voicing-controls:voicing",

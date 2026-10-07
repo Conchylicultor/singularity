@@ -32,6 +32,7 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/sonata/chord-chart`
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/ultimate-guitar`
     - `conversations/conversation-view/jsonl-viewer`

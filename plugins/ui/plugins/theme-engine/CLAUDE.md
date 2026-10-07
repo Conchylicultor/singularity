@@ -149,7 +149,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
 - Web:
   - Slots:
     - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
-    - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+    - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.chord-palette`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.file-type-palette`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
     - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.pages.shell`, `apps.website.shell`, `ui.theme-engine`
     - `ThemeEngine.SubTheme` ← `apps.file-explorer.browser`, `apps.website.pages.apps`, `apps.website.shell`
     - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
@@ -271,6 +271,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `ui/theme-toggle`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
+    - `ui/tokens/chord-palette`
     - `ui/tokens/color-palette`
     - `ui/tokens/density`
     - `ui/tokens/file-type-palette`

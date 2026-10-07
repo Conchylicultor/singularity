@@ -52,7 +52,7 @@ the scope, so the player cannot import the shell).
 - Description: Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport, PlayToggle, PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown).
 - Web:
   - Slots:
-    - `SonataPlayer.Display` ← `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
+    - `SonataPlayer.Display` ← `apps.sonata.chord-chart`, `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
     - `SonataPlayer.Transport` ← `apps.sonata.progress.scrubber`
     - `SonataPlayer.Effect` ← `apps.sonata.controls`
   - Uses:
@@ -85,6 +85,7 @@ the scope, so the player cannot import the shell).
     - `usePlayerView`
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/chord-chart`
     - `apps/sonata/controls`
     - `apps/sonata/library`
     - `apps/sonata/notation`

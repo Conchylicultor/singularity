@@ -10,9 +10,9 @@ import {
 import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
   ChordNumeral,
-  chordPaint,
   chordToneStyle,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
+import { chordPaint } from "@plugins/music/plugins/chord-box/web";
 import {
   catalogOrder,
   type Catalog,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { KeySignature } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { CHORD_TEMPLATES } from "./chords";
-import { parseRomanNumeral, romanNumeral } from "./roman";
+import { parseRomanNumeral, romanNumeral, romanNumeralParts } from "./roman";
 
 const C_MAJOR: KeySignature = { tonic: "C", mode: "major" };
 const A_MINOR: KeySignature = { tonic: "A", mode: "minor" };
@@ -84,12 +84,18 @@ describe("romanNumeral — chromatic / borrowed chords", () => {
 describe("romanNumeral — function is key-relative", () => {
   it("same C-major chord reads I / IV / ♭VI across keys", () => {
     expect(romanNumeral(chord(0, "maj"), C_MAJOR)).toBe("I");
-    expect(romanNumeral(chord(0, "maj"), { tonic: "G", mode: "major" })).toBe("IV");
-    expect(romanNumeral(chord(0, "maj"), { tonic: "E", mode: "minor" })).toBe("VI");
+    expect(romanNumeral(chord(0, "maj"), { tonic: "G", mode: "major" })).toBe(
+      "IV",
+    );
+    expect(romanNumeral(chord(0, "maj"), { tonic: "E", mode: "minor" })).toBe(
+      "VI",
+    );
   });
   it("respects an accidental tonic (V in F♯ major)", () => {
     // F# = pc 6; its dominant is C# = pc 1.
-    expect(romanNumeral(chord(1, "maj"), { tonic: "F#", mode: "major" })).toBe("V");
+    expect(romanNumeral(chord(1, "maj"), { tonic: "F#", mode: "major" })).toBe(
+      "V",
+    );
   });
 });
 
@@ -122,7 +128,10 @@ describe("parseRomanNumeral — major-key diatonic triads", () => {
   ];
   for (const [numeral, root, quality] of cases) {
     it(`${numeral} → root ${root}, ${quality}`, () => {
-      expect(parseRomanNumeral(numeral, C_MAJOR)).toMatchObject({ root, quality });
+      expect(parseRomanNumeral(numeral, C_MAJOR)).toMatchObject({
+        root,
+        quality,
+      });
     });
   }
 });
@@ -135,10 +144,14 @@ describe("parseRomanNumeral — degrees follow the key's scale", () => {
     expect(parseRomanNumeral("vi", C_MAJOR)!.symbol).toBe("Am");
   });
   it("V7 in F major is C7", () => {
-    expect(parseRomanNumeral("V7", { tonic: "F", mode: "major" })!.symbol).toBe("C7");
+    expect(parseRomanNumeral("V7", { tonic: "F", mode: "major" })!.symbol).toBe(
+      "C7",
+    );
   });
   it("accepts an accidental tonic (V in F♯ major is C♯)", () => {
-    expect(parseRomanNumeral("V", { tonic: "F#", mode: "major" })).toMatchObject({
+    expect(
+      parseRomanNumeral("V", { tonic: "F#", mode: "major" }),
+    ).toMatchObject({
       root: 1,
     });
   });
@@ -284,7 +297,11 @@ describe("parseRomanNumeral — altered / extended tensions", () => {
 
 describe("romanNumeral ⇄ parseRomanNumeral round-trip", () => {
   const QUALITIES = CHORD_TEMPLATES.map((t) => t.quality);
-  for (const key of [C_MAJOR, A_MINOR, { tonic: "Eb", mode: "major" } as const]) {
+  for (const key of [
+    C_MAJOR,
+    A_MINOR,
+    { tonic: "Eb", mode: "major" } as const,
+  ]) {
     for (const quality of QUALITIES) {
       it(`every root, ${quality} in ${key.tonic} ${key.mode}`, () => {
         for (let root = 0; root < 12; root++) {
@@ -298,4 +315,30 @@ describe("romanNumeral ⇄ parseRomanNumeral round-trip", () => {
       });
     }
   }
+});
+
+describe("romanNumeralParts", () => {
+  it("splits the numeral from its mark and figure", () => {
+    expect(romanNumeralParts(chord(11, "halfdim7"), C_MAJOR)).toEqual({
+      numeral: "vii",
+      mark: "ø7",
+    });
+    expect(romanNumeralParts(chord(10, "maj"), C_MAJOR)).toEqual({
+      numeral: "♭VII",
+      mark: "",
+    });
+  });
+
+  it("joins back into romanNumeral", () => {
+    for (const { quality } of CHORD_TEMPLATES) {
+      const parts = romanNumeralParts(chord(7, quality), C_MAJOR);
+      expect(parts === null ? null : parts.numeral + parts.mark).toBe(
+        romanNumeral(chord(7, quality), C_MAJOR),
+      );
+    }
+  });
+
+  it("is null outside the vocabulary", () => {
+    expect(romanNumeralParts(chord(0, "nope"), C_MAJOR)).toBeNull();
+  });
 });

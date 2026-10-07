@@ -1,4 +1,4 @@
-// @hash 0a34462542c3
+// @hash d040d334c10a
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "apps.sonata.rich.chord-list:chord-list",
     "apps.sonata.rich.chord-mode:chord-mode",
     "apps.sonata.rich.chord-progression:chord-progression",
     "apps.sonata.rich.chord-readout:chord-readout",

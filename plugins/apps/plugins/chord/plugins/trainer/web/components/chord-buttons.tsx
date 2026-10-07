@@ -9,9 +9,9 @@ import {
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
   ChordNumeral,
-  chordPaint,
   chordToneStyle,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
+import { chordPaint } from "@plugins/music/plugins/chord-box/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";

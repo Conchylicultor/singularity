@@ -3,7 +3,7 @@
  * and its label are the `.chord-tone` pair (`--fn-bg` / `--fn-ink`) an answer
  * box already wears, so the two read as the same object. No hex here. */
 
-/* The doubled bass wears the theme's NEUTRAL chord grey (`--categorical-10`,
+/* The doubled bass wears the theme's NEUTRAL chord grey (`--chord-outside`,
  * the colour a root outside the key already uses), given the same tile-and-ink
  * treatment `.chord-tone` gives a chord colour — a little deeper, so it sits
  * under the chord rather than beside it.
@@ -15,8 +15,8 @@
  * Defined here rather than in `.chord-tone` because nothing else in the app
  * doubles a bass. */
 .chord-piano {
-  --fn-bass: color-mix(in oklch, var(--categorical-10) 58%, black);
-  --fn-bass-ink: color-mix(in srgb, var(--categorical-10) 12%, white);
+  --fn-bass: color-mix(in oklch, var(--chord-outside) 58%, black);
+  --fn-bass-ink: color-mix(in srgb, var(--chord-outside) 12%, white);
 }
 
 /* The note printed on a lit key. Only lit keys carry one, so the ink is always

@@ -108,11 +108,13 @@ availability gates over the composed score.
     - `useWriteSongSetting`
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/chord-chart`
     - `apps/sonata/library`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
     - `apps/sonata/player`
     - `apps/sonata/rich/chord-analyzer`
+    - `apps/sonata/rich/chord-list`
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/chord-progression`
     - `apps/sonata/rich/chord-readout`

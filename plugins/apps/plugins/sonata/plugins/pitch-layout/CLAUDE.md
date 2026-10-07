@@ -90,6 +90,7 @@ which puts the C row (C D E F♯ G♯ A♯) nearest the player, as on a real Jan
     - `pitchLayoutConfig`
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/rich/chord-list`
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/key-readout`
 

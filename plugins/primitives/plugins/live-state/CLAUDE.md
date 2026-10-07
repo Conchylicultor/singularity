@@ -970,6 +970,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/prototypes/canvas`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
+    - `apps/sonata/chord-chart`
     - `apps/sonata/library`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
@@ -1109,6 +1110,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `ui/theme-engine/theme-gallery`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
+    - `ui/tokens/chord-palette`
     - `ui/tokens/color-adjust`
     - `ui/tokens/color-palette`
     - `ui/tokens/density`

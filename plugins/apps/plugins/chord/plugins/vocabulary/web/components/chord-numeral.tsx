@@ -1,13 +1,12 @@
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import "../chord-paint.css";
+import { ChordNumeral as Numeral } from "@plugins/music/plugins/chord-box/web";
 
 /**
- * A chord's Roman numeral in the display serif (Bodoni Moda): the degree at
- * full size, its quality mark and inversion figure small and raised, in the
- * sans. Its size and colour come from where it sits: a box, a chord button, a
- * chip, the Chords section's chips.
+ * A chord token's Roman numeral, drawn by the shared chord box's numeral: the
+ * degree at full size, its quality mark and inversion figure small and raised.
+ * Its size and colour come from where it sits: a box, a chord button, a chip,
+ * the Chords section's chips.
  */
 export function ChordNumeral({
   token,
@@ -17,11 +16,7 @@ export function ChordNumeral({
   className?: string;
 }) {
   const { numeral, suffix, figure } = chordLabel(token);
-  const mark = suffix + figure;
   return (
-    <span className={cn("chord-num", className)}>
-      {numeral}
-      {mark !== "" && <span className="chord-num-mark">{mark}</span>}
-    </span>
+    <Numeral numeral={numeral} mark={suffix + figure} className={className} />
   );
 }

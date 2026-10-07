@@ -95,6 +95,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/canvas`
     - `apps/prototypes/present`
+    - `apps/sonata/chord-chart`
     - `apps/sonata/library`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
@@ -219,6 +220,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `ui/theme-engine/theme-customizer`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
+    - `ui/tokens/chord-palette`
     - `ui/tokens/color-adjust`
     - `ui/tokens/color-palette`
     - `ui/tokens/density`

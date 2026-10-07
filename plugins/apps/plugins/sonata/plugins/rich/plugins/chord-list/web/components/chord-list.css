@@ -1,0 +1,38 @@
+/* A row of the chord list: the chord box, its keyboard, its count. The row's
+ * `--fn` (its chord colour) comes from `chordToneStyle`; colours are tokens. */
+.chord-list-row {
+  border-radius: var(--radius-md);
+}
+.chord-list-hit {
+  border-radius: inherit;
+  cursor: pointer;
+}
+.chord-list-hit:hover {
+  background: var(--accent);
+}
+.chord-list-hit:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 1px;
+}
+/* The chord under the playhead: washed and ringed in its own colour. */
+.chord-list-row[data-now] .chord-list-hit {
+  background: color-mix(in srgb, var(--fn, var(--chord-outside)) 14%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--fn, var(--chord-outside));
+}
+
+.chord-list-cells {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 4px;
+}
+.chord-list-cells > :last-child {
+  text-align: end;
+}
+/* Doubled with `.chord-box` so it outranks the box's own rules whatever order
+ * the two sheets load in. */
+.chord-box.chord-list-box {
+  height: 3rem;
+  border-radius: var(--radius-md);
+}

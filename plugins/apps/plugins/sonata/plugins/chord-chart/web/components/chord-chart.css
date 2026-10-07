@@ -1,0 +1,140 @@
+/* The chord grid's own chrome: the sheet, the bar cells, the beat dots and the
+ * beat line. How a chord is painted is the chord box's (music/chord-box); this
+ * file only places boxes inside a bar. Colours are theme tokens. */
+
+/* The sheet: a readable measure, four bars a row — two once it is narrow. */
+.chord-chart-sheet {
+  container-type: inline-size;
+  max-width: 70rem;
+  margin-inline: auto;
+}
+.chord-chart-bars {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+@container (max-width: 34rem) {
+  .chord-chart-bars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* A bar: its number on top, its chords, a dot per beat underneath. */
+.chord-chart-bar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 2px;
+  height: 6.5rem;
+  padding: 2px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.chord-chart-bar > :first-child {
+  padding-inline-start: 4px;
+}
+/* The bar under the playhead: outlined in the ink colour. */
+.chord-chart-bar[data-active] {
+  border-color: var(--foreground);
+  box-shadow: 0 0 0 1px var(--foreground);
+}
+
+/* The chords, each as wide as the beats it lasts in the bar. */
+.chord-chart-segs {
+  position: relative;
+  display: flex;
+  gap: 3px;
+  min-height: 0;
+}
+/* Doubled with `.chord-box` so it outranks the box's own rules whatever order
+ * the two sheets load in. */
+.chord-box.chord-chart-seg {
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+/* A short chord gets a narrow box: its label shrinks with the box (lower
+ * floors than the box's own, which are sized for an answer tile), drops the
+ * name line first, and a sliver keeps only its colour — never clipped text. */
+.chord-box.chord-chart-seg .chord-num {
+  font-size: clamp(12px, 38cqi, 44px);
+}
+.chord-box.chord-chart-seg .chord-box-symbol {
+  font-size: clamp(11px, 30cqi, 34px);
+}
+@container (max-width: 3.5rem) {
+  .chord-chart-seg .chord-box-name {
+    display: none;
+  }
+}
+@container (max-width: 1.75rem) {
+  .chord-chart-seg .chord-num,
+  .chord-chart-seg .chord-box-symbol {
+    display: none;
+  }
+}
+
+/* A chord held over the barline: a tie across its dimmed box. */
+.chord-chart-seg[data-tie]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 10px;
+  top: 50%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--fn, var(--chord-outside));
+  opacity: 0.5;
+  pointer-events: none;
+}
+.chord-chart-rest {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  font-size: 1.25rem;
+  color: var(--faint-foreground);
+}
+
+/* While playing, the bars the playhead is not in recede. */
+[data-playing] .chord-chart-bar:not([data-active]) .chord-chart-seg {
+  opacity: 0.55;
+}
+
+/* The beat line: where the playhead is in the active bar, from the
+ * `--chord-chart-progress` the display writes on every cursor move. */
+.chord-chart-beatline {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: calc(100% * var(--chord-chart-progress, 0));
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--foreground);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--background) 60%, transparent);
+  pointer-events: none;
+}
+
+/* A dot per beat, under the chords. */
+.chord-chart-beats {
+  display: flex;
+  justify-content: space-around;
+  height: 3px;
+}
+.chord-chart-beats > i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chord-chart-bar {
+    transition: none;
+  }
+}

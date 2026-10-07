@@ -1,0 +1,181 @@
+/* How a chord is drawn, wherever it is drawn: its colour, its numeral, the
+ * four named paints a chord surface wears, and the chord box that frames
+ * them.
+ *
+ * A surface picks a paint BY NAME (`chordPaint(…)`, `chord-paint.ts`) and
+ * keeps only its geometry and its state chrome (sizes, radii, selected /
+ * marked / lit edges, shadows); it never re-states a chord colour.
+ *
+ * Colours READ the chord-palette tokens (`--chord-1…7`, `--chord-outside`)
+ * through `--fn`, which `chordToneStyle` sets. No hex lives here; black and
+ * white appear only as the ends a chord colour is mixed toward. The paint
+ * around a box that only one surface has (a checked mark, a fill's pop, a
+ * corner badge) stays with that surface. */
+
+/* ── A chord's colours ─────────────────────────────────────────────────────
+ * `--fn` (the degree's colour) and `--fn-depth` come from `chordToneStyle`.
+ * The solid tile deepens the colour in OKLCH so it keeps its strength; the
+ * numeral on it is the colour washed almost to white. */
+.chord-tone {
+  --fn-bg: color-mix(in oklch, var(--fn, var(--chord-outside)) var(--fn-depth, 74%), black);
+  --fn-ink: color-mix(in srgb, var(--fn, var(--chord-outside)) 10%, white);
+}
+
+/* ── The paints ──────────────────────────────────────────────────────────────
+ * Each sets the surface's fill and edge, and `--chord-ink`: the colour of the
+ * numeral and of any label inside that should read as one with it (a surface
+ * label opts in with `color: var(--chord-ink, <its unpainted colour>)`).
+ *
+ * The edge's WIDTH is the surface's: `--chord-edge` (1.5px unless the surface
+ * says otherwise). A paint owns style and colour only, so a surface never
+ * re-declares `border` and races this file in the cascade.
+ *
+ *   tile        — solid: the deepened chord colour, numeral and labels in the
+ *                 light ink. A chord that is named: a filled box, a lit
+ *                 button, a practised chip.
+ *   tint        — outline + light wash, numeral in the chord colour: a chord
+ *                 that is on but not asked (a Hear chip, its legend swatch).
+ *   tint-quiet  — the same tint, quieter: a fainter edge and the numeral
+ *                 dimmed. A given box — printed beside the boxes being asked,
+ *                 it must recede behind them. Same wash (7 %), so the two read
+ *                 as one family.
+ *   ghost       — off / empty: a dashed neutral edge, no fill, a faint numeral.
+ */
+.chord-tile,
+.chord-tint,
+.chord-tint-quiet,
+.chord-ghost {
+  border-width: var(--chord-edge, 1.5px);
+  color: var(--chord-ink);
+}
+.chord-tile {
+  --chord-ink: var(--fn-ink);
+  background: var(--fn-bg);
+  border-style: solid;
+  border-color: transparent;
+}
+.chord-tint {
+  --chord-ink: var(--fn, var(--chord-outside));
+  background: color-mix(in srgb, var(--fn, var(--chord-outside)) 7%, transparent);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--fn, var(--chord-outside)) 55%, transparent);
+}
+.chord-tint-quiet {
+  --chord-ink: color-mix(in srgb, var(--fn, var(--chord-outside)) 55%, transparent);
+  background: color-mix(in srgb, var(--fn, var(--chord-outside)) 7%, transparent);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--fn, var(--chord-outside)) 22%, transparent);
+}
+.chord-ghost {
+  --chord-ink: color-mix(in srgb, var(--faint-foreground) 60%, transparent);
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--input);
+}
+
+/* ── The numeral ──────────────────────────────────────────────────────────────
+ * In the paint's ink; unpainted (a button at rest, a footer), the chord's own
+ * colour. */
+.chord-num {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--chord-ink, var(--fn, var(--foreground)));
+}
+.chord-num-mark {
+  font-family: var(--font-sans);
+  font-size: 0.42em;
+  vertical-align: 0.9em;
+  margin-left: 0.05em;
+}
+
+/* ── A reading under the numeral ("V/V", "I/3") ──────────────────────────────
+ * In the paint's ink, dimmed, so it reads as the numeral's footnote on every
+ * paint; unpainted, the muted text. Its size is the surface's. */
+.chord-caption {
+  font-family: var(--font-sans);
+  line-height: 1;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--chord-ink, var(--muted-foreground)) 75%, transparent);
+}
+
+/* ── The chord box ────────────────────────────────────────────────────────
+ * A box is a painted frame; its click target is the full-bleed button behind
+ * its content (`.chord-box-hit`), so the frame's hover and focus states read
+ * off that button. Its paint follows its state (`ChordBox`): ghost while
+ * empty, tile once filled, tint-quiet when given. */
+.chord-box {
+  container-type: inline-size;
+  border-radius: 10px;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    transform 0.12s;
+}
+.chord-box-hit {
+  border-radius: inherit;
+  cursor: pointer;
+}
+.chord-box-hit:disabled {
+  cursor: default;
+}
+.chord-box-hit:focus-visible {
+  outline: none;
+}
+.chord-box:has(.chord-box-hit:enabled:hover) {
+  border-color: var(--faint-foreground);
+}
+.chord-box:has(.chord-box-hit:focus-visible) {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+.chord-box .chord-num {
+  font-size: clamp(22px, 38cqi, 44px);
+}
+/* A chord written as its symbol rather than its numeral: the root as the head,
+ * in the sans at nearly the numeral's size, the rest of the symbol (`maj7`,
+ * `/E`) set small and raised beside it — the way the numeral carries its mark,
+ * so the two modes read as one typography. In the paint's ink, as the numeral. */
+.chord-box-symbol {
+  font-size: clamp(16px, 30cqi, 34px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--chord-ink, var(--fn, var(--foreground)));
+}
+.chord-box-symbol-mark {
+  font-size: 0.5em;
+  vertical-align: 0.75em;
+  margin-left: 0.03em;
+}
+/* The chord's name under its numeral: in the paint's ink, the same as the
+ * numeral, so the two lines read as one label. */
+.chord-box-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--chord-ink, var(--muted-foreground));
+}
+/* The numeral as the second line, under a symbol: the name's size. */
+.chord-box .chord-num.chord-box-name {
+  font-size: 13px;
+}
+.chord-box[data-selected] {
+  border: 2px solid var(--muted-foreground);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+/* The chord sounding now: lifted, ringed in its own colour (the raw `--fn` as
+ * a line, not a paint). */
+.chord-box[data-now] {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px var(--fn, var(--chord-outside));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chord-box {
+    transition: none;
+  }
+}

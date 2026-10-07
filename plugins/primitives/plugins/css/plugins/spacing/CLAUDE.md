@@ -145,6 +145,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/prototypes/compare`
     - `apps/prototypes/present`
     - `apps/sonata/audio/engine`
+    - `apps/sonata/chord-chart`
     - `apps/sonata/library`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
@@ -152,6 +153,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/scrubber`
     - `apps/sonata/recording`
+    - `apps/sonata/rich/chord-list`
     - `apps/sonata/rich/chord-progression`
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/key-readout`
@@ -313,6 +315,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `layouts/miller`
     - `layouts/route-fallback`
     - `map/google`
+    - `music/chord-box`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
     - `page/attachment-block`
@@ -440,6 +443,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `ui/theme-engine/theme-gallery`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
+    - `ui/tokens/chord-palette`
     - `ui/tokens/color-adjust`
     - `ui/tokens/color-palette`
     - `ui/tokens/density`

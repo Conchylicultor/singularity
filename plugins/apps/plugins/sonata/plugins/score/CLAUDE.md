@@ -17,6 +17,8 @@
     - `BarPosition`
     - `Capability`
     - `ChordAnnotation`
+    - `ChordBar`
+    - `ChordBarSegment`
     - `ChordData`
     - `KeyEntry`
     - `KeySignature`
@@ -55,6 +57,7 @@
     - `beatToSeconds`
     - `buildActiveNoteIndex`
     - `buildTempoIndex`
+    - `chordBars`
     - `collectKeyEntries`
     - `currentLine`
     - `effectiveKeyAt`

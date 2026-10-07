@@ -32,6 +32,7 @@
     - `apps/pages/history`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
+    - `apps/sonata/chord-chart`
     - `apps/sonata/notation`
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/midi/file-preview`

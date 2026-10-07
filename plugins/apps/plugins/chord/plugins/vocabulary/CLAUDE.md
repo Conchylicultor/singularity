@@ -21,11 +21,10 @@ songKeyLabel(key)        → "G major", "E♭ mixolydian"
 songKeyTonicPc(key)      → 0..11
 songVocabulary(key)      → { nameChord, noteName }              // "D7", "D/F♯", "A♭"
 
-// web/ — the one drawing of a chord
+// web/ — a chord TOKEN drawn with the shared chord box (music/chord-box)
 <ChordNumeral token/>    // the numeral, its mark and figure raised beside it
 chordToneStyle(token)    // --fn / --fn-depth, which .chord-tone reads
-chordPaint(paint)        // "chord-tone chord-<paint>": tile | tint | tint-quiet | ghost
-.chord-caption           // a reading under a numeral, in the paint's ink, dimmed
+// chordPaint(paint) and .chord-caption are music/chord-box's, imported from there
 ```
 
 ## Readings
@@ -120,11 +119,15 @@ by the curriculum staying small.
 
 ## Drawing
 
-`web/` is the one place a chord is drawn: `<ChordNumeral>`,
-`chordToneStyle`, and `chordPaint`, with `.chord-tone` / `.chord-num` and the
-four paints in `chord-paint.css`. The trainer and the curriculum both use them,
-so one chord reads the same in an answer box, on a button, in a panel chip and
-in the Chords section's chips.
+How a chord is drawn lives in the shared chord box (`music/chord-box`), which
+knows degrees and strings only, so Sonata draws chords the same way:
+`chordPaint`, `.chord-tone` / `.chord-num` / `.chord-caption`, the four paints
+and `<ChordBox>` in its `chord-box.css`, painted from the `chord-palette`
+tokens (`--chord-1…7`, `--chord-outside`). `web/` here is the thin token layer
+over it: `<ChordNumeral token>` (the numeral from `chordLabel`) and
+`chordToneStyle(token)` (the token's degree). The trainer and the curriculum
+both use them, so one chord reads the same in an answer box, on a button, in a
+panel chip and in the Chords section's chips.
 
 **A surface applies a paint by name and never re-states a chord colour.** Its
 component maps its own state to a paint (`chordPaint("tile")`, the Chords
@@ -180,13 +183,13 @@ surface.
 
 ## Plugin reference
 
-- Description: How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
+- Description: A chord token drawn with the shared chord box (music/chord-box): <ChordNumeral token> (its Roman numeral, from chordLabel) and chordToneStyle(token) (its degree colour and tile depth, as the --fn custom properties the .chord-tone paint and the named chord paints read). Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`
-  - Exports (types): `ChordPaint`
+  - Uses:
+    - `music/chord-box.ChordNumeral`
+    - `music/chord-box.chordToneStyle`
   - Exports (values):
     - `ChordNumeral`
-    - `chordPaint`
     - `chordToneStyle`
 - Core:
   - Uses:
@@ -206,6 +209,8 @@ surface.
     - `apps/sonata/theory.romanNumeral`
     - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.hookpadTonicPc`
+    - `music/chord-box.majorDegree`
+    - `music/chord-box.MajorDegree`
   - Exports (types):
     - `ChordDigit`
     - `ChordFunction`

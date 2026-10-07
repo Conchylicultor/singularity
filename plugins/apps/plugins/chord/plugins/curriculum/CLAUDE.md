@@ -223,11 +223,11 @@ A round nothing was typed into reads exactly like the next one, so after
 - Web:
   - Uses:
     - `apps/chord/vocabulary.ChordNumeral`
-    - `apps/chord/vocabulary.chordPaint`
-    - `apps/chord/vocabulary.ChordPaint`
     - `apps/chord/vocabulary.chordToneStyle`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
+    - `music/chord-box.chordPaint`
+    - `music/chord-box.ChordPaint`
     - `network/live.useLive`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleChevron`

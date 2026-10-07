@@ -20,7 +20,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`pages`** [exempt] [15 sub-plugins] — Notion-like pages app.
     - **`prototypes`** [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
-    - **`sonata`** [test helpers] [exempt] [70 sub-plugins] — Sonata — extensible piano and music app.
+    - **`sonata`** [test helpers] [exempt] [72 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
     - **`website`** [15 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
 
@@ -253,6 +253,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`map`** — Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType.
   - Plugins:
     - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as AdvancedMarkers holding each pin's contributed content, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them only when the set of positions changes, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
+
+- **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
+  - Plugins:
+    - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the root's major-scale degree colour — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
@@ -563,7 +567,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
         - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry first). Shown as the customizer's first section (cards, with rename and delete on saved themes) and in the quick-theme popover (compact rows).
     - **`theme-toggle`** — Light/dark switch inside the quick-theme popover.
-    - **`tokens`** [exempt] [16 sub-plugins] — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
+    - **`tokens`** [exempt] [17 sub-plugins] — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Plugins:
         - **`column`** — Column tree disclosure — a dedicated chevron column ahead of the icon, present only on rows with children (Finder / VS Code style).

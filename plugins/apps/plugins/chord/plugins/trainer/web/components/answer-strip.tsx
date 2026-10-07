@@ -1,5 +1,8 @@
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
+import {
+  chordDegree,
+  chordLabel,
+} from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
   isRightAnswer,
   type Answer,
@@ -19,11 +22,8 @@ import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  ChordNumeral,
-  chordPaint,
-  chordToneStyle,
-} from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
+import { ChordNumeral } from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
+import { ChordBox } from "@plugins/music/plugins/chord-box/web";
 import {
   gridBeatAt,
   sheetScore,
@@ -223,111 +223,95 @@ function AnswerBox({
   // The box is a painted frame holding two buttons: the whole box replays its
   // stretch of the song (or selects it, before the check), and a wrong box's
   // struck answer plays the answer given. A button cannot hold a button, so
-  // the box's own button is the full-bleed layer BEHIND the content, and the
-  // struck answer opts back into clicks above it.
+  // the box's own button is the full-bleed layer BEHIND the content (the chord
+  // box's `hit`), and the struck answer opts back into clicks above it.
   return (
-    <div
-      // Its paint: the quiet tint for a given box, the tile once filled, the
-      // ghost while it waits for an answer.
-      className={cn(
-        placedClasses({}),
-        "chord-box",
-        chordPaint(!asked ? "tint-quiet" : shown !== null ? "tile" : "ghost"),
+    <ChordBox
+      // Its paint follows its state: the quiet tint for a given box, the tile
+      // once filled, the ghost while it waits for an answer. Rare has no chord
+      // colour: it paints the outside-the-scale grey.
+      degree={shown === null || shown === "rare" ? null : chordDegree(shown)}
+      state={!asked ? "given" : shown !== null ? "filled" : "empty"}
+      selected={selected}
+      now={checked && sounding}
+      className={placedClasses({})}
+      style={placedStyle(
+        {
+          start: beatX(box.gridStart, beats),
+          size: `calc(${pct(box.gridSpan / beats)} - ${String(2 * HALF_GAP)}px)`,
+        },
+        "fill",
       )}
-      style={{
-        ...placedStyle(
-          {
-            start: beatX(box.gridStart, beats),
-            size: `calc(${pct(box.gridSpan / beats)} - ${String(2 * HALF_GAP)}px)`,
-          },
-          "fill",
-        ),
-        ...(shown === null || shown === "rare" ? {} : chordToneStyle(shown)),
-      }}
-      data-given={asked ? undefined : ""}
-      data-filled={asked && shown !== null ? "" : undefined}
-      data-selected={selected ? "" : undefined}
       data-mark={mark}
-      data-now={checked && sounding ? "" : undefined}
       data-pop={popped && !checked ? "" : undefined}
+      hit={{
+        // A given box is nothing to press before the check; after it, it
+        // replays its stretch of the song like any other box.
+        disabled: checked ? !canReplay : !asked,
+        // The numeral first, then the name, then ", given": the order the
+        // e2e script and `ASKED_BOX` read, so the name extends the label
+        // instead of moving anything already in it.
+        ariaLabel: `Chord ${String(box.position + 1)}, ${beatsLabel}${
+          shown === null
+            ? ""
+            : `: ${answerText(shown)}${name === null ? "" : `, ${name}`}`
+        }${asked ? "" : ", given"}${
+          mark === undefined ? "" : mark === "ok" ? ", right" : ", wrong"
+        }`,
+        pressed: checked || !asked ? undefined : selected,
+        onClick: () => (checked ? onReplay(box) : onSelect(box.position)),
+      }}
+      adornment={
+        mark !== undefined && (
+          <Center
+            as="span"
+            aria-hidden="true"
+            className={cn(placedClasses({}), "chord-badge")}
+            style={placedStyle({ end: -9 }, { start: -9 })}
+            data-mark={mark}
+          >
+            {mark === "ok" ? (
+              <Icon icon={checkIcon} />
+            ) : (
+              <Icon icon={closeIcon} />
+            )}
+          </Center>
+        )
+      }
     >
-      <Overlay
-        fill
-        clickThrough
-        className="size-full"
-        behind={
-          <button
-            type="button"
-            className="chord-box-hit size-full"
-            // A given box is nothing to press before the check; after it, it
-            // replays its stretch of the song like any other box.
-            disabled={checked ? !canReplay : !asked}
-            // The numeral first, then the name, then ", given": the order the
-            // e2e script and `ASKED_BOX` read, so the name extends the label
-            // instead of moving anything already in it.
-            aria-label={`Chord ${String(box.position + 1)}, ${beatsLabel}${
-              shown === null
-                ? ""
-                : `: ${answerText(shown)}${name === null ? "" : `, ${name}`}`
-            }${asked ? "" : ", given"}${
-              mark === undefined ? "" : mark === "ok" ? ", right" : ", wrong"
-            }`}
-            aria-pressed={checked || !asked ? undefined : selected}
-            onClick={() => (checked ? onReplay(box) : onSelect(box.position))}
-          />
-        }
-      >
-        <Stack gap="xs" align="center" justify="center" className="size-full">
-          {missed === null ? (
-            shown !== null && <AnswerGlyph answer={shown} />
-          ) : (
-            <Stack
-              direction="row"
-              gap="xs"
-              align="baseline"
-              justify="center"
-              className="chord-box-pair"
-            >
-              {missed === "rare" ? (
-                // Rare is not one chord: nothing to play, only the mistake.
-                <span className="chord-missed">
-                  <AnswerGlyph answer={missed} />
-                </span>
-              ) : (
-                <Overlay.Interactive>
-                  <button
-                    type="button"
-                    className="chord-missed"
-                    title="Hear what you picked"
-                    aria-label={`Hear your answer, ${chordLabel(missed).text}`}
-                    onClick={() => onHearAnswer(missed)}
-                  >
-                    <ChordNumeral token={missed} />
-                  </button>
-                </Overlay.Interactive>
-              )}
-              {shown !== null && <AnswerGlyph answer={shown} />}
-            </Stack>
-          )}
-          {name !== null && <span className="chord-box-name">{name}</span>}
-        </Stack>
-      </Overlay>
-      {mark !== undefined && (
-        <Center
-          as="span"
-          aria-hidden="true"
-          className={cn(placedClasses({}), "chord-badge")}
-          style={placedStyle({ end: -9 }, { start: -9 })}
-          data-mark={mark}
+      {missed === null ? (
+        shown !== null && <AnswerGlyph answer={shown} />
+      ) : (
+        <Stack
+          direction="row"
+          gap="xs"
+          align="baseline"
+          justify="center"
+          className="chord-box-pair"
         >
-          {mark === "ok" ? (
-            <Icon icon={checkIcon} />
+          {missed === "rare" ? (
+            // Rare is not one chord: nothing to play, only the mistake.
+            <span className="chord-missed">
+              <AnswerGlyph answer={missed} />
+            </span>
           ) : (
-            <Icon icon={closeIcon} />
+            <Overlay.Interactive>
+              <button
+                type="button"
+                className="chord-missed"
+                title="Hear what you picked"
+                aria-label={`Hear your answer, ${chordLabel(missed).text}`}
+                onClick={() => onHearAnswer(missed)}
+              >
+                <ChordNumeral token={missed} />
+              </button>
+            </Overlay.Interactive>
           )}
-        </Center>
+          {shown !== null && <AnswerGlyph answer={shown} />}
+        </Stack>
       )}
-    </div>
+      {name !== null && <span className="chord-box-name">{name}</span>}
+    </ChordBox>
   );
 }
 

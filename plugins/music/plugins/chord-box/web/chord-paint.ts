@@ -1,13 +1,13 @@
-import "./chord-paint.css";
+import "./chord-box.css";
 
 /**
- * The named paints a chord surface wears (`chord-paint.css`):
+ * The named paints a chord surface wears (`chord-box.css`):
  *
- * - `tile` — solid: a chord the learner names (a filled box, a lit button, a
+ * - `tile` — solid: a chord that is named (a filled box, a lit button, a
  *   practised chip).
  * - `tint` — outline and light wash: a chord on but not asked (a Hear chip).
- * - `tint-quiet` — the tint, quieter: a given answer box, which must recede
- *   beside the boxes being asked.
+ * - `tint-quiet` — the tint, quieter: a given box, which must recede beside
+ *   the boxes being asked.
  * - `ghost` — off or empty: a dashed neutral edge, a faint numeral.
  */
 export type ChordPaint = "tile" | "tint" | "tint-quiet" | "ghost";

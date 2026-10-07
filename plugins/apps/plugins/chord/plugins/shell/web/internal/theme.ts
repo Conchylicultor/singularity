@@ -1,6 +1,6 @@
 import { both, defineTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
-import { categoricalGroup } from "@plugins/ui/plugins/tokens/plugins/categorical/core";
+import { chordPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/chord-palette/core";
 import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
 
 // The mockup's "onyx" palette (proto-1789461303-updb): neutral blacks, and
@@ -60,28 +60,27 @@ const colorPalette = colorPaletteGroup.fragment(
 );
 
 /**
- * The chord colours ("classic"), one per scale degree: categorical-1…7 are
- * I, ii, iii, IV, V, vi, vii°. The most common chords sit on the most distant
- * hues — I orange, IV sage, V blue, vi violet — then ii gold, iii rose, vii
- * teal. The deep tile a filled answer sits on and the numeral on it are
- * derived from these in CSS (`color-mix`), as in the mockup.
+ * The chord colours ("classic"), one per scale degree: chord-1…7 are I, ii,
+ * iii, IV, V, vi, vii°, and chord-outside the neutral grey of a chord whose
+ * root is outside the major scale. The most common chords sit on the most
+ * distant hues — I orange, IV sage, V blue, vi violet — then ii gold, iii
+ * rose, vii teal. The deep tile a filled answer sits on and the numeral on it
+ * are derived from these in CSS (`color-mix`, `music/chord-box`), as in the
+ * mockup.
  *
- * categorical-10 is the neutral grey of a chord whose root is outside the
- * major scale. 8 and 9 are unused and keep the group's dark defaults.
+ * They are the palette's own defaults today; the theme states them anyway, so
+ * the app keeps the mockup's look whatever the defaults become.
  */
-const categorical = categoricalGroup.fragment(
+const chordPalette = chordPaletteGroup.fragment(
   both({
-    "categorical-1": "#EC8A3A",
-    "categorical-2": "#E2B23A",
-    "categorical-3": "#DE6A9A",
-    "categorical-4": "#7FB685",
-    "categorical-5": "#3AA4D0",
-    "categorical-6": "#9C6FE6",
-    "categorical-7": "#2FB5A8",
-    "categorical-8": "oklch(0.78 0.17 350)",
-    "categorical-9": "oklch(0.80 0.15 50)",
-    "categorical-10": "#8C8A85",
-    "categorical-foreground": "#F7F6F4",
+    "chord-1": "#EC8A3A",
+    "chord-2": "#E2B23A",
+    "chord-3": "#DE6A9A",
+    "chord-4": "#7FB685",
+    "chord-5": "#3AA4D0",
+    "chord-6": "#9C6FE6",
+    "chord-7": "#2FB5A8",
+    "chord-outside": "#8C8A85",
   }),
 );
 
@@ -109,5 +108,5 @@ const fontFamily = fontFamilyGroup.fragment(
 export const chordTheme = defineTheme({
   id: "chord",
   label: "Chord",
-  fragments: [colorPalette, categorical, fontFamily],
+  fragments: [colorPalette, chordPalette, fontFamily],
 });

@@ -5,18 +5,18 @@
  * solid).
  *
  * Every colour READS the chord theme (`chordTheme`, shell): surfaces and ink
- * from the colour palette, the chord colours from `--categorical-N`. No hex
+ * from the colour palette, the chord colours from `--chord-N`. No hex
  * lives here; black and white appear only as the ends a chord colour is mixed
  * toward. */
 
 /* A chord's own colours (`.chord-tone`), its numeral (`.chord-num`) and the
- * paints a chord surface wears (tile, tint-quiet, ghost — `chordPaint`) are
- * drawn the same everywhere, so they live with the vocabulary
- * (`vocabulary/web/chord-paint.css`). The components pick a paint by name;
- * this file only sizes it and draws the state chrome around it (the selected
- * and marked edges, the lit pad's edge, the shadow). No chord colour is
- * re-stated here — the meter fill, the pad's bar and the sounding box's ring
- * use the raw `--fn` as a LINE, which is a value, not a paint. */
+ * paints a chord surface wears (tile, tint-quiet, ghost — `chordPaint`) and
+ * the chord box itself are drawn the same everywhere, so they live with the
+ * shared chord box (`music/chord-box/web/chord-box.css`). The components pick
+ * a paint by name; this file only sizes it and draws the state chrome around
+ * it (the marked edges, the lit pad's edge, the shadow). No chord colour is
+ * re-stated here — the meter fill, the pad's bar and the lit pad's edge use
+ * the raw `--fn` as a LINE, which is a value, not a paint. */
 
 /* The mockup's "sunk" black, a step below the page. */
 .chord-trainer {
@@ -49,67 +49,19 @@
 .chord-strip-boxes {
   height: 92px;
 }
-/* A box is a painted frame; its click target is the full-bleed button behind
- * its content (`.chord-box-hit`), so the frame's hover and focus states read
- * off that button. */
-/* Its paint (`chordPaint`): ghost while empty, tile once filled, tint-quiet
- * when given. */
-.chord-box {
-  container-type: inline-size;
-  border-radius: 10px;
-  transition:
-    background-color 0.12s,
-    border-color 0.12s,
-    transform 0.12s;
-}
-.chord-box-hit {
-  border-radius: inherit;
-  cursor: pointer;
-}
-.chord-box-hit:disabled {
-  cursor: default;
-}
-.chord-box-hit:focus-visible {
-  outline: none;
-}
-.chord-box:has(.chord-box-hit:enabled:hover) {
-  border-color: var(--faint-foreground);
-}
-.chord-box:has(.chord-box-hit:focus-visible) {
-  outline: 2px solid var(--foreground);
-  outline-offset: 2px;
-}
-.chord-box .chord-num {
-  font-size: clamp(22px, 38cqi, 44px);
-}
-/* A GIVEN box — one the round is not asking about — wears the quiet tint:
- * its chord already printed, in its own colour but dimmed and flat, no dashed
- * waiting edge, nothing to click before the check. So the strip reads as
- * "these are the ones I have to name". After the check it replays the song
- * like any other box, and takes the hover edge above. */
-/* The chord's name under its numeral, once reveal is on: in the paint's ink,
- * the same as the numeral, so the two lines read as one label. */
-.chord-box-name {
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--chord-ink, var(--muted-foreground));
-}
-.chord-box[data-selected] {
-  border: 2px solid var(--muted-foreground);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--foreground) 7%, transparent);
-}
-.chord-box[data-mark="ok"] {
+/* The box itself — its frame, fill, given / selected / now states and the
+ * numeral's size — is the shared chord box (`music/chord-box`). What follows is
+ * only what the answer strip adds to it: the checked mark, a fill's pop, the
+ * corner badge and a wrong box's struck pair. Each rule is scoped to the strip
+ * (`.chord-strip-boxes`) so it outranks the shared box's rules whatever order
+ * the two stylesheets load in. */
+.chord-strip-boxes .chord-box[data-mark="ok"] {
   border: 2px solid var(--success);
 }
-.chord-box[data-mark="bad"] {
+.chord-strip-boxes .chord-box[data-mark="bad"] {
   border: 2px solid var(--destructive);
 }
-.chord-box[data-now] {
-  transform: translateY(-2px);
-  box-shadow: 0 0 0 2px var(--fn, var(--categorical-10));
-}
-.chord-box[data-pop] {
+.chord-strip-boxes .chord-box[data-pop] {
   animation: chord-pop 0.22s ease-out;
 }
 @keyframes chord-pop {
@@ -152,7 +104,7 @@
   font-size: clamp(20px, 30cqi, 38px);
   max-width: calc(100% - 6px);
 }
-.chord-box .chord-box-pair .chord-num {
+.chord-strip-boxes .chord-box .chord-box-pair .chord-num {
   font-size: 1em;
 }
 .chord-missed {
@@ -161,7 +113,7 @@
   font-size: 0.72em;
   cursor: pointer;
 }
-.chord-box .chord-missed .chord-num {
+.chord-strip-boxes .chord-box .chord-missed .chord-num {
   color: color-mix(in srgb, var(--chord-ink) 72%, transparent);
 }
 .chord-missed::after {
@@ -241,7 +193,7 @@
   bottom: 14px;
   width: 4px;
   border-radius: 2px;
-  background: var(--fn, var(--categorical-10));
+  background: var(--fn, var(--chord-outside));
 }
 .chord-pad:hover {
   border-color: var(--faint-foreground);
@@ -298,7 +250,7 @@
  * button never gives an answer away. The tile, edged in the chord's colour
  * (a line, the pad's own state chrome). */
 .chord-pad[data-lit] {
-  border-color: var(--fn, var(--categorical-10));
+  border-color: var(--fn, var(--chord-outside));
 }
 
 /* ── The side panel ───────────────────────────────────────────────────────── */
@@ -322,7 +274,7 @@
 /* The raw `--fn` as a line (a meter), not a paint. */
 .chord-meter-fill {
   border-radius: 3px;
-  background: var(--fn, var(--categorical-10));
+  background: var(--fn, var(--chord-outside));
   transition: width 0.4s ease;
 }
 /* The 90 % mark a chord must reach. */
@@ -354,12 +306,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chord-box,
   .chord-pad,
   .chord-meter-fill {
     transition: none;
   }
-  .chord-box[data-pop] {
+  .chord-strip-boxes .chord-box[data-pop] {
     animation: none;
   }
 }

@@ -209,9 +209,10 @@ runtime numbers (`placedStyle`, a fraction of the window's beats), rows are
 at 1000 px, with a named disable).
 
 A chord's own colour and numeral are drawn the same wherever they appear, so
-they live with the vocabulary (`vocabulary/web`: `chordToneStyle`,
-`<ChordNumeral>`, `chord-paint.css`) and the curriculum's Chords section (its
-chips) draws them too.
+they live with the shared chord box (`music/chord-box`: `<ChordBox>`,
+`chordPaint`, `chord-box.css`, used through vocabulary's `chordToneStyle` and
+`<ChordNumeral>`) and the curriculum's Chords section (its chips) draws them
+too.
 
 ## e2e
 
@@ -252,7 +253,6 @@ piano.
     - `apps/chord/piano.useSoundMix`
     - `apps/chord/song-index.SongIndexGate`
     - `apps/chord/vocabulary.ChordNumeral`
-    - `apps/chord/vocabulary.chordPaint`
     - `apps/chord/vocabulary.chordToneStyle`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
@@ -261,6 +261,8 @@ piano.
     - `integrations/youtube.useYouTubePlayhead`
     - `integrations/youtube.YouTubePlayer`
     - `integrations/youtube.YouTubePlayerController`
+    - `music/chord-box.ChordBox`
+    - `music/chord-box.chordPaint`
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`

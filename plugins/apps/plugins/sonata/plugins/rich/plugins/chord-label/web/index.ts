@@ -4,6 +4,8 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { chordLabelConfig } from "../shared/config";
 
 export { useChordDisplayMode } from "./hook";
+export { chordBoxFace } from "./chord-box-label";
+export type { ChordBoxFace } from "./chord-box-label";
 
 export default {
   description:

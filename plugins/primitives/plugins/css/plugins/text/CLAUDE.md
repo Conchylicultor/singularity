@@ -328,6 +328,7 @@ to reconcile them; they never needed reconciling.
     - `apps/prototypes/canvas`
     - `apps/prototypes/compare`
     - `apps/prototypes/present`
+    - `apps/sonata/chord-chart`
     - `apps/sonata/library`
     - `apps/sonata/piano-roll`
     - `apps/sonata/player`
@@ -335,6 +336,7 @@ to reconcile them; they never needed reconciling.
     - `apps/sonata/progress/scrubber`
     - `apps/sonata/progress/sections`
     - `apps/sonata/recording`
+    - `apps/sonata/rich/chord-list`
     - `apps/sonata/rich/chord-progression`
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/key-readout`

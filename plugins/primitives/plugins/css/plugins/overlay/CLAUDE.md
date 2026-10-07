@@ -86,8 +86,10 @@ header content inside is a `<Frame>`.
     - `apps/chord/trainer`
     - `apps/prototypes/gallery`
     - `apps/prototypes/thumbnails`
+    - `apps/sonata/rich/chord-list`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `debug/timeline`
+    - `music/chord-box`
     - `page/editor`
     - `page/embed`
     - `page/read-only-view`

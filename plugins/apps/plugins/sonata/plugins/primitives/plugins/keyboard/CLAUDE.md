@@ -119,6 +119,7 @@ pads sit on the paper lane rather than floating over it as an unrelated dark gri
   - Imported by:
     - `apps/chord/piano`
     - `apps/sonata/piano-keyboard`
+    - `apps/sonata/rich/chord-list`
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/key-readout`
 
