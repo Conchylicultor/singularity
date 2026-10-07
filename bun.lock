@@ -1837,6 +1837,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-running-agents",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/selection-actions": {
+      "name": "@singularity/plugin-conversations-conversation-view-selection-actions",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/status": {
       "name": "@singularity/plugin-conversations-conversation-view-status",
       "version": "0.0.1",
@@ -7115,6 +7119,8 @@
 
     "@singularity/plugin-conversations-conversation-view-running-agents": ["@singularity/plugin-conversations-conversation-view-running-agents@workspace:plugins/conversations/plugins/conversation-view/plugins/running-agents"],
 
+    "@singularity/plugin-conversations-conversation-view-selection-actions": ["@singularity/plugin-conversations-conversation-view-selection-actions@workspace:plugins/conversations/plugins/conversation-view/plugins/selection-actions"],
+
     "@singularity/plugin-conversations-conversation-view-status": ["@singularity/plugin-conversations-conversation-view-status@workspace:plugins/conversations/plugins/conversation-view/plugins/status"],
 
     "@singularity/plugin-conversations-conversation-view-tasks-panel": ["@singularity/plugin-conversations-conversation-view-tasks-panel@workspace:plugins/conversations/plugins/conversation-view/plugins/tasks-panel"],
@@ -8440,6 +8446,7 @@
     "@singularity/plugin-primitives-file-viewer-markdown": ["@singularity/plugin-primitives-file-viewer-markdown@workspace:plugins/primitives/plugins/file-viewer/plugins/markdown"],
 
     "@singularity/plugin-primitives-file-viewer-media": ["@singularity/plugin-primitives-file-viewer-media@workspace:plugins/primitives/plugins/file-viewer/plugins/media"],
+
     "@singularity/plugin-primitives-file-viewer-pdf": ["@singularity/plugin-primitives-file-viewer-pdf@workspace:plugins/primitives/plugins/file-viewer/plugins/pdf"],
 
     "@singularity/plugin-primitives-filepath-breadcrumb": ["@singularity/plugin-primitives-filepath-breadcrumb@workspace:plugins/primitives/plugins/filepath-breadcrumb"],

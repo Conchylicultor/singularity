@@ -1,4 +1,4 @@
-// @hash e90bbadb2f7b
+// @hash 6e07f95751a8
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -23,10 +23,13 @@
   //
   // Overlays float over the transcript at their own corners and never overlap,
   // so this order is paint order, read top-of-pane downwards: the outline rail
-  // and the task progress sit at the top, the stats strip at the foot.
+  // and the task progress sit at the top, the stats strip at the foot. The
+  // selection toolbar paints nothing in place — it portals over the selected
+  // text — so it goes last.
   "items": [
     "conversations.conversation-view.jsonl-viewer.outline:outline",
     "conversations.conversation-view.jsonl-viewer.tool-call.task-tools:task-progress",
-    "conversations.conversation-view.jsonl-viewer.transcript-stats:transcript-stats"
+    "conversations.conversation-view.jsonl-viewer.transcript-stats:transcript-stats",
+    "conversations.conversation-view.selection-actions:selection-actions"
   ]
 }

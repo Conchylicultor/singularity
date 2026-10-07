@@ -621,6 +621,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/rewind`
     - `conversations/conversation-view/running-agents`
+    - `conversations/conversation-view/selection-actions`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/terminal-pane`
     - `conversations/conversation-view/turn-summary`

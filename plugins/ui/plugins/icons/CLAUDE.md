@@ -364,6 +364,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/rewind`
     - `conversations/conversation-view/running-agents`
+    - `conversations/conversation-view/selection-actions`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/terminal-pane`
     - `conversations/conversation-view/turn-summary`

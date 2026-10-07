@@ -1,0 +1,1 @@
+export { selectionAnswersConfig } from "./config";

@@ -1,4 +1,4 @@
-// @hash e90bbadb2f7b
+// @hash 6e07f95751a8
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,7 @@
   "items": [
     "conversations.conversation-view.jsonl-viewer.outline:outline",
     "conversations.conversation-view.jsonl-viewer.tool-call.task-tools:task-progress",
-    "conversations.conversation-view.jsonl-viewer.transcript-stats:transcript-stats"
+    "conversations.conversation-view.jsonl-viewer.transcript-stats:transcript-stats",
+    "conversations.conversation-view.selection-actions:selection-actions"
   ]
 }

@@ -122,7 +122,7 @@ export function FloatingSurface({
     [anchor],
   );
 
-  const { floatingStyles, update } = useFloating({
+  const { floatingStyles, update, isPositioned } = useFloating({
     open,
     strategy: "fixed",
     placement: toPlacement(side, align),
@@ -212,7 +212,13 @@ export function FloatingSurface({
         width={width}
         padding={padding}
         maxHeight={maxHeight}
-        className="pointer-events-auto"
+        // Fade in where it belongs, never slide there. Until Floating UI has
+        // measured, the panel sits at the viewport origin; the panel's own
+        // `duration-*` with CSS's default `transition-property: all` would
+        // animate the jump to the anchor (and every later caret-follow) as a
+        // slide. So: hidden until positioned, and only opacity transitions.
+        data-positioned={isPositioned ? "" : undefined}
+        className="pointer-events-auto transition-opacity not-data-[positioned]:opacity-0"
       >
         {children}
       </OverlayPanel>

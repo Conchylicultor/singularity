@@ -11,7 +11,11 @@ export {
 } from "./use-conversation-opener";
 export { ConversationView } from "./components/conversation-view";
 export { draftToPlainText, isDraftEmpty } from "./prompt-draft-utils";
-export { PromptInsertProvider, usePromptInsert } from "./prompt-insert-context";
+export {
+  usePromptComposer,
+  useRegisterPromptComposer,
+  type PromptComposer,
+} from "./prompt-composer-context";
 
 export default {
   description:

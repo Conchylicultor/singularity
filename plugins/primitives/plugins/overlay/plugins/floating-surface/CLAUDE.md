@@ -73,6 +73,7 @@ needs the surface element.
   - Exports (values): `FloatingSurface`
 - Cross-plugin:
   - Imported by:
+    - `conversations/conversation-view/selection-actions`
     - `page/formatting/link`
     - `primitives/path-bar`
     - `primitives/text-editor/caret-trigger`

@@ -1,0 +1,14 @@
+// @hash c19388a08f63
+{
+  // Buttons shown when you select text in an agent's reply. Each one quotes the selection: its name puts the quote and the prompt in the prompt field to edit, ➤ sends them right away.
+  "answers": [
+    {
+      "title": "Go",
+      "prompt": "Go ahead with this."
+    },
+    {
+      "title": "Explain",
+      "prompt": "Explain this in more detail — what it means, and why."
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/
 import { useConversationById } from "@plugins/conversations/web";
 import { Conversation } from "../slots";
 import { conversationPane } from "../panes";
-import { PromptInsertProvider } from "../prompt-insert-context";
+import { PromptComposerProvider } from "../prompt-composer-context";
 import { ActiveRelateSync } from "./active-relate-sync";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -77,48 +77,52 @@ export function ConversationView() {
             <ActionBarView />
           </Bar>
           <Clip fill>
-            <JsonlPane conversation={conversation}>
-              {showBottomBar && (
-                <PromptInsertProvider>
-                  {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid bottom bar: must not shrink under the scrolling transcript above; lone shrink-0 block has no container primitive */}
-                  <div className="shrink-0">
-                    <Stack
-                      gap="sm"
-                      className="mx-auto max-w-reading px-md pt-xs pb-sm"
-                    >
-                      <Conversation.AbovePromptInput.Render>
-                        {(item) => (
-                          <item.component conversation={conversation} />
-                        )}
-                      </Conversation.AbovePromptInput.Render>
-                      <Conversation.PromptInput.Render>
-                        {(item) => (
-                          <item.component conversation={conversation} />
-                        )}
-                      </Conversation.PromptInput.Render>
-                      {promptBarItems.length > 0 && (
-                        // The footer under the prompt is a row of small pills:
-                        // its own `xs` density, one step below the prompt's.
-                        <ControlSizeProvider size="xs">
-                          <Stack direction="row" gap="none" justify="end">
-                            <Stack direction="row" gap="xs" align="center">
-                              <Conversation.PromptBar.Render>
-                                {(item) => {
-                                  const Component = item.component;
-                                  return (
-                                    <Component conversation={conversation} />
-                                  );
-                                }}
-                              </Conversation.PromptBar.Render>
+            {/* Around the transcript as well as the prompt: the transcript is
+                where text gets picked to quote or answer INTO the prompt. */}
+            <PromptComposerProvider>
+              <JsonlPane conversation={conversation}>
+                {showBottomBar && (
+                  <>
+                    {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid bottom bar: must not shrink under the scrolling transcript above; lone shrink-0 block has no container primitive */}
+                    <div className="shrink-0">
+                      <Stack
+                        gap="sm"
+                        className="mx-auto max-w-reading px-md pt-xs pb-sm"
+                      >
+                        <Conversation.AbovePromptInput.Render>
+                          {(item) => (
+                            <item.component conversation={conversation} />
+                          )}
+                        </Conversation.AbovePromptInput.Render>
+                        <Conversation.PromptInput.Render>
+                          {(item) => (
+                            <item.component conversation={conversation} />
+                          )}
+                        </Conversation.PromptInput.Render>
+                        {promptBarItems.length > 0 && (
+                          // The footer under the prompt is a row of small pills:
+                          // its own `xs` density, one step below the prompt's.
+                          <ControlSizeProvider size="xs">
+                            <Stack direction="row" gap="none" justify="end">
+                              <Stack direction="row" gap="xs" align="center">
+                                <Conversation.PromptBar.Render>
+                                  {(item) => {
+                                    const Component = item.component;
+                                    return (
+                                      <Component conversation={conversation} />
+                                    );
+                                  }}
+                                </Conversation.PromptBar.Render>
+                              </Stack>
                             </Stack>
-                          </Stack>
-                        </ControlSizeProvider>
-                      )}
-                    </Stack>
-                  </div>
-                </PromptInsertProvider>
-              )}
-            </JsonlPane>
+                          </ControlSizeProvider>
+                        )}
+                      </Stack>
+                    </div>
+                  </>
+                )}
+              </JsonlPane>
+            </PromptComposerProvider>
           </Clip>
         </Clip>
       </PaneChrome>

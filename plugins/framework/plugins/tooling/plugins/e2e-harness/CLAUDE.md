@@ -335,6 +335,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/rewind`
+    - `conversations/conversation-view/selection-actions`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
     - `database/admin`

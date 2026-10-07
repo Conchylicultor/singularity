@@ -9364,7 +9364,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.recording`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.open-app`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.deps.updates`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.automations`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.recording`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.open-app`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.selection-actions`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.audio-analysis`, `infra.deps.updates`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.automations`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -9569,6 +9569,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/open-app`
       - `conversations/conversation-view/prompt-templates`
       - `conversations/conversation-view/push-and-exit`
+      - `conversations/conversation-view/selection-actions`
       - `conversations/conversation-view/turn-summary`
       - `conversations/conversations-view/data-view`
       - `conversations/hibernation`
@@ -9655,6 +9656,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-preprompt`
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/prompt-templates`
+          - `conversations/conversation-view/selection-actions`
           - `conversations/preprompts`
           - `stats/commits`
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
@@ -10705,16 +10707,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
           - `shell/toast.showToast`
           - `tasks/task-draft-form.setActiveRelateContext`
-        - Exports (types): `ConversationOpener`
+        - Exports (types):
+          - `ConversationOpener`
+          - `PromptComposer`
         - Exports (values):
           - `Conversation`
           - `conversationPane`
           - `ConversationView`
           - `draftToPlainText`
           - `isDraftEmpty`
-          - `PromptInsertProvider`
           - `useConversationOpener`
-          - `usePromptInsert`
+          - `usePromptComposer`
+          - `useRegisterPromptComposer`
       - Cross-plugin:
         - Imported by:
           - `active-data/attempt`
@@ -10763,6 +10767,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/push-profiling`
           - `conversations/conversation-view/rewind`
           - `conversations/conversation-view/running-agents`
+          - `conversations/conversation-view/selection-actions`
           - `conversations/conversation-view/status`
           - `conversations/conversation-view/tasks-panel`
           - `conversations/conversation-view/terminal-pane`
@@ -11286,7 +11291,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
               - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
               - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
-              - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.outline`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`
+              - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.outline`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`, `conversations.conversation-view.selection-actions`
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
@@ -11398,6 +11403,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
+              - `conversations/conversation-view/selection-actions`
               - `conversations/conversation-view/terminal-pane`
               - `conversations/question-relay`
           - Plugins:
@@ -12847,7 +12853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useLiveConversation`
               - `conversations/conversation-view.Conversation`
               - `conversations/conversation-view.isDraftEmpty`
-              - `conversations/conversation-view.usePromptInsert`
+              - `conversations/conversation-view.useRegisterPromptComposer`
               - `conversations/conversation-view/pending-turn.sendConversationTurn`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/persistent-draft.useDraft`
@@ -13054,6 +13060,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.ElapsedTime`
               - `ui/icons.Icon`
+        - **`selection-actions`** — Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and each quick answer (Go, Explain — a setting of its own) is a split chip like the prompt templates: its name quotes the selection and puts the answer in the prompt to edit, ➤ sends both right away. Registers the selection quick-answer list (Go, Explain, …) for Settings → Config.
+          - Web:
+            - Contributes:
+              - `JsonlViewer.Overlay` "selection-actions" → `SelectionToolbar`
+              - `ConfigV2.WebRegister` "config"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.useConfig`
+              - `config_v2/config-link.ConfigGearButton`
+              - `conversations/conversation-view.PromptComposer`
+              - `conversations/conversation-view.usePromptComposer`
+              - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+              - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
+              - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.ButtonGroup`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/dom/dom-selection.selectionRange`
+              - `primitives/overlay/floating-surface.FloatingSurface`
+              - `ui/icons.Icon`
+          - Server:
+            - Contributes: `ConfigV2.Register` "config"
+            - Uses: `config_v2.ConfigV2`
+          - Shared:
+            - Exports (values): `selectionAnswersConfig`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Web:
             - Contributes: `conversationPane.Actions` "status" → `StatusBadge`
@@ -19593,6 +19625,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/rewind`
+              - `conversations/conversation-view/selection-actions`
               - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
               - `database/admin`
@@ -30130,6 +30163,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/rewind`
+              - `conversations/conversation-view/selection-actions`
               - `conversations/conversation-view/turn-summary`
               - `conversations/conversations-view`
               - `conversations/conversations-view/data-view`
@@ -31245,6 +31279,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/push-and-exit`
               - `conversations/conversation-view/rewind`
               - `conversations/conversation-view/running-agents`
+              - `conversations/conversation-view/selection-actions`
               - `conversations/conversation-view/tasks-panel`
               - `conversations/conversation-view/terminal-pane`
               - `conversations/conversation-view/turn-summary`
@@ -32695,6 +32730,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`dom-selection`** — The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, hasBox(rect) is the one statement of 'a rect with no box is not an anchor', and selectionIsCollapsed() answers 'does the user have anything highlighted right now' — the question Lexical's model gets wrong for a whole task after a one-step selection gesture. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
           - Cross-plugin:
             - Imported by:
+              - `conversations/conversation-view/selection-actions`
               - `page/editor`
               - `primitives/diff-view`
               - `primitives/dom/copy-source-text`
@@ -34727,6 +34763,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `FloatingSurface`
           - Cross-plugin:
             - Imported by:
+              - `conversations/conversation-view/selection-actions`
               - `page/formatting/link`
               - `primitives/path-bar`
               - `primitives/text-editor/caret-trigger`
@@ -40376,6 +40413,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/rewind`
           - `conversations/conversation-view/running-agents`
+          - `conversations/conversation-view/selection-actions`
           - `conversations/conversation-view/tasks-panel`
           - `conversations/conversation-view/terminal-pane`
           - `conversations/conversation-view/turn-summary`

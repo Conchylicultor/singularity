@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   isDraftEmpty,
-  usePromptInsert,
+  useRegisterPromptComposer,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useLiveConversation } from "@plugins/conversations/web";
 import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
@@ -33,11 +33,26 @@ export function PromptInput({
     !!live.waitingFor;
 
   const insertRef = useRef<((text: string) => void) | null>(null);
-  const promptInsert = usePromptInsert();
-  useEffect(() => {
-    if (!promptInsert) return;
-    return promptInsert.registerInsert((text) => insertRef.current?.(text));
-  }, [promptInsert]);
+
+  // This prompt, published to the rest of the pane (the transcript quotes and
+  // answers into it). A quick send is a turn of its own: it goes through the
+  // same gate as Enter and leaves whatever is being typed in the draft alone.
+  const insert = useCallback((text: string) => {
+    const insertNow = insertRef.current;
+    // The editor below is mounted with this component, so a missing handle is
+    // a broken wiring, not a state to absorb.
+    if (!insertNow)
+      throw new Error("Prompt editor insert handle is not mounted");
+    insertNow(text);
+  }, []);
+  const sendText = useCallback(
+    (text: string) => {
+      if (disabled) return;
+      sendConversationTurn(conversation.id, { text });
+    },
+    [conversation.id, disabled],
+  );
+  useRegisterPromptComposer({ insert, send: sendText, canSend: !disabled });
 
   // Latest-draft ref so the send handler doesn't capture stale state.
   const draftRef = useLatestRef(draft);
