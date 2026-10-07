@@ -5,11 +5,11 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /**
- * Every `defineTimer(...)` call is reported unless its file is listed — with
- * its reason — in this plugin's `ignores`. A timer is a periodic in-process
+ * Every `defineTimer(...)` call is reported unless the plugin owning its file
+ * exempts it — with its reason — in its own `exempt/index.ts`. A timer is a periodic in-process
  * loop, which CLAUDE.md's "no polling" rule forbids by default: work on a
  * schedule is a `defineJob`, work on a change is a watcher / LISTEN / event.
- * The allowlist is where each exception (central has no job queue; a watchdog
+ * Those exemptions are where each exception (central has no job queue; a watchdog
  * or sampler that must keep running while the queue is wedged) is argued once.
  */
 export default createRule({
@@ -18,9 +18,9 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "`defineTimer` is allowed only in the files the timer plugin's lint " +
-        "`ignores` lists, each with its reason — so a timer cannot become a " +
-        "polling escape hatch.",
+        "`defineTimer` is allowed only in files their owning plugin exempts in " +
+        "its `exempt/index.ts`, each with its reason — so a timer cannot become " +
+        "a polling escape hatch.",
     },
     schema: [],
     messages: {
@@ -28,9 +28,9 @@ export default createRule({
         "`defineTimer` is not a polling escape hatch. Work on a schedule is a " +
         "`defineJob` (cron); work on a change is a watcher / LISTEN / event. If " +
         "this loop truly must run in-process (central has no job queue; a " +
-        "watchdog or sampler that must run while the queue is wedged), add this " +
-        "file to `no-unlisted-timer`'s ignores in " +
-        "plugins/infra/plugins/background/plugins/timer/lint/index.ts, with the reason.",
+        "watchdog or sampler that must run while the queue is wedged), exempt " +
+        "this file in your plugin's plugins/<you>/exempt/index.ts " +
+        '(rule "timer/no-unlisted-timer", kind "sanctioned", with the reason).',
     },
   },
   defaultOptions: [],

@@ -878,6 +878,8 @@ rendered.
     - `primitives/pane`
     - `reorder/node-types/overflow`
     - `reports/adaptive-bar`
+- Exemptions:
+  - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/adaptive-bar.tsx` (sanctioned)
 - Core:
   - Exports (types):
     - `AbsentRungs`

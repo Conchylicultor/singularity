@@ -5,4 +5,7 @@ export default {
   rules: {
     "no-raw-pg-connection": noRawPgConnection,
   },
+  outOfScope: {
+    "no-raw-pg-connection": ["script", "cli"],
+  },
 };

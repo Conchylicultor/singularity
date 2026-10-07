@@ -9,22 +9,17 @@ const PLUGIN_SET: ReadonlySet<string> = new Set([
   "conversations/plugins/conversation-category",
 ]);
 
-const NO_EXCEPTIONS: ReadonlySet<string> = new Set();
-
 /** Build a collectForeignReexports invocation over an in-memory file map. */
 async function run(opts: {
   files: Record<string, string>;
   barrelRel: string;
   ownPlugin: string;
   runtime: string;
-  exceptions?: ReadonlySet<string>;
 }): Promise<Violation[]> {
   return collectForeignReexports({
     barrelRel: opts.barrelRel,
     ownPlugin: opts.ownPlugin,
-    runtime: opts.runtime,
     pluginSet: PLUGIN_SET,
-    exceptions: opts.exceptions ?? NO_EXCEPTIONS,
     readFile: (relPath) =>
       Promise.resolve(
         Object.prototype.hasOwnProperty.call(opts.files, relPath)
@@ -135,20 +130,6 @@ describe("collectForeignReexports", () => {
     });
     expect(vs).toHaveLength(1);
     expect(vs[0]!.message).toContain("tasks/plugins/tasks-core");
-  });
-
-  it("8. an exception entry suppresses an otherwise-flagged case", async () => {
-    const exceptions = new Set(["tasks/core -> @plugins/other/core"]);
-    const vs = await run({
-      files: {
-        "plugins/tasks/core/index.ts": `export { X } from "@plugins/other/core";`,
-      },
-      barrelRel: "plugins/tasks/core/index.ts",
-      ownPlugin: "tasks",
-      runtime: "core",
-      exceptions,
-    });
-    expect(vs).toHaveLength(0);
   });
 
   it("9. flags an aliased from-reexport on the surfaced (aliased) name", async () => {

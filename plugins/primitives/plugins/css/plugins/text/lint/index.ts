@@ -15,7 +15,7 @@ import noClipWithoutNowrap from "./no-clip-without-nowrap";
  *   `truncating-text` plugin) because `text` now owns the single-line leaf — a
  *   `<Text>` inside a line container — that the fix routes truncation to.
  *
- * Neither has an `ignores` allowlist — a genuinely-fixed one-off escapes per-site,
+ * Neither has an exemption allowlist — a genuinely-fixed one-off escapes per-site,
  * travelling with the code:
  *
  *   // eslint-disable-next-line text/no-adhoc-typography -- <reason>

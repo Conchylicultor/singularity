@@ -1,4 +1,5 @@
 import noAdhocDetailSections from "./no-adhoc-detail-sections";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-adhoc-detail-sections` rule. The root `eslint.config.ts`
@@ -11,11 +12,10 @@ import noAdhocDetailSections from "./no-adhoc-detail-sections";
  * forfeits persisted open state, the `useAvailable` gate, and the
  * icon/actions/summary header.
  *
- * `ignores` exempts the sanctioned home of the chrome — this plugin's own factory,
- * which is where the one legitimate `.Section.Render`-wraps-a-card lives. Its
- * current callback returns a named helper (so it would not trip the rule today),
- * but the exemption is declared anyway: inlining that helper is a refactor the
- * primitive is entitled to make, and the rule must not be what blocks it.
+ * This plugin's own factory is the one legitimate home of the
+ * `.Section.Render`-wraps-a-card shape. Its callback returns a named helper, so
+ * it does not trip the rule and needs no exemption; if it ever inlines that
+ * helper it declares one in its own `exempt/index.ts`.
  *
  * A genuinely-irreducible one-off escapes per-site, travelling with the code:
  *   // eslint-disable-next-line detail-sections/no-adhoc-detail-sections -- <reason>
@@ -25,9 +25,4 @@ export default {
   rules: {
     "no-adhoc-detail-sections": noAdhocDetailSections,
   },
-  ignores: {
-    "no-adhoc-detail-sections": [
-      "plugins/primitives/plugins/detail-sections/web/internal/define-detail-sections.tsx",
-    ],
-  },
-};
+} satisfies LintContribution;

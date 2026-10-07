@@ -47,12 +47,6 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-/**
- * The plugin that owns the sanctioned decoders. Its docs and tests have to be
- * able to write the banned form in order to name it. Skipped whole.
- */
-const SQL_PROJECTION_DIR = "plugins/database/plugins/sql-projection/";
-
 /** The tag identifier drizzle's SQL template is spelled with. */
 const SQL_TAG = "sql";
 
@@ -161,11 +155,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    const filename = context.filename.split("\\").join("/");
-    // sql-projection owns the sanctioned decoders — its docs and tests must be
-    // able to write the banned form in order to name it.
-    if (filename.includes(SQL_PROJECTION_DIR)) return {};
-
     return {
       TaggedTemplateExpression(node: TSESTree.TaggedTemplateExpression) {
         if (!isSqlTemplate(node)) return;

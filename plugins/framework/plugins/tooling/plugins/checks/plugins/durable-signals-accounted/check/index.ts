@@ -1,3 +1,4 @@
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import {
   grepCode,
   listCandidateSources,
@@ -10,7 +11,6 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { TIMELINE_SOURCES } from "@plugins/debug/plugins/timeline/core";
 import { ACCOUNTING } from "./accounting";
 import {
-  COMPUTED_ID_EXEMPTIONS,
   SINK_MARKERS,
   SINK_PATHSPECS,
   inventorySinks,
@@ -19,9 +19,6 @@ import {
   type ResolvedSinkCall,
   type SinkInventory,
 } from "./scan";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 // Every DURABLE sink — a `defineLogSink` log channel or a bare `defineFileSink`
 // file — must be a conscious, reviewed classification in `accounting.ts`. The
@@ -97,7 +94,10 @@ async function registeredReportKinds(root: string): Promise<Set<string>> {
 // (defineLogSink and defineFileSink). The scan and the fold are the pure
 // helpers in ./scan; this only feeds them sources and resolves `const` ids
 // (`id: DURESS_EPISODES_CHANNEL`) to their declared string values.
-async function findDurableSinks(root: string): Promise<SinkInventory> {
+async function findDurableSinks(
+  root: string,
+  skips: (path: string) => boolean,
+): Promise<SinkInventory> {
   const resolved: ResolvedSinkCall[] = [];
   for (const marker of SINK_MARKERS) {
     const sources = await listCandidateSources({
@@ -121,7 +121,7 @@ async function findDurableSinks(root: string): Promise<SinkInventory> {
       });
     }
   }
-  return inventorySinks(resolved, COMPUTED_ID_EXEMPTIONS);
+  return inventorySinks(resolved, skips);
 }
 
 const fmtSite = (s: CallSite): string => `${s.path}:${s.line} (${s.marker})`;
@@ -130,10 +130,17 @@ const check: Check = {
   id: "durable-signals-accounted",
   description:
     "Every durable sink (defineLogSink channel or defineFileSink file) is a reviewed classification in accounting.ts, and every report/timeline classification points at a live ReportKind / TimelineSource",
-  async run(): Promise<CheckResult> {
+  exemptable: {
+    "durable-signals-accounted":
+      "computes a durable sink's id on purpose (its ids are accounted elsewhere), so the check cannot name it",
+  },
+  async run(ctx) {
     const root = await getWorktreeRoot();
-    const { found, unresolvable, staleExemptions, collisions } =
-      await findDurableSinks(root);
+    const exempt = await ctx.exempt("durable-signals-accounted");
+    const { found, unresolvable, collisions } = await findDurableSinks(
+      root,
+      exempt.skips,
+    );
 
     // Loud failure: a durable sink whose id we cannot resolve. The check cannot
     // classify what it cannot name, so this is never silently skipped.
@@ -144,19 +151,7 @@ const check: Check = {
           `Durable sink call site(s) with an unresolvable id ` +
           `in ${unresolvable.length} place(s):\n    ` +
           unresolvable.map(fmtSite).join("\n    "),
-        hint: 'Use a string literal or an `export const NAME = "…"` for the sink id so durable-signals-accounted can classify it in accounting.ts. A computed id whose ids are genuinely accounted elsewhere needs a named entry in COMPUTED_ID_EXEMPTIONS (check/scan.ts).',
-      };
-    }
-
-    // Loud failure: an exemption that no longer excuses anything. Left in place
-    // it would silently excuse the NEXT computed id written in that file.
-    if (staleExemptions.length > 0) {
-      return {
-        ok: false,
-        message:
-          `COMPUTED_ID_EXEMPTIONS entr(y/ies) matching no computed-id call site:\n    ` +
-          staleExemptions.map((e) => `${e.path} (${e.marker})`).join("\n    "),
-        hint: "The computed-id call moved or was removed. Update or delete the exemption in check/scan.ts.",
+        hint: 'Use a string literal or an `export const NAME = "…"` for the sink id so durable-signals-accounted can classify it in accounting.ts. A computed id whose ids are genuinely accounted elsewhere declares an exemption (rule `durable-signals-accounted`) in the owning plugin\'s `exempt/index.ts`.',
       };
     }
 

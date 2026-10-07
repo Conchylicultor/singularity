@@ -67,7 +67,7 @@ export default createRule({
         "@plugins/framework/plugins/tooling/plugins/checks/core, which asks git " +
         "for the same tracked + untracked-not-ignored file set. If this list is not " +
         "enumerating the repo's sources — a bounded walk of one known subtree — " +
-        "add the file to this rule's `ignores` allowlist so the exemption is " +
+        "declare the file in its plugin's `exempt/index.ts` so the exemption is " +
         "reviewed rather than invisible.",
     },
   },

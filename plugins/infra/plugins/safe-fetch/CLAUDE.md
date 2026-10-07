@@ -19,6 +19,8 @@
     - `infra/safe-fetch/browser-fetch`
     - `page/bookmark`
     - `stats/cost`
+- Exemptions:
+  - Exempts itself from: `namespace:no-hand-built-url` — `server/internal/ssrf.ts` (sanctioned)
 - Server:
   - Exports (types):
     - `PinnedDial`

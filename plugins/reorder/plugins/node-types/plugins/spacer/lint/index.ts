@@ -1,4 +1,5 @@
 import noSplitSlotRow from "./no-split-slot-row";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-split-slot-row` rule. The root `eslint.config.ts`
@@ -8,7 +9,7 @@ import noSplitSlotRow from "./no-split-slot-row";
  * to: position within a slot is a spacer in the slot's order config, never a
  * second slot.
  *
- * `ignores` exempts the browser toolbar, whose three slots (nav controls, the
+ * An `exempt/index.ts` entry exempts the browser toolbar, whose three slots (nav controls, the
  * omnibox, actions) are different kinds of thing — the omnibox is a single
  * growing occupant, not a movable item among the buttons.
  */
@@ -17,9 +18,4 @@ export default {
   rules: {
     "no-split-slot-row": noSplitSlotRow,
   },
-  ignores: {
-    "no-split-slot-row": [
-      "plugins/apps/plugins/browser/plugins/shell/web/components/browser-layout.tsx",
-    ],
-  },
-};
+} satisfies LintContribution;

@@ -33,6 +33,8 @@
     - `conversations.resumeConversation`
     - `infra/endpoints.implement`
   - Routes: `POST /api/conversations-recover/restore-batch`
+- Exemptions:
+  - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/recovery-view.tsx` (debt)
 - Shared:
   - Exports (types): `RestoreBatchBody`
   - Exports (values):

@@ -1,6 +1,11 @@
 export { lintCollectedDir } from "./collected-dir";
 export { findPluginDirs } from "./plugin-dirs";
-export { buildLintConfig } from "./build-lint-config";
+export {
+  buildLintConfig,
+  lintExemptions,
+  lintRuleIds,
+  loadLintContributions,
+} from "./build-lint-config";
 export { LINT_DATA_FILES } from "./declared-utilities";
 export {
   LINT_SCOPE_EXCLUDE_GLOBS,
@@ -8,6 +13,9 @@ export {
 } from "./lint-scope-exceptions";
 export type {
   BuildLintConfigOptions,
+  LintContribution,
+  LintExemptionMode,
+  LoadedLintContribution,
   ParserTypeSource,
 } from "./build-lint-config";
 export {

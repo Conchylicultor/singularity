@@ -12,6 +12,7 @@
   - Exports (types):
     - `Check`
     - `CheckContext`
+    - `CheckExemptions`
     - `CheckResult`
     - `CheckScope`
     - `RepoFiles`
@@ -31,6 +32,7 @@
   - **`codegen`** — Plugin doc generation and registry codegen
   - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
   - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./singularity deps install chromium`). Also owns the two generic tools (screenshot, perf).
+  - **`exempt`** — Inverted exemptions: a plugin declares, in its own exempt/index.ts, which of its files may violate which lint rule or check — with a reason, and a task when it is debt. The manifest types, the generated rule-id union, the file-category vocabulary rule owners scope by, and the one loader + hit-recording matcher the ESLint config, the type-check worker and the check runner all read.
   - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
   - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
   - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads.

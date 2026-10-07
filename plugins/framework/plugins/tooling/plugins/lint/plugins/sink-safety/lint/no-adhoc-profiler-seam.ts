@@ -22,30 +22,6 @@ const SEAM_NAMES = new Set([
   "readGateGauges",
 ]);
 
-/**
- * The sanctioned owners of the seams (in-rule, mirroring watcher-safety's
- * FILE_WATCHER_DIR): slow-ops installs the ONE onSlowSpan subscriber; the trace
- * spans/gates event classes read the flight window / gauges at the trip instant;
- * stall-monitor reads the flight window at the SAME trip instant to test span
- * coverage of a freeze (evidence-at-trip, the exact category as trace/spans, not
- * a background sink); profiling/runtime serves the live flight window on demand to
- * the Debug → Profiling Gantt pane — the pull-read UI for the flight window, which
- * `getRuntimeProfile` (a different shape: aggregates/slowest, no in-flight set)
- * cannot supply. The profiler's own internals import these by RELATIVE path
- * (`./recorder`), so they never match PROFILER_CORE and need no entry here.
- */
-const OWNER_DIRS = [
-  "plugins/debug/plugins/slow-ops/",
-  "plugins/debug/plugins/trace/plugins/spans/",
-  "plugins/debug/plugins/trace/plugins/gates/",
-  "plugins/debug/plugins/stall-monitor/",
-  "plugins/debug/plugins/profiling/plugins/runtime/",
-  // Reads the open-span set on its own 15 s tick: a hang is only visible while
-  // the span is still open, and getRuntimeProfile has no in-flight set. Its
-  // evidence still goes through captureTrace.
-  "plugins/debug/plugins/stuck-spans/",
-];
-
 export default createRule({
   name: "no-adhoc-profiler-seam",
   meta: {
@@ -70,11 +46,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    const filename = (context.filename ?? context.getFilename?.() ?? "")
-      .split("\\")
-      .join("/");
-    if (OWNER_DIRS.some((dir) => filename.includes(dir))) return {};
-
     // Local names bound to a `import * as prof from "…/core"` namespace import —
     // member access on these to a seam name is flagged.
     const nsLocals = new Set<string>();

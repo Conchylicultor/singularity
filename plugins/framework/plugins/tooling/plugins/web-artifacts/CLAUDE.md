@@ -200,6 +200,8 @@ Key invariants:
     - `SHARED_ROOT`
 - Cross-plugin:
   - Imported by: `framework/cli/build`
+- Exemptions:
+  - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
 - Cli:
   - Exports (types): `CarryForwardResult`
   - Exports (values): `carryForwardServedEntries`

@@ -8,7 +8,7 @@ import noAdhocRadius from "./no-adhoc-radius";
  * The rule enforces with ZERO exemptions: every corner routes through the
  * token-driven `rounded-{sm,md,lg,…}` scale (or an intentional
  * `rounded-full`/`rounded-none`) so Shape presets rescale the whole app at once.
- * There is intentionally no `ignores` allowlist — a genuinely-fixed literal
+ * There is intentionally no exemption allowlist — a genuinely-fixed literal
  * shape escapes per-site, travelling with the code:
  *
  *   // eslint-disable-next-line radius/no-adhoc-radius -- <reason>

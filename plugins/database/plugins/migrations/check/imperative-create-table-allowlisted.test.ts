@@ -27,7 +27,7 @@ const m = (path: string, line: number, text: string): CodeMatch => ({
 
 // Real DDL lines are spelled with the keyword split so this source file never
 // contains the literal token the check greps for (belt-and-suspenders; the file
-// is also exempt via ALLOWED_PATHS).
+// is also exempt in the migrations manifest).
 const CT = "CREATE " + "TABLE";
 
 describe("allowlistIdentifiers", () => {
@@ -149,15 +149,34 @@ describe("findOffenders", () => {
     expect(findOffenders(matches, ids).length).toBe(1);
   });
 
-  test("exempts this check's own test fixture path", () => {
+  test("drops a path the caller's `skips` exempts, and only an offender is asked", () => {
+    const asked: string[] = [];
     const matches = [
       m(
-        "plugins/database/plugins/migrations/check/imperative-create-table-allowlisted.test.ts",
+        "plugins/database/plugins/migrations/server/ok.ts",
         1,
+        `${CT} \${MIGRATIONS_TABLE_NAME} (id int)`,
+      ),
+      m(
+        "plugins/database/plugins/migrations/server/skipped.ts",
+        2,
         `${CT} foo (id int)`,
       ),
+      m(
+        "plugins/database/plugins/migrations/server/bad.ts",
+        3,
+        `${CT} bar (id int)`,
+      ),
     ];
-    expect(findOffenders(matches, ids)).toEqual([]);
+    const out = findOffenders(matches, ids, new Set(), (p) => {
+      asked.push(p);
+      return p.endsWith("skipped.ts");
+    });
+    expect(out.length).toBe(1);
+    expect(asked).toEqual([
+      "plugins/database/plugins/migrations/server/skipped.ts",
+      "plugins/database/plugins/migrations/server/bad.ts",
+    ]);
   });
 
   test("exempts a path the caller resolved as a throwaway-test-db file", () => {

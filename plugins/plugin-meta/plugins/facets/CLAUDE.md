@@ -112,6 +112,7 @@ See `plugins/commands/` for the reference implementation.
     - `plugin-meta/facets/contributions`
     - `plugin-meta/facets/cross-refs`
     - `plugin-meta/facets/db-schema`
+    - `plugin-meta/facets/exemptions`
     - `plugin-meta/facets/exports`
     - `plugin-meta/facets/registrations`
     - `plugin-meta/facets/resources`
@@ -135,6 +136,11 @@ See `plugins/commands/` for the reference implementation.
       - **`render-contributions`** — Aggregated cross-plugin tables table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin db-schema section in the plugin detail pane.
       - **`render-diff`** (excluded — cascade) — Diff renderer for the db-schema facet (PR review).
+  - **`exemptions`**
+    - Plugins:
+      - **`render-contributions`** — Aggregated exemptions table in the Studio Contributions view.
+      - **`render-detail`** — Per-plugin exemptions section in the plugin detail pane.
+      - **`render-diff`** (excluded — cascade) — Diff renderer for the exemptions facet (PR review).
   - **`exports`**
     - Plugins:
       - **`render-contributions`** — Aggregated cross-plugin exports table in the Studio Contributions view.
@@ -150,7 +156,7 @@ See `plugins/commands/` for the reference implementation.
       - **`render-contributions`** — Aggregated cross-plugin resources table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin resources section in the plugin detail pane.
       - **`render-diff`** (excluded — cascade) — Diff renderer for the resources facet (PR review).
-  - **`routes`**
+  - **`routes`** [exempt]
     - Plugins:
       - **`render-contributions`** — Aggregated cross-plugin routes table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin routes section in the plugin detail pane.

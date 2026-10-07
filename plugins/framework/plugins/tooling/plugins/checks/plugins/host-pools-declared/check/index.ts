@@ -1,8 +1,6 @@
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepImports } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 const BARREL = "@plugins/packages/plugins/host-semaphore/server";
 
@@ -14,30 +12,18 @@ const BARREL = "@plugins/packages/plugins/host-semaphore/server";
 //
 // The primitive's own files (barrel, internal, tests) reach it by RELATIVE path,
 // never the `@plugins/...` specifier this filter matches, so they are excluded by
-// construction — no allowlist entry needed for them.
-const ALLOWED_PREFIXES = [
-  // The registry — the one legitimate owner.
-  "plugins/infra/plugins/host/plugins/host-admission/server/",
-];
-
-// Importers not yet migrated onto `defineHostPool`. Now EMPTY — every host pool
-// (cpu, push, layout-geometry, and the four server pools) is declared through
-// `defineHostPool`, so `host-admission/server` is the sole legitimate importer
-// of `createHostSemaphore` and this allowlist has nothing left to grandfather.
-const PENDING_MIGRATION: string[] = [];
-
-function allowed(path: string): boolean {
-  return (
-    ALLOWED_PREFIXES.some((p) => path.startsWith(p)) ||
-    PENDING_MIGRATION.includes(path)
-  );
-}
+// construction. The one legitimate importer — host-admission, the registry —
+// declares its exemption in its own `exempt/index.ts`.
 
 const check: Check = {
   id: "host-pools-declared",
   description:
     "Only host-admission may import createHostSemaphore — every host pool is declared through defineHostPool",
-  async run() {
+  exemptable: {
+    "host-pools-declared":
+      "imports createHostSemaphore directly — declaring a host pool nothing bounds, outside the host-admission registry",
+  },
+  async run(ctx) {
     // grepImports is string-safe by construction (findImports masks strings), so a
     // barrel path written inside a string/fixture can never match. Match on the
     // exact barrel specifier.
@@ -49,7 +35,8 @@ const check: Check = {
       pathspecs: ["plugins/"],
     });
 
-    const offenders = matches.filter((m) => !allowed(m.path));
+    const exempt = await ctx.exempt("host-pools-declared");
+    const offenders = matches.filter((m) => !exempt.skips(m.path));
     if (offenders.length === 0) return { ok: true };
 
     return {

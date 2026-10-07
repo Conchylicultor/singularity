@@ -321,6 +321,9 @@ export const bytea = (name: string) =>
     - `search/engine`
     - `shell/notifications`
     - `ui/theme-engine/saved-themes`
+- Exemptions:
+  - Exempts itself from: `sql-column/no-asserted-column-type` — `.` (sanctioned)
+  - Exempted by: `database/sql-column` (0 debt)
 - Server:
   - Exports (types):
     - `ColumnWire`

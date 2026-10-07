@@ -155,6 +155,8 @@ as the only escape. Being importable from every runtime *is* the feature.
   - Imported by:
     - `framework/tooling/checks`
     - `packages/signal-origin/sink`
+- Exemptions:
+  - Exempts itself from: `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)
 - Core:
   - Exports (types):
     - `FileSink`

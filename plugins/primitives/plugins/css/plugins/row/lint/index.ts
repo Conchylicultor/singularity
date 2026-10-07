@@ -1,5 +1,6 @@
 import noAdhocRow from "./no-adhoc-row";
 import noRowFocusClass from "./no-row-focus-class";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the row rules. The root `eslint.config.ts` auto-discovers this
@@ -12,7 +13,7 @@ import noRowFocusClass from "./no-row-focus-class";
  *
  * ## `no-adhoc-row`
  *
- * `ignores` carries exactly ONE entry, and it is not an allowlist of victims —
+ * `exempt/index.ts` carries exactly ONE entry, and it is not an allowlist of victims —
  * it is the definition site. Fingerprint B flags `p-row` + a hover tint as "you
  * rebuilt `Row`", and no class-level test can tell the original from an exact
  * copy, so the primitive is exempted by path. Same precedent as
@@ -30,7 +31,7 @@ import noRowFocusClass from "./no-row-focus-class";
  *
  * ## `no-row-focus-class`
  *
- * `ignores` carries the SAME single glob, for the same reason: `row/web/**` is
+ * `exempt/index.ts` carries the SAME single glob, for the same reason: `row/web/**` is
  * where the app's canonical focus ring (`focus-ring` + `focus-ring-from`) is
  * actually applied, and a class-level test cannot tell that definition site from
  * a call site copying it. Everywhere else a focus/ring class on a `Row` is dead
@@ -49,10 +50,4 @@ export default {
     "no-adhoc-row": noAdhocRow,
     "no-row-focus-class": noRowFocusClass,
   },
-  ignores: {
-    "no-adhoc-row": ["**/plugins/primitives/plugins/css/plugins/row/web/**"],
-    "no-row-focus-class": [
-      "**/plugins/primitives/plugins/css/plugins/row/web/**",
-    ],
-  },
-};
+} satisfies LintContribution;

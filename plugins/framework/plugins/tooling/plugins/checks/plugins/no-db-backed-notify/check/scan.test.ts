@@ -1,12 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import {
-  ALLOWED_PATHS,
-  findFeedExclusions,
-  pluginRootOf,
-  scanDbBackedNotify,
-} from "./scan";
+import { findFeedExclusions, pluginRootOf, scanDbBackedNotify } from "./scan";
 
 const scan = (
   src: string,
@@ -152,28 +147,6 @@ describe("scanDbBackedNotify — serveValue", () => {
       [1, "defineExternalResource"],
       [5, "serveValue"],
     ]);
-  });
-});
-
-describe("scanDbBackedNotify — allowlist", () => {
-  // jobs-list reads graphile_worker.*, which the change feed excludes, so it is
-  // external on purpose — under either spelling.
-  const allowed = ALLOWED_PATHS[0]!;
-
-  test("exempts an allowlisted file under both spellings", () => {
-    const src = [
-      "export const jobsListResource = defineExternalResource({",
-      '  key: "jobs-list",',
-      "  loader: async () => db.execute(sql`SELECT 1 FROM graphile_worker.jobs`),",
-      "});",
-      "export const jobsListServed = serveValue(jobsList, {",
-      '  source: "external",',
-      "  loader: async () => db.execute(sql`SELECT 1 FROM graphile_worker.jobs`),",
-      "});",
-    ].join("\n");
-    expect(scan(src, allowed)).toEqual([]);
-    // The same source anywhere else is flagged twice.
-    expect(scan(src)).toHaveLength(2);
   });
 });
 

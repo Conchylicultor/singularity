@@ -32,9 +32,6 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 const LOOKUPS =
   "querySelector|querySelectorAll|getElementById|getElementsByClassName|getElementsByTagName";
 
-/** `e2e` scripts and test files ask about the whole document by nature. */
-const EXEMPT = /(?:^|\/)(?:e2e|__tests__)\/|\.test\.tsx?$/;
-
 /** `bounds: ["data-a", "data-b"]` — the array literal, however it is wrapped. */
 const BOUNDS_BLOCK = /bounds\s*:\s*\[([^\]]*)\]/g;
 const QUOTED = /["'`]([^"'`]+)["'`]/g;
@@ -44,7 +41,9 @@ const check: Check = {
   inputKeyed: true,
   description:
     "A DOM attribute bounded by a declared dom-scope is never looked up on `document`",
-  async run() {
+  // `e2e` scripts and test files ask about the whole document by nature.
+  outOfScope: ["test", "e2e"],
+  async run(ctx) {
     const root = await getWorktreeRoot();
 
     // 1. Collect the declared bounds. `maskStrings: false` because the attribute
@@ -59,7 +58,7 @@ const check: Check = {
 
     const bounded = new Map<string, string>(); // attribute -> declaring file
     for (const decl of declarations) {
-      if (EXEMPT.test(decl.path)) continue;
+      if (!ctx.inScope(decl.path)) continue;
       const src = await Bun.file(`${root}/${decl.path}`).text();
       for (const block of src.matchAll(BOUNDS_BLOCK)) {
         for (const quoted of (block[1] ?? "").matchAll(QUOTED)) {
@@ -81,7 +80,7 @@ const check: Check = {
 
     const offenders: string[] = [];
     for (const hit of lookups) {
-      if (EXEMPT.test(hit.path)) continue;
+      if (!ctx.inScope(hit.path)) continue;
       for (const [attr, declaredIn] of bounded) {
         if (!hit.text.includes(attr)) continue;
         offenders.push(

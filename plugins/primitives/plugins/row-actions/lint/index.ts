@@ -1,11 +1,12 @@
 import noRawActionsSlot from "./no-raw-actions-slot";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-raw-actions-slot` rule. The root `eslint.config.ts`
  * auto-discovers this default export and registers
  * `row-actions/no-raw-actions-slot` repo-wide as `error`.
  *
- * `ignores` is EMPTY and stays empty. This rule asks a dataflow question — does
+ * The rule is `closed` and stays closed. This rule asks a dataflow question — does
  * an `actions`-shaped prop reach the `RowActions` primitive? — precisely so that
  * a duplicate cluster cannot satisfy it in place. A path allowlist is the escape
  * hatch that let the previous duplicate survive `no-uncoupled-hover-reveal`
@@ -17,7 +18,5 @@ export default {
   rules: {
     "no-raw-actions-slot": noRawActionsSlot,
   },
-  ignores: {
-    "no-raw-actions-slot": [],
-  },
-};
+  closed: ["no-raw-actions-slot"],
+} satisfies LintContribution;

@@ -46,7 +46,7 @@ export default createRule({
         "`defineJob`; work on a change is a watcher / LISTEN / event. The few " +
         "sites that cannot use a timer (a Worker thread or child-process entry, " +
         "a process's own orphan guard, a primitive's per-instance timer) are " +
-        "listed in this plugin's `ignores`, each with its reason.",
+        "declared in the exempted plugin's `exempt/index.ts`, each with its reason.",
     },
     schema: [],
     messages: {
@@ -54,8 +54,7 @@ export default createRule({
         "Raw `setInterval` is not allowed in server/central code. Declare the " +
         "loop with `defineTimer` (infra/background/timer) so it is tracked and " +
         "listed in Background activity — or, if it must run on a schedule, make " +
-        "it a `defineJob`. An exception belongs in detached-work-safety's " +
-        "`ignores`, with its reason.",
+        "it a `defineJob`. An exception belongs in the exempted plugin's `exempt/index.ts`, with its reason.",
     },
   },
   defaultOptions: [],

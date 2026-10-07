@@ -135,6 +135,10 @@
     - `tasks/task-effort`
     - `tasks/task-preprompt`
     - `tasks/task-track`
+- Exemptions:
+  - Exempts itself from:
+    - `endpoints/no-void-fetch-endpoint` — `web/components/bell-button.tsx` (sanctioned)
+    - `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
 - Shared:
   - Exports (values):
     - `createNotification`

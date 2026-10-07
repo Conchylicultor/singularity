@@ -648,12 +648,11 @@ read off the barrel's module object (a namespace import or an awaited
 `windowQueryResourceDescriptor` / `pointQueryResourceDescriptor`, now internal
 to `network/live` (`core/internal/window-descriptor.ts`, Wave 7) — still
 listed so a stale import is told its replacement, not only tsc's "no exported
-member". Its `ignores` list is the
-burndown inventory: the substrate globs plus every file not migrated yet,
-grouped under the wave or item that removes it
+member". Its exemptions (`exempt/index.ts` of the plugins that hold them: the substrate, plus
+debt entries for every file not migrated yet) are the burndown inventory (`./singularity exempt list --rule live/no-legacy-resource-spelling --debt`)
 (`research/2026-09-27-global-live-resources-phase3-bulk-migration.md`).
 **Never add an entry for new code** — declare it with `liveValue` /
-`liveCollection`. A migration must delete its files from the list:
+`liveCollection`. A migration must delete its file's debt entry:
 `lint/index.test.ts` fails on a listed file that no longer imports one.
 
 One group is permanent rather than burndown: **Declared legacy-full (item 9)**,
@@ -1027,6 +1026,49 @@ for a new reader of the two page resources.
     - `tasks/task-track`
     - `tasks/tasks-core`
     - `ui/icons/sprites`
+- Exemptions:
+  - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
+  - Exempted by:
+    - `active-data/attempt` (1 debt)
+    - `active-data/page-link` (1 debt)
+    - `active-data/task` (1 debt)
+    - `active-data/task-link` (1 debt)
+    - `apps/pages/page-author` (1 debt)
+    - `apps/pages/page-tree` (7 debt)
+    - `apps/pages/prompt-origin` (1 debt)
+    - `apps/pages/welcome/recent-pages` (1 debt)
+    - `conversations` (1 debt)
+    - `conversations/agents` (7 debt)
+    - `conversations/conversation-view` (1 debt)
+    - `conversations/conversation-view/dependencies` (1 debt)
+    - `conversations/conversation-view/jsonl-viewer/tool-call/add-task` (1 debt)
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools` (1 debt)
+    - `conversations/conversations-view/data-view/queue` (1 debt)
+    - `conversations/recover` (1 debt)
+    - `framework/central-core` (0 debt)
+    - `framework/resource-runtime` (0 debt)
+    - `framework/server-core` (0 debt)
+    - `infra/query-resource` (0 debt)
+    - `network/live` (0 debt)
+    - `page/annotations/instructions/instructions-page` (1 debt)
+    - `page/annotations/todo/task-link` (1 debt)
+    - `page/editor` (3 debt)
+    - `page/inline-page-link` (2 debt)
+    - `page/links` (2 debt)
+    - `page/page-link` (1 debt)
+    - `primitives/live-state` (0 debt)
+    - `primitives/optimistic-mutation` (0 debt)
+    - `tasks` (1 debt)
+    - `tasks/attempt-view` (3 debt)
+    - `tasks/task-category` (3 debt)
+    - `tasks/task-dependencies` (1 debt)
+    - `tasks/task-deps-tree` (1 debt)
+    - `tasks/task-detail` (1 debt)
+    - `tasks/task-draft-form` (1 debt)
+    - `tasks/task-graph` (1 debt)
+    - `tasks/task-list` (2 debt)
+    - `tasks/tasks-core` (3 debt)
+    - `tasks/worktree-identity` (1 debt)
 - Central:
   - Exports (types): `CentralServedValue`
   - Exports (values): `serveValue`

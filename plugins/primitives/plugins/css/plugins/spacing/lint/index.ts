@@ -1,4 +1,5 @@
 import noAdhocSpacing from "./no-adhoc-spacing";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-adhoc-spacing` rule. The root `eslint.config.ts`
@@ -27,7 +28,5 @@ export default {
   classRules: {
     "no-adhoc-spacing": noAdhocSpacing,
   },
-  ignores: {
-    "no-adhoc-spacing": [],
-  },
-};
+  closed: ["no-adhoc-spacing"],
+} satisfies LintContribution;

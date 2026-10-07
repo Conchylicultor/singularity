@@ -7,7 +7,7 @@ import noArbitraryFontSize from "./no-arbitrary-font-size";
  *
  * The rule enforces with ZERO exemptions: an arbitrary `text-[Npx]` size routes
  * to a named token (`text-3xs`/`text-2xs`/…) or the `<Text>` primitive. There is
- * intentionally no `ignores` allowlist.
+ * intentionally no exemption allowlist.
  */
 export default {
   name: "type-scale-tokens",

@@ -14,25 +14,6 @@ const createRule = ESLintUtils.RuleCreator(
  */
 const VAR = "SINGULARITY_WORKTREE";
 
-/**
- * The files allowed to name it, as path SUFFIXES so they match whatever absolute
- * root the lint run has. Two, and only the rule's own pair:
- *
- * 1. THIS FILE, which has to spell the name it bans. Rule files are linted
- *    repo-wide like any other source, so without the entry the rule reports
- *    itself — and the alternative, splitting the literal up to hide it from the
- *    matcher, would make the one place that defines the ban unreadable.
- * 2. Its test, whose fixtures are the ban's own worked examples.
- *
- * No production file is exempt. The backend entry used to be, while a gateway
- * predating the `--namespace` argv contract could still be running; that
- * gateway has been restarted and the transition branch deleted.
- */
-const ALLOWED_SUFFIXES = [
-  "plugins/framework/plugins/tooling/plugins/lint/plugins/namespace-identity/lint/no-ambient-worktree-env.ts",
-  "plugins/framework/plugins/tooling/plugins/lint/plugins/namespace-identity/lint/no-ambient-worktree-env.test.ts",
-] as const;
-
 export default createRule({
   name: "no-ambient-worktree-env",
   meta: {
@@ -62,7 +43,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    if (ALLOWED_SUFFIXES.some((s) => context.filename.endsWith(s))) return {};
     const report = (node: TSESTree.Node): void => {
       context.report({ node, messageId: "ambientWorktreeEnv" });
     };

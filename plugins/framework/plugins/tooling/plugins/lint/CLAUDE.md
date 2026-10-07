@@ -8,8 +8,8 @@ A plugin contributes rules via `plugins/<name>/lint/index.ts`; the root
 check can never enforce different sets.
 
 Contributed rules apply repo-wide **to app code**, and are **off in test and e2e
-files** — the globs in [`core/non-app-globs.ts`](core/non-app-globs.ts)
-(`**/e2e/**`, `**/__tests__/**`, `**/*.test.*`, `test/**`).
+files** — the `test` and `e2e` file categories of
+[`tooling/exempt`](../exempt/CLAUDE.md) (`NON_APP_FILE_CATEGORIES`).
 
 The reason is what these rules are: nearly all of them enforce the app's
 *composition* — use the `Row` primitive, use the spacing ramp, route scroll
@@ -43,16 +43,16 @@ pass while asserting nothing. A rule id in `enforceEverywhere` that the plugin
 does not define fails the config build loudly, so a typo can't silently leave a
 rule off.
 
-`ignores` (per-rule path allowlists) is the separate, narrower mechanism for
-naming the one sanctioned home of an idiom — e.g. `scroll-safety` exempts the
-`auto-scroll` primitive's own files.
+Type the barrel `satisfies LintContribution`. A rule owner declares only
+scope: `outOfScope: { "<rule>": FileCategory[] }` and `closed: ["<rule>"]`.
+Which files may violate a rule is declared by the plugin owning them, in its
+own `exempt/index.ts` — see [`tooling/exempt`](../exempt/CLAUDE.md). The
+owner-side `ignores` key no longer exists: a barrel carrying it is a tsc error and fails at load.
 
 ## Class rules take the shared walk — they do not copy it
 
 A rule that reads Tailwind class tokens uses the ONE walk in
-[`core/class-token-walk.ts`](core/class-token-walk.ts). It cannot import it:
-rule files dual-load under **jiti** (which loads `eslint.config.ts` and cannot
-resolve `@plugins/*`) and under Bun. jiti *erases* `import type`, so the rule
+[`core/class-token-walk.ts`](core/class-token-walk.ts). The rule
 takes the type by import and the value by injection — default-export a factory,
 and list it under **`classRules`** (not `rules`):
 
@@ -108,10 +108,23 @@ its disable does not cover. Parameters and imports have no in-file value.
 
 - Description: Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
 - Core:
+  - Uses:
+    - `framework/tooling/collected-dir.defineCollectedDir`
+    - `framework/tooling/exempt.categoryGlobs`
+    - `framework/tooling/exempt.FILE_CATEGORIES`
+    - `framework/tooling/exempt.FileCategory`
+    - `framework/tooling/exempt.isLintRuleId`
+    - `framework/tooling/exempt.loadExemptions`
+    - `framework/tooling/exempt.NON_APP_FILE_CATEGORIES`
+    - `framework/tooling/exempt.ResolvedExemption`
+    - `framework/tooling/exempt.ruleIdProblems`
   - Exports (types):
     - `BuildLintConfigOptions`
     - `ClassRuleFactory`
+    - `LintContribution`
+    - `LintExemptionMode`
     - `LintToolkit`
+    - `LoadedLintContribution`
     - `ParserTypeSource`
     - `TokenNode`
   - Exports (values):
@@ -126,6 +139,11 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `LINT_DATA_FILES`
     - `LINT_SCOPE_EXCLUDE_GLOBS`
     - `lintCollectedDir`
+    - `lintExemptions`
+    - `lintRuleIds`
+    - `loadLintContributions`
+- Cross-plugin:
+  - Imported by: `framework/tooling/codegen`
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
     - `lintToolkit`
@@ -150,7 +168,7 @@ its disable does not cover. Parameters and imports have no in-file value.
   - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
   - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
   - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
-  - **`namespace-identity`** — Two lint rules over one mistake — answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace, and no-ambient-worktree-env bans the retired SINGULARITY_WORKTREE environment variable a runtime now receives as --namespace.
+  - **`namespace-identity`** [exempt] — Two lint rules over one mistake — answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace, and no-ambient-worktree-env bans the retired SINGULARITY_WORKTREE environment variable a runtime now receives as --namespace.
   - **`polling-safety`** — polling-safety lint rule: no-refetch-interval
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
   - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io

@@ -173,6 +173,9 @@ deadline sees it go silent. That needs a heartbeat.
     - `database/query-deadline`
     - `infra/events-test`
     - `infra/jobs`
+- Exemptions:
+  - Exempts itself from: `db-connection/no-raw-pg-connection` — `.` (sanctioned)
+  - Exempted by: `database/connection` (0 debt)
 - Server:
   - Exports (types):
     - `CreateDbClientOptions`

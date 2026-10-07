@@ -5,8 +5,8 @@
  * a surface silently opts out of the pending-turn send lifecycle. It fires on
  * the import specifier (the binding a `fetchEndpoint` call would need), only in
  * files under a `web/` segment — server files legitimately implement these
- * routes, and the three sanctioned delivery modules are allowlisted in
- * `index.ts`'s `ignores`.
+ * routes, and the three sanctioned delivery modules are declared in
+ * the pending-turn plugins' `exempt/index.ts`.
  */
 
 import { RuleTester } from "eslint";
@@ -20,8 +20,10 @@ const ruleTester = new RuleTester({
   },
 });
 
-const WEB = "/repo/plugins/conversations/plugins/conversation-view/plugins/x/web/components/x.tsx";
-const SERVER = "/repo/plugins/conversations/server/internal/handle-post-turn.ts";
+const WEB =
+  "/repo/plugins/conversations/plugins/conversation-view/plugins/x/web/components/x.tsx";
+const SERVER =
+  "/repo/plugins/conversations/server/internal/handle-post-turn.ts";
 
 // `RuleTester.run` drives the harness itself (it calls the ambient describe/it
 // that bun:test provides), so it must run at module top level.

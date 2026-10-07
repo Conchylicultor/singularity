@@ -6,7 +6,7 @@ import noAdhocZindex from "./no-adhoc-zindex";
  * as `error`.
  *
  * The rule enforces with ZERO exemptions: every stacking decision in the repo
- * routes through the semantic `z-*` scale. There is intentionally no `ignores`
+ * routes through the semantic `z-*` scale. There is intentionally no exemptions
  * allowlist — a new raw `z-<n>`/`z-[…]` must pick a named layer, not get
  * exempted here.
  */

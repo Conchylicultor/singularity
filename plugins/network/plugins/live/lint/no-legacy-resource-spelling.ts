@@ -30,7 +30,7 @@ const createRule = ESLintUtils.RuleCreator(
  * this covers every call. The module object is resolved through scope, so a
  * local that shadows it is not flagged. A type position (`typeof m.x`) calls
  * nothing and is not flagged. The substrate plugins, and the files not
- * migrated yet, are exempt through the lint barrel's `ignores`.
+ * migrated yet, are exempt through debt entries in their plugins' `exempt/index.ts`.
  */
 
 /** Each old spelling → the unified spelling that replaces it. */

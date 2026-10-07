@@ -439,6 +439,9 @@ only agreement that matters.
     - `UnjoinedSnapshotTipsError`
 - Cross-plugin:
   - Imported by: `database`
+- Exemptions:
+  - Exempts itself from: `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
+  - Exempted by: `database/migrations` (0 debt)
 - Structure:
   - Non-standard folders: `data/`
 - Test helpers:

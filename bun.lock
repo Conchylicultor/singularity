@@ -3022,6 +3022,10 @@
       "name": "@singularity/plugin-framework-tooling-e2e-harness",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/exempt": {
+      "name": "@singularity/plugin-framework-tooling-exempt",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/format": {
       "name": "@singularity/plugin-framework-tooling-format",
       "version": "0.0.1",
@@ -4093,6 +4097,22 @@
     },
     "plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-diff": {
       "name": "@singularity/plugin-plugin-meta-facets-db-schema-render-diff",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/exemptions": {
+      "name": "@singularity/plugin-plugin-meta-facets-exemptions",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/exemptions/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-exemptions-render-contributions",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/exemptions/plugins/render-detail": {
+      "name": "@singularity/plugin-plugin-meta-facets-exemptions-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/exemptions/plugins/render-diff": {
+      "name": "@singularity/plugin-plugin-meta-facets-exemptions-render-diff",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/exports": {
@@ -7746,6 +7766,8 @@
 
     "@singularity/plugin-framework-tooling-e2e-harness": ["@singularity/plugin-framework-tooling-e2e-harness@workspace:plugins/framework/plugins/tooling/plugins/e2e-harness"],
 
+    "@singularity/plugin-framework-tooling-exempt": ["@singularity/plugin-framework-tooling-exempt@workspace:plugins/framework/plugins/tooling/plugins/exempt"],
+
     "@singularity/plugin-framework-tooling-format": ["@singularity/plugin-framework-tooling-format@workspace:plugins/framework/plugins/tooling/plugins/format"],
 
     "@singularity/plugin-framework-tooling-guards": ["@singularity/plugin-framework-tooling-guards@workspace:plugins/framework/plugins/tooling/plugins/guards"],
@@ -8231,6 +8253,14 @@
     "@singularity/plugin-plugin-meta-facets-db-schema-render-detail": ["@singularity/plugin-plugin-meta-facets-db-schema-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-detail"],
 
     "@singularity/plugin-plugin-meta-facets-db-schema-render-diff": ["@singularity/plugin-plugin-meta-facets-db-schema-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-diff"],
+
+    "@singularity/plugin-plugin-meta-facets-exemptions": ["@singularity/plugin-plugin-meta-facets-exemptions@workspace:plugins/plugin-meta/plugins/facets/plugins/exemptions"],
+
+    "@singularity/plugin-plugin-meta-facets-exemptions-render-contributions": ["@singularity/plugin-plugin-meta-facets-exemptions-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/exemptions/plugins/render-contributions"],
+
+    "@singularity/plugin-plugin-meta-facets-exemptions-render-detail": ["@singularity/plugin-plugin-meta-facets-exemptions-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/exemptions/plugins/render-detail"],
+
+    "@singularity/plugin-plugin-meta-facets-exemptions-render-diff": ["@singularity/plugin-plugin-meta-facets-exemptions-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/exemptions/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-exports": ["@singularity/plugin-plugin-meta-facets-exports@workspace:plugins/plugin-meta/plugins/facets/plugins/exports"],
 

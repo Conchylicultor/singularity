@@ -1,8 +1,6 @@
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
 
 const check: Check = {
   id: "no-hand-built-link-to",
@@ -10,7 +8,8 @@ const check: Check = {
   inputKeyed: true,
   description:
     "Notification/toast `linkTo` must be built from a route (`<route>.link(app, params)`), never a hand-written app-rooted path literal",
-  async run() {
+  outOfScope: ["research"],
+  async run(ctx) {
     const root = await getWorktreeRoot();
     // Flags a hand-built app-rooted link literal: `linkTo: "/…"` or
     // `` linkTo: `/…` ``. A `.link(...)` call, `null`, or a variable does not
@@ -25,7 +24,7 @@ const check: Check = {
     });
 
     const offenders = matches
-      .filter((m) => !m.path.startsWith("research/"))
+      .filter((m) => ctx.inScope(m.path))
       .map((m) => `${m.path}:${m.line}:${m.text}`);
 
     if (offenders.length === 0) return { ok: true };

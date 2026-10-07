@@ -158,7 +158,7 @@ A child a backend keeps running for its lifetime is declared with
 `defineDaemon` (`plugins/daemon`) — not an exception. A genuinely streaming
 child — parsed live, written to live, or meant to outlive a non-backend call —
 cannot use after-exit temp files. Those get a file
-entry in `lint/index.ts`'s `ignores` **with a written justification** (intended
+entry in the exempted plugin's `exempt/index.ts` **with a written justification** (intended
 review pressure, mirroring git-grep-safety), never an inline disable.
 
 ## Stage 2 — done
@@ -170,7 +170,7 @@ all 20 migrated onto `spawnCaptured`, and each took a bound while it was being
 touched — which is what made the mandatory-bound union above expressible at all,
 since a union `tsc` enforces cannot be adopted halfway.
 
-What remains in `ignores` is the permanent group alone: files where after-exit
+What remains exempt is the permanent group alone: files where after-exit
 temp-file capture is structurally impossible (a pipe chain, a live log stream, a
 supervised child that outlives the call). Anything added there needs a written
 justification beside it, and nothing else belongs. A long-lived child a backend
@@ -225,6 +225,16 @@ presence only — **no re-exports**; import from `core/`.
     - `infra/paths`
     - `reports/outbox`
     - `upstream`
+- Exemptions:
+  - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
+  - Exempted by:
+    - `conversations/runtime-tmux` (0 debt)
+    - `framework/cli/migrations` (0 debt)
+    - `framework/tooling/checks/bun-runtime` (0 debt)
+    - `infra/jobs/supervised-job` (0 debt)
+    - `infra/launcher` (0 debt)
+    - `infra/spawn` (0 debt)
+    - `packages/host-semaphore` (0 debt)
 - Sub-plugins:
   - **`daemon`** — defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
 

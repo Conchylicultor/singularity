@@ -31,7 +31,7 @@ of a `defineResource({ loader })` or of network/live's `serveValue(value, { load
 guarantee: an evasive projection is intentionally allowed to slip through rather than risk a false
 positive.
 
-There is no `ignores` allowlist. Entity-extension side-tables were its last exception — their
+There are no exemptions. Entity-extension side-tables were its last exception — their
 loaders had to rename the `parentId` FK to the domain key because `defineExtension` built no wire
 schema. `defineExtension` is now built on `defineEntity`: the row is declared once with
 `defineExtensionShape` (`@plugins/infra/plugins/entity-extensions/core`, browser-safe), whose key

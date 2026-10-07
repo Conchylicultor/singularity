@@ -126,6 +126,8 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/perfs/scheduler.yieldToMain`
 - Cross-plugin:
   - Imported by: `framework/tooling/web-artifacts`
+- Exemptions:
+  - Exempts itself from: `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)
 - Core:
   - Exports (types):
     - `BabelPluginItem`

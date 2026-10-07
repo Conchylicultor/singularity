@@ -17,8 +17,8 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * filter because it does not spell one. This rule closes the other route: it
  * flags every drizzle READ that names the raw table —
  * `.from(_blocks)` and `.<inner|left|right|full>Join(_blocks, …)` — anywhere
- * but the trash machinery, which is exempted by path in the lint barrel
- * (`ignores`): the modules that must see trashed rows to trash, restore, purge,
+ * but the trash machinery, which is exempted by path in
+ * its own `exempt/index.ts`: the modules that must see trashed rows to trash, restore, purge,
  * walk a cascade set, resolve a scope, or park a rank around them.
  *
  * Raw `sql\`… page_blocks …\`` reads are not seen by this rule (an AST rule

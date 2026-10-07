@@ -1,15 +1,12 @@
 /**
  * Tests for `no-raw-fs-watch`: node:fs watch APIs (named, namespace, default,
  * `fs.promises`, `fs/promises`) and chokidar are reported in host-process code,
- * while web code, tests, type-only imports and look-alikes are left alone —
- * and the one listed exception is really exempt through the plugin's ignores.
+ * while web code, tests, type-only imports and look-alikes are left alone.
  */
 
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
-import { describe, expect, test } from "bun:test";
 import rule from "./no-raw-fs-watch";
-import watcherSafety from "./index";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -105,11 +102,3 @@ ruleTester.run(
     ],
   },
 );
-
-describe("watcher-safety ignores", () => {
-  test("the admission valve is the one listed exception", () => {
-    expect(watcherSafety.ignores["no-raw-fs-watch"]).toEqual([
-      "plugins/framework/plugins/cli/plugins/op-runtime/cli/admission-valve.ts",
-    ]);
-  });
-});

@@ -1,15 +1,9 @@
 import noRawEventsWrite from "./no-raw-events-write";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 export default {
   name: "events",
   rules: {
     "no-raw-events-write": noRawEventsWrite,
   },
-  ignores: {
-    // `events-repo.ts` IS the funnel — it owns the sighting stamps and write
-    // shapes every other writer must route through.
-    "no-raw-events-write": [
-      "plugins/apps/plugins/events/plugins/events-core/server/internal/events-repo.ts",
-    ],
-  },
-};
+} satisfies LintContribution;

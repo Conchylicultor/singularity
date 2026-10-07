@@ -325,6 +325,13 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `framework/tooling.repoFilesOver`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `framework/tooling/collected-dir.loadCollectedDir`
+    - `framework/tooling/exempt.createExemptionIndex`
+    - `framework/tooling/exempt.describeExemption`
+    - `framework/tooling/exempt.ExemptionIndex`
+    - `framework/tooling/exempt.exemptionInputPaths`
+    - `framework/tooling/exempt.isInAnyCategory`
+    - `framework/tooling/exempt.loadExemptions`
+    - `framework/tooling/exempt.ResolvedExemption`
     - `infra/file-sink.defineFileSink`
     - `infra/paths.pruneWorktreeCheckArtifacts`
     - `infra/paths.REPO_ROOT`
@@ -405,6 +412,8 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `runChecks`
     - `scopeOf`
     - `tsBuildInfoPath`
+- Exemptions:
+  - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
     - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
@@ -412,7 +421,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`barrel-stubs-in-sync`**
-  - **`bun-runtime`**
+  - **`bun-runtime`** [exempt]
   - **`class-token-walk-single-source`**
   - **`composition-closure`**
   - **`config-origins-in-sync`**
@@ -443,12 +452,12 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`no-plugin-imports-in-core`**
   - **`no-plugin-workspace-deps`**
   - **`no-raw-event-source`**
-  - **`no-raw-sse`**
+  - **`no-raw-sse`** [exempt]
   - **`no-raw-websocket`**
   - **`no-reexport-default`**
   - **`no-relative-server-imports`**
   - **`no-use-resource-cast`**
-  - **`plugin-boundaries`**
+  - **`plugin-boundaries`** [exempt]
   - **`plugin-refs-resolve`**
   - **`plugins-doc-in-sync`**
   - **`plugins-have-claudemd`**

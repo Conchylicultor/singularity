@@ -736,6 +736,10 @@ importing `db` never touches a worktree — no test env shim needed.
     - `runs`
     - `tasks/task-category`
     - `tasks/tasks-core`
+- Exemptions:
+  - Exempts itself from:
+    - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
+    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Test helpers:
   - Server: `@plugins/infra/plugins/query-resource/server/testing`
     - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.

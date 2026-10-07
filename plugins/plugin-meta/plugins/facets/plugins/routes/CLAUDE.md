@@ -21,6 +21,8 @@ This facet is the single source of truth for route metadata.
   - Exports (values):
     - `routesFacetDef`
     - `routesToComparable`
+- Exemptions:
+  - Exempts itself from: `marker-scan-safety/no-adhoc-marker-scan` — `facet/index.ts` (sanctioned)
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin routes table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin routes section in the plugin detail pane.

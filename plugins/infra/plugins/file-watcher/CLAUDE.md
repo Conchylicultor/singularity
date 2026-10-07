@@ -50,7 +50,7 @@ required.
 `watcher-safety/no-direct-parcel-watcher` keeps `@parcel/watcher` inside this
 plugin's `shared/`; `watcher-safety/no-raw-fs-watch` bans `fs.watch` /
 `watchFile` / `fs.promises.watch` / chokidar in host-process code, with a
-reasoned `ignores` list.
+reasoned `exempt/index.ts` manifest.
 
 ## `onChange` and `onReconcile` are different questions
 
@@ -102,6 +102,10 @@ moved (see `apps/prototypes/files`).
     - `integrations/google-maps`
     - `plugin-meta/plugin-tree`
     - `reports/outbox`
+- Exemptions:
+  - Exempts itself from:
+    - `detached-work-safety/no-raw-set-interval` — `shared/engine.ts` (sanctioned)
+    - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
 - Server:
   - Exports (types):
     - `FileChangeEvent`

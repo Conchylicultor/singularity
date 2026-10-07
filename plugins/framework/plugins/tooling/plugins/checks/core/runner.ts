@@ -28,6 +28,14 @@ import { openProgressRun } from "./progress-log";
 import { openCheckTranscript, renderStallLine } from "./transcript";
 import { isBuildProcess } from "./run-context";
 import {
+  assertExemptableInvariant,
+  openCheckExemptions,
+} from "./check-exemptions";
+import {
+  loadExemptions,
+  type ResolvedExemption,
+} from "@plugins/framework/plugins/tooling/plugins/exempt/core";
+import {
   thrownOutcome,
   type CheckObservation,
   type CheckOutcome,
@@ -116,6 +124,7 @@ async function loadAllChecks(): Promise<Check[]> {
     label: "check",
   });
   assertScopeInvariant(checks);
+  assertExemptableInvariant(checks);
   return checks;
 }
 
@@ -472,6 +481,25 @@ export async function runChecks(
     selected.map((c) => c.id),
   );
 
+  // The exemption manifests, loaded at most once per run and only if some
+  // check asks. Each check still READS them through its own `ctx.repo()` (see
+  // `openCheckExemptions`), which is what records them in its read-set.
+  let exemptionsLoad: Promise<readonly ResolvedExemption[]> | null = null;
+  const loadRunExemptions = (): Promise<readonly ResolvedExemption[]> =>
+    (exemptionsLoad ??= loadExemptions());
+
+  // One check body: `run()` with the exemption context, then the verdict on
+  // its exemptions that suppressed nothing. Both cache paths go through here,
+  // inside their scan view, so the manifest reads land in the read-set.
+  const runBody = async (
+    check: Check,
+    base: Omit<CheckContext, "exempt" | "inScope">,
+  ): Promise<CheckResult> => {
+    const session = openCheckExemptions(check, base.repo, loadRunExemptions);
+    const result = await check.run({ ...base, ...session.ctx });
+    return session.finish(result);
+  };
+
   // Shadow mode (opt-in via the env var): an input-keyed check logs the
   // old-vs-new decision so a divergence (old MISS/new HIT, or the validate
   // reason) is visible before a check is trusted. Never changes the verdict or
@@ -505,7 +533,7 @@ export async function runChecks(
     // Scan the SAME tree the cache key (treeHash) is computed from, so a
     // recorded PASS always reflects content the check actually inspected. The
     // grant is the caller's held host CPU admission; heavy checks spend it.
-    const ctx: CheckContext = {
+    const ctx: Omit<CheckContext, "exempt" | "inScope"> = {
       grant: options.grant,
       log: (line, stream) => observations.push({ line, stream }),
       cacheEnabled: !noCache,
@@ -583,12 +611,9 @@ export async function runChecks(
       // reads through it is part of what a later HIT replays. Its set is this
       // same snapshot's (one memoized load), which `recordingRepo` requires.
       const view = snapshot.createRecordingView();
-      const recordingCtx: CheckContext = {
-        ...ctx,
-        repo: recordingRepo(repo, view),
-      };
+      const recordingCtx = { ...ctx, repo: recordingRepo(repo, view) };
       const result = await withScanView(treeHash, view, () =>
-        check.run(recordingCtx),
+        runBody(check, recordingCtx),
       );
       const durationMs = Math.round(performance.now() - wallStart);
       if (result.ok) cache.recordReadSet(check.id, sig, view.readSet());
@@ -620,7 +645,9 @@ export async function runChecks(
         observations,
       };
     }
-    const result = await withScanView(treeHash, null, () => check.run(ctx));
+    const result = await withScanView(treeHash, null, () =>
+      runBody(check, ctx),
+    );
     const durationMs = Math.round(performance.now() - wallStart);
     // Cache PASSES only — failures must always re-run with full output.
     if (cache !== null && treeHash !== null && sig !== null && result.ok) {

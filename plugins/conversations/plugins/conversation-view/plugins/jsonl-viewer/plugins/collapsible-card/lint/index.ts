@@ -1,10 +1,11 @@
 import noAdhocCardTitleFont from "./no-adhoc-card-title-font";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-adhoc-card-title-font` rule. The root `eslint.config.ts`
  * auto-discovers this default export and registers the rule repo-wide as `error`.
  *
- * `ignores` is intentionally EMPTY (no central allowlist — mirrors
+ * The rule is `closed` (no central allowlist — mirrors
  * `pane/no-adhoc-pane-title`). The rule is precise: it fires only on a
  * font-family class inside an inline `CollapsibleCard` `label=`/`note=` node. A
  * deliberate per-site override escapes via
@@ -15,7 +16,5 @@ export default {
   rules: {
     "no-adhoc-card-title-font": noAdhocCardTitleFont,
   },
-  ignores: {
-    "no-adhoc-card-title-font": [],
-  },
-};
+  closed: ["no-adhoc-card-title-font"],
+} satisfies LintContribution;

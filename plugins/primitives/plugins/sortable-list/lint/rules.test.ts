@@ -2,7 +2,7 @@
  * Tests for the sortable-list lint rules: `no-scaling-transform` (the dnd-kit
  * `CSS.Transform` serializer that squashes dragged items) and `no-raw-dnd-kit`
  * (imports of @dnd-kit outside the drag primitives; path exemptions live in
- * the lint barrel's `ignores`, so every filename here is flagged).
+ * the owning plugins' `exempt/index.ts`, so every filename here is flagged).
  */
 
 import { RuleTester } from "eslint";

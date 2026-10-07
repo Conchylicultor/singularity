@@ -1,5 +1,6 @@
 import noAdhocMarkerScan from "./no-adhoc-marker-scan";
 import noAdhocBindingScan from "./no-adhoc-binding-scan";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 export default {
   name: "marker-scan-safety",
@@ -10,38 +11,4 @@ export default {
     // footgun `no-adhoc-marker-scan` covers. Both route through `markerCallSpans`.
     "no-adhoc-binding-scan": noAdhocBindingScan,
   },
-  ignores: {
-    // `{ strings: false }` is sanctioned ONLY for a genuine token-in-string scan
-    // (a token that lives inside a real string literal with no enclosing marker
-    // call, where a full mask would erase the very thing being searched for) or
-    // a careful dual-mask. Everywhere else, marker-value scans must full-mask +
-    // read-by-offset via `findMarkerCalls`.
-    "no-adhoc-marker-scan": [
-      // Token-in-string: scans caller source for an `/api/<prefix>` URL that
-      // legitimately lives inside caller string literals passed to fetch — there
-      // is no enclosing marker call, so masking fully would erase the URL.
-      "plugins/plugin-meta/plugins/facets/plugins/routes/facet/index.ts",
-      // Dual-mask: statement structure (brace/semicolon depth) is detected on a
-      // FULL mask; only the final statement text is sliced from the strings-kept
-      // copy at identical offsets so downstream sees real module specifiers.
-      "plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/check/parse.ts",
-      // Token-in-string: asserts vitest.config.ts still contains the literal
-      // `include` glob that scopes vitest off bun:test's files. The glob IS a
-      // string literal with no enclosing marker call, so a full mask erases the
-      // one thing being asserted. Comments must still be masked — the file
-      // documents the pair in prose that quotes the same glob, and matching that
-      // prose would keep the check passing after the live directive was deleted.
-      "plugins/framework/plugins/tooling/plugins/test-layout/check/index.ts",
-      // Token-in-string: the launcher checks look for SINGULARITY_* variable
-      // names, which code spells inside strings (`env: { "SINGULARITY_X": … }`,
-      // `process.env["SINGULARITY_X"]`) with no enclosing marker call — a full
-      // mask would erase the names. It only needs comments (and regex literals)
-      // blanked.
-      "plugins/infra/plugins/launcher/check/internal/strip-comments.ts",
-      // Unit tests of maskSource's `{ strings: false }` behavior itself.
-      "plugins/plugin-meta/plugins/parse-utils/core/mask-source.test.ts",
-      // Test fixtures exercising find-marker-calls / mask behavior.
-      "plugins/plugin-meta/plugins/parse-utils/core/find-marker-calls.test.ts",
-    ],
-  },
-};
+} satisfies LintContribution;

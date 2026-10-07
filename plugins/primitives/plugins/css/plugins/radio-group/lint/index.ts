@@ -1,11 +1,12 @@
 import noAdhocRadio from "./no-adhoc-radio";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-adhoc-radio` rule. The root `eslint.config.ts`
  * auto-discovers this default export and registers `no-adhoc-radio` repo-wide
  * as `error`.
  *
- * The `ignores` glob is the single PERMANENT tier — this primitive itself, which
+ * The one `exempt/index.ts` entry is the single sanctioned tier — this primitive itself, which
  * owns the raw `<input type="radio">` the rule redirects to (mirrors how
  * `no-adhoc-surface` exempts the shadcn primitive definitions and
  * `no-adhoc-layout` the layout primitives).
@@ -22,11 +23,4 @@ export default {
   rules: {
     "no-adhoc-radio": noAdhocRadio,
   },
-  ignores: {
-    "no-adhoc-radio": [
-      // ── PERMANENT: the radio-group primitive itself ──────────────────────
-      // It owns the native input + the minted `name`; it IS the implementation.
-      "plugins/primitives/plugins/css/plugins/radio-group/**/*.{ts,tsx}",
-    ],
-  },
-};
+} satisfies LintContribution;

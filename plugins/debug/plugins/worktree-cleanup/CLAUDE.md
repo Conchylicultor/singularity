@@ -135,6 +135,8 @@ the panel until it is given something to say.
     - `GET /api/debug/worktrees`
     - `POST /api/debug/worktrees/bulk-delete`
     - `DELETE /api/debug/worktrees/:id`
+- Exemptions:
+  - Exempts itself from: `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
 - Shared:
   - Exports (types): `BulkDeleteWorktreesBody`
   - Exports (values):

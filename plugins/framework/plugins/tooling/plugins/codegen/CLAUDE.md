@@ -40,6 +40,7 @@
     - `framework/tooling.RepoFiles`
     - `framework/tooling/format.formatIfFormattable`
     - `framework/tooling/format.SourceBytes`
+    - `framework/tooling/lint.loadLintContributions`
     - `framework/tooling/resource-vocabulary.isResourceVocabularyOwner`
     - `framework/tooling/resource-vocabulary.PreloadFlag`
     - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
@@ -65,6 +66,7 @@
     - `plugin-meta/facets.Facet`
     - `plugin-meta/facets.getFacet`
     - `plugin-meta/facets/contributions.contributionsFacetDef`
+    - `plugin-meta/facets/exemptions.exemptionsFacetDef`
     - `plugin-meta/facets/slots.slotsFacetDef`
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/parse-utils.findMarkerCalls`
@@ -114,6 +116,7 @@
     - `collectedDirNamedCompositionRegistryPath`
     - `collectedDirRegistryPath`
     - `collectEntriesWithDeps`
+    - `collectExemptableRuleIds`
     - `collectFieldEagerBarrels`
     - `collectIconManifest`
     - `collectImportGraph`
@@ -127,6 +130,8 @@
     - `discoverCollectedDirs`
     - `discoverCollectedDirsIn`
     - `eagerTierManifestPath`
+    - `EXEMPT_RULE_IDS_REL_PATH`
+    - `exemptRuleIdsPath`
     - `extractRuntimeImportSpecifiers`
     - `fieldsEagerManifestPath`
     - `fileConfigProxy`
@@ -137,6 +142,7 @@
     - `generateCustomUtilities`
     - `generateDataViews`
     - `generateEagerTier`
+    - `generateExemptRuleIds`
     - `generateFieldsEager`
     - `generatePluginDocs`
     - `generatePluginRegistry`
@@ -172,6 +178,7 @@
     - `renderDataViewsManifest`
     - `renderDetailsDoc`
     - `renderEagerTierManifest`
+    - `renderExemptRuleIds`
     - `renderFieldsEagerManifest`
     - `renderIconManifest`
     - `renderPluginClaudeMd`

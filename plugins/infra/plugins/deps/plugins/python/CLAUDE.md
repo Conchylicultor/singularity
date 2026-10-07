@@ -9,6 +9,11 @@
   - Imported by:
     - `infra/audio-analysis`
     - `integrations/youtube`
+- Exemptions:
+  - Exempts itself from: `python/no-system-python` — `lint/no-system-python.test.ts` (sanctioned)
+  - Exempted by:
+    - `framework/tooling/guards` (0 debt)
+    - `infra/deps/python` (0 debt)
 - Deps:
   - Exports (types):
     - `PythonEnvSource`

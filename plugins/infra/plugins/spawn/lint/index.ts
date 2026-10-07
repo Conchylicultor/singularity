@@ -1,4 +1,5 @@
 import noRawBunSpawn from "./no-raw-bun-spawn";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 export default {
   name: "spawn-safety",
@@ -26,64 +27,7 @@ export default {
    *   its own file so this ignore stays surgical.
    * - The research tree: the wedge repro deliberately exercises the bug.
    */
-  ignores: {
-    "no-raw-bun-spawn": [
-      "**/*.test.ts",
-      "**/*.test.tsx",
-      "plugins/framework/plugins/cli/plugins/migrations/cli/migrations-interactive.ts",
-      // The `bun-runtime` check's probe. It is the one file whose PURPOSE is an
-      // extra stdio pipe: it proves the running Bun does not close a finished
-      // child's extra fds a second time (oven-sh/bun#33828), which it cannot do
-      // without handing a child one. Temp-file capture would remove the very
-      // thing under test. It spawns `/bin/sh -c 'printf hi >&3'`, which exits
-      // immediately, so the wedge this rule guards has no room to happen.
-      "plugins/framework/plugins/tooling/plugins/checks/plugins/bun-runtime/check/internal/fd-double-close-probe.ts",
-      "research/**",
-
-      // A long-lived child a BACKEND keeps running is not an exception: it is
-      // declared with `defineDaemon` (infra/spawn/daemon), which lives under
-      // this plugin's directory and so is the chokepoint for it.
-      //
-      // --- PERMANENT: genuinely streaming or long-lived children. After-exit
-      // temp-file capture is structurally impossible for these — the output must
-      // be read (or the input written) while the child is still alive, or the
-      // child is meant to outlive the call entirely.
-      //
-      // A pipe from one child INTO another is NOT such a case: write the first
-      // child's output to a file and hand the path to the second. Bun relays
-      // `stdin: other.stdout` through JS and drops the stream's tail when the
-      // writer exits — the DB fork (`pg_dump | pg_restore`) lost it 6 runs in 15.
-      // `spawnWait` reads "granted\n" off live stdout while holding stdin open as
-      // the release channel: the whole protocol is the open pipe.
-      "plugins/packages/plugins/host-semaphore/server/internal/host-semaphore.ts",
-      // `pg_dump -Fc` writes straight into a caller-chosen output file sink;
-      // spawnCaptured only ever captures into its own temp files.
-      "plugins/database/plugins/admin/server/internal/backup.ts",
-      // The supervised-run primitive, and the one place `detached: true` is
-      // meant to be written. Every property that makes it exempt is the point
-      // of it: the child outlives the call BY DESIGN (that is what surviving a
-      // backend restart means), its stdout and stderr are a caller-owned file
-      // descriptor rather than temp files read after exit, and its output is
-      // published while it runs by tailing that file. As build, release and
-      // deploy migrate onto it, their three entries below are deleted — the
-      // exemption converges on this one line instead of spreading.
-      "plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/run/supervisor.ts",
-      // The gateway's launch, run by the CLI (`./singularity start`), serve-app
-      // and the release launcher — never by a backend. The gateway outlives the
-      // call by design (it is the parent of every backend), and its stdio is a
-      // caller-owned log fd. Not a daemon: no backend starts it, so there is no
-      // catalog to list it in from here — each backend `attach`es it instead
-      // (launcher/server/internal/gateway-daemon.ts).
-      "plugins/infra/plugins/launcher/server/internal/boot.ts",
-      // `tmux load-buffer -b … -` reads the buffer from stdin as a stream.
-      "plugins/conversations/plugins/runtime-tmux/server/internal/tmux-runtime.ts",
-
-      // The TEMPORARY Stage-2 backlog that used to sit here is EMPTY: all 20
-      // plain-capture sites moved onto `spawnCaptured` and each took a bound
-      // while it was being touched, which is what made `SpawnOptions`'s
-      // mandatory-bound union expressible. Nothing belongs below this line
-      // except a genuinely streaming or long-lived child, which goes in the
-      // permanent group above WITH its written justification.
-    ],
+  outOfScope: {
+    "no-raw-bun-spawn": ["research"],
   },
-};
+} satisfies LintContribution;

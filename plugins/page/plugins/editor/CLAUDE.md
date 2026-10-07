@@ -4555,6 +4555,18 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `apps/pages/starred` (table `editor_ext_starred`)
     - `page/annotations/todo/task-link` (table `editor_ext_todo_task`)
   - Endpoint callers: `editor-collab`
+- Exemptions:
+  - Exempts itself from:
+    - `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/components/page-options.tsx` (debt)
+    - `page-editor/no-adhoc-block-id` — `core/block-id.ts` (sanctioned)
+    - `page-editor/no-adhoc-forest-write` — `server/internal/forest-writer.ts` (sanctioned)
+    - `page-editor/no-adhoc-doc-write` — `web/__tests__`, `web/internal/block-text-write.ts`, `web/internal/live-state-yjs-provider.ts`, `web/internal/local-yjs-provider.ts` (sanctioned)
+    - `page-editor/no-unfiltered-blocks-read` — `server/internal/forest-writer.ts`, `server/internal/handle-patch-blocks.ts`, `server/internal/live-blocks.ts`, `server/internal/page-forest.ts`, `server/internal/trash-blocks.ts` (sanctioned)
+    - `page-editor/no-unfiltered-blocks-read` — `server/internal/page-clipboard.ts` (sanctioned)
+    - `page-editor/no-adhoc-structural-write` — `web/block-store.ts`, `web/composite-block-store.tsx` (sanctioned)
+    - `page-editor/no-unhistoried-block-field` — `web/components/block-text-area.tsx` (sanctioned)
+    - `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
+  - Exempted by: `page/editor` (0 debt)
 - Test helpers:
   - Web: `@plugins/page/plugins/editor/web/testing`
     - `blockTextRunsOptions` — The registry-bound options for the runs ↔ `Y.XmlText` bridge (`core/runs-yjs.ts`): every registered token extension, plus the decorator node classes those extensions materialize.

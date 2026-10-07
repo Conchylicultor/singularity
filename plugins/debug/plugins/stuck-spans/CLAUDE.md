@@ -153,6 +153,10 @@ run no `onReady`, so no watchdog.
     - `reports.recordReport`
     - `reports.ReportKind`
   - Register: `defineTimer('stuck-spans.watchdog')`
+- Exemptions:
+  - Exempts itself from:
+    - `timer/no-unlisted-timer` — `server/internal/watchdog.ts` (sanctioned)
+    - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
 - Core:
   - Exports (types):
     - `StuckAncestor`

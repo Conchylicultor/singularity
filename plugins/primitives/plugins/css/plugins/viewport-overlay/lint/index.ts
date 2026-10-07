@@ -1,5 +1,6 @@
 import noAdhocViewportOverlay from "./no-adhoc-viewport-overlay";
 import noPortalToggle from "./no-portal-toggle";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for this plugin's two rules. The root `eslint.config.ts`
@@ -23,7 +24,7 @@ import noPortalToggle from "./no-portal-toggle";
  * because the rule's `HOST_TAGS` gate skipped capitalized tags — a gate that also
  * let `<section className="fixed inset-0">` through, so it is gone.
  *
- * `no-portal-toggle` keeps an EMPTY `ignores` (no central allowlist). Either way,
+ * `no-portal-toggle` is `closed` (no central allowlist). Either way,
  * a genuinely-bespoke site escapes per-site, travelling with the code:
  *
  *   // eslint-disable-next-line viewport-overlay/no-adhoc-viewport-overlay -- <reason>
@@ -39,13 +40,5 @@ export default {
   classRules: {
     "no-adhoc-viewport-overlay": noAdhocViewportOverlay,
   },
-  ignores: {
-    "no-adhoc-viewport-overlay": [
-      // ── PERMANENT: the shadcn dialog/sheet definitions themselves ──
-      // They open-code `fixed inset-0` as literal strings on base-ui
-      // `*.Popup`/`*.Backdrop` tags, which base-ui portals to the document root.
-      "plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/**/*.{ts,tsx}",
-    ],
-    "no-portal-toggle": [],
-  },
-};
+  closed: ["no-portal-toggle"],
+} satisfies LintContribution;

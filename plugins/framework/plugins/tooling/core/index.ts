@@ -1,6 +1,7 @@
 export type {
   Check,
   CheckContext,
+  CheckExemptions,
   CheckResult,
   CheckScope,
   RepoFiles,

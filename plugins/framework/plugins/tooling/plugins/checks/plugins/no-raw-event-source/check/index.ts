@@ -1,14 +1,6 @@
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
-
-const ALLOWED_PATHS = [
-  "plugins/primitives/plugins/networking/",
-  "cli/",
-  "plugins/framework/plugins/tooling/plugins/checks/plugins/no-raw-event-source/check/index.ts",
-];
 
 const check: Check = {
   id: "no-raw-event-source",
@@ -16,7 +8,12 @@ const check: Check = {
   inputKeyed: true,
   description:
     "SSE streams must go through the shared ReconnectingEventSource primitive (not raw `new EventSource`)",
-  async run() {
+  exemptable: {
+    "no-raw-event-source":
+      "constructs a raw `new EventSource(` — only the networking primitive that every client shares may",
+  },
+  outOfScope: ["research"],
+  async run(ctx) {
     const root = await getWorktreeRoot();
     const matches = await grepCode({
       root,
@@ -26,12 +23,9 @@ const check: Check = {
       maskStrings: true,
     });
 
+    const exempt = await ctx.exempt("no-raw-event-source");
     const offenders = matches
-      .filter((m) => {
-        if (ALLOWED_PATHS.some((p) => m.path.startsWith(p))) return false;
-        if (m.path.startsWith("research/")) return false;
-        return true;
-      })
+      .filter((m) => !exempt.skips(m.path))
       .map((m) => `${m.path}:${m.line}:${m.text}`);
 
     if (offenders.length === 0) return { ok: true };
@@ -39,8 +33,7 @@ const check: Check = {
     return {
       ok: false,
       message: `raw \`new EventSource(\` found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint:
-        "Use `new ReconnectingEventSource(...)` from `@plugins/primitives/plugins/networking/web` instead. It handles reconnection and inter-tab sharing (leader election) so opening many tabs doesn't saturate the server.",
+      hint: "Use `new ReconnectingEventSource(...)` from `@plugins/primitives/plugins/networking/web` instead. It handles reconnection and inter-tab sharing (leader election) so opening many tabs doesn't saturate the server. A file that genuinely must construct one declares it in its own plugin's `exempt/index.ts` (rule `no-raw-event-source`).",
     };
   },
 };

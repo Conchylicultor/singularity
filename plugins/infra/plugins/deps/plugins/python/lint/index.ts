@@ -1,4 +1,5 @@
 import noSystemPython from "./no-system-python";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 export default {
   name: "python",
@@ -19,10 +20,4 @@ export default {
    *   interpreter names to recognise.
    * - The rule's own tests hold its forbidden spellings as fixtures.
    */
-  ignores: {
-    "no-system-python": [
-      "plugins/framework/plugins/tooling/plugins/guards/core/**",
-      "plugins/infra/plugins/deps/plugins/python/lint/no-system-python.test.ts",
-    ],
-  },
-};
+} satisfies LintContribution;

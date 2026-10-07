@@ -12,8 +12,7 @@ import {
 // declaration in a set of sources, and fold the resolved call sites into the
 // sink-id map the check classifies. No git, no fs — the check feeds it sources
 // from listCandidateSources and resolves `const` ids itself — so every rule
-// here (which calls count, what a computed id means, when an exemption is
-// stale, when two primitives claim one id) is unit-testable on literal strings.
+// here (which calls count, what a computed id means, when when two primitives claim one id) is unit-testable on literal strings.
 
 /**
  * The two ways a durable sink comes into existence. `defineLogSink` is the
@@ -38,26 +37,9 @@ export const SINK_PATHSPECS = [
   `:(exclude)**/${TESTING_FOLDER}/**`,
 ];
 
-/**
- * A call site whose id is computed ON PURPOSE, with the reason its ids are
- * already accounted elsewhere. Matched by marker + file; it must keep matching
- * at least one computed-id call, or the check fails (a stale exemption is an
- * unreviewed hole waiting for the next computed id in that file).
- */
-export interface ComputedIdExemption {
-  marker: SinkMarker;
-  path: string;
-  reason: string;
-}
-
-export const COMPUTED_ID_EXEMPTIONS: readonly ComputedIdExemption[] = [
-  {
-    marker: "defineFileSink",
-    path: "plugins/primitives/plugins/log-channels/server/internal/log.ts",
-    reason:
-      "defineLogSink's own body builds its file sink with `id: spec.id`. Those ids are exactly the defineLogSink call sites, which are scanned and accounted by their literal ids.",
-  },
-];
+// A call site whose id is computed ON PURPOSE (its ids already accounted
+// elsewhere) is exempted in the owning plugin's `exempt/index.ts`, rule
+// `durable-signals-accounted`; the runner fails a stale one.
 
 /** How a call's `id` field reads before const resolution. */
 export type RawSinkId =
@@ -126,10 +108,8 @@ export function scanSinkCalls(
 export interface SinkInventory {
   /** Sink id → its first call site. */
   found: Map<string, CallSite>;
-  /** Computed / unresolvable ids NOT covered by an exemption. */
+  /** Computed / unresolvable ids NOT excused by `skips`. */
   unresolvable: CallSite[];
-  /** Exemptions that no longer match any computed-id call. */
-  staleExemptions: ComputedIdExemption[];
   /** One id declared through BOTH primitives. */
   collisions: Array<{ id: string; sites: CallSite[] }>;
 }
@@ -142,12 +122,11 @@ export interface SinkInventory {
  */
 export function inventorySinks(
   calls: readonly ResolvedSinkCall[],
-  exemptions: readonly ComputedIdExemption[],
+  skips: (path: string) => boolean,
 ): SinkInventory {
   const found = new Map<string, CallSite>();
   const byMarker = new Map<string, Map<SinkMarker, CallSite>>();
   const unresolvable: CallSite[] = [];
-  const usedExemptions = new Set<ComputedIdExemption>();
 
   for (const call of calls) {
     const site: CallSite = {
@@ -156,11 +135,9 @@ export function inventorySinks(
       line: call.line,
     };
     if (call.id === null) {
-      const exemption = exemptions.find(
-        (e) => e.marker === call.marker && e.path === call.path,
-      );
-      if (exemption) usedExemptions.add(exemption);
-      else unresolvable.push(site);
+      // Only a computed id is ever offered to `skips`, so an exemption that
+      // never meets one is reported unused by the runner.
+      if (!skips(call.path)) unresolvable.push(site);
       continue;
     }
     if (!found.has(call.id)) found.set(call.id, site);
@@ -172,6 +149,5 @@ export function inventorySinks(
   const collisions = [...byMarker]
     .filter(([, markers]) => markers.size > 1)
     .map(([id, markers]) => ({ id, sites: [...markers.values()] }));
-  const staleExemptions = exemptions.filter((e) => !usedExemptions.has(e));
-  return { found, unresolvable, staleExemptions, collisions };
+  return { found, unresolvable, collisions };
 }

@@ -20,7 +20,16 @@ import { readFileSync, unlinkSync } from "fs";
 import { dirname, relative } from "path";
 import ts from "typescript";
 import { Linter } from "eslint";
-import { buildLintConfig } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import {
+  buildLintConfig,
+  lintExemptions,
+  loadLintContributions,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import {
+  createExemptionIndex,
+  describeExemption,
+  loadExemptions,
+} from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 // The job/result shapes live in this plugin's `core/` barrel: two spawners (the
 // check's fan-out and the build's fast path) name them, and only one worker
 // implements them. Through the barrel, not the file: a deep import into the
@@ -130,17 +139,35 @@ async function run(job: Job): Promise<Result> {
     const config = await buildLintConfig({
       root: job.root,
       typeSource: { programs: [program] },
+      exemptions: "report",
     });
+    // "report" mode: every rule runs on exempt files too, and an exemption is
+    // applied here, message by message, so it can be caught suppressing
+    // nothing. Validated by the same function the config build used.
+    const exemptions = createExemptionIndex(
+      lintExemptions(await loadExemptions(), await loadLintContributions(job.root)),
+    );
     const linter = new Linter({ configType: "flat" });
     const lines: string[] = [];
     for (const file of job.lintFiles) {
       const code = ts.sys.readFile(file);
       if (code === undefined) continue;
+      const relFile = rel(job.root, file);
       // `--quiet` parity: error-level (2) and fatal parse errors only.
       const messages = linter
         .verify(code, config as Linter.Config[], { filename: file })
-        .filter((m) => m.severity === 2 || m.fatal);
-      if (messages.length === 0) continue;
+        .filter((m) => m.severity === 2 || m.fatal)
+        .filter(
+          (m) =>
+            m.ruleId === null ||
+            exemptions.exemptionsFor(m.ruleId).match(relFile) === undefined,
+        );
+      // A FILE-level exemption on this file that suppressed nothing is dead —
+      // the same contract as `reportUnusedDisableDirectives: "error"`. A
+      // directory-level one cannot be judged here: an incremental run lints
+      // only part of its subtree (`exempt:manifests-valid` checks it exists).
+      const unused = exemptions.unused(exemptions.at(relFile));
+      if (messages.length === 0 && unused.length === 0) continue;
       failedLintFiles.push(file);
       for (const m of messages) {
         // A null ruleId means the message came from the linter itself, not a
@@ -149,8 +176,11 @@ async function run(job: Job): Promise<Result> {
         // latter is common, and calling it a parse error sends the reader
         // hunting for a syntax bug that isn't there.
         const source = m.ruleId ?? (m.fatal ? "(parse)" : "(unused-disable)");
+        lines.push(`${relFile}:${m.line}:${m.column}  ${source}  ${m.message}`);
+      }
+      for (const e of unused) {
         lines.push(
-          `${rel(job.root, file)}:${m.line}:${m.column}  ${source}  ${m.message}`,
+          `${relFile}:1:1  (unused-exemption)  suppressed nothing — delete it from ${e.manifest}: ${describeExemption(e)}`,
         );
       }
     }

@@ -23,9 +23,8 @@ const createRule = ESLintUtils.RuleCreator(
  * `pr-floating-bar`. `pr-floating-bar` reserves space under the top-right
  * floating action bar — it is worn only by a top toolbar row, which makes the
  * pair a precise, low-false-positive fingerprint for "this is a toolbar bar."
- * The sanctioned hosts wear the same signature and are exempted by path in the
- * lint barrel's `ignores` (the same allowlist mechanism the other `no-adhoc-*`
- * rules use). Inspected only in a class-name context (a `className`/`class`
+ * The sanctioned hosts wear the same signature and are exempted by path in
+ * their own `exempt/index.ts`. Inspected only in a class-name context (a `className`/`class`
  * attribute or a `cn(...)`/`clsx(...)`/`twMerge(...)` argument) via the shared
  * `collectTokens` walk, so prose mentioning the classes is never flagged.
  */

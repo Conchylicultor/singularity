@@ -13,7 +13,7 @@ Two deliberate holes, both load-bearing:
 - **`typeof <name> !== "undefined"` guards pass.** They degrade to a skipped
   branch off-browser instead of throwing — the right shape for a module-scope
   listener registration (`primitives/pane/web/pane.ts`, `parse-keys.ts`).
-- **`ignores` holds only the two Vite entry points** (`web-core/web/main.tsx`,
+- **`exempt/index.ts` holds only the two Vite entry points** (`web-core/web/main.tsx`,
   `layout-harness/…/entry.tsx`). They are loaded by a `<script type="module">`
   tag and never statically imported, so no module graph can reach them. Nothing
   else qualifies — put the read in a function instead.

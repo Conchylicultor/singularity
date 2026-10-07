@@ -1,5 +1,5 @@
 /** Tests for `no-unlisted-timer`: any `defineTimer(...)` call is reported (the
- * allowlist lives in the plugin's `ignores`, applied by the ESLint config). */
+ * exempt files are declared by their owning plugins' `exempt/index.ts`). */
 
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";

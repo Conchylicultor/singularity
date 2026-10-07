@@ -5,6 +5,7 @@ import noAdhocStructuralWrite from "./no-adhoc-structural-write";
 import noUnfilteredBlocksRead from "./no-unfiltered-blocks-read";
 import noUnhistoriedBlockField from "./no-unhistoried-block-field";
 import noModelFocusRing from "./no-model-focus-ring";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the page-editor rules. The root `eslint.config.ts`
@@ -21,7 +22,7 @@ import noModelFocusRing from "./no-model-focus-ring";
  * outline switched off unconditionally, a ring redrawn only under the model gate,
  * and a box that genuinely had focus while the two disagreed drew nothing.
  *
- * It carries **no `ignores` entry**, deliberately — unlike `row`'s rules, there
+ * It carries **no exemption**, deliberately — unlike `row`'s rules, there
  * is no definition site to exempt. `VoidCaretBox`, the sanctioned home for the
  * caret cue, writes the focus utility UNCONDITIONALLY (that is the whole point:
  * the browser decides when it draws) and puts only a tint under the `isFocused`
@@ -77,59 +78,4 @@ export default {
   classRules: {
     "no-model-focus-ring": noModelFocusRing,
   },
-  ignores: {
-    // The one module allowed to mint a block id. Everything else — client ops,
-    // server handlers, the forest mint — calls its `newBlockId()`.
-    "no-adhoc-block-id": ["plugins/page/plugins/editor/core/block-id.ts"],
-    // The one module allowed to mutate `page_blocks`. Every export there takes a
-    // `PageForestTx`, so the write is provably under its page's lock.
-    "no-adhoc-forest-write": [
-      "plugins/page/plugins/editor/server/internal/forest-writer.ts",
-    ],
-    // The three origins of a block owner's canonical doc, and only them: the
-    // replay host, the two transport providers, the binding relay. Tests may
-    // stand in for a binding (a local transaction driven straight onto an
-    // owner's doc is how a suite types without mounting Lexical).
-    "no-adhoc-doc-write": [
-      "plugins/page/plugins/editor/web/internal/block-text-write.ts",
-      "plugins/page/plugins/editor/web/internal/live-state-yjs-provider.ts",
-      "plugins/page/plugins/editor/web/internal/local-yjs-provider.ts",
-      "plugins/page/plugins/editor/web/internal/binding-replica.ts",
-      "plugins/page/plugins/editor/web/__tests__/**",
-      "plugins/page/plugins/editor/web/internal/*.test.ts",
-    ],
-    // The modules that must see TRASHED rows: the delete/restore/purge
-    // chokepoint, its flag writers, the cascade-set walk (raw SQL), the page-id
-    // recompute (raw SQL) and doc-order CTE, the scope resolver (a lock name,
-    // never a row), the patch handler's "which creates land on a trashed row"
-    // lookup, the rank-park floor (a trashed sibling still holds its rank), the
-    // pasted-sub-page resolver, and the live relation's own definition.
-    "no-unfiltered-blocks-read": [
-      "plugins/page/plugins/editor/server/internal/live-blocks.ts",
-      "plugins/page/plugins/editor/server/internal/forest-writer.ts",
-      "plugins/page/plugins/editor/server/internal/trash-blocks.ts",
-      "plugins/page/plugins/editor/server/internal/collect-subtree.ts",
-      "plugins/page/plugins/editor/server/internal/page-forest.ts",
-      "plugins/page/plugins/editor/server/internal/page-doc-order.ts",
-      "plugins/page/plugins/editor/server/internal/page-id.ts",
-      "plugins/page/plugins/editor/server/internal/handle-patch-blocks.ts",
-      // A pasted sub-page: a cut page is in the trash when its paste claims it,
-      // and a copy of a since-deleted page still clones what it held.
-      "plugins/page/plugins/editor/server/internal/page-clipboard.ts",
-    ],
-    // The two modules allowed to call the structural endpoints: the page's own
-    // optimistic instance, and the composite router that fans writes out to it
-    // (and owns the two lane-enqueued writes that carry no overlay).
-    "no-adhoc-structural-write": [
-      "plugins/page/plugins/editor/web/block-store.ts",
-      "plugins/page/plugins/editor/web/composite-block-store.tsx",
-    ],
-    // The one module allowed to render a raw block textarea: it IS the
-    // sanctioned surface, and it records every typing run onto the document
-    // stack itself. Everything else in `plugins/page/**/web` takes one of the
-    // two answers the rule's message names.
-    "no-unhistoried-block-field": [
-      "plugins/page/plugins/editor/web/components/block-text-area.tsx",
-    ],
-  },
-};
+} satisfies LintContribution;

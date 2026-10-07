@@ -55,7 +55,7 @@ export default createRule({
         "— named, described, and listed in Debug → Background activity with its " +
         "open instances, backend and runs — or, for a foreground CLI command, " +
         "opened with `watchForCommand` (`@plugins/infra/plugins/file-watcher/cli`). " +
-        "The few sites that cannot (listed in watcher-safety's `ignores`) each " +
+        "The few sites that cannot (declared in their plugins' `exempt/index.ts`) each " +
         "carry their reason.",
     },
     schema: [],
@@ -65,7 +65,7 @@ export default createRule({
         "Declare the watcher with `defineFileWatcher` (infra/file-watcher/server) " +
         "so it is tracked and listed in Background activity — or use " +
         "`watchForCommand` (infra/file-watcher/cli) for a foreground command. " +
-        "An exception belongs in watcher-safety's `ignores`, with its reason.",
+        "An exception belongs in the exempted plugin's `exempt/index.ts`, with its reason.",
     },
   },
   defaultOptions: [],

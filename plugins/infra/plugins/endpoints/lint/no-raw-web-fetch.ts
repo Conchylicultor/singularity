@@ -13,7 +13,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * whose callee identifier is `fetch` or `fetchWithRetry`. No import resolution —
  * intentionally evadable by indirection, which is accepted. The rule only fires
  * inside files whose path contains `/web/`; primitives and burndown holdouts are
- * exempted via the contributing plugin's `ignores` globs (see lint/index.ts).
+ * exempted through `exempt/index.ts` in the exempted plugins.
  */
 
 const createRule = ESLintUtils.RuleCreator(
@@ -27,7 +27,10 @@ const RAW_FETCH_NAMES = new Set(["fetch", "fetchWithRetry"]);
 function calleeName(node: TSESTree.CallExpression): string | null {
   const callee = node.callee;
   if (callee.type === "Identifier") return callee.name;
-  if (callee.type === "MemberExpression" && callee.property.type === "Identifier") {
+  if (
+    callee.type === "MemberExpression" &&
+    callee.property.type === "Identifier"
+  ) {
     return callee.property.name;
   }
   return null;

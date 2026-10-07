@@ -20,8 +20,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * (the leaf property is identical; only the object chain differs). `.back()` /
  * `.forward()` and `history.state` reads are not matched. The two sanctioned
  * low-level URL writers (the pane store's `setRoute` and apps-layout's pre-tab
- * canonicalization) are exempted via the contributing plugin's `ignores` globs
- * (see lint/index.ts).
+ * canonicalization) are exempted through `exempt/index.ts` in the exempted plugins.
  */
 
 const createRule = ESLintUtils.RuleCreator(
@@ -34,7 +33,10 @@ const RAW_HISTORY_METHODS = new Set(["pushState", "replaceState"]);
 /** The member-call's leaf method name, or null if not a member call. */
 function calleeMethod(node: TSESTree.CallExpression): string | null {
   const callee = node.callee;
-  if (callee.type === "MemberExpression" && callee.property.type === "Identifier") {
+  if (
+    callee.type === "MemberExpression" &&
+    callee.property.type === "Identifier"
+  ) {
     return callee.property.name;
   }
   return null;
@@ -64,7 +66,11 @@ export default createRule({
       CallExpression(node: TSESTree.CallExpression) {
         const method = calleeMethod(node);
         if (!method || !RAW_HISTORY_METHODS.has(method)) return;
-        context.report({ node, messageId: "noRawHistoryNav", data: { method } });
+        context.report({
+          node,
+          messageId: "noRawHistoryNav",
+          data: { method },
+        });
       },
     };
   },

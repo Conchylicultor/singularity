@@ -12,7 +12,7 @@
 // The name must be a declared plugin folder (`PluginFolder`, owned by
 // plugin-id/core), so a collected dir cannot exist without its row in the
 // boundary table. Codegen's discovery enforces the same for call sites tsc
-// cannot type (the lint collected dir's inline copy of this marker).
+// cannot type.
 
 import type { PluginFolder } from "@plugins/framework/plugins/plugin-id/core";
 

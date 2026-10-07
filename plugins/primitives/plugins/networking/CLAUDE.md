@@ -78,6 +78,11 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
     - `primitives/optimistic-mutation`
     - `primitives/overlay/image-viewer`
     - `primitives/terminal`
+- Exemptions:
+  - Exempts itself from:
+    - `no-raw-websocket` — `web/shared-websocket.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
+    - `no-raw-event-source` — `.` (sanctioned)
+    - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
 - Test helpers:
   - Web: `@plugins/primitives/plugins/networking/web/testing`
     - `createTransportHub` — Compose one server + bus + locks into a multi-tab transport.

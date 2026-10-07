@@ -18,6 +18,7 @@ import {
 import { assertPreBarrelManifestsFresh } from "./pre-barrel-guard";
 import { assertSlotsDeclared } from "./slot-declaration-guard";
 import { syncPluginPackageNames } from "./package-names";
+import { generateExemptRuleIds } from "./exempt-rule-ids-gen";
 
 /**
  * Single source of truth for the ordered, non-migration **repo-tree** codegen
@@ -173,7 +174,10 @@ export async function regenerateRegistryCodegen({
  *     it only reads token-group descriptors.
  *   - config-origins: after everything above — depends on every config_v2
  *     directive registered above.
- *   - override legends: LAST — reads the same descriptor set as the origins.
+ *   - override legends: reads the same descriptor set as the origins.
+ *   - exempt rule ids: after the guard is disarmed — it imports every lint
+ *     barrel and every check module (the live rule set), none of which is a
+ *     plugin runtime barrel, and nothing in this pipeline reads its output.
  */
 export async function regenerateManifestCodegen({
   root,
@@ -234,4 +238,7 @@ export async function regenerateManifestCodegen({
     // Disarm so a guard never leaks into a later run / unrelated barrel import.
     setPreBarrelImportGuard(() => {});
   }
+  await onStep("exemptRuleIds", "exempt rule-id union", () =>
+    generateExemptRuleIds({ root }),
+  );
 }

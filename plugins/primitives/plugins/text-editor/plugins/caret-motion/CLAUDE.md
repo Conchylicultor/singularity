@@ -74,7 +74,7 @@ A file that imports `KEY_ARROW_LEFT_COMMAND` / `KEY_ARROW_RIGHT_COMMAND` from
 `lexical` must also import `crossCaret` / `announceCaretCrossing` (it moves
 carets) or `CARET_CROSSED_COMMAND` (it observes them). A horizontal-arrow
 handler IS a caret mover by definition, so the rule is precise, and there are no
-`ignores` — no sanctioned home to exempt.
+exemptions — no sanctioned home to exempt.
 
 - **It keys on the IMPORT, not the `registerCommand(...)` call site**, because
   registration is routinely indirect (the page editor registers all eight of its

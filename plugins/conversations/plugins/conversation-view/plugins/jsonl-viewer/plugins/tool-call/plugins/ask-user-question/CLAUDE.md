@@ -126,6 +126,8 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `POST /api/conversations/:id/flush-question`
 - Cross-plugin:
   - Imported by: `conversations/question-relay`
+- Exemptions:
+  - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
 - Shared:
   - Exports (values):
     - `ANSWER_MARKER`

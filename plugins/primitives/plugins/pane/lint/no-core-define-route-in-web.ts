@@ -27,7 +27,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * from the core barrel stay legal in `web/` — those are not re-exported here,
  * so there is no second spelling to choose between.
  *
- * The pane plugin's own tree is exempt (see OWNER_PLUGIN_DIR): its correct
+ * The pane plugin's own tree is exempt (`pane/exempt/index.ts`): its correct
  * spelling is the relative `../core`, and the barrel doing the re-export must
  * not be flagged for performing it.
  */
@@ -42,15 +42,6 @@ const PANE_WEB = "@plugins/primitives/plugins/pane/web";
 
 /** The one symbol both barrels expose, and so the one that needs a canonical path. */
 const ROUTE_FACTORY = "defineRoute";
-
-/**
- * The owner's own plugin tree. A DIRECTORY, unlike `no-adhoc-check-runner`'s
- * single owner FILE, because the exemption is not "one sanctioned caller" but
- * "this plugin does not address itself through the cross-plugin specifier": its
- * `web/` files reach `../core` relatively, and its jsdom suites drive the core
- * barrel directly on purpose.
- */
-const OWNER_PLUGIN_DIR = "plugins/primitives/plugins/pane/";
 
 /** Normalize to `/` separators — the rule reasons in posix segments. */
 function toPosix(p: string): string {
@@ -108,7 +99,6 @@ export default createRule({
   defaultOptions: [],
   create(context) {
     const file = toPosix(context.filename ?? context.getFilename?.() ?? "");
-    if (file.includes(OWNER_PLUGIN_DIR)) return {};
     if (runtimeFolderOf(file) !== "web") return {};
 
     // Local names bound to `import * as paneCore from "…/pane/core"` — member

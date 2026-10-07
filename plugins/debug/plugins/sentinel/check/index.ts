@@ -12,6 +12,7 @@ const WORKER_ENTRY =
  * dir, the jobs and database server barrels build the pool and job queue, and
  * server-core is the plugin runtime itself.
  */
+// eslint-disable-next-line exempt/no-path-allowlist -- a deny-list of import-closure targets, not an allowlist of violators
 const FORBIDDEN_PREFIXES = [
   "plugins/config_v2/server/",
   "plugins/infra/plugins/jobs/server/",
@@ -55,6 +56,7 @@ const workerClosureLeanCheck: Check = {
   },
 };
 
+// eslint-disable-next-line exempt/no-path-allowlist -- the entry points whose closure is checked, not an allowlist of violators
 const STATUS_FILE_ENTRIES = [
   "plugins/debug/plugins/sentinel/plugins/status-file/core/index.ts",
   "plugins/debug/plugins/sentinel/plugins/status-file/server/index.ts",
@@ -66,6 +68,7 @@ const STATUS_FILE_ENTRIES = [
  * live-state belong to a backend, and the parent sentinel's own barrels drag
  * both (its core holds the sentinel config and the live resource).
  */
+// eslint-disable-next-line exempt/no-path-allowlist -- a deny-list of import-closure targets, not an allowlist of violators
 const STATUS_FILE_FORBIDDEN_PREFIXES = [
   "plugins/config_v2/",
   "plugins/primitives/plugins/live-state/",

@@ -1,7 +1,8 @@
 /**
  * Tests for the `no-legacy-resource-spelling` lint rule. The rule module alone
- * flags every file; the substrate and burndown exemptions are the barrel's
- * `ignores`, which `index.test.ts` covers through the real lint config.
+ * flags every file; the substrate and burndown exemptions are
+ * `exempt/index.ts` manifests, checked by `exempt:manifests-valid` and the
+ * unused-exemption report.
  */
 
 import { RuleTester } from "eslint";

@@ -56,11 +56,11 @@ const THIS_CHECK =
   "plugins/ui/plugins/tokens/plugins/type-scale/check/index.ts";
 const TYPE_SCALE_GROUP_ID = "type-scale";
 
-/** Plugins allowed to spell a raw type var in TS: the ladder's two owners. */
-const RAW_VAR_OWNERS = [
-  "plugins/primitives/plugins/css/plugins/text/",
-  "plugins/ui/plugins/tokens/plugins/type-scale/",
-];
+/**
+ * Spelling a raw type var in TS is exempted for the ladder's two owners (the
+ * text and type-scale plugins), in their own `exempt/index.ts`.
+ */
+const RAW_VARS = "type-scale:closed-role-ladder:raw-vars";
 
 /**
  * The type-scale keys that are NOT a role's: the scale itself, the inherited
@@ -160,7 +160,11 @@ const check: Check = {
   id: "type-scale:closed-role-ladder",
   description:
     "the type-scale role ladder stays closed: type-scale keys = TYPE_ROLES-derived + non-role keys, no other token group declares type metrics, every ui-kit type @utility is a derived role utility scaled by --font-scale, the no-adhoc-typography message names every <Text> variant, and no TS outside text/type-scale reads a raw type var",
-  async run(): Promise<CheckResult> {
+  exemptable: {
+    [RAW_VARS]:
+      "reads a raw `var(--font-size-*)` / `var(--line-height-*)` in TS, which skips --font-scale (use typeVar())",
+  },
+  async run(ctx): Promise<CheckResult> {
     const root = await getWorktreeRoot();
     // Every leak is reported in one run, not the first one only.
     const failures: Failure[] = [];
@@ -283,6 +287,7 @@ const check: Check = {
     }
 
     // (5) No raw type var in TS outside the ladder's owners.
+    const exempt = await ctx.exempt(RAW_VARS);
     const rawVars = (
       await grepCode({
         root,
@@ -292,13 +297,13 @@ const check: Check = {
         grepArg: "var\\(--(font-size|line-height)-",
         maskStrings: false,
       })
-    ).filter((m) => !RAW_VAR_OWNERS.some((p) => m.path.startsWith(p)));
+    ).filter((m) => !exempt.skips(m.path));
     if (rawVars.length > 0) {
       report(
         `raw type vars read outside the text / type-scale plugins (they skip --font-scale): ${rawVars
           .map((m) => `${m.path}:${m.line}`)
           .join(", ")}`,
-        'Use typeVar("line-height-body") from @plugins/primitives/plugins/css/plugins/text/core — the same calc(var(--x) * var(--font-scale)) every role utility writes — or, for styling, a role utility.',
+        'Use typeVar("line-height-body") from @plugins/primitives/plugins/css/plugins/text/core — the same calc(var(--x) * var(--font-scale)) every role utility writes — or, for styling, a role utility. A file that must read one declares it in its plugin\'s `exempt/index.ts` (rule `type-scale:closed-role-ladder:raw-vars`).',
       );
     }
 

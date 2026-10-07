@@ -5,13 +5,6 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /**
- * The single sanctioned chokepoint for prettier. `tooling/format` IS the
- * memoized dynamic import and the hardcoded options object — it is not an
- * exception to the rule, it is what the rule points everyone at. Skipped whole.
- */
-const FORMAT_PLUGIN_DIR = "plugins/framework/plugins/tooling/plugins/format/";
-
-/**
  * A `prettier` reaching a COMMAND position: at the very start of a string value
  * / template quasi, or right after a shell command separator (`\n`, `;`, `&`,
  * `|`), optionally behind `bunx ` / `npx `.
@@ -107,10 +100,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    const filename = context.filename.split("\\").join("/");
-    // tooling/format owns the sanctioned prettier chokepoint.
-    if (filename.includes(FORMAT_PLUGIN_DIR)) return {};
-
     return {
       // Case A: `import … from "prettier"` / `export … from "prettier/…"`.
       ImportDeclaration(node) {

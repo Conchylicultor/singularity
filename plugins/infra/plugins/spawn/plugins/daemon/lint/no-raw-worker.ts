@@ -9,11 +9,7 @@ const createRule = ESLintUtils.RuleCreator(
 // backend keeps running.
 const SCOPED_SEGMENTS = ["/server/", "/central/", "/shared/"];
 
-/** The daemon primitive itself is where the one `new Worker` lives. */
-const DAEMON_PLUGIN_DIR = "plugins/infra/plugins/spawn/plugins/daemon/";
-
 function inScope(filename: string): boolean {
-  if (filename.includes(DAEMON_PLUGIN_DIR)) return false;
   if (
     filename.endsWith(".test.ts") ||
     filename.endsWith(".spec.ts") ||
@@ -64,7 +60,7 @@ export default createRule({
         "Raw `new Worker(...)` is not allowed in server/central/shared code. " +
         "Declare it with `defineDaemon` (infra/spawn/daemon/server) and start " +
         "it with `spawnWorker`, so it is supervised and listed in Background " +
-        "activity. An exception belongs in daemon's lint `ignores`, with its reason.",
+        "activity. An exception belongs in the exempted plugin's `exempt/index.ts`, with its reason.",
     },
   },
   defaultOptions: [],

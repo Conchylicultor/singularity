@@ -94,6 +94,9 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `infra/launcher`
     - `infra/spawn/daemon/background-arm`
     - `release`
+- Exemptions:
+  - Exempts itself from: `daemon/no-raw-worker` — `.` (sanctioned)
+  - Exempted by: `infra/spawn/daemon` (0 debt)
 - Server:
   - Exports (types):
     - `AttachOptions`

@@ -36,14 +36,10 @@ export interface CollectForeignReexportsOptions {
   barrelRel: string;
   /** Owning plugin relpath, e.g. "tasks" or "conversations/plugins/conversation-view". */
   ownPlugin: string;
-  /** Runtime the barrel belongs to: "web" | "server" | "central" | "core". */
-  runtime: string;
   /** Known plugin relpaths (for longest-prefix resolution of @plugins specifiers). */
   pluginSet: ReadonlySet<string>;
   /** Reads a repo-root-relative path; resolves null if absent. */
   readFile: (relPath: string) => Promise<string | null>;
-  /** Temporary-migration allowlist, keyed `${ownPlugin}/${runtime} -> ${ultimateSpecifier}`. */
-  exceptions: ReadonlySet<string>;
 }
 
 // ----------------------------------------------------------------------------
@@ -403,8 +399,7 @@ async function originFromSpec(
 export async function collectForeignReexports(
   opts: CollectForeignReexportsOptions,
 ): Promise<Violation[]> {
-  const { barrelRel, ownPlugin, runtime, pluginSet, readFile, exceptions } =
-    opts;
+  const { barrelRel, ownPlugin, pluginSet, readFile } = opts;
   const ctx: ResolveContext = {
     ownPlugin,
     pluginSet,
@@ -446,8 +441,6 @@ export async function collectForeignReexports(
   for (const w of barrel.wildcardFrom) {
     const plugin = pluginFromSpec(w.spec, pluginSet);
     if (plugin && plugin !== ownPlugin) {
-      const exceptionKey = `${ownPlugin}/${runtime} -> ${w.spec}`;
-      if (exceptions.has(exceptionKey)) continue;
       const dedupe = `*|${plugin}`;
       if (seen.has(dedupe)) continue;
       seen.add(dedupe);
@@ -472,9 +465,6 @@ export async function collectForeignReexports(
       s.exported,
       origin.plugin,
     );
-    const exceptionKey = `${ownPlugin}/${runtime} -> ${ultimateSpec}`;
-    if (exceptions.has(exceptionKey)) continue;
-
     const dedupe = `${s.exported}|${origin.plugin}`;
     if (seen.has(dedupe)) continue;
     seen.add(dedupe);

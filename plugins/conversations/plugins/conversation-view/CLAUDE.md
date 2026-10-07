@@ -112,6 +112,8 @@
     - `stats/cost`
     - `tasks/attempt-view`
     - `tasks/task-events`
+- Exemptions:
+  - Exempts itself from: `live/no-legacy-resource-spelling` — `web/panes.tsx` (debt)
 - Sub-plugins:
   - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
   - **`allow-monitor`** — Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.

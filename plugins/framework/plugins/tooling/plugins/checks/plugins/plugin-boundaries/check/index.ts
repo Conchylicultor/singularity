@@ -35,27 +35,13 @@ import {
   type BarrelUse,
 } from "./test-only-exports";
 
-const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
-
-// Sanctioned, TEMPORARY cross-plugin barrel re-exports for gradual migrations.
-// Key: `${reexporting-plugin}/${runtime} -> ${source-specifier}`. Normally forbidden
-// by the cross-plugin-reexport rule; each entry is a scoped, documented exception
-// removed once all importers move to the source barrel directly. Currently empty —
-// add a scoped entry here only while a gradual token/API relocation is in flight.
-const REEXPORT_EXCEPTIONS: ReadonlySet<string> = new Set([]);
-
-// Framework-level files exempt from cross-plugin boundary checks (both the
-// import grammar (R4) and the "default-import is registry-only" rule (R5)).
-// Generated files (*.generated.ts) are exempt from R9 via a pattern check
-// in the inline-import section below — they use dynamic import() by design.
-//
-// App.tsx and its test import the generated web plugin registry directly
-// (re-exporting from the web-sdk barrel would pollute TSC's module graph
-// in server/central tsconfigs via transitive import chains).
-const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
-  "plugins/framework/plugins/web-core/web/App.tsx",
-  "plugins/framework/plugins/web-core/web/__tests__/plugin-render.test.tsx",
-]);
+// Files that may bypass the cross-plugin import rules (grammar R4, default-import
+// R5, inline-import R9, shared R10) are declared in their own plugin's
+// `exempt/index.ts` (rule `plugin-boundaries`) — App.tsx and its test import the
+// generated web plugin registry directly (re-exporting from the web-sdk barrel
+// would pollute TSC's module graph in server/central tsconfigs via transitive
+// import chains). Generated files (*.generated.ts) are exempt from R9 by name:
+// they use dynamic import() by design.
 
 const PUSH_BACK_HINT =
   "Do NOT work around these violations by editing `plugin-boundaries.ts`, expanding the skip list, " +
@@ -96,6 +82,10 @@ const check: Check = {
   // tree walk. See ./read-set for the completeness argument and the sourceHash
   // widening that pins buildPluginTree's own logic.
   inputKeyed: true,
+  exemptable: {
+    "plugin-boundaries":
+      "bypasses the cross-plugin import rules (grammar, default-import, inline-import, shared) — a framework file that wires plugin registries",
+  },
   async run(ctx: CheckContext): Promise<CheckResult> {
     // Record the read-set (no-op on the legacy whole-tree path, where the view is
     // null). Pure snapshot projection — spawns nothing, reads no bytes — so it is
@@ -124,7 +114,7 @@ const check: Check = {
       }),
     );
     const pluginSet = new Set(plugins.map((p) => p.relPath));
-    const skippedSet = new Set(SKIPPED_PLUGINS);
+    const exempt = await ctx.exempt("plugin-boundaries");
     const violations: Violation[] = [];
 
     // The check thread is shared by every other check in the pass. Yield to the
@@ -144,7 +134,7 @@ const check: Check = {
 
     // R1: package.json naming
     for (const p of plugins) {
-      if (skippedSet.has(p.relPath) || p.compositionRoot) continue;
+      if (p.compositionRoot) continue;
       await checkPackageNaming(p, violations, repoFiles);
       await maybeYield();
     }
@@ -152,7 +142,7 @@ const check: Check = {
     // R11: reject unrecognized top-level directories inside plugin folders
     const allPluginRelPaths = plugins.map((p) => p.relPath);
     for (const p of plugins) {
-      if (skippedSet.has(p.relPath) || p.compositionRoot) continue;
+      if (p.compositionRoot) continue;
       violations.push(
         ...collectUnknownDirViolations({
           pluginRelPath: p.relPath,
@@ -168,7 +158,7 @@ const check: Check = {
     // central is optional (not all plugins target the central runtime).
     // shared/ is excluded — it uses relative imports, not barrels.
     for (const p of plugins) {
-      if (skippedSet.has(p.relPath) || p.compositionRoot) continue;
+      if (p.compositionRoot) continue;
       const pluginRel = `plugins/${p.relPath}`;
       for (const runtime of ["web", "server", "central", "core"] as const) {
         // A runtime dir "exists" iff the run's git-derived file set holds at
@@ -206,10 +196,8 @@ const check: Check = {
         for (const v of await collectForeignReexports({
           barrelRel,
           ownPlugin: p.relPath,
-          runtime,
           pluginSet,
           readFile: (relPath) => repoFiles.read(relPath),
-          exceptions: REEXPORT_EXCEPTIONS,
         })) {
           violations.push(v);
         }
@@ -243,10 +231,8 @@ const check: Check = {
         for (const v of await collectForeignReexports({
           barrelRel,
           ownPlugin: p.relPath,
-          runtime: `${runtime}/${TESTING_FOLDER}`,
           pluginSet,
           readFile: (relPath) => repoFiles.read(relPath),
-          exceptions: REEXPORT_EXCEPTIONS,
         })) {
           violations.push(v);
         }
@@ -281,7 +267,6 @@ const check: Check = {
     for (const relFile of sourceFiles) {
       const absFile = join(root, relFile);
       const sourcePlugin = pluginForPath(relFile, pluginSet);
-      if (sourcePlugin && skippedSet.has(sourcePlugin)) continue;
 
       const src = await repoFiles.read(relFile);
       if (!src) continue;
@@ -327,11 +312,12 @@ const check: Check = {
       // the boundary system. Use a top-level `import type { X } from "…"` instead.
       // Framework files (plugin registries) are exempt — their dynamic imports
       // are the resilient-loading mechanism, not accidental boundary bypasses.
-      if (!FRAMEWORK_FILES.has(relFile) && !relFile.endsWith(".generated.ts")) {
+      if (!relFile.endsWith(".generated.ts")) {
         for (const inlinePath of extractInlineImports(src)) {
           const resolved = resolveImport(inlinePath, pluginSet);
           if (!resolved) continue;
           if (sourcePlugin && sourcePlugin === resolved.pluginPath) continue;
+          if (exempt.skips(relFile)) continue;
           violations.push({
             rule: "inline-import",
             file: relFile,
@@ -363,10 +349,8 @@ const check: Check = {
           continue;
         }
 
-        const frameworkExempt = FRAMEWORK_FILES.has(relFile);
-
         // R10: cross-plugin shared/ imports are forbidden — shared/ is plugin-private.
-        if (!frameworkExempt && resolved.suffixHead === "shared") {
+        if (resolved.suffixHead === "shared" && !exempt.skips(relFile)) {
           violations.push({
             rule: "cross-plugin-internal",
             file: relFile,
@@ -387,10 +371,10 @@ const check: Check = {
         // `<runtime>/testing` (the runtime's test-helper barrel), nothing
         // deeper. WHO may import a testing barrel is boundary-rules' job.
         if (
-          !frameworkExempt &&
           !isAssetImport &&
           (!runtimeNames.has(resolved.suffixHead) ||
-            (resolved.tail !== "" && resolved.tail !== TESTING_FOLDER))
+            (resolved.tail !== "" && resolved.tail !== TESTING_FOLDER)) &&
+          !exempt.skips(relFile)
         ) {
           violations.push({
             rule: "grammar",
@@ -401,7 +385,7 @@ const check: Check = {
         }
 
         // R5: only framework files may pull a plugin's default export across boundaries.
-        if (imp.kind === "default" && !frameworkExempt) {
+        if (imp.kind === "default" && !exempt.skips(relFile)) {
           violations.push({
             rule: "default-import",
             file: relFile,

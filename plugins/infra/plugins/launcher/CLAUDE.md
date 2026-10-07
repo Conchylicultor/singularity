@@ -283,6 +283,11 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
   - Exports (values): `gatewayBinary`
 - Cross-plugin:
   - Imported by: `release`
+- Exemptions:
+  - Exempts itself from:
+    - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
+    - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
+    - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
 - Core:
   - Exports (values):
     - `isRuntimeEnvName`

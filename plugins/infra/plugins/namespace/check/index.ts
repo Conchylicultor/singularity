@@ -8,26 +8,6 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // importing `../core/internal/paths`.
 import { NAMESPACE_LABEL_RE, NAMESPACE_MAX_BYTES } from "../core/namespace";
 
-// Files allowed to spell the namespace host suffix themselves. Each is either
-// the owner of the rule, or asking a question that is not namespace identity.
-const ALLOWED_PATHS = [
-  // The owner, its tests, and this check.
-  "plugins/infra/plugins/namespace/core/namespace.ts",
-  "plugins/infra/plugins/namespace/core/namespace.test.ts",
-  "plugins/infra/plugins/namespace/check/index.ts",
-  // The SSRF guard refuses `.localhost` because it RESOLVES TO LOOPBACK — a
-  // question about where a URL points, not about which namespace it names. It
-  // must keep refusing these hosts however the namespace scheme changes.
-  "plugins/infra/plugins/safe-fetch/server/internal/ssrf.ts",
-  // "Did the user type a local address?" in the browser app's omnibox —
-  // navigation heuristics over free text, not identity extraction.
-  "plugins/apps/plugins/browser/plugins/omnibox/web/normalize.ts",
-  // Generates a Caddy site-block for a PUBLIC deploy, and documents the
-  // gateway's `.localhost` fallthrough as the reason its hostnames route the way
-  // they do. Prose about the rule, in another machine's config.
-  "plugins/framework/plugins/cli/plugins/deploy/cli/internal/converge-script.ts",
-];
-
 /**
  * The two shapes that ARE namespace identity, as opposed to the many benign
  * mentions of `.localhost` in the tree.
@@ -58,14 +38,22 @@ const PATTERNS: ReadonlyArray<{ pattern: RegExp; what: string }> = [
   },
 ];
 
+const RULE = "namespace:no-hand-built-url";
+
 const noHandBuiltNamespaceUrlCheck: Check = {
   // INPUT-KEYED (Stage 1). Pure `grepCode` — see no-raw-websocket for rationale.
   inputKeyed: true,
   id: "namespace:no-hand-built-url",
   description:
     "A namespace URL or host must be built with namespaceUrl()/namespaceHost() and read back with namespaceFromHost(), never by spelling the host suffix inline",
-  async run() {
+  exemptable: {
+    [RULE]:
+      "spells the namespace host suffix inline (builds or parses a `.localhost` host) for a purpose that is not namespace identity",
+  },
+  outOfScope: ["research"],
+  async run(ctx) {
     const root = await getWorktreeRoot();
+    const exempt = await ctx.exempt(RULE);
     const offenders: string[] = [];
 
     for (const { pattern, what } of PATTERNS) {
@@ -81,8 +69,7 @@ const noHandBuiltNamespaceUrlCheck: Check = {
         maskStrings: false,
       });
       for (const m of matches) {
-        if (m.path.startsWith("research/")) continue;
-        if (ALLOWED_PATHS.includes(m.path)) continue;
+        if (exempt.skips(m.path)) continue;
         offenders.push(
           `${m.path}:${m.line} — ${what}\n        ${m.text.trim()}`,
         );
@@ -97,7 +84,7 @@ const noHandBuiltNamespaceUrlCheck: Check = {
       hint:
         "Build one with `namespaceUrl(ns, path?)` / `namespaceHost(ns)` and read one back with `namespaceFromHost(location.host)`, from `@plugins/infra/plugins/namespace/core`. " +
         "A namespace is `<composition>.<checkout>` with both sentinels elided, so only the owner knows how many labels that is — which is why the four hand-rolled parsers disagreed with each other and with the gateway. " +
-        "If your line is genuinely not namespace identity (an SSRF guard, a navigation heuristic), add it to ALLOWED_PATHS with the reason.",
+        "If your line is genuinely not namespace identity (an SSRF guard, a navigation heuristic), declare it in your own plugin's `exempt/index.ts` (rule `namespace:no-hand-built-url`) with the reason.",
     };
   },
 };

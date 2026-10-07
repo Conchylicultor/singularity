@@ -10,8 +10,8 @@
  *
  * Filenames are supplied via the RuleTester `filename` option, which is what the
  * directory short-circuit reads. The two production exemptions (`main-edits.ts`,
- * `git-diff-main.ts`) are NOT tested here: they live in the barrel's `ignores`
- * globs, which the root eslint config applies — the rule itself flags them, and
+ * `git-diff-main.ts`) are NOT tested here: they are declared in `guards/exempt/index.ts`
+ * manifest, which the root eslint config applies — the rule itself flags them, and
  * a case asserting otherwise would encode the wrong contract.
  */
 

@@ -90,7 +90,7 @@ rule keys on the menu PANEL and never sees the cue.
 merely linted, and the rule reads the declaration instead of inferring it. Not
 built now — one live arm and no second consumer is speculative generality.
 
-## Sanctioned exception (on the `ignores` allowlist)
+## Sanctioned exception (declared in an `exempt/index.ts`)
 
 Two files, both inside the primitive:
 

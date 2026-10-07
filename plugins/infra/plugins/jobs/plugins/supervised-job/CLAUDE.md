@@ -719,6 +719,8 @@ construction, and the job and the body it spawns cannot drift apart.
     - `infra/deps`
     - `infra/events-test`
     - `release`
+- Exemptions:
+  - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `server/internal/run/supervisor.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing`
     - `execContextForTests` — An `ExecContext` for tests: origin `cli`, admission that admits at once.

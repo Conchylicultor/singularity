@@ -1,10 +1,11 @@
 import noMenuItemOnSelect from "./no-menu-item-on-select";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for `no-menu-item-on-select`. The root `eslint.config.ts`
  * auto-discovers this default export and registers the rule repo-wide as `error`.
  *
- * `ignores` is intentionally EMPTY: the rule is precise (it fires only on the
+ * The rule is `closed`: the rule is precise (it fires only on the
  * capitalized Base UI menu-item wrappers carrying `onSelect`) and auto-fixes to
  * `onClick`, so there is no legitimate escape hatch to allowlist.
  */
@@ -13,7 +14,5 @@ export default {
   rules: {
     "no-menu-item-on-select": noMenuItemOnSelect,
   },
-  ignores: {
-    "no-menu-item-on-select": [],
-  },
-};
+  closed: ["no-menu-item-on-select"],
+} satisfies LintContribution;

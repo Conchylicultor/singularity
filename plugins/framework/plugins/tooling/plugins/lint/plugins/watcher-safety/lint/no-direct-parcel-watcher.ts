@@ -4,12 +4,6 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-/**
- * The single sanctioned chokepoint for loading @parcel/watcher: the
- * file-watcher plugin's engine (`shared/engine.ts`) and its siblings.
- */
-const FILE_WATCHER_DIR = "plugins/infra/plugins/file-watcher/shared/";
-
 export default createRule({
   name: "no-direct-parcel-watcher",
   meta: {
@@ -32,12 +26,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    const filename = (context.filename ?? context.getFilename?.() ?? "")
-      .split("\\")
-      .join("/");
-    // The file-watcher engine owns the native-addon loader chokepoint.
-    if (filename.includes(FILE_WATCHER_DIR)) return {};
-
     return {
       ImportDeclaration(node) {
         // Type-only imports never load the native addon — always allowed.

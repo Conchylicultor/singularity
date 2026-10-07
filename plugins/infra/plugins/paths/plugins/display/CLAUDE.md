@@ -34,6 +34,8 @@ paths, and nobody else.
 ## Plugin reference
 
 - Description: The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
+- Exemptions:
+  - Exempts itself from: `paths:no-hardcoded-paths` — `core/internal/display.ts` (sanctioned)
 - Core:
   - Exports (values):
     - `PROTOTYPES_DIR_DISPLAY`

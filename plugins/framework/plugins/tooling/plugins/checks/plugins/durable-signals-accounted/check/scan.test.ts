@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
   inventorySinks,
   scanSinkCalls,
-  type ComputedIdExemption,
   type RawSinkCall,
   type ResolvedSinkCall,
 } from "./scan";
@@ -17,11 +16,7 @@ const resolveLiterals = (calls: RawSinkCall[]): ResolvedSinkCall[] =>
   }));
 
 const LOG_TS = "plugins/primitives/plugins/log-channels/server/internal/log.ts";
-const EXEMPTION: ComputedIdExemption = {
-  marker: "defineFileSink",
-  path: LOG_TS,
-  reason: "test",
-};
+const skipsLog = (path: string): boolean => path === LOG_TS;
 
 describe("scanSinkCalls", () => {
   test("finds a multi-line defineFileSink call and reads its literal id", () => {
@@ -67,18 +62,18 @@ describe("inventorySinks", () => {
       ...scanSinkCalls([{ rel: LOG_TS, src: computed }], "defineFileSink"),
       ...scanSinkCalls([{ rel: "other.ts", src: computed }], "defineFileSink"),
     ]);
-    const inv = inventorySinks(calls, [EXEMPTION]);
+    const inv = inventorySinks(calls, skipsLog);
     expect(inv.unresolvable.map((s) => s.path)).toEqual(["other.ts"]);
-    expect(inv.staleExemptions).toEqual([]);
   });
 
-  test("an exemption whose file has no computed-id call goes stale", () => {
+  test("skips is offered only a computed id, never a literal one", () => {
     const literalOnly = 'defineFileSink({ id: "fixed", path: P });';
     const calls = resolveLiterals(
       scanSinkCalls([{ rel: LOG_TS, src: literalOnly }], "defineFileSink"),
     );
-    const inv = inventorySinks(calls, [EXEMPTION]);
-    expect(inv.staleExemptions).toEqual([EXEMPTION]);
+    const asked: string[] = [];
+    const inv = inventorySinks(calls, (p) => (asked.push(p), true));
+    expect(asked).toEqual([]);
     expect(inv.found.has("fixed")).toBe(true);
   });
 
@@ -98,7 +93,7 @@ describe("inventorySinks", () => {
         "defineFileSink",
       ),
     ]);
-    const inv = inventorySinks(calls, []);
+    const inv = inventorySinks(calls, () => false);
     expect(inv.collisions.map((c) => c.id)).toEqual(["dup"]);
   });
 
@@ -114,7 +109,7 @@ describe("inventorySinks", () => {
         "defineFileSink",
       ),
     );
-    const { found } = inventorySinks(calls, []);
+    const { found } = inventorySinks(calls, () => false);
     expect([...found.keys()].filter((id) => !(id in ACCOUNTING))).toEqual([
       "never-accounted-sink",
     ]);

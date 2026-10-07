@@ -22,18 +22,12 @@ import {
 export const NOTIFY_MARKERS = ["defineExternalResource", "serveValue"] as const;
 export type NotifyMarker = (typeof NOTIFY_MARKERS)[number];
 
-// Legitimate, documented exceptions: resources that read a Postgres schema the
-// change-feed DELIBERATELY excludes (only the `public` schema gets triggers).
-// Such a resource is feed-blind despite reading the DB, so it must keep an
-// explicit `notify` and therefore be served external — by either spelling, so
-// an entry covers both. Keep this list minimal — each entry is a schema the
-// feed cannot see, not a convenience. A `public` table a plugin opts out of
-// the feed is NOT listed here: that exemption is derived from the plugin's own
-// `ExcludeFromChangeFeed` declarations (see {@link findFeedExclusions}).
-//   - jobs `resources.ts`: `jobs-list` reads `graphile_worker.*`.
-export const ALLOWED_PATHS = [
-  "plugins/infra/plugins/jobs/server/internal/resources.ts",
-];
+// Legitimate, documented exceptions — resources that read a Postgres schema the
+// change-feed DELIBERATELY excludes (only the `public` schema gets triggers) —
+// are exempted by the owning plugin's `exempt/index.ts` (rule
+// `no-db-backed-notify`), applied by the check, not here. A `public` table a
+// plugin opts out of the feed is NOT exempted there: that is derived from the
+// plugin's own `ExcludeFromChangeFeed` declarations (see {@link findFeedExclusions}).
 
 /** The marker of a feed exclusion: `ExcludeFromChangeFeed({ table, reason })`. */
 export const FEED_EXCLUSION_MARKER = "ExcludeFromChangeFeed";
@@ -105,7 +99,7 @@ const DB_ACCESS = /\bdb\.|\b(?:executeRows|queryRows)\(\s*db\b/;
  * source is scanned MASKED, so `db.` inside a string or comment never counts,
  * and the search is scoped to each call's own argument span (block-level, not
  * file-level) so unrelated `db.` use elsewhere in the file is not a false
- * positive. A file under {@link ALLOWED_PATHS} is skipped whole. A call is
+ * positive. A call is
  * exempt when its own argument span names a table its plugin excludes from the
  * feed ({@link findFeedExclusions}) — per call and per table, so the same
  * plugin serving an external value over only feed-visible tables is still
@@ -118,7 +112,6 @@ export function scanDbBackedNotify(
 ): DbBackedNotify[] {
   const out: DbBackedNotify[] = [];
   for (const { rel, src } of sources) {
-    if (ALLOWED_PATHS.some((p) => rel.startsWith(p))) continue;
     const root = pluginRootOf(rel);
     const excluded = root === null ? undefined : feedExclusions.get(root);
     const masked = maskSource(src, { strings: true });

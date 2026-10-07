@@ -1,5 +1,5 @@
 import type TS from "typescript";
-import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   findProducedWrites,
@@ -7,14 +7,6 @@ import {
   resolveTableNames,
   type Source,
 } from "./producer-writes";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = {
-  id: string;
-  description: string;
-  inputKeyed?: boolean;
-  run(): Promise<CheckResult>;
-};
 
 // `typescript`'s module object is invariant for the process's lifetime, so a
 // per-process memo is safe. Loaded lazily, so the check runner's "load every
@@ -26,31 +18,30 @@ function loadTypescript(): Promise<typeof TS> {
 
 // Where a write that bypasses the producer is legitimate, each with its reason.
 // Nothing here runs inside the serving backend on a live table:
-//  - test code (`*.test.ts`, `__tests__/`, `<runtime>/testing/`): a DB fixture
-//    seeds and clears rows of a throwaway database no live reader subscribes
-//    to, and a suite defines its own fixture producers;
-//  - the migration runner and its SQL: schema DDL and data migrations run in
-//    the boot barrier, before any subscriber exists, and every client loads in
-//    full after the deploy anyway.
-function exempt(path: string): boolean {
-  return (
-    isTestCodePath(path.split("/")) ||
-    path.startsWith("plugins/database/plugins/migrations/")
-  );
-}
+//  - test code (`outOfScope: ["test"]`): a DB fixture seeds and clears rows of a
+//    throwaway database no live reader subscribes to, and a suite defines its
+//    own fixture producers;
+//  - the migration runner and its SQL (the migrations plugin's `exempt/`):
+//    schema DDL and data migrations run in the boot barrier, before any
+//    subscriber exists, and every client loads in full after the deploy anyway.
 
 const check: Check = {
   id: "change-feed:producer-writes",
   // INPUT-KEYED: a pure scan over tracked sources.
   inputKeyed: true,
   description:
-    "Every write to a table with a change producer (`defineChangeProducer`) goes through the producer's `mutate` — the only write that reaches live readers, since a produced table has no trigger. Flags a drizzle insert / update / delete on the table's binding (under any alias) that is not the builder a producer's `mutate` callback returns, and a raw SQL write (insert / update / delete / truncate / merge) naming the table. Test fixtures and the migration runner are exempt. See research/2026-10-01-global-scoped-change-routing-p5-p8.md (A11).",
-  async run() {
+    "Every write to a table with a change producer (`defineChangeProducer`) goes through the producer's `mutate` — the only write that reaches live readers, since a produced table has no trigger. Flags a drizzle insert / update / delete on the table's binding (under any alias) that is not the builder a producer's `mutate` callback returns, and a raw SQL write (insert / update / delete / truncate / merge) naming the table. Test fixtures are out of scope and the migration runner is exempt (migrations' `exempt/index.ts`). See research/2026-10-01-global-scoped-change-routing-p5-p8.md (A11).",
+  exemptable: {
+    "change-feed:producer-writes":
+      "writes a table that has a change producer without going through the producer's `mutate`, so the write reaches no live reader",
+  },
+  outOfScope: ["test"],
+  async run(ctx) {
     const ts = await loadTypescript();
     const pathspecs = ["plugins/**/*.ts", "plugins/**/*.tsx"];
     const declSources = (
       await listCandidateSources({ grepArg: "defineChangeProducer", pathspecs })
-    ).filter((s) => !exempt(s.rel));
+    ).filter((s) => ctx.inScope(s.rel));
     const decls = findProducerDecls(ts, declSources);
     if (decls.length === 0) return { ok: true };
 
@@ -79,11 +70,17 @@ const check: Check = {
         grepArg: alternation([...bindings, ...names]),
         pathspecs,
       })
-    ).filter((s) => !exempt(s.rel));
+    ).filter((s) => ctx.inScope(s.rel));
     const producers = new Set(
       decls.flatMap((d) => (d.producer === null ? [] : [d.producer])),
     );
-    const writes = findProducedWrites(ts, writeSources, tables, producers);
+    const exempt = await ctx.exempt("change-feed:producer-writes");
+    const writes = findProducedWrites(
+      ts,
+      writeSources,
+      tables,
+      producers,
+    ).filter((w) => !exempt.skips(w.path));
     if (writes.length === 0) return { ok: true };
     return {
       ok: false,

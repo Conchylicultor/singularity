@@ -42,16 +42,16 @@ export default createRule({
     messages: {
       adhocMarkerScan:
         "Keeping string interiors (`maskSource(src, { strings: false })`) means " +
-        "a `defineX(\"id\")` / value written INSIDE a string or template literal " +
+        'a `defineX("id")` / value written INSIDE a string or template literal ' +
         "is matched as a real call — a silent false positive (a test fixture, a " +
         "docs snippet, a codegen template). Route marker-value scans through " +
-        "`findMarkerCalls(src, \"defineX\")` (or " +
+        '`findMarkerCalls(src, "defineX")` (or ' +
         "`markerCallSpans(maskSource(src), …)`): mask FULLY and read the value " +
         "back from the original by offset. `{ strings: false }` is allowed ONLY " +
         "for a genuine token-in-string scan (a URL/MIME/path that legitimately " +
         "lives in a string with NO enclosing marker call — prefer " +
-        "`grepCode({ maskStrings: false })`), and that scanner must be added to " +
-        "this rule's `ignores` allowlist.",
+        "`grepCode({ maskStrings: false })`), and that scanner must be " +
+        "declared in its plugin's `exempt/index.ts`.",
     },
   },
   defaultOptions: [],

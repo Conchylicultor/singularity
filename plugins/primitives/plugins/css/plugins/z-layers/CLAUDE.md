@@ -35,8 +35,7 @@ values (`z-[60]`, `z-[9999]`). The named `z-*` utilities above are allowed.
 Don't reach for a raw z number — pick the semantic layer that matches the
 element's role so the whole app's stacking order stays legible and movable.
 
-The rule enforces with **zero exemptions** — `lint/index.ts` has no `ignores`
-allowlist. When several sticky/floating peers must order *within one scroll
+The rule enforces with **zero exemptions** — no plugin declares an exemption. When several sticky/floating peers must order *within one scroll
 container*, give that container `isolate` (so the inner z-values form a sealed
 stacking context), then assign each peer a named layer — or drop the z entirely
 on any element that only needs to sit above *static* content, since a positioned

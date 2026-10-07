@@ -45,6 +45,7 @@ import { findGlobalTriggerFiles, type TreeListing } from "./fingerprint";
  *  (c) CONTENT of the global-trigger set (`findGlobalTriggerFiles` — the SAME
  *      enumeration `globalConfigFingerprint` folds: tsconfig*, package.json,
  *      bun.lock(b), *.d.ts, eslint.config.ts, plugins/**\/lint/**,
+ *      plugins/**\/exempt/** (exemption manifests),
  *      *.lint.generated.ts). This is what makes a TypeScript compiler version
  *      bump (package.json / bun.lock) or a tsconfig/eslint change invalidate.
  *

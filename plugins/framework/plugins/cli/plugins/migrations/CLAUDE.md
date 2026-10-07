@@ -42,6 +42,8 @@ through `./singularity build`.
   - Imported by:
     - `framework/cli/build`
     - `framework/cli/regen-migrations`
+- Exemptions:
+  - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `cli/migrations-interactive.ts` (sanctioned)
 - Cli:
   - Exports (types):
     - `DetectedPrompt`

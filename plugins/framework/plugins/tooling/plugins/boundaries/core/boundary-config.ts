@@ -119,6 +119,9 @@ export default defineBoundaries({
     // One uv project (`infra/deps/plugins/python`): Python source plus
     // `pyproject.toml` / `uv.lock`. It holds no TypeScript, so it imports nothing.
     python: [],
+    // An exemption manifest (`tooling/exempt`): plain data that names its own
+    // plugin's files, typed by the exempt primitive's `core`.
+    exempt: ["core"],
   },
 
   runtimeExceptions: [

@@ -38,10 +38,14 @@ export interface FingerprintResult {
 
 function isGlobalTrigger(rel: string): boolean {
   if (rel === "eslint.config.ts") return true;
-  // Any plugins/**/lint/ directory (a path segment `lint/` under plugins/).
+  // Any plugins/**/lint/ directory (a path segment `lint/` under plugins/),
+  // and any plugins/**/exempt/ one: an exemption manifest decides which lint
+  // messages are dropped from files that do not import it, so an edit to one
+  // must re-lint every file (the exempt primitive's own generated registry
+  // sits under a segment of that name too).
   if (rel.startsWith("plugins/")) {
     const segs = rel.split("/");
-    if (segs.includes("lint")) return true;
+    if (segs.includes("lint") || segs.includes("exempt")) return true;
   }
   if (rel.endsWith("lint.generated.ts")) return true;
   // A file a class rule reads (app.css's declared @utility set): a change can
@@ -104,7 +108,8 @@ export function findFiles(
 
 /**
  * sha256 over the sorted `"<rel>\0<ch(rel)>"` of every file matching the
- * isForceFull trigger list (eslint.config.ts, plugins/**\/lint/**, tsconfig*.json,
+ * isForceFull trigger list (eslint.config.ts, plugins/**\/lint/**,
+ * plugins/**\/exempt/**, tsconfig*.json,
  * package.json, bun.lock(b), *.d.ts, *.lint.generated.ts). A change to any of
  * these flips this component → every closure fingerprint changes → whole cache
  * invalidated.

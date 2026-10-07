@@ -108,7 +108,7 @@ box does not arise from the reads that produced it.
 
 Enforced by the `dom-selection-safety` lint rule
 ([`no-raw-selection-range`](../../../../../framework/plugins/tooling/plugins/lint/plugins/dom-selection-safety/lint/no-raw-selection-range.ts)),
-whose `ignores` list has exactly one entry: this plugin's
+whose only exemption is: this plugin's
 `web/internal/dom-selection.ts`. Every caller was migrated rather than
 exempted — a rule that needs an allowlist entry for a *correct* use is
 enforcing less than it looks.
@@ -143,6 +143,8 @@ need no guard; `getRangeAt` is the one read that does.
     - `primitives/diff-view`
     - `primitives/dom/copy-source-text`
     - `primitives/text-editor/caret-trigger`
+- Exemptions:
+  - Exempts itself from: `dom-selection-safety/no-raw-selection-range` — `web/internal/dom-selection.ts` (sanctioned)
 - Web:
   - Exports (values):
     - `hasBox`

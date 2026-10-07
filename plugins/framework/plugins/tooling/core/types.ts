@@ -1,4 +1,9 @@
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type {
+  ExemptableRuleId,
+  FileCategory,
+  ResolvedExemption,
+} from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 
 /**
  * What every check is handed when run. `grant` is the host CPU admission the
@@ -62,6 +67,33 @@ export interface CheckContext {
    * recorded in its read-set, with no extra code.
    */
   repo(): Promise<RepoFiles>;
+  /**
+   * The exemptions for one of THIS check's `exemptable` ids — what the
+   * exempted plugins declared in their own `exempt/index.ts`. Asking for an id
+   * the check did not declare throws.
+   *
+   * The manifests are read through `repo()`, so an input-keyed check's
+   * read-set covers them and a manifest edit invalidates its cached PASS.
+   *
+   * After `run()` the runner FAILS the check for every exemption of its ids
+   * that matched nothing: ask `skips` only for a violation you would
+   * otherwise report.
+   */
+  exempt(id: ExemptableRuleId): Promise<CheckExemptions>;
+  /** Whether the repo-relative `path` is outside every one of the check's `outOfScope` categories. */
+  inScope(path: string): boolean;
+}
+
+/** A check's view of one exemptable id. */
+export interface CheckExemptions {
+  /**
+   * Whether the check must not report a violation at the repo-relative
+   * `path`: the path is in one of the check's `outOfScope` categories, or an
+   * exemption covers it (recording the hit).
+   */
+  skips(path: string): boolean;
+  /** The exemption covering `path`, recording the hit; undefined if none. Ignores `outOfScope`. */
+  match(path: string): ResolvedExemption | undefined;
 }
 
 /**
@@ -121,6 +153,23 @@ export interface Check {
   id: string;
   description: string;
   run(ctx: CheckContext): Promise<CheckResult>;
+  /**
+   * The ids a plugin may name in its `exempt/index.ts` to let its own files
+   * violate this check, each with what violating it means. An id is the
+   * check's own id or `<check id>:<sub>` (one per distinct thing the check
+   * forbids). Only declared ids enter `ExemptableRuleId`, so a check that
+   * declares none admits no exemption by construction.
+   *
+   * The check reads them with `ctx.exempt(id)`; the runner fails it for any
+   * exemption of these ids that matched nothing.
+   */
+  exemptable?: Record<string, string>;
+  /**
+   * File categories this check does not apply to — its scope, not an
+   * exemption. Read through `ctx.inScope(path)`, or `ctx.exempt(id).skips(path)`
+   * which folds it in.
+   */
+  outOfScope?: readonly FileCategory[];
   /**
    * What the verdict is ABOUT, which decides who can assert it:
    *   - "tree" (default) → the verdict is a function of the working-tree content

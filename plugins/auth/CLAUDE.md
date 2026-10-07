@@ -253,6 +253,8 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `integrations/google-maps`
     - `integrations/hooktheory`
   - Endpoint callers: `setup-wizard`
+- Exemptions:
+  - Exempts itself from: `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
 - Server:
   - Exports (types):
     - `GetAccessTokenArgs`

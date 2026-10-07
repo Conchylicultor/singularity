@@ -50,7 +50,7 @@ Reach for a token-driven scale step instead so Shape presets keep working. The
 walk also catches a banned class in an **object/array map indexed directly in a
 class context** (e.g. `cn(MAP[key])`) — but not a bare string `const`.
 
-The rule enforces repo-wide with no `ignores` allowlist — every corner routes
+The rule enforces repo-wide with no exemptions — every corner routes
 through the token scale. The legacy offenders were all migrated; a genuinely
 fixed literal escapes per-site via the disable comment below, not a central list.
 

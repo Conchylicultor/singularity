@@ -43,52 +43,6 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Canonical files where these patterns are intentionally allowed.
-const ALLOWED_PATHS = [
-  // The check itself and the paths plugin source files.
-  "plugins/infra/plugins/paths/check/index.ts",
-  "plugins/infra/plugins/paths/core/internal/paths.ts",
-  // The declared-directory registry for the data root. Same category as
-  // paths.ts: the owner of the path family names the root in its own prose
-  // (every docblock here is ABOUT `~/.singularity/`), and `legacyLocation`'s
-  // contract is written in terms of it.
-  "plugins/infra/plugins/paths/core/internal/data-dir.ts",
-  // The same paths written the way a person types them (`~/…`), for prose that
-  // TELLS somebody where a directory is: UI empty states, agent prompts, check
-  // messages. Its own leaf plugin because the browser needs it and cannot
-  // import paths.ts (homedir() at module scope). Same category as the entry
-  // above — the path family's owner declaring its own spelling.
-  "plugins/infra/plugins/paths/plugins/display/core/internal/display.ts",
-  "plugins/infra/plugins/paths/server/internal/bins.ts",
-  // CLI bin/ imports from @plugins/infra/paths/server — no homedir() calls, no allowlist entry needed.
-  // Tooling inlines the subset of paths it needs (HOME_DIR) to avoid depending on cli/.
-  "plugins/framework/plugins/tooling/plugins/guards/core/guards/main-edits.ts",
-  // Database plugin owns its own embedded-PG path constants and config
-  // reader. Lives in shared/ so server, central, and CLI can all import
-  // from a sanctioned location.
-  "plugins/database/plugins/embedded/shared/internal/paths.ts",
-  // Deploy owns the REMOTE host's layout — a different machine's filesystem,
-  // reached over SSH. This plugin cannot source those from `paths` even in
-  // principle: `paths` resolves paths on THIS machine, and a dev-host constant
-  // in a generated remote script would be silently wrong (the laptop is macOS,
-  // the target is Ubuntu). Same principle as the entries above — the owner of a
-  // path family is source-of-truth territory; its consumers (the CLI's
-  // `deploy.ts`, which generates the scripts) stay policed.
-  "plugins/apps/plugins/deploy/plugins/deployments/core/derive.ts",
-  // Display-only strings — the `~/…` spelling inside a plugin's own description
-  // metadata, which is prose a person reads and never a path anything resolves.
-  //
-  // Entries LEAVE this list the moment their literal does. An exemption that
-  // outlives the string it was granted for is how an allowlist stops meaning
-  // anything: it reads as "this file is allowed to hardcode paths" rather than
-  // "this one line is prose". Two entries were dropped that way in the layout
-  // migration — `auth/web/components/accounts-pane.tsx` (its `~/.singularity/auth/`
-  // JSX moved to the `display` sub-plugin, and was wrong besides) and
-  // `infra/secrets/central/internal/boot.ts`.
-  "plugins/infra/plugins/attachments/server/index.ts",
-  "plugins/infra/plugins/secrets/central/index.ts",
-];
-
 // Strings are split so this source file does not match its own grep patterns.
 const PATTERNS = [
   "home" + "dir()",
@@ -103,8 +57,14 @@ const noHardcodedPathsCheck: Check = {
   id: "paths:no-hardcoded-paths",
   description:
     "Filesystem paths must come from @plugins/infra/plugins/paths/{core,server}; no homedir() calls or hardcoded path strings in TS",
-  async run() {
+  exemptable: {
+    "paths:no-hardcoded-paths":
+      "calls homedir() or spells a hardcoded path string instead of importing it from the paths plugin",
+  },
+  outOfScope: ["research"],
+  async run(ctx) {
     const root = await getWorktreeRoot();
+    const exempt = await ctx.exempt("paths:no-hardcoded-paths");
     const seen = new Set<string>();
     const offenders: string[] = [];
 
@@ -122,8 +82,7 @@ const noHardcodedPathsCheck: Check = {
         if (seen.has(line)) continue;
         seen.add(line);
 
-        if (ALLOWED_PATHS.includes(m.path)) continue;
-        if (m.path.startsWith("research/")) continue;
+        if (exempt.skips(m.path)) continue;
 
         offenders.push(line);
       }
@@ -201,18 +160,22 @@ const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
 // The paths plugin OWNS the artifact layout: paths.ts defines it, the prune
 // logic (core/internal/prune-artifacts.ts) mirrors the filename families
 // to reap old artifacts, and both have co-located tests that reference concrete
-// filenames. Anything inside the plugin is source-of-truth territory, exempt by
-// the same principle that exempts paths.ts. This guard exists to stop *other*
+// filenames. Anything inside the plugin is source-of-truth territory (its own
+// manifest exempts the whole plugin). This guard exists to stop *other*
 // plugins from re-coupling to the layout behind paths.ts's back — not to police
 // the owner's own internals.
-const WORKTREE_ARTIFACT_ALLOWED_PREFIXES = ["plugins/infra/plugins/paths/"];
-
 const noInlinedWorktreeArtifactsCheck: Check = {
   id: "paths:no-inlined-worktree-artifacts",
   description:
     "The per-worktree file layout (the worktrees/<name> data dir, the namespace's spec.json, and the build/release artifact filenames) must come from worktreeDataDir()/worktreeArtifacts/WORKTREE_SPEC_FILE in @plugins/infra/plugins/paths; never re-inline the base dir or a raw filename.",
-  async run() {
+  exemptable: {
+    "paths:no-inlined-worktree-artifacts":
+      "re-inlines the per-worktree file layout (the worktrees/<name> dir or a raw artifact filename) instead of deriving it from the paths plugin",
+  },
+  outOfScope: ["research"],
+  async run(ctx) {
     const root = await getWorktreeRoot();
+    const exempt = await ctx.exempt("paths:no-inlined-worktree-artifacts");
     const seen = new Set<string>();
     const offenders: string[] = [];
 
@@ -230,11 +193,7 @@ const noInlinedWorktreeArtifactsCheck: Check = {
         if (seen.has(line)) continue;
         seen.add(line);
 
-        if (
-          WORKTREE_ARTIFACT_ALLOWED_PREFIXES.some((p) => m.path.startsWith(p))
-        )
-          continue;
-        if (m.path.startsWith("research/")) continue;
+        if (exempt.skips(m.path)) continue;
 
         offenders.push(line);
       }
@@ -964,53 +923,26 @@ const DATA_ROOT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
 ];
 
 /**
- * The paths plugin owns the root, so it is the one tree that may name it: the
- * single derivation (`resolveDataRoot`), the registry that joins kind and name
- * onto it (`data-dir.ts`), and this check's own patterns.
+ * The paths plugin owns the root, so it is the one tree that may name it (its
+ * manifest exempts the whole plugin). Tests are out of scope categorically, not
+ * by name: a test that points the root at a temp dir is being hermetic — the
+ * correct thing for a test to do, and the alternative (running against the
+ * developer's real `~/.singularity`) is the actual bug. Files that legitimately
+ * read `SINGULARITY_DIR` declare it in their own plugin's manifest; entries
+ * LEAVE it the moment their read does (a stale one fails this check).
  */
-const DATA_ROOT_ALLOWED_PREFIXES = ["plugins/infra/plugins/paths/"];
-
-/**
- * Files that legitimately read `SINGULARITY_DIR` from the environment, each for
- * a reason `dataRoot()` cannot express. Entries LEAVE this list the moment their
- * read does — an exemption that outlives its line is how an allowlist stops
- * meaning anything (see `ALLOWED_PATHS` above, which lost two entries that way).
- */
-const DATA_ROOT_ALLOWED_PATHS = [
-  // The release launcher and its teardown twin SET the root (`??=`) and read
-  // back what they just wrote, before anything path-dependent is imported.
-  // These are the processes that decide what the root IS.
-  "plugins/infra/plugins/launcher/bin/launch.ts",
-  "plugins/infra/plugins/launcher/bin/teardown.ts",
-  // The `serve-app` presence guard. It asserts the root was EXPLICITLY set,
-  // which `dataRoot()` cannot say: unset, it answers with the dev
-  // `~/.singularity`, and defaulting to that would boot a release cluster into
-  // the developer's own data root. The guard reads the env precisely because
-  // the env is the thing being checked; the command's actual path use goes
-  // through `dataRoot()`.
-  "plugins/framework/plugins/cli/plugins/serve-app/cli/run.ts",
-];
-
-/**
- * Tests are exempt categorically, not by name.
- *
- * A test that points the root at a temp dir is being hermetic — the correct
- * thing for a test to do, and the alternative (running against the developer's
- * real `~/.singularity`) is the actual bug. Naming each such file instead would
- * grow the allowlist with every new hermetic test, which reads as "these files
- * may bypass the registry" rather than "a test owns its own root". Mirrors
- * `sink-safety`'s rule exemptions, for the same reason.
- */
-function isTestFile(path: string): boolean {
-  return /\.test\.tsx?$/.test(path);
-}
-
 const dataRootNotJoinedCheck: Check = {
   id: "paths:data-root-not-joined",
   description:
     "The data root has one door: `dataRoot()` names it and nothing joins it. No `join(dataRoot(), …)`, and no re-reading SINGULARITY_DIR from the environment — a directory under the root is declared with defineDataDir.",
-  async run() {
+  exemptable: {
+    "paths:data-root-not-joined":
+      "joins the data root by hand or re-reads SINGULARITY_DIR from the environment instead of declaring a data dir",
+  },
+  outOfScope: ["research", "test"],
+  async run(ctx) {
     const root = await getWorktreeRoot();
+    const exempt = await ctx.exempt("paths:data-root-not-joined");
     const seen = new Set<string>();
     const offenders: string[] = [];
 
@@ -1030,11 +962,7 @@ const dataRootNotJoinedCheck: Check = {
         if (seen.has(line)) continue;
         seen.add(line);
 
-        if (DATA_ROOT_ALLOWED_PREFIXES.some((pre) => m.path.startsWith(pre)))
-          continue;
-        if (DATA_ROOT_ALLOWED_PATHS.includes(m.path)) continue;
-        if (isTestFile(m.path)) continue;
-        if (m.path.startsWith("research/")) continue;
+        if (exempt.skips(m.path)) continue;
 
         offenders.push(line);
       }

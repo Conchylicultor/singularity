@@ -87,7 +87,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * call it `trailing` — or, if the name is load-bearing, by a per-site
  * `// eslint-disable-next-line row-actions/no-raw-actions-slot -- <reason>`, a
  * marker that travels with the code and is re-reviewed when the code moves. What
- * it must never get is a path entry in the barrel's `ignores`.
+ * it must never get is a path entry as an `exempt/index.ts` path entry.
  */
 
 const createRule = ESLintUtils.RuleCreator(
@@ -145,7 +145,8 @@ function collectRenderedExpressions(
     return;
   }
   if (expr.type === "ArrayExpression") {
-    for (const element of expr.elements) collectRenderedExpressions(element, out);
+    for (const element of expr.elements)
+      collectRenderedExpressions(element, out);
     return;
   }
   out.push(expr);
@@ -159,9 +160,7 @@ function collectRenderedExpressions(
  * name `acts`, reported against the KEY `itemActions`), so aliasing the local
  * binding is not an escape.
  */
-function actionsPropKeyFor(
-  identifier: TSESTree.Identifier,
-): string | null {
+function actionsPropKeyFor(identifier: TSESTree.Identifier): string | null {
   const localName = identifier.name;
 
   for (
@@ -173,8 +172,7 @@ function actionsPropKeyFor(
 
     // (a) destructured directly in the parameter list — `({ actions }) => …`
     for (const param of node.params) {
-      const pattern =
-        param.type === "AssignmentPattern" ? param.left : param;
+      const pattern = param.type === "AssignmentPattern" ? param.left : param;
       const key = actionsKeyInPattern(pattern, localName);
       if (key) return key;
     }

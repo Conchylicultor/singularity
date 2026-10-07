@@ -118,7 +118,7 @@ a `.map()` of `<Row>` in feature code. Genuine transient chrome (menus, pickers,
 tab strips, typeaheads) keeps `Row` with
 `// eslint-disable-next-line data-view/no-adhoc-row-list -- <reason>`; the
 row-rendering machinery itself (this plugin's view children, `primitives/tree`,
-`reorder/editor`) is permanently exempt via the rule's `ignores`. The two checks
+`reorder/editor`) is permanently exempt via its own `exempt/index.ts`. The two checks
 bracket the choice: `no-adhoc-row-list` fires when you avoid DataView,
 `config:overrides-authored` fires until you finish adopting it.
 
@@ -2359,6 +2359,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `tasks/task-deps-tree`
     - `tasks/task-list`
     - `ui/theme-engine/theme-gallery`
+- Exemptions:
+  - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
+  - Exempted by:
+    - `primitives/data-view` (0 debt)
+    - `primitives/tree` (0 debt)
+    - `reorder/editor` (0 debt)
 - Core:
   - Exports (types):
     - `CellEditorProps`

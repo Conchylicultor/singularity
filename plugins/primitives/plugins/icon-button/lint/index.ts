@@ -6,7 +6,7 @@ import preferIconButton from "./prefer-icon-button";
  * auto-discovers this default export and registers `prefer-icon-button` repo-wide
  * as `error`.
  *
- * No `ignores`: the rule is precise (fires only on a standalone
+ * No exemptions: the rule is precise (fires only on a standalone
  * `<Button aspect="icon">` whose only child is an `<Icon>` glyph). Genuine
  * keep-bare one-offs (e.g. a per-model glyph size IconButton can't express)
  * carry a per-site `// eslint-disable-next-line icon-button/prefer-icon-button -- <reason>`.

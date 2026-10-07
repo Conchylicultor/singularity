@@ -8,22 +8,45 @@
  * the parser's type source: `projectService: true`, which discovers each file's
  * tsconfig. A file that resolves to no project errors loudly.
  *
- * The builder is imported by relative path (not `@plugins/*`) because ESLint
- * loads this config via jiti, which does not resolve the tsconfig path alias.
+ * ESLint loads this file through its own jiti, which knows nothing of the
+ * tsconfig `@plugins/*` alias. So the builder is loaded through a SECOND jiti
+ * created here with that alias: everything the builder reaches — lint core, the
+ * exempt primitive, every lint barrel and rule — then resolves `@plugins/*`
+ * exactly as Bun does for the type-check worker, and no file below has to stay
+ * alias-free for this one loader's sake.
+ *
+ * `exemptions: "config-off"`: an exempted file gets the rule switched off in
+ * the config, so the editor shows no squiggle there. The type-check worker uses
+ * the `"report"` mode instead, which also catches an exemption that suppresses
+ * nothing. Both modes read the same manifests through one loader.
  */
 
 import type { Linter } from "eslint";
-import { dirname } from "path";
+import { createJiti } from "jiti";
+import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { buildLintConfig } from "./plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config";
+import type { buildLintConfig as BuildLintConfig } from "./plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config";
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+const jiti = createJiti(import.meta.url, {
+  alias: { "@plugins": join(here, "plugins") },
+});
+const { buildLintConfig } = await jiti.import<{
+  buildLintConfig: typeof BuildLintConfig;
+}>(
+  join(
+    here,
+    "plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config.ts",
+  ),
+);
 
 // Annotated so the declaration emitter can name the export through eslint's
 // public types rather than a non-portable path into `@eslint/core` (TS2883).
 const config: Linter.Config[] = await buildLintConfig({
   root: here,
   typeSource: { projectService: true },
+  exemptions: "config-off",
 });
 
 export default config;

@@ -1,12 +1,13 @@
 import noAdhocChip from "./no-adhoc-chip";
 import noBadgeTextTransform from "./no-badge-text-transform";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-adhoc-chip` rule. The root `eslint.config.ts`
  * auto-discovers this default export and registers `no-adhoc-chip` repo-wide as
  * `error`.
  *
- * `ignores` is intentionally EMPTY (no central allowlist — see the ad-hoc chip
+ * The rule is `closed` (no central allowlist — see the ad-hoc chip
  * guardrail plan). A file-path allowlist rots the moment code moves and reads as
  * "covered" when it isn't. Instead the rule is precise enough to fire only on
  * genuine chips (all of which have a sanctioned primitive home), and the few
@@ -26,8 +27,5 @@ export default {
     "no-adhoc-chip": noAdhocChip,
     "no-badge-text-transform": noBadgeTextTransform,
   },
-  ignores: {
-    "no-adhoc-chip": [],
-    "no-badge-text-transform": [],
-  },
-};
+  closed: ["no-adhoc-chip", "no-badge-text-transform"],
+} satisfies LintContribution;

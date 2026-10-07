@@ -25,24 +25,19 @@ const createRule = ESLintUtils.RuleCreator(
  *
  * Not flagged (the rule is for code that runs inside a backend, where a lost
  * call has a report to land in):
- *   - the connection plugin itself — it IS the sanctioned construction site;
- *   - any file under a `cli/`, `check/`, `scripts/`, `e2e/` or `lint/`
- *     directory, and tests (`*.test.ts(x)`, `__tests__/`).
+ *   - the connection plugin itself — it IS the sanctioned construction site
+ *     (`connection/exempt/index.ts`);
+ *   - any file under a `cli/`, `scripts/` or `e2e/` directory, and tests (the
+ *     barrel's `outOfScope`), or a `check/` or `lint/` directory (skipped here).
  *
  * A backend site that genuinely cannot use the plugin (a process with no report
  * path, a test stand-in) takes an `eslint-disable-next-line` with its reason.
  */
 
-const CONNECTION_PLUGIN_DIR = "plugins/database/plugins/connection/";
-
-const EXEMPT_SEGMENTS = [
-  "/cli/",
-  "/check/",
-  "/scripts/",
-  "/e2e/",
-  "/lint/",
-  "/__tests__/",
-];
+// FileCategory has no `check` / `lint` (leaf folders, not categories), so this
+// rule still skips them itself; `cli`, `script`, `e2e` and tests are rule scope
+// in the lint barrel.
+const EXEMPT_SEGMENTS = ["/check/", "/lint/"];
 
 const PG_CLASSES = new Set(["Pool", "Client"]);
 const GRAPHILE_ENTRYPOINTS = new Set([
@@ -52,10 +47,8 @@ const GRAPHILE_ENTRYPOINTS = new Set([
   "runMigrations",
 ]);
 
-export function isExemptPath(rawFilename: string): boolean {
+function isExemptPath(rawFilename: string): boolean {
   const filename = `/${rawFilename.split("\\").join("/")}`;
-  if (filename.includes(`/${CONNECTION_PLUGIN_DIR}`)) return true;
-  if (/\.test\.tsx?$/.test(filename)) return true;
   return EXEMPT_SEGMENTS.some((seg) => filename.includes(seg));
 }
 

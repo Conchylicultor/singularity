@@ -114,6 +114,8 @@ keeps reading the old location until then.
     - `ui/theme-engine/theme-customizer`
     - `ui/theme-engine/theme-gallery`
     - `ui/tokens/icons`
+- Exemptions:
+  - Exempted by: `apps-core/layout` (0 debt)
 - Core:
   - Exports (types):
     - `Placement`

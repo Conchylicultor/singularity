@@ -1,43 +1,13 @@
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-// The one file allowed to insert a `jobs.run` row. Everything else goes through
-// `job.enqueue(...)`, which routes here.
-const REGISTRY = "plugins/infra/plugins/jobs/server/internal/registry.ts";
-
-// The class table — the one file that may SPELL a graphile task identifier.
-const HOLD = "plugins/infra/plugins/jobs/core/hold.ts";
-
-// This check's own source names every banned token, in code, to describe them.
-const SELF = "plugins/infra/plugins/jobs/check/index.ts";
-
-// The cron-dedup regression harness. It is not an enqueue path: it inserts a row
-// under a literal job key an hour in the future, asserts graphile's upsert
-// behaviour under the `job_key` / `job_key_mode` arguments the cron path passes,
-// and removes the row before it returns — no plugin ever routes work through it.
-// Driving `add_job` directly is the only way to make that assertion without a
-// permanently-installed `* * * * *` schedule and a multi-minute wait; see the
-// file's header for the trade-off it accepts. Listed here rather than left to
-// slip through, so the exemption is enumerated like every other one.
-const CRON_DEDUP_HARNESS =
-  "plugins/infra/plugins/events-test/server/internal/cron-dedup.ts";
-
-// The enqueue-deadline suite. Not an enqueue path either: it proves graphile's
-// insert, run through a `jobs-enqueue` pool whose connection stops answering,
-// rejects with the connection deadline. `job.enqueue` cannot drive that — it
-// reaches the process's own enqueue pool, which no test proxy sits in front of —
-// and the insert's bytes are dropped on a throwaway database, so no row lands.
-const ENQUEUE_DEADLINE_SUITE =
-  "plugins/infra/plugins/jobs/server/internal/enqueue-deadline.test.ts";
-
-const ALLOWED = [REGISTRY, SELF, CRON_DEDUP_HARNESS, ENQUEUE_DEADLINE_SUITE];
-
-// The second half of the check: who may SPELL the legacy task identifier.
-// `core/hold.ts` declares it (`LEGACY_JOB_TASK`); everyone else imports that.
-const TASK_LITERAL_ALLOWED = [HOLD, SELF];
+// The one file allowed to insert a `jobs.run` row is `server/internal/registry.ts`;
+// everything else goes through `job.enqueue(...)`, which routes there. The one
+// file that may SPELL a graphile task identifier is the class table
+// (`core/hold.ts`). Both are exempted in the jobs plugin's own manifest.
+const INSERT = "jobs:no-raw-addjob";
+const TASK_LITERAL = "jobs:no-raw-addjob:task-literal";
 
 // Why this exists rather than a comment saying "remember to pass the queue name".
 //
@@ -77,8 +47,16 @@ const check: Check = {
   id: "jobs:no-raw-addjob",
   description:
     "Only jobs/registry.ts may insert graphile rows (`utils.addJob` / `graphile_worker.add_job`), so every enqueue carries the job's serialization queue and its hold class's task identifier — which only `core/hold.ts` may spell",
-  async run() {
+  exemptable: {
+    [INSERT]:
+      "inserts a graphile row by hand (`utils.addJob` / `graphile_worker.add_job`), bypassing the job's serialization queue and hold-class task",
+    [TASK_LITERAL]:
+      'spells the legacy `"jobs.run"` task identifier instead of importing `LEGACY_JOB_TASK`',
+  },
+  async run(ctx) {
     const root = await getWorktreeRoot();
+    const insertExempt = await ctx.exempt(INSERT);
+    const taskExempt = await ctx.exempt(TASK_LITERAL);
 
     // Two greps because the tokens live in different lexical contexts.
     // `utils.addJob(` is code, so string literals are masked as well as comments
@@ -117,12 +95,12 @@ const check: Check = {
     });
 
     const insertOffenders = [...jsMatches, ...sqlMatches]
-      .filter((m) => !ALLOWED.includes(m.path))
+      .filter((m) => !insertExempt.skips(m.path))
       .map((m) => `${m.path}:${m.line}:${m.text.trim()}`)
       .sort();
 
     const taskOffenders = taskLiteralMatches
-      .filter((m) => !TASK_LITERAL_ALLOWED.includes(m.path))
+      .filter((m) => !taskExempt.skips(m.path))
       .map((m) => `${m.path}:${m.line}:${m.text.trim()}`)
       .sort();
 
@@ -133,15 +111,15 @@ const check: Check = {
     const hints: string[] = [];
     if (insertOffenders.length > 0) {
       messages.push(
-        `${insertOffenders.length} graphile job insertion(s) outside ${REGISTRY}:\n    ${insertOffenders.join("\n    ")}`,
+        `${insertOffenders.length} graphile job insertion(s) outside plugins/infra/plugins/jobs/server/internal/registry.ts:\n    ${insertOffenders.join("\n    ")}`,
       );
       hints.push(
-        `Enqueue through the registered job — \`job.enqueue(input, opts)\` — or, inside the jobs plugin, build the spec with \`graphileSpecFor(job, …)\` from ${REGISTRY}. A hand-written addJob omits the job's \`serial\` queue name, so that one path escapes serialization silently.`,
+        `Enqueue through the registered job — \`job.enqueue(input, opts)\` — or, inside the jobs plugin, build the spec with \`graphileSpecFor(job, …)\` from plugins/infra/plugins/jobs/server/internal/registry.ts. A hand-written addJob omits the job's \`serial\` queue name, so that one path escapes serialization silently.`,
       );
     }
     if (taskOffenders.length > 0) {
       messages.push(
-        `${taskOffenders.length} hand-typed \`jobs.run\` task identifier(s) outside ${HOLD}:\n    ${taskOffenders.join("\n    ")}`,
+        `${taskOffenders.length} hand-typed \`jobs.run\` task identifier(s) outside plugins/infra/plugins/jobs/core/hold.ts:\n    ${taskOffenders.join("\n    ")}`,
       );
       hints.push(
         `Import \`LEGACY_JOB_TASK\` from the jobs barrel instead. A row's task identifier is a property of the registered job — \`taskFor(job.hold)\` — and each class's task is served by a different set of runners; a hand-typed \`jobs.run\` lands the row in the widest tier, escaping its class's reserved slots with no type error and no symptom.`,

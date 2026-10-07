@@ -4,14 +4,6 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-/**
- * The single sanctioned chokepoint for async child processes. `infra/spawn`
- * IS the implementation of wedge-proof (fd-redirected) spawning — it is not an
- * exception to the rule, it is what the rule points everyone at. Skipped whole,
- * its `daemon` child (long-lived supervised children) included.
- */
-const SPAWN_PLUGIN_DIR = "plugins/infra/plugins/spawn/";
-
 export default createRule({
   name: "no-raw-bun-spawn",
   meta: {
@@ -39,16 +31,12 @@ export default createRule({
         "supervised and listed in Debug → Background activity. " +
         "Bun.spawnSync buffers natively (no JS streams) and is not flagged. A " +
         "genuinely interactive/streaming child (rare — e.g. drizzle-kit's prompt " +
-        "parser in migrations-interactive.ts) gets a file entry in spawn-safety's " +
-        "ignores with a written justification, never an inline disable.",
+        "parser in migrations-interactive.ts) gets an `exempt/index.ts` entry in its own " +
+        "plugin with a written justification, never an inline disable.",
     },
   },
   defaultOptions: [],
   create(context) {
-    const filename = (context.filename ?? "").split("\\").join("/");
-    // infra/spawn owns the sanctioned spawn chokepoint.
-    if (filename.includes(SPAWN_PLUGIN_DIR)) return {};
-
     return {
       // Every `Bun.spawn` member access — calls, aliasing (`const s = Bun.spawn`),
       // and the computed form `Bun["spawn"]`. `spawnSync` deliberately unmatched.

@@ -247,6 +247,7 @@ export const ICON_MANIFEST: {
     "restaurant",
     "restore-from-trash",
     "rocket-launch",
+    "rule",
     "rule-folder",
     "save",
     "schedule",

@@ -240,7 +240,7 @@ to reconcile them; they never needed reconciling.
   The shared class walk reads `className`, `cn` / `clsx` / `twMerge` AND `cva`
   (a `cva` table's base and variant values are classes; its variant names and
   `defaultVariants` are not), and follows same-file string consts and
-  object/array maps (`cn(TONE[tone])`). It enforces repo-wide with no `ignores`
+  object/array maps (`cn(TONE[tone])`). It enforces repo-wide with no exemptions
   allowlist. A genuinely fixed raw size escapes per-site via
   `// eslint-disable-next-line text/no-adhoc-typography -- reason`.
 - `type-scale/lint/no-arbitrary-font-size.ts` bans `text-[Npx]` /

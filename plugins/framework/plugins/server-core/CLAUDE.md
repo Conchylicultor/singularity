@@ -353,6 +353,10 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `infra/audio-analysis`
     - `infra/deps`
     - `infra/jobs/supervised-job`
+- Exemptions:
+  - Exempts itself from:
+    - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
+    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Cli:
   - Exports (values): `runExec`
 - Test helpers:

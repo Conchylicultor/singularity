@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-plugin-meta-facets-exemptions-render-detail",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Per-plugin exemptions section in the plugin detail pane."
+}

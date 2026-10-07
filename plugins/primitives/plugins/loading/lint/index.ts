@@ -1,5 +1,6 @@
 import noAdhocLoadingText from "./no-adhoc-loading-text";
 import noShadcnSkeleton from "./no-shadcn-skeleton";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 export default {
   name: "loading",
@@ -7,11 +8,5 @@ export default {
     "no-adhoc-loading-text": noAdhocLoadingText,
     "no-shadcn-skeleton": noShadcnSkeleton,
   },
-  ignores: {
-    // BURNDOWN COMPLETE — every grandfathered hand-rolled loading text was
-    // migrated to <Loading> (2026-06-11). An empty array is the sanctioned
-    // "no exemptions" state (see build-lint-config.ts). Keep it empty: do NOT
-    // add new entries — route loading states through <Loading> instead.
-    "no-adhoc-loading-text": [],
-  },
-};
+  closed: ["no-adhoc-loading-text"],
+} satisfies LintContribution;

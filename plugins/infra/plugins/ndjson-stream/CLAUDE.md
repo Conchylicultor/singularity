@@ -27,6 +27,8 @@ Bun's 10s idle timeout.
     - `debug/slow-ops/cluster`
     - `debug/timeline`
     - `debug/worktree-cleanup`
+- Exemptions:
+  - Exempts itself from: `endpoints/no-raw-web-fetch` — `web` (sanctioned)
 - Server:
   - Exports (values): `ndjsonResponse`
 

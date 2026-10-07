@@ -66,12 +66,6 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /**
- * The plugin that owns the sanctioned decoder. Its docs and tests have to be
- * able to write the banned form in order to name it. Skipped whole.
- */
-const SQL_COLUMN_DIR = "plugins/database/plugins/sql-column/";
-
-/**
  * Which decoder a column builder's tier calls for. The two tiers differ only in
  * their remedy, so the rule keys the message off this rather than off the
  * builder name — a fourth text-family builder needs no second branch.
@@ -227,11 +221,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    const filename = context.filename.split("\\").join("/");
-    // sql-column owns the sanctioned decoder — its docs and tests must be able
-    // to write the banned form in order to name it.
-    if (filename.includes(SQL_COLUMN_DIR)) return {};
-
     return {
       CallExpression(node: TSESTree.CallExpression) {
         const ownTier = columnTierOf(node);

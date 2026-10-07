@@ -102,7 +102,7 @@ export default createRule({
     // key. The primitive's own files reach the caret-trigger barrel by relative
     // path, so they never self-match on it — but `FloatingSurface` is another
     // plugin, which they must import through its barrel, so `CaretTriggerMenu`'s
-    // own file is on the `ignores` allowlist.
+    // own file is declared in its `exempt/index.ts`.
     //
     // Keying on the panel rather than on a rect helper is a strengthening, not a
     // swap: it catches a hand-rolled caret menu HOWEVER it obtained its anchor —

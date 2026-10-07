@@ -227,6 +227,8 @@ card, not a collection.
     - `useTodoTaskState`
 - Cross-plugin:
   - Imported by: `page/annotations/todo`
+- Exemptions:
+  - Exempts itself from: `live/no-legacy-resource-spelling` — `web/hooks.ts` (debt)
 - Shared:
   - Exports (types):
     - `CreateTodoBlockTaskBody`

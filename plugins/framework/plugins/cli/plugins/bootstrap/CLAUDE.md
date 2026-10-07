@@ -62,6 +62,8 @@ the build lock.
   - Imported by:
     - `framework/cli/build`
     - `framework/cli/push`
+- Exemptions:
+  - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
 - Cli:
   - Exports (types):
     - `AcquireCheckoutLockOptions`

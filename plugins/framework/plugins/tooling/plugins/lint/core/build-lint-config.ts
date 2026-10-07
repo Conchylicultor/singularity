@@ -2,35 +2,40 @@
  * Single source of truth for the repo's flat ESLint config.
  *
  * Two consumers build the same rules/plugins from here, differing only in how
- * the parser obtains TypeScript type information:
+ * the parser obtains TypeScript type information and how exemptions apply:
  *
  *   - the root `eslint.config.ts` (editor/IDE + ad-hoc `bunx eslint`) passes
  *     `{ projectService: true }` — typescript-eslint discovers each file's
- *     tsconfig and builds its own program;
+ *     tsconfig and builds its own program — and `exemptions: "config-off"`;
  *   - the `type-check` check's per-target worker passes `{ programs: [program] }`
  *     — typescript-eslint REUSES a program the worker already built for `tsc`
- *     diagnostics, so the type-program is constructed once, not twice.
+ *     diagnostics, so the type-program is constructed once, not twice — and
+ *     `exemptions: "report"`.
  *
  * Keeping both paths on this one builder means a rule/plugin/exemption change
  * applies identically to the IDE and the check. The contribution loader is
  * shared too (and fails loudly on a dropped contribution), so the type-aware
  * check can never silently enforce a different rule set than the editor.
  *
- * Loaded under BOTH jiti (eslint.config.ts) and Bun (the worker), so it must
- * avoid the `@plugins/*` alias jiti can't resolve: `lintEntries` is imported
- * relatively (same plugin) and lint barrels are imported by absolute path.
+ * Loaded under Bun (the worker) and under a jiti carrying the `@plugins` alias
+ * (`eslint.config.ts`), so `@plugins/*` imports resolve in both.
  */
-import { join } from "path";
-import { pathToFileURL } from "url";
 import type TsEslintPlugin from "@typescript-eslint/eslint-plugin";
 import type TsEslintParser from "@typescript-eslint/parser";
 import type { ESLint, Linter } from "eslint";
 import type ReactHooksPlugin from "eslint-plugin-react-hooks";
 import type { Program } from "typescript";
+import {
+  FILE_CATEGORIES,
+  NON_APP_FILE_CATEGORIES,
+  categoryGlobs,
+  isLintRuleId,
+  loadExemptions,
+  ruleIdProblems,
+  type FileCategory,
+  type ResolvedExemption,
+} from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import { lintEntries } from "./lint.generated";
-import { NON_APP_FILE_GLOBS } from "./non-app-globs";
-// Relative, not `@plugins/*`: this file is dual-loaded, by jiti for the root
-// `eslint.config.ts` (which cannot resolve the alias) and by Bun for the worker.
 import { LINT_SCOPE_EXCLUDE_GLOBS } from "./lint-scope-exceptions";
 import { createLintToolkit, type LintToolkit } from "./class-token-walk";
 import { readDeclaredUtilities } from "./declared-utilities";
@@ -64,39 +69,58 @@ function loadReactHooks(): Promise<typeof ReactHooksPlugin> {
   ));
 }
 
-interface PluginContribution {
-  /** Relative path under plugins/, e.g. "welcome" or "conversations/plugins/conversation-view". */
-  relPath: string;
-  /** ESLint plugin namespace — must match the lint barrel's `name`. */
+/**
+ * What a plugin's `lint/index.ts` default-exports. Write the barrel as
+ * `export default { … } satisfies LintContribution`, so a misspelled or
+ * retired key is a type error before it is a load error.
+ *
+ * The owner declares the rule's SCOPE here and never names a consumer: which
+ * files may violate a rule is declared by the plugin that owns those files, in
+ * its own `exempt/index.ts` (see `tooling/exempt`).
+ */
+export interface LintContribution {
+  /** ESLint plugin namespace: the rules are enabled as `<name>/<rule>`. */
   name: string;
   rules: Record<string, unknown>;
-  /** Per-rule exemption globs, keyed by rule id, declared by the contributing plugin. */
-  ignores?: Record<string, string[]>;
-  /**
-   * Rule ids that stay enforced in test/e2e files (NON_APP_FILE_GLOBS), which
-   * contributed rules are otherwise off in. Opt in for rules that catch a real
-   * BUG anywhere they fire — a floating promise, a swallowed error — as opposed
-   * to an app-architecture deviation, which is meaningless in a test driver.
-   */
-  enforceEverywhere?: string[];
-}
-
-/** The raw shape a plugin's `lint/index.ts` default-exports. */
-interface RawContribution {
-  name?: string;
-  rules?: Record<string, unknown>;
   /**
    * Class rules, declared as FACTORIES rather than rule modules. A rule file
-   * that reads class tokens cannot import the shared walk (it is dual-loaded
-   * under jiti, which can't resolve `@plugins/*`), so it default-exports
-   * `(toolkit) => rule` and receives the one walk from here. Kept a separate key
-   * from `rules` so a factory is never confused with ESLint's legacy
-   * function-shaped rule module — the distinction is declared, not sniffed.
-   * See `./class-token-walk.ts`.
+   * that reads class tokens default-exports `(toolkit) => rule` and receives
+   * the one shared walk from here. Kept a separate key from `rules` so a
+   * factory is never confused with ESLint's legacy function-shaped rule module
+   * — the distinction is declared, not sniffed. See `./class-token-walk.ts`.
    */
   classRules?: Record<string, unknown>;
-  ignores?: Record<string, string[]>;
+  /**
+   * Rule ids that stay enforced in test/e2e files (`NON_APP_FILE_CATEGORIES`),
+   * which contributed rules are otherwise off in. Opt in for rules that catch a
+   * real BUG anywhere they fire — a floating promise, a swallowed error — as
+   * opposed to an app-architecture deviation, which is meaningless in a test
+   * driver.
+   */
   enforceEverywhere?: string[];
+  /**
+   * File categories a rule does not apply to, keyed by rule id — rule scope,
+   * not an exemption (`tooling/exempt`'s `FileCategory`). Adds to the default
+   * test/e2e scope; does not override `enforceEverywhere`.
+   */
+  outOfScope?: Record<string, readonly FileCategory[]>;
+  /**
+   * Rule ids that admit no exemption: an `exempt/index.ts` naming one is
+   * refused (and the id is absent from `ExemptableRuleId`, so tsc refuses it
+   * first).
+   */
+  closed?: string[];
+}
+
+/** A loaded contribution: the barrel, with its class rules built into `rules`. */
+export interface LoadedLintContribution {
+  /** Relative path under plugins/, e.g. "welcome" or "conversations/plugins/conversation-view". */
+  relPath: string;
+  name: string;
+  rules: Record<string, unknown>;
+  enforceEverywhere: string[];
+  outOfScope: Record<string, readonly FileCategory[]>;
+  closed: string[];
 }
 
 /**
@@ -122,23 +146,18 @@ function buildClassRules(
 }
 
 /**
- * Load every plugin's `lint/index.ts` contribution by absolute path (the one
- * import form that resolves under both jiti and Bun). Fail loudly: a dropped
+ * Load every plugin's `lint/index.ts` contribution. Fail loudly: a dropped
  * contribution silently stops enforcing its rules.
  */
-async function loadContributions(root: string): Promise<PluginContribution[]> {
+export async function loadLintContributions(
+  root: string,
+): Promise<LoadedLintContribution[]> {
   const toolkit = createLintToolkit(readDeclaredUtilities(root));
-  const results = await Promise.allSettled(
-    lintEntries.map(
-      (e) =>
-        import(
-          pathToFileURL(join(root, "plugins", e.pluginPath, "lint", "index.ts"))
-            .href
-        ),
-    ),
-  );
-  const contributions: PluginContribution[] = [];
+  const results = await Promise.allSettled(lintEntries.map((e) => e.loader()));
+  const contributions: LoadedLintContribution[] = [];
   const failures: string[] = [];
+  const isCategory = (c: unknown): c is FileCategory =>
+    (FILE_CATEGORIES as readonly unknown[]).includes(c);
   for (let i = 0; i < results.length; i++) {
     const r = results[i]!;
     const e = lintEntries[i]!;
@@ -148,10 +167,18 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
       );
       continue;
     }
-    const def = (r.value as { default?: RawContribution }).default;
+    const def = (r.value as { default?: Partial<LintContribution> }).default;
     if (!def?.name || !def.rules) {
       failures.push(
         `${e.pluginPath}/lint — default export missing { name, rules }`,
+      );
+      continue;
+    }
+    // The owner-side `ignores` allowlist is gone: which files may violate a
+    // rule is declared by the plugin owning them, in its `exempt/index.ts`.
+    if ("ignores" in def) {
+      failures.push(
+        `${e.pluginPath}/lint — \`ignores\` is no longer supported: the plugin that owns an exempted file declares it in its own plugins/<plugin>/exempt/index.ts (see plugins/framework/plugins/tooling/plugins/exempt/CLAUDE.md); a whole category of files is \`outOfScope\`, and a rule that admits no exemption is \`closed\``,
       );
       continue;
     }
@@ -163,14 +190,29 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
       continue;
     }
     const rules = { ...def.rules, ...built.rules };
-    // A typo'd rule id in enforceEverywhere would silently leave the rule off in
-    // tests — exactly the failure this mechanism exists to prevent. Fail loudly.
-    const unknown = (def.enforceEverywhere ?? []).filter(
-      (id) => !(id in rules),
-    );
+    // A typo'd rule id in enforceEverywhere / outOfScope / closed would
+    // silently change nothing — exactly the failure each exists to prevent.
+    const outOfScope = def.outOfScope ?? {};
+    const named: (readonly [key: string, id: string])[] = [
+      ...(def.enforceEverywhere ?? []).map(
+        (id) => ["enforceEverywhere", id] as const,
+      ),
+      ...Object.keys(outOfScope).map((id) => ["outOfScope", id] as const),
+      ...(def.closed ?? []).map((id) => ["closed", id] as const),
+    ];
+    const unknown = named.filter(([, id]) => !(id in rules));
     if (unknown.length > 0) {
       failures.push(
-        `${e.pluginPath}/lint — enforceEverywhere names rule(s) this plugin does not define: ${unknown.join(", ")}`,
+        `${e.pluginPath}/lint — names rule(s) this plugin does not define: ${unknown.map(([k, id]) => `${k} "${id}"`).join(", ")}`,
+      );
+      continue;
+    }
+    const badCategories = Object.entries(outOfScope).flatMap(([id, cats]) =>
+      cats.filter((c) => !isCategory(c)).map((c) => `${id}: "${String(c)}"`),
+    );
+    if (badCategories.length > 0) {
+      failures.push(
+        `${e.pluginPath}/lint — outOfScope names unknown file categories (${badCategories.join(", ")}); known: ${FILE_CATEGORIES.join(", ")}`,
       );
       continue;
     }
@@ -178,8 +220,9 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
       relPath: e.pluginPath,
       name: def.name,
       rules,
-      ignores: def.ignores,
-      enforceEverywhere: def.enforceEverywhere,
+      enforceEverywhere: def.enforceEverywhere ?? [],
+      outOfScope,
+      closed: def.closed ?? [],
     });
   }
   if (failures.length > 0) {
@@ -190,15 +233,65 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
   return contributions;
 }
 
+/**
+ * The live lint rule ids (`<ns>/<rule>`) and the closed subset — what an
+ * exemption naming a lint rule is validated against.
+ */
+export function lintRuleIds(contributions: readonly LoadedLintContribution[]): {
+  known: Set<string>;
+  closed: Set<string>;
+} {
+  const known = new Set<string>();
+  const closed = new Set<string>();
+  for (const c of contributions) {
+    for (const id of Object.keys(c.rules)) known.add(`${c.name}/${id}`);
+    for (const id of c.closed) closed.add(`${c.name}/${id}`);
+  }
+  return { known, closed };
+}
+
+/**
+ * The exemptions that name a lint rule, validated against the live rule set.
+ * Throws on an unknown or closed id: in "config-off" mode it would otherwise
+ * switch off a rule that does not exist, and in "report" mode suppress nothing
+ * with no way to tell.
+ */
+export function lintExemptions(
+  exemptions: readonly ResolvedExemption[],
+  contributions: readonly LoadedLintContribution[],
+): ResolvedExemption[] {
+  const lint = exemptions.filter((e) => isLintRuleId(e.rule));
+  const problems = ruleIdProblems(lint, lintRuleIds(contributions));
+  if (problems.length > 0) {
+    throw new Error(
+      `[eslint] invalid lint exemptions:\n  ${problems.join("\n  ")}`,
+    );
+  }
+  return lint;
+}
+
 /** How the parser resolves TypeScript type information for type-aware rules. */
 export type ParserTypeSource =
   { projectService: true } | { programs: Program[] };
 
+/**
+ * How `exempt/` manifests apply:
+ *   - "config-off" — each exempted (rule, path) becomes an `"off"` config block,
+ *     so the editor shows no squiggle on an exempt file. An exemption that
+ *     suppresses nothing is invisible in this mode.
+ *   - "report" — the rule stays on everywhere and the CALLER drops the messages
+ *     an exemption covers (the type-check worker, through `createExemptionIndex`
+ *     over `loadExemptions()`), so it can also report an exemption that
+ *     suppressed nothing.
+ */
+export type LintExemptionMode = "config-off" | "report";
+
 export interface BuildLintConfigOptions {
-  /** Repo root — locates lint barrels and anchors `tsconfigRootDir`. */
+  /** Repo root — anchors `tsconfigRootDir`. */
   root: string;
   /** projectService (IDE/CLI) or a pre-built program set (type-check worker). */
   typeSource: ParserTypeSource;
+  exemptions: LintExemptionMode;
 }
 
 /**
@@ -254,12 +347,17 @@ export async function buildLintConfig(
   opts: BuildLintConfigOptions,
 ): Promise<Linter.Config[]> {
   const { root, typeSource } = opts;
-  const [contributions, tsPlugin, tsParser, reactHooks] = await Promise.all([
-    loadContributions(root),
-    loadTsPlugin(),
-    loadTsParser(),
-    loadReactHooks(),
-  ]);
+  const [contributions, exemptions, tsPlugin, tsParser, reactHooks] =
+    await Promise.all([
+      loadLintContributions(root),
+      loadExemptions(),
+      loadTsPlugin(),
+      loadTsParser(),
+      loadReactHooks(),
+    ]);
+  // Validated in BOTH modes, so a manifest naming a dead or closed rule fails
+  // the IDE config and the check alike.
+  const lintExempt = lintExemptions(exemptions, contributions);
 
   const parserOptions: Record<string, unknown> = {
     ecmaVersion: "latest",
@@ -426,37 +524,39 @@ export async function buildLintConfig(
     ),
   }));
 
-  // Contributed rules are architecture rules; turn them off in test/e2e files
-  // unless the contributing plugin opted the rule back in (see NON_APP_FILE_GLOBS).
-  const nonAppConfigs: Linter.Config[] = contributions
-    .map((c) => {
-      const enforced = new Set(c.enforceEverywhere ?? []);
-      const off = Object.keys(c.rules).filter(
-        (ruleId) => !enforced.has(ruleId),
-      );
-      return { c, off };
-    })
-    .filter(({ off }) => off.length > 0)
-    .map(({ c, off }) => ({
-      files: [...NON_APP_FILE_GLOBS],
-      rules: Object.fromEntries(
-        off.map((ruleId) => [`${c.name}/${ruleId}`, "off"] as const),
-      ),
-    })) as Linter.Config[];
-
-  const exemptConfigs: Linter.Config[] = contributions.flatMap((c) =>
-    Object.entries(c.ignores ?? {})
-      // An empty glob array is a valid "no allowlist" state; ESLint rejects a
-      // config whose `files` is empty, so skip those entries entirely.
-      .filter(([, globs]) => globs.length > 0)
-      .map((entry) => {
-        const [ruleId, globs] = entry;
-        return {
-          files: globs,
+  // A contributed rule's scope: off in test/e2e files (NON_APP_FILE_CATEGORIES)
+  // unless the plugin opted it back in via enforceEverywhere, and off in every
+  // category its owner declared `outOfScope`. One block per (rule, category
+  // set), all built from the one category vocabulary.
+  const scopeConfigs: Linter.Config[] = contributions.flatMap((c) => {
+    const enforced = new Set(c.enforceEverywhere);
+    return Object.keys(c.rules).flatMap((ruleId) => {
+      const categories = [
+        ...(enforced.has(ruleId) ? [] : NON_APP_FILE_CATEGORIES),
+        ...(c.outOfScope[ruleId] ?? []),
+      ];
+      if (categories.length === 0) return [];
+      return [
+        {
+          files: categoryGlobs(categories),
           rules: { [`${c.name}/${ruleId}`]: "off" },
-        } as Linter.Config;
-      }),
-  );
+        } as Linter.Config,
+      ];
+    });
+  });
 
-  return [...baseConfigs, ...pluginConfigs, ...nonAppConfigs, ...exemptConfigs];
+  // "config-off": one block per exempted (rule, target). A target is a file or
+  // a directory; naming both spellings covers either without a stat.
+  const exemptConfigs: Linter.Config[] =
+    opts.exemptions === "config-off"
+      ? lintExempt.map(
+          (e) =>
+            ({
+              files: [e.target, `${e.target}/**`],
+              rules: { [e.rule]: "off" },
+            }) as Linter.Config,
+        )
+      : [];
+
+  return [...baseConfigs, ...pluginConfigs, ...scopeConfigs, ...exemptConfigs];
 }

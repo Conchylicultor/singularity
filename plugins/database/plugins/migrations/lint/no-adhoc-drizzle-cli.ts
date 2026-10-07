@@ -14,13 +14,6 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /**
- * The module that owns the argv. Skipped whole: it IS the sanctioned invocation,
- * not an exception to the rule. (Same shape as spawn-safety's SPAWN_PLUGIN_DIR.)
- */
-const OWNER_MODULE =
-  "plugins/database/plugins/migrations/core/internal/drizzle-cli.ts";
-
-/**
  * Everything in the repo that can start a process. Bare identifiers are the
  * sanctioned chokepoint (`@plugins/infra/plugins/spawn/core`); `Bun.spawn` /
  * `Bun.spawnSync` are the raw forms `spawn-safety/no-raw-bun-spawn` still permits
@@ -110,9 +103,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    const filename = (context.filename ?? "").split("\\").join("/");
-    if (filename.endsWith(OWNER_MODULE)) return {};
-
     /**
      * Does the array this literal sits in reach a spawn? Either it is passed
      * straight to one, or it is bound to a variable that is — the

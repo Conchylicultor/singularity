@@ -1,4 +1,5 @@
 import { join } from "path";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import {
   grepCode,
   type CodeMatch,
@@ -6,16 +7,6 @@ import {
 import * as derivedViewsCore from "@plugins/database/plugins/derived-views/core";
 import { IMPERATIVE_PUBLIC_TABLES } from "@plugins/database/plugins/derived-views/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-// Inlined minimal Check shape (mirrors the sibling orphaned-tables check) to
-// avoid a cross-plugin import of the framework Check type from a check file.
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = {
-  id: string;
-  description: string;
-  run(): Promise<CheckResult>;
-  cacheSignature?(): string | null;
-};
 
 // The allowlist source of truth. What this check needs is the IDENTIFIER NAMES,
 // not the table names — the create sites interpolate the constant and the
@@ -27,20 +18,14 @@ type Check = {
 const ALLOWLIST_SRC_REL =
   "plugins/database/plugins/derived-views/core/internal/imperative-tables.ts";
 
-// Real-code occurrences of CREATE TABLE that are exempt by PATH: this check's OWN
-// source (its description/message/hint strings spell out the token) and its test
-// fixtures. Mirrors the ALLOWED_PATHS escape hatch in no-raw-websocket, which
-// exempts its own check file the same way. Keep this list to exactly that — it is
-// a self-reference hatch, not a general opt-out.
+// This check's OWN source (its description/message/hint strings spell out the
+// token) is exempted in the migrations plugin's `exempt/index.ts` — a
+// self-reference hatch, not a general opt-out.
 //
 // The check otherwise scans the whole repo, because an imperative table can be
 // created from anywhere that boots against a worktree DB. The one other exemption
-// is derived from evidence rather than listed here: a CREATE TABLE aimed at a
+// is derived from evidence rather than listed: a CREATE TABLE aimed at a
 // throwaway test database (see `usesThrowawayTestDb` below).
-const ALLOWED_PATHS = [
-  "plugins/database/plugins/migrations/check/imperative-create-table-allowlisted.ts",
-  "plugins/database/plugins/migrations/check/imperative-create-table-allowlisted.test.ts",
-];
 
 // A CREATE TABLE in a test that provisions its own THROWAWAY database is not
 // worktree schema, and exempting it is a scope correction rather than a hole.
@@ -126,20 +111,23 @@ export function allowlistIdentifiers(
 /**
  * PURE helper (exported for unit testing): an offender is a real-code
  * CREATE TABLE match whose line does NOT name any allowlist identifier, and which
- * is neither on an exempt path nor in a file that creates it in a throwaway test
- * database (`exemptPaths`, resolved by the caller — see `usesThrowawayTestDb`).
- * Returns "path:line:text" strings.
+ * is not in a file that creates it in a throwaway test database (`exemptPaths`,
+ * resolved by the caller — see `usesThrowawayTestDb`) and is not `skips`ped (the
+ * declared exemptions). `skips` is consulted last, only for a real offender, so
+ * the runner can tell which declared exemptions went unused. Returns
+ * "path:line:text" strings.
  */
 export function findOffenders(
   matches: CodeMatch[],
   allowlistIds: Set<string>,
   exemptPaths: ReadonlySet<string> = new Set(),
+  skips: (path: string) => boolean = () => false,
 ): string[] {
   const ids = [...allowlistIds];
   return matches
-    .filter((m) => !ALLOWED_PATHS.some((p) => m.path === p))
     .filter((m) => !exemptPaths.has(m.path))
     .filter((m) => !ids.some((id) => new RegExp(`\\b${id}\\b`).test(m.text)))
+    .filter((m) => !skips(m.path))
     .map((m) => `${m.path}:${m.line}:${m.text.trim()}`);
 }
 
@@ -150,8 +138,13 @@ const check: Check = {
   // Pure source scan, but cheap (one git grep narrows to a handful of files).
   // Never cache: a stale PASS on a correctness gate is worse than re-scanning.
   cacheSignature: () => null,
-  async run() {
+  exemptable: {
+    "imperative-create-table-allowlisted":
+      "spells an imperative CREATE TABLE without naming an IMPERATIVE_PUBLIC_TABLES constant (only a file that names the token to ban it may)",
+  },
+  async run(ctx) {
     const root = await getWorktreeRoot();
+    const exempt = await ctx.exempt("imperative-create-table-allowlisted");
     const allowlistIds = allowlistIdentifiers(
       IMPERATIVE_PUBLIC_TABLES,
       derivedViewsCore,
@@ -179,7 +172,12 @@ const check: Check = {
       }
     }
 
-    const offenders = findOffenders(matches, allowlistIds, exemptPaths);
+    const offenders = findOffenders(
+      matches,
+      allowlistIds,
+      exemptPaths,
+      exempt.skips,
+    );
     if (offenders.length === 0) return { ok: true };
     return {
       ok: false,

@@ -6,8 +6,8 @@ export default {
     "no-adhoc-check-runner": noAdhocCheckRunner,
   },
   /**
-   * NO `ignores`, and specifically NO test exemption — unlike `sink-safety`,
-   * which allowlists the test globs for both of its rules.
+   * No test exemption — unlike `sink-safety`,
+   * whose rules are out of scope in tests.
    *
    * Contributed rules are off in test/e2e files by default (NON_APP_FILE_GLOBS)
    * because they enforce the app's *composition*, which a suite observes from

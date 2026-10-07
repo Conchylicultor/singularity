@@ -1,4 +1,5 @@
 import noAdhocSurface from "./no-adhoc-surface";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-adhoc-surface` rule. The root `eslint.config.ts`
@@ -6,7 +7,7 @@ import noAdhocSurface from "./no-adhoc-surface";
  * as `error`. This rule subsumes the former `card/no-adhoc-card` — its raised
  * fingerprint IS the old card fingerprint, plus a new overlay fingerprint.
  *
- * The `ignores` glob below is the single PERMANENT tier — the shadcn surface
+ * The one `exempt/index.ts` entry is the single sanctioned tier — the shadcn surface
  * *primitive definitions* under `ui-kit/web/components/ui/`. They open-code the
  * recipe as literal strings on base-ui `*.Popup` member tags because they ARE the
  * implementation behind `<Surface level="overlay">` / `PopoverContent` /
@@ -28,12 +29,4 @@ export default {
   classRules: {
     "no-adhoc-surface": noAdhocSurface,
   },
-  ignores: {
-    "no-adhoc-surface": [
-      // ── PERMANENT: the shadcn surface-primitive definitions themselves ──
-      // They open-code the raised/overlay recipe as literal strings (the
-      // implementation behind <Surface>/PopoverContent/DropdownMenuContent).
-      "plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/**/*.{ts,tsx}",
-    ],
-  },
-};
+} satisfies LintContribution;

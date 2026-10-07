@@ -4,13 +4,6 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-/**
- * The single sanctioned chokepoint for append-mode filesystem writes. `file-sink`
- * IS the implementation of bounded, rotated, declared durable append — it is not
- * an exception to the rule, it is what the rule points everyone at. Skipped whole.
- */
-const FILE_SINK_DIR = "plugins/infra/plugins/file-sink/";
-
 /** The fs modules whose append/stream writers create an unbounded durable sink. */
 const FS_MODULES = new Set([
   "fs",
@@ -20,7 +13,11 @@ const FS_MODULES = new Set([
 ]);
 
 /** The append/stream writers themselves — the ways to accumulate bytes on disk. */
-const APPEND_NAMES = new Set(["appendFile", "appendFileSync", "createWriteStream"]);
+const APPEND_NAMES = new Set([
+  "appendFile",
+  "appendFileSync",
+  "createWriteStream",
+]);
 
 /** Whole-file writers that can be turned into an append via a `{ flag: "a" }` option. */
 const WHOLEFILE_WRITE_NAMES = new Set(["writeFile", "writeFileSync"]);
@@ -29,7 +26,8 @@ const WHOLEFILE_WRITE_NAMES = new Set(["writeFile", "writeFileSync"]);
 function keyIs(prop: TSESTree.Property, name: string): boolean {
   const k = prop.key;
   if (k.type === "Identifier") return k.name === name;
-  if (k.type === "Literal" && typeof k.value === "string") return k.value === name;
+  if (k.type === "Literal" && typeof k.value === "string")
+    return k.value === name;
   return false;
 }
 
@@ -57,7 +55,10 @@ function hasAppendFlag(arg: TSESTree.Node): boolean {
 /** The final identifier name of a callee: `writeFileSync`, `Bun.write`'s `write`, `fs.appendFileSync`'s `appendFileSync`. */
 function calleeName(callee: TSESTree.Node): string | null {
   if (callee.type === "Identifier") return callee.name;
-  if (callee.type === "MemberExpression" && callee.property.type === "Identifier") {
+  if (
+    callee.type === "MemberExpression" &&
+    callee.property.type === "Identifier"
+  ) {
     return callee.property.name;
   }
   return null;
@@ -102,12 +103,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    const filename = (context.filename ?? context.getFilename?.() ?? "")
-      .split("\\")
-      .join("/");
-    // file-sink owns the sanctioned append chokepoint.
-    if (filename.includes(FILE_SINK_DIR)) return {};
-
     // Local names bound to an fs namespace/default import (`import * as fs`,
     // `import fsp from "node:fs/promises"`) — member access on these is checked.
     const fsLocals = new Set<string>();

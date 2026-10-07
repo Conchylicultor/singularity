@@ -9,6 +9,7 @@ import {
   type Facet,
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
+import { exemptionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/exemptions/core";
 import { UNDOCUMENTED_RUNTIME_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 import { mainComposition, type MainComposition } from "./main-bundle";
 import { writeGenerated } from "./write-generated";
@@ -123,6 +124,15 @@ function subtreeHasTestHelpers(p: PluginNode): boolean {
   );
 }
 
+/** Whether the plugin declares exemptions of its own (an `exempt/index.ts` with entries). */
+function hasExemptions(p: PluginNode): boolean {
+  return (getFacet(p, exemptionsFacetDef)?.declared.length ?? 0) > 0;
+}
+
+function subtreeHasExemptions(p: PluginNode): boolean {
+  return hasExemptions(p) || p.children.some(subtreeHasExemptions);
+}
+
 function countDescendants(p: PluginNode): number {
   let n = 0;
   for (const c of p.children) n += 1 + countDescendants(c);
@@ -150,19 +160,25 @@ function renderPluginTreeMd(
     (p.collapsed ? subtreeHasTestHelpers(p) : collectTestHelpers(p).length > 0)
       ? " [test helpers]"
       : "";
+  // Same rule for `[exempt]`: a plugin that exempts itself from a rule.
+  const exemptMarker =
+    mode === "compact" &&
+    (p.collapsed ? subtreeHasExemptions(p) : hasExemptions(p))
+      ? " [exempt]"
+      : "";
   const exMarker = exclusionMarker(p, main);
 
   if (mode === "compact" && p.collapsed && p.children.length > 0) {
     const total = countDescendants(p);
     const subLabel = total === 1 ? "1 sub-plugin" : `${total} sub-plugins`;
     lines.push(
-      `${headerIndent}- **\`${p.name}\`**${lbMarker}${thMarker} [${subLabel}]${exMarker}${descStr}`,
+      `${headerIndent}- **\`${p.name}\`**${lbMarker}${thMarker}${exemptMarker} [${subLabel}]${exMarker}${descStr}`,
     );
     return lines;
   }
 
   lines.push(
-    `${headerIndent}- **\`${p.name}\`**${lbMarker}${thMarker}${exMarker}${descStr}`,
+    `${headerIndent}- **\`${p.name}\`**${lbMarker}${thMarker}${exemptMarker}${exMarker}${descStr}`,
   );
 
   const includeBody = mode === "detail";
@@ -206,7 +222,7 @@ function renderTreeBody(
 
 const COMPACT_HEADER =
   "# Plugins (compact)\n\n" +
-  "Slim, always-loaded index of every plugin. Shows only `name — description`; load-bearing infrastructure plugins are marked `[load-bearing]`; plugins publishing shared test fixtures (`<runtime>/testing/` barrels) are marked `[test helpers]` (a collapsed entry, when any plugin inside it does), listed under *Test helpers* in the details doc; collapsed plugins show `[N sub-plugins]` — open the plugin's own `CLAUDE.md` for its full sub-tree. Read [`plugins-details.md`](./plugins-details.md) for the full reference, or open the per-plugin `CLAUDE.md` when working inside a specific plugin.\n\n";
+  "Slim, always-loaded index of every plugin. Shows only `name — description`; load-bearing infrastructure plugins are marked `[load-bearing]`; plugins publishing shared test fixtures (`<runtime>/testing/` barrels) are marked `[test helpers]` (a collapsed entry, when any plugin inside it does), listed under *Test helpers* in the details doc; plugins that exempt some of their own files from a lint rule or check (their `exempt/index.ts`) are marked `[exempt]`, the rule and who is exempted listed in the details doc and by `./singularity exempt list`; collapsed plugins show `[N sub-plugins]` — open the plugin's own `CLAUDE.md` for its full sub-tree. Read [`plugins-details.md`](./plugins-details.md) for the full reference, or open the per-plugin `CLAUDE.md` when working inside a specific plugin.\n\n";
 
 const DETAILS_HEADER =
   "# Plugins (details)\n\n" +

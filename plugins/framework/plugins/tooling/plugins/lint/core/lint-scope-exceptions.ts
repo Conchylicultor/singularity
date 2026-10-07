@@ -16,10 +16,7 @@
 // program") while ESLint quietly ignored it. Latent only because no such file
 // exists yet.
 //
-// Imported RELATIVELY by `build-lint-config.ts` — load-bearing: that file is
-// dual-loaded, by jiti for the root `eslint.config.ts` (which cannot resolve the
-// `@plugins/*` alias) and by Bun for the type-check worker. Consumers outside
-// this plugin take it from the `lint/core` barrel.
+// Consumers outside this plugin take it from the `lint/core` barrel.
 
 /**
  * ESLint `ignores` globs for tracked files that are deliberately out of lint

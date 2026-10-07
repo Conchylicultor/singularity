@@ -60,13 +60,6 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-/**
- * The single sanctioned chokepoint for parsed SQL rows. `sql-rows` IS the
- * implementation of the parse — it is not an exception to the rule, it is what
- * the rule points everyone at. Skipped whole.
- */
-const SQL_ROWS_DIR = "plugins/database/plugins/sql-rows/";
-
 /** Callee property names whose result is a raw SQL result object. */
 const SQL_CALL_NAMES = new Set(["query", "execute"]);
 
@@ -255,16 +248,12 @@ export default createRule({
         "multi-hour 'why is my fork empty' into a one-line SQL cast. " +
         "DDL/DML that never reads `.rows` is fine and is not what this rule targets: `pool.query(ddl)` and " +
         "`db.execute(sql`DELETE …`)` stay exactly as they are. " +
-        "A genuine exception gets a file entry in sql-rows' `ignores` map with a written justification, never an " +
+        "A genuine exception gets an entry in its plugin's `exempt/index.ts` with a written justification, never an " +
         "inline eslint-disable. See research/2026-08-23-database-parsed-sql-rows.md.",
     },
   },
   defaultOptions: [],
   create(context) {
-    const filename = context.filename.split("\\").join("/");
-    // sql-rows owns the sanctioned parse chokepoint — it must reach the raw result.
-    if (filename.includes(SQL_ROWS_DIR)) return {};
-
     /**
      * Is the value of `expr` read for rows? Walks up through the wrappers that
      * pass a value through unchanged (`await`, `?.`, `!`, `as`) and then judges

@@ -11,16 +11,14 @@
 // and the recorded fact agree by construction.
 // See research/2026-09-09-tooling-check-file-enumeration-from-git.md.
 
-// The prefixes under which a file is boundary-relevant. The second is nested
-// inside the first (`plugins/framework/plugins/web-core/web`) and so adds
-// nothing today; it is kept because it states the intent — the SPA composition
-// root is in scope — independently of where that root currently sits. Selecting
-// from a deduped list means the overlap can no longer yield the same file twice,
-// as the two-rooted walk did.
-const SOURCE_ROOTS = ["plugins", "plugins/framework/plugins/web-core/web"];
+// The directory under which a file is boundary-relevant. The SPA composition
+// root (`plugins/framework/plugins/web-core/web`) sits inside it, so one root
+// covers it; selecting from a single root also means no file can be yielded
+// twice, as the old two-rooted walk could.
+const SOURCE_ROOT = "plugins/";
 
 function underSourceRoot(path: string): boolean {
-  return SOURCE_ROOTS.some((r) => path === r || path.startsWith(r + "/"));
+  return path.startsWith(SOURCE_ROOT);
 }
 
 /**

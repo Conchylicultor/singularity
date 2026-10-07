@@ -1,17 +1,6 @@
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = {
-  id: string;
-  description: string;
-  inputKeyed?: boolean;
-  run(): Promise<CheckResult>;
-};
-
-const ALLOWED_PATHS = [
-  "plugins/framework/plugins/tooling/plugins/checks/plugins/no-raw-sse/check/index.ts",
-];
 
 /**
  * A line that names the token as an **`Accept` request header** — which is the
@@ -38,7 +27,12 @@ const check: Check = {
   inputKeyed: true,
   description:
     "Live state must go through `liveValue` / `liveCollection` + `useLive`; no raw `text/event-stream` writers in TS",
-  async run() {
+  exemptable: {
+    "no-raw-sse":
+      "names `text/event-stream` as a raw SSE writer instead of serving live state through liveValue / liveCollection",
+  },
+  outOfScope: ["research"],
+  async run(ctx) {
     const root = await getWorktreeRoot();
     const matches = await grepCode({
       root,
@@ -48,13 +42,9 @@ const check: Check = {
       maskStrings: false,
     });
 
+    const exempt = await ctx.exempt("no-raw-sse");
     const offenders = matches
-      .filter((m) => {
-        if (ALLOWED_PATHS.includes(m.path)) return false;
-        if (m.path.startsWith("research/")) return false;
-        if (ACCEPT_HEADER.test(m.text)) return false;
-        return true;
-      })
+      .filter((m) => !ACCEPT_HEADER.test(m.text) && !exempt.skips(m.path))
       .map((m) => `${m.path}:${m.line}:${m.text}`);
 
     if (offenders.length === 0) return { ok: true };
@@ -62,7 +52,7 @@ const check: Check = {
     return {
       ok: false,
       message: `raw \`text/event-stream\` response found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Live state belongs in a `liveValue` / `liveCollection` declaration, served with `serveValue` / `serveCollection` and read with `useLive` / `useLiveRow`; see `plugins/network/plugins/live/CLAUDE.md`. Append-only firehoses (terminal, log tails) belong on a dedicated WS route. The gateway's SSE endpoint for external log streams is Go and out of scope for this check. A CLIENT declaring `Accept: application/json, text/event-stream` (e.g. any MCP caller, which the transport 406s without) is not a writer and is already exempt — keep the header on ONE line so the exemption can see it.",
+      hint: "Live state belongs in a `liveValue` / `liveCollection` declaration, served with `serveValue` / `serveCollection` and read with `useLive` / `useLiveRow`; see `plugins/network/plugins/live/CLAUDE.md`. Append-only firehoses (terminal, log tails) belong on a dedicated WS route. The gateway's SSE endpoint for external log streams is Go and out of scope for this check. A CLIENT declaring `Accept: application/json, text/event-stream` (e.g. any MCP caller, which the transport 406s without) is not a writer and is already exempt — keep the header on ONE line so the exemption can see it. Any other file that must name it declares an exemption in its own plugin's `exempt/index.ts` (rule `no-raw-sse`).",
     };
   },
 };

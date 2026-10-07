@@ -55,6 +55,8 @@
     - `mcpTool('exit_clean')`
     - `mcpTool('flag_raise')`
   - Routes: `POST /api/conversations/:id/push-and-exit`
+- Exemptions:
+  - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
 - Shared:
   - Exports (values):
     - `pushAndExitConfig`

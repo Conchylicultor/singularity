@@ -820,6 +820,10 @@ and those plugins' `CLAUDE.md`.
   - Imported by:
     - `framework/central-core`
     - `framework/server-core`
+- Exemptions:
+  - Exempts itself from:
+    - `resource-runtime:compiled-routes` — `core/routing.ts`, `core/index.ts` (sanctioned)
+    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Test helpers:
   - Core: `@plugins/framework/plugins/resource-runtime/core/testing`
     - `buildSnapshot` — Build the id→entry map for a keyed resource's array `value`, in array order.

@@ -224,6 +224,8 @@ bar).
   - Imported by:
     - `debug/boot-monitor`
     - `debug/health-monitor`
+- Exemptions:
+  - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
 - Sub-plugins:
   - **`cluster`** — Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
   - **`pane`** — Aggregates tab of the Slow Events pane: a global, ranked overview of slow operations with per-operation caller attribution.

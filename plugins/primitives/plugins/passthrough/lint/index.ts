@@ -24,7 +24,7 @@ import noUnanchoredPassthrough from "./no-unanchored-passthrough";
  * So the pair reads: you may not open a passthrough without stating its
  * destination, and having stated it, you may not move the bag off it.
  *
- * ## No `ignores`
+ * ## No exemptions
  *
  * There is no path allowlist, and none is needed — which is unusual enough to
  * be worth saying why.

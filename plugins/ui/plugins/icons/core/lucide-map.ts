@@ -255,6 +255,7 @@ export const LUCIDE_MAP = {
   restaurant: "utensils",
   "restore-from-trash": "archive-restore",
   "rocket-launch": "rocket",
+  rule: "list-checks",
   "rule-folder": "folder-check",
   save: "save",
   schedule: "clock",

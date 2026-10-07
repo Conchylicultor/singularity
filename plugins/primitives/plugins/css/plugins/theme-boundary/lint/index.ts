@@ -1,4 +1,5 @@
 import noAdhocThemeScope from "./no-adhoc-theme-scope";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-adhoc-theme-scope` rule. The root `eslint.config.ts`
@@ -9,7 +10,7 @@ import noAdhocThemeScope from "./no-adhoc-theme-scope";
  * import specifier, not Tailwind class tokens, so it needs none of the shared
  * class-token walk `classRules` factories are handed.
  *
- * The `ignores` glob is the single PERMANENT tier and lists exactly one thing —
+ * The one `exempt/index.ts` entry is the single sanctioned tier and lists exactly one thing —
  * this plugin's own tree. `<Theme>` writes the raw `data-theme-scope` and
  * renders the `PortalThemeScopeProvider` because it IS the implementation both
  * messages redirect to (mirrors how `no-adhoc-surface` exempts the shadcn
@@ -24,12 +25,4 @@ export default {
   rules: {
     "no-adhoc-theme-scope": noAdhocThemeScope,
   },
-  ignores: {
-    "no-adhoc-theme-scope": [
-      // ── PERMANENT: the <Theme> primitive itself ──
-      // It stamps the attribute and renders the provider; that is the whole
-      // implementation of the contract this rule points at.
-      "plugins/primitives/plugins/css/plugins/theme-boundary/**/*.{ts,tsx}",
-    ],
-  },
-};
+} satisfies LintContribution;

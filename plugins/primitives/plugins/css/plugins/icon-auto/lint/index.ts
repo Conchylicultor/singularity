@@ -1,10 +1,11 @@
 import noAdhocSlotIconSize from "./no-adhoc-slot-icon-size";
+import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
  * Lint barrel for the `no-adhoc-slot-icon-size` rule. The root `eslint.config.ts`
  * auto-discovers this default export and registers the rule repo-wide as `error`.
  *
- * `ignores` is intentionally EMPTY (no central allowlist — mirrors
+ * The rule is `closed` (no central allowlist — mirrors
  * `control-size/no-adhoc-control` and `badge/no-adhoc-chip`). The rule is precise:
  * it fires only on inline icon literals carrying a hardcoded size in an
  * `icon=`/`leading=` slot.
@@ -18,7 +19,5 @@ export default {
   classRules: {
     "no-adhoc-slot-icon-size": noAdhocSlotIconSize,
   },
-  ignores: {
-    "no-adhoc-slot-icon-size": [],
-  },
-};
+  closed: ["no-adhoc-slot-icon-size"],
+} satisfies LintContribution;

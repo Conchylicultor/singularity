@@ -1177,6 +1177,11 @@ See "Open questions" in the design doc.
     - `tasks/task-header`
     - `tasks/tasks-core`
     - `ui/theme-engine/theme-customizer`
+- Exemptions:
+  - Exempts itself from: `pane/no-core-define-route-in-web` — `.` (sanctioned)
+  - Exempted by:
+    - `primitives/bar` (0 debt)
+    - `primitives/pane` (0 debt)
 - Core:
   - Exports (types):
     - `AppRef`

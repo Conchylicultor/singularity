@@ -90,6 +90,8 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `plugin-meta/barrel-import`
     - `plugin-meta/closure`
     - `plugin-meta/composition`
+- Exemptions:
+  - Exempts itself from: `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
 - Core:
   - Exports (types):
     - `CheckoutRef`

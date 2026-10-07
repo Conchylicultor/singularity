@@ -209,3 +209,10 @@ export { formatGenerated, writeGenerated } from "./write-generated";
 // The build writes every plugin's; `plugin move` writes the moved ones itself,
 // before any install can see a stale or duplicate workspace name.
 export { withPackageName } from "./package-names";
+export {
+  collectExemptableRuleIds,
+  EXEMPT_RULE_IDS_REL_PATH,
+  exemptRuleIdsPath,
+  generateExemptRuleIds,
+  renderExemptRuleIds,
+} from "./exempt-rule-ids-gen";

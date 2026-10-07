@@ -17,17 +17,6 @@ const CHECKS_CORE = "@plugins/framework/plugins/tooling/plugins/checks/core";
  */
 const RUNNER_NAME = "runChecks";
 
-/**
- * The ONE sanctioned in-process caller — a FILE, not a directory.
- *
- * It is the `check` command's action body, and nothing else in that plugin: its
- * own `cli/index.ts` declaration must stay data-only, and a directory-shaped
- * owner would quietly admit any future file dropped beside it. `build` and
- * `push` are the callers this rule exists to keep out, and they each spawn the
- * pass instead.
- */
-const OWNER_FILE = "plugins/framework/plugins/cli/plugins/check/cli/run.ts";
-
 export default createRule({
   name: "no-adhoc-check-runner",
   meta: {
@@ -57,11 +46,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    const filename = (context.filename ?? context.getFilename?.() ?? "")
-      .split("\\")
-      .join("/");
-    if (filename.endsWith(OWNER_FILE)) return {};
-
     // Local names bound to `import * as checks from "…/checks/core"` — member
     // access on these to the runner is flagged, same as the profiler-seam rule.
     const nsLocals = new Set<string>();

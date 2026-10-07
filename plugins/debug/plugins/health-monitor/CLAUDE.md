@@ -178,6 +178,8 @@ measured overhead on a real worktree workload is still an open task.
   - Imported by:
     - `debug/latency-ledger`
     - `debug/timeline`
+- Exemptions:
+  - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts` (sanctioned)
 - Shared:
   - Exports (types):
     - `GetHealthDataResponse`

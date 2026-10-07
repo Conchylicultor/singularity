@@ -367,6 +367,11 @@ run everywhere.
     - `stats/cost`
     - `tasks`
     - `toolchain`
+- Exemptions:
+  - Exempts itself from:
+    - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts`, `server/internal/bins.ts` (sanctioned)
+    - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
+    - `paths:data-root-not-joined` — `.` (sanctioned)
 - Server:
   - Exports (types):
     - `AppIdentity`
