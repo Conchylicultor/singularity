@@ -421,7 +421,7 @@ describe("color picks", () => {
       accent: "#10b981",
       pane: "floating",
     });
-    const url = prototypeUrl("proto-1-abcd", { v: 2, picks });
+    const url = prototypeUrl("proto-1-abcd", { v: "2", picks });
     expect(url).toBe(
       "/api/prototypes/proto-1-abcd/index.html?v=2&pane=floating&accent=%2310b981",
     );
