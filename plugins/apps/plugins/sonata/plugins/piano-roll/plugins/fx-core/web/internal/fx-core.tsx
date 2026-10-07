@@ -12,11 +12,15 @@
  *
  * BRIGHTEN GEOMETRY — the brighten is welded to its note because it is a PURE
  * FUNCTION of the playback cursor, not an integrated wall-clock timer. The bar
- * spans beats [start, start+duration]; the now-line is the cursor, so the
- * still-above-the-line fraction is exactly `(start + duration − cursor) /
- * duration`. Height is `rect.h · fraction`, anchored bottom-at-laneY (`rect`
- * comes fresh from `getProjection().noteToRect(note)` each tick, so resizes
- * stay pixel-exact). Reading `fx.getPlaybackBeats()` rather than accumulating
+ * spans beats [start, start+duration]; the now-line is the cursor, so the part
+ * still above the line is `beatToY(cursor) − beatToY(start + duration)` pixels
+ * — measured through the SAME projection that places the note, never as a
+ * beat fraction of `rect.h`: a tempo map that changes inside the note (a song
+ * timed to its recording changes tempo every beat) makes beats and pixels
+ * non-proportional, and a beat fraction then shrinks the brighten faster or
+ * slower than the bar scrolls. Anchored bottom-at-laneY (`rect` and `beatToY`
+ * come fresh from `getProjection()` each tick, so resizes and zoom stay
+ * pixel-exact). Reading `fx.getPlaybackBeats()` rather than accumulating
  * `ticker.deltaMS` is what guarantees the highlight stays on the note when
  * playback isn't advancing at real time: PAUSED ⇒ frozen cursor ⇒ frozen
  * highlight on the frozen bar; SCRUB ⇒ it tracks the bar both ways. It is also
@@ -182,44 +186,44 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
 
       if (liveBars.length === 0) return;
       const proj = fx.getProjection();
-      // `noteToRect` is optional on Projection (capability-dependent), but the
-      // piano roll always publishes a pitch-plane projection — fail loudly if
-      // that invariant ever breaks rather than silently skipping the effect.
-      const noteToRect = proj.noteToRect;
-      if (!noteToRect) {
+      // `noteToRect` / `beatToY` are optional on Projection (capability-
+      // dependent), but the piano roll always publishes a time-axis +
+      // pitch-plane projection — fail loudly if that invariant ever breaks
+      // rather than silently skipping the effect.
+      const { noteToRect, beatToY } = proj;
+      if (!noteToRect || !beatToY) {
         throw new Error(
-          "fx-core: projection lacks noteToRect (pitch-plane capability expected)",
+          "fx-core: projection lacks noteToRect/beatToY (time-axis + pitch-plane capabilities expected)",
         );
       }
       const laneY = fx.getLaneSize().height;
       // The playback cursor drives the brighten (NOT integrated wall-clock), so
       // the highlight is glued to the bar on pause/scrub — see header geometry.
-      const cursorBeat = fx.getPlaybackBeats();
+      const nowY = beatToY(fx.getPlaybackBeats());
       for (let i = liveBars.length - 1; i >= 0; i--) {
         const bar = liveBars[i]!;
-        // Fraction of the bar still above the now-line at the current cursor:
-        // 1 at onset (cursor = start), 0 once the bar has fully passed.
-        const remainingFrac =
-          (bar.note.start + bar.note.duration - cursorBeat) / bar.note.duration;
-        if (remainingFrac <= 0) {
-          releaseSprite(bar.sprite);
-          liveBars.splice(i, 1);
-          continue;
-        }
-        // Fresh rect per tick → resize-proof; height shrinks with the fraction
-        // of the bar still above the line (pure cursor function — header).
+        // Fresh rect per tick → resize/zoom-proof.
         const rect = noteToRect(bar.note);
         // The pitch is not on this axis (a layout may not carry it) — there is
         // nowhere honest to paint, so skip this bar rather than invent a box.
         if (!rect) continue;
-        const h = rect.h * Math.min(1, remainingFrac);
+        // Pixels of the bar still above the now-line: content-space distance
+        // from the cursor up to the note's top edge (rect.y = its end). Same
+        // mapping as the note itself, so it is exact under any tempo map.
+        const remainingPx = nowY - rect.y;
+        if (remainingPx <= 0 || rect.h <= 0) {
+          releaseSprite(bar.sprite);
+          liveBars.splice(i, 1);
+          continue;
+        }
+        const h = Math.min(rect.h, remainingPx);
         const s = bar.sprite;
         s.position.set(rect.x, laneY - h);
         s.width = rect.w;
         s.height = h;
         // Release fade over the note's final BRIGHTEN_RELEASE_SEC of wall-clock,
         // derived from the same cursor-driven remaining fraction.
-        const remainingSec = remainingFrac * bar.dur;
+        const remainingSec = (h / rect.h) * bar.dur;
         s.alpha =
           BRIGHTEN_ALPHA * Math.min(1, remainingSec / BRIGHTEN_RELEASE_SEC);
       }
