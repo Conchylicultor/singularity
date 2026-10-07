@@ -1,5 +1,6 @@
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   type ReactNode,
   type RefObject,
@@ -144,7 +145,15 @@ export function useVirtualRows<T>({
   // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual is genuinely compiler-incompatible (returns a mutable Virtualizer mutated outside render); this hook is the sanctioned exempt, opted out of compilation via the "use no memo" directive above.
   const virtualizer = useVirtualizer({
     count: items.length,
+    // Off until the scroller is known. The virtualizer WRITES its initial offset
+    // to the scroller the moment it attaches, and caches that offset the first
+    // time it renders enabled — so it must not render enabled before it can
+    // read where the scroller already is. Otherwise a list that becomes
+    // windowed inside an already-scrolled container (a tree opening a folder
+    // past its windowing threshold) is thrown back to the top.
+    enabled: scrollEl !== null,
     getScrollElement: () => scrollEl,
+    initialOffset: () => scrollEl?.scrollTop ?? 0,
     estimateSize:
       typeof estimateSize === "number" ? () => estimateSize : estimateSize,
     overscan,
@@ -154,15 +163,25 @@ export function useVirtualRows<T>({
   });
 
   useEffect(() => {
-    if (scrollToIndex == null || scrollToIndex < 0) return;
+    if (scrollEl === null || scrollToIndex == null || scrollToIndex < 0) return;
     virtualizer.scrollToIndex(scrollToIndex, { align: "auto" });
-  }, [scrollToIndex, virtualizer]);
+  }, [scrollEl, scrollToIndex, virtualizer]);
+
+  // While disabled the virtualizer measures nothing (total size 0); hold the
+  // sizer at its estimated extent so the content never collapses — a collapse
+  // would clamp the scroller's position before the virtualizer can read it.
+  const totalSize =
+    scrollEl === null
+      ? typeof estimateSize === "number"
+        ? items.length * estimateSize
+        : items.reduce<number>((sum, _, i) => sum + estimateSize(i), 0)
+      : virtualizer.getTotalSize();
 
   return {
     measureRef,
     virtualizer,
     virtualItems: virtualizer.getVirtualItems(),
-    totalSize: virtualizer.getTotalSize(),
+    totalSize,
     scrollMargin,
   };
 }
@@ -190,10 +209,25 @@ export function VirtualRows<T>({
   raisedKey,
   children,
 }: VirtualRowsProps<T>): ReactNode {
+  // The first commit renders no window (the virtualizer waits for its scroller),
+  // so it renders one invisible probe of a real row instead and measures it: the
+  // window's estimate is then the height rows really have under the current
+  // theme, not a constant. A wrong estimate misplaces every not-yet-measured row
+  // above the viewport — a list that becomes windowed while scrolled (a tree
+  // opening a big folder) would shift its visible rows by the accumulated error.
+  const probeRef = useRef<HTMLElement>(null);
+  const [probedSize, setProbedSize] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const probe = probeRef.current;
+    if (probe === null) return;
+    const height = probe.getBoundingClientRect().height;
+    if (height > 0) setProbedSize(height);
+  }, []);
+
   const { measureRef, virtualizer, virtualItems, scrollMargin, totalSize } =
     useVirtualRows({
       items,
-      estimateSize,
+      estimateSize: probedSize ?? estimateSize,
       overscan,
       getKey,
       scrollToIndex,
@@ -210,6 +244,18 @@ export function VirtualRows<T>({
       className="relative w-full"
       style={{ height: totalSize }}
     >
+      {probedSize === null && virtualItems.length === 0 && items.length > 0 && (
+        <Placed
+          ref={probeRef}
+          aria-hidden
+          inert
+          x={{ start: 0, end: 0 }}
+          y={{ start: 0 }}
+          className={cn(itemClassName, "invisible")}
+        >
+          {children(items[0]!, 0)}
+        </Placed>
+      )}
       {virtualItems.map((vi) => (
         // Each windowed row spans the sizer's width and is composited down to
         // its measured offset. The two axes are different mechanics on purpose:

@@ -30,6 +30,7 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
+import { KeepScrollAcross } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { TreeListProvider, TreeRowSlot } from "./use-tree-row";
 import { useSubtreeExpandIndex } from "./use-subtree-expand-index";
 import { useFlatExpandAll } from "./use-flat-expand-all";
@@ -305,6 +306,17 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   });
 
   const windowed = flatVisible.length > VIRTUALIZE_THRESHOLD;
+  // The rows column survives the plain ⇄ windowed swap (only its children are
+  // replaced), so it is the anchor KeepScrollAcross finds the scroller from.
+  const rootRef = useRef<HTMLElement | null>(null);
+  const keyboardRef = keyboard.containerRef;
+  const setRoot = useCallback(
+    (el: HTMLElement | null) => {
+      rootRef.current = el;
+      keyboardRef(el);
+    },
+    [keyboardRef],
+  );
   const selectedIndex = useMemo(() => {
     if (!windowed || !selectedId) return undefined;
     const i = flatVisible.findIndex(
@@ -487,94 +499,98 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       {(activeId) => (
         <TreeListProvider value={ctxValue}>
           <MaybeMultiSelect multiSelect={multiSelect} orderedIds={orderedIds}>
-            <Stack
-              gap="none"
-              className="gap-tree-root"
-              ref={keyboard.containerRef}
-              onKeyDown={keyboard.onKeyDown}
-            >
-              {hasToolbar && (
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
-                <Sticky mask className="mb-1">
-                  <Stack
-                    direction="row"
-                    gap="xs"
-                    align="center"
-                    justify="between"
+            {/* Crossing the windowing threshold (opening a big folder) swaps
+                every row out at once; keep the reader where they were. */}
+            <KeepScrollAcross swapKey={windowed} anchorRef={rootRef}>
+              <Stack
+                gap="none"
+                className="gap-tree-root"
+                ref={setRoot}
+                onKeyDown={keyboard.onKeyDown}
+              >
+                {hasToolbar && (
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
+                  <Sticky mask className="mb-1">
+                    <Stack
+                      direction="row"
+                      gap="xs"
+                      align="center"
+                      justify="between"
+                    >
+                      <Stack direction="row" gap="xs" align="center">
+                        {showSearchInput && (
+                          <SearchInput
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") {
+                                setSearchQuery("");
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            placeholder="Filter…"
+                            className="w-32"
+                          />
+                        )}
+                        {toolbar.start}
+                      </Stack>
+                      <Stack direction="row" gap="xs" align="center">
+                        {showExpandAll && (
+                          <ExpandAllButton
+                            allExpanded={allExpanded}
+                            onToggle={expandAll}
+                          />
+                        )}
+                      </Stack>
+                    </Stack>
+                  </Sticky>
+                )}
+                {multiSelect && <SelectionBar actions={multiSelect.actions} />}
+                {windowed ? (
+                  <VirtualRows
+                    items={flatVisible}
+                    estimateSize={ROW_ESTIMATE_PX}
+                    getKey={(item) =>
+                      item.kind === "node"
+                        ? item.node.id
+                        : `\u0000placeholder:${item.parent.id}`
+                    }
+                    scrollToIndex={selectedIndex}
+                    // Pin the drag source so it stays mounted when scrolled out of
+                    // the window — otherwise its draggable unregisters mid-gesture
+                    // and dnd-kit cancels the drop.
+                    keepMounted={activeId ? [activeId] : undefined}
                   >
-                    <Stack direction="row" gap="xs" align="center">
-                      {showSearchInput && (
-                        <SearchInput
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Escape") {
-                              setSearchQuery("");
-                              (e.target as HTMLInputElement).blur();
-                            }
-                          }}
-                          placeholder="Filter…"
-                          className="w-32"
+                    {(item) =>
+                      item.kind === "node" ? (
+                        <TreeRowSlot node={item.node} depth={item.depth} />
+                      ) : (
+                        <TreeChildPlaceholder
+                          placeholder={item.placeholder}
+                          depth={item.depth}
+                          guides={guides}
                         />
-                      )}
-                      {toolbar.start}
-                    </Stack>
-                    <Stack direction="row" gap="xs" align="center">
-                      {showExpandAll && (
-                        <ExpandAllButton
-                          allExpanded={allExpanded}
-                          onToggle={expandAll}
-                        />
-                      )}
-                    </Stack>
-                  </Stack>
-                </Sticky>
-              )}
-              {multiSelect && <SelectionBar actions={multiSelect.actions} />}
-              {windowed ? (
-                <VirtualRows
-                  items={flatVisible}
-                  estimateSize={ROW_ESTIMATE_PX}
-                  getKey={(item) =>
-                    item.kind === "node"
-                      ? item.node.id
-                      : `\u0000placeholder:${item.parent.id}`
-                  }
-                  scrollToIndex={selectedIndex}
-                  // Pin the drag source so it stays mounted when scrolled out of
-                  // the window — otherwise its draggable unregisters mid-gesture
-                  // and dnd-kit cancels the drop.
-                  keepMounted={activeId ? [activeId] : undefined}
-                >
-                  {(item) =>
-                    item.kind === "node" ? (
-                      <TreeRowSlot node={item.node} depth={item.depth} />
-                    ) : (
-                      <TreeChildPlaceholder
-                        placeholder={item.placeholder}
-                        depth={item.depth}
-                        guides={guides}
-                      />
-                    )
-                  }
-                </VirtualRows>
-              ) : (
-                visibleTree.map((node) => (
-                  <TreeRowSlot key={node.id} node={node} depth={0} />
-                ))
-              )}
-              {showRootAdd && (
-                <Button
-                  variant="ghost"
-                  onClick={() => void createAtRoot(null)}
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
-                  className="text-muted-foreground mt-1 w-fit"
-                >
-                  <Icon icon={addIcon} className="size-4" />
-                  {addLabel}
-                </Button>
-              )}
-            </Stack>
+                      )
+                    }
+                  </VirtualRows>
+                ) : (
+                  visibleTree.map((node) => (
+                    <TreeRowSlot key={node.id} node={node} depth={0} />
+                  ))
+                )}
+                {showRootAdd && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => void createAtRoot(null)}
+                    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
+                    className="text-muted-foreground mt-1 w-fit"
+                  >
+                    <Icon icon={addIcon} className="size-4" />
+                    {addLabel}
+                  </Button>
+                )}
+              </Stack>
+            </KeepScrollAcross>
           </MaybeMultiSelect>
         </TreeListProvider>
       )}

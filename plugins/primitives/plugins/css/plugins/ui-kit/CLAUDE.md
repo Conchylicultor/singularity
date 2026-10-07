@@ -806,6 +806,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/tree`
     - `primitives/ui-context`
     - `primitives/ui-context/element-picker`
+    - `primitives/virtual-rows`
     - `reorder`
     - `reorder/editor`
     - `reorder/node-types/header`

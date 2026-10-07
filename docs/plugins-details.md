@@ -31273,6 +31273,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree`
               - `primitives/ui-context`
               - `primitives/ui-context/element-picker`
+              - `primitives/virtual-rows`
               - `reorder`
               - `reorder/editor`
               - `reorder/node-types/header`
@@ -32464,7 +32465,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/plugin-changes/file-changes`
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -32482,6 +32483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `FindScrollParentOptions`
               - `JumpToBottomButtonProps`
               - `JumpToBottomView`
+              - `KeepScrollAcrossProps`
               - `ScrollAlign`
               - `ScrollChildIntoViewOptions`
               - `ScrollToBottomOptions`
@@ -32492,6 +32494,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `findScrollParent`
               - `JumpToBottomButton`
+              - `KeepScrollAcross`
               - `scrollChildIntoView`
               - `scrollToBottom`
               - `useEdgeAutoScroll`
@@ -32508,6 +32511,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `primitives/log-channels`
               - `primitives/outline/scroll-spy`
+              - `primitives/tree`
               - `primitives/virtual-rows`
         - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText (core), and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable. A substituting element also SELECTS as one unit: its letters take no highlight, and a selectionchange listener rings the whole element while the selection overlaps it — so the selection shows exactly what the copy will carry.
           - Web:
@@ -36356,6 +36360,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DropdownMenuContent`
           - `primitives/css/ui-kit.DropdownMenuItem`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
+          - `primitives/dom/auto-scroll.KeepScrollAcross`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
@@ -36642,6 +36647,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/coords.Placed`
+          - `primitives/css/ui-kit.cn`
           - `primitives/dom/auto-scroll.findScrollParent`
         - Exports (types):
           - `UseVirtualRowsOptions`

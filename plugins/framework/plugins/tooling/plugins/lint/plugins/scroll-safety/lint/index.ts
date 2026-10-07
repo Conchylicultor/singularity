@@ -12,12 +12,10 @@ export default {
     "no-adhoc-scroll-into-view": [
       "plugins/primitives/plugins/dom/plugins/scroll-reveal/web/internal/use-reveal-on-active.ts",
     ],
-    // The auto-scroll primitive is the one sanctioned home for raw scroll writes.
+    // The auto-scroll primitive is the one sanctioned home for raw scroll
+    // writes — the whole plugin, so a new scroll role added there is covered.
     "no-adhoc-scroll-write": [
-      "plugins/primitives/plugins/dom/plugins/auto-scroll/web/use-sticky-scroll.ts",
-      "plugins/primitives/plugins/dom/plugins/auto-scroll/web/scroll-to-bottom.ts",
-      "plugins/primitives/plugins/dom/plugins/auto-scroll/web/scroll-child-into-view.ts",
-      "plugins/primitives/plugins/dom/plugins/auto-scroll/web/use-edge-auto-scroll.ts",
+      "plugins/primitives/plugins/dom/plugins/auto-scroll/web/**",
     ],
   },
 };

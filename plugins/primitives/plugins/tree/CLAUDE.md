@@ -207,6 +207,7 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
+    - `primitives/dom/auto-scroll.KeepScrollAcross`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
