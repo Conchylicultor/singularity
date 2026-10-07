@@ -77,11 +77,16 @@ export type AlignmentRecord = z.infer<typeof AlignmentRecordSchema>;
  * Below this overall `score` an alignment is a weak match: the resolver keeps
  * looking for a better video (`walkCandidates`). It is still applied to the
  * Score — the song plays on its best try, labelled unconfirmed — so this
- * decides only the search, never the playing. Calibrated on the
- * reference songs (see the plan doc): the right recordings scored 0.70–0.91,
- * the wrong ones at most 0.34.
+ * decides only the search, never the playing. Calibrated on the calibration
+ * set (`scripts/calibrate.ts --set`, results in
+ * research/2026-10-07-apps-sonata-ug-alignment-scoring.md): every right
+ * recording scores at least 0.68. Sheets built on a common progression
+ * (I–V–vi–IV) also fit other songs' recordings, and 6 of 169 wrong pairs
+ * reach 0.6; the resolver only aligns videos that already matched the song's
+ * title and artist, so the threshold guards against a wrong video of the
+ * song, not against every other song.
  */
-export const WEAK_MATCH_THRESHOLD = 0.5;
+export const WEAK_MATCH_THRESHOLD = 0.6;
 
 /**
  * Stable hash of a sheet's markup: a record applies only to the exact sheet it

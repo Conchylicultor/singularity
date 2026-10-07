@@ -7,6 +7,7 @@ import {
   type AlignmentCandidate,
 } from "../../core";
 import type { AlignmentRecord } from "../../core/internal/record";
+import { RANK_MARGIN } from "../../core/internal/accept";
 import {
   decideWork,
   MAX_TRIES_PER_RUN,
@@ -198,9 +199,10 @@ describe("decideWork — a chosen video", () => {
     ).toMatchObject({ kind: "align", reason: "the video changed" });
   });
 
-  test("a stale aligner version re-aligns", () => {
+  test("a stale aligner version re-aligns a user's video", () => {
     expect(
       kind({
+        pick: "user",
         videoId: "AAAAAAAAAAA",
         status: "aligned",
         record: record("AAAAAAAAAAA", 0.8, {
@@ -208,6 +210,28 @@ describe("decideWork — a chosen video", () => {
         }),
       }),
     ).toMatchObject({ kind: "align", reason: "the aligner changed" });
+  });
+
+  test("a stale aligner version re-picks an auto video: released, the tried candidates scored again", () => {
+    const tried = [
+      candidate("AAAAAAAAAAA", 0, { outcome: "weak", score: 0.49 }),
+      candidate("BBBBBBBBBBB", 1, { outcome: "aligned", score: 0.68 }),
+    ];
+    expect(
+      kind({
+        videoId: "BBBBBBBBBBB",
+        status: "aligned",
+        candidates: tried,
+        record: record("BBBBBBBBBBB", 0.68, {
+          alignerVersion: ALIGNER_VERSION - 1,
+        }),
+      }),
+    ).toMatchObject({
+      kind: "resolve",
+      search: false,
+      retry: true,
+      release: true,
+    });
   });
 });
 
@@ -287,6 +311,42 @@ describe("walkCandidates", () => {
       ["CCCCCCCCCCC", "untried", null],
       ["DDDDDDDDDDD", "untried", null],
     ]);
+  });
+
+  test("a higher-ranked near miss is preferred to a lower-ranked pass that only just beat it", async () => {
+    const studio = WEAK_MATCH_THRESHOLD - 0.02;
+    const live = WEAK_MATCH_THRESHOLD + RANK_MARGIN / 2;
+    const run = fakeRun({
+      AAAAAAAAAAA: scored("AAAAAAAAAAA", studio),
+      BBBBBBBBBBB: scored("BBBBBBBBBBB", live),
+    });
+    const result = await walkCandidates(four, run.hooks);
+    expect(run.tried).toEqual(["AAAAAAAAAAA", "BBBBBBBBBBB"]);
+    expect(result.kind).toBe("accepted");
+    if (result.kind !== "accepted") return;
+    expect(result.record.videoId).toBe("AAAAAAAAAAA");
+    expect(
+      result.candidates.slice(0, 2).map((c) => [c.videoId, c.outcome]),
+    ).toEqual([
+      ["AAAAAAAAAAA", "aligned"],
+      ["BBBBBBBBBBB", "aligned"],
+    ]);
+  });
+
+  test("a lower-ranked pass that clearly beats a near miss is accepted", async () => {
+    const run = fakeRun({
+      AAAAAAAAAAA: scored("AAAAAAAAAAA", WEAK_MATCH_THRESHOLD - 0.02),
+      BBBBBBBBBBB: scored(
+        "BBBBBBBBBBB",
+        WEAK_MATCH_THRESHOLD - 0.02 + RANK_MARGIN + 0.05,
+      ),
+    });
+    const result = await walkCandidates(four, run.hooks);
+    expect(result.kind === "accepted" && result.record.videoId).toBe(
+      "BBBBBBBBBBB",
+    );
+    if (result.kind !== "accepted") return;
+    expect(result.candidates[0]!.outcome).toBe("weak");
   });
 
   test(`tries at most ${MAX_TRIES_PER_RUN}, then is exhausted with the best weak record`, async () => {

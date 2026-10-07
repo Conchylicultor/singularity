@@ -8,6 +8,10 @@ import {
   type UgAlignmentRow,
 } from "../../core";
 import type { AlignmentRecord } from "../../core/internal/record";
+import {
+  chooseCandidate,
+  type TriedCandidate,
+} from "../../core/internal/accept";
 
 // ── What the job does, decided from the rows (pure) ──────────────────────────
 
@@ -26,6 +30,8 @@ export type AlignmentWork =
    * Choose a video: search for candidates (`search`), or walk the stored ones
    * from the next untried. `retry` first puts the ones already scored back to
    * untried (the sheet or the aligner changed, so their scores are stale).
+   * `release` first gives back the video the resolver chose earlier: the
+   * aligner changed, so that choice was made on scores that no longer hold.
    */
   | {
       kind: "resolve";
@@ -34,6 +40,7 @@ export type AlignmentWork =
       hash: string;
       search: boolean;
       retry: boolean;
+      release: boolean;
     };
 
 export type AlignmentState = Pick<
@@ -70,6 +77,7 @@ function decideResolve(tab: UgTab, row: AlignmentState): AlignmentWork {
     hash,
     search,
     retry,
+    release: false,
   });
   switch (row.status) {
     case "queued":
@@ -108,7 +116,10 @@ function decideResolve(tab: UgTab, row: AlignmentState): AlignmentWork {
  * - `failed`: align again unless the failure was permanent for this video.
  * - `aligned` / `weak` / `needs-video`: align only when the record no longer
  *   matches the current video, sheet or aligner. An edit re-aligns the chosen
- *   video, whoever chose it; it never re-picks one that aligned.
+ *   video, whoever chose it; it never re-picks one that aligned. A new aligner
+ *   does re-pick a video the resolver chose (`pick: "auto"`): its choice was
+ *   made on the old aligner's scores, so the candidates are scored again
+ *   (their features are cached) and the accept rule runs anew.
  */
 export function decideWork(tab: UgTab, row: AlignmentState): AlignmentWork {
   const videoId = row.videoId;
@@ -141,6 +152,16 @@ export function decideWork(tab: UgTab, row: AlignmentState): AlignmentWork {
       const r = row.record;
       if (r === null) return align("no record");
       if (r.videoId !== videoId) return align("the video changed");
+      if (row.pick === "auto" && r.alignerVersion !== ALIGNER_VERSION)
+        return {
+          kind: "resolve",
+          reason: "the aligner changed: choosing the video again",
+          tab,
+          hash,
+          search: row.candidates.length === 0,
+          retry: true,
+          release: true,
+        };
       const why = stale(r, hash);
       if (why !== null) return align(why);
       return {
@@ -200,9 +221,12 @@ export function retryScored(
 }
 
 /**
- * Try the untried candidates in rank order, at most `MAX_TRIES_PER_RUN`: the
- * first whose score reaches `WEAK_MATCH_THRESHOLD` is accepted and the walk
- * stops; below it is `weak`, and the walk goes on. `tryOne` aligns one
+ * Try the untried candidates in rank order, at most `MAX_TRIES_PER_RUN`. After
+ * each try `chooseCandidate` decides over this run's tries: once one reaches
+ * `WEAK_MATCH_THRESHOLD`, the walk stops and accepts the highest-ranked try
+ * within `RANK_MARGIN` of the best — so a studio recording that just missed is
+ * not passed over for a live take that just passed. A try below the threshold
+ * is `weak`, and the walk goes on. `tryOne` aligns one
  * candidate; a throw that is the candidate's own (`candidateFailure`: its
  * audio could not be had) marks it `failed` with the reason, and the walk goes
  * on. A `trying` left by a run that died is untried. Any other throw from
@@ -230,7 +254,8 @@ export async function walkCandidates(
       c.videoId === videoId ? { ...c, ...patch } : c,
     );
   };
-  let bestWeak: AlignmentRecord | null = null;
+  const records = new Map<string, AlignmentRecord>();
+  const tried: TriedCandidate[] = [];
   let tries = 0;
   for (const candidate of [...candidates]) {
     if (candidate.outcome !== "untried") continue;
@@ -250,12 +275,31 @@ export async function walkCandidates(
       });
       continue;
     }
-    if (record.score >= WEAK_MATCH_THRESHOLD) {
-      set(candidate.videoId, { outcome: "aligned", score: record.score });
-      return { kind: "accepted", candidates, record };
+    set(candidate.videoId, {
+      outcome: record.score >= WEAK_MATCH_THRESHOLD ? "aligned" : "weak",
+      score: record.score,
+    });
+    records.set(candidate.videoId, record);
+    tried.push({
+      videoId: candidate.videoId,
+      rank: candidate.rank,
+      score: record.score,
+    });
+    const choice = chooseCandidate(tried, { exhausted: false });
+    if (choice.kind === "accept") {
+      // The one chosen became the video, whatever its own score.
+      set(choice.videoId, { outcome: "aligned" });
+      return {
+        kind: "accepted",
+        candidates,
+        record: records.get(choice.videoId)!,
+      };
     }
-    set(candidate.videoId, { outcome: "weak", score: record.score });
-    if (bestWeak === null || record.score > bestWeak.score) bestWeak = record;
   }
-  return { kind: "exhausted", candidates, bestWeak };
+  const end = chooseCandidate(tried, { exhausted: true });
+  const best =
+    end.kind === "exhausted" && end.best !== null
+      ? records.get(end.best.videoId)!
+      : null;
+  return { kind: "exhausted", candidates, bestWeak: best };
 }

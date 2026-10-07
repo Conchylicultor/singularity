@@ -274,6 +274,37 @@ describe("alignChords", () => {
     );
   });
 
+  it("lets a passing slash bass the recording does not play be its root (C/B as C)", () => {
+    const parsed = parsedSheet([
+      { name: "Verse", lines: ["Am C", "Am C"] },
+      { name: "Chorus", lines: ["C", "C/B F", "C", "G F"] },
+    ]);
+    // The chorus's C/B is played as plain C, its bass on C.
+    const performed = ["Am", "C", "Am", "C", "C", "C", "F", "C", "G", "F"];
+    const record = alignChords(parsed, synthFeatures(played(performed)), OPTS);
+    expect(sections(parsed, record)).toEqual(["Verse#0@0", "Chorus#0@16"]);
+    expect(timeline(parsed, record)).toContain("C/B@20");
+    expect(record.score).toBeGreaterThan(WEAK_MATCH_THRESHOLD);
+  });
+
+  it("scores a fast loop on a noisy, sparse mix above the threshold", () => {
+    // Shape Of You's case: one 4-chord loop, two beats a chord, under chroma
+    // a free decode can follow beat by beat.
+    const loop = "C#m F#m A B";
+    const parsed = parsedSheet([
+      { name: "Verse", lines: [loop, loop, loop, loop] },
+      { name: "Chorus", lines: [loop, loop, loop, loop] },
+    ]);
+    const performed = Array.from(
+      { length: 32 },
+      (_, i) => loop.split(" ")[i % 4]!,
+    );
+    const features = synthFeatures(played(performed, 2), { noise: 0.9 });
+    expect(alignChords(parsed, features, OPTS).score).toBeGreaterThan(
+      WEAK_MATCH_THRESHOLD,
+    );
+  });
+
   it("throws on features without beats", () => {
     const parsed = parsedSheet([{ name: "", lines: ["C"] }]);
     const empty = { ...synthFeatures(["C"]), beats: [] };

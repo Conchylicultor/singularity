@@ -9,9 +9,11 @@
  *   intro, and one gap after each block.
  * - **Transitions**: stay on a token; advance to the next token in the block;
  *   at a block's last token go to the next block (cheap), repeat the block
- *   (cheaper with an "x2" hint), jump to a block of the expected name
- *   (medium), to any block (expensive) or into the filler after it
- *   (expensive). A line marked "x4" is unrolled into four copies (`sheet.ts`);
+ *   (cheaper with an "x2" hint), jump ahead to a block of the expected name
+ *   (medium) or back to one (dearer: a performance goes forward through its
+ *   sheet, and "verse" names every verse, so a cheap way back let a path
+ *   cycle the verses instead of reaching the chorus), to any block
+ *   (expensive) or into the filler after it (expensive). A line marked "x4" is unrolled into four copies (`sheet.ts`);
  *   the end of a copy may skip the remaining ones. A filler stays, or enters
  *   any block, priced like the jump from the block it follows. Every change
  *   pays a small penalty off the downbeat (less on the half bar), so chords
@@ -19,14 +21,20 @@
  *   double-tempo grid needs nothing special.
  * - **Emission**: the correlation of the beat's chroma with the chord's
  *   template rotated by the transposition, plus a bass term (the bass chroma
- *   at the chord's bass). The filler emits a constant floor, raised when the
+ *   at the chord's bass). A slash bass that is not a chord tone ("C/B",
+ *   "Am/G") is a passing bass line the recording may well not play, so its
+ *   root counts as well; an inversion ("C/E") keeps its bass, which is what
+ *   tells it from the root position. The filler emits a constant floor, raised when the
  *   beat is quiet, so silence, intros and omitted passages fall into it.
  * - **Transposition**: all 12 are decoded; the best total wins, with a small
  *   prior for `transpose ≡ capo` (UG chords are shapes over the capo).
  * - **Score** = fit × coverage. `fit` is how much of the gain over explaining
  *   nothing (all filler) the sheet-constrained path achieves, relative to a
  *   free decode where any chord may follow any other: it cancels how clean a
- *   recording's chroma is, which an absolute correlation does not. `coverage`
+ *   recording's chroma is, which an absolute correlation does not. The free
+ *   decode pays `FREE_SWITCH` for every change: the sheet names the one next
+ *   chord, the free model picks among dozens, and unpriced it follows a sparse
+ *   mix's melody beat by beat and earns a gain no sheet can match. `coverage`
  *   is the fraction of the sheet's written chords the path plays: a wrong
  *   recording sharing one progression with the sheet (I–V–vi–IV) fits that
  *   block well, but only by repeating it and skipping the rest.
@@ -47,10 +55,13 @@ import {
 import { buildAlignSheet, type AlignSheet } from "./sheet";
 import {
   TRIAD_VOCABULARY,
+  chordShape,
   dot12,
   pcMask,
   prepareBeat,
+  shapeKey,
   toneTemplate,
+  type ChordShape,
   type PreparedBeat,
 } from "./templates";
 
@@ -81,8 +92,10 @@ const REPEAT_BLOCK = -2.5;
 const REPEAT_BLOCK_HINTED = -1;
 /** Skipping the remaining copies of a line marked to repeat. */
 const SKIP_REPEAT = -1;
-/** A block named like the expected next one (or the one just played), elsewhere in the sheet. */
+/** A block named like the expected next one (or the one just played), later in the sheet. */
 const SAME_NAME = -1.5;
+/** The same, back to an earlier block (or the block itself, when it is named). */
+const SAME_NAME_BACK = -3.5;
 /** Any other block. */
 const ANY_BLOCK = -4;
 /** A block's end into the gap after it, and a filler into a block (on top of the jump it stands for). */
@@ -93,6 +106,13 @@ const START_ELSEWHERE = -3;
 
 /** Total log-score bonus of `transpose ≡ capo`. */
 const CAPO_PRIOR = 2;
+
+/**
+ * The free reference decode's cost of a chord change, on top of the change
+ * prior both decodes pay: what choosing among the whole vocabulary costs over
+ * advancing to the sheet's one next chord.
+ */
+const FREE_SWITCH = -0.15;
 
 /** Margin (correlation) that squashes to a bar confidence of ≈0.73. */
 const MARGIN_SCALE = 0.1;
@@ -166,7 +186,7 @@ function buildStateSpace(sheet: AlignSheet): StateSpace {
         there.name.length > 0 &&
         (there.name === expected || there.name === here.name)
       )
-        cost = SAME_NAME;
+        cost = j > i ? SAME_NAME : SAME_NAME_BACK;
       else cost = ANY_BLOCK;
       jump[i * B + j] = cost;
     }
@@ -254,11 +274,22 @@ function emissions(
         const c = dot12(beat.chroma, templates[k]![root]!);
         const at = (tr * T + t) * K + k;
         corr[at] = c;
-        emit[at] = c + BASS_WEIGHT * beat.bass[(root + shape.bass) % 12]!;
+        emit[at] = c + BASS_WEIGHT * bassTerm(beat, shape, root);
       }
     }
   }
   return { emit, corr };
+}
+
+/**
+ * The bass chroma at the chord's bass; for a slash bass outside the chord
+ * ("C/B"), at whichever of it and the root is stronger.
+ */
+function bassTerm(beat: PreparedBeat, shape: ChordShape, root: number): number {
+  const bass = beat.bass[(root + shape.bass) % 12]!;
+  return shape.bass === 0 || shape.tones.includes(shape.bass)
+    ? bass
+    : Math.max(bass, beat.bass[root]!);
 }
 
 function fillerEmission(beat: PreparedBeat): number {
@@ -485,20 +516,22 @@ function freeDecode(
   change: Float64Array,
 ): number {
   const T = beats.length;
-  const vocab: { template: Float64Array; bass: number }[] = [];
+  const vocab: { template: Float64Array; shape: ChordShape; root: number }[] =
+    [];
   for (const tones of [
     [0, 4, 7],
     [0, 3, 7],
   ]) {
     for (let root = 0; root < 12; root++)
-      vocab.push({ template: toneTemplate(tones, root), bass: root });
+      vocab.push({
+        template: toneTemplate(tones, root),
+        shape: { root, tones, bass: 0 },
+        root,
+      });
   }
   for (const shape of sheet.shapes) {
     const root = (shape.root + tr) % 12;
-    vocab.push({
-      template: toneTemplate(shape.tones, root),
-      bass: (root + shape.bass) % 12,
-    });
+    vocab.push({ template: toneTemplate(shape.tones, root), shape, root });
   }
   const V = vocab.length;
   let prev = new Float64Array(V + 1);
@@ -506,16 +539,16 @@ function freeDecode(
   const emission = (t: number, v: number): number => {
     if (v === V) return filler[t]!;
     const beat = beats[t]!;
+    const { template, shape, root } = vocab[v]!;
     return (
-      dot12(beat.chroma, vocab[v]!.template) +
-      BASS_WEIGHT * beat.bass[vocab[v]!.bass]!
+      dot12(beat.chroma, template) + BASS_WEIGHT * bassTerm(beat, shape, root)
     );
   };
   for (let v = 0; v <= V; v++) prev[v] = emission(0, v);
   for (let t = 1; t < T; t++) {
     let top = NEG;
     for (let v = 0; v <= V; v++) if (prev[v]! > top) top = prev[v]!;
-    const switched = top + ADVANCE + change[t]!;
+    const switched = top + ADVANCE + change[t]! + FREE_SWITCH;
     for (let v = 0; v <= V; v++)
       next[v] = Math.max(prev[v]!, switched) + emission(t, v);
     [prev, next] = [next, prev];
@@ -651,4 +684,128 @@ export function alignWithDiagnostics(
       coverage,
     },
   };
+}
+
+const PITCH_NAMES = [
+  "C",
+  "C#",
+  "D",
+  "Eb",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "Ab",
+  "A",
+  "Bb",
+  "B",
+];
+
+/** One bar of a decoded path, as the calibration script's `--bars` view prints it. */
+export interface BarDiagnostic {
+  bar: number;
+  startBeat: number;
+  /** The sheet chord the path holds for most of the bar (`—` for the filler), at sheet pitch. */
+  path: string;
+  /** Its mean correlation over the bar's beats (0 for the filler). */
+  pathCorr: number;
+  /** The sheet's chord (any shape, at the record's transposition) that fits the bar best. */
+  bestSheet: string;
+  bestSheetCorr: number;
+  /** The best of the 24 triads, at sounding pitch. */
+  bestTriad: string;
+  bestTriadCorr: number;
+}
+
+/**
+ * Per bar of a record: what the path holds against what fits best — the sheet
+ * chord and the triad with the highest mean correlation over the bar. Tells a
+ * passage the sheet's chords cannot explain apart from one the path took a
+ * wrong turn through. Diagnostics only; nothing in the aligner reads it.
+ */
+export function barDiagnostics(
+  parsed: ParsedTab,
+  features: BeatFeatures,
+  record: AlignmentRecord,
+): BarDiagnostic[] {
+  const sheet = buildAlignSheet(parsed);
+  const beats = features.beats.map(prepareBeat);
+  const T = beats.length;
+  const tr = record.transpose;
+  const symbolOfShape = new Map<number, string>();
+  for (const block of sheet.blocks)
+    for (const token of block.tokens)
+      if (token.shape !== null && !symbolOfShape.has(token.shape))
+        symbolOfShape.set(
+          token.shape,
+          parsed.sections[token.section]!.lines[token.line]!.chords[
+            token.chord
+          ]!.symbol,
+        );
+  const templates = sheet.shapes.map((shape) =>
+    toneTemplate(shape.tones, (shape.root + tr) % 12),
+  );
+  // Per beat: the path's symbol and shape (null for a gap).
+  const pathSymbol: string[] = new Array<string>(T).fill("—");
+  const pathShape: (number | null)[] = new Array<number | null>(T).fill(null);
+  for (const seg of record.segments) {
+    if (seg.kind !== "chord") continue;
+    const symbol =
+      parsed.sections[seg.section]!.lines[seg.line]!.chords[seg.chord]!.symbol;
+    const shape = chordShape(symbol);
+    const k =
+      shape === null
+        ? null
+        : sheet.shapes.findIndex((s) => shapeKey(s) === shapeKey(shape));
+    for (let t = seg.startBeat; t < seg.endBeat; t++) {
+      pathSymbol[t] = symbol;
+      pathShape[t] = k === null || k < 0 ? null : k;
+    }
+  }
+  const starts = barStarts(features);
+  return starts.map((start, bar) => {
+    const end = bar + 1 < starts.length ? starts[bar + 1]! : T;
+    const n = end - start;
+    const mean = (template: Float64Array): number => {
+      let sum = 0;
+      for (let t = start; t < end; t++)
+        sum += dot12(beats[t]!.chroma, template);
+      return sum / n;
+    };
+    const counts = new Map<string, number>();
+    for (let t = start; t < end; t++)
+      counts.set(pathSymbol[t]!, (counts.get(pathSymbol[t]!) ?? 0) + 1);
+    const path = [...counts].sort((a, b) => b[1] - a[1])[0]![0];
+    const at = pathSymbol.indexOf(path, start);
+    const k = pathShape[at];
+    const pathCorr = k === null || k === undefined ? 0 : mean(templates[k]!);
+    let bestSheet = "—";
+    let bestSheetCorr = -Infinity;
+    templates.forEach((template, i) => {
+      const c = mean(template);
+      if (c > bestSheetCorr) {
+        bestSheetCorr = c;
+        bestSheet = symbolOfShape.get(i) ?? "?";
+      }
+    });
+    let bestTriad = "—";
+    let bestTriadCorr = -Infinity;
+    TRIAD_VOCABULARY.forEach((v, i) => {
+      const c = mean(v.template);
+      if (c > bestTriadCorr) {
+        bestTriadCorr = c;
+        bestTriad = `${PITCH_NAMES[i % 12]}${i < 12 ? "" : "m"}`;
+      }
+    });
+    return {
+      bar,
+      startBeat: start,
+      path,
+      pathCorr,
+      bestSheet,
+      bestSheetCorr,
+      bestTriad,
+      bestTriadCorr,
+    };
+  });
 }

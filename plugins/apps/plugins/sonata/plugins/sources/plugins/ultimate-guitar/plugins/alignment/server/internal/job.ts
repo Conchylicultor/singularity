@@ -134,6 +134,11 @@ async function runResolve(
   const { tab, hash } = work;
   log(`${songId}: choosing a video (${work.reason})`);
   let candidates = work.retry ? retryScored(stored) : [...stored];
+  if (work.release) {
+    // Give the earlier choice back first, so the walk (which stops the
+    // moment a video is set) knows the resolver owns the choice again.
+    await songUgAlignment.upsert(songId, { videoId: null, candidates });
+  }
   const progress = async (
     phase: "analysing" | "aligning" | null,
   ): Promise<void> => {
