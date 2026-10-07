@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import {
   useCursorSelector,
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
-import { useLivePlay } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
+import { useChordAudition } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
 import type {
   Annotation,
   ChordData,
@@ -73,8 +73,6 @@ const BASE_MIDI = 60;
 /** Triad intervals above the tonic, in semitones. */
 const MAJOR_TRIAD = [0, 4, 7];
 const MINOR_TRIAD = [0, 3, 7];
-/** How long a clicked chord rings before its note-off, in ms. */
-const CHORD_RING_MS = 900;
 
 // --- Wheel geometry (SVG user units; viewBox is 160×160, centre at 80,80) ---
 const CX = 80;
@@ -126,35 +124,9 @@ function sector(rIn: number, rOut: number, a0: number, a1: number): string {
  */
 export function CircleOfFifths() {
   const { score } = useSession();
-  const live = useLivePlay();
-
-  // Pending note-off timers, cleared on unmount so a clicked chord never fires
-  // its release into an unmounted surface.
-  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
-  useEffect(() => {
-    const timers = timersRef.current;
-    return () => {
-      for (const t of timers) clearTimeout(t);
-      timers.clear();
-      live?.releaseAll();
-    };
-  }, [live]);
-
-  // Audition a chord: warm the voices, strike every pitch, then release after a
-  // short ring-out. Pure note-on/note-off — independent of the transport.
-  const playChord = useCallback(
-    (pitches: number[]) => {
-      if (!live) return;
-      live.warmup();
-      for (const p of pitches) live.press(p);
-      const t = setTimeout(() => {
-        for (const p of pitches) live.release(p);
-        timersRef.current.delete(t);
-      }, CHORD_RING_MS);
-      timersRef.current.add(t);
-    },
-    [live],
-  );
+  // Auditions a wedge's triad; null until the live-play engine mounts.
+  const audition = useChordAudition();
+  const playChord = (pitches: number[]) => audition?.(pitches);
 
   const chords = useMemo(
     () => score.annotations.filter((a): a is ChordAnn => a.type === "chord"),

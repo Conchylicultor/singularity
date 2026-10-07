@@ -19,6 +19,7 @@ import {
   Keyboard,
   useSonataKeySkin,
 } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
+import { useChordAudition } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
 import { pitchKeyboardHeight } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
 import { usePitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/web";
 import {
@@ -38,7 +39,7 @@ interface ChordEntry {
   /** Its first occurrence, which names, paints and voices it and is where a click seeks. */
   first: ChordAnnotation;
   face: ChordBoxFace;
-  /** Its notes as the keyboard lights them: each pitch in the chord's colour. */
+  /** Its notes as the keyboard lights them (and a click sounds them): each pitch in the chord's colour. */
   lit: ReadonlyMap<number, string>;
   /** How many times it is struck. */
   uses: number;
@@ -90,8 +91,8 @@ function distinctChords(
  * chrome (Card + collapsible "Chord list" title) the host paints. One row per
  * distinct chord, in the order the song first plays them: its chord box, a
  * keyboard lit with its notes in its colour, and how many times it is played.
- * The chord under the playhead is marked; clicking a row seeks to the chord's
- * first occurrence.
+ * The chord under the playhead is marked; clicking a row sounds the chord (the
+ * notes its keyboard lights) and seeks to its first occurrence.
  *
  * Applicability is the contribution's `useAvailable` (`useHasChords`), so this
  * body never renders for a chordless song.
@@ -104,6 +105,7 @@ export function ChordList() {
   const { score, seekTo } = useSession();
   const mode = useChordDisplayMode();
   const skin = useSonataKeySkin();
+  const audition = useChordAudition();
 
   const entries = useMemo(() => distinctChords(score, mode), [score, mode]);
 
@@ -138,28 +140,31 @@ export function ChordList() {
           now={entry.key === nowKey}
           plane={plane}
           skin={skin}
-          onSeek={seekTo}
+          onPick={(e) => {
+            audition?.([...e.lit.keys()]);
+            seekTo(e.first.start);
+          }}
         />
       ))}
     </Stack>
   );
 }
 
-/** One chord: its box, its keyboard and its count, the whole row a seek button. */
+/** One chord: its box, its keyboard and its count, the whole row a play-and-seek button. */
 function ChordRow({
   entry,
   now,
   plane,
   skin,
-  onSeek,
+  onPick,
 }: {
   entry: ChordEntry;
   now: boolean;
   plane: PitchPlane;
   skin: ReturnType<typeof useSonataKeySkin>;
-  onSeek: (beat: number) => void;
+  onPick: (entry: ChordEntry) => void;
 }) {
-  const { face, first, lit, uses } = entry;
+  const { face, lit, uses } = entry;
   return (
     <Overlay
       className="chord-list-row"
@@ -170,9 +175,9 @@ function ChordRow({
         <button
           type="button"
           className="chord-list-hit size-full"
-          aria-label={`${face.name}, played ${String(uses)} times — go to its first time`}
+          aria-label={`${face.name}, played ${String(uses)} times — play it and go to its first time`}
           aria-current={now ? "true" : undefined}
-          onClick={() => onSeek(first.start)}
+          onClick={() => onPick(entry)}
         />
       }
     >

@@ -8,7 +8,7 @@
 - Web:
   - Contributes: `Sonata.Section` "Circle of fifths" → `CircleOfFifths`
   - Uses:
-    - `apps/sonata/audio/live-play.useLivePlay`
+    - `apps/sonata/audio/live-play.useChordAudition`
     - `apps/sonata/document.useHasChords`
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`

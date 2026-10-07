@@ -6,7 +6,7 @@ import { ChordList } from "./components/chord-list";
 
 export default {
   description:
-    "Sonata Section: the song's chords — one row per distinct chord in order of first appearance, each a chord box (degree colour, chord-label mode) beside a keyboard lit with its notes in that colour and how many times it is played. The chord under the playhead is marked; clicking a row seeks to its first occurrence.",
+    "Sonata Section: the song's chords — one row per distinct chord in order of first appearance, each a chord box (degree colour, chord-label mode) beside a keyboard lit with its notes in that colour and how many times it is played. The chord under the playhead is marked; clicking a row plays the chord and seeks to its first occurrence.",
   contributions: [
     Sonata.Section({
       id: "chord-list",

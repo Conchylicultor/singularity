@@ -4,10 +4,11 @@
 
 ## Plugin reference
 
-- Description: Sonata Section: the song's chords — one row per distinct chord in order of first appearance, each a chord box (degree colour, chord-label mode) beside a keyboard lit with its notes in that colour and how many times it is played. The chord under the playhead is marked; clicking a row seeks to its first occurrence.
+- Description: Sonata Section: the song's chords — one row per distinct chord in order of first appearance, each a chord box (degree colour, chord-label mode) beside a keyboard lit with its notes in that colour and how many times it is played. The chord under the playhead is marked; clicking a row plays the chord and seeks to its first occurrence.
 - Web:
   - Contributes: `Sonata.Section` "Chord list" → `ChordList`
   - Uses:
+    - `apps/sonata/audio/live-play.useChordAudition`
     - `apps/sonata/document.useHasChords`
     - `apps/sonata/pitch-layout.usePitchGeometry`
     - `apps/sonata/primitives/keyboard.Keyboard`

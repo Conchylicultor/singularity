@@ -6,6 +6,7 @@ import { LivePlayEngine } from "./components/live-play-engine";
 // The per-surface live-play API for consumers (the playable keyboard) to drive
 // hand-played notes through.
 export { useLivePlay, type LivePlayApi } from "./live-store";
+export { useChordAudition } from "./use-chord-audition";
 
 export default {
   description:

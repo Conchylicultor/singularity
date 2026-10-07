@@ -4756,10 +4756,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/latest-ref.useLatestRef`
                   - `primitives/scope/scoped-store.defineScopedStore`
                 - Exports (types): `LivePlayApi`
-                - Exports (values): `useLivePlay`
+                - Exports (values):
+                  - `useChordAudition`
+                  - `useLivePlay`
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/piano-keyboard`
+                  - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/circle-of-fifths`
             - **`metronome`** — Sonata metronome: a synthesized click track (continuous + count-in lead-in) scheduled on the engine's audio clock, with a toolbar control and an on-screen countdown. Server registration of the Sonata metronome config.
               - Web:
@@ -5679,10 +5682,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`
-            - **`chord-list`** — Sonata Section: the song's chords — one row per distinct chord in order of first appearance, each a chord box (degree colour, chord-label mode) beside a keyboard lit with its notes in that colour and how many times it is played. The chord under the playhead is marked; clicking a row seeks to its first occurrence.
+            - **`chord-list`** — Sonata Section: the song's chords — one row per distinct chord in order of first appearance, each a chord box (degree colour, chord-label mode) beside a keyboard lit with its notes in that colour and how many times it is played. The chord under the playhead is marked; clicking a row plays the chord and seeks to its first occurrence.
               - Web:
                 - Contributes: `Sonata.Section` "Chord list" → `ChordList`
                 - Uses:
+                  - `apps/sonata/audio/live-play.useChordAudition`
                   - `apps/sonata/document.useHasChords`
                   - `apps/sonata/pitch-layout.usePitchGeometry`
                   - `apps/sonata/primitives/keyboard.Keyboard`
@@ -5777,7 +5781,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `Sonata.Section` "Circle of fifths" → `CircleOfFifths`
                 - Uses:
-                  - `apps/sonata/audio/live-play.useLivePlay`
+                  - `apps/sonata/audio/live-play.useChordAudition`
                   - `apps/sonata/document.useHasChords`
                   - `apps/sonata/session.useCursorSelector`
                   - `apps/sonata/session.useSession`
