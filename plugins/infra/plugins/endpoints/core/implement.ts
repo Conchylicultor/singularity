@@ -128,8 +128,10 @@ export function implement<
         },
       );
 
-      // void/undefined/null → 204
-      if (result === undefined || result === null) {
+      // void/undefined → 204. `null` is a value (a `.nullable()` response),
+      // not an absence: it goes out as JSON `null` so the client decodes it
+      // through the response schema — a 204 reads back as `undefined`.
+      if (result === undefined) {
         return new Response(null, { status: 204 });
       }
 
