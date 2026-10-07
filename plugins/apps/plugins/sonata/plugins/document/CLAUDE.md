@@ -101,6 +101,7 @@ availability gates over the composed score.
     - `useHasDerivedChord`
     - `useHasVoicedChords`
     - `useLibrarySong`
+    - `useLoadCount`
     - `useLoadDocument`
     - `useMountedSongId`
     - `useSongDocument`
@@ -123,6 +124,7 @@ availability gates over the composed score.
     - `apps/sonata/rich/key-readout`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/rich/voicing-controls`
+    - `apps/sonata/shell`
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/midi`

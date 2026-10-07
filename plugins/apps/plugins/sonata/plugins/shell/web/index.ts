@@ -18,7 +18,7 @@ export {
 
 export default {
   description:
-    "App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), owns the app state — the open song (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.",
+    "App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.",
   contributions: [
     Apps.App({
       app: sonataApp,

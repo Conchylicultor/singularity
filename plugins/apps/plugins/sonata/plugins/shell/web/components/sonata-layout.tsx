@@ -2,7 +2,6 @@ import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { SonataPlayerScope } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { Sonata } from "../slots";
-import { SonataAppProvider } from "../app";
 
 /**
  * Sonata's app surface. Sonata is a pure full-surface app: the sidebar-less
@@ -17,20 +16,18 @@ import { SonataAppProvider } from "../app";
  * effects and the per-song setting observers), so each Sonata surface (desktop
  * window / keep-alive tab) gets its own isolated playback state, and a song
  * played from the library keeps playing whichever pane is active. Inside it,
- * the app's own state (the open song) and the app-only effects
- * (`Sonata.Effect`: shortcuts, play history, source persistence).
+ * the app-only effects (`Sonata.Effect`: shortcuts, play history, source
+ * persistence).
  */
 export function SonataLayout() {
   return (
     <SonataPlayerScope>
-      <SonataAppProvider>
-        <div className="h-full min-h-0">
-          <AppShellLayout>
-            <FullPane />
-          </AppShellLayout>
-          <Sonata.Effect.Mount />
-        </div>
-      </SonataAppProvider>
+      <div className="h-full min-h-0">
+        <AppShellLayout>
+          <FullPane />
+        </AppShellLayout>
+        <Sonata.Effect.Mount />
+      </div>
     </SonataPlayerScope>
   );
 }

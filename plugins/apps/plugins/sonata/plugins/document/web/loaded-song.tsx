@@ -26,6 +26,13 @@ interface LoadedSong {
    * another one in the same tick (A → B → A), whose id alone would not change.
    */
   generation: number;
+  /**
+   * Bumped by EVERY load — a reload of the same document included (its sources
+   * re-hydrated), unlike `generation`. What a once-per-load effect keys on: a
+   * play is counted once per load, a source's persist observer skips the raw a
+   * load handed it rather than an edit.
+   */
+  loads: number;
   /** Each source's raw input, by source id. */
   rawById: Readonly<Record<string, unknown>>;
   /**
@@ -87,10 +94,11 @@ export function useLoadDocument(): (
       (identity: SongIdentity, rawById: Readonly<Record<string, unknown>>) =>
         api.setState((prev) =>
           prev !== null && sameIdentity(prev.identity, identity)
-            ? { ...prev, rawById }
+            ? { ...prev, loads: prev.loads + 1, rawById }
             : {
                 identity,
                 generation: (prev?.generation ?? 0) + 1,
+                loads: (prev?.loads ?? 0) + 1,
                 rawById,
                 settings: NO_SETTINGS,
                 failures: NO_FAILURES,
@@ -124,6 +132,15 @@ export function useEditLoadedRaw(): (sourceId: string, raw: unknown) => void {
 /** The loaded document's raw inputs by source id — none before a load. */
 export function useLoadedRaw(): Readonly<Record<string, unknown>> {
   return loadedSongStore.useSelector((s) => s?.rawById ?? NO_RAW, []);
+}
+
+/**
+ * How many times a document has been loaded on this surface — 0 before any
+ * load, then bumped by every load, a reload of the same song included. A
+ * once-per-load effect keys on it (see `LoadedSong.loads`).
+ */
+export function useLoadCount(): number {
+  return loadedSongStore.useSelector((s) => s?.loads ?? 0, []);
 }
 
 /** Which document is loaded, and which load of it (see `LoadedSong.generation`). */

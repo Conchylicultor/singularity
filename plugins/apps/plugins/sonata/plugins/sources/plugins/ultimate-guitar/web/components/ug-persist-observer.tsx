@@ -17,7 +17,7 @@ const SAVE_DEBOUNCE_MS = 500;
  * contributed to `Sonata.Effect`. Treats the context (`rawById`) as the source of
  * truth and debounce-persists a full `UgTab` snapshot (plus derived duration / end
  * beat) to the server whenever the raw's `tab` changes — never on the fresh load
- * that opening a song triggers (which bumps `songOpenEpoch`), and never when only
+ * of a song (which bumps `songLoadEpoch`), and never when only
  * `raw.alignment` changes (an alignment landing is not an edit), only on edits.
  *
  * This lives OUTSIDE the editor section deliberately: a section body is unmounted
@@ -34,12 +34,12 @@ const SAVE_DEBOUNCE_MS = 500;
  */
 export function UltimateGuitarPersistObserver() {
   const { sourceRaw } = useSongDocument();
-  const { currentSongId, songOpenEpoch } = useSonataApp();
+  const { currentSongId, songLoadEpoch } = useSonataApp();
   const saveTab = useSaveUltimateGuitar();
 
   const rawValue = sourceRaw(UG_SOURCE_ID);
 
-  const seededEpoch = useRef(songOpenEpoch);
+  const seededEpoch = useRef(songLoadEpoch);
   // The tab as last persisted (or as opened), serialized. Only a change of the
   // TAB is an edit: the alignment child rewrites `raw.alignment` when a job
   // lands, and that must never read as a sheet edit (nor re-save it).
@@ -50,10 +50,10 @@ export function UltimateGuitarPersistObserver() {
     if (!parsed.success) return;
     const raw = parsed.data;
     const tabJson = JSON.stringify(raw.tab);
-    // Skip the echo right after a song opens (hydrate set raw / bumped epoch),
+    // Skip the echo right after a song loads (hydrate set raw and bumped the epoch in one write),
     // and the first raw this observer sees when it mounts on an open song.
-    if (seededEpoch.current !== songOpenEpoch || savedTab.current === null) {
-      seededEpoch.current = songOpenEpoch;
+    if (seededEpoch.current !== songLoadEpoch || savedTab.current === null) {
+      seededEpoch.current = songLoadEpoch;
       savedTab.current = tabJson;
       return;
     }
@@ -70,7 +70,7 @@ export function UltimateGuitarPersistObserver() {
       });
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [rawValue, currentSongId, songOpenEpoch, saveTab]);
+  }, [rawValue, currentSongId, songLoadEpoch, saveTab]);
 
   return null;
 }

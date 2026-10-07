@@ -4,26 +4,27 @@
 
 `SonataLayout` (the `Apps.App` `component`) is a pure full-surface app: one
 `SonataPlayerScope` (player plugin — cursor, song document, playback session,
-view, per-session effects, setting observers) around `SonataAppProvider` and
-`<FullPane/>`, which paints the active pane full-surface. The panes themselves
-(library index at `/sonata`, player at `/sonata/song/:songId`) live in the
+view, per-session effects, setting observers) around `<FullPane/>`, which
+paints the active pane full-surface. The panes themselves (library index at `/sonata`, player at `/sonata/song/:songId`) live in the
 **library** plugin — see its `CLAUDE.md` — because they reference
 `Library.Source`, which the shell can't import without a cycle.
 
-The shell keeps only the APP's state, `useSonataApp()`: the open song's
-**identity** (`currentSongId` / `songOpenEpoch`, `setCurrentSong` /
-`clearCurrentSong`) — deliberately **not** the title, which has a single owner
-in the library's `songs` value (`useCurrentSong`). It touches neither content
-nor settings: those belong to the document the player loaded (a song played in
-the background stays loaded while no player shows it). The transport lives in
-the session (`useSession()`), content and settings in the document
+`useSonataApp()` is the APP's view of its song, **derived** from the loaded
+document — it keeps no state of its own: `currentSongId` (the library song
+loaded in the player, whether a player pane shows it or it plays in the
+background from the library) and `songLoadEpoch` (bumped by every load, for
+once-per-load effects). Leaving the player does not unload the song: it keeps
+playing, and the library's now-playing bar, card Pause and ring follow it.
+Deliberately **not** the title, which has a single owner in the library's
+`songs` value (`useCurrentSong`). The transport lives in the session (`useSession()`), content and settings in the document
 (`useSongDocument()`), the display lens and spread in the player view
 (`usePlayerView()`).
 
 Keyboard transport is owned by the **controls** plugin (`Sonata.Effect`), which
 registers Space/↑/↓ as per-surface, focus-scoped shortcuts and runs a
-focus-gated ←/→ seek-hold controller — both gated on `currentSongId != null`.
-Each Sonata window drives only its own transport.
+focus-gated ←/→ seek-hold controller — gated on the player being on screen
+(`usePlayerView().shown`), so they stay inert on the library even while a song
+plays there. Each Sonata window drives only its own transport.
 
 `Sonata.Effect` is for APP-only effects (shortcuts, play history, source
 persistence); an effect that must run wherever a song plays is a
@@ -33,7 +34,7 @@ persistence); an effect that must run wherever a song plays is a
 
 ## Plugin reference
 
-- Description: App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), owns the app state — the open song (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
+- Description: App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
 - Web:
   - Slots:
     - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
@@ -48,6 +49,8 @@ persistence); an effect that must run wherever a song plays is a
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
   - Uses:
     - `apps-core.Apps`
+    - `apps/sonata/document.useLibrarySong`
+    - `apps/sonata/document.useLoadCount`
     - `apps/sonata/player.SonataPlayerScope`
     - `layouts/full-pane.FullPane`
     - `primitives/app-shell.AppShellLayout`

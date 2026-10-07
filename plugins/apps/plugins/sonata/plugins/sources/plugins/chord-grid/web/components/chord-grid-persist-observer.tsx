@@ -16,7 +16,7 @@ const SAVE_DEBOUNCE_MS = 500;
  * contributed to `Sonata.Effect`. Treats the context (`rawById`) as the source of
  * truth and debounce-persists the open song's grid text plus its derived metrics
  * (duration / end beat) to the server whenever the raw changes — never on the
- * fresh load that opening a song triggers (which bumps `songOpenEpoch`), only on
+ * fresh load of a song (which bumps `songLoadEpoch`), only on
  * edits.
  *
  * This lives OUTSIDE the editor section deliberately: a section body is unmounted
@@ -33,17 +33,17 @@ const SAVE_DEBOUNCE_MS = 500;
  */
 export function ChordGridPersistObserver() {
   const { sourceRaw } = useSongDocument();
-  const { currentSongId, songOpenEpoch } = useSonataApp();
+  const { currentSongId, songLoadEpoch } = useSonataApp();
   const saveGrid = useSaveChordGrid();
 
   const rawValue = sourceRaw(CHORD_GRID_SOURCE_ID);
 
-  const seededEpoch = useRef(songOpenEpoch);
+  const seededEpoch = useRef(songLoadEpoch);
   useEffect(() => {
     if (!currentSongId || rawValue === undefined) return;
-    // Skip the echo right after a song opens (hydrate set raw / bumped epoch).
-    if (seededEpoch.current !== songOpenEpoch) {
-      seededEpoch.current = songOpenEpoch;
+    // Skip the echo right after a song loads (hydrate set raw and bumped the epoch in one write).
+    if (seededEpoch.current !== songLoadEpoch) {
+      seededEpoch.current = songLoadEpoch;
       return;
     }
     const id = currentSongId;
@@ -58,7 +58,7 @@ export function ChordGridPersistObserver() {
       });
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [rawValue, currentSongId, songOpenEpoch, saveGrid]);
+  }, [rawValue, currentSongId, songLoadEpoch, saveGrid]);
 
   return null;
 }

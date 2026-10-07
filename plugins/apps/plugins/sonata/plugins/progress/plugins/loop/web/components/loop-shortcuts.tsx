@@ -4,15 +4,16 @@ import {
   useCursorApi,
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
-import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { usePlayerView } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { toggleLoop } from "../loop-actions";
 
 /**
  * Headless A–B-loop keyboard registrar (a `Sonata.Effect`, mirroring controls'
  * `TransportShortcuts`): surface-scoped, focus-gated shortcuts that fire only
- * while THIS Sonata surface is focused, and only while a song is open
- * (`currentSongId != null`) so they stay inert on the library.
+ * while THIS Sonata surface is focused, and only while the player is on screen
+ * (`shown`) so they stay inert on the library — even while a song plays there
+ * in the background.
  *
  *  - `L` — toggle the loop (create the default region + seek, or flip enabled).
  *  - `[` — set the loop start (A) at the playhead, enabling the loop.
@@ -23,13 +24,13 @@ import { toggleLoop } from "../loop-actions";
  * whole feature stays atomic.
  */
 export function LoopShortcuts() {
-  const { currentSongId } = useSonataApp();
+  const { shown } = usePlayerView();
   const { loop, setLoop, seekTo, score } = useSession();
   const cursor = useCursorApi();
 
   const descriptors = useMemo(
     () =>
-      currentSongId == null
+      !shown
         ? []
         : [
             {
@@ -76,7 +77,7 @@ export function LoopShortcuts() {
                 }),
             },
           ],
-    [currentSongId, loop, setLoop, seekTo, score, cursor],
+    [shown, loop, setLoop, seekTo, score, cursor],
   );
 
   useSurfaceShortcuts(descriptors);

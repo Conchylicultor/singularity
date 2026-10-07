@@ -53,6 +53,7 @@ plain wrap; tempo changes follow the existing loop-aware `retime` path.
     - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
   - Uses:
     - `apps/sonata/library.sonataPlayerPane`
+    - `apps/sonata/player.usePlayerView`
     - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
     - `apps/sonata/progress/scrubber.SonataProgress`
     - `apps/sonata/session.useCursorApi`
@@ -60,7 +61,6 @@ plain wrap; tempo changes follow the existing loop-aware `retime` path.
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useLaneInsets`
-    - `apps/sonata/shell.useSonataApp`
     - `primitives/css/coords.pct`
     - `primitives/css/coords.Placed`
     - `primitives/css/inline.Inline`

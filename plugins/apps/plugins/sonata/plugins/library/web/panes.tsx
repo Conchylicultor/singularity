@@ -1,4 +1,4 @@
-import { type ReactElement, useEffect, useRef, useState } from "react";
+import { type ReactElement, useEffect, useRef } from "react";
 import {
   Pane,
   PaneChrome,
@@ -11,6 +11,7 @@ import {
 import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
+  useLibrarySong,
   useLoadDocument,
   useSongDocument,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
@@ -21,7 +22,6 @@ import {
   PlayerDisplay,
   PlayerTransport,
 } from "@plugins/apps/plugins/sonata/plugins/player/web";
-import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -153,7 +153,8 @@ function useSonataPlayerResolve({
   const loadDocument = useLoadDocument();
   const { requestSeekOnLoad, seekTo, score } = useSession();
   const { content } = useSongDocument();
-  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
+  const loadedSong = useLibrarySong();
+  const loadedSongRef = useLatestRef(loadedSong);
   const bar = parseBarParam(barParam);
   const barRef = useLatestRef(bar);
   // The (song, bar) the playhead was last placed for — by the load intent armed
@@ -162,9 +163,17 @@ function useSonataPlayerResolve({
   const placedForRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // The song is already loaded — playing in the background from the library,
+    // or reopened from the now-playing bar: show it as it is. Reloading would
+    // re-hydrate its sources into a new timeline, and the session's content
+    // reset would stop it and rewind to the lead-in. Its document is current
+    // (source edits write into it), and the bar effect below honours a URL bar.
+    const loaded = loadedSongRef.current;
+    if (loaded.kind === "library" && loaded.songId === songId) {
+      placedForRef.current = placementKey(songId, undefined);
+      return;
+    }
     let cancelled = false;
-    /* eslint-disable react-hooks/set-state-in-effect -- async hydration with cancellation flag: fans out over the dynamic plugin-contributed Library.Source registry (Promise.all of per-source hydrate), so a single useLive/useEndpoint cannot express it; setHydratedFor(null) resets the settle gate before the await and loadDocument/setHydratedFor(songId) commit only after the cancel guard, which is genuinely stateful (no derive-in-render equivalent). */
-    setHydratedFor(null);
     void (async () => {
       const rawMap: Record<string, unknown> = {};
       await Promise.all(
@@ -186,15 +195,17 @@ function useSonataPlayerResolve({
       // The song id travels WITH its content: loading it hands the song's
       // settings over in the same write (see `useLoadDocument`).
       loadDocument({ kind: "library", songId }, rawMap);
-      setHydratedFor(songId);
     })();
-    /* eslint-enable react-hooks/set-state-in-effect */
     return () => {
       cancelled = true;
     };
-  }, [songId, sources, loadDocument, requestSeekOnLoad, barRef]);
+  }, [songId, sources, loadDocument, requestSeekOnLoad, barRef, loadedSongRef]);
 
-  const hydrated = hydratedFor === songId;
+  // Hydrated exactly when the loaded document is this song: after the load
+  // above, or at once for a song already loaded. Another song still loaded
+  // while this one hydrates is not this song's content.
+  const hydrated =
+    loadedSong.kind === "library" && loadedSong.songId === songId;
   const ready = hydrated && content.kind === "ready";
 
   // A bar change on the song already loaded here (`/song/X/3` → `/song/X/9`
@@ -231,22 +242,6 @@ function placementKey(songId: string, bar: number | undefined): string {
  * (`PlayerDisplay`), and the collapsible `SectionPane`.
  */
 function SonataPlayerSurface(): ReactElement {
-  const { songId } = sonataPlayerPane.useParams();
-  const { setCurrentSong, clearCurrentSong } = useSonataApp();
-
-  // Mark this song open on mount (once per open — each open is a fresh
-  // `mode:"root"` instance, so this fires exactly once and bumps `songOpenEpoch`).
-  // Clear on unmount so library-state effects don't mis-attribute playback. Only
-  // the bare id is marked open: the title is library-owned (`songLibrary`), so
-  // there is nothing to seed here.
-  useEffect(() => {
-    setCurrentSong(songId);
-    return () => clearCurrentSong();
-    // Re-run only when the song id changes; `setCurrentSong`/`clearCurrentSong`
-    // are stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [songId]);
-
   return (
     // The player bar IS the pane header — one slot, title included. The
     // full-width Transport progress strip stays OUT of it, in the body top (the

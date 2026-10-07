@@ -5,14 +5,15 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { recordPlay } from "../../shared/endpoints";
 
 /**
- * Headless: records a play when the open song's playback first starts. Mounted
- * via `Sonata.Effect` (always inside the provider) so it can read context.
+ * Headless: records a play when the loaded song's playback first starts.
+ * Mounted via `Sonata.Effect` (inside the app's player scope).
  *
- * Counts once per *open* (keyed on `songOpenEpoch`): pause→resume within one open
- * does not re-count, but reopening the song — even the same one — re-arms it.
+ * Counts once per *load* (keyed on `songLoadEpoch`): pause→resume within one
+ * load does not re-count, nor does leaving the player and coming back to the
+ * song still loaded; loading it again — even the same one — re-arms it.
  */
 export function RecordPlayObserver() {
-  const { currentSongId, songOpenEpoch } = useSonataApp();
+  const { currentSongId, songLoadEpoch } = useSonataApp();
   const { isPlaying } = useSession();
   const prevPlaying = useRef(false);
   const recordedEpoch = useRef<number | null>(null);
@@ -20,11 +21,11 @@ export function RecordPlayObserver() {
   useEffect(() => {
     const started = !prevPlaying.current && isPlaying;
     prevPlaying.current = isPlaying;
-    if (started && currentSongId && recordedEpoch.current !== songOpenEpoch) {
-      recordedEpoch.current = songOpenEpoch;
+    if (started && currentSongId && recordedEpoch.current !== songLoadEpoch) {
+      recordedEpoch.current = songLoadEpoch;
       void fetchEndpoint(recordPlay, { id: currentSongId });
     }
-  }, [isPlaying, currentSongId, songOpenEpoch]);
+  }, [isPlaying, currentSongId, songLoadEpoch]);
 
   return null;
 }

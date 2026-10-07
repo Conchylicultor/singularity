@@ -23,12 +23,12 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const musicNoteIcon = symbol("music-note");
 
 /**
- * Compact now-playing bar at the bottom of the library. Shown only while a song
- * is loaded as the current transport song — i.e. after a card/row "Play" loaded
- * one in the background — and `null` otherwise. It surfaces the in-place
- * playback the library started without navigating: the song identity, a
- * play/pause toggle, and the shared transport scrubber for seeking. Clicking the
- * title opens the full player. The title is read from the canonical library
+ * Compact now-playing bar at the bottom of the library. Shown while a song is
+ * loaded in the app's player — a card/row "Play" loaded one in the background,
+ * or the user left the player with its song still loaded — and `null` before
+ * any. It surfaces the playback that outlives the player pane: the song
+ * identity, a play/pause toggle, and the shared transport scrubber for seeking.
+ * Clicking the title reopens the player on it, still playing where it was. The title is read from the canonical library
  * row (`useCurrentSong`), never a shell-context mirror.
  */
 export function NowPlayingBar() {

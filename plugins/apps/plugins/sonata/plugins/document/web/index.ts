@@ -18,6 +18,7 @@ export {
 export {
   useLoadDocument,
   useLibrarySong,
+  useLoadCount,
   useSongSetting,
   useWriteSongSetting,
   useFailSongSetting,

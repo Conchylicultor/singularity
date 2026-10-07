@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
-import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { usePlayerView } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { TEMPO_STEP } from "../shortcuts";
 
@@ -11,16 +11,16 @@ import { TEMPO_STEP } from "../shortcuts";
  * every shown player — see `PlayPauseShortcut` / `SeekHoldController`.)
  *
  * Surface-scoped via `useSurfaceShortcuts`, so ↑/↓ in one Sonata window drives
- * only its own transport, and registered only while a song is open
- * (`currentSongId != null`) so the arrows stay with the rest of the app on the
- * library.
+ * only its own transport, and registered only while the player is on screen
+ * (`shown`) so the arrows stay with the rest of the app on the library — even
+ * while a song plays there in the background.
  */
 export function TempoShortcuts() {
   const { nudgeTempo } = useSession();
-  const { currentSongId } = useSonataApp();
+  const { shown } = usePlayerView();
   const descriptors = useMemo(
     () =>
-      currentSongId == null
+      !shown
         ? []
         : [
             {
@@ -38,7 +38,7 @@ export function TempoShortcuts() {
               handler: () => nudgeTempo(-TEMPO_STEP),
             },
           ],
-    [currentSongId, nudgeTempo],
+    [shown, nudgeTempo],
   );
   useSurfaceShortcuts(descriptors);
   return null;

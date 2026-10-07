@@ -41,9 +41,9 @@ tie-break belongs in the player (focus-within its own root), not here.
     - `Sonata.Effect` "tempo-shortcuts" → `TempoShortcuts`
   - Uses:
     - `apps/sonata/player.SonataPlayer`
+    - `apps/sonata/player.usePlayerView`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSonataApp`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/shortcuts.getFocusedSurfaceId`

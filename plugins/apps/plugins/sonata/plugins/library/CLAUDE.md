@@ -25,9 +25,10 @@ them without a `shell → library` import that would cycle with the existing
   Carries the optimistic title in `input`; its `resolve` hook
   (`useSonataPlayerResolve`) hydrates every `Library.Source`'s raw for the song
   and loads it (`useLoadDocument({ kind: "library", songId }, rawMap)`) — so
-  direct nav / reload restores it — and gates on the song existing. The surface
-  marks the song open on mount (`setCurrentSong`, once per open since each open
-  is a fresh `mode:"root"` instance) and composes the player parts
+  direct nav / reload restores it — and gates on the song existing. A song
+  already loaded (playing in the background, reopened from the now-playing bar)
+  is NOT reloaded: a reload would rebuild its timeline and the session's content
+  reset would stop and rewind it. The surface composes the player parts
   (`PlayerTransport`, `PlayerDisplay`) with the `SectionPane`.
 
 `useSongLink` opens the player with `openPane(sonataPlayerPane, { songId },
@@ -168,6 +169,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Pane.Register` "sonata-player"
   - Uses:
     - `apps/sonata/document.SonataDocument`
+    - `apps/sonata/document.useLibrarySong`
     - `apps/sonata/document.useLoadDocument`
     - `apps/sonata/document.useSongDocument`
     - `apps/sonata/player.PlayerDisplay`

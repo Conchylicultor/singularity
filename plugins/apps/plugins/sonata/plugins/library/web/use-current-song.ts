@@ -6,11 +6,12 @@ import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songLibrary, type Song } from "../core";
 
 /**
- * The canonical row for the song currently open in the player: one point read
- * of the live `songLibrary` collection. `loading` while it loads, `error`
- * (with the row as last seen, as `stale`) when the read failed; `found: false`
- * when no song is open (determinate at once — nothing is read), or the open id
- * is not a song. THE read path for the open song's title — the shell context
+ * The canonical row for the song loaded in the app's player — the one the
+ * player pane shows, or that plays in the background from the library: one
+ * point read of the live `songLibrary` collection. `loading` while it loads,
+ * `error` (with the row as last seen, as `stale`) when the read failed;
+ * `found: false` when no song is loaded (determinate at once — nothing is
+ * read), or the loaded id is no longer a song (deleted). THE read path for the open song's title — the shell context
  * deliberately keeps no copy.
  *
  * Neither `loading` nor `error` is ever collapsed into "no song": callers

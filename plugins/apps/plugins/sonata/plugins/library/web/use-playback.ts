@@ -7,8 +7,8 @@ import { Library } from "./slots";
 /**
  * Background playback for the library: play a song in place (no navigation) by
  * hydrating every registered source's raw, loading it into the surface's player
- * (`useLoadDocument` + `setCurrentSong`), then arming `requestPlayOnLoad` so
- * playback starts as soon as the recomposed score is ready. Because the player
+ * (`useLoadDocument` — which makes it the app's `currentSongId`), then arming
+ * `requestPlayOnLoad` so playback starts as soon as the recomposed score is ready. Because the player
  * scope (and with it the audio engine) is mounted above the pane router, the
  * song keeps playing while the user stays on the gallery/table.
  *
@@ -23,7 +23,7 @@ export function useSonataPlayback(): {
   currentSongId: string | null;
   isPlaying: boolean;
 } {
-  const { currentSongId, setCurrentSong } = useSonataApp();
+  const { currentSongId } = useSonataApp();
   const { isPlaying, requestPlayOnLoad, play, stop } = useSession();
   const loadDocument = useLoadDocument();
   const sources = Library.Source.useContributions();
@@ -44,7 +44,6 @@ export function useSonataPlayback(): {
           }),
         );
         loadDocument({ kind: "library", songId: song.id }, rawMap);
-        setCurrentSong(song.id);
         requestPlayOnLoad();
       })();
     },
