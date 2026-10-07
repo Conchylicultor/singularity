@@ -443,6 +443,13 @@ interface FieldDefBase<TRow> {
   width?: string;
   /** Text alignment within the table column (header + cells). Default `"start"`. */
   align?: "start" | "end" | "center";
+  /**
+   * When a view runs out of room for its fixed-width columns (the tree's
+   * aligned columns), the order they give way to the row label in: lower
+   * drops first. A field without one drops after every numbered field,
+   * rightmost first.
+   */
+  dropOrder?: number;
   /** Opaque per-type config for custom columns; understood only by the field
    *  type's own code (e.g. enum options). Passed through untouched by the host. */
   config?: unknown;

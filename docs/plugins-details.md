@@ -33281,6 +33281,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/data-view.useRowFilter`
+              - `primitives/dom/element-size.useResizeObserver`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
@@ -33666,6 +33667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view`
               - `primitives/data-view/gallery`
               - `primitives/data-view/icons`
+              - `primitives/data-view/tree`
               - `primitives/expandable`
               - `primitives/graph-canvas`
               - `primitives/metrics/chart-kit`

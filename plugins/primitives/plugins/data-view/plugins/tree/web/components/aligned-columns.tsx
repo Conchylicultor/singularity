@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   FieldCell,
   DATA_VIEW_HEADER_OFFSET_VAR,
@@ -14,6 +14,9 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { fitAlignedColumns } from "../internal/aligned-fit";
 
 const arrowUpwardIcon = symbol("arrow-upward");
 const arrowDownwardIcon = symbol("arrow-downward");
@@ -28,14 +31,84 @@ const DEFAULT_COLUMN_WIDTH = "6rem";
  * A tree row is a flex line, not a grid, so only a definite length carries over;
  * a content-sized or flexible track has no meaning when each row sizes its own
  * cells, and falls back to the default — every row must agree on the width, or
- * the columns stop lining up, which is the whole point of the mode.
+ * the columns stop lining up, which is the whole point of the mode. A definite
+ * length must be px or rem: the fit (`useAlignedFit`) adds the widths up.
  */
 export function alignedColumnWidth(field: FieldDef<unknown>): string {
   const w = field.width?.trim();
   if (!w || /auto|minmax|content|\dfr\b/.test(w)) {
     return DEFAULT_COLUMN_WIDTH;
   }
+  if (!LENGTH.test(w)) {
+    throw new Error(
+      `Aligned column "${field.id}": width "${w}" must be a px or rem length`,
+    );
+  }
   return w;
+}
+
+const LENGTH = /^(\d*\.?\d+)(px|rem)$/;
+
+function alignedColumnPx(field: FieldDef<unknown>): number {
+  const [, n, unit] = LENGTH.exec(alignedColumnWidth(field))!;
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return parseFloat(n!) * (unit === "rem" ? rem : 1);
+}
+
+/** The narrowest the row label gets before an aligned column gives way. */
+const MIN_LABEL_PX = 160;
+
+/**
+ * The aligned columns that fit, given the label's measured width: attach
+ * `labelRef` to the header's label cell. Columns give way (`FieldDef.dropOrder`)
+ * so the label keeps `MIN_LABEL_PX` — measured on the tree itself, so a narrow
+ * pane in a wide window drops them as a narrow window does. Until measured
+ * (or with no header), every column shows.
+ */
+export function useAlignedFit<TRow>(fields: FieldDef<TRow>[]): {
+  shown: FieldDef<TRow>[];
+  labelRef: (el: HTMLElement | null) => void;
+} {
+  const [label, setLabel] = useState<HTMLElement | null>(null);
+  const [room, setRoom] = useState<{ budget: number; gap: number } | null>(
+    null,
+  );
+  const shown = useMemo(() => {
+    if (!room) return fields;
+    const cols = fields.map((field) => ({
+      field,
+      px: alignedColumnPx(field as FieldDef<unknown>),
+      dropOrder: field.dropOrder,
+    }));
+    return fitAlignedColumns(cols, { ...room, minLabel: MIN_LABEL_PX }).map(
+      (c) => c.field,
+    );
+  }, [fields, room]);
+  const shownRef = useLatestRef(shown);
+  useResizeObserver(
+    () => label,
+    () => {
+      const row = label?.parentElement;
+      // A row with no box is not laid out (hidden, or no layout engine): it
+      // says nothing about the room, so every column stays.
+      if (!label || !row || row.getBoundingClientRect().width === 0) return;
+      // The room is the label plus every column now shown — the same total
+      // whichever columns show, so the fit settles in one step.
+      const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+      const columns = shownRef.current.reduce(
+        (sum, f) => sum + alignedColumnPx(f as FieldDef<unknown>) + gap,
+        0,
+      );
+      const budget = label.getBoundingClientRect().width + columns;
+      setRoom((prev) =>
+        prev && prev.budget === budget && prev.gap === gap
+          ? prev
+          : { budget, gap },
+      );
+    },
+    { deps: [label] },
+  );
+  return { shown, labelRef: setLabel };
 }
 
 /** Aligned cells default to the end edge (dates, sizes, counts read right-aligned). */
@@ -183,9 +256,12 @@ export function AlignedHeader({
   fields,
   sortHeader,
   setSort,
+  labelRef,
 }: {
   primaryField: FieldDef<unknown> | undefined;
   fields: FieldDef<unknown>[];
+  /** The label cell, measured by `useAlignedFit`. */
+  labelRef?: (el: HTMLElement | null) => void;
   sortHeader: { active: readonly SortRule[]; sortable: ReadonlySet<string> };
   setSort: (fieldId: string) => void;
 }): ReactNode {
@@ -208,7 +284,7 @@ export function AlignedHeader({
       >
         {/* The chevron / icon slot's width, so the Name title sits on the label. */}
         <span className="size-5" aria-hidden />
-        <Fill>
+        <Fill ref={labelRef}>
           {primaryField ? (
             <HeaderCell
               field={primaryField}

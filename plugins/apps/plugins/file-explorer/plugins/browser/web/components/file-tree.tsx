@@ -40,7 +40,6 @@ import type { Listing, Listings } from "../internal/listings";
 import { useFolderPeek } from "../internal/folder-peek";
 import { FileBrowserSlots } from "../slots";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
-import { useViewportAtMost } from "../internal/use-viewport-at-most";
 
 const FILE_TREE_VIEW = defineDataView("file-explorer.tree");
 
@@ -182,6 +181,8 @@ const KIND_FIELD: FieldDef<EntryRow> = {
   label: "Kind",
   width: "140px",
   align: "start",
+  // The first column to give way to the names when the listing is narrow.
+  dropOrder: 1,
   value: (r) => entryKindLabel(r),
 };
 
@@ -196,7 +197,7 @@ function timeField(
   label: string,
   get: (r: EntryRow) => number | undefined,
   now: number,
-  visible?: boolean,
+  { visible, dropOrder }: { visible?: boolean; dropOrder?: number } = {},
 ): FieldDef<EntryRow> {
   return {
     id,
@@ -205,6 +206,7 @@ function timeField(
     width: "96px",
     align: "start",
     ...(visible === undefined ? {} : { visible }),
+    ...(dropOrder === undefined ? {} : { dropOrder }),
     value: (r) => get(r) ?? null,
     cell: (r) => {
       const ms = get(r);
@@ -342,17 +344,15 @@ export function FileTree({
     [listings, request],
   );
 
-  // At 900px and under the Kind and Modified columns give their room to the names.
-  const narrow = useViewportAtMost(900);
+  // When the listing is narrow Kind, then Modified, give their room to the
+  // names (`dropOrder`); Size stays longest.
   const fields = useMemo<FieldDef<EntryRow>[]>(
     () => [
       { id: "name", label: "Name", primary: true, value: (r) => r.name },
-      ...(narrow
-        ? []
-        : [
-            KIND_FIELD,
-            timeField("modified", "Modified", (r) => r.mtimeMs, now),
-          ]),
+      KIND_FIELD,
+      timeField("modified", "Modified", (r) => r.mtimeMs, now, {
+        dropOrder: 2,
+      }),
       {
         id: "size",
         label: "Size",
@@ -371,8 +371,12 @@ export function FileTree({
             formatSize(r.size)
           ),
       },
-      timeField("created", "Created", (r) => r.birthtimeMs, now, false),
-      timeField("accessed", "Accessed", (r) => r.atimeMs, now, false),
+      timeField("created", "Created", (r) => r.birthtimeMs, now, {
+        visible: false,
+      }),
+      timeField("accessed", "Accessed", (r) => r.atimeMs, now, {
+        visible: false,
+      }),
       {
         id: "category",
         label: "Category",
@@ -395,7 +399,7 @@ export function FileTree({
         value: (r) => r.symlinkTarget ?? null,
       },
     ],
-    [now, shows, listings, narrow, visit],
+    [now, shows, listings, visit],
   );
 
   const treeOptions = useMemo<TreeViewOptions<EntryRow>>(

@@ -62,7 +62,7 @@ import {
   type Projected,
 } from "../internal/project-rows";
 import { EditableTreeLabel } from "./editable-tree-label";
-import { AlignedCells, AlignedHeader } from "./aligned-columns";
+import { AlignedCells, AlignedHeader, useAlignedFit } from "./aligned-columns";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -349,6 +349,11 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     () => vis.filter((f) => f.id !== primaryField?.id && f !== leadingField),
     [vis, primaryField, leadingField],
   );
+  // Aligned columns give way to the label when the tree is narrow (measured on
+  // the header's label cell); chips wrap nothing and keep every field.
+  const alignedFit = useAlignedFit(secondaryFields);
+  const bodyFields =
+    options.columns === "aligned" ? alignedFit.shown : secondaryFields;
   const resolveOperatorSet = useResolveOperatorSet();
 
   // Project each raw row → a TreeItem-shaped row, keeping a map back to the
@@ -488,7 +493,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           node={rowProps.node}
           depth={rowProps.depth}
           primaryField={primaryField}
-          secondaryFields={secondaryFields}
+          secondaryFields={bodyFields}
           leadingField={leadingField}
           options={options}
           rowTone={rowTone}
@@ -500,7 +505,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       hierarchy,
       options,
       primaryField,
-      secondaryFields,
+      bodyFields,
       leadingField,
       rowTone,
       revealedActions,
@@ -661,9 +666,10 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const columnHeader = aligned ? (
     <AlignedHeader
       primaryField={primaryField}
-      fields={secondaryFields}
+      fields={bodyFields}
       sortHeader={props.sortHeader}
       setSort={props.setSort}
+      labelRef={alignedFit.labelRef}
     />
   ) : null;
 

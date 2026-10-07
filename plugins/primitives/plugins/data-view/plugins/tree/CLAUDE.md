@@ -206,8 +206,13 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   one right edge, under a sticky header row (`AlignedHeader`, pinned at the
   DataView's `--dv-header-offset`) of the field titles. Widths come from
   `FieldDef.width` when it is a definite length (a grid track like `auto` /
-  `1fr` / `minmax(…)` means nothing to a flex row and falls back to 6rem);
-  `FieldDef.align` defaults to `"end"`. A title whose field is in
+  `1fr` / `minmax(…)` means nothing to a flex row and falls back to 6rem; any
+  other definite length must be px or rem, or it throws);
+  `FieldDef.align` defaults to `"end"`. **Columns give way to the label**:
+  `useAlignedFit` measures the header's label cell and drops columns (in
+  `FieldDef.dropOrder`, lower first; unnumbered last, rightmost first) until
+  the label keeps 160px — measured on the tree, so a narrow pane in a wide
+  window behaves like a narrow window (never a viewport media query). A title whose field is in
   `sortHeader.sortable` is a button calling the view's `setSort` (the table
   headers' path), with the active direction's arrow. The header mirrors
   `TreeRowChrome`'s depth-0 geometry (indent + chevron slot) rather than
@@ -286,6 +291,7 @@ CLAUDE.md ("Row tone").
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/data-view.useRowFilter`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`

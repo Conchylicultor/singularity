@@ -70,6 +70,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `primitives/data-view`
     - `primitives/data-view/gallery`
     - `primitives/data-view/icons`
+    - `primitives/data-view/tree`
     - `primitives/expandable`
     - `primitives/graph-canvas`
     - `primitives/metrics/chart-kit`
