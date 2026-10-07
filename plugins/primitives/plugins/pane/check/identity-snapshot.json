@@ -61,6 +61,18 @@
       "parent": null
     },
     {
+      "paneId": "automation-detail",
+      "segment": "automation/:automationId",
+      "appIndex": false,
+      "parent": "automations"
+    },
+    {
+      "paneId": "automations",
+      "segment": "automations",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "backup",
       "segment": "backup",
       "appIndex": false,

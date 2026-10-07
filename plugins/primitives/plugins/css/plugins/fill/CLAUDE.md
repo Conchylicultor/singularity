@@ -209,6 +209,7 @@ primitive exists to name.
     - `shell/health-report`
     - `shell/notifications`
     - `tasks/attempt-view`
+    - `tasks/automations`
     - `tasks/task-draft-form`
     - `tasks/task-events`
     - `tasks/task-header`

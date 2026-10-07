@@ -118,6 +118,7 @@ reads what is on screen rather than a per-app flag.
     - `conversations/agents`
     - `conversations/all-conversations`
     - `stats`
+    - `tasks/automations`
     - `tasks/task-detail`
     - `ui/sidebar-framing`
 - Core:

@@ -93,6 +93,7 @@ Consumers read only the generic aggregate:
     - `page/annotations/todo/task-link`
     - `page/prompt/link`
     - `tasks`
+    - `tasks/automations`
     - `tasks/reports-investigation`
     - `tasks/task-dependencies`
     - `toolchain`

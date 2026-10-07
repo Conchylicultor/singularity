@@ -4,6 +4,6 @@ import { depsUpdatesConfig } from "../shared/config";
 
 export default {
   description:
-    "Registers the dependency-upgrade schedule (the deps.detect-outdated cron, weekly by default) for Settings → Config.",
+    "Registers the dependency-upgrade schedule (the Dependency upgrades automation's cron, weekly by default) for Settings → Config.",
   contributions: [ConfigV2.WebRegister({ descriptor: depsUpdatesConfig })],
 } satisfies PluginDefinition;

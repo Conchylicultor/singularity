@@ -109,6 +109,7 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
     - `reports`
     - `runs`
     - `shell/notifications`
+    - `tasks/automations`
     - `tasks/tasks-core`
 - Server:
   - Exports (values):

@@ -19,8 +19,8 @@ every move proven before it lands.
   doctor (`framework/cli/plugins/doctor`).
 - **The upgrade loop lives in `infra/deps`.** `infra/deps/plugins/mise` is the
   `mise` updater (mise self-update, ls-remote, side-by-side install, `mise lock`)
-  and `infra/deps/plugins/updates` the generic gated runner and the daily
-  `deps.detect-outdated` job that files the auto-started task (Dependencies
+  and `infra/deps/plugins/updates` the generic gated runner and the
+  Dependency upgrades automation that files the auto-started task (Dependencies
   category). `cli/` keeps `./singularity toolchain upgrade [--tool a,b]` as an
   alias of `./singularity deps upgrade mise`; its receipt is
   `deps-upgrade-mise.json` in the worktree data dir. Refuses the main checkout.
@@ -51,7 +51,7 @@ every move proven before it lands.
 
 ## Plugin reference
 
-- Description: Registers the legacy Toolchain task category, so upgrade tasks filed before the toolchain loop moved onto infra/deps' updater runner still render under it. New upgrade tasks are filed by deps.detect-outdated under Dependencies.
+- Description: Registers the legacy Toolchain task category, so upgrade tasks filed before the toolchain loop moved onto infra/deps' updater runner still render under it. New upgrade tasks are filed by the Dependency upgrades automation under Dependencies.
 - Server:
   - Contributes: `taskCategory` "toolchain"
   - Uses: `tasks/task-category.TaskCategory`

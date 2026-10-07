@@ -19,6 +19,7 @@
     - `setAutoStart`
     - `useActiveDependentCount`
     - `useTask`
+    - `useTasksById`
 - Server:
   - Uses:
     - `conversations.launchTaskNow`
@@ -137,9 +138,9 @@
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-dependents`
     - `conversations/conversation-view/tasks-panel`
-    - `infra/deps/updates`
     - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
+    - `tasks/automations`
     - `tasks/task-description`
     - `tasks/task-detail`
     - `tasks/task-graph`
@@ -150,6 +151,7 @@
   - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as one live resource plus a direct read for the server-side exit-drop guard.
   - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
+  - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — schedule in words, next run, on/off, open task), the detail pane (Run now through Background activity, the Behavior settings — enabled, push when checks pass, model — the included sources, and the History of the tasks it filed), the `origin` Automation field in every task DataView, and the per-automation settings registered for Settings → Config. Automations registry: defineAutomation declares something that files a task and launches its agent on its own, and owns its job (automation.<id>) — settings resolution (automationsConfig over declared defaults: enabled, autoPush, model, excluded sources), the one-open-task dedupe, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
   - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
   - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.

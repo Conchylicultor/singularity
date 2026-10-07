@@ -1,0 +1,5 @@
+// @hash 00110ca76dc7
+{
+  // How each automation behaves. An automation with no entry here runs on its own defaults.
+  "settings": []
+}

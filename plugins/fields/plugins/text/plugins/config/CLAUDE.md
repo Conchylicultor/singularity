@@ -58,6 +58,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `infra/events`
     - `plugin-meta/composition`
     - `plugin-meta/plugin-health`
+    - `tasks/automations`
     - `tasks/task-source-url`
     - `tasks/tasks-core`
 

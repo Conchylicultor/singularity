@@ -227,6 +227,8 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "stats.chart", pluginId: "stats", configName: "chart" },
   { slotId: "stats.stats.actions", pluginId: "stats", configName: "stats.actions" },
   { slotId: "tasks.attempt-view.attempt.actions", pluginId: "tasks.attempt-view", configName: "attempt.actions" },
+  { slotId: "tasks.automations.automation-detail.actions", pluginId: "tasks.automations", configName: "automation-detail.actions" },
+  { slotId: "tasks.automations.automations.actions", pluginId: "tasks.automations", configName: "automations.actions" },
   { slotId: "tasks.launch-options.option", pluginId: "tasks.launch-options", configName: "option" },
   { slotId: "tasks.task-deps-tree.actions", pluginId: "tasks.task-deps-tree", configName: "actions" },
   { slotId: "tasks.task-deps-tree.sources", pluginId: "tasks.task-deps-tree", configName: "sources" },

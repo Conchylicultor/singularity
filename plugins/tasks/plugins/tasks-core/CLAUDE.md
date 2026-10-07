@@ -518,6 +518,7 @@ serves them.
     - `tasks`
     - `tasks/attempt-work`
     - `tasks/auto-start`
+    - `tasks/automations`
     - `tasks/reports-investigation`
     - `tasks/task-category`
     - `tasks/task-effort`
@@ -536,6 +537,7 @@ serves them.
     - `tasks/task-category` (table `tasks_ext_category`)
     - `tasks/task-effort` (table `tasks_ext_effort`)
     - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
+    - `tasks/automations` (table `tasks_ext_origin`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
     - `tasks/task-title` (table `tasks_ext_short_title`)

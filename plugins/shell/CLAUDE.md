@@ -8,7 +8,7 @@
 - Load-bearing: yes
 - Web:
   - Slots:
-    - `Shell.Sidebar` ← `conversations.agents`, `conversations.all-conversations`, `conversations.conversations-view`, `stats`, `tasks.task-detail`
+    - `Shell.Sidebar` ← `conversations.agents`, `conversations.all-conversations`, `conversations.conversations-view`, `stats`, `tasks.automations`, `tasks.task-detail`
     - `Shell.Toolbar`
   - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports (values): `Shell`
@@ -19,6 +19,7 @@
     - `conversations/all-conversations`
     - `conversations/conversations-view`
     - `stats`
+    - `tasks/automations`
     - `tasks/task-detail`
 - Sub-plugins:
   - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout editing) folded behind the bar's gear popover; the global-action-bar plugin renders both. ActionBar.Activity (background work as a ring around the collapsed bar's health dot) and ActionBar.Glance (compact chips beside it) keep that work visible while the floating bar is collapsed.

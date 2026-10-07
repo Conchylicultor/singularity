@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   mapResource,
   useResource,
@@ -53,6 +54,27 @@ export function useTask(
   return mapResource(result, (tasks) =>
     id ? (tasks.find((t) => t.id === id) ?? null) : null,
   );
+}
+
+/**
+ * Several tasks out of the live task list, by id — for a surface that lists
+ * rows of its own keyed by task (an automation's history) and joins each to
+ * its task. The ready arm maps every id the list holds; an id it does not hold
+ * is absent from the map (a deleted task), which is a settled answer. Loading
+ * and a failed read stay their own states, as in `useTask`.
+ */
+export function useTasksById(
+  ids: readonly string[],
+): ResourceResult<ReadonlyMap<string, TaskListItem>> {
+  const result = useResource(tasksResource);
+  return useMemo(() => {
+    const wanted = new Set(ids);
+    return mapResource(
+      result,
+      (tasks) =>
+        new Map(tasks.filter((t) => wanted.has(t.id)).map((t) => [t.id, t])),
+    );
+  }, [result, ids]);
 }
 
 // One TaskGraph per task-list snapshot, shared by every caller in a render pass.

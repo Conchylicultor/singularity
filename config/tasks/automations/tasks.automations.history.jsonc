@@ -1,0 +1,14 @@
+// @hash 6ec84829688d
+// Newest filing first: the history reads as what the automation did lately.
+{
+  "views": [
+    {
+      "id": "recent",
+      "name": "Recent",
+      "view": { "type": "list", "sort": [{ "fieldId": "filedAt", "direction": "desc" }] }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

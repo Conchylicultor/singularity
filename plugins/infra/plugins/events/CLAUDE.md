@@ -182,6 +182,7 @@ insert and the ring's inline prune reach it through the change feed. The
     - `page/inline-date`
     - `page/links`
     - `tasks/auto-start`
+    - `tasks/automations`
     - `tasks/task-title`
     - `tasks/tasks-core`
 

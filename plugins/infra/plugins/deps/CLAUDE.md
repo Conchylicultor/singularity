@@ -184,11 +184,15 @@ module eval).
   deps upgrade` with no updater moves every one behind one baseline and one
   candidate run (receipt `deps-upgrade.json`); naming one moves only it
   (`deps-upgrade-<updater>.json`, `--only` allowed) — how a batch regression is
-  narrowed down. The `UpdaterDeclare` registry and the scheduled
-  `deps.detect-outdated` job (cron in the `depsUpdatesConfig` config, weekly by
-  default, empty disables): ONE auto-started task covering every outdated
-  updater, filed only while no upgrade task (author `deps.*`) is open,
-  Dependencies category.
+  narrowed down. The `UpdaterDeclare` registry and the **Dependency upgrades
+  automation** (`deps-upgrades`, a `tasks/automations` `defineAutomation`; its
+  job `automation.deps-upgrades` runs on the cron in the `depsUpdatesConfig`
+  config, weekly by default, empty disables): ONE auto-started task covering
+  every outdated INCLUDED updater, filed only while no task it filed is open,
+  Dependencies category. Enabled, Push when checks pass, the model and which
+  updaters take part are the automation's settings (Agent manager →
+  Automations); with Push off the task's text withholds the push
+  authorization.
 - `mise` — the toolchain as the first updater (`toolchain upgrade` is its
   alias; `toolchain:resolved` stays in `plugins/toolchain`).
 - `python` — the `python` kind (`pythonEnv`, `runPython`, `PythonEntryError`,
@@ -371,10 +375,10 @@ torch.
 - Sub-plugins:
   - **`build`** — The build installer kind of infra/deps: build({ inputs, tool, output, run }) (its deps barrel) declares something built from this checkout's own source — identity = sha256 of every file the git ls-files input globs match, the tool's version output and the target platform/arch — built by run(ctx) straight into env/<output>, which is what isIntact checks; builtFile(ready) is its path. admission: { none } skips host admission for a build too small to be worth a grant.
   - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus derive.version — fetched with curl into env/<name>.part (progress in the install log), sha256-checked and renamed, then optionally post-processed in place by derive.run; downloadedFile(ready, name) is the path of one of them.
-  - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the scheduled deps.detect-outdated job includes it in the batched upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
+  - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the Dependency upgrades automation includes it in the batched upgrade task and `./singularity deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
   - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
   - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current.
   - **`sweep`** — The daily deps.sweep job: removes installed optional-dependency identities that no checkout of this repo declares and that sat unused for 14 days (sweepUnusedDeps over the git worktree list).
-  - **`updates`** — Registers the dependency-upgrade schedule (the deps.detect-outdated cron, weekly by default) for Settings → Config. The updater registry (UpdaterDeclare) and the scheduled deps.detect-outdated job (weekly by default, a cron in config): when any updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and pushes on an `upgraded` verdict.
+  - **`updates`** — Registers the dependency-upgrade schedule (the Dependency upgrades automation's cron, weekly by default) for Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on a config cron, weekly by default): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./singularity deps upgrade` (all updaters behind one baseline and one candidate run) and, with Push when checks pass on, pushes on an `upgraded` verdict.
 
 <!-- AUTOGENERATED:END -->

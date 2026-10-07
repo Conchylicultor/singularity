@@ -12,31 +12,48 @@ import { ModelChoiceLabel } from "./model-choice-label";
 
 const OFF = "none";
 
-export interface ModelSelectProps {
-  /** The selected model choice, or `null` for the Off option. */
-  value: ModelChoice | null;
-  onChange: (model: ModelChoice | null) => void;
-  /** Label for the Off option. Defaults to "Off". */
-  offLabel?: string;
+interface ModelSelectCommon {
   ariaLabel?: string;
   disabled?: boolean;
   className?: string;
 }
 
 /**
- * Controlled model picker shared by every "auto-launch with" surface
- * (task auto-start, agent). Lists exactly the choices the launch dropdown
- * shows (`useVisibleModels`) plus an Off option, so all model pickers stay in
- * lockstep with the registry.
+ * Two shapes, told apart by `allowOff`: a picker that offers Off (the default —
+ * "auto-launch with", where no model means do not launch) hands back `null`
+ * for it, and one that does not (`allowOff: false` — a setting that always
+ * names a model) can only hand back a model, so its caller never handles an
+ * Off it cannot be given.
  */
-export function ModelSelect({
-  value,
-  onChange,
-  offLabel = "Off",
-  ariaLabel,
-  disabled,
-  className,
-}: ModelSelectProps) {
+export type ModelSelectProps = ModelSelectCommon &
+  (
+    | {
+        allowOff?: true;
+        /** The selected model choice, or `null` for the Off option. */
+        value: ModelChoice | null;
+        onChange: (model: ModelChoice | null) => void;
+        /** Label for the Off option. Defaults to "Off". */
+        offLabel?: string;
+      }
+    | {
+        allowOff: false;
+        value: ModelChoice;
+        onChange: (model: ModelChoice) => void;
+        offLabel?: never;
+      }
+  );
+
+/**
+ * Controlled model picker shared by every "auto-launch with" surface
+ * (task auto-start, agent, an automation's model). Lists exactly the choices
+ * the launch dropdown shows (`useVisibleModels`) plus, unless `allowOff:
+ * false`, an Off option, so all model pickers stay in lockstep with the
+ * registry.
+ */
+export function ModelSelect(props: ModelSelectProps) {
+  const { value, ariaLabel, disabled, className } = props;
+  const offLabel = props.offLabel ?? "Off";
+  const withOff = props.allowOff !== false;
   const visibleModels = useVisibleModels();
   const selected = value ?? OFF;
 
@@ -44,7 +61,7 @@ export function ModelSelect({
   // (unmounted) option list. Label every visible choice AND the selected one —
   // a stored hidden pinned version still shows its label, derived from its id.
   const items: Record<string, string> = {
-    [OFF]: offLabel,
+    ...(withOff ? { [OFF]: offLabel } : {}),
     ...Object.fromEntries(visibleModels.map((m) => [m, choiceLabel(m)])),
     ...(value ? { [value]: choiceLabel(value) } : {}),
   };
@@ -55,7 +72,11 @@ export function ModelSelect({
       value={selected}
       onValueChange={(v: string | null) => {
         if (!v) return;
-        onChange(v === OFF ? null : ModelChoiceSchema.parse(v));
+        if (props.allowOff === false) {
+          props.onChange(ModelChoiceSchema.parse(v));
+          return;
+        }
+        props.onChange(v === OFF ? null : ModelChoiceSchema.parse(v));
       }}
       disabled={disabled}
     >
@@ -63,7 +84,7 @@ export function ModelSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={OFF}>{offLabel}</SelectItem>
+        {withOff ? <SelectItem value={OFF}>{offLabel}</SelectItem> : null}
         {visibleModels.map((m) => (
           <SelectItem key={m} value={m}>
             <ModelChoiceLabel choice={m} />

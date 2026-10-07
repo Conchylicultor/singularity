@@ -710,7 +710,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `infra/attachments`
     - `infra/audio-analysis`
     - `infra/deps/sweep`
-    - `infra/deps/updates`
     - `infra/events`
     - `infra/events-test`
     - `infra/jobs/background-arm`
@@ -724,6 +723,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `shell/notifications`
     - `stats/cost`
     - `tasks/auto-start`
+    - `tasks/automations`
     - `tasks/task-title`
     - `upstream`
 - Test helpers:

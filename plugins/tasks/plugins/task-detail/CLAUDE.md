@@ -42,6 +42,7 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/markdown-extensions`
     - `conversations/conversation-view/tasks-panel`
+    - `tasks/automations`
     - `tasks/task-attachments`
     - `tasks/task-dependencies`
     - `tasks/task-deps-tree`

@@ -593,6 +593,7 @@ to reconcile them; they never needed reconciling.
     - `stats/responsiveness`
     - `stats/tasks`
     - `tasks/attempt-view`
+    - `tasks/automations`
     - `tasks/task-attachments`
     - `tasks/task-dependencies`
     - `tasks/task-description`

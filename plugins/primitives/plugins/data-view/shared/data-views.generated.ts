@@ -57,6 +57,8 @@ export const dataViews: DataViewEntry[] = [
   { id: "studio.release.history", pluginId: "apps.studio.compositions.release" },
   { id: "task-deps-tree", pluginId: "tasks.task-deps-tree" },
   { id: "tasks-list", pluginId: "tasks.task-list" },
+  { id: "tasks.automations", pluginId: "tasks.automations" },
+  { id: "tasks.automations.history", pluginId: "tasks.automations" },
   { id: "theme-engine.themes", pluginId: "ui.theme-engine.theme-gallery" },
   { id: "theme-engine.themes.quick", pluginId: "ui.theme-engine.theme-gallery" },
 ];

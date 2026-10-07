@@ -231,6 +231,7 @@ Never hand-edit the generated SQL to interleave the DML: the push-time hand-edit
     - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `tasks/auto-start`
+    - `tasks/automations`
     - `tasks/task-category`
     - `tasks/task-effort`
     - `tasks/task-preprompt`

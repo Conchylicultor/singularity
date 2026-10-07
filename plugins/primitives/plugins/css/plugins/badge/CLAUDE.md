@@ -218,6 +218,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `tasks/attempt-status`
     - `tasks/attempt-view`
     - `tasks/auto-start`
+    - `tasks/automations`
     - `tasks/task-deps-tree`
     - `tasks/task-status`
     - `tasks/task-track`

@@ -155,6 +155,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `shell/notifications`
     - `stats/commits`
     - `tasks/attempt-view`
+    - `tasks/automations`
     - `tasks/task-events`
     - `tasks/task-graph`
     - `tasks/task-status`

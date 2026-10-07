@@ -1087,6 +1087,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `tasks/attempt-view`
     - `tasks/attempt-work`
     - `tasks/auto-start`
+    - `tasks/automations`
     - `tasks/task-category`
     - `tasks/task-dependencies`
     - `tasks/task-deps-tree`

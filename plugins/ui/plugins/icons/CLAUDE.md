@@ -518,6 +518,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `shell/health-report`
     - `shell/toast`
     - `tasks/attempt-view`
+    - `tasks/automations`
     - `tasks/task-deps-tree`
     - `tasks/task-draft-form`
     - `tasks/task-events`

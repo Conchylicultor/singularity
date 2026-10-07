@@ -67,6 +67,7 @@ dense-list spelling for a trailing time column, where "ago" is implied.
     - `primitives/sync-status`
     - `runs`
     - `shell/notifications`
+    - `tasks/automations`
     - `tasks/task-header`
     - `tasks/task-list`
 - Web:

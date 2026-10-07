@@ -1,4 +1,4 @@
-// @hash e9b384fe9f8b
+// @hash 9ece5c55fa67
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "tasks.automations:origin",
     "tasks.task-category:category",
     "tasks.task-track:track"
   ]

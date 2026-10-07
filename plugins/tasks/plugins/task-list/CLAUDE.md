@@ -9,7 +9,7 @@
   - Slots:
     - `Tasks.TaskActions` ← `tasks.auto-start`, `tasks.task-list`
     - `Tasks.ListActions`
-    - `Tasks.Fields` ← `tasks.task-category`, `tasks.task-track`
+    - `Tasks.Fields` ← `tasks.automations`, `tasks.task-category`, `tasks.task-track`
   - Contributes:
     - `Tasks.TaskActions` "child-count" → `ChildCountAction`
     - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
@@ -43,6 +43,7 @@
 - Cross-plugin:
   - Imported by:
     - `tasks/auto-start`
+    - `tasks/automations`
     - `tasks/task-category`
     - `tasks/task-deps-tree`
     - `tasks/task-detail`

@@ -1,0 +1,16 @@
+// @hash 6ec84829688d
+// Every automation, by name. The set is declared in code and small, so one
+// plain list is the whole page; Off ones stay listed (a person turns them on
+// from here).
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "view": { "type": "list", "sort": [{ "fieldId": "label", "direction": "asc" }] }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

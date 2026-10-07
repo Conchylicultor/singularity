@@ -675,6 +675,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `primitives/data-view/view-core`
     - `reorder/edit-mode`
     - `shell/global-action-bar`
+    - `tasks/automations`
     - `ui/theme-engine/quick-theme`
     - `ui/theme-toggle`
 

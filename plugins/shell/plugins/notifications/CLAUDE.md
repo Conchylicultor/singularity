@@ -130,6 +130,7 @@
     - `reports/mutation-errors`
     - `screenshot`
     - `screenshot/draw-on-app`
+    - `tasks/automations`
     - `tasks/task-draft-form`
     - `tasks/task-effort`
     - `tasks/task-preprompt`

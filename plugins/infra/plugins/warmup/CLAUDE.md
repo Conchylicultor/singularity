@@ -31,6 +31,7 @@
     - `stats/cost`
     - `tasks`
     - `tasks/auto-start`
+    - `tasks/automations`
     - `tasks/task-title`
 - Sub-plugins:
   - **`background-arm`** — Warm-ups in the Background activity catalog: registers the `warmup` background kind — every declared warm-up under After boot, its scope from the warm-up's (host → main only, worktree → every worktree), and its one run in this process (duration, error, or skipped off main) — and pushes the catalog as each warm-up starts and settles. Corpus indexes appear through the warm-up they declare.

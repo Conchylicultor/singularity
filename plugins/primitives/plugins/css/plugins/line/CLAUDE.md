@@ -113,6 +113,7 @@ attribute type carries.
     - `shell/health-report`
     - `shell/notifications`
     - `tasks/attempt-view`
+    - `tasks/automations`
     - `tasks/task-draft-form`
     - `tasks/task-events`
     - `ui/tab-bar/chip`

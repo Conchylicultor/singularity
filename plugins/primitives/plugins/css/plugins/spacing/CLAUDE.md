@@ -413,6 +413,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `stats/responsiveness`
     - `stats/tasks`
     - `tasks/attempt-view`
+    - `tasks/automations`
     - `tasks/launch-options`
     - `tasks/task-attachments`
     - `tasks/task-dependencies`

@@ -294,6 +294,7 @@ export const ICON_MANIFEST: {
     "undo",
     "unfold-less",
     "unfold-more",
+    "upgrade",
     "upload",
     "upload-file",
     "vertical-align-bottom",

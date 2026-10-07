@@ -301,6 +301,7 @@ export const LUCIDE_MAP = {
   undo: "undo-2",
   "unfold-less": "chevrons-down-up",
   "unfold-more": "chevrons-up-down",
+  upgrade: "circle-arrow-up",
   upload: "upload",
   "upload-file": "file-up",
   "vertical-align-bottom": "arrow-down-to-line",

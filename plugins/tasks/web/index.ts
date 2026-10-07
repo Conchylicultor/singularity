@@ -4,6 +4,7 @@ export {
   patchTask,
   setAutoStart,
   useTask,
+  useTasksById,
   useActiveDependentCount,
 } from "./client";
 export type { TaskPatch, AutoStartModel } from "./client";

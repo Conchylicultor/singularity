@@ -5325,6 +5325,10 @@
       "name": "@singularity/plugin-tasks-auto-start-launch-option",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/automations": {
+      "name": "@singularity/plugin-tasks-automations",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/launch-options": {
       "name": "@singularity/plugin-tasks-launch-options",
       "version": "0.0.1",
@@ -8721,6 +8725,8 @@
     "@singularity/plugin-tasks-auto-start": ["@singularity/plugin-tasks-auto-start@workspace:plugins/tasks/plugins/auto-start"],
 
     "@singularity/plugin-tasks-auto-start-launch-option": ["@singularity/plugin-tasks-auto-start-launch-option@workspace:plugins/tasks/plugins/auto-start/plugins/launch-option"],
+
+    "@singularity/plugin-tasks-automations": ["@singularity/plugin-tasks-automations@workspace:plugins/tasks/plugins/automations"],
 
     "@singularity/plugin-tasks-launch-options": ["@singularity/plugin-tasks-launch-options@workspace:plugins/tasks/plugins/launch-options"],
 

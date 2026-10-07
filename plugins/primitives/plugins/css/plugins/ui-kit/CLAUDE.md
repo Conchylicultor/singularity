@@ -827,6 +827,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `stats/cost`
     - `tasks/attempt-status`
     - `tasks/attempt-view`
+    - `tasks/automations`
     - `tasks/task-dependencies`
     - `tasks/task-deps-tree`
     - `tasks/task-description`

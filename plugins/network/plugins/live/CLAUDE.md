@@ -1018,6 +1018,7 @@ for a new reader of the two page resources.
     - `tasks/attempt-work`
     - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
+    - `tasks/automations`
     - `tasks/task-description`
     - `tasks/task-effort`
     - `tasks/task-events`
