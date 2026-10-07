@@ -133,6 +133,25 @@ Config-backed like every DataView:
 `null` while the reads are landing, and `null` when nothing is running.
 "0 agents working" is a claim that would reverse itself a moment later.
 
+## The agents stat toggles the card
+
+A `TranscriptStats.Item` (`agents-stat.tsx`) in the strip at the foot of the
+transcript: **`3 agents · 165k total`**, shown when at least one agent was
+launched. The total is output tokens: the transcript's own plus every agent's
+`usage` total, which the subagents plugin reads incrementally.
+
+Clicking it toggles this card's `showAll`: every agent and run, finished or not,
+unfolded, and the card stays up with nothing running ("6 agents · all
+finished"). Clicking again restores the band. The stat and the card sit in
+slots with no common ancestor, so they share one per-conversation `useDraft`
+value (`band-view.ts`: `showAll` + `open`).
+
+- **In a sub-agent's pane it counts that sub-agent's own children**
+  (`rowsUnder` its agent id, via `useTranscriptSubject()`) and toggles nothing:
+  the card is the conversation's.
+- **Scrolled back into history**, it counts only agents started by the row on
+  screen. Each agent's total is still as of now.
+
 ## Design
 
 [`research/2026-09-22-conversations-running-subagents-band-v2.md`](../../../../../../research/2026-09-22-conversations-running-subagents-band-v2.md)
@@ -141,11 +160,16 @@ Config-backed like every DataView:
 
 ## Plugin reference
 
-- Description: The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent — what it was asked to do, what it is, and what it last did. A finished agent lingers a few seconds showing 'done m:ss'; the card is not there at all when nothing is running.
+- Description: The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent — what it was asked to do, what it is, what it last did and how many tokens it has produced. A finished agent lingers a few seconds showing 'done m:ss'; the card is not there at all when nothing is running. The transcript's stats strip carries an agents reading (how many agents, and the output tokens the conversation and they produced in all) that toggles the card to list every agent, finished or not
 - Web:
-  - Contributes: `Conversation.AbovePromptInput` → `RunningAgentsBand`
+  - Contributes:
+    - `Conversation.AbovePromptInput` → `RunningAgentsBand`
+    - `TranscriptStats.Item` "agents" → `AgentsStat`
   - Uses:
     - `conversations/conversation-view.Conversation`
+    - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
+    - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+    - `conversations/conversation-view/jsonl-viewer.useTranscriptSubject`
     - `conversations/conversation-view/jsonl-viewer/background-shells.shellOutputPane`
     - `conversations/conversation-view/jsonl-viewer/background-shells.shellStateDisplay`
     - `conversations/conversation-view/jsonl-viewer/background-shells.useConversationShells`
@@ -153,6 +177,9 @@ Config-backed like every DataView:
     - `conversations/conversation-view/jsonl-viewer/subagents.SubagentDuration`
     - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.useCollapsible`
     - `primitives/collapsible.UseCollapsibleReturn`
@@ -168,6 +195,7 @@ Config-backed like every DataView:
     - `primitives/data-view.defineDataView`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.useOpenPane`
+    - `primitives/persistent-draft.useDraft`
     - `primitives/relative-time.ElapsedTime`
     - `ui/icons.Icon`
 

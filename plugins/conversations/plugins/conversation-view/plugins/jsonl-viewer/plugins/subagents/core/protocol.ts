@@ -2,6 +2,7 @@ import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   JsonlEventSchema,
+  TokenUsageSchema,
   type JsonlEvent,
 } from "@plugins/conversations/plugins/transcript-watcher/core";
 
@@ -95,6 +96,12 @@ const SubagentBaseSchema = z.object({
    * `null` = no such line yet.
    */
   newestTurnLineAt: z.string().nullable(),
+  /**
+   * Every token its transcript has recorded so far, summed over its messages
+   * (`foldUsageLine`). All zeros before it has written a message — it has
+   * spent nothing yet, which is a fact, not a stand-in.
+   */
+  usage: TokenUsageSchema,
   /**
    * Set when a `Workflow` run spawned this agent (found under
    * `subagents/workflows/wf_<runId>/`). On BOTH arms: an agent whose meta is

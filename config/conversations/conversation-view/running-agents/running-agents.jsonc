@@ -9,7 +9,7 @@
       "view": {
         "type": "tree",
         "sort": [],
-        "visibleFields": ["description", "type", "started"]
+        "visibleFields": ["description", "type", "tokens", "started"]
       }
     }
   ]

@@ -6,7 +6,9 @@ import type { BackgroundShell } from "@plugins/conversations/plugins/conversatio
 import {
   DONE_LINGER_MS,
   agentRow,
+  allAgentRows,
   nextLingerExpiry,
+  rowsUnder,
   summarizeAgents,
   visibleAgentRows,
   workflowRow,
@@ -48,6 +50,7 @@ function entry(over: Partial<SubagentEntry> & { id: string }): SubagentEntry {
       lastActivityAt: at(30).toISOString(),
       turnEnded: false,
       newestTurnLineAt: null,
+      usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
       lastStep: { kind: "tool", toolName: "Read", preview: "auth.ts" },
     },
     state: { kind: "running" },
@@ -75,6 +78,7 @@ describe("agentRow", () => {
           lastActivityAt: at(30).toISOString(),
           turnEnded: false,
           newestTurnLineAt: null,
+          usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
           lastStep: null,
         },
         agentToolEvent: call({ model: "opus", run_in_background: true }),
@@ -105,6 +109,7 @@ describe("agentRow", () => {
           lastActivityAt: at(1).toISOString(),
           turnEnded: false,
           newestTurnLineAt: null,
+          usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
           lastStep: null,
         },
         agentToolEvent: call({ run_in_background: true }),
@@ -126,6 +131,7 @@ describe("agentRow", () => {
             lastActivityAt: at(1).toISOString(),
             turnEnded: false,
             newestTurnLineAt: null,
+            usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
             lastStep: null,
           },
           agentToolEvent: call({ run_in_background: value }),
@@ -148,6 +154,7 @@ describe("agentRow", () => {
           lastActivityAt: at(5).toISOString(),
           turnEnded: false,
           newestTurnLineAt: null,
+          usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
           lastStep: { kind: "tool-result" },
         },
         lastStep: { kind: "tool-result" },
@@ -179,6 +186,7 @@ describe("agentRow", () => {
           lastActivityAt: at(1).toISOString(),
           turnEnded: false,
           newestTurnLineAt: null,
+          usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
           lastStep: null,
         },
       }),
@@ -202,6 +210,7 @@ describe("visibleAgentRows", () => {
       lastActivityAt: at(10).toISOString(),
       turnEnded: false,
       newestTurnLineAt: null,
+      usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
       lastStep: null,
     },
   });
@@ -262,6 +271,7 @@ describe("visibleAgentRows", () => {
         lastActivityAt: at(30).toISOString(),
         turnEnded: false,
         newestTurnLineAt: null,
+        usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
         lastStep: null,
       },
       ...over,
@@ -302,6 +312,30 @@ describe("visibleAgentRows", () => {
   });
 });
 
+describe("visibleAgentRows with showAll", () => {
+  test("keeps every agent, finished long ago or not, but not a stopped shell", () => {
+    const now = at(3000).getTime();
+    const rows = visibleAgentRows(
+      {
+        entries: [
+          entry({ id: "old", state: { kind: "finished" }, endedAt: at(10) }),
+        ],
+        workflowRuns: [],
+        shells: [],
+      },
+      now,
+      { showAll: true },
+    );
+    expect(rows.map((row) => row.key)).toEqual(["old"]);
+    expect(
+      visible(
+        [entry({ id: "old", state: { kind: "finished" }, endedAt: at(10) })],
+        now,
+      ),
+    ).toEqual([]);
+  });
+});
+
 describe("summarizeAgents", () => {
   test("counts only what is still working, and clocks the longest of those", () => {
     const now = at(300).getTime();
@@ -315,6 +349,7 @@ describe("summarizeAgents", () => {
     );
     expect(summarizeAgents(rows)).toEqual({
       running: 2,
+      agents: 3,
       shellsRunning: 0,
       runsGoing: 0,
       longestSince: at(60),
@@ -329,6 +364,7 @@ describe("summarizeAgents", () => {
     );
     expect(summarizeAgents(rows)).toEqual({
       running: 0,
+      agents: 1,
       shellsRunning: 0,
       runsGoing: 0,
       longestSince: null,
@@ -376,6 +412,7 @@ describe("workflow runs", () => {
         lastActivityAt: at(30).toISOString(),
         turnEnded: false,
         newestTurnLineAt: null,
+        usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
         lastStep: null,
         workflow: { runId: "wf_abc", reported },
       },
@@ -460,6 +497,7 @@ describe("workflow runs", () => {
     ]);
     expect(summarizeAgents(rows)).toEqual({
       running: 2,
+      agents: 2,
       shellsRunning: 0,
       runsGoing: 1,
       longestSince: at(2),
@@ -467,6 +505,7 @@ describe("workflow runs", () => {
     // A run alone, between phases, is not "1 agent working" — but it is going.
     expect(summarizeAgents(visible([], now, [run()]))).toEqual({
       running: 0,
+      agents: 0,
       shellsRunning: 0,
       runsGoing: 1,
       longestSince: null,
@@ -557,9 +596,57 @@ describe("background shells", () => {
     );
     expect(summarizeAgents(rows)).toEqual({
       running: 1,
+      agents: 1,
       shellsRunning: 2,
       runsGoing: 0,
       longestSince: at(5),
     });
+  });
+});
+
+describe("allAgentRows / rowsUnder", () => {
+  const child = (id: string, parent: string | undefined) =>
+    entry({
+      id,
+      row: {
+        kind: "described",
+        agentId: id,
+        agentType: "fork",
+        description: id,
+        ...(parent === undefined ? {} : { parentAgentId: parent }),
+        startedAt: at(0).toISOString(),
+        lastActivityAt: at(1).toISOString(),
+        turnEnded: true,
+        newestTurnLineAt: null,
+        usage: { input: 0, output: 7, cacheRead: 0, cacheCreation: 0 },
+        lastStep: null,
+      },
+      state: { kind: "finished" },
+    });
+  const entries = [
+    child("lead", undefined),
+    child("mate", "lead"),
+    child("grandchild", "mate"),
+    child("other", undefined),
+  ];
+
+  test("lists every agent, finished or not, with its own token total", () => {
+    const rows = allAgentRows({ entries, workflowRuns: [] });
+    expect(rows.map((row) => row.key)).toEqual([
+      "lead",
+      "mate",
+      "grandchild",
+      "other",
+    ]);
+    expect(rows[0]).toMatchObject({ usage: { output: 7 } });
+  });
+
+  test("keeps only what descends from a root, at any depth", () => {
+    const rows = allAgentRows({ entries, workflowRuns: [] });
+    expect(rowsUnder(rows, "lead").map((row) => row.key)).toEqual([
+      "mate",
+      "grandchild",
+    ]);
+    expect(rowsUnder(rows, null)).toHaveLength(4);
   });
 });

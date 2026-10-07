@@ -25,6 +25,7 @@ tab's own — the prototype canvas, keyed by its pane instance.
     - `conversations/conversation-view/open-app`
     - `conversations/conversation-view/prompt-input`
     - `conversations/conversation-view/push-and-exit`
+    - `conversations/conversation-view/running-agents`
     - `page/editor`
     - `primitives/css/color-picker`
     - `primitives/detail-sections`

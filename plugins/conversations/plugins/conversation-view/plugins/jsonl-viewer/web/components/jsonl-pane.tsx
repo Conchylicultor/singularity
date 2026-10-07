@@ -21,6 +21,9 @@ import {
   PendingTurnCard,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { JsonlViewer } from "../slots";
+import type { TranscriptSubject } from "./transcript-subject-context";
+
+const CONVERSATION_SUBJECT: TranscriptSubject = { kind: "conversation" };
 
 function WorkingIndicator({ startAt }: { startAt: number }) {
   return (
@@ -139,6 +142,7 @@ function JsonlPaneInner({
     <TranscriptView
       events={events}
       conversationId={conversation.id}
+      subject={CONVERSATION_SUBJECT}
       // The surface tab is appended by the view — name only the subject here.
       persistKey={`conversation-scroll:${conversation.id}`}
       // The user sending a turn, NOT `isWorking`. A rising `isWorking` also

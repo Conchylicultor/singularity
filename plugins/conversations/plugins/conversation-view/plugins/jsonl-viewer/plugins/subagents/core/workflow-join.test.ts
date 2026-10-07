@@ -57,6 +57,7 @@ const agent = (
   lastStep: null,
   turnEnded: over.turnEnded ?? false,
   newestTurnLineAt: null,
+  usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
   workflow: { runId, reported: over.reported ?? false },
 });
 
@@ -71,6 +72,7 @@ const ordinary: SubagentActivityRow = {
   lastStep: null,
   turnEnded: false,
   newestTurnLineAt: null,
+  usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
 };
 
 describe("workflowRunIdOf", () => {

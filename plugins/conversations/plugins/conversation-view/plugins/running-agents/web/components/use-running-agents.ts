@@ -43,7 +43,10 @@ const NO_SHELLS: readonly BackgroundShell[] = [];
  * expiry — a presentational timer, not a poll. An expiry already behind the
  * real clock (the rows changed under a stale reading of it) fires at once.
  */
-export function useRunningAgents(conversationId: string): RunningAgentsState {
+export function useRunningAgents(
+  conversationId: string,
+  showAll: boolean,
+): RunningAgentsState {
   const subagents = useConversationSubagents(conversationId);
   const shellRead = useConversationShells(conversationId);
   const { entries, workflowRuns } =
@@ -53,8 +56,8 @@ export function useRunningAgents(conversationId: string): RunningAgentsState {
   // The instant the linger is measured against.
   const [now, setNow] = useState(() => Date.now());
   const rows = useMemo(
-    () => visibleAgentRows({ entries, workflowRuns, shells }, now),
-    [entries, workflowRuns, shells, now],
+    () => visibleAgentRows({ entries, workflowRuns, shells }, now, { showAll }),
+    [entries, workflowRuns, shells, now, showAll],
   );
 
   useEffect(() => {

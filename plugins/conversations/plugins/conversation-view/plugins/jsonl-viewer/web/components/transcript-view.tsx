@@ -22,6 +22,10 @@ import { ImageGallery } from "@plugins/primitives/plugins/overlay/plugins/image-
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
 import { ConversationIdProvider } from "./conversation-id-context";
+import {
+  TranscriptSubjectProvider,
+  type TranscriptSubject,
+} from "./transcript-subject-context";
 import { TranscriptEventsProvider } from "./transcript-events-context";
 import { paneScrollScope } from "./pane-scroll-scope";
 import { SectionExpandProvider } from "./section-sticky-context";
@@ -125,6 +129,13 @@ export interface TranscriptViewProps {
    */
   conversationId: string;
   /**
+   * Whose transcript `events` is — the conversation's own, or one of its
+   * sub-agents'. Required, because the conversation id cannot tell them apart
+   * (a sub-agent's rows carry its parent's), and an overlay that reads the
+   * conversation's own data must know which agent it is annotating.
+   */
+  subject: TranscriptSubject;
+  /**
    * What is on screen — `conversation-scroll:<id>`, `subagent-scroll:<id>`.
    *
    * Name only the subject: the view appends the surface tab itself, so two
@@ -165,7 +176,7 @@ function TranscriptViewInner({
   overlay,
   dimmed,
   children,
-}: Omit<TranscriptViewProps, "conversationId">) {
+}: Omit<TranscriptViewProps, "conversationId" | "subject">) {
   const surfaceTabId = useSurfaceTabId();
 
   // Plugin-contributed hide predicates, via the shared owner — every surface
@@ -270,6 +281,7 @@ function TranscriptViewInner({
  */
 export function TranscriptView({
   conversationId,
+  subject,
   ...props
 }: TranscriptViewProps) {
   return (
@@ -281,9 +293,11 @@ export function TranscriptView({
     // the view has nothing left to remember.
     <paneScrollScope.Provider>
       <ConversationIdProvider id={conversationId}>
-        <TranscriptEventsProvider events={props.events}>
-          <TranscriptViewInner {...props} />
-        </TranscriptEventsProvider>
+        <TranscriptSubjectProvider subject={subject}>
+          <TranscriptEventsProvider events={props.events}>
+            <TranscriptViewInner {...props} />
+          </TranscriptEventsProvider>
+        </TranscriptSubjectProvider>
       </ConversationIdProvider>
     </paneScrollScope.Provider>
   );

@@ -162,6 +162,7 @@ back.
     - `EventFilterContribution`
     - `OverlayContribution`
     - `SectionExpand`
+    - `TranscriptSubject`
     - `TranscriptViewProps`
   - Exports (values):
     - `EventLine`
@@ -177,6 +178,7 @@ back.
     - `useRowMarkdown`
     - `useSectionExpand`
     - `useTranscriptEvents`
+    - `useTranscriptSubject`
     - `useVisibleEvents`
 - Server:
   - Contributes: `resource.declare` "jsonl-events"
@@ -230,6 +232,7 @@ back.
     - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
     - `conversations/conversation-view/jsonl-viewer/user-image`
     - `conversations/conversation-view/jsonl-viewer/user-text`
+    - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/selection-actions`
     - `conversations/conversation-view/terminal-pane`
     - `conversations/question-relay`

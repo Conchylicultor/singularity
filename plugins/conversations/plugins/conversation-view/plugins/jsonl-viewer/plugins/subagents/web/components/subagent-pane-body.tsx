@@ -490,6 +490,7 @@ function SubagentTranscript({
     <TranscriptView
       events={transcript.data.events}
       conversationId={conversationId}
+      subject={{ kind: "subagent", agentId: transcript.data.agentId }}
       // The surface tab is appended by the view — name only the subject here.
       persistKey={`subagent-scroll:${subagent.by}:${subagent.key}`}
       empty={

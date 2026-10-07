@@ -25,6 +25,7 @@ const row = (
     lastActivityAt: "2026-09-20T10:01:00.000Z",
     turnEnded: false,
     newestTurnLineAt: null,
+    usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
     lastStep: null,
     ...over,
   }) as SubagentActivityRow;
@@ -117,6 +118,7 @@ describe("describedSubagent", () => {
         lastActivityAt: "2026-09-20T10:01:00.000Z",
         turnEnded: false,
         newestTurnLineAt: null,
+        usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
         lastStep: null,
       },
     ];
@@ -184,6 +186,7 @@ describe("agentCallForSubagent", () => {
       lastActivityAt: "2026-09-20T10:01:00.000Z",
       turnEnded: false,
       newestTurnLineAt: null,
+      usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
       lastStep: null,
     };
     expect(agentCallForSubagent(broken, calls)).toBeUndefined();

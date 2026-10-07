@@ -6,7 +6,7 @@
 
 - Description: The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it.
 - Web:
-  - Slots: `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`, `conversations.conversation-view.jsonl-viewer.transcript-stats.usage`
+  - Slots: `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`, `conversations.conversation-view.jsonl-viewer.transcript-stats.usage`, `conversations.conversation-view.running-agents`
   - Contributes: `JsonlViewer.Overlay` "transcript-stats" → `TranscriptStatsStrip`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -16,6 +16,7 @@
     - `primitives/css/badge.Badge`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/ui-kit.cn`
     - `primitives/outline/scroll-spy.useActiveInView`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
@@ -31,6 +32,7 @@
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
+    - `conversations/conversation-view/running-agents`
 - Sub-plugins:
   - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering.
   - **`usage`** — Context and output token usage as a transcript stat: the current context window and the output produced, folded from each message's own usage record up to the reading position.

@@ -473,6 +473,9 @@ downstream can widen the set, because nothing downstream resolves one.
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
     - `conversations/transcript-watcher.JsonlEvent`
     - `conversations/transcript-watcher.JsonlEventSchema`
+    - `conversations/transcript-watcher.TokenUsage`
+    - `conversations/transcript-watcher.tokenUsageOf`
+    - `conversations/transcript-watcher.TokenUsageSchema`
     - `network/live.liveValue`
   - Exports (types):
     - `DescribedSubagent`
@@ -486,6 +489,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `SubagentRunStateInput`
     - `SubagentTranscript`
     - `UndescribedSubagent`
+    - `UsageFold`
     - `WorkflowRunEntry`
     - `WorkflowRunsInput`
   - Exports (values):
@@ -497,6 +501,8 @@ downstream can widen the set, because nothing downstream resolves one.
     - `classifyLastStep`
     - `describedSubagent`
     - `DescribedSubagentSchema`
+    - `emptyUsageFold`
+    - `foldUsageLine`
     - `formatLastStep`
     - `lastStepOfLines`
     - `LastStepSchema`

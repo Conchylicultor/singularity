@@ -10,6 +10,7 @@ import type {
   WorkflowRunEntry,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
 import type { SubagentEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
+import type { TokenUsage } from "@plugins/conversations/plugins/transcript-watcher/core";
 import type {
   BackgroundShell,
   BackgroundShellState,
@@ -82,6 +83,8 @@ export interface AgentBandRow extends RowBase {
   background: boolean;
   /** `null` = it has written nothing classifiable yet, not "it did nothing". */
   lastStep: LastStep | null;
+  /** Every token its own transcript has recorded so far. */
+  usage: TokenUsage;
   /** The row this was read from, for the surfaces that take the whole union. */
   row: SubagentActivityRow;
 }
@@ -155,6 +158,7 @@ export function agentRow(entry: SubagentEntry): AgentBandRow {
         ? described.requestShape === "background"
         : input?.run_in_background === true,
     lastStep: entry.lastStep,
+    usage: entry.row.usage,
     state: entry.state,
     startedAt: entry.startedAt,
     endedAt: entry.endedAt,
@@ -255,6 +259,45 @@ function bandRows({
 }
 
 /**
+ * Every sub-agent of the conversation and the workflow runs they sit under,
+ * running or not — the whole list, where the band shows only what is working.
+ * No shells: a background shell is not an agent.
+ */
+export function allAgentRows({
+  entries,
+  workflowRuns,
+}: Omit<BandSource, "shells">): RunningAgentRow[] {
+  return bandRows({ entries, workflowRuns, shells: [] });
+}
+
+/**
+ * `rows` narrowed to what descends from `rootKey` (the row itself excluded),
+ * or all of them when `rootKey` is `null`. The parent chain is walked to the
+ * top, so a grandchild is kept even if the rows arrive out of order; the walk
+ * stops at a key already visited, so a cycle the harness should never write
+ * cannot hang it.
+ */
+export function rowsUnder(
+  rows: readonly RunningAgentRow[],
+  rootKey: string | null,
+): RunningAgentRow[] {
+  if (rootKey === null) return [...rows];
+  const byKey = new Map(rows.map((row) => [row.key, row]));
+  return rows.filter((row) => {
+    const seen = new Set<string>();
+    for (
+      let parent = row.parentKey;
+      parent !== null && !seen.has(parent);
+      parent = byKey.get(parent)?.parentKey ?? null
+    ) {
+      if (parent === rootKey) return true;
+      seen.add(parent);
+    }
+    return false;
+  });
+}
+
+/**
  * Is this row still on screen at `now`? While it runs, and for
  * {@link DONE_LINGER_MS} after its recorded end.
  *
@@ -292,16 +335,24 @@ function isShown(row: RunningAgentRow, now: number): boolean {
  * A sub-agent that ended WITHOUT reporting lingers the same way. It stopped —
  * killed, or died with the session — and the honest reading of a stopped
  * sub-agent is that it is no longer working, whichever way it stopped.
+ *
+ * With `showAll` (the user asked for the whole list, from the transcript's
+ * agents stat) every agent and workflow run is kept, finished or not.
  */
 export function visibleAgentRows(
   source: BandSource,
   now: number,
+  options: { showAll?: boolean } = {},
 ): RunningAgentRow[] {
   const rows = bandRows(source);
   const byKey = new Map(rows.map((row) => [row.key, row]));
   const kept = new Set<string>();
   for (const row of rows) {
-    if (!isShown(row, now)) continue;
+    // `showAll` keeps every agent and run, finished or not; a shell is not an
+    // agent, so it still comes and goes with its own run.
+    const shown =
+      isShown(row, now) || (options.showAll === true && row.kind !== "shell");
+    if (!shown) continue;
     // Walk up until the chain leaves the rows or meets one already kept. The
     // `kept` check also ends a cycle, which the harness should never write but
     // which must not hang the band if it did.
@@ -345,6 +396,8 @@ export function nextLingerExpiry(
 export interface RunningAgentsSummary {
   /** How many sub-agents are still working. Lingering rows are not counted — they stopped. */
   running: number;
+  /** How many sub-agent rows there are at all, working or not. */
+  agents: number;
   /**
    * How many background shells are still running. Counted apart from
    * `running`: a shell is not an agent, and the header names each.
@@ -377,6 +430,7 @@ export function summarizeAgents(
   const shells = going("shell");
   return {
     running: agents.length,
+    agents: rows.filter((row) => row.kind === "agent").length,
     shellsRunning: shells.length,
     runsGoing: going("workflow").length,
     longestSince: [...agents, ...shells].reduce<Date | null>(

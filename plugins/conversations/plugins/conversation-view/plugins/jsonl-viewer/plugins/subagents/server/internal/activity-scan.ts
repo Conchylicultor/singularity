@@ -10,6 +10,7 @@ import {
   type SubagentEntry,
 } from "./discovery";
 import { readTail } from "./tail-read";
+import { readUsageSince, type UsageScan } from "./usage-read";
 import { evictWorkflowJournals, readWorkflowReports } from "./workflow-journal";
 
 /** What we remember about one sub-agent's transcript between scans. */
@@ -20,11 +21,16 @@ interface TranscriptState {
   turnEnded: boolean;
   newestTurnLineAt: string | null;
   lastActivityAt: string;
+  usage: UsageScan;
 }
+
+/** A sub-agent with no transcript yet has spent nothing. */
+const NO_USAGE = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
 
 /**
  * Per-scope incremental scan state — the reason a change costs ONE bounded tail
- * read rather than a re-parse of every sub-agent transcript.
+ * read (plus the bytes appended since, for the token total) rather than a
+ * re-parse of every sub-agent transcript.
  *
  * Each entry holds the `(mtime, size)` the row was built from; a scan re-stats
  * (cheap, a handful of files) and only re-reads the tail of the files whose stat
@@ -97,6 +103,9 @@ export async function scanActivityIn(
       // No transcript yet: no turn has been taken, let alone ended.
       turnEnded: transcript?.turnEnded ?? false,
       newestTurnLineAt: transcript?.newestTurnLineAt ?? null,
+      // A copy: the scan's totals are this cache's, and a row once handed out
+      // must not change under whoever holds it.
+      usage: { ...(transcript?.usage.fold.totals ?? NO_USAGE) },
       ...(entry.workflowRunId === undefined
         ? {}
         : {
@@ -167,6 +176,9 @@ async function refreshTranscriptState(
     size: st.size,
     ...(await readTail(entry.transcriptPath, st.size)),
     lastActivityAt: new Date(st.mtimeMs).toISOString(),
+    // The total is the one reading that needs every line, so it alone reads
+    // incrementally from where the last scan stopped (`readUsageSince`).
+    usage: await readUsageSince(entry.transcriptPath, st.size, cached?.usage),
   };
   state.set(entry.agentId, fresh);
   return fresh;

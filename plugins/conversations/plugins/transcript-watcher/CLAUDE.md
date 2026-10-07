@@ -144,6 +144,7 @@ memo degrades to a full chain re-read on every push.
     - `JsonlEventSchema`
     - `PREPROMPT_TAG`
     - `stripRelayBoilerplate`
+    - `tokenUsageOf`
     - `TokenUsageSchema`
     - `unwrapPastedContent`
     - `unwrapRelayEnvelopes`

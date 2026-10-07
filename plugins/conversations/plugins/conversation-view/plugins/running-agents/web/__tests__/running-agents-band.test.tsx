@@ -171,6 +171,7 @@ function entry(over: {
       lastActivityAt: ago(over.endedAgo ?? 0).toISOString(),
       turnEnded: false,
       newestTurnLineAt: null,
+      usage: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
       lastStep,
     },
     state: over.state,
@@ -246,6 +247,9 @@ const summaryLine = () =>
   screen.getByRole("button", { name: "Running agents" });
 
 beforeEach(() => {
+  // The card's view (open, show all) is a per-conversation localStorage value;
+  // one test folding the card must not fold it for the next.
+  localStorage.clear();
   shells = { kind: "known", shells: [] };
   outputs = {};
   // Date only: the band's linger timer and the clocks' own ticks stay real, so

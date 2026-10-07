@@ -11,6 +11,7 @@ export {
   wrapPreprompt,
   extractPreprompt,
 } from "./protocol";
+export { tokenUsageOf } from "./token-usage";
 export { isInterruptContent } from "./interrupt";
 export { unwrapPastedContent } from "./pasted-content";
 export { userPromptText } from "./user-prompt";

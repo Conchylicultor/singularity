@@ -11454,6 +11454,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventFilterContribution`
               - `OverlayContribution`
               - `SectionExpand`
+              - `TranscriptSubject`
               - `TranscriptViewProps`
             - Exports (values):
               - `EventLine`
@@ -11469,6 +11470,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useRowMarkdown`
               - `useSectionExpand`
               - `useTranscriptEvents`
+              - `useTranscriptSubject`
               - `useVisibleEvents`
           - Server:
             - Contributes: `resource.declare` "jsonl-events"
@@ -11522,6 +11524,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/selection-actions`
               - `conversations/conversation-view/terminal-pane`
               - `conversations/question-relay`
@@ -12179,6 +12182,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
                   - `conversations/transcript-watcher.JsonlEvent`
                   - `conversations/transcript-watcher.JsonlEventSchema`
+                  - `conversations/transcript-watcher.TokenUsage`
+                  - `conversations/transcript-watcher.tokenUsageOf`
+                  - `conversations/transcript-watcher.TokenUsageSchema`
                   - `network/live.liveValue`
                 - Exports (types):
                   - `DescribedSubagent`
@@ -12192,6 +12198,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `SubagentRunStateInput`
                   - `SubagentTranscript`
                   - `UndescribedSubagent`
+                  - `UsageFold`
                   - `WorkflowRunEntry`
                   - `WorkflowRunsInput`
                 - Exports (values):
@@ -12203,6 +12210,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `classifyLastStep`
                   - `describedSubagent`
                   - `DescribedSubagentSchema`
+                  - `emptyUsageFold`
+                  - `foldUsageLine`
                   - `formatLastStep`
                   - `lastStepOfLines`
                   - `LastStepSchema`
@@ -12691,7 +12700,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/syntax-highlight.languageForPath`
             - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it.
               - Web:
-                - Slots: `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`, `conversations.conversation-view.jsonl-viewer.transcript-stats.usage`
+                - Slots: `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`, `conversations.conversation-view.jsonl-viewer.transcript-stats.usage`, `conversations.conversation-view.running-agents`
                 - Contributes: `JsonlViewer.Overlay` "transcript-stats" → `TranscriptStatsStrip`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -12701,6 +12710,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/badge.Badge`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/spacing.Stack`
+                  - `primitives/css/ui-kit.cn`
                   - `primitives/outline/scroll-spy.useActiveInView`
                   - `primitives/slot-render.defineRenderSlot`
                   - `ui/icons.Icon`
@@ -12716,6 +12726,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
                   - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
+                  - `conversations/conversation-view/running-agents`
               - Plugins:
                 - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering.
                   - Web:
@@ -13164,11 +13175,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `rewindConversationEndpoint`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-        - **`running-agents`** — The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent — what it was asked to do, what it is, and what it last did. A finished agent lingers a few seconds showing 'done m:ss'; the card is not there at all when nothing is running.
+        - **`running-agents`** — The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent — what it was asked to do, what it is, what it last did and how many tokens it has produced. A finished agent lingers a few seconds showing 'done m:ss'; the card is not there at all when nothing is running. The transcript's stats strip carries an agents reading (how many agents, and the output tokens the conversation and they produced in all) that toggles the card to list every agent, finished or not
           - Web:
-            - Contributes: `Conversation.AbovePromptInput` → `RunningAgentsBand`
+            - Contributes:
+              - `Conversation.AbovePromptInput` → `RunningAgentsBand`
+              - `TranscriptStats.Item` "agents" → `AgentsStat`
             - Uses:
               - `conversations/conversation-view.Conversation`
+              - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
+              - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+              - `conversations/conversation-view/jsonl-viewer.useTranscriptSubject`
               - `conversations/conversation-view/jsonl-viewer/background-shells.shellOutputPane`
               - `conversations/conversation-view/jsonl-viewer/background-shells.shellStateDisplay`
               - `conversations/conversation-view/jsonl-viewer/background-shells.useConversationShells`
@@ -13176,6 +13192,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/subagents.SubagentDuration`
               - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.useCollapsible`
               - `primitives/collapsible.UseCollapsibleReturn`
@@ -13191,6 +13210,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/pane.useOpenPane`
+              - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.ElapsedTime`
               - `ui/icons.Icon`
         - **`selection-actions`** — Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and each quick answer (Go, Explain — a setting of its own) is a split chip like the prompt templates: its name quotes the selection and puts the answer in the prompt to edit, ➤ sends both right away. Registers the selection quick-answer list (Go, Explain, …) for Settings → Config.
@@ -14128,6 +14148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `JsonlEventSchema`
           - `PREPROMPT_TAG`
           - `stripRelayBoilerplate`
+          - `tokenUsageOf`
           - `TokenUsageSchema`
           - `unwrapPastedContent`
           - `unwrapRelayEnvelopes`
@@ -19872,6 +19893,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/rewind`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/selection-actions`
               - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
@@ -31955,6 +31977,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/launch-prompts`
               - `conversations/conversation-view/new-child-task`
               - `conversations/conversation-view/op-status`
@@ -36353,6 +36376,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/open-app`
           - `conversations/conversation-view/prompt-input`
           - `conversations/conversation-view/push-and-exit`
+          - `conversations/conversation-view/running-agents`
           - `page/editor`
           - `primitives/css/color-picker`
           - `primitives/detail-sections`

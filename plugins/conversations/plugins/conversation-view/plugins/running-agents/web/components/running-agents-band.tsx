@@ -30,6 +30,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { agentReportPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/web";
+import { formatTokenCount } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { SubagentDuration } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import { formatLastStep } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
 import {
@@ -45,6 +46,7 @@ import {
   type ShellBandRow,
 } from "../internal/agent-rows";
 import { useRunningAgents } from "./use-running-agents";
+import { useAgentsBandView } from "./band-view";
 import "./running-agents-band.css";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -68,6 +70,8 @@ interface BandChrome {
   collapsible: UseCollapsibleReturn;
   /** The conversation whose shells' output the shell rows read. */
   conversationId: string;
+  /** The card lists every agent (the transcript's agents stat asked for it). */
+  showAll: boolean;
 }
 
 const BandChromeContext = createContext<BandChrome | null>(null);
@@ -242,6 +246,23 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
     value: lastStepText,
   },
   {
+    id: "tokens",
+    label: "Output tokens",
+    type: "number",
+    align: "end",
+    // A workflow run writes no transcript of its own, and a shell spends none.
+    value: (row) => (row.kind === "agent" ? row.usage.output : null),
+    cell: (row) =>
+      row.kind === "agent" ? (
+        <span
+          className="font-mono tabular-nums text-muted-foreground"
+          title={`${row.usage.output.toLocaleString()} output tokens`}
+        >
+          {formatTokenCount(row.usage.output)} out
+        </span>
+      ) : null,
+  },
+  {
     id: "started",
     label: "Started",
     type: "date",
@@ -261,7 +282,7 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
  * settles.
  */
 function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
-  const { summary, collapsible } = useBandChrome();
+  const { summary, collapsible, showAll } = useBandChrome();
   const { open, triggerProps, contentId } = collapsible;
   const working =
     summary.running > 0 || summary.shellsRunning > 0 || summary.runsGoing > 0;
@@ -313,7 +334,11 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
                   )}
                 </>
               ) : (
-                <span className="text-muted-foreground">All finished</span>
+                <span className="text-muted-foreground">
+                  {showAll
+                    ? `${summary.agents} ${summary.agents === 1 ? "agent" : "agents"} · all finished`
+                    : "All finished"}
+                </span>
               )}
             </Fill>
             <CollapsibleChevron
@@ -394,9 +419,14 @@ export function RunningAgentsBand({
 }: {
   conversation: ConversationRecord;
 }) {
-  const state = useRunningAgents(conversation.id);
+  // Shared with the transcript's agents stat, which toggles `showAll`.
+  const { view, setOpen } = useAgentsBandView(conversation.id);
+  const state = useRunningAgents(conversation.id, view.showAll);
   const openPane = useOpenPane();
-  const collapsible = useCollapsible({ defaultOpen: true });
+  const collapsible = useCollapsible({
+    open: view.open,
+    onOpenChange: setOpen,
+  });
 
   const rows = state.kind === "known" ? state.rows : NO_ROWS;
   const chrome = useMemo<BandChrome>(
@@ -404,8 +434,9 @@ export function RunningAgentsBand({
       summary: summarizeAgents(rows),
       collapsible,
       conversationId: conversation.id,
+      showAll: view.showAll,
     }),
-    [rows, collapsible, conversation.id],
+    [rows, collapsible, conversation.id, view.showAll],
   );
   // Each sub-agent sits under the one that spawned it. Siblings keep launch
   // order: the rows arrive in start order, and their ranks are minted from that

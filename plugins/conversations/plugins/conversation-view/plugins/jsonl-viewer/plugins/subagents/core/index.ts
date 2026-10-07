@@ -38,3 +38,5 @@ export {
   workflowRunIdOf,
   workflowRunsOf,
 } from "./workflow-join";
+export type { UsageFold } from "./usage";
+export { emptyUsageFold, foldUsageLine } from "./usage";

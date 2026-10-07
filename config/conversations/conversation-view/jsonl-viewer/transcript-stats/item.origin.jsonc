@@ -1,4 +1,4 @@
-// @hash 3d7c484c9e91
+// @hash e031439e1306
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget:token-budget",
-    "conversations.conversation-view.jsonl-viewer.transcript-stats.usage:usage"
+    "conversations.conversation-view.jsonl-viewer.transcript-stats.usage:usage",
+    "conversations.conversation-view.running-agents:agents"
   ]
 }

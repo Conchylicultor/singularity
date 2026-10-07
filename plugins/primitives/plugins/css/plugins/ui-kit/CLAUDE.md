@@ -613,6 +613,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/new-child-task`
     - `conversations/conversation-view/op-status`

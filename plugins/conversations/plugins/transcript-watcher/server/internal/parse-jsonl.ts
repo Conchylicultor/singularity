@@ -7,8 +7,9 @@ import {
   stripRelayBoilerplate,
   unwrapPastedContent,
   userPromptText,
+  tokenUsageOf,
 } from "../../core";
-import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
+import type { JsonlEvent, ToolCallResult } from "../../core";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
@@ -181,28 +182,6 @@ interface RawBlock {
     media_type?: string;
     data?: string;
   };
-}
-
-function extractUsage(raw: unknown): TokenUsage | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const u = raw as Record<string, unknown>;
-  const num = (v: unknown) =>
-    typeof v === "number" && Number.isFinite(v) ? v : 0;
-  const usage: TokenUsage = {
-    input: num(u.input_tokens),
-    output: num(u.output_tokens),
-    cacheRead: num(u.cache_read_input_tokens),
-    cacheCreation: num(u.cache_creation_input_tokens),
-  };
-  if (
-    usage.input === 0 &&
-    usage.output === 0 &&
-    usage.cacheRead === 0 &&
-    usage.cacheCreation === 0
-  ) {
-    return undefined;
-  }
-  return usage;
 }
 
 function extractText(content: unknown): string {
@@ -492,7 +471,7 @@ async function buildEvents(
     if (type === "assistant" && msg?.role === "assistant") {
       if (!Array.isArray(msg.content)) continue;
       const msgId = msg.id;
-      const lineUsage = extractUsage((msg as { usage?: unknown }).usage);
+      const lineUsage = tokenUsageOf((msg as { usage?: unknown }).usage);
       const shouldAttributeUsage =
         !!lineUsage && !!msgId && !usageAttributedMsgIds.has(msgId);
       let usageAnchor:
