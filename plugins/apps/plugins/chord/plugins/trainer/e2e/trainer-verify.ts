@@ -144,11 +144,10 @@ async function moveSelectionTo(want: Selection): Promise<boolean> {
   }
   await post("/api/chord/curriculum/blanks", { blanks: want.blanks });
   await post("/api/chord/curriculum/extras", { extras: want.extras });
-  const settled = await waitFor(
-    readCurriculum,
-    (s) => sameSelection(s, want),
-    { timeoutMs: 20_000, intervalMs: 250 },
-  );
+  const settled = await waitFor(readCurriculum, (s) => sameSelection(s, want), {
+    timeoutMs: 20_000,
+    intervalMs: 250,
+  });
   return settled.ok;
 }
 
@@ -180,9 +179,13 @@ async function readListed() {
     async () => {
       const res = await agentFetch("/api/resources/chord.catalog");
       if (!res.ok) {
-        throw new Error(`GET /api/resources/chord.catalog → HTTP ${res.status}`);
+        throw new Error(
+          `GET /api/resources/chord.catalog → HTTP ${res.status}`,
+        );
       }
-      const { value } = z.object({ value: z.unknown() }).parse(await res.json());
+      const { value } = z
+        .object({ value: z.unknown() })
+        .parse(await res.json());
       return CatalogStateSchema.parse(value);
     },
     (state) => state.kind === "ready",

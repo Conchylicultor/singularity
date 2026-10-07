@@ -607,27 +607,37 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/icons.Icon`
     - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
       - Plugins:
-        - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, the key modes), useCurriculumWrites (its four writes, refusals as toasts), <PathCard> — the folded card holding every practice control: the chord chips, the blanks, where the path goes next, and each chapter's map — and <PathProgress>, the step bar of the chapter in hand. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; the key modes), the live chord.curriculum resource, and the four writes — one chord, a whole chapter, the blanks, or a cell of the path.
+        - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, how many other chords a loop may hold), useCatalog (the live chord.catalog), useCurriculumWrites (chords, blanks, extras; refusals as toasts), and <ChordsSection> — the trainer side panel's collapsible Chords section: Clear / Undo clear, the Blanks and Other-chords-per-loop pills, and every chord of the song index in tracks and sections, each chip cycling off → hear → practise, one chip per section's rare chords, and a footer giving the exact numbers of the chip under the pointer. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; how many other chords a loop may hold), the live chord.curriculum resource and its three writes — chords, blanks, extras —, and the live chord.catalog: every chord of the song index in tracks and sections, built once per loaded index.
           - Server:
-            - Contributes: `resource.declare` "chord.curriculum"
+            - Contributes:
+              - `resource.declare` "chord.curriculum"
+              - `resource.declare` "chord.catalog"
             - Uses:
+              - `apps/chord/song-index.countTokenSets`
+              - `apps/chord/song-index.loadReadyIndexIdentity`
               - `database.db`
               - `database/derived-updated-at.deriveUpdatedAt`
               - `database/sql-column.parsedJson`
               - `database/sql-column.parsedText`
-              - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/chord/plugins/curriculum/server/internal/tables.ts`
-            - Resources: `chord.curriculum` (push)
+            - Exports (types): `ListedChordsState`
+            - Exports (values):
+              - `isListedChord`
+              - `loadListedChords`
+            - Resources:
+              - `chord.catalog` (push)
+              - `chord.curriculum` (push)
             - Routes:
-              - `POST /api/chord/curriculum/chord`
-              - `POST /api/chord/curriculum/chapter`
+              - `POST /api/chord/curriculum/chords`
               - `POST /api/chord/curriculum/blanks`
-              - `POST /api/chord/curriculum/cell`
+              - `POST /api/chord/curriculum/extras`
           - Web:
             - Uses:
               - `apps/chord/vocabulary.ChordNumeral`
+              - `apps/chord/vocabulary.chordPaint`
+              - `apps/chord/vocabulary.ChordPaint`
               - `apps/chord/vocabulary.chordToneStyle`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
@@ -637,39 +647,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/collapsible.CollapsibleTrigger`
               - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
               - `primitives/css/coords.pct`
               - `primitives/css/coords.placedClasses`
               - `primitives/css/coords.placedStyle`
               - `primitives/css/fill.Fill`
-              - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
-              - `primitives/css/spacing.selfClass`
+              - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
+              - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
-              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.ControlSizeProvider`
-              - `primitives/overlay/popover.InlinePopover`
+              - `primitives/css/yield.yieldClass`
+              - `primitives/hover-reveal.hoverRevealClass`
+              - `primitives/hover-reveal.useHoverReveal`
+              - `primitives/persistent-draft.useDraft`
               - `shell/toast.showToast`
               - `ui/icons.Icon`
             - Exports (types):
+              - `ChipStanding`
               - `CurriculumWrites`
               - `StandingLookup`
             - Exports (values):
-              - `BlanksGlyph`
-              - `PathCard`
-              - `PathProgress`
+              - `ChordsSection`
+              - `useCatalog`
               - `useCurriculum`
               - `useCurriculumWrites`
           - Core:
             - Uses:
               - `apps/chord/song-index.ChordToken`
               - `apps/chord/song-index.chordTokenFromParts`
-              - `apps/chord/song-index.ChordTokenParts`
               - `apps/chord/song-index.ChordTokenSchema`
+              - `apps/chord/song-index.LoopExtras`
+              - `apps/chord/song-index.LoopExtrasSchema`
               - `apps/chord/song-index.parseChordToken`
+              - `apps/chord/song-index.TokenSetCount`
               - `infra/endpoints.defineEndpoint`
               - `integrations/hooktheory.HookpadMode`
               - `integrations/hooktheory.HookpadModeSchema`
@@ -678,60 +692,67 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `AskedBox`
               - `AskedOptions`
               - `Blanks`
-              - `Cell`
-              - `CellStanding`
-              - `Chapter`
+              - `Catalog`
+              - `CatalogChord`
+              - `CatalogSection`
+              - `CatalogState`
+              - `CatalogTrack`
+              - `ChordChange`
+              - `ChordPlace`
               - `ChordState`
-              - `PathRow`
+              - `RareGroup`
+              - `RecordedBlanks`
+              - `SectionKind`
               - `SelectedChord`
               - `Selection`
-              - `SelectionChange`
-              - `Stage`
-              - `StageId`
-              - `TokenStanding`
+              - `TrackStanding`
             - Exports (values):
-              - `ALL_CELLS`
-              - `applyCellEndpoint`
               - `askedPositions`
               - `BLANKS`
               - `BLANKS_LABEL`
               - `BlanksSchema`
+              - `buildCatalog`
               - `canonicalSelection`
-              - `cellName`
-              - `cellOf`
-              - `CellSchema`
-              - `cellSelection`
-              - `cellStanding`
-              - `chapterById`
-              - `CHAPTERS`
+              - `CatalogChordSchema`
+              - `catalogOrder`
+              - `CatalogSchema`
+              - `CatalogSectionSchema`
+              - `CatalogStateSchema`
+              - `CatalogTrackSchema`
               - `CHORD_STATES`
+              - `chordCatalog`
+              - `ChordChangeSchema`
               - `chordCurriculum`
+              - `chordPlaces`
               - `chordState`
               - `ChordStateSchema`
               - `firstSelection`
-              - `nextCell`
-              - `onRoute`
-              - `PATH_TOKENS`
-              - `pathOrder`
+              - `groupState`
+              - `isListed`
+              - `LISTED_SHARE`
+              - `listedTokens`
+              - `MAX_CHORD_CHANGES`
+              - `MAX_FOLDED_RARE`
               - `playableChords`
               - `practisedChords`
-              - `ROUTE`
-              - `routeOf`
-              - `sameCell`
+              - `RareGroupSchema`
+              - `RECORDED_BLANKS`
+              - `RecordedBlanksSchema`
               - `sameSelection`
+              - `SectionKindSchema`
+              - `sectionTokens`
               - `SelectedChordSchema`
               - `SelectionSchema`
               - `setBlanksEndpoint`
-              - `setChapterStateEndpoint`
-              - `setChordStateEndpoint`
-              - `STAGE_IDS`
-              - `stageById`
-              - `StageIdSchema`
-              - `stageOf`
-              - `STAGES`
+              - `setChordsEndpoint`
+              - `setExtrasEndpoint`
+              - `suggestedNext`
+              - `trackStanding`
+              - `trackTokens`
               - `withBlanks`
-              - `withChapterState`
+              - `withChordChanges`
               - `withChordState`
+              - `withExtras`
           - Cross-plugin:
             - Imported by:
               - `apps/chord/progress`
@@ -782,6 +803,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `resource.declare` "chord.progress"
             - Uses:
+              - `apps/chord/curriculum.isListedChord`
+              - `apps/chord/curriculum.loadListedChords`
               - `database.db`
               - `database/sql-column.parsedText`
               - `infra/endpoints.implement`
@@ -791,8 +814,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Routes: `POST /api/chord/rounds`
           - Core:
             - Uses:
-              - `apps/chord/curriculum.Blanks`
-              - `apps/chord/curriculum.BLANKS`
               - `apps/chord/curriculum.BlanksSchema`
               - `apps/chord/song-index.ChordToken`
               - `apps/chord/song-index.ChordTokenSchema`
@@ -801,24 +822,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `integrations/hooktheory.TheorytabSectionIdSchema`
               - `network/live.liveValue`
             - Exports (types):
+              - `Answer`
               - `ChordAnswerSample`
               - `ChordMastery`
               - `ChordProgress`
               - `ChordProgressParams`
               - `ChordStanding`
               - `DecodedProgressParams`
-              - `LevelStanding`
+              - `MasteryStanding`
               - `RecordRoundBody`
               - `RoundAnswer`
             - Exports (values):
+              - `AnswerSchema`
               - `chordMastery`
               - `chordProgress`
               - `ChordProgressSchema`
               - `ChordStandingSchema`
               - `decodeProgressParams`
               - `encodeProgressParams`
-              - `LevelStandingSchema`
+              - `isRightAnswer`
               - `MASTERY_WINDOW`
+              - `MasteryStandingSchema`
               - `MAX_ANSWER_MS`
               - `MIN_ANSWER_MS`
               - `RecordRoundBodySchema`
@@ -826,6 +850,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RoundAnswerSchema`
               - `TARGET_ACCURACY`
               - `TARGET_MEDIAN_MS`
+          - Cross-plugin:
+            - Imported by: `apps/chord/trainer`
         - **`shell`** — The Chord app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the trainer's pane (whose header carries the app launcher) is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
           - Web:
             - Contributes:
@@ -893,7 +919,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `countLoopsByNextChord`
               - `countLoopsInSet`
+              - `countTokenSets`
               - `loadIndexStatus`
+              - `loadReadyIndexIdentity`
             - Register: `defineSupervisedJob('chord.song-index.load')`
             - Resources: `chord.index-status` (push)
             - Routes:
@@ -934,6 +962,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `IndexStatus`
               - `LoadScope`
               - `LoopCandidate`
+              - `LoopExtras`
               - `LoopSectionInput`
               - `LoopShape`
               - `LoopShapeId`
@@ -952,6 +981,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SnapshotSkipReason`
               - `StoredChord`
               - `TokenizedChord`
+              - `TokenSetCount`
               - `VideoFractionAlignment`
               - `WindowsByMode`
             - Exports (values):
@@ -986,9 +1016,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `isInLoadScope`
               - `isInSample`
               - `LoadScopeSchema`
+              - `LOOP_EXTRAS`
               - `LOOP_SHAPE_IDS`
               - `LOOP_SHAPES`
               - `LoopCandidateSchema`
+              - `LoopExtrasSchema`
               - `LoopWindowFieldsSchema`
               - `NEXT_CHORDS_MAX_LIMIT`
               - `NextChordCountSchema`
@@ -1033,9 +1065,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `chord-trainer.actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "chord-trainer"
             - Uses:
-              - `apps/chord/curriculum.PathCard`
-              - `apps/chord/curriculum.PathProgress`
+              - `apps/chord/curriculum.ChordsSection`
               - `apps/chord/curriculum.StandingLookup`
+              - `apps/chord/curriculum.useCatalog`
               - `apps/chord/curriculum.useCurriculum`
               - `apps/chord/piano.PianoCard`
               - `apps/chord/piano.SoundChannelControl`
@@ -1043,7 +1075,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/piano.useSoundMix`
               - `apps/chord/song-index.SongIndexGate`
               - `apps/chord/vocabulary.ChordNumeral`
+              - `apps/chord/vocabulary.chordPaint`
               - `apps/chord/vocabulary.chordToneStyle`
+              - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.useEndpointMutation`
               - `integrations/youtube.useYouTubePlayer`
               - `integrations/youtube.useYouTubePlayerState`
@@ -1071,6 +1105,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/yield.yieldClass`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.mapResource`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.ResourceResult`
               - `primitives/loading.Loading`
@@ -1083,6 +1119,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/icons.Icon`
           - Core:
             - Uses:
+              - `apps/chord/curriculum.askedPositions`
+              - `apps/chord/curriculum.Blanks`
+              - `apps/chord/progress.Answer`
+              - `apps/chord/progress.isRightAnswer`
+              - `apps/chord/progress.MASTERY_WINDOW`
+              - `apps/chord/progress.MasteryStanding`
+              - `apps/chord/progress.RecordRoundBody`
               - `apps/chord/song-index.beatTimesAlignment`
               - `apps/chord/song-index.BeatTimesAlignment`
               - `apps/chord/song-index.beatToSeconds`
@@ -1095,8 +1138,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `AnswerSheet`
               - `Box`
+              - `DealtLoop`
+              - `DesiredShares`
+              - `GridBox`
               - `Round`
               - `RoundResult`
+              - `ShareKey`
               - `SheetScore`
             - Exports (values):
               - `ANSWER_MS_MAX`
@@ -1104,17 +1151,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `boxAt`
               - `clampAnswerMs`
               - `clearBackward`
+              - `dealLoop`
+              - `desiredShare`
               - `emptySheet`
               - `fillSelected`
               - `FINISH_EPSILON_S`
               - `finishedBoxes`
               - `gridBeatAt`
+              - `gridBoxes`
+              - `loopShareKeys`
+              - `MASTERED_SHARE`
               - `moveSelection`
+              - `NEW_SHARE`
+              - `observedShares`
+              - `pickNext`
+              - `PRIOR_LOOPS`
               - `recordRoundBody`
               - `roundFromCandidate`
               - `selectBox`
+              - `SHARE_HISTORY`
+              - `shareDeficits`
               - `sheetScore`
-              - `weakestChord`
               - `WRAP_TOLERANCE_S`
         - **`video-availability`** — Chord video availability: the chord_videos evidence ledger (oEmbed's answer and the player's, each in its own columns), the chord_video_status_v view that resolves them, the on-demand oEmbed check a loop query runs over the videos it is about to offer, and the player's playback-report endpoint.
           - Server:
@@ -1159,11 +1216,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `videoStatusSummaryEndpoint`
           - Cross-plugin:
             - Imported by: `apps/chord/song-index`
-        - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads). Shared by the trainer's boxes, buttons and chips and by the curriculum's Path card (its chips and map rows), so one chord reads the same everywhere.
+        - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour. Shared by the trainer's boxes, buttons and chips and by the curriculum's Chords section (its chips), so one chord reads the same everywhere.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
+            - Exports (types): `ChordPaint`
             - Exports (values):
               - `ChordNumeral`
+              - `chordPaint`
               - `chordToneStyle`
           - Core:
             - Uses:
@@ -28648,6 +28707,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
+              - `apps/chord/curriculum`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/file-explorer/places`
@@ -29120,7 +29180,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
-              - `apps/chord/curriculum`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
               - `apps/pages/page-tree`
@@ -29825,6 +29884,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/bookmarks`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
+              - `apps/chord/curriculum`
               - `apps/deploy/analytics/dashboard`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
@@ -30491,6 +30551,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stickyOffsetPx`
           - Cross-plugin:
             - Imported by:
+              - `apps/chord/curriculum`
               - `apps/mail/search`
               - `apps/prototypes/canvas`
               - `code-explorer/commit-detail`
@@ -31601,6 +31662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
             - Imported by:
+              - `apps/chord/curriculum`
               - `apps/chord/trainer`
               - `apps/pages/page-tree`
               - `apps/sonata/track-mixer`
@@ -33261,6 +33323,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface/floating`
+          - `apps/chord/curriculum`
           - `apps/pages/page-tree`
           - `apps/prototypes/canvas`
           - `apps/prototypes/present`
@@ -35039,7 +35102,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `InlinePopover`
           - Cross-plugin:
             - Imported by:
-              - `apps/chord/curriculum`
               - `apps/prototypes/canvas`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/entry-points`
@@ -35649,6 +35711,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/curriculum`
           - `apps/file-explorer/browser`
           - `apps/prototypes/canvas`
           - `apps/sonata/library`
