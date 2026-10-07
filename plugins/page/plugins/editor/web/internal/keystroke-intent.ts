@@ -220,7 +220,10 @@ export interface IntentContext {
  * The same holds for the zoom root's children: the root is the view's top, and
  * outdenting past it would leave the view.
  */
-function isIndented(ctx: IntentContext, node: BlockNode): boolean {
+function isIndented(
+  ctx: Pick<IntentContext, "scopeRootId">,
+  node: BlockNode,
+): boolean {
   return (
     node.parentId !== null &&
     node.parentId !== node.pageId &&
@@ -422,6 +425,39 @@ function unmarkFor(
   if (stop === null) return null;
   if ((stop.direction === "right" ? "before" : "after") !== side) return null;
   return { type: "unmark", delimiter: delimiterDeletion(caret.boundary) };
+}
+
+/** What {@link resolveTab} reads — no caret, no edit policy: Tab is structural only. */
+export type TabContext = Pick<
+  IntentContext,
+  "nodes" | "scopeRootId" | "blockId" | "isAnchor"
+>;
+
+/**
+ * Tab / Shift+Tab on one block: indent, outdent, open the closed container the
+ * line is borrowed by, or consume and do nothing. Caret-free, so a block with no
+ * text editor (a void block's caret host) resolves the SAME ladder a text block's
+ * Tab does — one set of guards (zoom, page boundary, closed container) for both.
+ * Always consumes the event (never move focus / insert a tab).
+ */
+export function resolveTab(
+  mods: { shift: boolean },
+  ctx: TabContext,
+): Extract<KeyIntent, { type: "indent" | "outdent" | "expand" | "noop" }> {
+  const node = ctx.nodes.find((b) => b.id === ctx.blockId);
+  if (!node) return { type: "noop" };
+  if (mods.shift) {
+    // Same guard as Backspace's, for the same reason: outdenting the
+    // borrowed line of a CLOSED container restructures around lines the
+    // user cannot see (the box's hidden content, or followers `outdentOne`
+    // adopts when the line's parent is not itself the container).
+    const closed = collapsedAnchorAbove(ctx.nodes, node, ctx.isAnchor);
+    if (closed) return { type: "expand", blockId: closed.id };
+    return isIndented(ctx, node) ? { type: "outdent" } : { type: "noop" };
+  }
+  return hasPrevSibling(ctx.nodes, node)
+    ? { type: "indent" }
+    : { type: "noop" };
 }
 
 export function resolveKeystroke(
@@ -636,21 +672,8 @@ export function resolveKeystroke(
         return { type: "nav", dir: "right" };
       return { type: "mergeNext" };
     }
-    case "Tab": {
-      // Tab/Shift+Tab always consume the event (never move focus / insert a tab).
-      if (mods.shift) {
-        // Same guard as Backspace's, for the same reason: outdenting the
-        // borrowed line of a CLOSED container restructures around lines the
-        // user cannot see (the box's hidden content, or followers `outdentOne`
-        // adopts when the line's parent is not itself the container).
-        const closed = collapsedAnchorAbove(ctx.nodes, node, ctx.isAnchor);
-        if (closed) return { type: "expand", blockId: closed.id };
-        return isIndented(ctx, node) ? { type: "outdent" } : { type: "noop" };
-      }
-      return hasPrevSibling(ctx.nodes, node)
-        ? { type: "indent" }
-        : { type: "noop" };
-    }
+    case "Tab":
+      return resolveTab(mods, ctx);
     case "ArrowUp": {
       // Cross blocks only on the true top visual line; otherwise move within.
       if (!caret.onTopLine) return { type: "passthrough" };

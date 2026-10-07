@@ -12,6 +12,10 @@ import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import type { BlockEditorAPI } from "../types";
 import { useInsertParagraphBelow } from "./use-insert-block-below";
+import { useAnchorTypes } from "../internal/block-handles";
+import { resolveTab } from "../internal/keystroke-intent";
+import { toNodes } from "../internal/optimistic-block-ops";
+import { scopeNodes } from "../internal/zoom-scope";
 
 /**
  * How a **void** block — one owning no editable text — takes part in the
@@ -289,8 +293,10 @@ export interface BlockCaretHostProps {
  *   `defaultPrevented`. That is the protocol: an inner control that genuinely
  *   wants the arrows says so by preventing default, which is exactly what the
  *   place block's result list already does while its suggestions are open.
- * - **Backspace/Delete/Enter/Space are origin-guarded**, so typing in an inner
- *   field is never swallowed by the block around it.
+ * - **Backspace/Delete/Enter/Space/Tab are origin-guarded**, so typing in an
+ *   inner field is never swallowed by the block around it (and Tab still walks
+ *   focus between a block's own controls). On the box, Tab / Shift+Tab indent
+ *   and outdent the block through the text blocks' own ladder (`resolveTab`).
  *
  * Backspace deletes the whole block in one press, whatever its payload holds: a
  * filled image is ONE object, not content to clear and then a block to delete.
@@ -318,6 +324,8 @@ export function BlockCaretHost({
   }, [isFocused]);
   const insertParagraphBelow = useInsertParagraphBelow();
   const selection = useSelectionControl();
+  const { rowsRef, scope, makeBlockAPI } = useBlockEditor();
+  const anchorTypes = useAnchorTypes();
 
   // Stable for the lifetime of the host — `no-unstable-context-value`, and more
   // to the point a fresh identity would re-run every consumer's effect.
@@ -391,6 +399,27 @@ export function BlockCaretHost({
       e.preventDefault();
       editor.navigate("up"); // land the caret on the block above…
       editor.remove(); // …then delete this one
+      return;
+    }
+    if (e.key === "Tab" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      // The text block's Tab ladder, resolved for this block: the void block
+      // has no caret position, and Tab never needed one. Always consumed, so
+      // Tab never walks DOM focus out of the block list.
+      e.preventDefault();
+      const all = toNodes(rowsRef.current);
+      const intent = resolveTab(
+        { shift: e.shiftKey },
+        {
+          nodes: scope.rootId === null ? all : scopeNodes(all, scope.rootId),
+          scopeRootId: scope.rootId,
+          blockId,
+          isAnchor: (n) => anchorTypes.has(n.type),
+        },
+      );
+      if (intent.type === "indent") editor.indent();
+      else if (intent.type === "outdent") editor.outdent();
+      else if (intent.type === "expand")
+        makeBlockAPI(intent.blockId).setExpanded(true);
       return;
     }
     const activate = activateRef.current;

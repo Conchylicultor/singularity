@@ -18,6 +18,7 @@ import {
 } from "../../core";
 import {
   resolveKeystroke,
+  resolveTab,
   type IntentContext,
   type KeystrokeKey,
 } from "./keystroke-intent";
@@ -687,6 +688,19 @@ describe("Tab", () => {
     expect(resolveKeystroke("Tab", SHIFT, caret(), ctx("B"))).toEqual({
       type: "noop",
     });
+  });
+
+  // A void block (bookmark, image, …) has no caret position, so its caret host
+  // resolves Tab through `resolveTab` directly — it must agree with the text
+  // ladder on every case above.
+  test("resolveTab (caret-free) agrees with the keystroke ladder", () => {
+    for (const id of ["A", "A1", "B"]) {
+      for (const mods of [NO_SHIFT, SHIFT]) {
+        expect(resolveKeystroke("Tab", mods, caret(), ctx(id))).toEqual(
+          resolveTab(mods, ctx(id)),
+        );
+      }
+    }
   });
 });
 
