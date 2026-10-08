@@ -114,6 +114,7 @@ import {
 } from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDocText } from "@plugins/page/plugins/editor-collab/e2e";
 import { plainOf, type Block } from "@plugins/page/plugins/editor/core";
+import { splitPageMeta } from "@plugins/page/plugins/markdown-apply/core";
 
 const out = arg("out", "/tmp/agent-access");
 
@@ -269,8 +270,28 @@ interface ApplySummary {
   created_page_ids?: string[];
   /** The page's new title, when an `edit_page` renamed an agent page (P10). */
   renamed_to?: string;
+  /** Set when the edit changed the read-only `<page-meta>` header (P1). */
+  page_meta_ignored?: string;
   /** Leading-whitespace lengths, when `old_string` matched at another depth (P12). */
   reindented?: { from: number; to: number };
+}
+
+/**
+ * A read split into its `<page-meta>` header and the document after it. Every
+ * `read_page` opens with one, so a missing or malformed header is a failure.
+ */
+function readParts(read: string): {
+  breadcrumb: { id: string; title: string }[];
+  attrs: Record<string, string>;
+  body: string;
+} {
+  const split = splitPageMeta(read);
+  if (!split.ok || split.meta === null) {
+    throw new Error(
+      `read_page output opens with no <page-meta> header: ${read}`,
+    );
+  }
+  return { ...split.meta, body: split.rest };
 }
 
 /** A write that must succeed, with its summary parsed. */
@@ -790,9 +811,37 @@ await withBrowser(async (h) => {
   r.ok(
     "P1: read_page returns the page's prose, one markdown line per block, and its title banner",
     PROSE.every((p) => markdownLines.includes(p.md)) &&
-      markdown.startsWith(`# ${TITLE}`),
+      readParts(markdown).body.startsWith(`# ${TITLE}`),
     JSON.stringify(markdown),
   );
+  {
+    const meta = readParts(markdown);
+    r.ok(
+      "P1: read_page opens with a <page-meta> header: the breadcrumb ends at the page, times to the minute",
+      meta.breadcrumb.at(-1)?.id === pageId &&
+        meta.breadcrumb.at(-1)?.title === TITLE &&
+        /^\d{4}-\d\d-\d\dT\d\d:\d\dZ$/.test(meta.attrs.created ?? "") &&
+        /^\d{4}-\d\d-\d\dT\d\d:\d\dZ$/.test(meta.attrs.edited ?? ""),
+      JSON.stringify(meta),
+    );
+    const scoped = readParts(await mustCall("read_page", { block_id: noteId }));
+    r.ok(
+      "P1: a block-scoped read's header names the page holding it",
+      scoped.breadcrumb.at(-1)?.id === pageId && !scoped.body.startsWith("# "),
+      JSON.stringify(scoped),
+    );
+    const metaEdit = await mustWrite("edit_page", {
+      block_id: pageId,
+      old_string: `edited="${meta.attrs.edited}"`,
+      new_string: 'edited="1999-01-01T00:00Z"',
+    });
+    r.ok(
+      "P1: an edit of the <page-meta> header writes nothing, and says it was ignored",
+      metaEdit.page_meta_ignored !== undefined &&
+        Object.values(counts(metaEdit)).every((n) => n === 0),
+      JSON.stringify(metaEdit),
+    );
+  }
   r.ok(
     "P1: read_page emits the card's id as an address",
     markdown.includes(`<${CARD_TAG} id="${noteId}">`),
@@ -1315,7 +1364,11 @@ await withBrowser(async (h) => {
   const pageMarkdown = await mustCall("read_page", { block_id: agentPageId });
   r.ok(
     "P9: read_page on the page's own id is its whole content, title banner first",
-    pageMarkdown.startsWith(`# ${AGENT_PAGE_TITLE}`) &&
+    readParts(pageMarkdown).body.startsWith(`# ${AGENT_PAGE_TITLE}`) &&
+      readParts(pageMarkdown)
+        .breadcrumb.slice(-2)
+        .map((c) => c.id)
+        .join() === [pageId, agentPageId].join() &&
       pageMarkdown.includes(AGENT_PAGE_FIRST) &&
       pageMarkdown.includes("checked decode.ts"),
     JSON.stringify(pageMarkdown),
@@ -1526,9 +1579,9 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "P10: read_page on the page opens with the new title",
-    (await mustCall("read_page", { block_id: agentPageId })).startsWith(
-      `# ${RENAMED_TITLE}\n\n`,
-    ),
+    readParts(
+      await mustCall("read_page", { block_id: agentPageId }),
+    ).body.startsWith(`# ${RENAMED_TITLE}\n\n`),
     RENAMED_TITLE,
   );
   r.ok(
@@ -1672,7 +1725,7 @@ await withBrowser(async (h) => {
   r.ok(
     "P11: …and a second read does not repeat them",
     !secondRead.includes("<received-instructions>") &&
-      secondRead.startsWith("# A track"),
+      readParts(secondRead).body.startsWith("# A track"),
     secondRead,
   );
   const readerWrite = await callTool(

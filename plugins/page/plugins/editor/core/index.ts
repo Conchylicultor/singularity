@@ -188,6 +188,8 @@ export {
   parseMarkdownToForest,
   defaultTextHandle,
   dropBlankLinesBesideTags,
+  formatTagLine,
+  parseTagLine,
   markdownLineClaim,
   markdownParseTagNames,
   markdownTagIsIdentified,
@@ -203,6 +205,7 @@ export type {
   MarkdownNode,
   MdSerializeCtx,
   MdParseCtx,
+  TagLine,
 } from "./markdown";
 
 export { textDataSchema, textBlockSchema } from "./text-data";

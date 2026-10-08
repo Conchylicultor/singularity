@@ -11,6 +11,7 @@ import {
 import {
   pageTitleBanner,
   parsePageTitleBanner,
+  splitPageMeta,
 } from "@plugins/page/plugins/markdown-apply/core";
 import { renamePage } from "@plugins/page/plugins/editor/server";
 import {
@@ -224,6 +225,16 @@ function titleEditOf(
   return { ok: true, title: parsed.title, document };
 }
 
+/**
+ * `text` without a leading `<page-meta>` header — or `text` itself when it has
+ * none, or when what opens it is not a well-formed header (that is then matched
+ * as written, and refused by the apply if it ever reaches one).
+ */
+function withoutPageMeta(text: string): string {
+  const split = splitPageMeta(text);
+  return split.ok && split.meta !== null ? split.rest : text;
+}
+
 export const readPageTool = Mcp.tool({
   name: "read_page",
   description: `Read a Singularity page — or any block within one — as markdown.
@@ -234,6 +245,23 @@ collaboratively with the user, not something to test on.
 
 \`block_id\` is the SCOPE, not a line in the output: you get that block's
 sub-blocks. A page's id gives the whole page, opening with a \`# Title\` line.
+
+**Every read opens with a \`<page-meta>\` header** saying where the content
+comes from:
+
+    <page-meta created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
+      <breadcrumb>
+        <page id="…" title="Workspace"/>
+        <page id="…" title="This page"/>
+      </breadcrumb>
+    </page-meta>
+
+The breadcrumb runs from the root page down to the page holding what you read
+(the last entry), including when you read a block inside it; each id is a
+\`block_id\` you can read. \`created\` and \`edited\` are UTC — \`edited\` is the
+latest change to the page or any block in it, so it tells you how stale a note
+or todo may be. The header is not part of the page and is READ-ONLY: hand it
+back unchanged or leave it out; an edit to it is ignored.
 
 Four things in the output are ADDRESSES, and all of them matter when you write
 back:
@@ -334,6 +362,7 @@ and not inside a \`<human>\` or \`<todo>\` card within it.`,
     assertAgentAddressable(scope, blockId);
     const markdown = await readBlockAsMarkdown(blockId, {
       redact: redactHumanAudience,
+      meta: true,
     });
     // The instructions covering this page that the conversation has not
     // received yet go AHEAD of the page, and now count as received.
@@ -365,7 +394,8 @@ emits:
 - \`<agent-page id="…" title="…"/>\` — an agent page. A page's content is written
   by its OWN id: \`content\` becomes the page's whole content. If it opens with
   the page's \`# Title\` line exactly as \`read_page\` showed it, that line is
-  dropped rather than written. Any OTHER \`# …\` line is an ordinary heading
+  dropped rather than written (so is a leading \`<page-meta>\` header, on any
+  block). Any OTHER \`# …\` line is an ordinary heading
   inside the page's content — the title itself is not writable here, because a
   new \`# …\` line cannot be told apart from a first heading. To RENAME an agent
   page, use \`edit_page\` on its \`# Title\` line.
@@ -518,8 +548,15 @@ block that already exists:
 page); what is allowed is judged by what the resulting diff TOUCHED, not by which
 id you passed. Scoped to an agent page's own id, every block in it is yours.
 
-**The \`# Title\` line.** Scoped to a page's own id, the document opens with the
-page's title as \`# Title\` and a blank line. It is not a block of the page.
+**The \`<page-meta>\` header** that opens every \`read_page\` output is read-only
+and not part of the page: an edit that changes it writes nothing there (the
+result then carries \`page_meta_ignored\`), and one that leaves it malformed is
+refused. Anchor \`old_string\` below it; a header leading \`old_string\` or
+\`new_string\` (say, a whole read pasted in) is dropped before matching.
+
+**The \`# Title\` line.** Scoped to a page's own id, the document opens (after
+the header) with the page's title as \`# Title\` and a blank line. It is not a
+block of the page.
 
 - **On an agent page it IS the page's title, and editing it renames the page.**
   Change only the text after \`# \`, and keep it one \`# \` line followed by a
@@ -679,16 +716,36 @@ the author's even when it sits in yours.`,
     });
     const markdown = await readBlockAsMarkdown(blockId, {
       redact: redactHumanAudience,
+      // The document the agent matched old_string against is read_page's, and
+      // that one opens with the header.
+      meta: true,
     });
 
     // A blank line the agent put beside a tag — `</human>\n\n<agent-inline>` —
     // is spacing, not an empty paragraph minted in the page's prose. Only
     // `new_string` is the agent's own text: a spacer already on the page stays a
     // spacer when a card lands beside it (see `dropBlankLinesBesideTags`).
+    //
+    // A `<page-meta>` header leading old_string is dropped before matching (and
+    // one leading new_string with it): the header is read-only and differs per
+    // read root, so an old_string copied from ANOTHER read — a block's read,
+    // pasted against its page — would otherwise never match, over lines the edit
+    // cannot change anyway.
+    const oldBody = withoutPageMeta(oldString);
+    if (oldBody.trim() === "") {
+      throw new HttpError(
+        400,
+        `edit_page: old_string holds only the <page-meta> header, which is ` +
+          `read-only and not part of the page. Anchor old_string below it.`,
+      );
+    }
     const found = findEdits(
       markdown,
-      oldString,
-      dropBlankLinesBesideTags(newString, serverMarkdownContext().handles),
+      oldBody,
+      dropBlankLinesBesideTags(
+        withoutPageMeta(newString),
+        serverMarkdownContext().handles,
+      ),
     );
     if (found.kind === "none") {
       throw new HttpError(
@@ -758,12 +815,33 @@ the author's even when it sits in yours.`,
     // asks of every row. It is asked here on the scope loaded above, and asked
     // AGAIN under the page row's lock by `renamePage` (`requireAuthor`), because
     // a human can flip the page between the two; a check only here would race.
-    let document = next;
+    // The `<page-meta>` header comes off both documents before anything else
+    // reads them: it sits ahead of the `# Title` line, and it is read-only — its
+    // fields are facts held elsewhere (the page's ancestry and timestamps), so
+    // an edit to it is ignored, and said to be. A header the edit left
+    // malformed (a line it does not know, no closing tag) is refused instead,
+    // because content written inside it would otherwise vanish.
+    const readSplit = splitPageMeta(markdown);
+    if (!readSplit.ok) {
+      throw new Error(
+        `edit_page: the document read_page produced for ${blockId} has a malformed ` +
+          `<page-meta> header (${readSplit.reason})`,
+      );
+    }
+    const nextSplit = splitPageMeta(next);
+    if (!nextSplit.ok) {
+      throw new HttpError(400, `edit_page: ${nextSplit.reason}.`);
+    }
+    const metaIgnored = nextSplit.header !== readSplit.header;
+    const body = readSplit.rest;
+    const nextBody = nextSplit.rest;
+
+    let document = nextBody;
     let renamedTo: string | undefined;
     if (blockId === scope.pageId) {
       const mdCtx = serverMarkdownContext();
       const banner = pageTitleBanner(scope.title, mdCtx);
-      if (markdown.startsWith(banner) && !next.startsWith(banner)) {
+      if (body.startsWith(banner) && !nextBody.startsWith(banner)) {
         const titleIs =
           `this edit changes the document's first line, which is page ` +
           `${scope.pageId}'s TITLE and not a block of the page`;
@@ -777,8 +855,8 @@ the author's even when it sits in yours.`,
           );
         }
         const edit = titleEditOf(
-          next,
-          markdown,
+          nextBody,
+          body,
           banner.slice(0, banner.indexOf("\n")),
           mdCtx,
         );
@@ -798,12 +876,12 @@ the author's even when it sits in yours.`,
 
     let authored: string[] = [];
     const report = await applyMarkdownToBlock(blockId, document, {
-      // `markdown` is what this tool read a moment ago and `document` is that
-      // same string with one splice in it (a rename's title line put back to the
-      // stored one), so every write the two have in common is the round trip's
-      // own and not this edit's. Without it the boundary rule below judges the
-      // caller for blocks the projection touched.
-      baseline: markdown,
+      // `body` is what this tool read a moment ago (header off) and `document`
+      // is that same string with one splice in it (a rename's title line put
+      // back to the stored one), so every write the two have in common is the
+      // round trip's own and not this edit's. Without it the boundary rule below
+      // judges the caller for blocks the projection touched.
+      baseline: body,
       redact: redactHumanAudience,
       inert: inertEmptyParagraphs,
       assertAcceptable: (plan, { rows, pageRow }) => {
@@ -846,6 +924,12 @@ the author's even when it sits in yours.`,
         ? {}
         : { reindented: { from: shift.from.length, to: shift.to.length } }),
       ...(renamedTo === undefined ? {} : { renamed_to: renamedTo }),
+      ...(metaIgnored
+        ? {
+            page_meta_ignored:
+              "<page-meta> is read-only: your change to it was not written",
+          }
+        : {}),
     });
   },
 });

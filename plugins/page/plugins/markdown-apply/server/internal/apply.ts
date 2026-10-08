@@ -14,6 +14,7 @@ import {
   pageTitleBanner,
   planMarkdownApply,
   planWriteCount,
+  splitPageMeta,
   stripPageTitleBanner,
   subtractNoise,
   type InertBlocks,
@@ -290,10 +291,21 @@ async function applyToScope(scope: {
     // page's own read produced", and a document cannot answer that about itself.
     // Anything that fails the test falls through to the planner and is judged
     // there — see `core/page-title.ts` for the four arms and why they are right.
+    // The `<page-meta>` header comes off first — a read puts it on outside the
+    // banner — and by STRUCTURE, its values ignored: they are read-only facts
+    // held elsewhere (`core/page-meta.ts`). A header holding a line it does not
+    // know is refused rather than skipped, so nothing written inside it is lost.
+    const split = splitPageMeta(md);
+    if (!split.ok) {
+      throw new HttpError(
+        400,
+        `markdown apply refused for block ${rootId} on page ${pageId}: ${split.reason}`,
+      );
+    }
     const document =
       rootId === pageId
-        ? stripPageTitleBanner(md, pageTitleBanner(title, ctx))
-        : md;
+        ? stripPageTitleBanner(split.rest, pageTitleBanner(title, ctx))
+        : split.rest;
     const parsed = parseMarkdownToForest(document, ctx);
     const { forest, dropped } =
       inertBlocks === undefined

@@ -97,6 +97,36 @@ and the title handling adds **zero authority of its own**.
   an H1 reading exactly the title, strips that H1 block instead. Telling the two
   apart needs the banner to be a node, which is what this refuses to make it.
 
+## The `<page-meta>` header: the title's read-only sibling (`core/page-meta.ts`)
+
+`readBlockAsMarkdown(id, { meta: true })` opens the document — any root, not
+just a page — with a header stating where it comes from:
+
+```
+<page-meta created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
+  <breadcrumb>
+    <page id="…" title="Singularity"/>
+    <page id="…" title="Hosted"/>     ← the page holding the root, always last
+  </breadcrumb>
+</page-meta>
+# Hosted
+```
+
+- **Same contract as the banner**: a reader-side prefix, emitted and split in one
+  module, never a node. It goes on OUTSIDE the banner and comes off first.
+- **Recognised by STRUCTURE, values ignored** — where the banner is matched by
+  byte-identity. Its fields are facts held elsewhere (ancestry, timestamps), so
+  they are read-only like a tag's annotated attributes, and a document read a
+  minute ago still applies after `edited` moved. A future WRITABLE field (tags)
+  is read off `splitPageMeta`'s `meta` by the caller that owns it, as
+  `edit_page` owns the rename.
+- **A malformed header is refused, never skipped** (`applyToScope`'s
+  `planOf`): an unknown line inside it could be content an agent wrote there.
+- **Opt-in**, because its `edited` time changes on every edit: instructions
+  delivery hashes its documents, and a TODO's prompt embeds one.
+- `edited` is the editor's `readPageEditedAt`, the value behind the page's
+  "Edited" label, so the two never disagree.
+
 `BlockScope` carries `title` because `loadBlockScope` is the only place it exists
 without a second query — a page's own row is not in its content partition. It
 carries the whole `pageRow` for the same reason: a policy walking a chain up past
@@ -446,6 +476,7 @@ annotation in the key would make every status change look like a new block.
     - `page/editor.Editor`
     - `page/editor.liveBlocks`
     - `page/editor.PAGE_BLOCK_TYPE`
+    - `page/editor.readPageEditedAt`
     - `page/editor.resolveBlockAnnotations`
     - `page/editor.serializePageContent`
     - `page/editor.StoredBlock`
@@ -463,8 +494,8 @@ annotation in the key would make every status change look like a new block.
     - `readPageAsMarkdown`
     - `serverMarkdownContext`
 - Core:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×25
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×27
     - `primitives/rank.Rank`
   - Exports (types):
     - `BoundaryViolation`
@@ -473,6 +504,7 @@ annotation in the key would make every status change look like a new block.
     - `MarkdownApplyArgs`
     - `MarkdownApplyPlan`
     - `MarkdownApplyResult`
+    - `PageMeta`
     - `PageTitleBannerParse`
     - `StoredRow`
     - `TouchedBlocks`
@@ -484,10 +516,12 @@ annotation in the key would make every status change look like a new block.
     - `dropInertNodes`
     - `dropInertRows`
     - `markdownNodesOfRows`
+    - `pageMetaHeader`
     - `pageTitleBanner`
     - `parsePageTitleBanner`
     - `planMarkdownApply`
     - `planWriteCount`
+    - `splitPageMeta`
     - `stripPageTitleBanner`
     - `subtractNoise`
     - `touchedBlocks`

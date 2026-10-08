@@ -1397,6 +1397,46 @@ function matchOpenTag(line: string): OpenTag | null {
   }
 }
 
+/**
+ * One tag line, in THIS document's tag spelling — `<name a="1">`, or
+ * `<name a="1"/>` when `selfClosing`. Exported for a reader-side header that is
+ * written beside a page's document without being a block of it (the
+ * `<page-meta>` header `markdown-apply` prepends): its tags must quote their
+ * attributes exactly as the blocks' tags do, or the one document would speak
+ * two attribute dialects.
+ */
+export function formatTagLine(
+  name: string,
+  attrs: Record<string, string>,
+  selfClosing: boolean,
+): string {
+  return openTagPrefix(name, attrs) + (selfClosing ? "/>" : ">");
+}
+
+/** What {@link parseTagLine} reads off one line. */
+export interface TagLine {
+  name: string;
+  attrs: Record<string, string>;
+  selfClosing: boolean;
+}
+
+/**
+ * The inverse of {@link formatTagLine}: the open tag `line` consists of, and
+ * nothing else after it. A discriminated result — "this line is not a tag" is
+ * the answer a header reader has to refuse with, so it is not a `null` it could
+ * read past.
+ */
+export function parseTagLine(
+  line: string,
+): { ok: true; tag: TagLine } | { ok: false } {
+  const open = matchOpenTag(line);
+  if (open === null || open.end !== line.length) return { ok: false };
+  return {
+    ok: true,
+    tag: { name: open.name, attrs: open.attrs, selfClosing: open.selfClosing },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Parse: markdown text → forest
 // ---------------------------------------------------------------------------

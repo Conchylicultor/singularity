@@ -91,6 +91,9 @@ export { renamePage } from "./internal/rename-page";
 // A page row's emoji icon, written server-side under the page's lock (the
 // auto-icon job's write-back). `onlyIfUnset` never overwrites a user's pick.
 export { setPageIcon } from "./internal/set-page-icon";
+// When a page was last edited (its row and its live content) — the value behind
+// the page-detail "Edited" label, for a server reader stating the same time.
+export { readPageEditedAt } from "./internal/resources";
 export type {
   BlockTextWriter,
   PageContentSnapshot,

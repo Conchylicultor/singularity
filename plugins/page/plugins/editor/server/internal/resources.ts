@@ -1,7 +1,7 @@
 import { and, asc, eq, max, or } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
-import { db } from "@plugins/database/server";
+import { db, type DbExecutor } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { Rank, withRank } from "@plugins/primitives/plugins/rank/core";
@@ -151,23 +151,36 @@ export const pageBlocksServed = serveValue(pageBlocks, {
 // leaves with it (the trash is its record).
 export const pageEditedAtServed = serveValue(pageEditedAt, {
   source: "db",
-  loader: async ({ pageId }) => {
-    const [page] = await db
-      .select({ id: liveBlocks.id })
-      .from(liveBlocks)
-      .where(
-        and(eq(liveBlocks.id, pageId), eq(liveBlocks.type, PAGE_BLOCK_TYPE)),
-      )
-      .limit(1);
-    if (!page) return null;
-    const [row] = await db
-      .select({ editedAt: max(liveBlocks.updatedAt) })
-      .from(liveBlocks)
-      .where(or(eq(liveBlocks.id, pageId), eq(liveBlocks.pageId, pageId)));
-    // The page row itself matched, so the max is never null here.
-    if (!row?.editedAt) {
-      throw new Error(`page ${pageId} is live but has no updated_at`);
-    }
-    return { editedAt: row.editedAt };
-  },
+  loader: ({ pageId }) => readPageEditedAt(pageId),
 });
+
+/**
+ * When a page was last edited: the newest `updated_at` over the page row AND
+ * its live content blocks — the page row alone moves only on a rename, a cover
+ * or a kind change, never on a content edit. `null` when `pageId` names no live
+ * page (the live value's own "no such page" arm).
+ *
+ * The one definition of a page's edit time, read by the page-detail "Edited"
+ * label (through {@link pageEditedAtServed}) and by `markdown-apply`'s
+ * `<page-meta>` header, so the two can never state different times.
+ */
+export async function readPageEditedAt(
+  pageId: string,
+  executor: DbExecutor = db,
+): Promise<{ editedAt: Date } | null> {
+  const [page] = await executor
+    .select({ id: liveBlocks.id })
+    .from(liveBlocks)
+    .where(and(eq(liveBlocks.id, pageId), eq(liveBlocks.type, PAGE_BLOCK_TYPE)))
+    .limit(1);
+  if (!page) return null;
+  const [row] = await executor
+    .select({ editedAt: max(liveBlocks.updatedAt) })
+    .from(liveBlocks)
+    .where(or(eq(liveBlocks.id, pageId), eq(liveBlocks.pageId, pageId)));
+  // The page row itself matched, so the max is never null here.
+  if (!row?.editedAt) {
+    throw new Error(`page ${pageId} is live but has no updated_at`);
+  }
+  return { editedAt: row.editedAt };
+}

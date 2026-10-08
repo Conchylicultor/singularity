@@ -4201,6 +4201,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Uses:
     - `database.currentTxId`
     - `database.db`
+    - `database.DbExecutor`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `infra/endpoints.HttpError`
@@ -4248,6 +4249,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `pageData`
     - `PageDataSchema`
     - `pagesLiveResource`
+    - `readPageEditedAt`
     - `renamePage`
     - `resolveBlockAnnotations`
     - `restorePageContent`
@@ -4340,6 +4342,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `SetPageKindBody`
     - `SoftBreaks`
     - `SpliceCaret`
+    - `TagLine`
     - `TextBearingSchema`
     - `TextData`
     - `TextRun`
@@ -4373,6 +4376,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `deleteBlock`
     - `diffBlocks`
     - `dropBlankLinesBesideTags`
+    - `formatTagLine`
     - `getBlockPage`
     - `hasTextKey`
     - `IdentifiedBlockSchema`
@@ -4415,6 +4419,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `pagesResource`
     - `parseInlineMarkdown`
     - `parseMarkdownToForest`
+    - `parseTagLine`
     - `pasteAnchorId`
     - `patchBlocks`
     - `patchesFromDiff`

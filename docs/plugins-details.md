@@ -23874,6 +23874,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `database.currentTxId`
           - `database.db`
+          - `database.DbExecutor`
           - `database/derived-updated-at.deriveUpdatedAt`
           - `database/sql-column.parsedJson`
           - `infra/endpoints.HttpError`
@@ -23921,6 +23922,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pageData`
           - `PageDataSchema`
           - `pagesLiveResource`
+          - `readPageEditedAt`
           - `renamePage`
           - `resolveBlockAnnotations`
           - `restorePageContent`
@@ -24013,6 +24015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SetPageKindBody`
           - `SoftBreaks`
           - `SpliceCaret`
+          - `TagLine`
           - `TextBearingSchema`
           - `TextData`
           - `TextRun`
@@ -24046,6 +24049,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteBlock`
           - `diffBlocks`
           - `dropBlankLinesBesideTags`
+          - `formatTagLine`
           - `getBlockPage`
           - `hasTextKey`
           - `IdentifiedBlockSchema`
@@ -24088,6 +24092,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pagesResource`
           - `parseInlineMarkdown`
           - `parseMarkdownToForest`
+          - `parseTagLine`
           - `pasteAnchorId`
           - `patchBlocks`
           - `patchesFromDiff`
@@ -24644,6 +24649,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.Editor`
           - `page/editor.liveBlocks`
           - `page/editor.PAGE_BLOCK_TYPE`
+          - `page/editor.readPageEditedAt`
           - `page/editor.resolveBlockAnnotations`
           - `page/editor.serializePageContent`
           - `page/editor.StoredBlock`
@@ -24661,8 +24667,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readPageAsMarkdown`
           - `serverMarkdownContext`
       - Core:
-        - Uses: 26 symbols — full list in [`plugins/page/plugins/markdown-apply/REFERENCE.md`](../plugins/page/plugins/markdown-apply/REFERENCE.md)
-          - `page/editor` ×25
+        - Uses: 28 symbols — full list in [`plugins/page/plugins/markdown-apply/REFERENCE.md`](../plugins/page/plugins/markdown-apply/REFERENCE.md)
+          - `page/editor` ×27
           - `primitives/rank.Rank`
         - Exports (types):
           - `BoundaryViolation`
@@ -24671,6 +24677,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MarkdownApplyArgs`
           - `MarkdownApplyPlan`
           - `MarkdownApplyResult`
+          - `PageMeta`
           - `PageTitleBannerParse`
           - `StoredRow`
           - `TouchedBlocks`
@@ -24682,10 +24689,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dropInertNodes`
           - `dropInertRows`
           - `markdownNodesOfRows`
+          - `pageMetaHeader`
           - `pageTitleBanner`
           - `parsePageTitleBanner`
           - `planMarkdownApply`
           - `planWriteCount`
+          - `splitPageMeta`
           - `stripPageTitleBanner`
           - `subtractNoise`
           - `touchedBlocks`

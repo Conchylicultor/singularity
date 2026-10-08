@@ -9,8 +9,13 @@ import {
   type StoredBlock,
 } from "@plugins/page/plugins/editor/server";
 import { serializeForestToMarkdown } from "@plugins/page/plugins/editor/core";
-import { markdownNodesOfRows, pageTitleBanner } from "../../core";
+import {
+  markdownNodesOfRows,
+  pageMetaHeader,
+  pageTitleBanner,
+} from "../../core";
 import { serverMarkdownContext } from "./markdown-context";
+import { loadPageMeta } from "./page-meta";
 
 /** The page a block lives in, plus every live row of that page's partition. */
 export interface BlockScope {
@@ -164,6 +169,16 @@ export interface ReadBlockOptions {
    */
   redact?: (rows: StoredBlock[]) => StoredBlock[];
   /**
+   * Open the document with a `<page-meta>` header (`core/page-meta.ts`): the
+   * page's breadcrumb and its created / edited times. Opt-in, because the
+   * header is for a reader that may not know where it is — an agent handed an
+   * id — while a caller hashing or embedding the document (instructions
+   * delivery, a TODO's task prompt) must not see it change every time the page
+   * is edited. `applyMarkdownToBlock` strips one either way, so the document a
+   * header-bearing read returns applies back as-is.
+   */
+  meta?: boolean;
+  /**
    * The database the rows are read from — the process's own by default. A
    * DB-backed suite passes its throwaway here, as it does to the editor's
    * `serializePageContent`.
@@ -194,7 +209,13 @@ export async function readBlockAsMarkdown(
     opts?.redact ? opts.redact(rows) : rows,
     blockId,
   );
-  return blockId === pageId ? withTitleBanner(markdown, title) : markdown;
+  const document =
+    blockId === pageId ? withTitleBanner(markdown, title) : markdown;
+  // The header goes on OUTSIDE the banner, for any root: it says which page the
+  // document comes from, which a card-scoped read cannot otherwise tell.
+  return opts?.meta
+    ? pageMetaHeader(await loadPageMeta(pageId, opts.executor)) + document
+    : document;
 }
 
 /**
