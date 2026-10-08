@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   canRedo,
   canUndo,
+  dropEntry,
   dropScope,
   emptyHistory,
   popRedo,
@@ -37,7 +38,8 @@ describe("recordEntry", () => {
 
   it("enforces maxDepth by dropping the oldest entries", () => {
     let s = emptyHistory();
-    for (let i = 0; i < 5; i++) s = recordEntry(s, entry({ label: `e${i}` }), i, 3);
+    for (let i = 0; i < 5; i++)
+      s = recordEntry(s, entry({ label: `e${i}` }), i, 3);
     expect(s.past.length).toBe(3);
     expect(s.past[0]!.entry.label).toBe("e2");
     expect(s.past[2]!.entry.label).toBe("e4");
@@ -79,7 +81,12 @@ describe("coalescing", () => {
       0,
       200,
     );
-    s = recordEntry(s, entry({ coalesceKey: "text", coalesceWindowMs: 500 }), 600, 200);
+    s = recordEntry(
+      s,
+      entry({ coalesceKey: "text", coalesceWindowMs: 500 }),
+      600,
+      200,
+    );
     expect(s.past.length).toBe(2);
   });
 
@@ -105,9 +112,32 @@ describe("coalescing", () => {
   });
 });
 
+describe("dropEntry", () => {
+  it("drops only the entry with that id, from past or future", () => {
+    let s = recordEntry(emptyHistory(), entry({ label: "a", id: "1" }), 0, 200);
+    s = recordEntry(s, entry({ label: "b", id: "2" }), 1, 200);
+    s = recordEntry(s, entry({ label: "c", id: "3" }), 2, 200);
+    s = popUndo(s)!.state; // "c" parked in future
+    s = dropEntry(s, "1");
+    s = dropEntry(s, "3");
+    expect(s.past.map((e) => e.entry.label)).toEqual(["b"]);
+    expect(s.future).toEqual([]);
+  });
+
+  it("returns the same state when no entry has the id", () => {
+    const s = recordEntry(emptyHistory(), entry({ id: "1" }), 0, 200);
+    expect(dropEntry(s, "missing")).toBe(s);
+  });
+});
+
 describe("dropScope", () => {
   it("drops the scope's entries from past", () => {
-    let s = recordEntry(emptyHistory(), entry({ label: "a", scope: "editor" }), 0, 200);
+    let s = recordEntry(
+      emptyHistory(),
+      entry({ label: "a", scope: "editor" }),
+      0,
+      200,
+    );
     s = recordEntry(s, entry({ label: "b", scope: "editor" }), 1, 200);
     s = dropScope(s, "editor");
     expect(s.past).toEqual([]);
@@ -115,7 +145,12 @@ describe("dropScope", () => {
   });
 
   it("drops the scope's entries from future too", () => {
-    let s = recordEntry(emptyHistory(), entry({ label: "a", scope: "editor" }), 0, 200);
+    let s = recordEntry(
+      emptyHistory(),
+      entry({ label: "a", scope: "editor" }),
+      0,
+      200,
+    );
     s = popUndo(s)!.state;
     expect(canRedo(s)).toBe(true);
     s = dropScope(s, "editor");
@@ -137,7 +172,12 @@ describe("dropScope", () => {
   });
 
   it("is a no-op (same state object) when nothing matches", () => {
-    const s = recordEntry(emptyHistory(), entry({ label: "a", scope: "editor" }), 0, 200);
+    const s = recordEntry(
+      emptyHistory(),
+      entry({ label: "a", scope: "editor" }),
+      0,
+      200,
+    );
     expect(dropScope(s, "unknown")).toBe(s);
     expect(dropScope(emptyHistory(), "editor").past).toEqual([]);
   });

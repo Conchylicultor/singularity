@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { ScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 import {
+  dropEntry as dropEntryById,
   dropScope as dropScopeEntries,
   canRedo as selectCanRedo,
   canUndo as selectCanUndo,
@@ -47,6 +48,11 @@ export interface UndoRedoApi {
    * `useScopedUndoRedo`, which owns the scope + the unmount cleanup.
    */
   dropScope(scope: string): void;
+  /**
+   * Drop the one entry recorded with `id` (see {@link HistoryEntry.id}) from
+   * either stack — its command turned out never to have taken effect.
+   */
+  dropEntry(id: string): void;
   /**
    * Register a {@link PendingFlush}: a producer's "seal what you are holding"
    * callback, run synchronously at the start of every `undo`/`redo` turn
@@ -169,6 +175,13 @@ export function useUndoRedo(): UndoRedoApi {
     [store],
   );
 
+  const dropEntry = useCallback(
+    (id: string) => {
+      store.setState((prev) => ({ ...prev, ...dropEntryById(prev, id) }));
+    },
+    [store],
+  );
+
   const registerPendingFlush = useCallback(
     (flush: PendingFlush) => {
       store.setState((prev) => {
@@ -200,6 +213,7 @@ export function useUndoRedo(): UndoRedoApi {
       canRedo,
       clear,
       dropScope,
+      dropEntry,
       registerPendingFlush,
     }),
     [
@@ -210,6 +224,7 @@ export function useUndoRedo(): UndoRedoApi {
       canRedo,
       clear,
       dropScope,
+      dropEntry,
       registerPendingFlush,
     ],
   );

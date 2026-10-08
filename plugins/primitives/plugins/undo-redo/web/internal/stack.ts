@@ -31,6 +31,13 @@ export interface HistoryEntry {
    * history (its thunks are self-contained, e.g. pure server calls).
    */
   scope?: string;
+  /**
+   * Identity for {@link dropEntry}: a producer that learns AFTER recording that
+   * the command never took effect (the server rejected the write it recorded)
+   * drops the entry by this id, so no undo/redo replays a change that never
+   * happened. Unset = the entry can only leave by scope, `clear`, or depth.
+   */
+  id?: string;
 }
 
 /** A recorded entry plus the wall-clock time it was recorded (for coalescing). */
@@ -114,7 +121,35 @@ export function recordEntry(
 export function dropScope(state: HistoryState, scope: string): HistoryState {
   const past = state.past.filter((s) => s.entry.scope !== scope);
   const future = state.future.filter((s) => s.entry.scope !== scope);
-  if (past.length === state.past.length && future.length === state.future.length) {
+  if (
+    past.length === state.past.length &&
+    future.length === state.future.length
+  ) {
+    return state;
+  }
+  return { past, future };
+}
+
+/**
+ * Mint an identity for {@link HistoryEntry.id}. The stack owns the format, so a
+ * producer never invents one (and never spells it like an id of its own domain).
+ */
+export function newHistoryEntryId(): string {
+  return crypto.randomUUID();
+}
+
+/**
+ * Drop the entry recorded with `id` from whichever stack holds it — the command
+ * it records never took effect, so replaying either direction would act on a
+ * state that never existed. Same-state when absent, like {@link dropScope}.
+ */
+export function dropEntry(state: HistoryState, id: string): HistoryState {
+  const past = state.past.filter((s) => s.entry.id !== id);
+  const future = state.future.filter((s) => s.entry.id !== id);
+  if (
+    past.length === state.past.length &&
+    future.length === state.future.length
+  ) {
     return state;
   }
   return { past, future };

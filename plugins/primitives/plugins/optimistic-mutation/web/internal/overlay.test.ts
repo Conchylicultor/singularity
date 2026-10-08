@@ -20,6 +20,8 @@ import {
   markFailed,
   markResolved,
   OpNoLongerApplies,
+  classifyRejection,
+  rejectOp,
   replay,
   resolvePass,
   type OpFailure,
@@ -182,6 +184,41 @@ describe("failure (markFailed / clearFailure) — never a rollback", () => {
       pending,
     );
     expect(clearFailure(pending, "missing")).toEqual(pending);
+  });
+
+  test("rejectOp removes only the rejected op; its successors replay on", () => {
+    const pending = [
+      op("a", { kind: "push", n: 2 }),
+      op("b", { kind: "push", n: 99 }), // permanently rejected
+      op("c", { kind: "push", n: 3 }),
+    ];
+    const next = rejectOp(pending, "b");
+    expect(ids(next)).toEqual(["a", "c"]);
+    expect(replay([1], next, applyNums)).toEqual([1, 2, 3]);
+    expect(rejectOp(pending, "missing")).toBe(pending); // identity when absent
+  });
+
+  test("rejecting a parked junior's senior lets the junior leave on the next snapshot", () => {
+    // The stuck-collapse shape: the senior's prediction was refused, so while
+    // it stayed parked the junior (already reflected on the server) could
+    // never confirm. Removing the senior un-parks it.
+    const pending = [
+      op("senior", { kind: "remove", n: 9 }),
+      op("junior", { kind: "push", n: 9 }, true),
+    ];
+    expect(ids(confirmPass(pending, [1, 9], "999", content).pending)).toEqual([
+      "senior",
+      "junior",
+    ]);
+    const after = rejectOp(pending, "senior");
+    expect(confirmPass(after, [1, 9], "999", content).pending).toEqual([]);
+  });
+
+  test("classifyRejection: a 4xx is final, except 401 / 408 / 429; 5xx is transient", () => {
+    for (const status of [400, 403, 404, 409, 410, 422])
+      expect(classifyRejection(status)).toBe("permanent");
+    for (const status of [401, 408, 429, 500, 502, 503])
+      expect(classifyRejection(status)).toBe("transient");
   });
 
   test("failed ops are immune to confirm / denial / miss counting", () => {
@@ -504,8 +541,9 @@ describe("the ordering rule (an ordered fold admits no transitive eviction)", ()
   test("(5b) an HTTP-failed op parks its juniors until the user retries", () => {
     // A failed op is unresolved by construction, so it is a survivor, so it
     // blocks. For a `network` failure that is brief (a reconnect edge
-    // auto-retries). For an `http` failure — a durable server verdict awaiting
-    // an explicit retry() — it lasts as long as the user leaves it there. The
+    // auto-retries). For a (transient) `http` failure awaiting an explicit
+    // retry() it lasts as long as the user leaves it there — which is why a
+    // PERMANENT rejection is never parked but removed (rejectOp, below). The
     // junior keeps RENDERING throughout and accrues no misses; the surface is
     // already showing `error` because of the failed op.
     const pending = markFailed(
@@ -514,7 +552,7 @@ describe("the ordering rule (an ordered fold admits no transitive eviction)", ()
         op("junior", { kind: "push", n: 9 }, true), // resolved AND content-confirmed
       ],
       "failed",
-      { kind: "http", status: 422 },
+      { kind: "http", status: 503 },
     );
     let cur: ReadonlyArray<PendingOp<Vars>> = pending;
     for (let i = 0; i < DIVERGENCE_REPORT_MISSES + 2; i++) {

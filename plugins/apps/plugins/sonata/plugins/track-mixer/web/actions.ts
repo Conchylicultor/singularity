@@ -1,12 +1,16 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { enqueueResourceWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import {
+  enqueueDetachedWrite,
+  enqueueResourceWrite,
+} from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { resetTrackView, upsertTrackView } from "../shared/endpoints";
 import { trackViews } from "../shared/resources";
 
 // Fire-and-forget writes: the UI never reads the response — state refreshes via
-// the `trackViews` push the write's commit triggers. `void` keeps the
-// no-floating-promises rule satisfied while a genuine network failure still
-// surfaces loudly as an unhandled rejection (reported by the crashes plugin).
+// the `trackViews` push the write's commit triggers. `enqueueDetachedWrite`
+// owns the outcome the caller does not read: a server rejection tells the user
+// (a toast) and files a report; a network failure still surfaces loudly as an
+// unhandled rejection (reported by the crashes plugin).
 //
 // Fire-and-forget is NOT the same as unordered, and every write here must go
 // through the send lane. These are last-writer-wins upserts of the same row, so
@@ -28,8 +32,17 @@ import { trackViews } from "../shared/resources";
 // different songs touch different rows, so they need no order between them.
 
 /** Issue one track-view write on the song's ordered send lane. */
-function send(songId: string, write: () => Promise<unknown>): void {
-  void enqueueResourceWrite(trackViews, { songId }, write);
+function send(
+  songId: string,
+  describe: string,
+  write: () => Promise<unknown>,
+): void {
+  enqueueDetachedWrite(
+    trackViews,
+    { songId },
+    { label: "Track", describe },
+    write,
+  );
 }
 
 export function setTrackColor(
@@ -37,7 +50,7 @@ export function setTrackColor(
   trackId: string,
   color: string | null,
 ): void {
-  send(songId, () =>
+  send(songId, "color", () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -51,7 +64,7 @@ export function setTrackInstrument(
   trackId: string,
   instrumentId: string | null,
 ): void {
-  send(songId, () =>
+  send(songId, "instrument", () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -65,7 +78,7 @@ export function setTrackMuted(
   trackId: string,
   muted: boolean,
 ): void {
-  send(songId, () =>
+  send(songId, "mute", () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -79,7 +92,7 @@ export function setTrackHidden(
   trackId: string,
   hidden: boolean,
 ): void {
-  send(songId, () =>
+  send(songId, "hide", () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -99,7 +112,7 @@ export function setTrackVolume(
   trackId: string,
   volume: number,
 ): void {
-  send(songId, () =>
+  send(songId, "volume", () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -141,5 +154,5 @@ export function setTracksActive(
 }
 
 export function resetTrackViews(songId: string): void {
-  send(songId, () => fetchEndpoint(resetTrackView, { songId }));
+  send(songId, "reset", () => fetchEndpoint(resetTrackView, { songId }));
 }

@@ -84,8 +84,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 28 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×28
+  - Slot contributors: 29 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×29
   - Contributes: `ConfigV2.WebRegister` "reports"
   - Uses:
     - `config_v2.ConfigV2`
@@ -181,8 +181,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×18
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×19
     - `debug` ×17
     - `conversations` ×7
     - `database` ×3
@@ -206,6 +206,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
   - **`noise-rules`** — Built-in noise classification rules for low-signal crashes (e.g. ResizeObserver loop warnings).
   - **`optimistic-divergence`** — Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a server-acked op superseded by newer truth, or stalled unconfirmed) into a deduped report, plus the Debug →…
+  - **`optimistic-rejection`** — Optimistic-rejection collector: drains the optimistic-mutation primitive's rejection sink (a write the server permanently refused — the optimistic op already dropped, or a detached write lost) into…
   - **`outbox`** — Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no…
   - **`page-undo-conflict`** — Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the…
   - **`plugin-load-errors`** — Files crash tasks for plugins whose chunk failed to load in the deferred tier.

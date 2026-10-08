@@ -31,4 +31,30 @@ export interface OptimisticDivergenceReport {
 // `boundaryReportSink`. The primitive must not import `reports`, so a domain
 // plugin (`reports.optimistic-divergence`) registers the mapping to report() at
 // mount time. `emit` never throws — divergence is detected on a reconcile path.
-export const optimisticDivergenceReportSink = defineReportSink<OptimisticDivergenceReport>();
+export const optimisticDivergenceReportSink =
+  defineReportSink<OptimisticDivergenceReport>();
+
+/**
+ * The server PERMANENTLY rejected a write (`classifyRejection`): an optimistic
+ * op, which has already left the overlay so the surface renders server truth
+ * again, or a detached `enqueueResourceWrite`, which had nothing to predict.
+ * Either way the user's edit is gone, so a domain plugin
+ * (`reports.optimistic-rejection`) tells them (a toast) and files the report.
+ *
+ * Bounded, serializable coordinates only: `opSummary` is the consumer's own
+ * `describeOp(vars)` (or a detached write's `describe`), `message` the server's
+ * reason, capped at `REJECTION_MESSAGE_MAX` characters.
+ */
+export interface OptimisticRejectionReport {
+  resourceKey: string;
+  params: Record<string, string> | null;
+  label: string | null;
+  status: number;
+  message: string;
+  opSummary: string | null;
+}
+
+export const REJECTION_MESSAGE_MAX = 500;
+
+export const optimisticRejectionSink =
+  defineReportSink<OptimisticRejectionReport>();

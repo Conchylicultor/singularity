@@ -532,8 +532,21 @@ mutation is a `BlockOp` (or the undo/redo `BlockPatch`) dispatched through
 only callers of `applyBlockOpEndpoint` / `patchBlocks` —
 `page-editor/no-adhoc-structural-write` makes a third one a build failure. The
 two writes with no overlay to carry them (the detached persist into a collapsed
-sub-page, and a cross-page drag) use `enqueueResourceWrite`, which is the same
-lane without a prediction.
+sub-page, and a cross-page drag) use `enqueueDetachedWrite`, which is the same
+lane without a prediction — and reports a rejection like an overlay op's.
+
+### A rejected write unwinds its undo entry
+
+When the server PERMANENTLY rejects a write (a 4xx — `classifyRejection` in
+`optimistic-mutation`), the primitive drops the op and the user gets an error
+toast plus a report (`reports/optimistic-rejection`). The undo entry recorded
+with it would bracket a change that never happened, so it is dropped too:
+every recording chokepoint (`dispatchOp`, `applyOverlay`, the splice, the
+mounted merge, `commitRows`) mints an entry id (`newHistoryEntryId`, undo-redo), records under it
+and dispatches with `onRejected = dropRejectedEntry(id)` (`SettledBlockStore.dispatch`'s
+second argument, threaded through the composite store, and carried by the
+detached writes). A coalescing entry gets no id — one rejection must not drop
+the steps that merged into it and did land.
 
 ## The caret authority (input follows the model, not the DOM)
 
@@ -4040,19 +4053,19 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.InsertAction` ×3
     - `Editor.BlockMenuItem` ← `page.open-as-page`
     - `Editor.TurnInto` ← `page.turn-into-page`
-  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×5
     - `primitives/text-editor/caret-trigger` ×5
     - `primitives/css/spacing` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/dom/dom-selection` ×4
     - `primitives/slot-render` ×4
+    - `primitives/undo-redo` ×4
     - `primitives/css/control-panel` ×3
     - `primitives/css/coords` ×3
     - `primitives/multi-select` ×3
     - `primitives/optimistic-mutation` ×3
     - `primitives/text-editor/caret-motion` ×3
-    - `primitives/undo-redo` ×3
     - `reorder` ×3
     - `infra/endpoints` ×2
     - `network/live` ×2

@@ -45,8 +45,14 @@ import {
   activeSendLaneCount,
   enqueueResourceWrite,
 } from "../internal/send-lane";
-import { optimisticDivergenceReportSink } from "../reporter";
-import type { OptimisticDivergenceReport } from "../reporter";
+import {
+  optimisticDivergenceReportSink,
+  optimisticRejectionSink,
+} from "../reporter";
+import type {
+  OptimisticDivergenceReport,
+  OptimisticRejectionReport,
+} from "../reporter";
 
 const Numbers = z.array(z.number());
 
@@ -79,6 +85,9 @@ const laneOrderValue = liveValue("test.optimistic-mutation.lane-order", {
   schema: Numbers,
 });
 const laneWedgeValue = liveValue("test.optimistic-mutation.lane-wedge", {
+  schema: Numbers,
+});
+const laneRejectValue = liveValue("test.optimistic-mutation.lane-reject", {
   schema: Numbers,
 });
 const laneSharedValue = liveValue("test.optimistic-mutation.lane-shared", {
@@ -232,6 +241,7 @@ async function mountRows(
 
 afterEach(() => {
   optimisticDivergenceReportSink.register(null);
+  optimisticRejectionSink.register(null);
 });
 
 describe("useOptimisticResource", () => {
@@ -392,12 +402,12 @@ describe("useOptimisticResource", () => {
     await waitFor(() => expect(container.innerHTML).not.toBe(""));
   });
 
-  it("an HTTP-rejected mutate keeps the op RENDERED and surfaces it in `failed`", async () => {
-    // Never-revert: a durable server rejection is a sync-status state (cloud
-    // `error` + Retry), not an undo — the prediction stays in the overlay.
+  it("a transient HTTP failure keeps the op RENDERED and surfaces it in `failed`", async () => {
+    // Never-revert: a 5xx says the server failed, not the op — a sync-status
+    // state (cloud `error` + Retry), not an undo; the prediction stays.
     const client = makeClient();
     const mutate = vi.fn(() =>
-      Promise.reject(new EndpointError(422, { message: "nope" })),
+      Promise.reject(new EndpointError(503, { message: "busy" })),
     );
     const { rows } = await mountRows(client, mutate);
 
@@ -408,6 +418,98 @@ describe("useOptimisticResource", () => {
     expect(rows().pendingOps).toHaveLength(1); // still rendered
     expect(rows().data).toEqual([2]); // the prediction did not revert
     expect(rows().saving).toBe(true); // failed ⇒ still unresolved
+  });
+
+  it("a PERMANENT rejection (4xx) drops the op, reports it once, and tells onError", async () => {
+    // A 4xx is a final verdict: the server will never hold this state, so the
+    // prediction leaves the overlay (server truth renders) and the rejection is
+    // emitted for the toast + report.
+    const client = makeClient();
+    const reports: OptimisticRejectionReport[] = [];
+    optimisticRejectionSink.register((r) => {
+      reports.push(r);
+    });
+    const onError = vi.fn();
+    const mutate = vi.fn(() =>
+      Promise.reject(new EndpointError(400, "destination is outside the page")),
+    );
+    const { result } = mountPositional(client, () =>
+      useOptimisticResource(rowsValue, {
+        apply,
+        mutate,
+        onError,
+        label: "Rows",
+        describeOp: (n) => `add ${n}`,
+      }),
+    );
+    act(() => {
+      client.setQueryData(rowsKey, [1]);
+    });
+    const rows = () => settledArm(result.current);
+    await waitFor(() => expect(rows().data).toEqual([1]));
+
+    let opId = "";
+    await act(async () => {
+      opId = rows().dispatch(2);
+    });
+    await waitFor(() => expect(rows().pendingOps).toEqual([]));
+    expect(rows().data).toEqual([1]); // server truth, not the rejected prediction
+    expect(rows().failed).toEqual([]);
+    expect(rows().saving).toBe(false);
+    expect(reports).toEqual([
+      {
+        resourceKey: rowsValue.key,
+        params: null,
+        label: "Rows",
+        status: 400,
+        message: "destination is outside the page",
+        opSummary: "add 2",
+      },
+    ]);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]![2]).toEqual({ opId, rejected: true });
+  });
+
+  it.each([401, 408, 429, 500])(
+    "HTTP %i is transient: the op stays rendered in `failed`, nothing is reported",
+    async (status) => {
+      const client = makeClient();
+      const reports: OptimisticRejectionReport[] = [];
+      optimisticRejectionSink.register((r) => {
+        reports.push(r);
+      });
+      const mutate = vi.fn(() => Promise.reject(new EndpointError(status, {})));
+      const { rows } = await mountRows(client, mutate);
+
+      await act(async () => {
+        rows().dispatch(2);
+      });
+      await waitFor(() => expect(rows().failed).toHaveLength(1));
+      expect(rows().data).toEqual([2]);
+      expect(reports).toEqual([]);
+    },
+  );
+
+  it("a permanently rejected op un-parks the newer op queued behind it", async () => {
+    const client = makeClient();
+    const { mutate, calls, sent } = queuedMutate();
+    const { rows } = await mountRows(client, mutate, {
+      value: laneRejectValue,
+    });
+
+    act(() => {
+      rows().dispatch(2);
+      rows().dispatch(3);
+    });
+    await settleQueues();
+    await act(async () => {
+      calls[0]!.reject(new EndpointError(409, "conflict"));
+    });
+    await waitFor(() => expect(sent()).toEqual([2, 3]));
+    expect(rows().data).toEqual([3]); // 2 rejected and gone, 3 still predicted
+    await act(async () => {
+      calls[1]!.resolve(undefined);
+    });
   });
 
   it("retry(opId) re-fires a failed op IN PLACE (same opId, same overlay position)", async () => {
@@ -558,10 +660,10 @@ describe("useOptimisticResource", () => {
   });
 
   it("HTTP-failed ops are NOT auto-retried on the `online` edge", async () => {
-    // The server already gave a durable verdict; re-firing on reconnect would
-    // just repeat it. Only an explicit retry() re-sends.
+    // The server already answered; a reconnect doesn't change that answer.
+    // Only an explicit retry() re-sends.
     const client = makeClient();
-    const mutate = vi.fn(() => Promise.reject(new EndpointError(422, {})));
+    const mutate = vi.fn(() => Promise.reject(new EndpointError(503, {})));
     const { rows } = await mountRows(client, mutate);
 
     await act(async () => {
@@ -775,7 +877,7 @@ describe("useOptimisticResource", () => {
     expect(sent()).toEqual([2]);
 
     await act(async () => {
-      calls[0]!.reject(new EndpointError(422, { message: "nope" }));
+      calls[0]!.reject(new EndpointError(503, { message: "busy" }));
     });
     await waitFor(() => expect(sent()).toEqual([2, 3]));
     expect(rows().failed.map((f) => f.vars)).toEqual([2]);

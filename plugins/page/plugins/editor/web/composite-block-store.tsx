@@ -16,7 +16,7 @@ import {
   type ReactNode,
 } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { enqueueResourceWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import { enqueueDetachedWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   moveBlock,
@@ -37,6 +37,7 @@ import {
   type BelowFailure,
   type BlockStore,
   type PendingBlockStore,
+  type SettledBlockStore,
 } from "./block-store";
 import type { BlockOverlayOp } from "./internal/optimistic-block-ops";
 import {
@@ -69,7 +70,7 @@ type FeedSnapshot =
       pending: false;
       data: Block[];
       serverData: Block[];
-      dispatch: (v: BlockOverlayOp) => void;
+      dispatch: SettledBlockStore["dispatch"];
     };
 
 /** Reference-identical state — what the publish convergence guard compares. */
@@ -106,12 +107,12 @@ function PageFeedMount({
   // tuple, and a read that has landed a value never goes back to pending — the
   // throw is that invariant stated, not a state this can reach.
   const dispatch = useCallback(
-    (v: BlockOverlayOp) => {
+    (v: BlockOverlayOp, onRejected?: () => void) => {
       const current = storeRef.current;
       if (current.pending) {
         throw new Error(`Page ${pageId}'s feed went back to loading`);
       }
-      current.dispatch(v);
+      current.dispatch(v, onRejected);
     },
     [pageId, storeRef],
   );
@@ -280,7 +281,7 @@ export function CompositeServerProviderHost({
   // loudly. (The two writes that legitimately have no settled feed — the
   // detached patch persist and the cross-page move — never come through here.)
   const dispatchFor = useCallback(
-    (owner: string): ((v: BlockOverlayOp) => void) => {
+    (owner: string): ((v: BlockOverlayOp, onRejected?: () => void) => void) => {
       const feed = feedsRef.current.get(owner);
       if (!feed) throw new Error(`No mounted feed for page ${owner}`);
       if (feed.pending) {
@@ -312,10 +313,14 @@ export function CompositeServerProviderHost({
         Extract<BlockOverlayOp, { tag: "op" }>["op"],
         { kind: "move" | "bulkMove" }
       >,
+      onRejected: (() => void) | undefined,
     ) => {
       const parentId = translateUnionParentId(op.parentId, mountsRef.current);
+      // Nothing was predicted, so a rejection has nothing to roll back — but
+      // the move is lost, so it is reported (toast + report) like any other.
+      const info = { label: "Page", describe: op.kind, onRejected };
       if (op.kind === "move") {
-        void enqueueResourceWrite(pageBlocks, { pageId: sourcePageId }, () =>
+        enqueueDetachedWrite(pageBlocks, { pageId: sourcePageId }, info, () =>
           fetchEndpoint(
             moveBlock,
             { id: op.blockId },
@@ -326,7 +331,7 @@ export function CompositeServerProviderHost({
       }
       // A dragged SELECTION crossing pages: the same reasoning, one write for
       // the whole set so it lands atomically.
-      void enqueueResourceWrite(pageBlocks, { pageId: sourcePageId }, () =>
+      enqueueDetachedWrite(pageBlocks, { pageId: sourcePageId }, info, () =>
         fetchEndpoint(
           moveBlocks,
           {},
@@ -338,7 +343,7 @@ export function CompositeServerProviderHost({
   );
 
   const dispatch = useCallback(
-    (v: BlockOverlayOp) => {
+    (v: BlockOverlayOp, onRejected?: () => void) => {
       const curMounts = mountsRef.current;
       if (v.tag === "patch") {
         // A patch may legitimately span pages (undoing a cross-page bulk
@@ -357,11 +362,14 @@ export function CompositeServerProviderHost({
             // The whole gesture's `restoreIds` ride along: the set is keyed by
             // row id, which neither grouping nor translation rewrites, and a
             // predicate only consults it for the creates its own group carries.
-            feed.dispatch({
-              tag: "patch",
-              patch,
-              restoreIds: v.restoreIds,
-            });
+            feed.dispatch(
+              {
+                tag: "patch",
+                patch,
+                restoreIds: v.restoreIds,
+              },
+              onRejected,
+            );
           } else {
             // Detached persist (undo/redo targeting a collapsed page, or one
             // re-expanded whose rows have not landed yet): no settled feed means
@@ -370,8 +378,12 @@ export function CompositeServerProviderHost({
             // The send lane is MODULE-level, so the write still joins that
             // page's own ordered stream, a loading feed's included: ordering
             // holds, there is simply nothing to predict.
-            void enqueueResourceWrite(pageBlocks, { pageId: owner }, () =>
-              fetchEndpoint(patchBlocks, { pageId: owner }, { body: patch }),
+            enqueueDetachedWrite(
+              pageBlocks,
+              { pageId: owner },
+              { label: "Page", describe: "patch", onRejected },
+              () =>
+                fetchEndpoint(patchBlocks, { pageId: owner }, { body: patch }),
             );
           }
         }
@@ -392,7 +404,7 @@ export function CompositeServerProviderHost({
           basePageId,
         );
         if (sourcePageId !== destPageId) {
-          moveAcrossPages(sourcePageId, v.op);
+          moveAcrossPages(sourcePageId, v.op, onRejected);
           return;
         }
       }
@@ -406,6 +418,7 @@ export function CompositeServerProviderHost({
       )) {
         dispatchFor(owner)(
           translateOpForStore(routed, curMounts, seenAnchorsRef.current),
+          onRejected,
         );
       }
     },

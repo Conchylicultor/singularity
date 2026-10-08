@@ -67,7 +67,11 @@ and the reconnect drain are now ONE mechanism: the **send lane**
 - **Only the send is on it.** Overlay, React commits and both confirmation edges
   are off it: `confirmPass` fires from the QueryCache subscription at any time.
 - **A write with no overlay can still join it**: `enqueueResourceWrite(resource,
-  params, fn)` puts a plain thunk on a tuple's lane. It exists because the
+  params, fn)` puts a plain thunk on a tuple's lane. Its fire-and-forget twin
+  `enqueueDetachedWrite(resource, params, { label, describe, onRejected? }, fn)`
+  owns the outcome nobody reads: an `EndpointError` (any status — a detached
+  write has no Retry surface) is emitted on `optimisticRejectionSink`, any other
+  failure is rethrown. It exists because the
   registry is module-level — a tuple with NO mounted hook still has a lane — so a
   write whose surface is unmounted, or whose effect no single tuple's overlay can
   predict, is *unordered* rather than merely unpredicted if it bypasses this.
@@ -163,7 +167,9 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   against it. On resolve the op is marked `resolved`, stamped with the endpoint's
   `ackWatermark` (when returned), cleared of any prior failure, **and immediately
   re-checked for confirmation**. On reject it **stays in the overlay**
-  (never-revert) with a classified `failure` — see the failure model below.
+  (never-revert) with a classified `failure` — unless the server PERMANENTLY
+  rejected it, when it leaves at once and is reported; see the failure model
+  below.
 - **Ack watermarks (Rule A) and snapshot watermarks (Rule B).** A mutation
   endpoint may return `{ watermark }` — `currentTxId(tx)` (`database/server`)
   read *inside its write transaction* (free; the write already assigned the xid).
@@ -174,9 +180,10 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   commit (or its overwrite). Equal or older proves nothing — the snapshot may
   predate the commit no matter how many pushes delivered it; delivery order is
   not causality.
-- `failed` is the list of `{opId, vars}` whose `mutate` was **durably rejected
-  by the server** (an `EndpointError` — HTTP status). Network-level failures are
-  deliberately NOT in it (they auto-retry — see the failure model).
+- `failed` is the list of `{opId, vars}` whose `mutate` the server failed with a
+  **transient** HTTP status (`classifyRejection`). Network-level failures are
+  deliberately NOT in it (they auto-retry), and neither are permanent rejections
+  (they have left the overlay) — see the failure model.
   `retry(opId)` re-fires the op **in place**: same opId, same overlay position,
   so the rendered prediction never moves or flickers (it clears the failure and
   re-runs `mutate`; there is no remove + re-dispatch). Consequence: a retried op
@@ -196,7 +203,7 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   `retry` that re-runs **only this hook's own** failed ops, and an explicit
   `savedAt` timestamp. A network-failed op is unresolved, so it reports as
   `syncing` (offline-is-syncing — the Yjs lane's policy), never `error`; only a
-  durable HTTP rejection is an `error`. `savedAt` is stamped (`Date.now()`)
+  transient HTTP failure is an `error` (a permanent one is a toast, not a state). `savedAt` is stamped (`Date.now()`)
   **inside the resolve handler**, from `resolvePass`'s result, the moment no
   unresolved op remains — NOT from an effect watching a derived boolean, which
   React can coalesce away within one render (the hazard `sync-status/CLAUDE.md`
@@ -274,8 +281,25 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   UI briefly reverts until the real push lands — which is *guaranteed*, since the
   write committed. Bounded and self-healing, never a permanent zombie; returning
   `{ watermark }` from `mutate` removes even that window.
-- **Failure model (never-revert).** A rejected `mutate` keeps the op in the
-  overlay — the prediction stays rendered. The rejection is classified once:
+- **Failure model.** A rejected `mutate` is classified once, and only a
+  PERMANENT rejection leaves the overlay:
+  - **`rejected`** (`EndpointError` whose status `classifyRejection` calls
+    `permanent`: any 4xx but 401 / 408 / 429): a FINAL verdict — the server will
+    answer the same way however often the op is re-sent. Never-revert protects
+    predictions whose outcome is UNKNOWN; this outcome is known, so keeping the
+    op would show a state the server has refused to hold, park its same-target
+    juniors forever (a collapse that "does nothing"), and lose the edit silently
+    on reload. So `rejectOp` removes it at once — a direct removal, not a
+    reconcile verdict, since nothing on the server was folded on top of it — and
+    the hook emits `optimisticRejectionSink` (`web/reporter.ts`; drained by
+    `reports/optimistic-rejection` into an error toast + a report) and calls
+    `onError(err, vars, { opId, rejected: true })`, the consumer's cue to unwind
+    side state keyed on the op (the page editor drops the undo entry). Newer ops
+    are not cascaded: each gets its own verdict on the lane. Design:
+    `research/2026-10-08-global-rejected-optimistic-ops.md`.
+
+  Every other rejection keeps the op in the overlay — the prediction stays
+  rendered (never-revert):
   - **`network`** (`fetch` rejected — no HTTP verdict: offline, gateway down,
     server restarting): nothing is known to be wrong with the op. It stays
     `syncing` (not in `failed`) and **auto-retries in place, push-based** on
@@ -284,10 +308,10 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
     `online` event. No timers, no per-push retry; the residue (fetch fails while
     the WS never cycled and the browser never went offline) waits for the next
     edge or a manual `retry`, same as the Yjs lane.
-  - **`http`** (`EndpointError` — the server answered and said no): a durable
-    verdict. The op surfaces in `failed`, phase `error`, and waits for an
-    explicit `retry` — reconnect edges deliberately do NOT re-fire it (the
-    server would just repeat the verdict). `onError` fires on every rejection.
+  - **`http`** (`EndpointError` with a TRANSIENT status — 5xx, 401, 408, 429:
+    the server failed, not the op). The op surfaces in `failed`, phase `error`,
+    and waits for an explicit `retry` — reconnect edges deliberately do NOT
+    re-fire it. `onError` fires on every rejection.
 
   A failed op is **unresolved**, and unresolved ops are untouchable by
   confirmation, denial, and miss counting alike — it just keeps replaying, which
@@ -485,10 +509,11 @@ ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
 
 ## Plugin reference
 
-- Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, and keep-rendered failures with reconnect auto-retry.
+- Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
 - Web:
   - Uses:
     - `infra/endpoints.EndpointError`
+    - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.getResourceWatermark`
     - `primitives/live-state.hasResourceTxAck`
@@ -502,12 +527,15 @@ ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
   - Exports (types):
     - `OptimisticDivergenceReport`
     - `OptimisticOptions`
+    - `OptimisticRejectionReport`
     - `OptimisticResult`
     - `OptimisticSettled`
   - Exports (values):
+    - `enqueueDetachedWrite`
     - `enqueueResourceWrite`
     - `OpNoLongerApplies`
     - `optimisticDivergenceReportSink`
+    - `optimisticRejectionSink`
     - `useOptimisticResource`
 - Cross-plugin:
   - Imported by:
@@ -517,6 +545,7 @@ ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
     - `conversations/conversations-view/queue`
     - `page/editor`
     - `reports/optimistic-divergence`
+    - `reports/optimistic-rejection`
 - Exemptions:
   - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
 

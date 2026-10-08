@@ -16,6 +16,11 @@
 // `enqueueResourceWrite` order a write for a tuple with NO mounted hook at all.
 
 import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import {
+  EndpointError,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
+import { optimisticRejectionSink, REJECTION_MESSAGE_MAX } from "../reporter";
 
 /** One tuple's lane: the tail to chain onto, and how many sends are unsettled. */
 interface Lane {
@@ -57,7 +62,10 @@ export function sendLaneKey(
  * predecessor. A synchronous throw out of `send` therefore still propagates to
  * the caller on that path, exactly as an unqueued call would.
  */
-export function enqueueResourceSend<T>(laneKey: string, send: () => Promise<T>): Promise<T> {
+export function enqueueResourceSend<T>(
+  laneKey: string,
+  send: () => Promise<T>,
+): Promise<T> {
   const existing = lanes.get(laneKey);
   if (existing === undefined) {
     const run = send();
@@ -112,6 +120,48 @@ export function enqueueResourceWrite<T, Data, P extends Record<string, string>>(
   fn: () => Promise<T>,
 ): Promise<T> {
   return enqueueResourceSend(sendLaneKey(resource.key, params), fn);
+}
+
+/**
+ * What a detached write is, for the user and for the report: `label` names the
+ * surface ("Page"), `describe` the write ("move"). `onRejected` runs after a
+ * rejection is reported — the caller's cue to unwind side state it keyed on the
+ * write (an undo entry), the twin of `useOptimisticResource`'s
+ * `onError(…, { rejected: true })`.
+ */
+export interface DetachedWriteInfo {
+  label: string;
+  describe: string;
+  onRejected?: () => void;
+}
+
+/**
+ * `enqueueResourceWrite` for a FIRE-AND-FORGET write — the caller reads no
+ * outcome, so the outcome cannot be left for the caller to surface. A detached
+ * write has no overlay and no sync-status Retry, so a server rejection
+ * (`EndpointError`, any status) would otherwise vanish: it is routed to
+ * `optimisticRejectionSink`, which tells the user and files the report. Any
+ * other failure (network, a bug) is rethrown — a deliberate unhandled
+ * rejection, reported by the crash collector.
+ */
+export function enqueueDetachedWrite<P extends Record<string, string>, Data>(
+  resource: ResourceDescriptor<Data, P>,
+  params: P | undefined,
+  info: DetachedWriteInfo,
+  fn: () => Promise<unknown>,
+): void {
+  void enqueueResourceWrite(resource, params, fn).catch((err: unknown) => {
+    if (!(err instanceof EndpointError)) throw err;
+    optimisticRejectionSink.emit({
+      resourceKey: resource.key,
+      params: params ?? null,
+      label: info.label,
+      status: err.status,
+      message: getEndpointErrorMessage(err).slice(0, REJECTION_MESSAGE_MAX),
+      opSummary: info.describe,
+    });
+    if (info.onRejected) info.onRejected();
+  });
 }
 
 /** Occupied lanes. Test-only introspection — pins the reclamation above. */

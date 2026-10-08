@@ -23,7 +23,7 @@ export {
   UNDO_OWNER_ATTR,
   type UndoOwner,
 } from "./internal/undo-owner";
-export type { HistoryEntry } from "./internal/stack";
+export { newHistoryEntryId, type HistoryEntry } from "./internal/stack";
 
 export default {
   description:

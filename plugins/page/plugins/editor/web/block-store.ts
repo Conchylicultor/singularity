@@ -101,8 +101,15 @@ export interface SettledBlockStore {
    * page and in memory.
    */
   failedBelow: ReadonlyMap<string, BelowFailure>;
-  /** Apply a structural op / undo-redo patch through the overlay pipeline. */
-  dispatch: (v: BlockOverlayOp) => void;
+  /**
+   * Apply a structural op / undo-redo patch through the overlay pipeline.
+   * `onRejected` runs if the server PERMANENTLY rejects the write (the
+   * prediction has then already left the overlay, and the user has been told)
+   * — the provider's cue to drop the undo entry that recorded it. It may run
+   * more than once for one dispatch (a write routed to several pages); the
+   * in-memory store never calls it.
+   */
+  dispatch: (v: BlockOverlayOp, onRejected?: () => void) => void;
 }
 
 /** The still-loading arm, shared: it carries nothing, so one object serves every store. */
@@ -144,8 +151,19 @@ export function useServerBlockStore(pageId: string): BlockStore {
     (blocks: Block[], v: BlockOverlayOp) => applyOverlayOp(blocks, v, opCtx),
     [opCtx],
   );
+  // Per-dispatch rejection callbacks, keyed by the dispatched op OBJECT — the
+  // very `vars` the primitive hands back to `onError`. Weak, so an op that
+  // confirms (or is never rejected) leaves nothing behind.
+  const rejectHandlersRef = useRef(new WeakMap<BlockOverlayOp, () => void>());
   const optimistic = useOptimisticResource(pageBlocks, params, {
     apply,
+    // Names the surface in the sync cloud and the rejection toast.
+    label: "Page",
+    onError: (_err, v, { rejected }) => {
+      if (!rejected) return;
+      const onRejected = rejectHandlersRef.current.get(v);
+      if (onRejected) onRejected();
+    },
     // Structural ops keep their own `op` endpoint; undo/redo patches POST to the
     // generic `patch` endpoint. Both flow through this one instance so the
     // overlay + freeze pipeline (and confirmation) is shared — and so both ride
@@ -200,7 +218,8 @@ export function useServerBlockStore(pageId: string): BlockStore {
       loadingBelow: NOTHING_LOADING,
       failedBelow: NOTHING_FAILED,
       // The hook's dispatch returns the minted op id; the seam's is fire-and-forget.
-      dispatch: (v) => {
+      dispatch: (v, onRejected) => {
+        if (onRejected) rejectHandlersRef.current.set(v, onRejected);
         dispatch(v);
       },
     };

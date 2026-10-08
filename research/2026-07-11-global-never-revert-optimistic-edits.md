@@ -182,3 +182,15 @@ No cross-plugin re-exports; resource-runtime gains no imports (injected hook).
    block still rendered, Retry converges.
 6. Artificially break `isConfirmedBy`: exactly one `stalled` report files (Debug →
    Reports) and the op stays rendered throughout.
+
+## Addendum (2026-10-08): permanent rejections leave the overlay
+
+Change 3 ("No rollback on mutate failure") is narrowed. Never-revert protects
+predictions whose outcome is UNKNOWN (network loss, push lag, unproven
+divergence). A permanent HTTP rejection — any 4xx but 401 / 408 / 429
+(`classifyRejection`) — is a KNOWN, final verdict: keeping the op rendered showed
+a state the server refused to hold, parked every same-target junior behind it,
+and lost the edit silently on reload. Such an op now leaves the overlay at once
+and is reported (error toast + `optimistic-rejection` report); transient failures
+(network, 5xx, 401, 408, 429) keep the behaviour above. See
+`research/2026-10-08-global-rejected-optimistic-ops.md`.

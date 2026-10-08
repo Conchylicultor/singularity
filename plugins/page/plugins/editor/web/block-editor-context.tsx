@@ -14,6 +14,7 @@ import {
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import {
+  newHistoryEntryId,
   usePendingFlush,
   useScopedUndoRedo,
 } from "@plugins/primitives/plugins/undo-redo/web";
@@ -334,6 +335,12 @@ interface RecordEntryArgs {
   runsEdits?: readonly BlockRunsEdit[];
   /** Merges run-together edits into one step (a to-do's `checked` flips); structural ops pass none. */
   coalesceKey?: string;
+  /**
+   * The entry's identity, minted with the write it records (`newHistoryEntryId`): if
+   * the server permanently rejects that write, `dropRejectedEntry(id)` removes
+   * the entry — its before/after bracket a change that never happened.
+   */
+  id?: string;
 }
 
 /**
@@ -1171,7 +1178,16 @@ export function BlockEditorProviderInner({
   // and its row truth. So the editor's entries are dropped when it unmounts (a
   // Miller `swap` remounts the column on page navigation), leaving other
   // plugins' mount-free entries on the stack.
-  const { record, undo, redo, canUndo, canRedo } = useScopedUndoRedo();
+  const { record, undo, redo, canUndo, canRedo, dropEntry } =
+    useScopedUndoRedo();
+  // A write's `onRejected` (see `SettledBlockStore.dispatch`): the server
+  // permanently refused it, so the undo entry recorded with it describes a
+  // change that never happened — replaying it would act on a state that never
+  // existed. Idempotent (a write routed to several pages may call it twice).
+  const dropRejectedEntry = useCallback(
+    (id: string) => () => dropEntry(id),
+    [dropEntry],
+  );
   // Seal every block's open typing run before an undo/redo pops: the run the
   // user is in the middle of is then the entry on top, not the one below it.
   usePendingFlush(closeAllOpenTextRuns);
@@ -1192,7 +1208,7 @@ export function BlockEditorProviderInner({
   // and a render-keyed identity here would re-mint every consumer on each
   // push for nothing.
   const dispatchPatch = useCallback(
-    (patch: BlockPatch) => {
+    (patch: BlockPatch, onRejected?: () => void) => {
       if (isEmptyPatch(patch)) return;
       const restoreIds = new Set(
         patch.creates
@@ -1202,7 +1218,7 @@ export function BlockEditorProviderInner({
               !serverIdsRef.current.has(id) && everServerIdsRef.current.has(id),
           ),
       );
-      store.dispatch(buildPatchOverlayOp(patch, { restoreIds }));
+      store.dispatch(buildPatchOverlayOp(patch, { restoreIds }), onRejected);
     },
     [store, serverIdsRef],
   );
@@ -1285,6 +1301,7 @@ export function BlockEditorProviderInner({
       after,
       runsEdits = [],
       coalesceKey,
+      id,
     }: RecordEntryArgs) => {
       closeAllOpenTextRuns();
       const derived = derivePatchEntry(before, after, focusId);
@@ -1316,6 +1333,7 @@ export function BlockEditorProviderInner({
       record({
         label,
         coalesceKey,
+        id,
         undo: async () => {
           for (const e of runsEdits) await replayRunsEdit(e, "undo");
           dispatchPatch(undoPatch);
@@ -1339,8 +1357,9 @@ export function BlockEditorProviderInner({
       after: Block[],
       label: string,
       focusId: string | null,
+      id?: string,
     ) => {
-      recordEntry({ label, focusId, before, after });
+      recordEntry({ label, focusId, before, after, id });
     },
     [recordEntry],
   );
@@ -1507,6 +1526,12 @@ export function BlockEditorProviderInner({
       // outside the view.
       if (!admitsRows(before, after)) return;
       advanceRows(after);
+      // A coalescing entry gets no id: a later write merges INTO an earlier
+      // entry, and one rejection must not drop the steps that did land.
+      const id =
+        opts.record !== false && opts.coalesceKey === undefined
+          ? newHistoryEntryId()
+          : undefined;
       if (opts.record !== false) {
         recordEntry({
           label: opts.label,
@@ -1514,13 +1539,15 @@ export function BlockEditorProviderInner({
           coalesceKey: opts.coalesceKey,
           before,
           after,
+          id,
         });
       }
-      dispatchPatch(redoPatch);
+      dispatchPatch(redoPatch, id ? dropRejectedEntry(id) : undefined);
     },
     [
       recordEntry,
       dispatchPatch,
+      dropRejectedEntry,
       liveRowsRef,
       advanceRows,
       conformRowText,
@@ -1616,15 +1643,24 @@ export function BlockEditorProviderInner({
       // overlay or the network.
       if (!admitsRows(before, after)) return;
       advanceRows(after);
+      const id = newHistoryEntryId();
       recordStructural(
         before,
         after,
         OP_LABELS[op.kind],
         opFocusId(op, before, opCtx),
+        id,
       );
-      store.dispatch(vars);
+      store.dispatch(vars, dropRejectedEntry(id));
     },
-    [store, recordStructural, opCtx, advanceRows, admitsRows],
+    [
+      store,
+      recordStructural,
+      dropRejectedEntry,
+      opCtx,
+      advanceRows,
+      admitsRows,
+    ],
   );
 
   // See the context field. `liveRowsRef`, not `rowsRef`: an affordance asks
@@ -1831,7 +1867,8 @@ export function BlockEditorProviderInner({
       if (written.length === 0) return;
       if (!admitsRows(before, after)) return;
       advanceRows(after);
-      store.dispatch(vars);
+      const entryId = newHistoryEntryId();
+      store.dispatch(vars, dropRejectedEntry(entryId));
       // The line the caret lands on is always one this op CREATED (the last
       // pasted line, or the minted tail), so this claims the keyboard until it
       // mounts — split's `focusNew`, at an offset.
@@ -1849,6 +1886,7 @@ export function BlockEditorProviderInner({
             focusId: caret.blockId,
             before,
             after,
+            id: entryId,
           });
           return;
         }
@@ -1861,6 +1899,7 @@ export function BlockEditorProviderInner({
           focusId: caret.blockId,
           before,
           after,
+          id: entryId,
           runsEdits: runsEqual(originBefore, target)
             ? []
             : [{ blockId: args.blockId, before: originBefore, after: target }],
@@ -1878,6 +1917,7 @@ export function BlockEditorProviderInner({
       admitsRows,
       advanceRows,
       store,
+      dropRejectedEntry,
       recordEntry,
     ],
   );
@@ -1976,15 +2016,19 @@ export function BlockEditorProviderInner({
   // must not go on to the content-doc half of its gesture (a split's
   // truncation, a merge's record) — the rows it would describe never changed.
   const applyOverlay = useCallback(
-    (op: BlockOp): { before: Block[]; after: Block[] } | null => {
+    (
+      op: BlockOp,
+    ): { before: Block[]; after: Block[]; entryId: string } | null => {
       const before = rowsRef.current;
       const { after, vars } = predictOp(op, before, opCtx);
       if (!admitsRows(before, after)) return null;
       advanceRows(after);
-      store.dispatch(vars);
-      return { before, after };
+      // The caller records the entry under this id (see `RecordEntryArgs.id`).
+      const entryId = newHistoryEntryId();
+      store.dispatch(vars, dropRejectedEntry(entryId));
+      return { before, after, entryId };
     },
-    [store, opCtx, advanceRows, admitsRows],
+    [store, dropRejectedEntry, opCtx, advanceRows, admitsRows],
   );
 
   // Move the caret into a freshly-minted block by its known id. The block does
@@ -2174,12 +2218,14 @@ export function BlockEditorProviderInner({
           const targetAfter = mergeRuns(targetBefore, mergingRuns);
           if (targetOwner) targetOwner.untracked(() => append(mergingRuns));
           else append(mergingRuns);
-          store.dispatch(vars);
+          const entryId = newHistoryEntryId();
+          store.dispatch(vars, dropRejectedEntry(entryId));
           recordEntry({
             label: OP_LABELS.merge,
             focusId: sourceId,
             before,
             after,
+            id: entryId,
             runsEdits: [
               { blockId: target.id, before: targetBefore, after: targetAfter },
             ],
@@ -2225,6 +2271,7 @@ export function BlockEditorProviderInner({
             // the admission's snapshot above: the append was a round trip.
             before: applied.before,
             after: applied.after,
+            id: applied.entryId,
             runsEdits: [
               { blockId: targetId, before: targetBefore, after: targetAfter },
             ],
@@ -2234,6 +2281,7 @@ export function BlockEditorProviderInner({
     },
     [
       store,
+      dropRejectedEntry,
       applyOverlay,
       recordEntry,
       recordTextEdit,
@@ -2438,6 +2486,7 @@ export function BlockEditorProviderInner({
               applied.after,
               OP_LABELS.split,
               blockId,
+              applied.entryId,
             );
           return;
         }
@@ -2449,7 +2498,7 @@ export function BlockEditorProviderInner({
         // still precedes the commit that mounts the new block.
         const applied = applyOverlay(op);
         if (!applied) return;
-        const { before, after } = applied;
+        const { before, after, entryId } = applied;
         focusNew(newId);
         // The reducer left the HEAD in this block's row, but the bound editor
         // ignores rows — the LIVE content must be truncated from the caret
@@ -2489,6 +2538,7 @@ export function BlockEditorProviderInner({
               focusId: newId,
               before,
               after,
+              id: entryId,
             });
             return;
           }
@@ -2500,6 +2550,7 @@ export function BlockEditorProviderInner({
             focusId: newId,
             before,
             after,
+            id: entryId,
             runsEdits: runsEqual(originBefore, head)
               ? []
               : [{ blockId, before: originBefore, after: head }],

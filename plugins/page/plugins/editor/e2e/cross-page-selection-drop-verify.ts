@@ -148,8 +148,14 @@ await withBrowser(async (h) => {
     textsOf(await rowsOf(parent.pageId)),
     [],
   );
-  const syncError = await page.getByText("Could not save").count();
-  r.eq("A: no 'Could not save'", syncError, 0);
+  // The machine-readable sync phase, not the tooltip copy (which never
+  // matched "Could not save"), plus the rejection toast a 4xx would raise.
+  const syncError = await page.locator('[data-sync-phase="error"]').count();
+  r.eq("A: the sync cloud is not in error", syncError, 0);
+  const rejectionToast = await page
+    .getByText("Couldn't save page edit")
+    .count();
+  r.eq("A: no rejection toast", rejectionToast, 0);
 
   // ---- B: the chevron collapses the sub-page ----------------------------------
   const chevron = page.locator(`[data-chevron-for="${subId}"]`).first();

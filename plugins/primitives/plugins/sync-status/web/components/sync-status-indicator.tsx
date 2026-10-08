@@ -41,7 +41,9 @@ export function SyncStatusIndicator() {
   if (agg.kind === "syncing" && !showSyncing) return null;
 
   return (
-    <Pin to="bottom-right" offset="md" layer="float">
+    // `data-sync-phase` is the machine-readable state (e2e scripts assert on
+    // it — the tooltip text is copy, not a contract).
+    <Pin to="bottom-right" offset="md" layer="float" data-sync-phase={agg.kind}>
       <Body agg={agg} />
     </Pin>
   );

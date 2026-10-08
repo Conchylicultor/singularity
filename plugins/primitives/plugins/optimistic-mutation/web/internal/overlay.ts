@@ -54,13 +54,42 @@ export class OpNoLongerApplies extends Error {
 export const DIVERGENCE_REPORT_MISSES = 3;
 
 /**
- * Why an op's `mutate` rejected. `network` = the request never got an HTTP
- * verdict (fetch rejected — offline, server restarting): nothing is known to be
- * wrong with the op, so it keeps rendering as `syncing` and auto-retries on
- * reconnect edges. `http` = the server durably rejected it (`EndpointError`):
- * it keeps rendering, surfaces as `error`, and waits for an explicit retry.
+ * Why an op's `mutate` rejected, while the op stays in the overlay. `network` =
+ * the request never got an HTTP verdict (fetch rejected — offline, server
+ * restarting): nothing is known to be wrong with the op, so it keeps rendering
+ * as `syncing` and auto-retries on reconnect edges. `http` = the server failed
+ * it with a TRANSIENT status (`classifyRejection`): it keeps rendering,
+ * surfaces as `error`, and waits for an explicit retry.
+ *
+ * A PERMANENT rejection is never an `OpFailure`: the op leaves the overlay at
+ * once (`rejectOp`) — see `classifyRejection`.
  */
 export type OpFailure = { kind: "network" } | { kind: "http"; status: number };
+
+/**
+ * Is an HTTP failure a FINAL verdict on the op, or one a retry can overturn?
+ *
+ * - `permanent` — a 4xx the server will answer the same way however often the
+ *   op is re-sent (a validation failure, an op that no longer applies, a
+ *   missing row). Keeping such an op rendered would show a state the server
+ *   has definitively refused to hold, and park every newer same-target op
+ *   behind it forever — so the op is REJECTED: dropped from the overlay and
+ *   reported (`optimisticRejectionSink`).
+ * - `transient` — 5xx (the server failed, not the op), 401 (an expired
+ *   session; the same op succeeds after re-auth), 408 and 429 (timing, not
+ *   content). The op keeps rendering under never-revert, as `error` + Retry.
+ *
+ * Never-revert (`research/2026-07-11-global-never-revert-optimistic-edits.md`)
+ * protects predictions whose outcome is UNKNOWN; a permanent rejection is a
+ * known one, and dropping the op renders server truth for a causal reason,
+ * exactly like a `superseded` denial
+ * (`research/2026-10-08-global-rejected-optimistic-ops.md`).
+ */
+export function classifyRejection(status: number): "permanent" | "transient" {
+  if (status < 400 || status >= 500) return "transient";
+  if (status === 401 || status === 408 || status === 429) return "transient";
+  return "permanent";
+}
 
 /** One pending optimistic op. `vars` is replayed via `apply` on top of base. */
 export interface PendingOp<Vars> {
@@ -92,7 +121,7 @@ export interface PendingOp<Vars> {
    * miss counting — and, since it is still in the fold, it also blocks its
    * newer same-target ops from leaving (see `decideVerdicts`, which spells out
    * how long: until a reconnect edge for `network`, until the user's `retry()`
-   * for `http`).
+   * for `http`). A permanently rejected op never carries one — it is removed.
    */
   failure?: OpFailure;
   /**
@@ -646,6 +675,23 @@ export function markFailed<Vars>(
   failure: OpFailure,
 ): PendingOp<Vars>[] {
   return pending.map((op) => (op.opId === opId ? { ...op, failure } : op));
+}
+
+/**
+ * Remove the op the server PERMANENTLY rejected (`classifyRejection`). A direct
+ * removal, not a `reconcile` verdict: the ordering rule ("no op leaves while an
+ * older same-target op remains") protects ops whose effect newer ops were
+ * folded on top of — a rejected op's effect never existed on the server, so
+ * nothing newer can depend on it there. Newer ops are NOT cascaded: each rides
+ * the same send lane and gets its own verdict (one that depended on this op is
+ * rejected in turn). Identity-preserving when absent.
+ */
+export function rejectOp<Vars>(
+  pending: ReadonlyArray<PendingOp<Vars>>,
+  opId: string,
+): ReadonlyArray<PendingOp<Vars>> {
+  if (!pending.some((op) => op.opId === opId)) return pending;
+  return pending.filter((op) => op.opId !== opId);
 }
 
 /** Clear the op's failure ahead of a retry re-fire. No-op if absent. */

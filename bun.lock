@@ -5218,6 +5218,10 @@
       "name": "@singularity/plugin-reports-optimistic-divergence",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/optimistic-rejection": {
+      "name": "@singularity/plugin-reports-optimistic-rejection",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/outbox": {
       "name": "@singularity/plugin-reports-outbox",
       "version": "0.0.1",
@@ -8807,6 +8811,8 @@
     "@singularity/plugin-reports-noise-rules": ["@singularity/plugin-reports-noise-rules@workspace:plugins/reports/plugins/noise-rules"],
 
     "@singularity/plugin-reports-optimistic-divergence": ["@singularity/plugin-reports-optimistic-divergence@workspace:plugins/reports/plugins/optimistic-divergence"],
+
+    "@singularity/plugin-reports-optimistic-rejection": ["@singularity/plugin-reports-optimistic-rejection@workspace:plugins/reports/plugins/optimistic-rejection"],
 
     "@singularity/plugin-reports-outbox": ["@singularity/plugin-reports-outbox@workspace:plugins/reports/plugins/outbox"],
 

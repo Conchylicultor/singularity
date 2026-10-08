@@ -402,6 +402,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "reports/plugins/live-state-stale-drop", id: "reports.live-state-stale-drop", loader: () => import("@plugins/reports/plugins/live-state-stale-drop/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/noise-rules", id: "reports.noise-rules", loader: () => import("@plugins/reports/plugins/noise-rules/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/optimistic-divergence", id: "reports.optimistic-divergence", loader: () => import("@plugins/reports/plugins/optimistic-divergence/server"), dependsOn: ["reports"] },
+  { pluginPath: "reports/plugins/optimistic-rejection", id: "reports.optimistic-rejection", loader: () => import("@plugins/reports/plugins/optimistic-rejection/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/outbox", id: "reports.outbox", loader: () => import("@plugins/reports/plugins/outbox/server"), dependsOn: ["infra/plugins/file-watcher", "infra/plugins/paths", "infra/plugins/runtime-profiler", "infra/plugins/spawn", "reports"] },
   { pluginPath: "reports/plugins/page-undo-conflict", id: "reports.page-undo-conflict", loader: () => import("@plugins/reports/plugins/page-undo-conflict/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/render-loop", id: "reports.render-loop", loader: () => import("@plugins/reports/plugins/render-loop/server"), dependsOn: ["reports"] },

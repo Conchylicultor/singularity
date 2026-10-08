@@ -37,6 +37,7 @@
     - `page/url-paste`
     - `primitives/data-view`
     - `primitives/file-viewer`
+    - `reports/optimistic-rejection`
     - `shell/notifications`
 - Core:
   - Exports (types):

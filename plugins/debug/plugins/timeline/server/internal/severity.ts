@@ -15,8 +15,12 @@ export function traceSeverity(critical: boolean): TimelineSeverity {
 // A slow-op sample is a threshold breach by construction (warning). At 5× its
 // own threshold it stops being "slow" and becomes "broken" (error).
 export const SLOW_OP_ERROR_FACTOR = 5;
-export function slowOpSeverity(durationMs: number, thresholdMs: number): TimelineSeverity {
-  if (thresholdMs > 0 && durationMs >= SLOW_OP_ERROR_FACTOR * thresholdMs) return "error";
+export function slowOpSeverity(
+  durationMs: number,
+  thresholdMs: number,
+): TimelineSeverity {
+  if (thresholdMs > 0 && durationMs >= SLOW_OP_ERROR_FACTOR * thresholdMs)
+    return "error";
   return "warning";
 }
 
@@ -28,6 +32,7 @@ export const CRASH_LIKE_REPORT_KINDS: ReadonlySet<string> = new Set([
   "crash",
   "render-loop",
   "optimistic-divergence",
+  "optimistic-rejection",
 ]);
 export function reportSeverity(kind: string, noise: boolean): TimelineSeverity {
   if (noise) return "info";

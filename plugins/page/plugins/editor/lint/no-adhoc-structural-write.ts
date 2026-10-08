@@ -61,8 +61,9 @@ export default createRule({
         "causally dependent pair can reach the server in the wrong order and the " +
         "prediction diverges from server truth. Dispatch through the editor's " +
         "`BlockStore` (`dispatchOp` records the undo entry), or — for a write with " +
-        "no mounted surface to predict it — `enqueueResourceWrite(pageBlocks, " +
-        "{ pageId }, …)` from `@plugins/primitives/plugins/optimistic-mutation/web`. " +
+        "no mounted surface to predict it — `enqueueDetachedWrite(pageBlocks, " +
+        "{ pageId }, …)` from `@plugins/primitives/plugins/optimistic-mutation/web`, " +
+        "which also reports a rejection to the user. " +
         "See research/2026-08-01-page-structural-write-contract.md.",
     },
   },

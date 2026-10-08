@@ -236,6 +236,7 @@ undoes the title text only — an ordinary autosaved input, never on this stack.
     - `UndoRedoShortcutsOptions`
   - Exports (values):
     - `localUndoProps`
+    - `newHistoryEntryId`
     - `resolveUndoOwner`
     - `surfaceUndoProps`
     - `UNDO_OWNER_ATTR`

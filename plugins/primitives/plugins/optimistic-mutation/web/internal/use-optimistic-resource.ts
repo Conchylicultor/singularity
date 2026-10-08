@@ -20,15 +20,24 @@ import type {
   LiveValue,
 } from "@plugins/network/plugins/live/core";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
-import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import {
+  EndpointError,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
-import { optimisticDivergenceReportSink } from "../reporter";
+import {
+  optimisticDivergenceReportSink,
+  optimisticRejectionSink,
+  REJECTION_MESSAGE_MAX,
+} from "../reporter";
 import { enqueueResourceSend, sendLaneKey } from "./send-lane";
 import {
   ackPass,
+  classifyRejection,
   clearFailure,
   confirmPass,
   markFailed,
+  rejectOp,
   replay,
   resolvePass,
   type OpFailure,
@@ -48,6 +57,12 @@ function ackParamsKey(params: Record<string, string> | undefined): string {
 }
 
 /**
+ * How one `mutate` attempt ended: accepted, failed in place (an `OpFailure`
+ * kind — the op stays rendered), or permanently rejected (the op is gone).
+ */
+type MutateOutcome = "resolved" | OpFailure["kind"] | "rejected";
+
+/**
  * What an optimistic read does with its ops — everything but the read itself,
  * which is positional (`useOptimisticResource(value, params?, options)` /
  * `(collection, { ids }, options)`).
@@ -63,11 +78,25 @@ interface OptimisticOpArgs<Data, Vars> {
    * coarse / content-only confirmation, no denial).
    */
   mutate: (vars: Vars) => Promise<void | { watermark?: string }>;
-  onError?: (err: unknown, vars: Vars) => void;
-  /** Names the thing being saved; surfaced in the sync-status error state. */
+  /**
+   * Fires on every `mutate` rejection. `outcome.rejected` is true when the
+   * server PERMANENTLY rejected the op (`classifyRejection`) and it has already
+   * left the overlay — the consumer's cue to unwind any side state it keyed on
+   * the op (an undo entry). Otherwise the op is still rendered, awaiting retry.
+   */
+  onError?: (
+    err: unknown,
+    vars: Vars,
+    outcome: { opId: string; rejected: boolean },
+  ) => void;
+  /**
+   * Names the thing being saved; surfaced in the sync-status error state and
+   * the rejection toast.
+   */
   label?: string;
   /**
-   * Short, bounded description of an op, used ONLY in the divergence report
+   * Short, bounded description of an op, used ONLY in the divergence and
+   * rejection reports
    * (`vars` itself is unbounded and possibly unserializable, so it is never
    * shipped). Must be pure and total — it runs on the reconcile path, and a
    * throw propagates loudly rather than being swallowed.
@@ -168,9 +197,11 @@ export interface OptimisticSettled<Data, Vars> {
   /** True while at least one op's `mutate` has not come back yet. */
   saving: boolean;
   /**
-   * Ops whose `mutate` was durably REJECTED by the server (an HTTP error —
-   * `EndpointError`). They are still rendered (still in `pendingOps`) but need
-   * an explicit `retry` to converge. Network-level failures (fetch rejected —
+   * Ops whose `mutate` the server failed with a TRANSIENT HTTP status
+   * (`EndpointError`, see `classifyRejection`). They are still rendered (still
+   * in `pendingOps`) but need an explicit `retry` to converge. A PERMANENTLY
+   * rejected op is never here — it has already left the overlay and been
+   * reported. Network-level failures (fetch rejected —
    * offline, restarting server) are deliberately NOT here: nothing is known to
    * be wrong with those ops, so they stay `syncing` and auto-retry on the next
    * reconnect edge.
@@ -538,7 +569,7 @@ function useOptimisticCore<Data, Vars>(
   // it inside a send-lane slot (see `send-lane.ts`), so the lane is the one
   // mechanism and classification/`failed`/`retry`/`savedAt` stay untouched by it.
   const runMutate = useCallback(
-    (opId: string, vars: Vars): Promise<"resolved" | OpFailure["kind"]> => {
+    (opId: string, vars: Vars): Promise<MutateOutcome> => {
       return mutateRef.current(vars).then(
         (res) => {
           // Confirm against what the cache ALREADY holds: the confirming push
@@ -583,18 +614,44 @@ function useOptimisticCore<Data, Vars>(
           return "resolved" as const;
         },
         (err: unknown) => {
-          // Reject is NOT a rollback: the op keeps rendering (never-revert) and
-          // the failure kind drives the sync phase. A durable server rejection
-          // (`EndpointError`) surfaces as `error` + manual Retry; anything else
-          // is a network-level failure (offline, restarting server) — nothing is
-          // known to be wrong with the op, so it stays `syncing` and auto-retries
-          // on the next reconnect edge.
+          // A PERMANENT rejection is a final verdict: the server will never
+          // hold this op's state, so it leaves the overlay now (the surface
+          // renders server truth, and newer same-target ops stop parking behind
+          // it) and is reported — the user is told, and a report is filed.
+          if (
+            err instanceof EndpointError &&
+            classifyRejection(err.status) === "permanent"
+          ) {
+            commitPending(rejectOp(pendingRef.current, opId));
+            const describe = describeOpRef.current;
+            optimisticRejectionSink.emit({
+              resourceKey: resource.key,
+              params: paramsRef.current ?? null,
+              label: labelRef.current ?? null,
+              status: err.status,
+              message: getEndpointErrorMessage(err).slice(
+                0,
+                REJECTION_MESSAGE_MAX,
+              ),
+              opSummary: describe ? describe(vars) : null,
+            });
+            if (onErrorRef.current)
+              onErrorRef.current(err, vars, { opId, rejected: true });
+            return "rejected" as const;
+          }
+          // Anything else is NOT a rollback: the op keeps rendering
+          // (never-revert) and the failure kind drives the sync phase. A
+          // transient server failure (`EndpointError`) surfaces as `error` +
+          // manual Retry; anything else is a network-level failure (offline,
+          // restarting server) — nothing is known to be wrong with the op, so
+          // it stays `syncing` and auto-retries on the next reconnect edge.
           const failure: OpFailure =
             err instanceof EndpointError
               ? { kind: "http", status: err.status }
               : { kind: "network" };
           commitPending(markFailed(pendingRef.current, opId, failure));
-          if (onErrorRef.current) onErrorRef.current(err, vars);
+          if (onErrorRef.current)
+            onErrorRef.current(err, vars, { opId, rejected: false });
           return failure.kind;
         },
       );
@@ -638,7 +695,7 @@ function useOptimisticCore<Data, Vars>(
   // keeps its position (no remove/re-append flicker, no reorder). Returns the
   // outcome (undefined when the op is gone or not failed) for the drain below.
   const retryOp = useCallback(
-    (opId: string): Promise<"resolved" | OpFailure["kind"]> | undefined => {
+    (opId: string): Promise<MutateOutcome> | undefined => {
       const op = pendingRef.current.find(
         (o) => o.opId === opId && o.failure !== undefined,
       );
@@ -662,8 +719,8 @@ function useOptimisticCore<Data, Vars>(
   // skips the rest of the batch (the transport is still down, so every later op
   // would fail the same way; a skipped op keeps its `failure`, so the next
   // reconnect edge — or the cloud's Retry — re-drains from the top). An `http`
-  // outcome parks that op for manual Retry and the batch keeps going, so later
-  // ops still get their in-order shot.
+  // outcome parks that op for manual Retry (a `rejected` one drops it) and the
+  // batch keeps going, so later ops still get their in-order shot.
   //
   // The whole batch is enqueued SYNCHRONOUSLY rather than awaiting each op
   // before enqueuing the next: an await-loop would let a keystroke dispatched
@@ -704,9 +761,9 @@ function useOptimisticCore<Data, Vars>(
   //    reachable again);
   //  - the browser's `online` event (covers actual connectivity loss, where an
   //    idle WS may not surface a close promptly).
-  // HTTP-failed ops are deliberately excluded: the server already gave a
-  // durable verdict, so re-firing them on reconnect would just repeat it —
-  // they wait for an explicit `retry`.
+  // HTTP-failed ops are deliberately excluded: the server already answered,
+  // and nothing about a reconnect changes that answer — they wait for an
+  // explicit `retry`.
   const retryNetworkFailed = useCallback(() => {
     drainFailed(["network"]);
   }, [drainFailed]);
@@ -735,8 +792,8 @@ function useOptimisticCore<Data, Vars>(
   // is what pinned the cloud on "Saving…" forever.
   const saving = useMemo(() => pending.some((op) => !op.resolved), [pending]);
 
-  // The durably-rejected subset, derived from the overlay (failed ops never
-  // left it). Network-failed ops are NOT failed — they are `syncing`.
+  // The HTTP-failed (transient) subset, derived from the overlay (failed ops
+  // never left it). Network-failed ops are NOT failed — they are `syncing`.
   const failed = useMemo(
     () =>
       pending
