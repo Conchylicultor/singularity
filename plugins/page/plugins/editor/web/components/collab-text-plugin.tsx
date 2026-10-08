@@ -5,6 +5,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import {
   COLLABORATION_TAG,
   COMMAND_PRIORITY_CRITICAL,
+  KEY_DOWN_COMMAND,
   REDO_COMMAND,
   UNDO_COMMAND,
 } from "lexical";
@@ -338,6 +339,19 @@ function LocalCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
 }
 
 /**
+ * The keys Lexical's `$handleKeyDown` treats as undo/redo (⌘/Ctrl+Z,
+ * ⌘/Ctrl+⇧Z, Ctrl+Y) plus ⌘Y — the surface binding's own redo spelling. A
+ * superset of Lexical's platform-exact `isUndo`/`isRedo` is safe: a claimed key
+ * is only kept from Lexical, never prevented, so whatever else it meant still
+ * happens.
+ */
+function isUndoRedoKey(event: KeyboardEvent): boolean {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey) return false;
+  const key = event.key.toLowerCase();
+  return key === "z" || (key === "y" && !event.shiftKey);
+}
+
+/**
  * The shared `CollaborationPlugin` mount + Lexical UNDO/REDO swallow, given the
  * {@link CollabBlockDoc} from either transport. `shouldBootstrap={false}`: the
  * doc is seeded through the provider (server first-writer-wins doc-init, or the
@@ -384,9 +398,23 @@ function CollabBinding({
   // deliberately has NO per-block history — undo is the single document-level
   // stack routed through window-level shortcuts (see editor/CLAUDE.md), which
   // drives text through the data entries recorded above. Swallow the commands
-  // at CRITICAL priority so CollaborationPlugin's manager never fires; the
-  // native keydown still bubbles to the document stack.
+  // at CRITICAL priority so CollaborationPlugin's manager never fires.
+  //
+  // Swallowing the COMMAND is not enough to hand the KEY over: Lexical's
+  // built-in `KEY_DOWN_COMMAND` listener (`$handleKeyDown`, priority EDITOR)
+  // calls `event.preventDefault()` on ⌘Z / ⌘⇧Z BEFORE dispatching
+  // UNDO/REDO_COMMAND (`lexical@0.44.0 Lexical.dev.mjs:2949-2954`), and the
+  // window-level `ShortcutManager` yields every `defaultPrevented` key to the
+  // element that "handled" it — so the document stack never saw ⌘Z typed in a
+  // block. Claiming the undo/redo keys at `KEY_DOWN_COMMAND` (consumed, NOT
+  // prevented) preempts that whole branch, so the native keydown reaches the
+  // surface binding untouched. Spec: `e2e/paste-undo-verify.ts`.
   useEffect(() => {
+    const unregisterKeys = editor.registerCommand(
+      KEY_DOWN_COMMAND,
+      isUndoRedoKey,
+      COMMAND_PRIORITY_CRITICAL,
+    );
     const unregisterUndo = editor.registerCommand(
       UNDO_COMMAND,
       () => true,
@@ -398,6 +426,7 @@ function CollabBinding({
       COMMAND_PRIORITY_CRITICAL,
     );
     return () => {
+      unregisterKeys();
       unregisterUndo();
       unregisterRedo();
     };
