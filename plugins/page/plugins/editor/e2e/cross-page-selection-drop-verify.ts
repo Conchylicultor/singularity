@@ -96,7 +96,11 @@ await withBrowser(async (h) => {
 
   // ---- A: drag the selection into the sub-page --------------------------------
   await enterBlockSelection("A", 0, "Shift+ArrowDown");
-  r.eq("A: the gesture starts from a two-block selection", await selectedCount(), 2);
+  r.eq(
+    "A: the gesture starts from a two-block selection",
+    await selectedCount(),
+    2,
+  );
 
   const ops = await stallRoute(page, "**/api/pages/*/blocks/op", {
     ms: 0,
@@ -107,7 +111,10 @@ await withBrowser(async (h) => {
     times: 0,
   });
 
-  const srcRow = page.locator("[data-block-id]").filter({ hasText: "alpha" }).last();
+  const srcRow = page
+    .locator("[data-block-id]")
+    .filter({ hasText: "alpha" })
+    .last();
   const src = await srcRow.boundingBox();
   if (!src) throw new Error("alpha row has no box");
   await page.mouse.move(src.x + src.width / 2, src.y + src.height / 2);
@@ -157,7 +164,11 @@ await withBrowser(async (h) => {
   await page.reload({ waitUntil: "domcontentloaded" });
   await subRow.waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(3000);
-  r.eq("B: ... and stays collapsed after a reload (server truth)", await insideCount(), 0);
+  r.eq(
+    "B: ... and stays collapsed after a reload (server truth)",
+    await insideCount(),
+    0,
+  );
 
   await r.finish();
 });
