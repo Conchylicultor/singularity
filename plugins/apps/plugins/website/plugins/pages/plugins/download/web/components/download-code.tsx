@@ -25,7 +25,14 @@ export function DownloadCode({
 }) {
   return (
     <Card className="rounded-xl shadow-none">
-      <Stack direction="row" gap="md" align="start">
+      {/* A command is one line: centre it on the copy button so the card's
+          space above and below the line match. A prompt wraps, so its first
+          line stays level with the button's top. */}
+      <Stack
+        direction="row"
+        gap="md"
+        align={kind === "command" ? "center" : "start"}
+      >
         <Fill>
           {kind === "command" ? (
             <Scroll axis="x">
