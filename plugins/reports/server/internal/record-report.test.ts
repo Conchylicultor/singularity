@@ -39,6 +39,7 @@ import type { routeChange } from "@plugins/database/plugins/change-feed/server";
 import { writeReport, type ReportUpsertValues } from "./record-report";
 import { reportsProducer } from "./producer";
 import { _reports } from "./tables";
+import { reportIdKind } from "../../core/id-kind";
 
 const T0 = new Date("2026-07-11T03:30:00.000Z");
 const T1 = new Date("2026-07-11T03:32:00.000Z");
@@ -48,7 +49,7 @@ let seq = 0;
 const values = (
   over: Partial<ReportUpsertValues> = {},
 ): ReportUpsertValues => ({
-  id: `report-test-${seq++}`,
+  id: reportIdKind.key(`report-test-${seq++}`),
   kind: "crash",
   fingerprint: "fp-1",
   worktree: "wt-test",

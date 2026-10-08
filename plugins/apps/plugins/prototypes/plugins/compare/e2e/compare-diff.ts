@@ -82,7 +82,7 @@ import {
 import {
   describeOptionValues,
   humanizeToken,
-  isPrototypeId,
+  protoIdKind,
   pickedColor,
   picksFromQuery,
   SIZE_PRESETS,
@@ -114,7 +114,7 @@ import {
 const USAGE =
   "--name <proto-id> is required — the prototype folder's minted id (`./singularity prototype list` prints them)";
 const name = requireArg("name", USAGE);
-if (!isPrototypeId(name)) {
+if (!protoIdKind.is(name)) {
   usage(
     `--name ${name} is not a prototype id (proto-<seconds>-<4 chars>); ${USAGE}`,
   );

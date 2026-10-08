@@ -160,7 +160,9 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
 - Cross-plugin:
   - Imported by: `stats/commits`
 - Exemptions:
-  - Exempts itself from: `endpoints:no-raw-json-handlers` — `server/internal/routes.ts` (sanctioned)
+  - Exempts itself from:
+    - `endpoints:no-raw-json-handlers` — `server/internal/routes.ts` (sanctioned)
+    - `ids:pk-declared` — `server/internal/tables.ts` (debt)
 - Shared:
   - Exports (types):
     - `ClassifyBody`

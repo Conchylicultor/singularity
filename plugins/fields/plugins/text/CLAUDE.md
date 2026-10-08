@@ -36,6 +36,7 @@ reuse these capabilities via the `extends`-chain fallback.
     - `fields/rank`
     - `fields/text/config`
     - `fields/uuid`
+    - `ids`
 - Sub-plugins:
   - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
   - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).

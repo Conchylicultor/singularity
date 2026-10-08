@@ -16,6 +16,8 @@ import { DeleteAgentAction } from "./components/delete-agent-action";
 import { ExpandAgentButton } from "./components/expand-agent-button";
 import { Agents as AgentsSlots } from "./slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { IdKinds } from "@plugins/ids/web";
+import { agentIdKind, agentLaunchIdKind } from "../core";
 
 export {
   agentsRootPane,
@@ -31,6 +33,8 @@ export { patchAgent } from "./components/agents-list";
 export default {
   description: "Named agent definitions that launch conversations.",
   contributions: [
+    IdKinds.Kind({ kind: agentIdKind }),
+    IdKinds.Kind({ kind: agentLaunchIdKind }),
     Pane.Register({ pane: agentsRootPane }),
     Pane.Register({ pane: agentDetailPane }),
     Pane.Register({ pane: systemAgentDetailPane }),

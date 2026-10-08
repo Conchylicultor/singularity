@@ -46,11 +46,12 @@ key also writes the row's `ssh_public_key`, so no hand-notify exists.
     - `serversRootPane.Actions` ← `primitives.pane`
     - `serverDetailPane.Actions` ← `primitives.pane`
   - Contributes:
+    - `IdKinds.Kind` "srv"
     - `Pane.Register` "deploy-server-detail"
     - `Pane.Register` "deploy-servers"
     - `ServerDetail.Section` "Server" → `ServerEditForm`
     - `item-actions` "open-console" → `OpenConsoleAction`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `primitives/pane` ×5
     - `infra/endpoints` ×4
@@ -58,6 +59,7 @@ key also writes the row's `ssh_public_key`, so no hand-notify exists.
     - `primitives/css/fill` ×2
     - `primitives/editable-field` ×2
     - `primitives/live-state` ×2
+    - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/spacing.Stack`
@@ -80,10 +82,14 @@ key also writes the row's `ssh_public_key`, so no hand-notify exists.
     - `serversRootPane`
     - `SshKeySchema`
 - Server:
-  - Contributes: `resource.declare` "deploy.servers"
+  - Contributes:
+    - `ids.kind` "srv"
+    - `resource.declare` "deploy.servers"
   - Uses:
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
+    - `ids.idColumn`
+    - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/secrets.deleteSecret`
@@ -106,8 +112,13 @@ key also writes the row's `ssh_public_key`, so no hand-notify exists.
     - `POST /api/deploy/servers/:id/ssh-keypair`
     - `POST /api/deploy/servers/:id/ssh-keypair/import`
 - Core:
-  - Uses: `primitives/pane.defineRoute`
+  - Uses:
+    - `ids.defineIdKind`
+    - `ids.IdOf`
+    - `primitives/pane.defineRoute`
+  - Exports (types): `DeployServerId`
   - Exports (values):
+    - `deployServerIdKind`
     - `serverDetailRoute`
     - `serversRoute`
 - Cross-plugin:

@@ -2167,11 +2167,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 52 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 54 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.WebRegister` ×46
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
-  - Uses: 72 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `IdKinds.Kind` ×2
+  - Uses: 73 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×7
     - `primitives/live-state` ×5
@@ -2191,6 +2192,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/search` ×2
     - `primitives/sortable-list` ×2
     - `fields.Fields`
+    - `ids.IdKinds`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
@@ -2337,37 +2339,22 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 46 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 48 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.Register` ×46
+    - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
     - `config_v2.watchConfig`
+    - `ids.IdKinds`
     - `primitives/data-view/view-core.buildViewConfigRegistrations`
     - `primitives/data-view/view-core.viewsDescriptor`
   - Exports (values):
     - `readDataViewConfigDoc`
     - `watchDataViewConfigDoc`
-- Cross-plugin:
-  - Imported by: 78 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×28
-    - `apps` ×19
-    - `conversations` ×7
-    - `debug` ×7
-    - `primitives` ×7
-    - `tasks` ×3
-    - `infra` ×2
-    - `apps-core/app-launcher`
-    - `config_v2/settings`
-    - `page/links`
-    - `runs`
-    - `ui/theme-engine/theme-gallery`
-- Exemptions:
-  - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
-  - Exempted by:
-    - `primitives/data-view` (0 debt)
-    - `primitives/tree` (0 debt)
-    - `reorder/editor` (0 debt)
 - Core:
+  - Uses:
+    - `ids.defineIdKind`
+    - `ids.IdOf`
   - Exports (types):
     - `CellEditorProps`
     - `ColumnConfigDerive`
@@ -2411,6 +2398,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterGroup`
     - `FilterLowerContext`
     - `FilterNode`
+    - `FilterNodeId`
     - `FilterOperator`
     - `FilterOperatorSet`
     - `FilterPreset`
@@ -2435,6 +2423,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `LiveSearchableColumn`
     - `LiveSourceScope`
     - `ManualOrderConfig`
+    - `PresetId`
     - `RowTone`
     - `SectionCount`
     - `SectionsToolbar`
@@ -2455,6 +2444,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `defineDataView`
     - `exactCount`
     - `FilterGroupSchema`
+    - `filterNodeIdKind`
     - `FilterNodeSchema`
     - `FilterRuleSchema`
     - `formatSectionCount`
@@ -2462,10 +2452,31 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `isHostedToolbar`
     - `isSectionsToolbar`
     - `orderFieldsBySection`
+    - `presetIdKind`
     - `scopeFilterRows`
     - `SHARED_FIELD_SECTION`
     - `splitFieldSections`
     - `UNGROUPED_FOLD_KEY`
+- Cross-plugin:
+  - Imported by: 78 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×28
+    - `apps` ×19
+    - `conversations` ×7
+    - `debug` ×7
+    - `primitives` ×7
+    - `tasks` ×3
+    - `infra` ×2
+    - `apps-core/app-launcher`
+    - `config_v2/settings`
+    - `page/links`
+    - `runs`
+    - `ui/theme-engine/theme-gallery`
+- Exemptions:
+  - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
+  - Exempted by:
+    - `primitives/data-view` (0 debt)
+    - `primitives/tree` (0 debt)
+    - `reorder/editor` (0 debt)
 - Test helpers:
   - Web: `@plugins/primitives/plugins/data-view/web/testing`
     - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.

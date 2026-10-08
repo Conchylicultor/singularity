@@ -37,6 +37,7 @@ import {
   type VerbEnding,
 } from "./verb-outcome";
 import { _deployRuns } from "./tables";
+import { deployRunIdKind } from "../../core/id-kinds";
 
 /** The index the claiming INSERT contends on — see `tables.ts`. */
 const INFLIGHT_UQ = "deploy_runs_server_inflight_uq";
@@ -86,7 +87,7 @@ async function publishLiveRun(
   const [row] = await db
     .select()
     .from(_deployRuns)
-    .where(eq(_deployRuns.id, runId));
+    .where(eq(_deployRuns.id, deployRunIdKind.key(runId)));
   if (!row) throw new Error(`[deploy] no run row for ${runId}`);
   // Parsed rather than cast: `verb` and `status` are plain `text` columns, and a
   // value outside the union must fail here rather than reach the client as a
@@ -134,7 +135,7 @@ export async function claimRun(opts: {
   body: RunDeploymentBody;
 }): Promise<DeployRun> {
   const { deployment, body } = opts;
-  const id = `drun-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = deployRunIdKind.mint();
   try {
     await db.insert(_deployRuns).values({
       id,
@@ -250,7 +251,12 @@ export async function beginLeg(
   const [updated] = await db
     .update(_deployRuns)
     .set({ legRunId: legRunId(runId, leg), pid: process.pid })
-    .where(and(eq(_deployRuns.id, runId), isNull(_deployRuns.finishedAt)))
+    .where(
+      and(
+        eq(_deployRuns.id, deployRunIdKind.key(runId)),
+        isNull(_deployRuns.finishedAt),
+      ),
+    )
     .returning({
       compositionId: _deployRuns.compositionId,
       serverId: _deployRuns.serverId,
@@ -275,7 +281,12 @@ export async function pinShipBundle(
   await db
     .update(_deployRuns)
     .set({ releaseRunId: pin.release, commitSha: pin.commitSha })
-    .where(and(eq(_deployRuns.id, runId), isNull(_deployRuns.finishedAt)));
+    .where(
+      and(
+        eq(_deployRuns.id, deployRunIdKind.key(runId)),
+        isNull(_deployRuns.finishedAt),
+      ),
+    );
 }
 
 /**
@@ -316,7 +327,7 @@ export async function failRun(
       finishedAt: _deployRuns.finishedAt,
     })
     .from(_deployRuns)
-    .where(eq(_deployRuns.id, runId));
+    .where(eq(_deployRuns.id, deployRunIdKind.key(runId)));
   if (!row || row.finishedAt !== null) return;
   const verb = DeployRunSchema.shape.verb.parse(row.verb);
 
@@ -331,7 +342,12 @@ export async function failRun(
       exitCode: null,
       message,
     })
-    .where(and(eq(_deployRuns.id, runId), isNull(_deployRuns.finishedAt)))
+    .where(
+      and(
+        eq(_deployRuns.id, deployRunIdKind.key(runId)),
+        isNull(_deployRuns.finishedAt),
+      ),
+    )
     .returning({ id: _deployRuns.id });
   if (updated.length === 0) return;
 
@@ -387,7 +403,7 @@ async function adoptRun(runId: string): Promise<string | null> {
   const [row] = await db
     .select({ finishedAt: _deployRuns.finishedAt })
     .from(_deployRuns)
-    .where(eq(_deployRuns.id, runId));
+    .where(eq(_deployRuns.id, deployRunIdKind.key(runId)));
   if (!row) {
     throw new Error(`[deploy] no run row for ${runId} — nothing to sequence.`);
   }
@@ -479,7 +495,10 @@ async function closeDeployRow(
     .select()
     .from(_deployRuns)
     .where(
-      and(eq(_deployRuns.id, parsed.runId), isNull(_deployRuns.finishedAt)),
+      and(
+        eq(_deployRuns.id, deployRunIdKind.key(parsed.runId)),
+        isNull(_deployRuns.finishedAt),
+      ),
     );
   // Someone stamped it first — the ordinary shape of first-writer-wins, not an
   // error.

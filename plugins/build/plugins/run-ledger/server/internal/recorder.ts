@@ -4,6 +4,7 @@ import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { _buildRuns } from "./tables";
 import { settleDeadInflightRun } from "./stale-holder";
+import { buildRunIdKind } from "../../core/internal/id-kind";
 
 // The detached `./singularity build` CLI records build_runs rows directly, from
 // the CLI process — which declares NO runtime namespace (a terminal build is
@@ -229,7 +230,12 @@ export async function closeRunOn(
     await db
       .update(_buildRuns)
       .set({ finishedAt: new Date(), exitCode })
-      .where(and(eq(_buildRuns.id, id), isNull(_buildRuns.finishedAt)));
+      .where(
+        and(
+          eq(_buildRuns.id, buildRunIdKind.key(id)),
+          isNull(_buildRuns.finishedAt),
+        ),
+      );
   } catch (err) {
     if (!isMissingLedger(err)) throw err;
   }

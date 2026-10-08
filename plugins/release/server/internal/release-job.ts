@@ -17,6 +17,7 @@ import {
   listUnfinished,
   setPid,
 } from "./run-state";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 
 /**
  * What one release request says.
@@ -169,7 +170,7 @@ export const releaseJob = defineSupervisedJob({
     const [row] = await db
       .select({ status: _releaseRuns.status, error: _releaseRuns.error })
       .from(_releaseRuns)
-      .where(eq(_releaseRuns.id, releaseId));
+      .where(eq(_releaseRuns.id, releaseRunIdKind.key(releaseId)));
     if (row === undefined) {
       // The claim inserted this row and nothing deletes `release_runs`, so its
       // absence is a real fault rather than a state to tolerate. Throwing fails

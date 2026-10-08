@@ -1,15 +1,19 @@
 import { join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { releasesDir } from "../../data-dirs";
+import {
+  releaseRunIdKind,
+  type ReleaseRunId,
+} from "../../core/internal/run-id";
 
 /**
- * A fresh release run id, `release-<ms>-<rand>`. The `<ms>` embeds a timestamp so
- * chronology is in the path, and the value also keys the `<run-id>` segment of
- * {@link releaseOutDir} and (for the engine) the `release_runs.id` DB row — so the
- * engine's on-disk dir and its DB row share one id.
+ * A fresh release run id — `releaseRunIdKind.mint()`, `release-<s>-<6>`. The
+ * stamp puts chronology in the path, and the value also keys the `<run-id>`
+ * segment of {@link releaseOutDir} and (for the engine) the `release_runs.id`
+ * DB row — so the engine's on-disk dir and its DB row share one id.
  */
-export function newReleaseRunId(): string {
-  return `release-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+export function newReleaseRunId(): ReleaseRunId {
+  return releaseRunIdKind.mint();
 }
 
 /**

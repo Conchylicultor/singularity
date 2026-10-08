@@ -1023,12 +1023,12 @@ See "Open questions" in the design doc.
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
 - Cross-plugin:
-  - Imported by: 160 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 164 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×57
     - `conversations` ×29
     - `debug` ×23
+    - `active-data` ×10
     - `tasks` ×8
-    - `active-data` ×6
     - `plugin-meta` ×6
     - `apps-core` ×5
     - `auth` ×5

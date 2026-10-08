@@ -5,6 +5,7 @@ import { assertChoiceLaunchable } from "@plugins/conversations/plugins/model-pro
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { createAgent } from "../../core/endpoints";
 import { AgentSchema } from "../../core/schemas";
+import { agentIdKind } from "../../core/id-kinds";
 import { _agents } from "./tables";
 import { agents } from "./views";
 import { agentRankAfterSibling, nextAgentRankUnder } from "./rank";
@@ -13,7 +14,7 @@ export const handleCreate = implement(createAgent, async ({ body }) => {
   // A model this machine cannot run (unknown, or retired) is a 400 listing
   // what can — never stored on an agent whose every launch would be refused.
   if (body.model) assertChoiceLaunchable(body.model, getModelCatalog());
-  const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = agentIdKind.mint();
   const parentId = body.parentId ?? null;
   // Positional intent when the client anchored the insert; plain append otherwise.
   const rank = body.afterId

@@ -51,6 +51,7 @@ export type ExemptableRuleId =
   | "icon-safety/no-react-icons"
   | "icon-safety/no-robot-icon"
   | "icons/literal-icon-name"
+  | "ids:pk-declared"
   | "imperative-create-table-allowlisted"
   | "import-scan-safety/no-adhoc-import-scan"
   | "install-sink/no-adhoc-install-sink"

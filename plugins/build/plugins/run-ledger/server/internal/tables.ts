@@ -7,6 +7,8 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { idColumn } from "@plugins/ids/server";
+import { buildRunIdKind } from "../../core/internal/id-kind";
 import {
   MAIN_COMPOSITION_ID,
   MAIN_WORKTREE_NAME,
@@ -15,7 +17,10 @@ import {
 export const _buildRuns = pgTable(
   "build_runs",
   {
-    id: text("id").primaryKey(),
+    // Keyed by the ledger's id kind. Rows minted before it (`<commit>-<ms>`,
+    // a hand-run build's old shape) stay readable: the column brands, it does
+    // not validate, and lookups go through `buildRunIdKind.key`.
+    id: idColumn(buildRunIdKind),
     trigger: text("trigger").notNull(),
     commitHash: text("commit_hash"),
     // Namespace (worktree slug, or MAIN_WORKTREE_NAME on main) that produced this

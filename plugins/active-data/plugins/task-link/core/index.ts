@@ -1,1 +1,1 @@
-export { TASK_ID_RE } from "./pattern";
+export { TASK_CHIP_SURFACES } from "./surfaces";

@@ -16,14 +16,11 @@ import {
   _eventSourceRuns,
 } from "./tables";
 import { getEventSourceType } from "./registry";
+import { eventSourceIdKind } from "../../core";
 
 // Source CRUD + the validation that keeps a row's `config` and its type's
 // `configFields` in agreement. Every failure THROWS an `HttpError` — never a
 // null/empty return a caller could mistake for a legitimately-empty success.
-
-function mintId(): string {
-  return `evs-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 /**
  * Validate a config blob against the source type's own field record. An unknown
@@ -70,7 +67,7 @@ export async function requireSource(id: string): Promise<EventSource> {
   const [row] = await db
     .select()
     .from(_eventSources)
-    .where(eq(_eventSources.id, id))
+    .where(eq(_eventSources.id, eventSourceIdKind.key(id)))
     .limit(1);
   if (!row) throw new HttpError(404, `Unknown event source: ${id}`);
   return row;
@@ -83,7 +80,7 @@ export async function createSource(
   const [row] = await db
     .insert(_eventSources)
     .values({
-      id: mintId(),
+      id: eventSourceIdKind.mint(),
       type: body.type,
       name: body.name?.trim() || deriveName(body.type, config),
       config,
@@ -141,7 +138,7 @@ export async function updateSource(
   const [row] = await db
     .update(_eventSources)
     .set(updates)
-    .where(eq(_eventSources.id, id))
+    .where(eq(_eventSources.id, eventSourceIdKind.key(id)))
     .returning();
   if (!row) throw new HttpError(404, `Unknown event source: ${id}`);
   return row;
@@ -151,7 +148,7 @@ export async function updateSource(
 export async function deleteSource(id: string): Promise<void> {
   const [row] = await db
     .delete(_eventSources)
-    .where(eq(_eventSources.id, id))
+    .where(eq(_eventSources.id, eventSourceIdKind.key(id)))
     .returning();
   if (!row) throw new HttpError(404, `Unknown event source: ${id}`);
 }

@@ -3,6 +3,7 @@ import { db } from "@plugins/database/server";
 import { _reports } from "./tables";
 import { ReportKind, type ReportRow } from "./report-kinds";
 import { reportsProducer } from "./producer";
+import { reportIdKind } from "../../core/id-kind";
 
 // Not yet investigated: no task linked, and not classified as noise.
 const uninvestigated = and(isNull(_reports.taskId), eq(_reports.noise, false));
@@ -62,7 +63,7 @@ export async function linkReportsToTask(
       q
         .update(t)
         .set({ taskId })
-        .where(inArray(t.id, [...reportIds])),
+        .where(inArray(t.id, [...reportIds].map(reportIdKind.key))),
     { latency: "interactive" },
   );
 }

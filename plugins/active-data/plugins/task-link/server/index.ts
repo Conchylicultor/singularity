@@ -1,37 +1,16 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Editor } from "@plugins/page/plugins/editor/server";
-import { inlineChipNode } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/core";
-import { InlineTokenReferentSource } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
-import { TASK_ID_RE } from "../core";
+import { idChipServer } from "@plugins/active-data/plugins/id-chip/server";
+import { taskIdKind } from "@plugins/tasks/plugins/task-ids/core";
+import { TASK_CHIP_SURFACES } from "../core";
 import { resolveTaskReferent } from "./internal/referent";
 
 export default {
   description:
-    "The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its task's title for model-read text (InlineTokenReferentSource).",
+    "The task id chip's server half (idChipServer): resolves a `task-<id>` to its task's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.",
   contributions: [
-    // The SAME pattern the chip declares to `inlineChip`, and the SAME node spec
-    // object the browser's `InlineChipNode` decorates. Every inline chip feeds
-    // ONE node, so the four sub-plugins each contribute their own pattern
-    // against this one object — which is exactly the case the registry allows
-    // (identical spec object) and the case it refuses (two different objects
-    // claiming one type).
-    //
-    // `markdownSpan: "transparent"` — the pattern says WHERE the token is; it does
-    // NOT ask for the token's bytes to be masked from the marks-aware inline
-    // markdown scan, and a bare id must not be. It is digits, lowercase letters
-    // and hyphens: nothing the scan could misread, so masking would buy nothing
-    // and COST the span its marks (a masked span becomes its own unmarked run).
-    // While the two were one field, `` `task-<id>` `` pasted as markdown lost its
-    // `code` mark and chipped itself — documentation turning into a widget.
-    Editor.InlineToken({
-      pattern: TASK_ID_RE,
-      markdownSpan: "transparent",
-      node: inlineChipNode,
-    }),
-    // What the chip shows, for text a model reads instead of a person.
-    InlineTokenReferentSource({
-      kind: "task",
-      pattern: TASK_ID_RE,
+    ...idChipServer({
+      kind: taskIdKind,
+      surfaces: TASK_CHIP_SURFACES,
       resolve: resolveTaskReferent,
     }),
   ],

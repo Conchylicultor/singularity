@@ -1,5 +1,9 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
+import type { IdReferentState } from "@plugins/ids/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -53,4 +57,25 @@ export function TaskLinkChip({
       );
     },
   });
+}
+
+/** The task presenter's referent read: the task's title, from the live tasks list. */
+export function useTaskReferent(taskId: string): IdReferentState {
+  const result = useLive(taskRows);
+  return foldResource(result, {
+    loading: (): IdReferentState => ({ status: "loading" }),
+    error: (error): IdReferentState => ({ status: "failed", error }),
+    ready: (tasks): IdReferentState => {
+      const task = tasks.find((t) => t.id === taskId);
+      return task
+        ? { status: "found", title: task.title }
+        : { status: "missing" };
+    },
+  });
+}
+
+/** Opens a task's detail pane beside the surface holding its id. */
+export function useOpenTask(): (taskId: string) => void {
+  const openPane = useOpenPane();
+  return (taskId) => openPane(taskDetailPane, { taskId }, { mode: "push" });
 }

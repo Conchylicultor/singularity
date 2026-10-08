@@ -3,7 +3,7 @@ import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import type { CustomColumnDef } from "../../core";
+import { customColumnIdKind, type CustomColumnDef } from "../../core";
 import { readCustomColumnDefs } from "../../shared/read-custom-column-defs";
 import { useDeleteCustomColumnValues } from "./use-custom-column-values";
 
@@ -19,7 +19,7 @@ export interface CustomColumnDefsController {
 
 /** Stable join key for a new column row (no collision with consumer field ids). */
 function columnId(): string {
-  return `cc-${crypto.randomUUID()}`;
+  return customColumnIdKind.mint();
 }
 
 /**
@@ -74,7 +74,9 @@ export function useCustomColumnDefs(
     if (pendingRef.current) return;
     setMirror((prev) => {
       const incoming = JSON.parse(persistedJson) as CustomColumnDef[];
-      return JSON.stringify(prev) === JSON.stringify(incoming) ? prev : incoming;
+      return JSON.stringify(prev) === JSON.stringify(incoming)
+        ? prev
+        : incoming;
     });
   }, [persistedJson]);
 
@@ -124,7 +126,13 @@ export function useCustomColumnDefs(
   );
 
   return useMemo(
-    () => ({ defs: mirror, addColumn, renameColumn, setColumnConfig, deleteColumn }),
+    () => ({
+      defs: mirror,
+      addColumn,
+      renameColumn,
+      setColumnConfig,
+      deleteColumn,
+    }),
     [mirror, addColumn, renameColumn, setColumnConfig, deleteColumn],
   );
 }

@@ -15,6 +15,7 @@ import {
   releaseSucceeded,
   type ReleaseEnding,
 } from "./release-outcome";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 
 /** The index the claiming INSERT contends on — see `tables.ts`. */
 const INFLIGHT_UQ = "release_runs_inflight_uniq";
@@ -52,7 +53,7 @@ export async function claimRelease(opts: {
 }): Promise<boolean> {
   try {
     await db.insert(_releaseRuns).values({
-      id: opts.releaseId,
+      id: releaseRunIdKind.parse(opts.releaseId),
       composition: opts.composition,
       target: opts.target,
       startedAt: new Date(),
@@ -135,7 +136,10 @@ export async function closeReleaseRow(
     })
     .from(_releaseRuns)
     .where(
-      and(eq(_releaseRuns.id, releaseId), isNull(_releaseRuns.finishedAt)),
+      and(
+        eq(_releaseRuns.id, releaseRunIdKind.key(releaseId)),
+        isNull(_releaseRuns.finishedAt),
+      ),
     );
   // Someone stamped it first — the ordinary shape of first-writer-wins, not an
   // error.
@@ -178,7 +182,12 @@ export async function closeReleaseRow(
       // wording, not two.
       error: succeeded ? null : releaseFailureMessage(ending),
     })
-    .where(and(eq(_releaseRuns.id, releaseId), isNull(_releaseRuns.finishedAt)))
+    .where(
+      and(
+        eq(_releaseRuns.id, releaseRunIdKind.key(releaseId)),
+        isNull(_releaseRuns.finishedAt),
+      ),
+    )
     .returning({ id: _releaseRuns.id });
 
   // The `release.candidate` value is read off the filesystem, which the change
@@ -226,5 +235,5 @@ export async function setPid(releaseId: string, pid: number): Promise<void> {
   await db
     .update(_releaseRuns)
     .set({ pid })
-    .where(eq(_releaseRuns.id, releaseId));
+    .where(eq(_releaseRuns.id, releaseRunIdKind.key(releaseId)));
 }

@@ -10,6 +10,7 @@ import {
   queryAnalyticsOverSsh,
   type DeploymentTarget,
 } from "./query-over-ssh";
+import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 
 async function resolveDeployment(
   deploymentId: string,
@@ -17,7 +18,7 @@ async function resolveDeployment(
   const [deployment] = await db
     .select()
     .from(_deployDeployments)
-    .where(eq(_deployDeployments.id, deploymentId));
+    .where(eq(_deployDeployments.id, deploymentIdKind.key(deploymentId)));
   if (!deployment) return { kind: "not-found" };
 
   // A reader, not the connection check: it never learns a host key it would

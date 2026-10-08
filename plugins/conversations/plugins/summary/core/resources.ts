@@ -12,6 +12,8 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { idKindField } from "@plugins/ids/core";
+import { summaryIdKind } from "./id-kinds";
 
 // The closed set of semantic phases a summary can be in. Single source of the
 // enum: both `PhaseSchema` (the standalone validator the MCP tool reuses) and
@@ -34,7 +36,7 @@ export type Phase = z.infer<typeof PhaseSchema>;
 // field record, so a column/schema drift is unrepresentable. `id` is an
 // app-minted text PK (no DB default); `generatedAt` defaults to now() in the DB.
 export const conversationSummaryFields = {
-  id: textField(),
+  id: idKindField(summaryIdKind),
   conversationId: textField(),
   generatedAt: dateField(),
   model: textField(),

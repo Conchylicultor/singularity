@@ -1,26 +1,11 @@
 # tasks-core
 
-## The id mints are exported, because the ids are also PARSED
+## The id kinds live in `tasks/task-ids`
 
-`core/id-mint.ts` owns `newTaskId` / `newAttemptId` / `newConversationId`. They
-used to be inline expressions at their two call sites (`createTaskOn`,
-`conversations`' `lifecycle.ts`), which was fine right up until something else
-started reading the shape back: a bare `task-…` / `att-…` / `conv-…` written in
-assistant prose is recognised by an active-data chip and rendered as a clickable
-widget, so each chip's `pattern.ts` is a SECOND, independent declaration of a
-format only the mint really owns.
-
-That pair drifts silently — the mint keeps minting, the chips just stop
-matching — and it has already happened once here (the retired
-`block-\d+-[a-z0-9]{4,8}` shape). Exporting the mints is what lets each chip's
-`pattern.test.ts` build every fixture from the REAL mint instead of a hand-typed
-literal that looks right, so a change to either half fails a test.
-
-KNOWN WART, stated at the mint and not fixed there: `Math.random().toString(36)`
-can yield fewer characters than the slice asks for, so a mint can rarely emit a
-suffix shorter than the four its chip pattern requires. `newPrototypeId` shows
-the fix; applying it changes the bytes of every id the app mints, which is not a
-change to make in passing.
+`taskIdKind` / `attemptIdKind` / `conversationIdKind` are declared in the leaf
+`tasks/task-ids` (so `infra/worktree` can read the attempt kind without a cycle
+through this plugin); this plugin mints with them and registers them in both
+runtimes' `IdKinds.Kind`.
 
 ## Schema layer
 
@@ -273,32 +258,39 @@ serves them.
 
 - Description: tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
 - Load-bearing: yes
+- Web:
+  - Contributes:
+    - `IdKinds.Kind` "att|claude"
+    - `IdKinds.Kind` "conv|claude"
+    - `IdKinds.Kind` "task"
+  - Uses:
+    - `ids.IdKinds`
+    - `network/live.useLive`
+  - Exports (values):
+    - `useTaskAttempts`
+    - `useTaskConversations`
 - Server:
-  - Contributes: 23 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 26 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `resource.declare` ×17
     - `derived-view` ×4
+    - `ids.kind` ×3
     - `derived-table` ×2
-  - Uses:
-    - `database.db`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/rank` ×3
+    - `database/sql-projection` ×2
+    - `infra/entities` ×2
+    - `infra/git/git-watcher` ×2
+    - `infra/worktree` ×2
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
-    - `database/sql-projection.nullable`
-    - `database/sql-projection.parsed`
+    - `database.db`
+    - `ids.IdKinds`
     - `infra/attachments.Attachments`
-    - `infra/entities.defaultNow`
-    - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
     - `infra/git/git-read-cache.createSignedMemo`
-    - `infra/git/git-watcher.defineRefReaction`
-    - `infra/git/git-watcher.lastKnownMainSha`
     - `infra/host/host-read-pool.withHeavyReadSlot`
-    - `infra/worktree.ensureMainWorktreeRoot`
-    - `infra/worktree.isCanonicalWorktreePath`
     - `network/live.serveCollection`
     - `primitives/commit-list.runGit`
-    - `primitives/rank.nextRankUnder`
-    - `primitives/rank.RankExecutor`
-    - `primitives/rank.withRank`
   - DB schema:
     - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
@@ -431,11 +423,6 @@ serves them.
     - `task-descriptions:rows` (keyed, point)
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
-- Web:
-  - Uses: `network/live.useLive`
-  - Exports (values):
-    - `useTaskAttempts`
-    - `useTaskConversations`
 - Core:
   - Uses:
     - `conversations/model-provider.FALLBACK_MODEL`
@@ -488,9 +475,6 @@ serves them.
     - `isAdoptedConversation`
     - `isBlockedStatus`
     - `isSettled`
-    - `newAttemptId`
-    - `newConversationId`
-    - `newTaskId`
     - `parseTrailerLog`
     - `PUSH_TRAILER_KEY`
     - `pushRows`
@@ -536,6 +520,10 @@ serves them.
     - `tasks/task-title` (table `tasks_ext_short_title`)
     - `tasks/task-source-url` (table `tasks_ext_source_url`)
     - `tasks/task-track` (table `tasks_ext_track`)
+- Exemptions:
+  - Exempts itself from:
+    - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+    - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
 - Test helpers:
   - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
     - `canonical` — JSON with sorted keys, so a row compares by content whatever its key order.

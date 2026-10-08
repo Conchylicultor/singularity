@@ -45,7 +45,7 @@ const row = await songTranspose.get(songId);   // full row, server-only columns 
 await songTranspose.delete(songId);
 ```
 
-This creates `sonata_songs_ext_transpose(parent_id text PK FK → sonata_songs.id ON DELETE CASCADE, semitones integer NOT NULL DEFAULT 0, created_at timestamptz NOT NULL DEFAULT now(), updated_at …)`. Drizzle-kit picks the table up via the `tables.ts` pattern in `SCHEMA_GLOBS` (`plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts`) — no central registration.
+This creates `sonata_songs_ext_transpose(parent_id text PK FK → sonata_songs.id ON DELETE CASCADE ON UPDATE CASCADE, semitones integer NOT NULL DEFAULT 0, created_at timestamptz NOT NULL DEFAULT now(), updated_at …)`. Drizzle-kit picks the table up via the `tables.ts` pattern in `SCHEMA_GLOBS` (`plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts`) — no central registration.
 
 ### `defineExtensionShape({ key, fields, serverOnly?, wireTimestamps? })` — `core/`
 
@@ -57,7 +57,7 @@ Returns a frozen `{ key, fields, serverOnly, schema }`:
 
 ### `defineExtension(parent, name, shape, meta?)` — `server/`
 
-Built on `defineEntity`. The table is `<parent>_ext_<name>`; the key column is the shape's key (`primaryKey`), stored as `parent_id` with the FK to `parent.id` ON DELETE CASCADE; both timestamps default to `now()`. `meta` takes the DB-only concerns:
+Built on `defineEntity`. The table is `<parent>_ext_<name>`; the key column is the shape's key (`primaryKey`), stored as `parent_id` with the FK to `parent.id` ON DELETE CASCADE ON UPDATE CASCADE (so a later rewrite of the parent's ids — `plugins/ids` — carries the side row); both timestamps default to `now()`. `meta` takes the DB-only concerns:
 
 - `columns` — `default` / `name` / `references` for the plugin's **own** fields (`defineEntity`'s `meta.columns`). The key and the timestamps are the primitive's, so they are not declarable here.
 - `indexes` — see below.

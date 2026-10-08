@@ -288,6 +288,8 @@ surfacing as crash tasks, not just toasts.
     - `PUT /api/sonata/songs/:id/ultimate-guitar`
 - Cross-plugin:
   - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
+- Exemptions:
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
 - Core:
   - Exports (types):
     - `UgFetchErrorKind`

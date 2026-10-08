@@ -20,5 +20,11 @@ export type {
   LaunchAgentBody,
   LaunchAgentResponse,
 } from "./endpoints";
-export { AgentSchema, AgentLaunchSchema, AgentLaunchWithStatusSchema } from "./schemas";
+export {
+  AgentSchema,
+  AgentLaunchSchema,
+  AgentLaunchWithStatusSchema,
+} from "./schemas";
 export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
+export { agentIdKind, agentLaunchIdKind } from "./id-kinds";
+export type { AgentId, AgentLaunchId } from "./id-kinds";

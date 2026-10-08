@@ -17,6 +17,8 @@ import {
   generateSshKeypair,
   importSshPrivateKey,
 } from "../shared/endpoints";
+import { IdKinds } from "@plugins/ids/server";
+import { deployServerIdKind } from "../core";
 
 export { _deployServers } from "./internal/tables";
 export { getServerSshPrivateKey } from "./internal/ssh-secret";
@@ -32,7 +34,10 @@ export default {
     [generateSshKeypair.route]: handleGenerateKeypair,
     [importSshPrivateKey.route]: handleImportKeypair,
   },
-  contributions: [...serversServed.declare],
+  contributions: [
+    IdKinds.Kind({ kind: deployServerIdKind }),
+    ...serversServed.declare,
+  ],
   onReady: async () => {
     await backfillSshPublicKeys();
   },

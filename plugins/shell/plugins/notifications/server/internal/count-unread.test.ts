@@ -27,6 +27,7 @@ import { countUnreadNotifications } from "./resources";
 import { _notifications } from "./tables";
 import type { NotificationVariant } from "../../shared/schema";
 import { countedUnread, countedUnreadFilterable } from "../../shared/unread";
+import { notificationIdKind } from "../../core";
 
 type Seed = {
   variant: NotificationVariant;
@@ -55,7 +56,7 @@ describe("countUnreadNotifications (real DB)", () => {
     const now = Date.now();
     await t.db.insert(_notifications).values(
       Array.from({ length: n }, (_, i) => ({
-        id: `n-${seq++}`,
+        id: notificationIdKind.key(`n-${seq++}`),
         type: "test",
         title: `${row.variant} ${i}`,
         description: "",

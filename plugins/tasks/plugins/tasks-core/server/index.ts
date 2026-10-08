@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { View } from "@plugins/database/plugins/derived-views/server";
+import { IdKinds } from "@plugins/ids/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { TASK_ROLLUPS } from "./internal/rollup-spec";
 import {
@@ -13,6 +14,11 @@ import {
   conversationsByIdServed,
 } from "./internal/resources";
 import { attempts, conversations, taskBlocking, tasks } from "./internal/views";
+import {
+  attemptIdKind,
+  conversationIdKind,
+  taskIdKind,
+} from "@plugins/tasks/plugins/task-ids/core";
 import {
   pushLanded,
   taskStatusChanged,
@@ -225,6 +231,9 @@ export default {
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
   contributions: [
+    IdKinds.Kind({ kind: taskIdKind }),
+    IdKinds.Kind({ kind: attemptIdKind }),
+    IdKinds.Kind({ kind: conversationIdKind }),
     ...taskRowsServed.declare,
     ...taskDescriptionsServed.declare,
     ...attemptRowsServed.declare,

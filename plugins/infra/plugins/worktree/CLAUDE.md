@@ -28,7 +28,7 @@ checkout. The refill job, its boot warm-up and its daily cron live in the
   locked with reason `singularity-spare`. `listReadySpares` lists only spares
   locked that way, so a half-written one is never claimed. The lock also keeps
   Claude Code's own `.claude/worktrees` sweep away from it.
-- **`spare-*` is non-canonical on purpose.** It fails `WORKTREE_NAME_RE`, so the
+- **`spare-*` is non-canonical on purpose.** It fails `isCanonicalWorktreeName` (not an attempt id), so the
   reaper, the namespace passes and the registry filters ignore it. Do not widen
   the regex.
 - **The claim** (inside the mutate-gate hold): `unlock` → `git worktree move` →
@@ -133,6 +133,7 @@ pid liveness.
     - `ensureMainWorktreeRoot`
     - `gitWorktreesDir`
     - `hasCompositionMarker`
+    - `isCanonicalWorktreeName`
     - `isCanonicalWorktreePath`
     - `isWorktreeOpActive`
     - `listActiveWorktreeOps`
@@ -171,12 +172,10 @@ pid liveness.
   - Exports (values):
     - `attemptBranchName`
     - `attemptBranchRef`
-    - `isCanonicalWorktreeName`
     - `isOpKind`
     - `OP_KIND_IDS`
     - `OP_KINDS`
     - `stripAttemptBranchPrefix`
-    - `WORKTREE_NAME_RE`
 - Sub-plugins:
   - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind…
   - **`spare-pool`** — Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under…

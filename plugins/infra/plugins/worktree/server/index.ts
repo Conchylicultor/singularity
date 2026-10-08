@@ -18,6 +18,7 @@ export {
   countReadySpares,
 } from "./internal/spare";
 export { withWorktreeMutateSlot } from "./internal/mutate-gate";
+export { isCanonicalWorktreeName } from "./internal/worktree-name";
 export {
   type WorktreeOp,
   type WorktreeOpInfo,

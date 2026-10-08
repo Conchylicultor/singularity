@@ -8,30 +8,26 @@
 - Web:
   - Slots: `conv-summary.actions`
   - Slot contributors: `conv-summary.actions` ← `primitives.pane`
-  - Contributes: `Pane.Register` "conv-summary"
-  - Uses:
+  - Contributes:
+    - `IdKinds.Kind` "summary"
+    - `Pane.Register` "conv-summary"
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×4
+    - `primitives/pane` ×3
+    - `infra/endpoints` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
     - `conversations/conversation-view.conversationPane`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpointMutation`
+    - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `shell/notifications.toast`
     - `ui/icons.Icon`
 - Server:
   - Contributes:
+    - `ids.kind` "summary"
     - `resource.declare` "conversation-summaries"
     - `resource.declare` "conversation-summaries:groups"
     - `resource.declare` "conversation-summaries:rows"
@@ -42,6 +38,7 @@
     - `conversations.Turn`
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
+    - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
@@ -67,17 +64,22 @@
     - `fields/int/config.intField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
+    - `ids.defineIdKind`
+    - `ids.idKindField`
+    - `ids.IdOf`
     - `network/live.liveCollection`
     - `network/live/filter.liveText`
   - Exports (types):
     - `ConversationSummary`
     - `Phase`
+    - `SummaryId`
   - Exports (values):
     - `conversationSummaries`
     - `conversationSummaryFields`
     - `ConversationSummarySchema`
     - `PHASE_VALUES`
     - `PhaseSchema`
+    - `summaryIdKind`
 - Shared:
   - Exports (values): `generateConversationSummary`
 

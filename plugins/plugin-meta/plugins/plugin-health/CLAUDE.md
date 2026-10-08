@@ -6,8 +6,11 @@
 
 - Description: Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "Health" → `HealthSection`
+  - Contributes:
+    - `IdKinds.Kind` "review"
+    - `PluginViewSlots.Section` "Health" → `HealthSection`
   - Uses:
+    - `ids.IdKinds`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `plugin-meta/plugin-view.PluginNode`
@@ -21,11 +24,13 @@
     - `primitives/relative-time.RelativeTime`
 - Server:
   - Contributes:
+    - `ids.kind` "review"
     - `resource.declare` "plugin-health-reviews"
     - `resource.declare` "plugin-health-reviews:groups"
     - `resource.declare` "plugin-health-reviews:rows"
   - Uses:
     - `database.db`
+    - `ids.IdKinds`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
@@ -57,9 +62,13 @@
     - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/text/config.textField`
+    - `ids.defineIdKind`
+    - `ids.idKindField`
+    - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
   - Exports (types):
     - `PluginHealthReview`
+    - `PluginReviewId`
     - `PluginStaleness`
     - `ReviewTaskSummary`
   - Exports (values):
@@ -68,6 +77,7 @@
     - `getPluginStaleness`
     - `pluginHealthReviewFields`
     - `PluginHealthReviewSchema`
+    - `pluginReviewIdKind`
     - `PluginStalenessSchema`
     - `ReviewTaskSummarySchema`
 

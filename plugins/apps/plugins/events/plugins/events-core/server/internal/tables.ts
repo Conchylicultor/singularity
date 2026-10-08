@@ -166,6 +166,9 @@ const eventSourceRunEvents = defineEntity(
         references: {
           column: () => eventSourceRuns.table.id,
           onDelete: "cascade",
+          // The run ids are bare uuids due a prefix rewrite (`evrun-`,
+          // `plugins/ids`); this carries the run's events along with it.
+          onUpdate: "cascade",
         },
       },
       eventId: {

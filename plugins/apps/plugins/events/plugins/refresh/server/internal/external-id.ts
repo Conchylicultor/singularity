@@ -3,7 +3,11 @@ import {
   eventDateIdentityKey,
   type EventDate,
 } from "@plugins/apps/plugins/events/plugins/event-date/core";
-import type { ExtractedEvent } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  eventIdKind,
+  type EventId,
+  type ExtractedEvent,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 // Event identity, derived HERE (in the engine) rather than per source type.
 //
@@ -99,9 +103,9 @@ export function resolveExternalId(
 export function deriveEventRowId(
   sourceId: string,
   externalId: string,
-): string {
+): EventId {
   const digest = createHash("sha256")
     .update(`${sourceId}${SEP}${externalId}`)
     .digest("hex");
-  return `evt-${digest.slice(0, 32)}`;
+  return eventIdKind.mint(digest.slice(0, 32));
 }

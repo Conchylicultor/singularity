@@ -7,6 +7,7 @@ import { toServer } from "./project-server";
 import { derivePublicKey } from "./ssh-keygen";
 import { rejectInvalidKey } from "./ssh-key-error";
 import { assertReplaceAllowed, storeSshKey } from "./store-ssh-key";
+import { deployServerIdKind } from "../../core/id-kind";
 
 export const handleImportKeypair = implement(
   importSshPrivateKey,
@@ -14,7 +15,7 @@ export const handleImportKeypair = implement(
     const [row] = await db
       .select()
       .from(_deployServers)
-      .where(eq(_deployServers.id, params.id));
+      .where(eq(_deployServers.id, deployServerIdKind.key(params.id)));
     if (!row) throw new HttpError(404, "Not found");
     assertReplaceAllowed(row, body.replace);
 

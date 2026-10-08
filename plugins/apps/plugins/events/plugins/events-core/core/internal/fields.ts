@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { idKindField } from "@plugins/ids/core";
+import { eventIdKind, eventSourceIdKind } from "./id-kinds";
 import { nullable, type FieldsRecord } from "@plugins/fields/core";
 import {
   textField,
@@ -56,7 +58,7 @@ const UNREACHABLE_DATE_DEFAULT: EventDate = {
  * type's own `configFields`.
  */
 export const eventSourceFields = {
-  id: textField(),
+  id: idKindField(eventSourceIdKind),
   /** The `EventSourceType.id` this row dispatches to (`url`, `manual`, …). */
   type: textField(),
   /** User label; defaulted from the URL host at create time. */
@@ -127,7 +129,7 @@ export const eventSourceFields = {
  * so a flaky scrape cannot destroy rows the user may have annotated.
  */
 export const eventFields = {
-  id: textField(),
+  id: idKindField(eventIdKind),
   sourceId: textField(),
   /**
    * Dedup identity, unique per `(sourceId, externalId)`. A source type MAY

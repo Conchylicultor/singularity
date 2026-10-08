@@ -1,9 +1,11 @@
 import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { idColumn } from "@plugins/ids/server";
+import { deployServerIdKind } from "../../core/id-kind";
 import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 
 export const _deployServers = deriveUpdatedAt(
   pgTable("deploy_servers", {
-    id: text("id").primaryKey(),
+    id: idColumn(deployServerIdKind),
     name: text("name").notNull(),
     host: text("host").notNull(),
     port: integer("port").notNull().default(22),

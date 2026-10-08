@@ -4,12 +4,13 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { getAgent } from "../../core/endpoints";
 import { AgentSchema } from "../../core/schemas";
 import { agents } from "./views";
+import { agentIdKind } from "../../core/id-kinds";
 
 export const handleGet = implement(getAgent, async ({ params }) => {
   const [row] = await db
     .select()
     .from(agents)
-    .where(eq(agents.id, params.id))
+    .where(eq(agents.id, agentIdKind.key(params.id)))
     .limit(1);
   if (!row) throw new HttpError(404, "Not found");
   return AgentSchema.parse(row);

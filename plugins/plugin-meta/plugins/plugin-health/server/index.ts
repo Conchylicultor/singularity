@@ -11,12 +11,17 @@ import {
   getPluginStaleness,
   getPluginHealthTasks,
 } from "../core/endpoints";
+import { IdKinds } from "@plugins/ids/server";
+import { pluginReviewIdKind } from "../core";
 
 export { healthReviewExt } from "./internal/tables";
 
 export default {
   description: "Per-plugin health review tracking.",
-  contributions: [...pluginHealthReviewsServed.declare],
+  contributions: [
+    IdKinds.Kind({ kind: pluginReviewIdKind }),
+    ...pluginHealthReviewsServed.declare,
+  ],
   httpRoutes: {
     [getPluginHealthReviews.route]: handleGetReviews,
     [getPluginStaleness.route]: handleGetStaleness,

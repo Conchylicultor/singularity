@@ -4,15 +4,27 @@
 
 ## Plugin reference
 
-- Description: Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
+- Description: Registers the conversation-group id kind (`cgrp-…`) in the browser's id registry, the twin of the server registration. Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
+- Web:
+  - Contributes: `IdKinds.Kind` "cgrp"
+  - Uses: `ids.IdKinds`
 - Server:
+  - Contributes: `ids.kind` "cgrp"
   - Uses:
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
+    - `ids.idColumn`
+    - `ids.IdKinds`
     - `primitives/rank.nextRankUnder`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
   - Exports (values): `addMemberToGroup`
+- Core:
+  - Uses:
+    - `ids.defineIdKind`
+    - `ids.IdOf`
+  - Exports (types): `ConversationGroupId`
+  - Exports (values): `conversationGroupIdKind`
 - Cross-plugin:
   - Imported by: `improve`
 

@@ -396,12 +396,14 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DeploymentItemActions` ← `apps.deploy.local-serve`
     - `deploymentDetailPane.Actions` ← `primitives.pane`
   - Contributes:
+    - `IdKinds.Kind` "dpl"
+    - `IdKinds.Kind` "drun"
     - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
     - `Pane.Register` "deploy-deployment-detail"
     - `DeploymentDetail.Section` "Overview" → `DeploymentOverview`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×7
     - `primitives/pane` ×5
@@ -410,6 +412,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `primitives/live-state` ×3
     - `apps/deploy/health` ×2
     - `apps/deploy/servers.ServerDetail`
+    - `ids.IdKinds`
     - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
@@ -433,6 +436,8 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `useDeploymentsListServerId`
 - Server:
   - Contributes:
+    - `ids.kind` "dpl"
+    - `ids.kind` "drun"
     - `resource.declare` "deploy.deployments"
     - `resource.declare` "deploy.deployments:groups"
     - `resource.declare` "deploy.deployments:rows"
@@ -440,8 +445,9 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `resource.declare` "deploy.run-history:groups"
     - `resource.declare` "deploy.run-history:rows"
     - `resource.declare` "deploy.runs"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×3
+    - `ids` ×2
     - `infra/endpoints` ×2
     - `infra/jobs/supervised-job` ×2
     - `infra/paths` ×2
@@ -480,6 +486,8 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
 - Core:
   - Uses:
     - `apps/deploy/servers.serverDetailRoute`
+    - `ids.defineIdKind`
+    - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
     - `network/live.liveValue`
@@ -489,8 +497,10 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
   - Exports (types):
     - `CreateDeploymentBody`
     - `Deployment`
+    - `DeploymentId`
     - `DeployPhase`
     - `DeployRun`
+    - `DeployRunId`
     - `DeployRunRecord`
     - `DeployVerb`
     - `InstallLayout`
@@ -505,10 +515,12 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `deleteDeployment`
     - `DEPLOY_LOG_CHANNEL`
     - `deploymentDetailRoute`
+    - `deploymentIdKind`
     - `deployments`
     - `DeploymentSchema`
     - `DeployPhaseSchema`
     - `deployRunHistory`
+    - `deployRunIdKind`
     - `DeployRunRecordSchema`
     - `deployRuns`
     - `DeployRunSchema`

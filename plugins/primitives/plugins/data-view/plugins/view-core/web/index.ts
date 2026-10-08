@@ -1,4 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { IdKinds } from "@plugins/ids/web";
+import { viewIdKind } from "../core";
 
 export { buildInstanceFromRow } from "./internal/resolve-instances";
 export type { ResolvedViewInstance } from "./internal/resolve-instances";
@@ -16,7 +18,7 @@ export { ViewSettingsPopover } from "./components/view-settings-popover";
 export default {
   description:
     "Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome.",
-  // Headless engine — registers no contributions of its own. Consumers register
-  // their own per-id `ConfigV2.WebRegister` via `buildViewConfigContributions`.
-  contributions: [],
+  // Headless engine — registers only the view-instance id kind (`view-…`).
+  // Consumers register their own per-id `ConfigV2.WebRegister` via `buildViewConfigContributions`.
+  contributions: [IdKinds.Kind({ kind: viewIdKind })],
 } satisfies PluginDefinition;

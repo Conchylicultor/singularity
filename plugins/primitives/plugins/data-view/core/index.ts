@@ -122,3 +122,6 @@ export type {
   FieldExtensionProps,
   FieldExtensionsDescriptor,
 } from "./internal/types";
+
+export { presetIdKind, filterNodeIdKind } from "./internal/id-kinds";
+export type { PresetId, FilterNodeId } from "./internal/id-kinds";

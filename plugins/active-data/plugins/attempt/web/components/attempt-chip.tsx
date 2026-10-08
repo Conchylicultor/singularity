@@ -1,8 +1,10 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
+  foldResource,
   matchResource,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
+import type { IdReferentState } from "@plugins/ids/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -112,4 +114,48 @@ export function AttemptChip({
       );
     },
   });
+}
+
+/**
+ * The attempt presenter's referent read — what the chip names it: its first
+ * conversation's title, else its task's title, else the id itself.
+ */
+export function useAttemptReferent(attemptId: string): IdReferentState {
+  const result = useCombinedResources({
+    attempts: useLive(attemptRows),
+    tasks: useLive(taskRows),
+  });
+  return foldResource(result, {
+    loading: (): IdReferentState => ({ status: "loading" }),
+    error: (error): IdReferentState => ({ status: "failed", error }),
+    ready: ({ attempts, tasks }): IdReferentState => {
+      const attempt = attempts.find((a) => a.id === attemptId);
+      if (!attempt) return { status: "missing" };
+      const title =
+        firstConversation(attempt)?.title?.trim() ||
+        tasks.find((t) => t.id === attempt.taskId)?.title.trim() ||
+        attemptId;
+      return { status: "found", title };
+    },
+  });
+}
+
+/**
+ * Opens an attempt the way its chip does: its first conversation (most attempts
+ * hold one), else the attempt pane — a push beside the surface holding the id.
+ */
+export function useOpenAttempt(): (attemptId: string) => void {
+  const attempts = useLive(attemptRows);
+  const openPane = useOpenPane();
+  const opener = useConversationOpener();
+  return (attemptId) => {
+    const attempt = foldResource(attempts, {
+      loading: () => undefined,
+      error: () => undefined,
+      ready: (rows) => rows.find((a) => a.id === attemptId),
+    });
+    const conv = attempt ? firstConversation(attempt) : undefined;
+    if (conv) opener.toggle(conv.id);
+    else openPane(attemptPane, { attemptId }, { mode: "push" });
+  };
 }

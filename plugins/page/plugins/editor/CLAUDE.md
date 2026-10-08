@@ -433,13 +433,14 @@ hand-written `PATCH` or a pasted `SerializedBlock` sets `expanded` to.
 
 ## A block id has one mint (`newBlockId`)
 
-`core/block-id.ts` mints every `page_blocks` id, as `block-<uuid>` — the client
+`core/block-id.ts` declares the block id kind (`blockIdKind`, `plugins/ids`,
+shape `uuid`) and mints every `page_blocks` id, as `block-<uuid>` — the client
 before the round trip (`insert`/`split`'s `newId`, `wrapInContainer`,
 `withMintedIds`), the server for a row no editor is open on (`createBlock`,
 turn-into-page's seed child). `page-editor/no-adhoc-block-id` keeps it one mint.
 
-**An id is opaque everywhere except the mint** — never validated, never
-destructured. Rows predating `newBlockId()` keep bare-uuid ids (a backfill is a
+**An id is opaque everywhere except the kind** — recognised (the active-data
+chip reads `blockIdKind.pattern`), never destructured. Rows predating `newBlockId()` keep bare-uuid ids (a backfill is a
 migration: two self-FKs plus every `page_blocks_ext_*` table reference them), and
 **undo of a delete re-inserts a row under its ORIGINAL id**, so a legacy-shaped
 id reaches an INSERT on a live path.
@@ -4053,7 +4054,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.InsertAction` ×3
     - `Editor.BlockMenuItem` ← `page.open-as-page`
     - `Editor.TurnInto` ← `page.turn-into-page`
-  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: `IdKinds.Kind` "block"
+  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×5
     - `primitives/text-editor/caret-trigger` ×5
     - `primitives/css/spacing` ×4
@@ -4071,6 +4073,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `network/live` ×2
     - `primitives/latest-ref` ×2
     - `primitives/persistent-draft` ×2
+    - `ids.IdKinds`
     - `primitives/announce.announce`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/badge.Badge`
@@ -4206,6 +4209,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useVoidCaret`
 - Server:
   - Contributes:
+    - `ids.kind` "block"
     - `resource.declare` "page-blocks"
     - `resource.declare` "page-edited-at"
     - `resource.declare` "pages"
@@ -4217,6 +4221,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `database.DbExecutor`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
+    - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/events.defineTriggerEvent`
@@ -4291,6 +4296,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `POST /api/pages/:pageId/blocks/patch`
 - Core:
   - Uses:
+    - `ids.defineIdKind`
     - `infra/endpoints.defineEndpoint`
     - `infra/trash.TrashOutcomeSchema`
     - `network/live.liveValue`
@@ -4366,6 +4372,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `applyBlockOpEndpoint`
     - `blockAuthorOf`
     - `BlockFieldChangesSchema`
+    - `blockIdKind`
     - `blockOpContextOf`
     - `BlockOpSchema`
     - `BlockPageSchema`
@@ -4480,10 +4487,10 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `xmlTextContentLength`
     - `xmlTextToRuns`
 - Cross-plugin:
-  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×56
     - `apps` ×8
-    - `active-data` ×6
+    - `active-data` ×3
     - `reports` ×3
     - `primitives` ×2
   - Extended by:
@@ -4495,7 +4502,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
 - Exemptions:
   - Exempts itself from:
     - `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/components/page-options.tsx` (debt)
-    - `page-editor/no-adhoc-block-id` — `core/block-id.ts` (sanctioned)
     - `page-editor/no-adhoc-forest-write` — `server/internal/forest-writer.ts` (sanctioned)
     - `page-editor/no-adhoc-doc-write` — `web/__tests__`, `web/internal/block-text-write.ts`, `web/internal/live-state-yjs-provider.ts`, `web/internal/local-yjs-provider.ts` (sanctioned)
     - `page-editor/no-unfiltered-blocks-read` — `server/internal/forest-writer.ts`, `server/internal/handle-patch-blocks.ts`, `server/internal/live-blocks.ts`, `server/internal/page-forest.ts`, `server/internal/trash-blocks.ts` (sanctioned)
@@ -4503,6 +4509,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page-editor/no-adhoc-structural-write` — `web/block-store.ts`, `web/composite-block-store.tsx` (sanctioned)
     - `page-editor/no-unhistoried-block-field` — `web/components/block-text-area.tsx` (sanctioned)
     - `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
+    - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+    - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
   - Exempted by: `page/editor` (0 debt)
 - Test helpers:
   - Web: `@plugins/page/plugins/editor/web/testing`

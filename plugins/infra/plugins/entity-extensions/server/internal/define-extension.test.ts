@@ -52,7 +52,10 @@ const oldTable = pgTable(
   {
     parentId: text("parent_id")
       .primaryKey()
-      .references((): AnyPgColumn => parent.id, { onDelete: "cascade" }),
+      .references((): AnyPgColumn => parent.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
     semitones: integer("semitones").notNull().default(0),
     enabled: boolean("enabled").notNull().default(false),
     label: text("label"),
@@ -145,6 +148,7 @@ describe("defineExtension DDL", () => {
         foreignTable: "ext_probe",
         foreignColumns: ["id"],
         onDelete: "cascade",
+        onUpdate: "cascade",
       }),
     ]);
   });

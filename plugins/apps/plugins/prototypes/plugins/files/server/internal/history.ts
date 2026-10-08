@@ -2,7 +2,7 @@ import { serveValue } from "@plugins/network/plugins/live/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   PROTOTYPE_ENTRY_FILE,
-  isPrototypeId,
+  protoIdKind,
   prototypeHistory,
   restorePrototypeVersion,
   type PrototypeVersion,
@@ -45,7 +45,7 @@ function store(): HistoryStore {
 export const prototypeHistoryServed = serveValue(prototypeHistory, {
   source: "external",
   loader: async ({ name }) => {
-    if (!isPrototypeId(name)) {
+    if (!protoIdKind.is(name)) {
       throw new Error(`prototypes.history: not a prototype id: ${name}`);
     }
     const read = await store().readHistory(name);
@@ -96,7 +96,7 @@ export async function handlePrototypeVersionFile(
     name === undefined ||
     sha === undefined ||
     file === undefined ||
-    !isPrototypeId(name) ||
+    !protoIdKind.is(name) ||
     !isVersionSha(sha) ||
     !isFlatFileName(file)
   ) {
@@ -123,7 +123,7 @@ export async function handlePrototypeVersionFile(
 export const handleRestoreVersion = implement(
   restorePrototypeVersion,
   async ({ params }) => {
-    if (!isPrototypeId(params.name) || !isVersionSha(params.sha)) {
+    if (!protoIdKind.is(params.name) || !isVersionSha(params.sha)) {
       throw new HttpError(404, "no such prototype version");
     }
     const result = await store().restoreVersion(params.name, params.sha);

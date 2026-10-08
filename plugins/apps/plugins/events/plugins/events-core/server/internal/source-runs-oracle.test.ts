@@ -57,6 +57,7 @@ import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
 import { eventSourceRuns, RUN_OUTCOMES } from "../../core";
 import { _eventSourceRuns, _eventSources } from "./tables";
+import { eventSourceIdKind } from "../../core";
 
 interface Load {
   key: string;
@@ -411,7 +412,7 @@ describe("events.source-runs — scoped differential oracle", () => {
         what = `delete source ${sourceId} (${cascaded.length} runs)`;
         await testDb.db
           .delete(_eventSources)
-          .where(eq(_eventSources.id, sourceId));
+          .where(eq(_eventSources.id, eventSourceIdKind.key(sourceId)));
         await insertSource(sourceId);
         for (const id of cascaded) {
           changed.add(id);

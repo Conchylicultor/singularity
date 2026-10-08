@@ -6,10 +6,14 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import {
+  blockDetailPane,
+  pageDetailPane,
   useBlockTarget,
   useBlockTargetTitle,
   useOpenBlockTarget,
 } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import type { IdReferentState } from "@plugins/ids/web";
 
 /**
  * A raw `block-…` id rendered as a chip that opens what it names: a page id
@@ -66,4 +70,40 @@ export function PageLinkChip({
       {title}
     </LinkChip>
   );
+}
+
+/**
+ * The block presenter's referent read — what the chip shows: the page's title,
+ * or "<page title> › <block type>" for a content block. Pages and content
+ * blocks share one id space; the target says which one this is.
+ */
+export function useBlockReferent(blockId: string): IdReferentState {
+  const target = useBlockTarget(blockId);
+  const title = useBlockTargetTitle(target);
+  if (target.kind === "pending") return { status: "loading" };
+  if (target.kind === "missing") return { status: "missing" };
+  if (target.kind === "error") return { status: "failed", error: target.error };
+  return title === undefined
+    ? { status: "loading" }
+    : { status: "found", title };
+}
+
+/**
+ * Opens what a block id names: a page id its page, a content-block id the
+ * block view (that block as a page of its own), as a column beside the surface
+ * holding the id. Which one is decided from the live pages list; an id the list
+ * does not hold is a content block, whose view resolves its own page.
+ */
+export function useOpenBlock(): (blockId: string) => void {
+  const pages = useResource(pagesResource);
+  const openPane = useOpenPane();
+  return (blockId) => {
+    const isPage = foldResource(pages, {
+      loading: () => false,
+      error: () => false,
+      ready: (list) => list.some((p) => p.id === blockId),
+    });
+    if (isPage) openPane(pageDetailPane, { pageId: blockId }, { mode: "push" });
+    else openPane(blockDetailPane, { blockId }, { mode: "push" });
+  };
 }

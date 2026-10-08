@@ -7,7 +7,12 @@ import {
   type ResourceError,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
-import type { ViewConfigRow, ViewSourceEntry, ViewTypeMeta } from "../../core";
+import {
+  viewIdKind,
+  type ViewConfigRow,
+  type ViewSourceEntry,
+  type ViewTypeMeta,
+} from "../../core";
 import { buildInstanceFromRow } from "./resolve-instances";
 import type { ResolvedViewInstance } from "./resolve-instances";
 import { normalizeRows, type RawViewRow } from "./normalize-rows";
@@ -60,7 +65,7 @@ export interface ViewsConfigHandle {
 /** Stable random id for new config rows (the listField also injects one on the
  *  server, but we need one client-side for the optimistic mirror). */
 function newId(): string {
-  return `view-${crypto.randomUUID()}`;
+  return viewIdKind.mint();
 }
 
 /**

@@ -22,6 +22,7 @@ import {
   hasCompositionMarker,
   isCanonicalWorktreePath,
   worktreePathFor,
+  isCanonicalWorktreeName,
 } from "@plugins/infra/plugins/worktree/server";
 import {
   listCompositionNamespaces,
@@ -29,7 +30,6 @@ import {
 } from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { dirExists } from "./reap";
-import { WORKTREE_NAME_RE } from "@plugins/infra/plugins/worktree/core";
 import { canClassifyOrphans, dirAgeMs, readWorktreeDirIndex } from "./dirs";
 import {
   getGitHygiene,
@@ -56,7 +56,7 @@ async function readRegistryNames(): Promise<Set<string>> {
     const entries = await readdir(worktreesDir(), { withFileTypes: true });
     for (const e of entries) {
       const name = e.isDirectory() ? e.name : e.name.replace(/\.json$/, "");
-      if (WORKTREE_NAME_RE.test(name)) names.add(name);
+      if (isCanonicalWorktreeName(name)) names.add(name);
     }
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -307,7 +307,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
 
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const dbSet = new Set(
-    databases.filter((name) => WORKTREE_NAME_RE.test(name)),
+    databases.filter((name) => isCanonicalWorktreeName(name)),
   );
   // A worktree's gateway spec file is an artifact to reclaim just like its fork
   // DB, so the on-disk registry set joins dbSet as a signal that an inactive
@@ -332,7 +332,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   //
   // TRAP: `hasDir` reads the UNFILTERED `allNames`, never `dirIndex.canonical`.
   // The old `dirExists` returned true for any node type and any name; narrowing
-  // to the WORKTREE_NAME_RE-filtered canonical list would flip a regex-failing
+  // to the isCanonicalWorktreeName-filtered canonical list would flip a regex-failing
   // dir to `!hasDir`, send it down the age-free orphan branch, and have
   // `reapAttempt` remove the dir with no hygiene check and no age floor.
   const { allNames } = dirIndex;
@@ -459,7 +459,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   // this branch existed — there was a backlog of ~16 such databases on this
   // machine when it landed).
   //
-  // DO NOT WIDEN `WORKTREE_NAME_RE` TO ADMIT DOTTED NAMES. Every branch above
+  // DO NOT WIDEN `isCanonicalWorktreeName` TO ADMIT DOTTED NAMES. Every branch above
   // reads a name matching that regex as a CHECKOUT id and resolves a git worktree
   // path from it, so admitting `sonata` (owned by main — must NEVER be swept) or
   // `sonata.att-X` there would route a composition namespace through checkout
@@ -467,7 +467,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   // namespaces carrying a provenance marker, and whether their OWNER is gone —
   // and its targets leave in their own list so nothing can hand one to
   // `reapAttempt`. The two sets cannot collide either: `<comp>.<checkout>` and a
-  // bare composition id both fail WORKTREE_NAME_RE.
+  // bare composition id both fail isCanonicalWorktreeName.
   //
   // Gated on canClassifyOrphans for the same reason the dir-orphan branch is: the
   // `retained` input is read from the attempts table, which on a worktree backend
@@ -505,7 +505,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   }
 
   // STAMP-OWNED NAMESPACE ORPHANS — the namespaces neither universe above can
-  // name: not an attempt id (WORKTREE_NAME_RE), not a composition (marker), so
+  // name: not an attempt id (isCanonicalWorktreeName), not a composition (marker), so
   // no row and no marker will ever authorize their reclaim. Their owner is the
   // checkout stamped by its CLI. Reclaimed through `reapAttempt` with no
   // worktree path — its database, config dir and registry dir — because such a
@@ -513,7 +513,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   // there is no git worktree of ours to remove.
   if (canClassifyOrphans()) {
     for (const name of listWorktreeDirs()) {
-      if (!isNamespace(name) || WORKTREE_NAME_RE.test(name)) continue;
+      if (!isNamespace(name) || isCanonicalWorktreeName(name)) continue;
       if (targets.has(name) || seenAttemptIds.has(name)) continue;
       const ns = asNamespace(name);
       if (hasCompositionMarker(ns)) continue;

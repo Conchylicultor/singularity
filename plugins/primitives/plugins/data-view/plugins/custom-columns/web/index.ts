@@ -2,6 +2,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { CustomColumnFieldExtension } from "./components/custom-column-field-extension";
 import { CustomColumnsFieldsSetting } from "./components/custom-columns-setting";
+import { IdKinds } from "@plugins/ids/web";
+import { customColumnIdKind } from "../core";
 
 export { useCustomColumnDefs } from "./internal/use-custom-column-defs";
 export type { CustomColumnDefsController } from "./internal/use-custom-column-defs";
@@ -23,6 +25,7 @@ export default {
   // field-extension slot, and (2) the "Fields" UI as a global-scope Setting. The
   // host names neither — full collection-consumer separation.
   contributions: [
+    IdKinds.Kind({ kind: customColumnIdKind }),
     DataViewSlots.FieldExtension({
       id: "custom-columns",
       // The user's own columns are their own band, wherever they are added: on a

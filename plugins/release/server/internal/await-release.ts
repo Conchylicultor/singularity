@@ -8,6 +8,7 @@ import {
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { _releaseRuns } from "./tables";
 import { RELEASE_RUN_KIND_ID } from "./kind-id";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 
 /**
  * How long one suspension waits for the release's `supervisedRun.ended` before
@@ -73,7 +74,7 @@ async function observeRelease(opts: {
       error: _releaseRuns.error,
     })
     .from(_releaseRuns)
-    .where(eq(_releaseRuns.id, opts.releaseId));
+    .where(eq(_releaseRuns.id, releaseRunIdKind.key(opts.releaseId)));
 
   if (row === undefined) {
     const conflict = await otherOpenRelease(opts);
@@ -112,7 +113,7 @@ async function otherOpenRelease(opts: {
       and(
         eq(_releaseRuns.namespace, runtimeNamespace()),
         eq(_releaseRuns.composition, opts.composition),
-        ne(_releaseRuns.id, opts.releaseId),
+        ne(_releaseRuns.id, releaseRunIdKind.key(opts.releaseId)),
         isNull(_releaseRuns.finishedAt),
       ),
     );

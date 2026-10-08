@@ -44,6 +44,7 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { attemptIdKind } from "@plugins/tasks/plugins/task-ids/core";
 
 // `--headed` is read by `withBrowser` itself, so it needs no plumbing here.
 const r = report("runs surface");
@@ -78,12 +79,18 @@ async function clickTab(page: Page, name: string): Promise<boolean> {
   return true;
 }
 
+// A build row's namespace chip is its attempt id — read from the attempt id
+// kind, never re-typed here.
+const ATTEMPT_NAMESPACE_RE = new RegExp(
+  `^(?:${attemptIdKind.recognitionPattern.source})$`,
+);
+
 /** How many rows of each kind are on screen, by per-kind marker. */
 async function kindCounts(
   page: Page,
 ): Promise<{ build: number; deploy: number; backup: number }> {
   return {
-    build: await page.getByText(/^att-\d+-[a-z0-9]+$/).count(),
+    build: await page.getByText(ATTEMPT_NAMESPACE_RE).count(),
     deploy: await page.getByText(/website on \d+\.\d+\.\d+\.\d+/).count(),
     backup: await page.getByText(/^\d+ sources$/).count(),
   };

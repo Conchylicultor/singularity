@@ -4,6 +4,7 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { updateServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
 import { toServer } from "./project-server";
+import { deployServerIdKind } from "../../core/id-kind";
 
 export const handleUpdate = implement(
   updateServer,
@@ -25,12 +26,12 @@ export const handleUpdate = implement(
         ? await db
             .select()
             .from(_deployServers)
-            .where(eq(_deployServers.id, params.id))
+            .where(eq(_deployServers.id, deployServerIdKind.key(params.id)))
             .limit(1)
         : await db
             .update(_deployServers)
             .set(updates)
-            .where(eq(_deployServers.id, params.id))
+            .where(eq(_deployServers.id, deployServerIdKind.key(params.id)))
             .returning();
     if (!row) throw new HttpError(404, "Not found");
     return toServer(row);

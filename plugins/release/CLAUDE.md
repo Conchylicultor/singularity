@@ -411,17 +411,22 @@ remote is built here.
 ## Plugin reference
 
 - Description: Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
+- Web:
+  - Contributes: `IdKinds.Kind` "release"
+  - Uses: `ids.IdKinds`
 - Server:
   - Contributes:
+    - `ids.kind` "release"
     - `resource.declare` "release.candidate"
     - `resource.declare` "release.history"
     - `resource.declare` "release.history:groups"
     - `resource.declare` "release.history:rows"
     - `resource.declare` "release.previews"
     - `resource.declare` "release.runs:rows"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `release/bundles` ×6
     - `infra/jobs/supervised-job` ×3
+    - `ids` ×2
     - `infra/endpoints` ×2
     - `infra/launcher` ×2
     - `infra/paths` ×2

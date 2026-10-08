@@ -1,6 +1,8 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { defineTrashSource } from "@plugins/infra/plugins/trash/server";
+import { IdKinds } from "@plugins/ids/server";
+import { blockIdKind } from "../core/block-id";
 import { handleListPages } from "./internal/handle-list-pages";
 import { handleListBlocks } from "./internal/handle-list-blocks";
 import { handleGetBlockPage } from "./internal/handle-get-block-page";
@@ -144,6 +146,7 @@ export default {
     }),
   ],
   contributions: [
+    IdKinds.Kind({ kind: blockIdKind }),
     Resource.Declare(pagesLiveResource),
     ...pageBlocksServed.declare,
     ...pageEditedAtServed.declare,

@@ -2,6 +2,7 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
+import { deployServerIdKind } from "../../core/id-kind";
 import { toServer } from "./project-server";
 import { derivePublicKey } from "./ssh-keygen";
 import { rejectInvalidKey } from "./ssh-key-error";
@@ -11,15 +12,16 @@ export const handleCreate = implement(createServer, async ({ body }) => {
   if (!body.host) {
     throw new HttpError(400, "host is required");
   }
-  const id = `srv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = deployServerIdKind.mint();
 
   // Derive BEFORE the insert, so a key the user got wrong is a 400 and not a
   // half-created server. The id is minted up front because the derived line
   // carries it as the authorized_keys comment.
   const publicKey = body.sshPrivateKey
-    ? await derivePublicKey(body.sshPrivateKey, `singularity-deploy-${id}`).catch(
-        rejectInvalidKey,
-      )
+    ? await derivePublicKey(
+        body.sshPrivateKey,
+        `singularity-deploy-${id}`,
+      ).catch(rejectInvalidKey)
     : undefined;
 
   const [row] = await db
@@ -36,7 +38,9 @@ export const handleCreate = implement(createServer, async ({ body }) => {
   if (!row) throw new HttpError(500, "insert returned no row");
 
   if (body.sshPrivateKey && publicKey) {
-    return toServer(await storeSshKey(id, { privateKey: body.sshPrivateKey, publicKey }));
+    return toServer(
+      await storeSshKey(id, { privateKey: body.sshPrivateKey, publicKey }),
+    );
   }
   return toServer(row);
 });

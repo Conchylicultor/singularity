@@ -5,11 +5,14 @@ import {
   HealthSection,
   useHealthAvailable,
 } from "./components/health-section";
+import { IdKinds } from "@plugins/ids/web";
+import { pluginReviewIdKind } from "../core";
 
 export default {
   description:
     "Displays health review status and staleness in the plugin detail pane.",
   contributions: [
+    IdKinds.Kind({ kind: pluginReviewIdKind }),
     PluginViewSlots.Section({
       id: "health",
       label: "Health",

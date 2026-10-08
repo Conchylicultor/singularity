@@ -91,13 +91,15 @@ how the caller obtained it.
 - Description: User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
 - Web:
   - Contributes:
+    - `IdKinds.Kind` "cc"
     - `DataViewSlots.FieldExtension` "custom-columns" → `CustomColumnFieldExtension`
     - `DataViewSlots.Setting` "custom-columns" → `CustomColumnsFieldsSetting`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×9
     - `primitives/live-state` ×3
     - `config_v2` ×2
     - `primitives/css/control-panel` ×2
+    - `ids.IdKinds`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/ui-kit.Input`
@@ -114,6 +116,7 @@ how the caller obtained it.
     - `useSetCustomColumnValue`
 - Server:
   - Contributes:
+    - `ids.kind` "cc"
     - `resource.declare` "data-view-custom-column-defs"
     - `resource.declare` "data-view-custom-values"
     - `live.columns.scoped` "custom"
@@ -121,6 +124,7 @@ how the caller obtained it.
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `fields/server-capabilities.resolveFieldValueTextCast`
+    - `ids.IdKinds`
     - `infra/endpoints.implement`
     - `network/live.LiveColumns`
     - `network/live.ScopedMemberRead`
@@ -138,10 +142,13 @@ how the caller obtained it.
     - `POST /api/data-view/custom-values/delete-column`
 - Core:
   - Uses:
+    - `ids.defineIdKind`
+    - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
   - Exports (types):
     - `CustomColumnDef`
+    - `CustomColumnId`
     - `CustomColumnValueRow`
     - `DeleteCustomColumnValuesBody`
     - `SetCustomColumnValueBody`
@@ -149,6 +156,7 @@ how the caller obtained it.
     - `CUSTOM_COLUMNS_SET`
     - `customColumnDefs`
     - `CustomColumnDefSchema`
+    - `customColumnIdKind`
     - `CustomColumnValueRowSchema`
     - `customColumnValues`
     - `deleteCustomColumnValues`

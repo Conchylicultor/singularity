@@ -5,6 +5,7 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { _deployServers } from "./tables";
 import { type ServerRow } from "./project-server";
 import { SSH_SECRET_NAMESPACE } from "./ssh-secret";
+import { deployServerIdKind } from "../../core/id-kind";
 
 /**
  * The tail every key-write path shares: stash the private half, then record the
@@ -30,7 +31,7 @@ export async function storeSshKey(
   const [row] = await db
     .update(_deployServers)
     .set({ sshPublicKey: key.publicKey })
-    .where(eq(_deployServers.id, serverId))
+    .where(eq(_deployServers.id, deployServerIdKind.key(serverId)))
     .returning();
   if (!row) throw new HttpError(404, "Not found");
   return row;

@@ -23,6 +23,8 @@ import {
   eventSourceRunsServed,
   eventSourcesServed,
 } from "./internal/resources";
+import { IdKinds } from "@plugins/ids/server";
+import { eventSourceIdKind, eventIdKind } from "../core";
 
 // The physical tables, the source-type registry, the repo functions, and the
 // refresh seam — everything the `refresh` engine, `event-list`, and `sources`
@@ -86,6 +88,8 @@ export default {
     [listRunEvents.route]: handleListRunEvents,
   },
   contributions: [
+    IdKinds.Kind({ kind: eventSourceIdKind }),
+    IdKinds.Kind({ kind: eventIdKind }),
     ...eventSourcesServed.declare,
     ...eventSourceRunsServed.declare,
   ],

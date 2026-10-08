@@ -1,4 +1,4 @@
-import { inlineBoundary } from "@plugins/active-data/core";
+import { inlineBoundary } from "@plugins/ids/core";
 
 // Matches plugin hierarchy IDs: kebab-case segments optionally joined by dots
 // (e.g. `tasks`, `active-data`, `active-data.conv`).

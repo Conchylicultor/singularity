@@ -5,11 +5,12 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { deleteServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
 import { SSH_SECRET_NAMESPACE } from "./ssh-secret";
+import { deployServerIdKind } from "../../core/id-kind";
 
 export const handleDelete = implement(deleteServer, async ({ params }) => {
   const [row] = await db
     .delete(_deployServers)
-    .where(eq(_deployServers.id, params.id))
+    .where(eq(_deployServers.id, deployServerIdKind.key(params.id)))
     .returning();
   if (!row) throw new HttpError(404, "Not found");
   await deleteSecret({ namespace: SSH_SECRET_NAMESPACE, key: params.id });

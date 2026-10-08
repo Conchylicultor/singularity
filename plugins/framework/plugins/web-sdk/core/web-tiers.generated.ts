@@ -15,11 +15,14 @@
 
 // App-content plugins pinned EAGER (would otherwise defer), and why:
 //   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
+//   - apps/plugins/events/plugins/events-core: dependency closure (imported by an eager plugin)
+//   - apps/plugins/events/plugins/sources: dependency closure (imported by an eager plugin)
 //   - apps/plugins/file-explorer/plugins/browser: dependency closure (imported by an eager plugin)
 //   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
 //   - apps/plugins/pages/plugins/auto-icon: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/canvas: dependency closure (imported by an eager plugin)
+//   - apps/plugins/prototypes/plugins/files: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/document: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/player: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/session: dependency closure (imported by an eager plugin)
@@ -60,8 +63,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/deploy/plugins/ssh-setup",
   "apps/plugins/deploy/plugins/ssh-setup/plugins/hetzner",
   "apps/plugins/events/plugins/event-list",
-  "apps/plugins/events/plugins/events-core",
-  "apps/plugins/events/plugins/sources",
   "apps/plugins/events/plugins/sources/plugins/coworkmeet",
   "apps/plugins/events/plugins/sources/plugins/dmda",
   "apps/plugins/events/plugins/sources/plugins/manual",

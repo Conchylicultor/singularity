@@ -2,8 +2,8 @@ import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
-  isPrototypeId,
   pickedColor,
+  protoIdKind,
   resolvePicks,
   type PrototypeMeta,
 } from "../core";
@@ -65,7 +65,7 @@ async function pickedLine(
 ): Promise<string | null> {
   // A hand-made folder is not referenceable by id, so it has no picks — the
   // server refuses to store any for it.
-  if (!isPrototypeId(meta.name) || meta.options.length === 0) return null;
+  if (!protoIdKind.is(meta.name) || meta.options.length === 0) return null;
   const picks = resolvePicks(meta.options, await store.read(meta.name));
   const parts = meta.options.flatMap((option) => {
     const value = picks[option.name];

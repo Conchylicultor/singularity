@@ -8,6 +8,8 @@ import {
   customColumnsScoped,
   watchScopedDefinitions,
 } from "./internal/scoped-columns";
+import { IdKinds } from "@plugins/ids/server";
+import { customColumnIdKind } from "../core";
 
 export { _dataViewCustomValues } from "./internal/tables";
 
@@ -19,6 +21,7 @@ export default {
     [deleteCustomColumnValues.route]: handleDeleteCustomColumnValues,
   },
   contributions: [
+    IdKinds.Kind({ kind: customColumnIdKind }),
     ...customColumnValuesServed.declare,
     ...customColumnDefsServed.declare,
     customColumnsScoped,

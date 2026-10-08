@@ -13,6 +13,8 @@ import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/ser
 // The specific module, not the `core` barrel: drizzle-kit loads this file to
 // build the schema, and `core/derive.ts` is plain strings with no imports at all.
 import { DEFAULT_LOOPBACK_PORT } from "../../core/derive";
+import { idColumn } from "@plugins/ids/server";
+import { deploymentIdKind, deployRunIdKind } from "../../core/id-kinds";
 
 // Where a composition is served and under what URL: `(composition × server) →
 // { hostnames, loopbackPort }`. Runtime data, deliberately not repo state — the
@@ -24,7 +26,7 @@ export const _deployDeployments = deriveUpdatedAt(
   pgTable(
     "deploy_deployments",
     {
-      id: text("id").primaryKey(),
+      id: idColumn(deploymentIdKind),
       // A composition NAME from the `compositions` config. No FK to point at —
       // compositions are config_v2 data, not rows — so the create handler
       // validates membership at write time.
@@ -100,7 +102,7 @@ export const _deployDeployments = deriveUpdatedAt(
 export const _deployRuns = pgTable(
   "deploy_runs",
   {
-    id: text("id").primaryKey(),
+    id: idColumn(deployRunIdKind),
     deploymentId: text("deployment_id")
       .notNull()
       .references(() => _deployDeployments.id, { onDelete: "cascade" }),

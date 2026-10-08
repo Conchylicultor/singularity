@@ -18,3 +18,5 @@ export type {
   SetCustomColumnValueBody,
   DeleteCustomColumnValuesBody,
 } from "./internal/endpoints";
+export { customColumnIdKind } from "./internal/id-kind";
+export type { CustomColumnId } from "./internal/id-kind";

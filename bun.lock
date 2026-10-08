@@ -70,12 +70,24 @@
       "name": "@singularity/plugin-active-data-attempt",
       "version": "0.0.1",
     },
+    "plugins/active-data/plugins/build-run": {
+      "name": "@singularity/plugin-active-data-build-run",
+      "version": "0.0.1",
+    },
     "plugins/active-data/plugins/commit-link": {
       "name": "@singularity/plugin-active-data-commit-link",
       "version": "0.0.1",
     },
     "plugins/active-data/plugins/conv": {
       "name": "@singularity/plugin-active-data-conv",
+      "version": "0.0.1",
+    },
+    "plugins/active-data/plugins/event-source": {
+      "name": "@singularity/plugin-active-data-event-source",
+      "version": "0.0.1",
+    },
+    "plugins/active-data/plugins/id-chip": {
+      "name": "@singularity/plugin-active-data-id-chip",
       "version": "0.0.1",
     },
     "plugins/active-data/plugins/page-link": {
@@ -88,6 +100,10 @@
     },
     "plugins/active-data/plugins/prototype": {
       "name": "@singularity/plugin-active-data-prototype",
+      "version": "0.0.1",
+    },
+    "plugins/active-data/plugins/report": {
+      "name": "@singularity/plugin-active-data-report",
       "version": "0.0.1",
     },
     "plugins/active-data/plugins/task": {
@@ -3269,6 +3285,10 @@
       "name": "@singularity/plugin-history-engine",
       "version": "0.0.1",
     },
+    "plugins/ids": {
+      "name": "@singularity/plugin-ids",
+      "version": "0.0.1",
+    },
     "plugins/improve": {
       "name": "@singularity/plugin-improve",
       "version": "0.0.1",
@@ -5481,6 +5501,10 @@
       "name": "@singularity/plugin-tasks-task-header",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/task-ids": {
+      "name": "@singularity/plugin-tasks-task-ids",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/task-list": {
       "name": "@singularity/plugin-tasks-task-list",
       "version": "0.0.1",
@@ -6399,15 +6423,23 @@
 
     "@singularity/plugin-active-data-attempt": ["@singularity/plugin-active-data-attempt@workspace:plugins/active-data/plugins/attempt"],
 
+    "@singularity/plugin-active-data-build-run": ["@singularity/plugin-active-data-build-run@workspace:plugins/active-data/plugins/build-run"],
+
     "@singularity/plugin-active-data-commit-link": ["@singularity/plugin-active-data-commit-link@workspace:plugins/active-data/plugins/commit-link"],
 
     "@singularity/plugin-active-data-conv": ["@singularity/plugin-active-data-conv@workspace:plugins/active-data/plugins/conv"],
+
+    "@singularity/plugin-active-data-event-source": ["@singularity/plugin-active-data-event-source@workspace:plugins/active-data/plugins/event-source"],
+
+    "@singularity/plugin-active-data-id-chip": ["@singularity/plugin-active-data-id-chip@workspace:plugins/active-data/plugins/id-chip"],
 
     "@singularity/plugin-active-data-page-link": ["@singularity/plugin-active-data-page-link@workspace:plugins/active-data/plugins/page-link"],
 
     "@singularity/plugin-active-data-plugin-link": ["@singularity/plugin-active-data-plugin-link@workspace:plugins/active-data/plugins/plugin-link"],
 
     "@singularity/plugin-active-data-prototype": ["@singularity/plugin-active-data-prototype@workspace:plugins/active-data/plugins/prototype"],
+
+    "@singularity/plugin-active-data-report": ["@singularity/plugin-active-data-report@workspace:plugins/active-data/plugins/report"],
 
     "@singularity/plugin-active-data-task": ["@singularity/plugin-active-data-task@workspace:plugins/active-data/plugins/task"],
 
@@ -7941,6 +7973,8 @@
 
     "@singularity/plugin-history-engine": ["@singularity/plugin-history-engine@workspace:plugins/history/plugins/engine"],
 
+    "@singularity/plugin-ids": ["@singularity/plugin-ids@workspace:plugins/ids"],
+
     "@singularity/plugin-improve": ["@singularity/plugin-improve@workspace:plugins/improve"],
 
     "@singularity/plugin-improve-element-picker": ["@singularity/plugin-improve-element-picker@workspace:plugins/improve/plugins/element-picker"],
@@ -8962,6 +8996,8 @@
     "@singularity/plugin-tasks-task-graph": ["@singularity/plugin-tasks-task-graph@workspace:plugins/tasks/plugins/task-graph"],
 
     "@singularity/plugin-tasks-task-header": ["@singularity/plugin-tasks-task-header@workspace:plugins/tasks/plugins/task-header"],
+
+    "@singularity/plugin-tasks-task-ids": ["@singularity/plugin-tasks-task-ids@workspace:plugins/tasks/plugins/task-ids"],
 
     "@singularity/plugin-tasks-task-list": ["@singularity/plugin-tasks-task-list@workspace:plugins/tasks/plugins/task-list"],
 

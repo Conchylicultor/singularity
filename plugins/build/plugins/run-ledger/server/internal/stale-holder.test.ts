@@ -44,6 +44,7 @@ import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { claimInflightRun, closeRunOn, type InsertRunRow } from "./recorder";
 import { readBuildTerminal } from "./stale-holder";
 import { _buildRuns } from "./tables";
+import { buildRunIdKind } from "../../core/internal/id-kind";
 
 const NS = asNamespace("ledger-settle-test");
 
@@ -102,7 +103,7 @@ async function readRow(id: string) {
       exitCode: _buildRuns.exitCode,
     })
     .from(_buildRuns)
-    .where(eq(_buildRuns.id, id));
+    .where(eq(_buildRuns.id, buildRunIdKind.key(id)));
   if (r === undefined) throw new Error(`no build_runs row ${id}`);
   return r;
 }
@@ -174,7 +175,7 @@ describe("claimInflightRun settles a dead holder", () => {
     const [count] = await t.db
       .select({ n: sql<number>`count(*)::int` })
       .from(_buildRuns)
-      .where(eq(_buildRuns.id, next.id));
+      .where(eq(_buildRuns.id, buildRunIdKind.key(next.id)));
     expect(count?.n).toBe(0);
   });
 
@@ -194,7 +195,7 @@ describe("claimInflightRun settles a dead holder", () => {
     await t.db
       .update(_buildRuns)
       .set({ finishedAt: new Date(), exitCode: 0 })
-      .where(eq(_buildRuns.id, holder.id));
+      .where(eq(_buildRuns.id, buildRunIdKind.key(holder.id)));
 
     const err = await rejection(claimInflightRun(t.db, NS, holder));
     expect((err as { constraint?: string }).constraint).not.toBe(

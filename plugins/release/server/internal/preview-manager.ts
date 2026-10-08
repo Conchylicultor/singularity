@@ -15,6 +15,7 @@ import {
 import { _releaseRuns } from "./tables";
 import { releaseLog } from "./release-log";
 import { previews, releasePreviewsServed } from "./preview-state-resource";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 
 /**
  * One release preview: a self-contained stack (gateway, backend, PgBouncer,
@@ -84,7 +85,7 @@ export async function startPreview(runId: string): Promise<void> {
       artifactPath: _releaseRuns.artifactPath,
     })
     .from(_releaseRuns)
-    .where(eq(_releaseRuns.id, runId))
+    .where(eq(_releaseRuns.id, releaseRunIdKind.key(runId)))
     .limit(1);
 
   if (!run) throw new Error(`No release run ${runId}`);

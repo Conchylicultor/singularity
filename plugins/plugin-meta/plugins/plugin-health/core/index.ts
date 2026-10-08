@@ -14,3 +14,5 @@ export {
   getPluginStaleness,
   getPluginHealthTasks,
 } from "./endpoints";
+export { pluginReviewIdKind } from "./id-kind";
+export type { PluginReviewId } from "./id-kind";

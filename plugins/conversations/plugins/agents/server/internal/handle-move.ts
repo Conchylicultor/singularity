@@ -5,6 +5,7 @@ import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
 import { moveAgent } from "../../core/endpoints";
 import { _agents } from "./tables";
 import { isAgentDescendant } from "./hierarchy";
+import { agentIdKind } from "../../core/id-kinds";
 
 export const handleMove = implement(moveAgent, async ({ params, body }) => {
   if (body.parentId === params.id) {
@@ -28,7 +29,7 @@ export const handleMove = implement(moveAgent, async ({ params, body }) => {
     const [before] = await tx
       .select({ id: _agents.id })
       .from(_agents)
-      .where(eq(_agents.id, params.id))
+      .where(eq(_agents.id, agentIdKind.key(params.id)))
       .limit(1);
     if (!before) throw new HttpError(404, "Not found");
 
@@ -70,7 +71,7 @@ export const handleMove = implement(moveAgent, async ({ params, body }) => {
         parentId: body.parentId,
         rank: rank.toJSON(),
       })
-      .where(eq(_agents.id, params.id));
+      .where(eq(_agents.id, agentIdKind.key(params.id)));
   });
 
   // No destination force-expand on a re-parent: expand/collapse is device-local

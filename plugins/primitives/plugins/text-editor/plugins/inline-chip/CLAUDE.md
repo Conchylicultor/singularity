@@ -18,12 +18,17 @@ that can build one (`web/internal/inline-registry.ts`):
 
 ```ts
 InlineChip.Tag(inlineChip({
-  id: "attempt",                          // names the chip in its error boundary + the docs
-  pattern: ATTEMPT_ID_RE,
-  surfaces: ["transcript", "document"],   // REQUIRED — no default
-  component: AttemptChip,
+  id: "ui-context",                       // names the chip in its error boundary + the docs
+  pattern: UI_CONTEXT_RE,
+  surfaces: ["transcript"],               // REQUIRED — no default
+  modelText: "self-describing",
+  component: UiContextTag,
 }))
 ```
+
+A chip for a declared id kind (`task-…`, `att-…`, `proto-…`, `block-…`) is not
+hand-built: `active-data/id-chip`'s `idChip({ presenter, surfaces })` calls
+this, with the pattern derived from the kind (`plugins/ids`).
 
 `InlineChip.Tag` is the DECLARATION surface — it is what puts the chip in
 `docs/plugins-details.md` and the reverse index — while `inlineChip` also
@@ -153,9 +158,12 @@ rendered chip out of a read surface puts the token back on the clipboard.
   - Slots: `InlineChip.Tag`
   - Slot contributors:
     - `InlineChip.Tag` ← `active-data.attempt`
+    - `InlineChip.Tag` ← `active-data.build-run`
     - `InlineChip.Tag` ← `active-data.conv`
+    - `InlineChip.Tag` ← `active-data.event-source`
     - `InlineChip.Tag` ← `active-data.page-link`
     - `InlineChip.Tag` ← `active-data.prototype`
+    - `InlineChip.Tag` ← `active-data.report`
     - `InlineChip.Tag` ← `active-data.task-link`
     - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
   - Uses:
@@ -186,11 +194,7 @@ rendered chip out of a read surface puts the token back on the clipboard.
 - Cross-plugin:
   - Imported by:
     - `active-data`
-    - `active-data/attempt`
-    - `active-data/conv`
-    - `active-data/page-link`
-    - `active-data/prototype`
-    - `active-data/task-link`
+    - `active-data/id-chip`
     - `page/inline-page-link`
     - `page/links`
     - `primitives/ui-context/element-picker`

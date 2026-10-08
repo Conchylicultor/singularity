@@ -5,7 +5,7 @@
 The reaper answers two different questions with two different enumerations, and
 mixing them is the mistake this plugin is shaped to prevent.
 
-**Checkouts** are named by `WORKTREE_NAME_RE` (`att-…` / `claude-…`). Every
+**Checkouts** are named by attempt ids — `isCanonicalWorktreeName`, i.e. `attemptIdKind.is` (`att-…` / `claude-…`). Every
 branch of `collectReapable` that matches a name against it goes on to resolve a
 git worktree path from that name, so **the regex must never be widened to admit
 dotted names**. `sonata` and `sonata.att-X` are not checkouts; admitting them
@@ -98,8 +98,8 @@ the panel until it is given something to say.
   - Exports (values): `worktreeCleanupPane`
 - Server:
   - Contributes: `report-kind` "worktree-reap-failed"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/worktree` ×8
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/worktree` ×9
     - `infra/worktree/reclaim` ×4
     - `database/admin` ×3
     - `tasks/tasks-core` ×3

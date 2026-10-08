@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import { newPrototypeId, PROTOTYPE_ENTRY_FILE } from "../core";
+import { protoIdKind, PROTOTYPE_ENTRY_FILE } from "../core";
 import { openHistoryStore } from "./history/store";
 import { copyFolderOnce, templateDir } from "./template";
 
@@ -51,7 +51,7 @@ export async function mintPrototype(
   const template = await templateDir();
 
   for (let attempt = 0; attempt < MAX_MINT_ATTEMPTS; attempt++) {
-    const id = newPrototypeId();
+    const id = protoIdKind.mint();
     const dir = prototypesDir.file(id);
     // A name collision re-mints rather than throwing: the caller asked for a
     // prototype, not for this particular id, and the folder that is already

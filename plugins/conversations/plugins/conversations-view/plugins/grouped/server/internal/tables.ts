@@ -2,13 +2,15 @@ import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
+import { idColumn } from "@plugins/ids/server";
+import { conversationGroupIdKind } from "../../core/id-kinds";
 
 // User-defined groupings shown in the conversation sidebar list. Each
 // conversation can be a member of at most one group (PK on conversation_id).
 // Groups persist even when empty — the user explicitly removes them.
 export const _conversationGroups = deriveUpdatedAt(
   pgTable("conversation_groups", {
-    id: text("id").primaryKey(),
+    id: idColumn(conversationGroupIdKind),
     title: text("title").notNull(),
     expanded: boolean("expanded").notNull().default(true),
     rank: rankText("rank").notNull(),

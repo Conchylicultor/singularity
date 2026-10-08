@@ -191,6 +191,9 @@ export function defineExtension<
         references: {
           column: (): AnyPgColumn => parentTable.id,
           onDelete: "cascade",
+          // A rewrite of the parent's ids (a legacy bare uuid gaining its
+          // kind's prefix, `plugins/ids`) carries the side row along.
+          onUpdate: "cascade",
         },
       },
       createdAt: { default: defaultNow() },

@@ -178,7 +178,8 @@ contributions each surface passes in, and per-entry plugin id
 
 - Description: Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
 - Web:
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: `IdKinds.Kind` "view"
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×13
     - `config_v2` ×3
     - `primitives/css/control-panel` ×2
@@ -186,6 +187,7 @@ contributions each surface passes in, and per-entry plugin id
     - `primitives/live-state` ×2
     - `primitives/sortable-list` ×2
     - `config_v2/fields.FieldRenderer`
+    - `ids.IdKinds`
     - `primitives/css/fill.Fill`
     - `primitives/css/grow.growClass`
     - `primitives/css/rigid.rigidClass`
@@ -213,22 +215,30 @@ contributions each surface passes in, and per-entry plugin id
     - `useViewsConfig`
     - `ViewSettingsPopover`
 - Server:
-  - Uses: `config_v2.ConfigV2`
+  - Contributes: `ids.kind` "view"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `ids.IdKinds`
   - Exports (values):
     - `buildViewConfigRegistrations`
     - `viewsDescriptor`
-- Cross-plugin:
-  - Imported by:
-    - `primitives/data-view`
-    - `primitives/metrics`
 - Core:
+  - Uses:
+    - `ids.defineIdKind`
+    - `ids.IdOf`
   - Exports (types):
     - `AddableSource`
     - `AddableViewType`
     - `ViewConfigRow`
+    - `ViewId`
     - `ViewInstance`
     - `ViewSourceEntry`
     - `ViewTypeMeta`
+  - Exports (values): `viewIdKind`
+- Cross-plugin:
+  - Imported by:
+    - `primitives/data-view`
+    - `primitives/metrics`
 - Shared:
   - Exports (values): `viewsDescriptor`
 

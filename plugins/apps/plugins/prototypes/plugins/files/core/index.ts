@@ -32,13 +32,7 @@ export {
   validatePrototypeFolder,
 } from "./validate";
 export type { PrototypeProblem, PrototypeFolder } from "./validate";
-export {
-  newPrototypeId,
-  isPrototypeId,
-  prototypeIdsIn,
-  PROTOTYPE_ID_RE,
-  UNTITLED_PROTOTYPE,
-} from "./id";
+export { protoIdKind, prototypeIdsIn, UNTITLED_PROTOTYPE } from "./id";
 export { parseMocks, mocksProblemDetail } from "./mocks";
 export {
   SIZE_PRESETS,

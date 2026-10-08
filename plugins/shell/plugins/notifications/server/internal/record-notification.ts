@@ -3,6 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
 import type { NotificationVariant } from "../../shared/schema";
+import { notificationIdKind, type NotificationId } from "../../core";
 
 // Every column a notification write can set, with no rule tying `variant` to
 // `linkTo`. Internal: only this plugin writes through it directly — the browser
@@ -58,7 +59,7 @@ export interface NotificationWrite {
    * generated one — clients pass their own id so the self-echo suppression
    * (recentClientIds) can match the stored row. Server-side callers omit it.
    */
-  id?: string;
+  id?: NotificationId;
 }
 
 /**
@@ -97,8 +98,7 @@ export async function writeNotification(
   input: NotificationWrite,
   conn: NodePgDatabase = db,
 ): Promise<string> {
-  const id =
-    input.id ?? `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = input.id ?? notificationIdKind.mint();
   const dedupKey = input.dedupeKey ?? null;
   const now = new Date();
   // Re-surface gate: a dedup hit re-alerts only once its row has been quiet (not

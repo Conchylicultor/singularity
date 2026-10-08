@@ -73,7 +73,11 @@ const mailSyncState = defineEntity("mail_sync_state", mailSyncStateFields, {
   },
   columns: {
     accountId: {
-      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+      references: {
+        column: () => mailAccounts.table.id,
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      },
     },
     status: { default: "idle" },
     resyncCount: { default: 0 },
@@ -103,7 +107,11 @@ const mailLabels = defineEntity("mail_labels", mailLabelFields, {
   },
   columns: {
     accountId: {
-      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+      references: {
+        column: () => mailAccounts.table.id,
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      },
     },
     parentId: {
       references: {
@@ -143,7 +151,11 @@ const mailThreads = defineEntity("mail_threads", mailThreadFields, {
   },
   columns: {
     accountId: {
-      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+      references: {
+        column: () => mailAccounts.table.id,
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      },
     },
     participants: { default: [] },
     messageCount: { default: 0 },
@@ -208,7 +220,11 @@ const mailMessages = defineEntity("mail_messages", mailMessageFields, {
       references: { column: () => mailThreads.table.id, onDelete: "cascade" },
     },
     accountId: {
-      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+      references: {
+        column: () => mailAccounts.table.id,
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      },
     },
     from: { name: "from_addr" },
     to: { name: "to_addrs", default: [] },
@@ -276,7 +292,11 @@ const mailAttachments = defineEntity("mail_attachments", mailAttachmentFields, {
       references: { column: () => mailMessages.table.id, onDelete: "cascade" },
     },
     accountId: {
-      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+      references: {
+        column: () => mailAccounts.table.id,
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      },
     },
     sizeBytes: { default: 0 },
     inline: { default: false },
@@ -308,7 +328,11 @@ const mailDrafts = defineEntity("mail_drafts", mailDraftFields, {
   },
   columns: {
     accountId: {
-      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+      references: {
+        column: () => mailAccounts.table.id,
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      },
     },
     // `threadId` is Gmail's own thread id, deliberately NOT a foreign key to
     // `mail_threads`. That table is a rebuildable mirror left out of forks and
@@ -345,7 +369,11 @@ const mailOutbox = defineEntity("mail_outbox", mailOutboxFields, {
   },
   columns: {
     accountId: {
-      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+      references: {
+        column: () => mailAccounts.table.id,
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      },
     },
     payload: { default: {} },
     status: { default: "pending" },

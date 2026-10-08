@@ -7,6 +7,7 @@ import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { _reports } from "./tables";
 import { isNoiseReport } from "./noise-rules";
 import { reportsProducer } from "./producer";
+import { reportIdKind } from "../../core/id-kind";
 
 // Re-evaluate every report row against the CURRENT noise-rule set and sync both
 // the stored `reports.noise` flag and the linked notification's `muted` flag.
@@ -85,7 +86,11 @@ export async function setReportNoise(
 ): Promise<void> {
   await reportsProducer.mutate(
     executor,
-    (q, t) => q.update(t).set({ noise }).where(eq(t.id, reportId)),
+    (q, t) =>
+      q
+        .update(t)
+        .set({ noise })
+        .where(eq(t.id, reportIdKind.key(reportId))),
     { latency: "background" },
   );
 }

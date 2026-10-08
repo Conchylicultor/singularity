@@ -227,6 +227,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useEventSourceTypes`
 - Cross-plugin:
   - Imported by:
+    - `active-data/event-source`
     - `apps/events/sources/refresh-all`
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/schedule`

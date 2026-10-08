@@ -33,12 +33,15 @@
 
 - Description: Persistent bell-button notifications backed by the DB.
 - Web:
-  - Contributes: `ActionBar.Item` → `BellButton`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `IdKinds.Kind` "notif"
+    - `ActionBar.Item` → `BellButton`
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×2
     - `primitives/cursor-pagination` ×2
     - `primitives/live-state` ×2
     - `apps-core/tabs.navigate`
+    - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -62,6 +65,7 @@
   - Exports (values): `toast`
 - Server:
   - Contributes:
+    - `ids.kind` "notif"
     - `resource.declare` "notifications"
     - `resource.declare` "notifications.unread"
     - `resource.declare` "notifications:groups"
@@ -72,6 +76,8 @@
     - `database/admin.ExcludeFromFork`
     - `database/live-state-snapshot.reconcileReadSetTable`
     - `database/sql-column.parsedJson`
+    - `ids.idColumn`
+    - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
@@ -96,6 +102,12 @@
     - `POST /api/notifications/dismiss-all`
     - `POST /api/notifications/mark-all-read`
     - `POST /api/notifications/:id/dismiss`
+- Core:
+  - Uses:
+    - `ids.defineIdKind`
+    - `ids.IdOf`
+  - Exports (types): `NotificationId`
+  - Exports (values): `notificationIdKind`
 - Cross-plugin:
   - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×15

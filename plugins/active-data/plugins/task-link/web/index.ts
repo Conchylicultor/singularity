@@ -1,25 +1,27 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { idChip } from "@plugins/active-data/plugins/id-chip/web";
+import { taskIdKind } from "@plugins/tasks/plugins/task-ids/core";
+import { TASK_CHIP_SURFACES } from "../core";
 import {
-  InlineChip,
-  inlineChip,
-} from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/web";
-import { TASK_ID_RE } from "../core";
-import { TaskLinkChip } from "./components/task-link-chip";
+  TaskLinkChip,
+  useOpenTask,
+  useTaskReferent,
+} from "./components/task-link-chip";
 
 export { TaskLinkChip };
 
 export default {
   description:
-    "Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed.",
+    "Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane, and presents the task id kind (title + open) to the id registry. Models emit the bare id, no tag wrapping needed.",
   contributions: [
-    InlineChip.Tag(
-      inlineChip({
-        id: "task-link",
-        pattern: TASK_ID_RE,
-        surfaces: ["transcript", "document"],
-        modelText: "resolved",
-        component: TaskLinkChip,
-      }),
-    ),
+    ...idChip({
+      presenter: {
+        kind: taskIdKind,
+        useReferent: useTaskReferent,
+        useOpen: useOpenTask,
+      },
+      surfaces: TASK_CHIP_SURFACES,
+      component: TaskLinkChip,
+    }),
   ],
 } satisfies PluginDefinition;

@@ -1019,15 +1019,15 @@ for a new reader of the two page resources.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 164 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 168 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×48
     - `conversations` ×34
     - `tasks` ×21
     - `infra` ×10
+    - `active-data` ×9
     - `debug` ×8
     - `build` ×6
     - `page` ×6
-    - `active-data` ×5
     - `primitives` ×5
     - `auth` ×3
     - `review` ×3

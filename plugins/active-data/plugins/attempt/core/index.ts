@@ -1,1 +1,1 @@
-export { ATTEMPT_ID_RE } from "./pattern";
+export { ATTEMPT_CHIP_SURFACES } from "./surfaces";

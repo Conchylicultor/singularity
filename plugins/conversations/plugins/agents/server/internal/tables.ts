@@ -10,6 +10,8 @@ import { rankText } from "@plugins/primitives/plugins/rank/core";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
 import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { StoredModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
+import { idColumn } from "@plugins/ids/server";
+import { agentIdKind, agentLaunchIdKind } from "../../core/id-kinds";
 
 // Physical tables only. Leaf in the schema dependency graph (no cross-plugin
 // imports). Views, Zod schemas, and types live in `./schema.ts`.
@@ -18,7 +20,7 @@ export const _agents = deriveUpdatedAt(
   pgTable(
     "agents",
     {
-      id: text("id").primaryKey(),
+      id: idColumn(agentIdKind),
       parentId: text("parent_id").references((): AnyPgColumn => _agents.id, {
         onDelete: "cascade",
       }),
@@ -62,7 +64,7 @@ export const _agents = deriveUpdatedAt(
 export const _agent_launches = pgTable(
   "agent_launches",
   {
-    id: text("id").primaryKey(),
+    id: idColumn(agentLaunchIdKind),
     agentId: text("agent_id")
       .notNull()
       .references(() => _agents.id, { onDelete: "cascade" }),

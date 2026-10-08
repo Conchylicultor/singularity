@@ -4,7 +4,7 @@ import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { originOf } from "@plugins/infra/plugins/request-origin/core";
 import { defineAgentWriteLedger } from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/server";
 import {
-  isPrototypeId,
+  protoIdKind,
   prototypeStatuses,
   setPrototypeStatus,
   type PrototypeStatusChange,
@@ -27,7 +27,7 @@ function store(): StatusStore {
 
 /** A prototype folder exists under this id. */
 function prototypeExists(name: string): boolean {
-  if (!isPrototypeId(name)) return false;
+  if (!protoIdKind.is(name)) return false;
   const stat = statSync(prototypesDir.file(name), { throwIfNoEntry: false });
   return stat?.isDirectory() ?? false;
 }

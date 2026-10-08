@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import type { EventDate } from "@plugins/apps/plugins/events/plugins/event-date/core";
-import { ExtractedEventSchema } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  eventIdKind,
+  ExtractedEventSchema,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 import type { eventsTable } from "@plugins/apps/plugins/events/plugins/events-core/server";
 import { echoIsLossless, echoRows, toExtractedEvent } from "./echo";
 
@@ -36,7 +39,7 @@ const fullDate: EventDate = {
 
 /** Every optional populated — the case where an echo has the most to lose. */
 const fullRow: EventRow = {
-  id: "evt-1",
+  id: eventIdKind.key("evt-1"),
   sourceId: "evs-manual",
   externalId: "hand-1",
   title: "Concert at the Bataclan",
@@ -65,7 +68,7 @@ const sparseDate: EventDate = {
 
 /** Every optional empty — the case where an echo can most easily invent values. */
 const sparseRow: EventRow = {
-  id: "evt-2",
+  id: eventIdKind.key("evt-2"),
   sourceId: "evs-manual",
   externalId: "hand-2",
   title: "Book club",

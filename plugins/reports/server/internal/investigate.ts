@@ -9,6 +9,7 @@ import { _reports } from "./tables";
 import { reportInvestigationSink } from "./investigation-sink";
 import { ReportKind } from "./report-kinds";
 import { reportsProducer } from "./producer";
+import { reportIdKind } from "../../core/id-kind";
 
 // Appended to every report-filed task. The agent that picks one up is about to
 // debug, so point them at the debugging map first — it routes them to the right
@@ -59,7 +60,7 @@ export async function investigateReport(
         const [row] = await db
           .select()
           .from(_reports)
-          .where(eq(_reports.id, reportId))
+          .where(eq(_reports.id, reportIdKind.key(reportId)))
           .limit(1);
         if (!row) {
           throw new Error(
@@ -119,7 +120,11 @@ export async function linkReportTask(
 ): Promise<void> {
   await reportsProducer.mutate(
     executor,
-    (q, t) => q.update(t).set({ taskId }).where(eq(t.id, reportId)),
+    (q, t) =>
+      q
+        .update(t)
+        .set({ taskId })
+        .where(eq(t.id, reportIdKind.key(reportId))),
     { latency: "interactive" },
   );
 }

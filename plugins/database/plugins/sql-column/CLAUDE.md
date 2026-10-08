@@ -274,6 +274,12 @@ definition (A18): a change to the schema moves what a read of the column
 produces with its name and SQL type unmoved, so the definition folds the
 schema's description in.
 
+It answers by identity, not structure — the very schema object the column was
+built with — so a plugin that MINTED a schema can recognise its columns from the
+table alone: the `ids:pk-declared` check reads a table's id column this way,
+whether it was spelled `idColumn(kind)` or a `defineEntity` record's
+`idKindField(kind)`.
+
 ## A column type's wire form — `withWire`
 
 A decoder answers "what does this column hold"; `withWire` answers a different
@@ -306,13 +312,14 @@ export const bytea = (name: string) =>
 
 - Description: Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×5
     - `conversations` ×4
     - `infra` ×4
     - `fields` ×3
     - `debug` ×2
     - `backup`
+    - `ids`
     - `network/live`
     - `page/editor`
     - `primitives/collab-doc`

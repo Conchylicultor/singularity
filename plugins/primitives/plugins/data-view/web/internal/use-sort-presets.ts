@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import type { SortPreset, SortRule } from "../../core";
+import { presetIdKind, type SortPreset, type SortRule } from "../../core";
 import { dataViewDescriptors } from "./descriptors";
 import { readSortPresets } from "./sort-presets";
 
@@ -23,10 +23,10 @@ export interface SortPresetsController {
   restorePreset: (preset: SortPreset, index: number) => void;
 }
 
-/** Stable id for a new preset row — mirrors view-core's `newId`, so the
- *  optimistic row and the persisted row share identity across the round-trip. */
+/** Stable id for a new preset row (`presetIdKind`) — minted client-side, so
+ *  the optimistic row and the persisted row share identity across the round-trip. */
 function presetId(): string {
-  return `preset-${crypto.randomUUID()}`;
+  return presetIdKind.mint();
 }
 
 /**

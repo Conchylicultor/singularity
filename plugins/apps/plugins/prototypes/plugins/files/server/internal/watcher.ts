@@ -3,7 +3,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { isPrototypeId } from "../../core";
+import { protoIdKind } from "../../core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { adoptPrototypeHistories, prototypeHistoryServed } from "./history";
 import { prototypePicksServed } from "./picks";
@@ -99,7 +99,7 @@ async function refreshOnce(): Promise<void> {
 
 /** Re-read one prototype's history, for whoever is subscribed to it. */
 function notifyHistory(name: string): void {
-  if (isPrototypeId(name)) prototypeHistoryServed.notify({ name });
+  if (protoIdKind.is(name)) prototypeHistoryServed.notify({ name });
 }
 
 // Single-flight with a trailing re-run: a signature read is async, so two

@@ -30,12 +30,14 @@ import {
   type ConversationModel,
   type ModelChoice,
 } from "@plugins/conversations/plugins/model-provider/core";
-import {
-  newAttemptId,
-  newConversationId,
-  type Conversation,
-  type ConversationKind,
+import type {
+  Conversation,
+  ConversationKind,
 } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  attemptIdKind,
+  conversationIdKind,
+} from "@plugins/tasks/plugins/task-ids/core";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { forkConfig } from "@plugins/config_v2/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -257,7 +259,7 @@ export async function prepareConversation(
     target = { kind: "reuse", attemptId, transcriptCopy };
   } else {
     effectiveTaskId = opts.taskId;
-    const newId = newAttemptId();
+    const newId = attemptIdKind.mint();
     // Derived purely from the id, so the path is known before the worktree dir
     // exists. `setupWorktree` (the multi-second `git worktree add` checkout) is
     // deferred to the durable `conversations.spawn` job — off the interactive
@@ -302,7 +304,7 @@ export async function prepareConversation(
 
   return {
     runtimeId,
-    conversationId: newConversationId(),
+    conversationId: conversationIdKind.mint(),
     model,
     spawnedBy,
     kind: opts.kind ?? "user",

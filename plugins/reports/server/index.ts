@@ -20,6 +20,8 @@ import {
 } from "./internal/process-hooks";
 import { appendFatalReportSync } from "./internal/buffer";
 import { submitReport, investigateReport } from "../shared/endpoints";
+import { IdKinds } from "@plugins/ids/server";
+import { reportIdKind } from "../core";
 
 export { reportInvestigationSink } from "./internal/investigation-sink";
 export { reportRecordedSignal } from "./internal/recorded-signal";
@@ -47,6 +49,7 @@ export type {
   ReportRow,
 } from "./internal/report-kinds";
 
+export { getReportTitle } from "./internal/get-report-title";
 export default {
   description:
     "Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.",
@@ -55,6 +58,7 @@ export default {
     [investigateReport.route]: handleInvestigate,
   },
   contributions: [
+    IdKinds.Kind({ kind: reportIdKind }),
     // `reports.list`: the Reports DataView's window, the detail pane's by-id
     // read and the kind / source filter options (see core/resources.ts).
     ...reportsListServed.declare,

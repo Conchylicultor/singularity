@@ -151,7 +151,9 @@ export async function applyLinkDiff(
 
 // Create a `<owner>_attachments` join table linking a consumer's domain table
 // to `_attachments`, and return a handle whose methods close over it. Both
-// FKs cascade on owner/attachment delete; the orphan sweep reclaims rows
+// FKs cascade on owner/attachment delete, and on update — so a rewrite of
+// either parent's ids (a legacy bare uuid gaining its kind's prefix,
+// `plugins/ids`) carries the link rows along; the orphan sweep reclaims rows
 // whose last link disappears. Module-load side effect — every consumer's
 // `tables*.ts` / `schema*.ts` runs at import time, registering its link.
 export function defineLink<T extends OwnerTable>(
@@ -164,10 +166,16 @@ export function defineLink<T extends OwnerTable>(
     {
       ownerId: text("owner_id")
         .notNull()
-        .references((): AnyPgColumn => ownerTable.id, { onDelete: "cascade" }),
+        .references((): AnyPgColumn => ownerTable.id, {
+          onDelete: "cascade",
+          onUpdate: "cascade",
+        }),
       attachmentId: text("attachment_id")
         .notNull()
-        .references(() => _attachments.id, { onDelete: "cascade" }),
+        .references(() => _attachments.id, {
+          onDelete: "cascade",
+          onUpdate: "cascade",
+        }),
       createdAt: timestamp("created_at", { withTimezone: true })
         .defaultNow()
         .notNull(),

@@ -1,66 +1,35 @@
-// THE one spelling of a prototype's id format — the mint, the folder-name
-// validation and the chip's inline pattern all read it from here.
+import { defineIdKind } from "@plugins/ids/core";
+
+// THE one declaration of a prototype's id — the mint, the folder-name
+// validation (`protoIdKind.is`), the chip's inline recognition and
+// `prototypeIdsIn` all read it from here (`plugins/ids`).
 //
 // A prototype's id IS its directory name, so the filesystem is the uniqueness
-// authority and the mint is a `mkdir`: there is no dir↔id map in front of the
-// routes, the watcher, the thumbnail cache or the backup source. It is opaque
-// rather than a slug because the folder is minted BEFORE the agent has designed
-// anything — any name chosen at that moment is a guess, and renaming later would
-// change the id, which is the one thing an id exists to prevent. Nothing is lost
-// to a human: every surface that displays a prototype reads `meta.title` out of
-// its `<title>`.
+// authority and the mint is a `mkdir` (`shared/mint.ts` re-mints on a
+// collision): there is no dir↔id map in front of the routes, the watcher, the
+// thumbnail cache or the backup source. It is opaque rather than a slug because
+// the folder is minted BEFORE the agent has designed anything — any name chosen
+// at that moment is a guess, and renaming later would change the id, which is
+// the one thing an id exists to prevent. Nothing is lost to a human: every
+// surface that displays a prototype reads `meta.title` out of its `<title>`.
 //
-// **Why one module rather than a shape re-typed per consumer.** `att-` and
-// `block-` are the precedent NOT to follow: their chips re-declare the id shape
-// in `active-data/plugins/*/web/internal/pattern.ts`, so a change to the mint
-// silently switches every chip off with nothing failing — `page-link`'s own
-// docblock says exactly that, and `block-id.ts` answers it by forbidding parsing
-// altogether. A prototype id has to be parsed (a bare id in assistant prose is
-// the whole point of the chip), so the answer here is the other one: parse it,
-// but from a single exported regex, pinned to the mint by `id.test.ts`.
+// The mint is the `stamped` shape (`proto-<epochSeconds>-<6 base36>`); folders
+// minted before it carry a 4-char suffix and stay valid, because recognition is
+// the generic body every kind shares, not the current mint's exact shape.
 //
 // `core/` is browser-importable, so this module stays dependency-free.
 
-/**
- * Mint a fresh prototype id: `proto-<epochSeconds>-<4 base36 chars>`.
- *
- * The shape `newId()` already mints for attempts and conversations
- * (`conversations/server/internal/lifecycle.ts`), with one deliberate
- * difference: the suffix is drawn as an integer and zero-padded to exactly four
- * characters, where `newId` slices four off `Math.random().toString(36)` and so
- * yields a SHORTER suffix for the rare double with few significant base-36
- * digits (`0.5` → `"i"`). Cosmetic for an attempt id, which nothing validates;
- * a real bug here, where the id is checked by {@link isPrototypeId} on every
- * folder read and matched by the chip's pattern in every assistant message.
- */
-export function newPrototypeId(): string {
-  const suffix = Math.floor(Math.random() * 36 ** 4)
-    .toString(36)
-    .padStart(4, "0");
-  return `proto-${Math.floor(Date.now() / 1000)}-${suffix}`;
-}
-
-/**
- * The id's CORE shape, unanchored and with no `g` flag — a fragment to compose,
- * not a matcher to use directly.
- *
- * Consumers add their own guards: {@link isPrototypeId} anchors it to a whole
- * string, and the active-data chip wraps it in `inlineBoundary()` so a bare id
- * in prose linkifies while `proto-…/index.html` in a path does not. Keeping the
- * boundaries OUT of here is what lets both readings share one shape.
- */
-export const PROTOTYPE_ID_RE = /proto-\d+-[a-z0-9]{4}/;
-
-/** Is this whole string a minted prototype id (⇒ a legal folder name)? */
-export function isPrototypeId(name: string): boolean {
-  return new RegExp(`^(?:${PROTOTYPE_ID_RE.source})$`).test(name);
-}
+/** The prototype id kind: `protoIdKind.mint()`, `protoIdKind.is(folderName)`. */
+export const protoIdKind = defineIdKind({
+  prefix: "proto",
+  label: "Prototype",
+});
 
 // Word-guarded on both sides: `proto-1-abcdx` is not the id `proto-1-abcd`.
 // `matchAll` clones the regex, so this shared `g` instance keeps no state
 // across calls.
 const MENTIONED_ID_RE = new RegExp(
-  `(?<![A-Za-z0-9])(?:${PROTOTYPE_ID_RE.source})(?![A-Za-z0-9])`,
+  `(?<![A-Za-z0-9])(?:${protoIdKind.pattern.source})(?![A-Za-z0-9])`,
   "g",
 );
 

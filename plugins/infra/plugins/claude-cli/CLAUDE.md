@@ -160,6 +160,8 @@ serves it with `serveCollection(claudeCliCalls, { from: _claudeCliCalls })`.
     - `conversations/conversation-view/turn-summary`
     - `debug/claude-cli-calls`
     - `tasks/task-title`
+- Exemptions:
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 - Sub-plugins:
   - **`availability`** — Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again)…
 

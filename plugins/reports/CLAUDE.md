@@ -86,9 +86,12 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Slots: `Reports.KindView`
   - Slot contributors: 29 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Reports.KindView` ×29
-  - Contributes: `ConfigV2.WebRegister` "reports"
+  - Contributes:
+    - `IdKinds.Kind` "report"
+    - `ConfigV2.WebRegister` "reports"
   - Uses:
     - `config_v2.ConfigV2`
+    - `ids.IdKinds`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/scope/tab-id.getTabId`
     - `primitives/slot-render.defineDispatchSlot`
@@ -99,6 +102,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `Reports`
 - Server:
   - Contributes:
+    - `ids.kind` "report"
     - `resource.declare` "reports.list"
     - `resource.declare` "reports.list:groups"
     - `resource.declare` "reports.list:rows"
@@ -114,6 +118,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `database/change-feed.defineChangeProducer`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
+    - `ids.idColumn`
+    - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/host/duress.createShedBuffer`
@@ -136,6 +142,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `StormSummary`
   - Exports (values):
     - `DEFAULT_REPORT_DEBOUNCE_MS`
+    - `getReportTitle`
     - `isReportKindRegistered`
     - `linkReportsToTask`
     - `recordReport`
@@ -161,6 +168,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Uses:
     - `config_v2.defineConfig`
     - `fields/int/config.intField`
+    - `ids.defineIdKind`
+    - `ids.IdOf`
     - `network/live.liveCollection`
     - `network/live/filter.liveBoolean`
     - `network/live/filter.liveInstant`
@@ -170,10 +179,12 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Exports (types):
     - `Report`
     - `ReportFingerprintContext`
+    - `ReportId`
     - `ReportSource`
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
     - `reportDetailRoute`
+    - `reportIdKind`
     - `REPORTS_SEARCHABLE`
     - `ReportSchema`
     - `reportsConfig`
@@ -181,12 +192,13 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×19
     - `debug` ×17
     - `conversations` ×7
     - `database` ×3
     - `infra` ×2
+    - `active-data/report`
     - `backup`
     - `page/place/google`
     - `stats/cost`

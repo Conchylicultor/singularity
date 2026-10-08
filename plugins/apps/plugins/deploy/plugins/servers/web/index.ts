@@ -8,6 +8,8 @@ import {
   ServerItemActions,
   OpenConsoleAction,
 } from "./components/server-item-actions";
+import { IdKinds } from "@plugins/ids/web";
+import { deployServerIdKind } from "../core";
 
 export { serversRootPane, serverDetailPane, NEW_SERVER_ID } from "./panes";
 export { Servers, ServerDetail } from "./slots";
@@ -22,6 +24,7 @@ export type { Server, SshKey } from "../shared";
 export default {
   description: "Server registry for the deployment platform.",
   contributions: [
+    IdKinds.Kind({ kind: deployServerIdKind }),
     Pane.Register({ pane: serversRootPane }),
     Pane.Register({ pane: serverDetailPane }),
     // The pane's identity block, as a section like every other region — that is

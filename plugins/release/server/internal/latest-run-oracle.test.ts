@@ -59,6 +59,7 @@ import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
 import { releaseHistory } from "../../core/resources";
 import { _releaseRuns } from "./tables";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 
 interface Load {
   key: string;
@@ -292,7 +293,7 @@ describe("release.history at limit 1 — the newest run, scoped differential ora
           p.open && p.namespace === namespace && p.composition === composition,
       );
       if (open) return null;
-      const id = `run-${nextRun++}`;
+      const id = releaseRunIdKind.key(`run-${nextRun++}`);
       clock += 1 + Math.floor(rand() * 5);
       await testDb.db.insert(_releaseRuns).values({
         id,
@@ -319,7 +320,7 @@ describe("release.history at limit 1 — the newest run, scoped differential ora
             exitCode: 0,
             platform: "linux-x64",
           })
-          .where(eq(_releaseRuns.id, id));
+          .where(eq(_releaseRuns.id, releaseRunIdKind.key(id)));
         present.get(id)!.open = false;
       }
     }
@@ -352,7 +353,7 @@ describe("release.history at limit 1 — the newest run, scoped differential ora
         await testDb.db
           .update(_releaseRuns)
           .set({ pid: 5000 + round })
-          .where(eq(_releaseRuns.id, id));
+          .where(eq(_releaseRuns.id, releaseRunIdKind.key(id)));
         changed.add(id);
       } else if (r < 0.85 && openIds.length > 0) {
         // `closeReleaseRow`'s guarded UPDATE.
@@ -369,13 +370,20 @@ describe("release.history at limit 1 — the newest run, scoped differential ora
             platform: "linux-x64",
             error: succeeded ? null : `boom ${id}`,
           })
-          .where(and(eq(_releaseRuns.id, id), isNull(_releaseRuns.finishedAt)));
+          .where(
+            and(
+              eq(_releaseRuns.id, releaseRunIdKind.key(id)),
+              isNull(_releaseRuns.finishedAt),
+            ),
+          );
         present.get(id)!.open = false;
         changed.add(id);
       } else {
         const id = any(ids);
         what = `delete ${id}`;
-        await testDb.db.delete(_releaseRuns).where(eq(_releaseRuns.id, id));
+        await testDb.db
+          .delete(_releaseRuns)
+          .where(eq(_releaseRuns.id, releaseRunIdKind.key(id)));
         present.delete(id);
         changed.add(id);
       }

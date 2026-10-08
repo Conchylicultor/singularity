@@ -1,5 +1,5 @@
 import { relative, sep } from "node:path";
-import { isPrototypeId } from "../../core";
+import { protoIdKind } from "../../core";
 import {
   HISTORY_DIR_NAME,
   LATEST_STAMP_FILE,
@@ -59,7 +59,7 @@ function classifyHistory(segments: string[]): TreePath {
   if (
     segments.length === 3 &&
     file === LATEST_STAMP_FILE &&
-    isPrototypeId(id)
+    protoIdKind.is(id)
   ) {
     return { kind: "version-recorded", id };
   }
@@ -72,5 +72,5 @@ function recordId(segments: string[]): string | null {
   const id = file?.endsWith(RECORD_FILE_EXT)
     ? file.slice(0, -RECORD_FILE_EXT.length)
     : "";
-  return segments.length === 2 && isPrototypeId(id) ? id : null;
+  return segments.length === 2 && protoIdKind.is(id) ? id : null;
 }

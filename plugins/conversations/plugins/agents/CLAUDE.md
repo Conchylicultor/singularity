@@ -76,6 +76,8 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `agentSidePane.Actions` ← `conversations.agents`
     - `agentSidePane.Actions` ← `primitives.pane`
   - Contributes:
+    - `IdKinds.Kind` "agent"
+    - `IdKinds.Kind` "launch"
     - `Pane.Register` "agent-detail"
     - `Pane.Register` "agent-side"
     - `Pane.Register` "agent-system-detail"
@@ -85,7 +87,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `Item.Avatar` → `AgentAvatarRow`
     - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
     - `primitives/avatar` ×4
     - `primitives/collapsible` ×4
@@ -100,6 +102,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `conversations/model-provider.ModelSelect`
     - `conversations.useConversationById`
     - `fields/avatar/table.avatarFieldDef`
+    - `ids.IdKinds`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/app-shell.opensPane`
@@ -126,16 +129,19 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `systemAgentDetailPane`
 - Server:
   - Contributes:
+    - `ids.kind` "agent"
+    - `ids.kind` "launch"
     - `resource.declare` "agent-launches"
     - `resource.declare` "agent-launches:rows"
     - `resource.declare` "agents"
     - `derived-view` "agents_v"
     - `derived-table` "task_latest_conversation"
     - `taskCategory` "agents"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/rank` ×4
     - `tasks/tasks-core` ×4
     - `database/sql-projection` ×2
+    - `ids` ×2
     - `infra/endpoints` ×2
     - `network/live` ×2
     - `tasks/task-category` ×2
@@ -184,13 +190,17 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
   - Uses:
     - `conversations/model-provider.ModelChoiceSchema`
     - `conversations/model-provider.StoredModelChoiceSchema`
+    - `ids.defineIdKind`
+    - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
     - `primitives/rank.RankSchema`
     - `tasks/tasks-core.ConversationStatusSchema`
     - `ui/icons/saved-names.SavedSymbolNameSchema`
   - Exports (types):
     - `Agent`
+    - `AgentId`
     - `AgentLaunch`
+    - `AgentLaunchId`
     - `AgentLaunchWithStatus`
     - `CreateAgentBody`
     - `LaunchAgentBody`
@@ -198,6 +208,8 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `MoveAgentBody`
     - `UpdateAgentBody`
   - Exports (values):
+    - `agentIdKind`
+    - `agentLaunchIdKind`
     - `AgentLaunchSchema`
     - `AgentLaunchWithStatusSchema`
     - `AgentSchema`

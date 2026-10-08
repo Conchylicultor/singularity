@@ -5,6 +5,7 @@ import { updateDeployment } from "../../core/endpoints";
 import { _deployDeployments } from "./tables";
 import { toDeployment } from "./project-deployment";
 import { rethrowConstraintViolation } from "./constraint-violation";
+import { deploymentIdKind } from "../../core/id-kinds";
 
 export const handleUpdate = implement(
   updateDeployment,
@@ -25,12 +26,12 @@ export const handleUpdate = implement(
         ? await db
             .select()
             .from(_deployDeployments)
-            .where(eq(_deployDeployments.id, params.id))
+            .where(eq(_deployDeployments.id, deploymentIdKind.key(params.id)))
             .limit(1)
         : await db
             .update(_deployDeployments)
             .set(updates)
-            .where(eq(_deployDeployments.id, params.id))
+            .where(eq(_deployDeployments.id, deploymentIdKind.key(params.id)))
             .returning()
             .catch((err: unknown) =>
               rethrowConstraintViolation(err, {

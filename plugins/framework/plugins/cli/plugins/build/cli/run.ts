@@ -94,6 +94,7 @@ import {
   writeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
+import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
@@ -598,22 +599,16 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // build-logs writers (which read the env var at write time) agree by
   // construction instead of falling back to id-less default filenames and
   // a null build-log buildId (which left manual builds un-clickable).
-  const shortCommitProc = Bun.spawnSync(
-    ["git", "rev-parse", "--short", "HEAD"],
-    {
-      cwd: root,
-      stdout: "pipe",
-    },
-  );
-  const shortCommit = shortCommitProc.stdout.toString().trim();
   // A UI/auto build's backend minted the build_runs row before spawning this
   // CLI (SINGULARITY_BUILD_ID is that row's id); a manual `./singularity
   // build` has no such id yet. Captured BEFORE the env is overwritten below,
   // so the CLI knows whether it must mint main's row itself (decision 3).
   const uiTriggered = process.env.SINGULARITY_BUILD_ID != null;
-  const buildId =
-    process.env.SINGULARITY_BUILD_ID ??
-    `${shortCommit || "nocommit"}-${Date.now()}`;
+  // Minted through the run ledger's id kind, like the backend's claim: one
+  // shape (`build-<s>-<6>`) whoever started the build, so a manual build's id
+  // is recognised (chips, the run pane) exactly like a UI build's.
+  const buildId: string =
+    process.env.SINGULARITY_BUILD_ID ?? buildRunIdKind.mint();
   process.env.SINGULARITY_BUILD_ID = buildId;
 
   // A main build is human-blocking (interactive lane); an agent build is
@@ -631,7 +626,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   //
   // `opId` is `buildId`: unique and non-null on every path (a UI build gets
   // SINGULARITY_BUILD_ID from run-build.ts, a manual CLI build the minted
-  // `<commit>-<now>` above). `buildId` is passed AGAIN, separately, because
+  // `build-<s>-<6>` above). `buildId` is passed AGAIN, separately, because
   // it means something else there — the join key to build-profile-<id>.json,
   // which is what makes a bar's span breakdown openable.
   const profiler = createOpProfiler("build", {
@@ -1119,8 +1114,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       id: buildId,
       targets: targets.map((t) => t.composition),
       trigger: "manual",
-      // `headAtStart`, not the abbreviated `shortCommit` used for the build
-      // id above: this is the same full sha stamped into the dist as
+      // `headAtStart`, the full sha: the same one stamped into the dist as
       // `.build-commit` and onto the receipt, so the ledger row and the
       // pin name the same commit in the same spelling by construction —
       // which is what lets the convergence decision compare them at all.

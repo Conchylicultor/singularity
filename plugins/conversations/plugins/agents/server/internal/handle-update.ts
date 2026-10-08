@@ -10,6 +10,7 @@ import { _agents } from "./tables";
 import { agentAttachments } from "./tables-attachments";
 import { agents } from "./views";
 import { isAgentDescendant } from "./hierarchy";
+import { agentIdKind } from "../../core/id-kinds";
 
 export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   const id = params.id;
@@ -50,12 +51,12 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
       ? await db
           .select({ id: _agents.id })
           .from(_agents)
-          .where(eq(_agents.id, id))
+          .where(eq(_agents.id, agentIdKind.key(id)))
           .limit(1)
       : await db
           .update(_agents)
           .set(patch)
-          .where(eq(_agents.id, id))
+          .where(eq(_agents.id, agentIdKind.key(id)))
           .returning({ id: _agents.id });
   if (!updated) throw new HttpError(404, "Not found");
   // No destination force-expand on a re-parent: expand/collapse is device-local
@@ -67,7 +68,7 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
     const [{ prompt } = { prompt: null }] = await db
       .select({ prompt: _agents.prompt })
       .from(_agents)
-      .where(eq(_agents.id, id))
+      .where(eq(_agents.id, agentIdKind.key(id)))
       .limit(1);
     await agentAttachments.set(
       id,
@@ -78,7 +79,7 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   const [row] = await db
     .select()
     .from(agents)
-    .where(eq(agents.id, id))
+    .where(eq(agents.id, agentIdKind.key(id)))
     .limit(1);
   if (!row) throw new HttpError(404, "Not found after update");
   return AgentSchema.parse(row);

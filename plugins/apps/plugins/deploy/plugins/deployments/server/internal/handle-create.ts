@@ -2,6 +2,7 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createDeployment } from "../../core/endpoints";
 import { DEFAULT_LOOPBACK_PORT } from "../../core/derive";
+import { deploymentIdKind } from "../../core/id-kinds";
 import { _deployDeployments } from "./tables";
 import { toDeployment } from "./project-deployment";
 import { assertKnownComposition } from "./assert-known-composition";
@@ -12,7 +13,7 @@ export const handleCreate = implement(createDeployment, async ({ body }) => {
   // than a row that converge will later choke on.
   assertKnownComposition(body.compositionId);
 
-  const id = `dpl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = deploymentIdKind.mint();
   const loopbackPort = body.loopbackPort ?? DEFAULT_LOOPBACK_PORT;
 
   const [row] = await db

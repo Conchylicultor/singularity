@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { NotificationVariantSchema } from "./schema";
+import { notificationIdKind } from "../core";
 
 export const createNotification = defineEndpoint({
   route: "POST /api/notifications",
   body: z.object({
-    id: z.string(),
+    id: notificationIdKind.schema,
     type: z.string(),
     title: z.string(),
     description: z.string(),

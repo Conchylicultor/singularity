@@ -19,6 +19,8 @@ import {
 } from "./internal/release-runs-resource";
 import { releaseCandidateServed } from "./internal/candidate-resource";
 import { releasePreviewsServed } from "./internal/preview-state-resource";
+import { IdKinds } from "@plugins/ids/server";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 export { _releaseRuns } from "./internal/tables";
 export { enqueueRelease } from "./internal/enqueue-release";
 export type { TriggerReleaseOptions } from "./internal/enqueue-release";
@@ -38,6 +40,7 @@ export default {
   // that never lands here would start runs nothing ever closes.
   register: [releaseJob, releasePreviewDaemon],
   contributions: [
+    IdKinds.Kind({ kind: releaseRunIdKind }),
     ...releaseRunsServed.declare,
     ...releaseHistoryServed.declare,
     ...releaseCandidateServed.declare,

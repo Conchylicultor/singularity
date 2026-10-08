@@ -12,6 +12,7 @@ import {
 } from "@plugins/apps/plugins/events/plugins/events-core/server";
 import type { RefreshErrorClassification } from "./classify-error";
 import { computeNextRunAt } from "./schedule";
+import { eventSourceIdKind } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 // The ONLY writer of `event_source_runs` and of a source row's runtime state.
 //
@@ -60,7 +61,7 @@ export async function markSourceRunning(sourceId: string): Promise<void> {
   await db
     .update(_eventSources)
     .set({ status: "running" })
-    .where(eq(_eventSources.id, sourceId));
+    .where(eq(_eventSources.id, eventSourceIdKind.key(sourceId)));
 }
 
 /**

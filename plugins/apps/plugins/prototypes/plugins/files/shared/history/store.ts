@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   PROTOTYPE_ENTRY_FILE,
-  isPrototypeId,
+  protoIdKind,
   readPrototypeOptions,
 } from "../../core";
 import type {
@@ -178,7 +178,7 @@ export function openHistoryStore(root: string): HistoryStore {
   }
 
   async function adoptAll(): Promise<void> {
-    const ids = (await listPrototypeDirNames(root)).filter(isPrototypeId);
+    const ids = (await listPrototypeDirNames(root)).filter(protoIdKind.is);
     // One failure must not stop the rest from being adopted; all of them are
     // reported together afterwards.
     const failures: unknown[] = [];
@@ -535,7 +535,7 @@ export function isFlatFileName(file: string): boolean {
 }
 
 function assertPrototypeId(id: string): string {
-  if (!isPrototypeId(id)) {
+  if (!protoIdKind.is(id)) {
     throw new Error(`not a prototype id: ${JSON.stringify(id)}`);
   }
   return id;

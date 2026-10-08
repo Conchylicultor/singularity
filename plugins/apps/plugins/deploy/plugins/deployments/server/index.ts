@@ -23,6 +23,8 @@ import {
   deleteDeployment,
   runDeployment,
 } from "../core/endpoints";
+import { IdKinds } from "@plugins/ids/server";
+import { deploymentIdKind, deployRunIdKind } from "../core";
 
 export { _deployDeployments, _deployRuns } from "./internal/tables";
 
@@ -38,6 +40,8 @@ export default {
     [runDeployment.route]: handleRun,
   },
   contributions: [
+    IdKinds.Kind({ kind: deploymentIdKind }),
+    IdKinds.Kind({ kind: deployRunIdKind }),
     ...deploymentsServed.declare,
     ...deployRunsServed.declare,
     ...deployRunHistoryServed.declare,

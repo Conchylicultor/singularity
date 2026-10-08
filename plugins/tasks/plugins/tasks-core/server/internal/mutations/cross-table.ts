@@ -15,6 +15,7 @@ import {
 } from "@plugins/infra/plugins/worktree/server";
 import path from "path";
 import { ADOPTED_SPAWNED_BY } from "../../../core/adopted";
+import { taskIdKind } from "@plugins/tasks/plugins/task-ids/core";
 
 // ONE HALF of the exit-drop policy, and named for exactly the half it is: does
 // any sibling conversation on this task remain active? If one does, another
@@ -86,9 +87,6 @@ type AdoptedRow = NonNullable<
 // spawned). The attempt id is derived from the worktree basename so that
 // `basename(attempt.worktreePath) === attempt.id` — the invariant the rest of
 // the system relies on (e.g. the "Open app" button).
-const TASK_PREFIX = "task";
-const newTaskId = () =>
-  `${TASK_PREFIX}-${Math.floor(Date.now() / 1000)}-${Math.random().toString(36).slice(2, 6)}`;
 
 // Returns the adopted conversation row plus the id of the task this call
 // synthesized (null when the conversation was linked to an existing attempt's
@@ -106,7 +104,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
 
   let inserted = false;
   let createdTaskId: string | null = null;
-  const taskId = newTaskId();
+  const taskId = taskIdKind.mint();
   // Derive attempt id from the worktree directory name so basename(worktreePath) === attemptId.
   const attemptId = path.basename(input.worktreePath);
 

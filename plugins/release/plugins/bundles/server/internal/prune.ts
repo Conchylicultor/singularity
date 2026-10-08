@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, realpathSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
 import { isPointerName } from "./pointer";
+import { releaseRunIdKind } from "../../core/internal/run-id";
 
 /**
  * What a sweep did. A batch outcome, so a partial reclaim is still reportable —
@@ -12,13 +13,14 @@ export interface PruneResult {
 }
 
 /**
- * A run id's embedded epoch-ms (`release-<ms>-<rand>`), or `-1` for a dir that
- * does not follow the shape. Sorting on the parsed number rather than on the
- * string keeps chronology right regardless of digit count.
+ * When a run was cut, in epoch ms, read by the run-id kind — `-1` for a dir
+ * that is not a release run id. The kind reads the current seconds stamp and
+ * the legacy millis one alike, so the two generations order correctly against
+ * each other (a digit-count-blind parse would rank every new run as the
+ * oldest).
  */
 function runIdMs(runId: string): number {
-  const ms = Number(runId.split("-")[1]);
-  return Number.isFinite(ms) ? ms : -1;
+  return releaseRunIdKind.stampedAtMs(runId) ?? -1;
 }
 
 /**

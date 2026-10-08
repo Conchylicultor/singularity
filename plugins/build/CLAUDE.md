@@ -229,6 +229,7 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `buildPane.Actions` ← `primitives.pane`
     - `buildDetailPane.Actions` ← `primitives.pane`
   - Contributes:
+    - `IdKinds.Kind` "build"
     - `ActionBar.Item` → `BuildButton`
     - `ActionBar.Activity` "build"
     - `ActionBar.Glance` → `ReloadChip`
@@ -236,7 +237,7 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/live-state` ×4
     - `infra/endpoints` ×2
@@ -246,6 +247,7 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `apps/debug/shell.DebugApp`
     - `build/deployment.DeploymentChain`
     - `config_v2.ConfigV2`
+    - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
@@ -271,19 +273,21 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `useStaleFrontend`
 - Server:
   - Contributes:
+    - `ids.kind` "build"
     - `ConfigV2.Register` "config"
     - `taskCategory` "build"
     - `resource.declare` "build.history"
     - `resource.declare` "build.history:groups"
     - `resource.declare` "build.history:rows"
     - `trigger` "build.run"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×3
     - `build/deployment` ×2
     - `build/run-ledger` ×2
     - `infra/endpoints` ×2
     - `infra/paths` ×2
     - `database.db`
+    - `ids.IdKinds`
     - `infra/events.Trigger`
     - `infra/git/git-watcher.refAdvanced`
     - `infra/jobs/supervised-job.defineSupervisedJob`
@@ -324,6 +328,7 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `triggerBuildEndpoint`
 - Cross-plugin:
   - Imported by:
+    - `active-data/build-run`
     - `build/build-commits`
     - `build/build-fix`
     - `build/build-info`

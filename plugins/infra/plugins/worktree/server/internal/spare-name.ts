@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 // A spare checkout's directory (and so its `.git/worktrees/<name>` admin dir,
 // which `git worktree move` keeps) is `spare-<ms>-<rand>`. It deliberately FAILS
-// `WORKTREE_NAME_RE`: the reaper, the namespace passes and the registry filters
+// `isCanonicalWorktreeName`: the reaper, the namespace passes and the registry filters
 // all ignore non-canonical names, so a spare is never mistaken for an attempt.
 // Unique per spare, so an admin dir name can never collide.
 const SPARE_PREFIX = "spare-";

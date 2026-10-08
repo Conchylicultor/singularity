@@ -185,6 +185,8 @@
     - `improve`
     - `page/annotations/agent-notes/agent-page`
   - Endpoint callers: `transcript-api`
+- Exemptions:
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts`, `server/internal/tables-user-turn-sent-event.ts` (debt)
 - Sub-plugins:
   - **`agents`** — Named agent definitions that launch conversations.
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…
@@ -282,7 +284,7 @@
         - Plugins:
           - **`history`** — Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.
           - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the…
-      - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
+      - **`grouped`** — Registers the conversation-group id kind (`cgrp-…`) in the browser's id registry, the twin of the server registration. Conversation-group persistence (tables + addMemberToGroup) backing the improve…
       - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into…
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
   - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and…
@@ -298,7 +300,7 @@
   - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
   - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
   - **`runtime-tmux`** [exempt] — Runs Claude CLI sessions inside tmux panes.
-  - **`session-chain`** — Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
+  - **`session-chain`** [exempt] — Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
   - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags…
   - **`terminal-menu`** — The shape of an interactive numbered menu a conversation's terminal has open (title, options, highlighted option, footer): the value the runtime reads off the screen, the conversation row carries as…
   - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.

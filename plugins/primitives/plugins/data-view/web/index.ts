@@ -10,6 +10,8 @@ import { SettingsControlPanel } from "./components/settings/settings-control-pan
 import { summarizeFilter } from "./internal/summarize-filter";
 import { summarizeSort } from "./internal/summarize-sort";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { IdKinds } from "@plugins/ids/web";
+import { presetIdKind, filterNodeIdKind } from "../core";
 
 export { DataView } from "./components/data-view";
 export { MergedDataView } from "./components/merged-data-view";
@@ -168,6 +170,8 @@ export default {
   // under the `primitives.data-view` plugin. Mirrors reorder's central
   // per-slot registration — no per-consumer barrel boilerplate.
   contributions: [
+    IdKinds.Kind({ kind: presetIdKind }),
+    IdKinds.Kind({ kind: filterNodeIdKind }),
     ...dataViewConfigContributions,
     // Per-view (view scope) DataView settings, rendered in the gear menu's
     // "Current view" section. Each reads what it needs from

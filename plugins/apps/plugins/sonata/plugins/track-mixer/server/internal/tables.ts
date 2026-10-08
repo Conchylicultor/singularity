@@ -33,7 +33,13 @@ export const trackView = defineEntity("sonata_track_view", trackViewFields, {
   serverOnly: TRACK_VIEW_SERVER_ONLY,
   columns: {
     songId: {
-      references: { column: () => _songs.id, onDelete: "cascade" },
+      references: {
+        column: () => _songs.id,
+        onDelete: "cascade",
+        // A rewrite of the song ids (bare uuid → `song-<uuid>`, `plugins/ids`)
+        // carries the per-track overrides along.
+        onUpdate: "cascade",
+      },
     },
     muted: { default: false },
     hidden: { default: false },

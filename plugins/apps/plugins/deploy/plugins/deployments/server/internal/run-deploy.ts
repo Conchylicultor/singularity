@@ -42,6 +42,7 @@ import {
   setRunPhase,
 } from "./run-state";
 import { _deployRuns } from "./tables";
+import { deployRunIdKind } from "../../core/id-kinds";
 
 /** The target this app deploys. Web is the only implemented remote target. */
 const RELEASE_TARGET = "web";
@@ -142,7 +143,7 @@ async function loadRun(runId: string): Promise<OpenRun> {
   const [row] = await db
     .select()
     .from(_deployRuns)
-    .where(eq(_deployRuns.id, runId));
+    .where(eq(_deployRuns.id, deployRunIdKind.key(runId)));
   if (!row) {
     throw new Error(`[deploy] no run row for ${runId} — nothing to sequence.`);
   }

@@ -10,11 +10,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
+import { idColumn } from "@plugins/ids/server";
+import { notificationIdKind } from "../../core";
 
 export const _notifications = pgTable(
   "notifications",
   {
-    id: text("id").primaryKey(),
+    id: idColumn(notificationIdKind),
     type: text("type").notNull(),
     title: text("title").notNull(),
     description: text("description").notNull(),

@@ -1,9 +1,13 @@
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
-import { createTask, getConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  createTask,
+  getConversation,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { inheritLaunchOptions } from "@plugins/tasks/plugins/launch-options/server";
 import { _pluginHealthReviews, healthReviewExt } from "./tables";
+import { pluginReviewIdKind } from "../../core";
 
 export const proposeTaskTool = Mcp.tool({
   name: "propose_task",
@@ -46,7 +50,7 @@ Good: "Floating promise in sidebar refresh". Bad: "Add await to line 42".`,
     const conv = await getConversation(conversationId);
     const currentTaskId = conv?.taskId ?? null;
 
-    const reviewId = `review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const reviewId = pluginReviewIdKind.mint();
 
     const [review] = await db
       .insert(_pluginHealthReviews)

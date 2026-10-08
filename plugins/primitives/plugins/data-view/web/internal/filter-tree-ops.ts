@@ -1,8 +1,9 @@
-import type {
-  FilterConjunction,
-  FilterGroup,
-  FilterNode,
-  FilterRule,
+import {
+  filterNodeIdKind,
+  type FilterConjunction,
+  type FilterGroup,
+  type FilterNode,
+  type FilterRule,
 } from "../../core";
 
 /**
@@ -10,12 +11,12 @@ import type {
  * NEW tree (structural sharing for untouched subtrees) keyed by node `id`, so
  * React keys stay stable and the popover builder can drive `setFilter` with a
  * plain functional update. No mutation, no `Math.random`/`Date.now` — ids come
- * from `newNodeId()` (crypto.randomUUID, which is allowed in browser web code).
+ * from `newNodeId()` (`filterNodeIdKind`, a `fnode-<uuid>`).
  */
 
 /** Mint a fresh local node id (React key / edit handle). */
 export function newNodeId(): string {
-  return crypto.randomUUID();
+  return filterNodeIdKind.mint();
 }
 
 /** A fresh empty root/child group with the given conjunction. */

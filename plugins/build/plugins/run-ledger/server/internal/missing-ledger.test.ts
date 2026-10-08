@@ -26,6 +26,7 @@ import {
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { closeRunOn, insertRunOn, type InsertRunRow } from "./recorder";
 import { _buildRuns } from "./tables";
+import { buildRunIdKind } from "../../core/internal/id-kind";
 
 const NS = asNamespace("ledger-missing-test");
 
@@ -74,7 +75,12 @@ describe("a database with no build_runs table", () => {
       t.db
         .update(_buildRuns)
         .set({ finishedAt: new Date(), exitCode: 0 })
-        .where(and(eq(_buildRuns.id, row().id), isNull(_buildRuns.finishedAt))),
+        .where(
+          and(
+            eq(_buildRuns.id, buildRunIdKind.key(row().id)),
+            isNull(_buildRuns.finishedAt),
+          ),
+        ),
     );
     expect((err as { code?: string }).code).toBe("42P01");
   });

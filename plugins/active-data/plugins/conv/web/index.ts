@@ -1,25 +1,27 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import {
-  InlineChip,
-  inlineChip,
-} from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/web";
-import { CONV_ID_RE } from "../core";
+import { idChip } from "@plugins/active-data/plugins/id-chip/web";
+import { conversationIdKind } from "@plugins/tasks/plugins/task-ids/core";
+import { CONV_CHIP_SURFACES } from "../core";
 import { ConvChip } from "./components/conv-chip";
+import {
+  useConversationReferent,
+  useOpenConversation,
+} from "./internal/presenter";
 
 export { ConvChip };
 
 export default {
   description:
-    "Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.",
+    "Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation, and presents the conversation id kind (title + open) to the id registry. Models emit the bare id, no tag wrapping needed.",
   contributions: [
-    InlineChip.Tag(
-      inlineChip({
-        id: "conv",
-        pattern: CONV_ID_RE,
-        surfaces: ["transcript", "document"],
-        modelText: "resolved",
-        component: ConvChip,
-      }),
-    ),
+    ...idChip({
+      presenter: {
+        kind: conversationIdKind,
+        useReferent: useConversationReferent,
+        useOpen: useOpenConversation,
+      },
+      surfaces: CONV_CHIP_SURFACES,
+      component: ConvChip,
+    }),
   ],
 } satisfies PluginDefinition;

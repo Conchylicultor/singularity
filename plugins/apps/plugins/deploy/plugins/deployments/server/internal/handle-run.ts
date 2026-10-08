@@ -5,6 +5,7 @@ import { runDeployment } from "../../core/endpoints";
 import { _deployDeployments } from "./tables";
 import { toDeployment } from "./project-deployment";
 import { startDeployRun } from "./run-deploy";
+import { deploymentIdKind } from "../../core/id-kinds";
 
 /**
  * Launch `converge` / `ship` for one deployment.
@@ -18,7 +19,7 @@ export const handleRun = implement(runDeployment, async ({ params, body }) => {
   const [row] = await db
     .select()
     .from(_deployDeployments)
-    .where(eq(_deployDeployments.id, params.id));
+    .where(eq(_deployDeployments.id, deploymentIdKind.key(params.id)));
   if (!row) throw new HttpError(404, "Not found");
 
   return startDeployRun({ deployment: toDeployment(row), body });

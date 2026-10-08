@@ -10,6 +10,8 @@ import { useBuildActivity } from "./hooks/use-build-activity";
 import { buildPane, buildDetailPane } from "./panes";
 import { BuildDetail } from "./slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { IdKinds } from "@plugins/ids/web";
+import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
 
 export { BuildDetail as BuildDetailSlots } from "./slots";
 export { buildPane, buildDetailPane } from "./panes";
@@ -21,6 +23,7 @@ export default {
   collapsed: true,
   description: "Trigger `./singularity build` from the toolbar.",
   contributions: [
+    IdKinds.Kind({ kind: buildRunIdKind }),
     ActionBar.Item({
       id: "build",
       component: BuildButton,

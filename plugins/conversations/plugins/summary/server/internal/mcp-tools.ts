@@ -10,17 +10,13 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { _conversationSummaries } from "./tables";
-import { PhaseSchema } from "../../core";
+import { PhaseSchema, summaryIdKind } from "../../core";
 
 /**
  * The summarizer runs whatever Sonnet is current — a family, resolved when it
  * is used. A pinned version here would go stale on the next release.
  */
 export const SUMMARY_MODEL_CHOICE: ModelChoice = "sonnet";
-
-function newSummaryId(): string {
-  return `summary-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 export const submitConversationSummaryTool = Mcp.tool({
   name: "submit_conversation_summary",
@@ -106,7 +102,7 @@ Use the MCP tool directly — do NOT invoke it via Bash, curl, or HTTP.`,
     const turns = await readConversationTurns(conversationId);
 
     await db.insert(_conversationSummaries).values({
-      id: newSummaryId(),
+      id: summaryIdKind.mint(),
       conversationId,
       // The CLI flag of the version the summarizer was resolved to (Sonnet's current).
       model: cliFlagFor(requireModel(SUMMARY_MODEL_CHOICE, getModelCatalog())),

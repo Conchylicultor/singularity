@@ -4,8 +4,8 @@ import { join } from "node:path";
 import {
   gitWorktreesDir,
   worktreePathFor,
+  isCanonicalWorktreeName,
 } from "@plugins/infra/plugins/worktree/server";
-import { isCanonicalWorktreeName } from "@plugins/infra/plugins/worktree/core";
 import { dirExists } from "./reap";
 
 export interface WorktreeDir {
@@ -15,7 +15,7 @@ export interface WorktreeDir {
 
 export interface WorktreeDirIndex {
   // EVERY dirent name in `<root>/.claude/worktrees`, unfiltered by node type and
-  // unfiltered by WORKTREE_NAME_RE — the exact set a `stat` of a child path
+  // unfiltered by isCanonicalWorktreeName — the exact set a `stat` of a child path
   // would find, so it can stand in for one.
   //
   // THE FILTERING IS THE WHOLE POINT OF KEEPING TWO LISTS. A caller asking "is
@@ -27,7 +27,7 @@ export interface WorktreeDirIndex {
   // comment at the `hasDir` computation in reap-policy.ts.
   allNames: Set<string>;
   // The canonical-shaped worktree dirs — real directories whose name matches
-  // WORKTREE_NAME_RE. Safe to enumerate as "the worktrees this system created".
+  // isCanonicalWorktreeName. Safe to enumerate as "the worktrees this system created".
   canonical: WorktreeDir[];
 }
 

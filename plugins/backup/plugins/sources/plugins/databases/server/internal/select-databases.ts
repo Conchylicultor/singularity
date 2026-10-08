@@ -7,7 +7,7 @@ import {
   namespaceParts,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
-import { isCanonicalWorktreeName } from "@plugins/infra/plugins/worktree/core";
+import { isCanonicalWorktreeName } from "@plugins/infra/plugins/worktree/server";
 
 // Which databases on the cluster are an app's own data, and so belong in the
 // backup — decided by what each database IS, from the evidence its producer

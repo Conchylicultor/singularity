@@ -16,6 +16,10 @@ import {
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { deploymentServed } from "@plugins/build/plugins/deployment/server";
 import { reconcileDeployment } from "./reconcile";
+import {
+  buildRunIdKind,
+  type BuildRunId,
+} from "@plugins/build/plugins/run-ledger/core";
 
 /** The index the claiming INSERT contends on — see `run-ledger`'s `tables.ts`. */
 const INFLIGHT_UQ = "build_runs_inflight_uniq";
@@ -52,7 +56,8 @@ function isInflightViolation(err: unknown): boolean {
  * retried once. The index still decides that retry.
  */
 export async function claimBuildRun(row: {
-  buildId: string;
+  /** A FRESH id — `buildRunIdKind.mint()`, never a key read back from elsewhere. */
+  buildId: BuildRunId;
   trigger: "manual" | "auto";
   commitHash: string | null;
   targets: string[];
@@ -112,7 +117,10 @@ export async function listUnfinished(): Promise<readonly UnfinishedRun[]> {
 
 /** Record the pid of the detached `./singularity build` now serving this run. */
 export async function setPid(buildId: string, pid: number): Promise<void> {
-  await db.update(_buildRuns).set({ pid }).where(eq(_buildRuns.id, buildId));
+  await db
+    .update(_buildRuns)
+    .set({ pid })
+    .where(eq(_buildRuns.id, buildRunIdKind.key(buildId)));
 }
 
 /**
@@ -138,7 +146,12 @@ export async function closeBuildRow(
   await db
     .update(_buildRuns)
     .set({ finishedAt: terminal.finishedAt, exitCode: terminal.exitCode })
-    .where(and(eq(_buildRuns.id, buildId), isNull(_buildRuns.finishedAt)));
+    .where(
+      and(
+        eq(_buildRuns.id, buildRunIdKind.key(buildId)),
+        isNull(_buildRuns.finishedAt),
+      ),
+    );
 }
 
 /**
@@ -209,7 +222,7 @@ export async function onBuildEnded(buildId: string): Promise<void> {
       commitHash: _buildRuns.commitHash,
     })
     .from(_buildRuns)
-    .where(eq(_buildRuns.id, buildId));
+    .where(eq(_buildRuns.id, buildRunIdKind.key(buildId)));
   // No row means the ledger no longer has this build — a hand-deleted row, or a
   // retention sweep. Nothing to describe; the reconcile below still runs.
   if (row !== undefined) await notifyBuildFinished(buildId, row);

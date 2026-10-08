@@ -17,11 +17,13 @@ import {
   ReleaseRunKindSchema,
   ReleaseRunStatusSchema,
 } from "../../core/resources";
+import { idColumn } from "@plugins/ids/server";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 
 export const _releaseRuns = pgTable(
   "release_runs",
   {
-    id: text("id").primaryKey(), // `release-${ms}-${rand}`
+    id: idColumn(releaseRunIdKind),
     composition: text("composition").notNull(),
     target: text("target").notNull(),
     // Namespace (worktree slug, or MAIN_WORKTREE_NAME on main) that produced this

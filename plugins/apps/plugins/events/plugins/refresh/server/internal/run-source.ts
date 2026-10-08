@@ -21,6 +21,7 @@ import {
   markSourceRunning,
 } from "./run-ledger";
 import { refreshLog } from "./sink";
+import { eventSourceIdKind } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 // THE engine. The only place that knows the phase order, and deliberately the
 // only thing in this file: every line below is one high-level action, with the
@@ -53,7 +54,7 @@ async function loadSource(sourceId: string): Promise<SourceLookup> {
   const [source] = await db
     .select()
     .from(_eventSources)
-    .where(eq(_eventSources.id, sourceId))
+    .where(eq(_eventSources.id, eventSourceIdKind.key(sourceId)))
     .limit(1);
   return source ? { kind: "found", source } : { kind: "gone" };
 }

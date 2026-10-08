@@ -1,3 +1,4 @@
+import { conversationIdKind } from "@plugins/tasks/plugins/task-ids/core";
 /**
  * Pure resolution of a Claude Code pane's status verdict from the two signals it
  * exposes: the tmux pane title and the CLI's own session file. No tmux / I/O
@@ -19,10 +20,6 @@ import type { SessionState } from "./claude-session";
 const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈◐◑◒◓]\s*/;
 const READY_RE = /^✳\s*/;
 const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈◐◑◒◓✳]\s*/;
-
-// Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
-// legacy prefix kept so zombie sessions still get picked up by the status reconciler.
-const SESSION_NAME_RE = /^(conv|claude)-\d+(-[a-z0-9]+)?$/;
 
 export interface ResolvedPaneStatus {
   title: string;
@@ -65,7 +62,9 @@ export function resolvePaneStatus(
   const isDefault =
     !titleText ||
     /^[a-zA-Z0-9-]+\.(local|internal|lan|home)$/.test(titleText) ||
-    SESSION_NAME_RE.test(titleText);
+    // A session we manage is named by its conversation id (the kind's `claude-`
+    // alias covers the pre-rename zombies), and tmux shows that as the default title.
+    conversationIdKind.is(titleText);
   const title = isDefault ? "" : titleText;
 
   const working = resolveWorking(trimmed, session, opActive);

@@ -50,3 +50,5 @@ export {
 } from "./derive";
 export type { InstallLayout } from "./derive";
 export { deploymentDetailRoute } from "./routes";
+export { deploymentIdKind, deployRunIdKind } from "./id-kinds";
+export type { DeploymentId, DeployRunId } from "./id-kinds";

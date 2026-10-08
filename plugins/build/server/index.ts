@@ -19,9 +19,12 @@ import {
   serveCompositionEndpoint,
 } from "../core/endpoints";
 import { BUILD_CATEGORY_ID } from "../core/task-category";
+import { IdKinds } from "@plugins/ids/server";
+import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
 
 export default {
   contributions: [
+    IdKinds.Kind({ kind: buildRunIdKind }),
     ConfigV2.Register({ descriptor: buildConfig }),
     TaskCategory({ id: BUILD_CATEGORY_ID, label: "Build", order: 7 }),
     ...buildHistoryServed.declare,

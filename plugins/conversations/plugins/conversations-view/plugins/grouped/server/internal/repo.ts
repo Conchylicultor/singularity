@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { nextRankUnder } from "@plugins/primitives/plugins/rank/server";
 import { _conversationGroupMembers, _conversationGroups } from "./tables";
+import { conversationGroupIdKind } from "../../core/id-kinds";
 
 export async function addMembersToGroup(
   groupId: string,
@@ -11,7 +12,7 @@ export async function addMembersToGroup(
     const [group] = await tx
       .select({ id: _conversationGroups.id })
       .from(_conversationGroups)
-      .where(eq(_conversationGroups.id, groupId))
+      .where(eq(_conversationGroups.id, conversationGroupIdKind.key(groupId)))
       .limit(1);
     if (!group) throw new Error(`Group ${groupId} not found`);
     for (const conversationId of conversationIds) {

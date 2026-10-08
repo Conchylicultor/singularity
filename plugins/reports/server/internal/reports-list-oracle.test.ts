@@ -66,6 +66,7 @@ import { linkReportTask } from "./investigate";
 import { setReportNoise } from "./backfill-noise";
 import { reportsProducer } from "./producer";
 import { _reports } from "./tables";
+import { reportIdKind } from "../../core/id-kind";
 
 interface Load {
   key: string;
@@ -323,7 +324,7 @@ describe("reports.list fed by the reports producer — differential oracle", () 
       const v: ReportUpsertValues = {
         // A deterministic id per fingerprint, so the point tuple names rows
         // that come and go.
-        id: `r-${fp}`,
+        id: reportIdKind.key(`r-${fp}`),
         kind: any(["crash", "slow-op", "render-loop"]),
         fingerprint: fp,
         worktree: "wt-oracle",

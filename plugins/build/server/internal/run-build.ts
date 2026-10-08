@@ -3,7 +3,10 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { isMainCompositionBuild } from "@plugins/build/core";
-import { BUILD_RUN_KIND_ID } from "@plugins/build/plugins/run-ledger/core";
+import {
+  BUILD_RUN_KIND_ID,
+  buildRunIdKind,
+} from "@plugins/build/plugins/run-ledger/core";
 import { buildLog } from "./build-log";
 import {
   claimBuildRun,
@@ -104,7 +107,7 @@ export const buildJob = defineSupervisedJob({
      * process being killed by its own build.
      */
     claim: async (input) => {
-      const buildId = `build-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const buildId = buildRunIdKind.mint();
       const targets = targetsOf(input);
       if (
         !(await claimBuildRun({

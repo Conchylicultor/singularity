@@ -13,6 +13,7 @@ import { launchAgent } from "../../core/endpoints";
 import { _agent_launches } from "./tables";
 import { agents } from "./views";
 import { assertClaudeCodeReady } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import { agentIdKind, agentLaunchIdKind } from "../../core/id-kinds";
 
 function formatLaunchTime(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -27,7 +28,7 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
   const [agent] = await db
     .select()
     .from(agents)
-    .where(eq(agents.id, agentId))
+    .where(eq(agents.id, agentIdKind.key(agentId)))
     .limit(1);
   if (!agent) throw new HttpError(404, "Not found");
   if (!agent.prompt) {
@@ -58,9 +59,7 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
     kind: "agent",
   });
 
-  const launchId = `launch-${Math.floor(Date.now() / 1000)}-${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
+  const launchId = agentLaunchIdKind.mint();
   await db
     .insert(_agent_launches)
     .values({ id: launchId, agentId, taskId: task.id });

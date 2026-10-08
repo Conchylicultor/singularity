@@ -1,1 +1,1 @@
-export { CONV_ID_RE } from "./pattern";
+export { CONV_CHIP_SURFACES } from "./surfaces";

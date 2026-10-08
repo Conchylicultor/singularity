@@ -3,7 +3,7 @@ import {
   decodeHtmlText,
   readHtmlAttr,
 } from "@plugins/infra/plugins/html-decode/core";
-import { isPrototypeId } from "./id";
+import { protoIdKind } from "./id";
 import { mocksProblemDetail, parseMocks } from "./mocks";
 import { parseViewport, viewportProblemDetail } from "./viewport";
 import { readPrototypeOptions } from "./option-source";
@@ -160,7 +160,7 @@ export async function validatePrototypeFolder(
   // to be referenced — nothing can write `ember` in a message and have it
   // resolve. This is the loud-runtime rung, and it is what stops
   // `cp -R _template <name>` from being silently fine again.
-  if (!folder.dirName.startsWith("_") && !isPrototypeId(folder.dirName)) {
+  if (!folder.dirName.startsWith("_") && !protoIdKind.is(folder.dirName)) {
     problems.push({
       path: "",
       detail:

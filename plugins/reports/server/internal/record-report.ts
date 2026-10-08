@@ -25,6 +25,7 @@ import { ReportKind } from "./report-kinds";
 import { reportRecordedSignal } from "./recorded-signal";
 import { createFanOutGate, type StormSummary } from "./fan-out";
 import type { ReportInput } from "../../shared/types";
+import { reportIdKind, type ReportId } from "../../core/id-kind";
 
 // What became of one recordReport call. A discriminated union so "the engine
 // took ownership of this occurrence" can never be misread as "recorded, with
@@ -282,7 +283,7 @@ export async function recordReport(
     staleOrigin,
   });
 
-  const id = `report-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = reportIdKind.mint();
   // Wrapped in runWithoutProfiling: the reports insert/upsert is itself a `db`
   // span that would otherwise re-feed the slow-op recorder, which then files a
   // report, which writes again — a self-amplifying loop. Suppressing here covers
@@ -423,7 +424,7 @@ export async function recordReport(
 // The validated, clamped, fingerprinted values recordReport computes before
 // the durable write — everything the upsert needs and nothing it re-derives.
 export interface ReportUpsertValues {
-  id: string;
+  id: ReportId;
   kind: string;
   fingerprint: string;
   worktree: string;

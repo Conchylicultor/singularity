@@ -1,10 +1,12 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { IdKinds } from "@plugins/ids/server";
 import {
   createPrototype,
   listPrototypes,
   PROTOTYPE_ASSET_ROUTE,
   PROTOTYPE_FILE_ROUTE,
   PROTOTYPE_VERSION_FILE_ROUTE,
+  protoIdKind,
   restorePrototypeVersion,
   setPrototypePicks,
   setPrototypeStatus,
@@ -60,6 +62,7 @@ export default {
     [setPrototypeStatus.route]: handleSetStatus,
   },
   contributions: [
+    IdKinds.Kind({ kind: protoIdKind }),
     ...prototypesListServed.declare,
     ...prototypeHistoryServed.declare,
     ...prototypePicksServed.declare,

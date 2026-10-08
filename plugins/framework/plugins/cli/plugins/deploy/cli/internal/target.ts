@@ -27,6 +27,7 @@ import {
   getServerSshPrivateKey,
 } from "@plugins/apps/plugins/deploy/plugins/servers/server";
 import { serverHealth } from "@plugins/apps/plugins/deploy/plugins/health/server";
+import { deployServerIdKind } from "@plugins/apps/plugins/deploy/plugins/servers/core";
 import {
   DEFAULT_LOOPBACK_PORT,
   DeploymentSchema,
@@ -197,7 +198,7 @@ async function ensureDeployment(
 
 /**
  * Resolve `--server` to one registered server. Documented as an id because that
- * is the identity, but a NAME is accepted too: ids are uuids nobody types.
+ * is the identity, but a NAME is accepted too: nobody types an `srv-…` id.
  * Ambiguity is a refusal, never a silent first-match.
  */
 async function resolveServer(
@@ -207,7 +208,12 @@ async function resolveServer(
   const rows = await db
     .select()
     .from(_deployServers)
-    .where(or(eq(_deployServers.id, ref), eq(_deployServers.name, ref)));
+    .where(
+      or(
+        eq(_deployServers.id, deployServerIdKind.key(ref)),
+        eq(_deployServers.name, ref),
+      ),
+    );
   if (rows.length === 1) return rows[0]!;
   if (rows.length > 1) {
     refuse(

@@ -14,13 +14,6 @@ export default [
       "Burndown: imported an old live-resource spelling when phase 3 started and still depends on the tree resource (item 3). New code declares, serves and reads through network/live; delete this entry when the file migrates.",
   },
   {
-    rule: "page-editor/no-adhoc-block-id",
-    paths: ["core/block-id.ts"],
-    kind: "sanctioned",
-    reason:
-      "The one module allowed to mint a block id. Everything else — client ops, server handlers, the forest mint — calls its `newBlockId()`.",
-  },
-  {
     rule: "page-editor/no-adhoc-forest-write",
     paths: ["server/internal/forest-writer.ts"],
     kind: "sanctioned",
@@ -79,5 +72,21 @@ export default [
     kind: "sanctioned",
     reason:
       "The page editor's block drag: droppable gaps between blocks plus a `DragOverlay` preview — not a sortable list.",
+  },
+  {
+    rule: "ids:pk-declared",
+    paths: ["server/internal/tables.ts"],
+    kind: "debt",
+    task: "task-1791405297096-jyzsmk",
+    reason:
+      "Phase-1 baseline of the unified prefixed ids: this table's `id` primary key names no id kind yet. Declare the kind (`defineIdKind`) and key the table with `idColumn` / `idKindField` (or `externalIdColumn` for an id minted elsewhere) in its migration phase, then delete this entry.",
+  },
+  {
+    rule: "ids:pk-declared",
+    paths: ["server/internal/tables-events.ts"],
+    kind: "debt",
+    task: "task-1791405297096-jyzsmk",
+    reason:
+      "A trigger table built by infra/events' defineTriggerEvent, whose shared column set (events/server/internal/base-columns.ts) keys every *_triggers table by a bare uuid. Phase 6 of the unified prefixed ids keys them all at once (uuid -> text + a declared kind) in that one file; delete this entry then.",
   },
 ] satisfies Exemptions;

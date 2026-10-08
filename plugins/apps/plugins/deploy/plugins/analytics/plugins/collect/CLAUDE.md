@@ -231,6 +231,8 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `apps/website/pages/download`
     - `apps/website/shell`
   - Endpoint callers: `host-only`
+- Exemptions:
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 - Test helpers:
   - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
     - `ZERO_METRICS`

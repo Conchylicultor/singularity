@@ -8,7 +8,7 @@ import {
 } from "node:fs/promises";
 import { join } from "node:path";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { isPrototypeId } from "../core";
+import { protoIdKind } from "../core";
 import { withHistoryLock } from "./history/lock";
 
 // A small JSON record per prototype, kept BESIDE the folders in a `_`-prefixed
@@ -165,7 +165,7 @@ export function openRecordStore<R, C>(
         const id = name.slice(0, -RECORD_FILE_EXT.length);
         // A file the store could not have written (a hand-made name) names no
         // prototype, so it holds no record of one.
-        if (!isPrototypeId(id)) continue;
+        if (!protoIdKind.is(id)) continue;
         records[id] = await read(id);
       }
       return records;
@@ -202,7 +202,7 @@ export function openRecordStore<R, C>(
 // a route answers 404 for a name that is not an id before it gets here, so past
 // that a bad id is a caller bug, and the store throws.
 function assertPrototypeId(id: string): string {
-  if (!isPrototypeId(id)) {
+  if (!protoIdKind.is(id)) {
     throw new Error(`not a prototype id: ${JSON.stringify(id)}`);
   }
   return id;

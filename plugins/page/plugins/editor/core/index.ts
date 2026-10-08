@@ -148,7 +148,7 @@ export { $spliceRunsInto } from "./runs-splice";
 
 export { runsToXmlText, xmlTextToRuns, xmlTextContentLength } from "./runs-yjs";
 
-export { newBlockId } from "./block-id";
+export { blockIdKind, newBlockId } from "./block-id";
 
 export {
   SerializedBlockSchema,

@@ -201,6 +201,8 @@ row with a rising count and a new source starting to fail mints its own.
     - `backup/sources/transcripts`
     - `backup/targets/google-drive`
     - `backup/targets/local`
+- Exemptions:
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 - Shared:
   - Exports (values): `runBackup`
 - Sub-plugins:

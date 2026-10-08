@@ -17,6 +17,8 @@ import {
   markAllNotificationsRead,
   dismissNotification,
 } from "../shared/endpoints";
+import { IdKinds } from "@plugins/ids/server";
+import { notificationIdKind } from "../core";
 
 export { _notifications } from "./internal/tables";
 export { recordNotification } from "./internal/record-notification";
@@ -26,6 +28,7 @@ export { setMutedByMetadata } from "./internal/reclassify-muted";
 export default {
   description: "Persistent bell-button notifications backed by the DB.",
   contributions: [
+    IdKinds.Kind({ kind: notificationIdKind }),
     ...notificationsServed.declare,
     ...notificationsUnreadServed.declare,
     // The sharpest case in the whole exclusion set. A notification has NO

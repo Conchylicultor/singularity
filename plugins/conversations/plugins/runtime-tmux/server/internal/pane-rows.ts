@@ -1,3 +1,4 @@
+import { conversationIdKind } from "@plugins/tasks/plugins/task-ids/core";
 import type { PaneRef } from "./claude-session";
 
 /**
@@ -10,8 +11,15 @@ import type { PaneRef } from "./claude-session";
  * `#{r:…}` — not a tmux modifier, and it kept every pane, so the sweep adopted
  * every session on the host whose start path was a worktree
  * (research/2026-10-07-conversations-status-shadow-audit-retirement.md).
+ *
+ * Derived from the conversation id KIND's namespace (`conv-`, plus its legacy
+ * `claude-` alias), not re-typed: a prefix test, deliberately looser than the
+ * kind's full shape, so a session is never dropped for a body the shape test
+ * would quibble with.
  */
-export const AGENT_SESSION_RE = /^(conv|claude)-/;
+export const AGENT_SESSION_RE = new RegExp(
+  `^(?:${conversationIdKind.prefixes.join("|")})-`,
+);
 
 // Field separator: tab (not present in pane paths or titles) keeps splits
 // unambiguous even though pane titles can contain arbitrary characters.

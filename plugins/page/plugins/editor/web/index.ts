@@ -1,5 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Editor as EditorSlots } from "./slots";
+import { IdKinds } from "@plugins/ids/web";
+import { blockIdKind } from "../core";
 
 export {
   Editor,
@@ -166,4 +168,5 @@ export type { PageIconProps } from "./components/page-icon";
 export default {
   description: "Block-based document editor component and slot system.",
   slots: EditorSlots,
+  contributions: [IdKinds.Kind({ kind: blockIdKind })],
 } satisfies PluginDefinition;

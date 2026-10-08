@@ -1,37 +1,16 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Editor } from "@plugins/page/plugins/editor/server";
-import { inlineChipNode } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/core";
-import { InlineTokenReferentSource } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
-import { CONV_ID_RE } from "../core";
+import { idChipServer } from "@plugins/active-data/plugins/id-chip/server";
+import { conversationIdKind } from "@plugins/tasks/plugins/task-ids/core";
+import { CONV_CHIP_SURFACES } from "../core";
 import { resolveConversationReferent } from "./internal/referent";
 
 export default {
   description:
-    "The conversation-id token at the page-editor's server boundary: locates `conv-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its conversation's title for model-read text (InlineTokenReferentSource).",
+    "The conversation id chip's server half (idChipServer): resolves a `conv-<id>` to its conversation's title (else its task's) for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.",
   contributions: [
-    // The SAME pattern the chip declares to `inlineChip`, and the SAME node spec
-    // object the browser's `InlineChipNode` decorates. Every inline chip feeds
-    // ONE node, so the four sub-plugins each contribute their own pattern
-    // against this one object — which is exactly the case the registry allows
-    // (identical spec object) and the case it refuses (two different objects
-    // claiming one type).
-    //
-    // `markdownSpan: "transparent"` — the pattern says WHERE the token is; it does
-    // NOT ask for the token's bytes to be masked from the marks-aware inline
-    // markdown scan, and a bare id must not be. It is digits, lowercase letters
-    // and hyphens: nothing the scan could misread, so masking would buy nothing
-    // and COST the span its marks (a masked span becomes its own unmarked run).
-    // While the two were one field, `` `conv-<id>` `` pasted as markdown lost its
-    // `code` mark and chipped itself — documentation turning into a widget.
-    Editor.InlineToken({
-      pattern: CONV_ID_RE,
-      markdownSpan: "transparent",
-      node: inlineChipNode,
-    }),
-    // What the chip shows, for text a model reads instead of a person.
-    InlineTokenReferentSource({
-      kind: "conversation",
-      pattern: CONV_ID_RE,
+    ...idChipServer({
+      kind: conversationIdKind,
+      surfaces: CONV_CHIP_SURFACES,
       resolve: resolveConversationReferent,
     }),
   ],

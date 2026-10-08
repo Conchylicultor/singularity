@@ -5,6 +5,7 @@ import {
   _deployServers,
   getServerSshPrivateKey,
 } from "@plugins/apps/plugins/deploy/plugins/servers/server";
+import { deployServerIdKind } from "@plugins/apps/plugins/deploy/plugins/servers/core";
 import { serverHealth } from "./tables";
 
 export type DeployServerRow = typeof _deployServers.$inferSelect;
@@ -49,7 +50,7 @@ export async function resolveServerSshTarget<P extends HostKeyPolicy>(
   const [server] = await db
     .select()
     .from(_deployServers)
-    .where(eq(_deployServers.id, serverId));
+    .where(eq(_deployServers.id, deployServerIdKind.key(serverId)));
   if (!server) return { kind: "not-found" };
 
   // The private key is asked of `servers` by name; the `deploy-ssh` secret

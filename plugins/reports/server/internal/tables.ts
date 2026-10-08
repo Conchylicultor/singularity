@@ -10,6 +10,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import { idColumn } from "@plugins/ids/server";
+import { reportIdKind } from "../../core/id-kind";
 
 // One row per (fingerprint, worktree). Upserts atomically dedupe repeats:
 // first report inserts + creates a task; repeats bump count and advance
@@ -29,7 +31,7 @@ export const _reports = deriveUpdatedAt(
   pgTable(
     "reports",
     {
-      id: text("id").primaryKey(),
+      id: idColumn(reportIdKind),
       kind: text("kind").notNull().default("crash"),
       fingerprint: text("fingerprint").notNull(),
       worktree: text("worktree").notNull(),

@@ -14,7 +14,9 @@ export async function isAgentDescendant(
   const all = await db
     .select({ id: _agents.id, parentId: _agents.parentId })
     .from(_agents);
-  const byId = new Map(all.map((r) => [r.id, r.parentId] as const));
+  const byId = new Map<string, string | null>(
+    all.map((r) => [r.id, r.parentId] as const),
+  );
   let cur: string | null = candidateId;
   const seen = new Set<string>();
   while (cur) {

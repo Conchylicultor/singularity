@@ -25,6 +25,8 @@ import {
   launchAgent,
   listAgentLaunches,
 } from "../core/endpoints";
+import { IdKinds } from "@plugins/ids/server";
+import { agentIdKind, agentLaunchIdKind } from "../core";
 
 export { _agent_launches, _agents } from "./internal/tables";
 export { agents } from "./internal/views";
@@ -53,6 +55,8 @@ export default {
     [listAgentLaunches.route]: handleListLaunches,
   },
   contributions: [
+    IdKinds.Kind({ kind: agentIdKind }),
+    IdKinds.Kind({ kind: agentLaunchIdKind }),
     ...agentRowsServed.declare,
     ...agentLaunchRowsServed.declare,
     View({ view: agents }),

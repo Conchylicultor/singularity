@@ -10,6 +10,8 @@ import {
 } from "./components/deployment-item-actions";
 import { deploymentDetailPane } from "./panes";
 import { DeploymentDetail, Deployments } from "./slots";
+import { IdKinds } from "@plugins/ids/web";
+import { deploymentIdKind, deployRunIdKind } from "../core";
 
 export {
   DeploymentItemActions,
@@ -23,6 +25,8 @@ export default {
   description:
     "Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface.",
   contributions: [
+    IdKinds.Kind({ kind: deploymentIdKind }),
+    IdKinds.Kind({ kind: deployRunIdKind }),
     ServerDetail.Section({
       id: "deployments",
       label: "Deployments",

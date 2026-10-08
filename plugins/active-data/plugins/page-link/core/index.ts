@@ -1,1 +1,1 @@
-export { BLOCK_ID_RE } from "./pattern";
+export { BLOCK_CHIP_SURFACES } from "./surfaces";

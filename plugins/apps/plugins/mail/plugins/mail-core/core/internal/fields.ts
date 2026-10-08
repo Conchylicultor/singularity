@@ -9,6 +9,7 @@ import {
   enumTextField,
   parsedTextField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
+import { externalIdField } from "@plugins/ids/core";
 import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
@@ -100,7 +101,10 @@ const MailLabelTypeSchema = tolerantEnum(
 );
 
 export const mailLabelFields = {
-  id: textField(),
+  id: externalIdField({
+    reason:
+      "Gmail's own label id — the local mirror is keyed by the id the Gmail API returns.",
+  }),
   accountId: textField(),
   name: textField(),
   // `default` is the field's wire/backfill default and stays what it was (the
@@ -119,7 +123,10 @@ export const mailLabelFields = {
 } satisfies FieldsRecord;
 
 export const mailThreadFields = {
-  id: textField(),
+  id: externalIdField({
+    reason:
+      "Gmail's own thread id — the local mirror is keyed by the id the Gmail API returns.",
+  }),
   accountId: textField(),
   subject: nullable(textField()),
   snippet: nullable(textField()),
@@ -140,7 +147,10 @@ export const mailThreadFields = {
 } satisfies FieldsRecord;
 
 export const mailMessageFields = {
-  id: textField(),
+  id: externalIdField({
+    reason:
+      "Gmail's own message id — the local mirror is keyed by the id the Gmail API returns.",
+  }),
   threadId: textField(),
   accountId: textField(),
   from: jsonField<z.infer<typeof MailAddressSchema>>({
