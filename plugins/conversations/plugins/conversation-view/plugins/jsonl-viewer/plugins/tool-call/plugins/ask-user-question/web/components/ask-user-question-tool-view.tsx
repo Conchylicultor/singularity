@@ -15,7 +15,7 @@ import { MarkerAnswerForm } from "./marker-answer-form";
 import { OptionBody, OptionRow } from "./option-row";
 import { findAnswerTurn } from "./awaiting";
 import {
-  parseAnswerMap,
+  answersFromRecord,
   parseMarkerAnswer,
   parseSelectedLabels,
   type AskUserQuestionInput,
@@ -116,19 +116,16 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   }
 
   // answerMap selection:
-  // - new flow: a marker answer turn was found → parse it.
-  // - legacy flow: result present, not an interrupt error → parse result.content.
+  // - flush path: a marker answer turn was found → parse it.
+  // - relay / terminal path: the CLI's structured answer record on the result.
   // - otherwise (result null pre-flush, or interrupted-but-not-last historical
   //   question with no answer turn): empty map → question rendered read-only.
+  const answerRecord = event.result?.questionAnswer;
   let answerMap: Record<string, ParsedAnswer> | null = null;
   if (answerTurn != null) {
     answerMap = parseMarkerAnswer(answerTurn.text, questions);
-  } else if (
-    event.result != null &&
-    !resultIsInterrupt &&
-    !event.result.isError
-  ) {
-    answerMap = parseAnswerMap(event.result.content, questions);
+  } else if (answerRecord != null) {
+    answerMap = answersFromRecord(answerRecord);
   }
 
   const questionSelections = questions.map((q) => {
@@ -154,7 +151,13 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
       ]
     : [];
 
-  const summary = summaryFor(questions, firstAnswerParts);
+  // A reply given in place of the answers stands in for them in the summary.
+  const summary = summaryFor(
+    questions,
+    firstAnswerParts.length === 0 && answerRecord?.response != null
+      ? [answerRecord.response]
+      : firstAnswerParts,
+  );
 
   return (
     <ToolCallCard
@@ -231,6 +234,20 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
             </div>
           );
         })}
+        {answerRecord?.response != null && (
+          <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-xs pl-sm">
+            <p className="text-3xs font-medium tracking-wider text-muted-foreground">
+              Reply
+            </p>
+            <Text
+              as="p"
+              variant="caption"
+              className="whitespace-pre-wrap break-words text-foreground"
+            >
+              {answerRecord.response}
+            </Text>
+          </div>
+        )}
         {event.result?.isError && !resultIsInterrupt && (
           <Text as="p" variant="caption" tone="destructive">
             {event.result.content}

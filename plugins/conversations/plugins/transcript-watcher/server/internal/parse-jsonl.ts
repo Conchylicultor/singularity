@@ -8,8 +8,9 @@ import {
   unwrapPastedContent,
   userPromptText,
   tokenUsageOf,
+  QuestionAnswerSchema,
 } from "../../core";
-import type { JsonlEvent, ToolCallResult } from "../../core";
+import type { JsonlEvent, QuestionAnswer, ToolCallResult } from "../../core";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
@@ -213,6 +214,25 @@ function extractToolReferences(content: unknown): string[] | undefined {
     /* eslint-enable @typescript-eslint/no-unnecessary-condition */
   }
   return names.length > 0 ? names : undefined;
+}
+
+/**
+ * The structured answer an answered AskUserQuestion line carries in its
+ * `toolUseResult` (`{questions, answers, annotations?, response?}`), or
+ * undefined when the line is any other tool's result. `toolUseResult` is
+ * per line, not per block, so it is only attributed when the line holds a
+ * single tool_result. A line shaped like an answer that fails the schema
+ * throws: the CLI changed its record, and the card must not guess.
+ */
+function extractQuestionAnswer(
+  obj: Record<string, unknown>,
+  toolResultCount: number,
+): QuestionAnswer | undefined {
+  if (toolResultCount !== 1) return undefined;
+  const r = obj.toolUseResult;
+  if (typeof r !== "object" || r === null) return undefined;
+  if (!("questions" in r) || !("answers" in r)) return undefined;
+  return QuestionAnswerSchema.parse(r);
 }
 
 /**
@@ -427,6 +447,13 @@ async function buildEvents(
       if (typeof content === "string") {
         await processUserText(content, ts, promptUuid);
       } else if (Array.isArray(content)) {
+        const questionAnswer = extractQuestionAnswer(
+          obj,
+          (content as RawBlock[]).filter(
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
+            (b) => b?.type === "tool_result",
+          ).length,
+        );
         for (const block of content as RawBlock[]) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           if (block?.type === "tool_result") {
@@ -437,6 +464,7 @@ async function buildEvents(
               content: extractText(block.content),
               isError: block.is_error === true ? true : undefined,
               toolReferences: extractToolReferences(block.content),
+              questionAnswer,
             };
             const existing = toolCallByUseId.get(toolUseId);
             if (existing) {

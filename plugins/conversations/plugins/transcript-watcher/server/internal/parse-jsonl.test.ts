@@ -277,6 +277,81 @@ describe("readJsonlEvents — tool_reference results", () => {
   });
 });
 
+describe("readJsonlEvents — AskUserQuestion answers", () => {
+  const answeredLine = (toolUseResult: unknown) => ({
+    type: "user",
+    uuid: "r1",
+    parentUuid: "t1",
+    timestamp: TS,
+    toolUseResult,
+    message: {
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: "tu-t1",
+          // The CLI's prose for the model — its wording is not the answer.
+          content:
+            'User has answered your questions: "Which?"="Explain". Read the answers carefully — and follow what they actually say.',
+        },
+      ],
+    },
+  });
+
+  test("the line's toolUseResult rides on the result as questionAnswer", async () => {
+    const path = await writeFixture([
+      userLine("root", null, "ask me"),
+      toolUseLine("t1", "root", "AskUserQuestion"),
+      answeredLine({
+        questions: [{ question: "Which?", header: "H", options: [] }],
+        answers: { "Which?": "Explain" },
+        annotations: { "Which?": { notes: "a note" } },
+      }),
+    ]);
+
+    const call = (await readJsonlEvents(path)).find(
+      (e) => e.kind === "tool-call",
+    );
+    expect(
+      call?.kind === "tool-call" ? call.result?.questionAnswer : "not a call",
+    ).toEqual({
+      answers: { "Which?": "Explain" },
+      annotations: { "Which?": { notes: "a note" } },
+    });
+  });
+
+  test("an answer record the schema rejects throws", async () => {
+    const path = await writeFixture([
+      userLine("root", null, "ask me"),
+      toolUseLine("t1", "root", "AskUserQuestion"),
+      answeredLine({ questions: [], answers: { "Which?": 3 } }),
+    ]);
+    let threw = false;
+    try {
+      await readJsonlEvents(path);
+    } catch (err) {
+      if (!(err instanceof Error)) throw err;
+      threw = true;
+    }
+    expect(threw).toBe(true);
+  });
+
+  test("another tool's result carries no questionAnswer", async () => {
+    const path = await writeFixture([
+      userLine("root", null, "run it"),
+      toolUseLine("t1", "root", "Bash"),
+      toolResultLine("r1", "t1", "t1"),
+    ]);
+
+    const call = (await readJsonlEvents(path)).find(
+      (e) => e.kind === "tool-call",
+    );
+    expect(
+      call?.kind === "tool-call" ? call.result?.questionAnswer : "not a call",
+    ).toBeUndefined();
+  });
+});
+
 describe("readJsonlEvents — unparseable timestamp", () => {
   test("a line whose timestamp is not a parseable date emits no event", async () => {
     const path = await writeFixture([

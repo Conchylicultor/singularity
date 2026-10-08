@@ -9,8 +9,11 @@ Expanded: for each question, shows the full question text and a vertical option 
 
 - **Relay (primary)** — `conversations/question-relay` holds the call in a
   `PreToolUse` hook and answers it as the tool's own input. The CLI writes a real
-  `Your questions have been answered: …` result, which the answered view parses
-  with `parseAnswerMap` like a terminal answer. That plugin owns the `"question"`
+  `Your questions have been answered: …` result, like a terminal answer. The
+  answered view reads the answer from the line's structured `toolUseResult`
+  (carried as `result.questionAnswer` by transcript-watcher, read with
+  `answersFromRecord`) — never from the result's prose, whose wording the CLI
+  changes across versions. That plugin owns the `"question"`
   pending prompt and composes this plugin's `AnswerForm` (presentational: it
   hands structured selections to `onSubmit`) and `AnswerHereButton`.
 - **Flush (fallback)** — a session without the hook, or a question released to

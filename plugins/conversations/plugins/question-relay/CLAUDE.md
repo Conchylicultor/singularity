@@ -8,7 +8,8 @@ Every agent the app launches carries a `PreToolUse` hook on `AskUserQuestion`
 runs `bin/ask-relay.ts`. The relay **holds the tool call** while the web shows
 the question; the web's answer goes back to the CLI as `updatedInput`, so the
 CLI skips its menu and writes `Your questions have been answered: …` — the same
-result a terminal answer writes, rendered by ask-user-question's `parseAnswerMap`
+result a terminal answer writes, rendered by ask-user-question from the line's
+structured `toolUseResult` (`answersFromRecord`)
 with no correlation and no hidden turns.
 
 ## Lifecycle — `pending_questions.state`

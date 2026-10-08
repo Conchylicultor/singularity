@@ -1,11 +1,13 @@
 export type {
   JsonlEvent,
+  QuestionAnswer,
   TokenUsage,
   ToolCallResult,
   UserTextSegment,
 } from "./protocol";
 export {
   JsonlEventSchema,
+  QuestionAnswerSchema,
   TokenUsageSchema,
   PREPROMPT_TAG,
   wrapPreprompt,

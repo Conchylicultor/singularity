@@ -44,10 +44,35 @@ const UserTextSegmentSchema = z.discriminatedUnion("kind", [
 ]);
 export type UserTextSegment = z.infer<typeof UserTextSegmentSchema>;
 
+/**
+ * An answered AskUserQuestion as the CLI records it: the line's `toolUseResult`
+ * (minus its echo of `questions`). This is the answer as data — `content` is
+ * only the CLI's prose wording of it for the model, which changes across CLI
+ * versions. `answers` is keyed by question text; a multi-select value is its
+ * labels joined with ", ", and `(no option selected)` marks a question answered
+ * with a note alone. `response` is free text given in place of the answers.
+ */
+export const QuestionAnswerSchema = z.object({
+  answers: z.record(z.string(), z.string()),
+  annotations: z
+    .record(
+      z.string(),
+      z.object({
+        notes: z.string().optional(),
+        preview: z.string().optional(),
+      }),
+    )
+    .optional(),
+  response: z.string().optional(),
+});
+export type QuestionAnswer = z.infer<typeof QuestionAnswerSchema>;
+
 const ToolCallResultSchema = z.object({
   at: z.string(),
   content: z.string(),
   isError: z.boolean().optional(),
+  /** The structured answer of an answered AskUserQuestion; absent otherwise. */
+  questionAnswer: QuestionAnswerSchema.optional(),
   /**
    * Names carried by the result's `tool_reference` blocks — the content type a
    * tool-search result uses to hand deferred tool definitions to the model.

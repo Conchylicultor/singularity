@@ -133,6 +133,7 @@ memo degrades to a full chain re-read on every push.
   - Exports (types):
     - `ForeignSessionPayload`
     - `JsonlEvent`
+    - `QuestionAnswer`
     - `TeammateMessage`
     - `TokenUsage`
     - `ToolCallResult`
@@ -145,6 +146,7 @@ memo degrades to a full chain re-read on every push.
     - `isInterruptContent`
     - `JsonlEventSchema`
     - `PREPROMPT_TAG`
+    - `QuestionAnswerSchema`
     - `stripRelayBoilerplate`
     - `tokenUsageOf`
     - `TokenUsageSchema`

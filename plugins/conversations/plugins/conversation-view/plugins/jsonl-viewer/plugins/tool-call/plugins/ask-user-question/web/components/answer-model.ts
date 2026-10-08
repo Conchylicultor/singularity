@@ -1,3 +1,4 @@
+import type { QuestionAnswer } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { ANSWER_MARKER } from "../../shared";
 
 /**
@@ -55,117 +56,25 @@ export interface ParsedAnswer {
   notes: string | null;
 }
 
-const KNOWN_PREFIXES = [
-  "Your questions have been answered: ",
-  "User has answered your questions: ",
-];
-const KNOWN_SUFFIXES = [
-  ". You can now continue with these answers in mind.",
-  ". You can now continue with the user's answers in mind.",
-];
-
-function extractPayload(content: string): string {
-  for (const prefix of KNOWN_PREFIXES) {
-    const pi = content.indexOf(prefix);
-    if (pi === -1) continue;
-    for (const suffix of KNOWN_SUFFIXES) {
-      const si = content.lastIndexOf(suffix);
-      if (si !== -1 && si > pi) return content.slice(pi + prefix.length, si);
-    }
-    return content.slice(pi + prefix.length);
-  }
-  return content;
-}
-
-// Sentinel the harness emits when the user submitted a note but picked no option.
+// The CLI's own sentinel for a question answered with a note and no option.
 const NO_SELECTION = "(no option selected)";
-// Annotation markers the harness appends after the answer value. ` selected` is
-// a trailing word stamped after a quoted option that carried a preview.
-const NOTES_MARK = " notes: ";
-const PREVIEW_MARK = " preview:";
-const SELECTED_MARK = " selected";
 
 /**
- * Splits a per-question result value into its answer portion and the optional
- * `notes:`/`preview:` annotations the harness appends. Preview text is rendered
- * from the tool input, so it is only used here to bound the answer and notes.
+ * Reads the CLI's structured answer record (the transcript line's
+ * `toolUseResult`) into one `ParsedAnswer` per answered question. The result's
+ * `content` is never parsed: it is the CLI's prose for the model, worded
+ * differently across CLI versions.
  */
-function splitAnnotations(value: string): {
-  answer: string;
-  notes: string | null;
-} {
-  const notesIdx = value.indexOf(NOTES_MARK);
-  const previewIdx = value.indexOf(PREVIEW_MARK);
-  const marks = [notesIdx, previewIdx].filter((i) => i >= 0);
-  const answerEnd = marks.length > 0 ? Math.min(...marks) : value.length;
-  const answer = value.slice(0, answerEnd).trim();
-
-  let notes: string | null = null;
-  if (notesIdx >= 0) {
-    const start = notesIdx + NOTES_MARK.length;
-    // The note runs until the next annotation marker (a later preview) or the end.
-    const notesEnd = previewIdx > notesIdx ? previewIdx : value.length;
-    notes = value.slice(start, notesEnd).trim() || null;
-  }
-
-  return { answer, notes };
-}
-
-/** Strips the trailing ` selected` word, the no-selection sentinel, and quotes. */
-function cleanAnswerPortion(answer: string): string | null {
-  let a = answer.trim();
-  if (a.endsWith(SELECTED_MARK)) a = a.slice(0, -SELECTED_MARK.length).trim();
-  if (a === "" || a === NO_SELECTION) return null;
-  if (a.length >= 2 && a.startsWith('"') && a.endsWith('"')) a = a.slice(1, -1);
-  return a;
-}
-
-/**
- * Legacy flow: the tool result content directly carries the answers as
- * `"<question>"=<value>` pairs. Anchors on each question text to slice values.
- */
-export function parseAnswerMap(
-  content: string,
-  questions: Question[],
+export function answersFromRecord(
+  record: QuestionAnswer,
 ): Record<string, ParsedAnswer> {
-  const payload = extractPayload(content);
-
   const answers: Record<string, ParsedAnswer> = {};
-  const anchors: {
-    question: string;
-    anchorStart: number;
-    valueStart: number;
-  }[] = [];
-
-  for (const q of questions) {
-    // Anchor on `"<question>"=` only — the value may be a quoted option or the
-    // `(no option selected)` sentinel, so we must not require a leading quote.
-    const anchor = `"${q.question}"=`;
-    const idx = payload.indexOf(anchor);
-    if (idx !== -1) {
-      anchors.push({
-        question: q.question,
-        anchorStart: idx,
-        valueStart: idx + anchor.length,
-      });
-    }
+  for (const [question, value] of Object.entries(record.answers)) {
+    answers[question] = {
+      answer: value === NO_SELECTION || value === "" ? null : value,
+      notes: record.annotations?.[question]?.notes ?? null,
+    };
   }
-
-  anchors.sort((a, b) => a.valueStart - b.valueStart);
-
-  for (let i = 0; i < anchors.length; i++) {
-    const cur = anchors[i]!;
-    const next = anchors[i + 1];
-    // Each value runs up to the next question's anchor; the `, ` separator only
-    // exists between questions, so strip it for non-final entries only.
-    const value =
-      next != null
-        ? payload.slice(cur.valueStart, next.anchorStart).replace(/,\s*$/, "")
-        : payload.slice(cur.valueStart);
-    const { answer, notes } = splitAnnotations(value);
-    answers[cur.question] = { answer: cleanAnswerPortion(answer), notes };
-  }
-
   return answers;
 }
 
@@ -192,7 +101,7 @@ export function serializeMarkerAnswer(
 /**
  * Parses the follow-up answer turn (the `Answering your questions:` message
  * produced by `serializeAnswers`) into the same `Record<questionText,
- * ParsedAnswer>` shape `parseAnswerMap` returns, so the answered-view JSX and
+ * ParsedAnswer>` shape `answersFromRecord` returns, so the answered-view JSX and
  * `parseSelectedLabels` consume it unchanged.
  *
  * The turn body is a list of `- <header>: <value>` lines, one per question in

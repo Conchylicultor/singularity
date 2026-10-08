@@ -13434,6 +13434,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `ForeignSessionPayload`
           - `JsonlEvent`
+          - `QuestionAnswer`
           - `TeammateMessage`
           - `TokenUsage`
           - `ToolCallResult`
@@ -13446,6 +13447,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isInterruptContent`
           - `JsonlEventSchema`
           - `PREPROMPT_TAG`
+          - `QuestionAnswerSchema`
           - `stripRelayBoilerplate`
           - `tokenUsageOf`
           - `TokenUsageSchema`
