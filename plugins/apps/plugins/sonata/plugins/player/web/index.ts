@@ -3,11 +3,7 @@ import { SonataPlayer } from "./slots";
 
 export { SonataPlayer } from "./slots";
 export { SonataPlayerScope } from "./scope";
-export {
-  PlayerDisplayBinding,
-  usePlayerView,
-  type PlayerView,
-} from "./view";
+export { PlayerDisplayBinding, usePlayerView, type PlayerView } from "./view";
 export { PlayerDisplay, PlayerTransport, PlayerTime } from "./components/parts";
 
 export default {

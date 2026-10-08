@@ -70,10 +70,7 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "3-bar");
   await lens("Songsheet").click();
   await page.waitForTimeout(800);
-  r.ok(
-    "switching lens keeps ;bar",
-    path().endsWith(";bar=5;view=songsheet"),
-  );
+  r.ok("switching lens keeps ;bar", path().endsWith(";bar=5;view=songsheet"));
 
   await r.finish();
 });
