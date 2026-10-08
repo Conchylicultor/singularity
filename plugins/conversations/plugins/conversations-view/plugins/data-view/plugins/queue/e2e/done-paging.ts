@@ -1,9 +1,10 @@
 /**
- * Verifies the queue's Done section pages as the user scrolls: it starts at
- * the default window (30), grows past it once the tail scrolls into view, and
- * stops growing while the Done section is collapsed (the sentinel is then
- * right under the header, so an ungated observer would page the whole
- * history in).
+ * Verifies the queue's Done section pages as the user scrolls: its header
+ * reads the EXACT number of ended conversations from the first paint (the
+ * collection's `:count`, not "30+"), and stays put while pages load; more rows
+ * page in once the tail scrolls into view, and none while the Done section is
+ * collapsed (the sentinel is then right under the header, so an ungated
+ * observer would page the whole history in).
  *
  *   ./singularity run plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/e2e/done-paging.ts --headed
  */
@@ -18,7 +19,7 @@ import {
 
 const OUT = arg("out") ?? "/tmp/queue-done-paging";
 
-/** The Done header's count: rows loaded, `+` while more exist. */
+/** The Done header's count. */
 async function doneCount(page: Page): Promise<number> {
   const m = /(\d+)/.exec(await doneHeader(page));
   return m ? Number(m[1]) : -1;
@@ -48,6 +49,16 @@ async function toggleDone(page: Page): Promise<void> {
   });
 }
 
+/** The last rendered conversation row's text — moves when a page lands past it. */
+async function tailMarker(page: Page): Promise<string> {
+  return (
+    (await page
+      .locator('[data-ui-owner^="ConversationItem"]')
+      .last()
+      .innerText()) ?? ""
+  );
+}
+
 /** Scroll the last conversation into view, then let a page land. */
 async function scrollToTail(page: Page): Promise<void> {
   await page
@@ -68,28 +79,28 @@ await withBrowser(async (h) => {
     .waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(1500);
 
-  const initial = await doneCount(page);
+  const total = await doneCount(page);
+  const initialTail = await tailMarker(page);
   r.note(`Done header: "${await doneHeader(page)}"`);
   r.ok(
-    "the Done section starts at the default window",
-    initial === 30,
-    `got ${initial}`,
-  );
-  r.ok(
-    "its count reads as a lower bound while more exist",
-    (await doneHeader(page)).endsWith("+"),
+    "the Done count is the exact total, not a lower bound",
+    total > 30 && !(await doneHeader(page)).endsWith("+"),
+    `got "${await doneHeader(page)}" (needs > 30 ended conversations)`,
   );
 
   await scrollToTail(page);
   await scrollToTail(page);
-  const grown = await doneCount(page);
-  r.note(
-    `after scrolling: ${grown} Done rows — header "${await doneHeader(page)}"`,
-  );
+  const grownTail = await tailMarker(page);
+  r.note(`after scrolling — header "${await doneHeader(page)}"`);
   r.ok(
     "scrolling to the tail pages more Done rows in",
-    grown > initial,
-    `got ${grown}`,
+    grownTail !== initialTail,
+    `tail still "${grownTail}"`,
+  );
+  r.ok(
+    "the exact count does not move as pages load",
+    (await doneCount(page)) === total,
+    `before ${total}, after ${await doneCount(page)}`,
   );
   await snap(page, OUT, "grown");
 
@@ -99,14 +110,14 @@ await withBrowser(async (h) => {
   const collapsedHeader = await doneHeader(page);
   await snap(page, OUT, "collapsed");
   r.note(`collapsed header: "${collapsedHeader}"`);
-  // Expand again and count: nothing loaded while it was collapsed.
+  // Expand again: nothing loaded while it was collapsed.
   await toggleDone(page);
   await page.waitForTimeout(500);
-  const afterCollapse = await doneCount(page);
+  const afterCollapse = await tailMarker(page);
   r.ok(
     "nothing pages in while Done is collapsed",
-    afterCollapse === grown,
-    `before ${grown}, after ${afterCollapse}`,
+    afterCollapse === grownTail,
+    `before "${grownTail}", after "${afterCollapse}"`,
   );
 
   const errors = [...captured.pageErrors, ...captured.consoleErrors];

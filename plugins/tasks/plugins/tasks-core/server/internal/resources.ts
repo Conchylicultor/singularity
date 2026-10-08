@@ -1,7 +1,4 @@
-import {
-  serveCollection,
-  serveValue,
-} from "@plugins/network/plugins/live/server";
+import { serveCollection } from "@plugins/network/plugins/live/server";
 import { _tasks, pushes } from "./tables";
 import { attemptRowsServeOptions } from "./attempt-rows";
 import { taskRowsServeOptions } from "./task-rows";
@@ -12,9 +9,8 @@ import {
   conversationsSystemServeOptions,
 } from "./conversation-rows";
 // Every resource here is declared in `../../core` (the single source of truth
-// both runtimes read): `conversationsGoneStats` is a `liveValue` served with
-// `serveValue`, every other one a `liveCollection` served with
-// `serveCollection` — both read key / schema / params off the declaration.
+// both runtimes read): each a `liveCollection` served with `serveCollection`,
+// which reads key / schema / params off the declaration.
 import {
   taskRows,
   taskDescriptions,
@@ -24,9 +20,7 @@ import {
   conversationsSystem,
   conversationsGone,
   conversationsById,
-  conversationsGoneStats,
 } from "../../core";
-import { countGoneConversations } from "./queries/conversations";
 
 // The conversation lists (`conversationsActive` / `conversationsSystem`: the
 // whole ordered sets of live conversations; `conversationsGone`: the window of
@@ -55,16 +49,6 @@ export const conversationsByIdServed = serveCollection(
   conversationsById,
   conversationsByIdServeOptions,
 );
-
-// The ended-conversation total (the gone window above holds only the newest
-// RECENT_GONE_LIMIT). A db value: its read-set is the `conversations` TABLE
-// alone (`countGoneConversations` reads no view), so a conversation write
-// recomputes it — one COUNT, and push mode drops the identical results — and
-// a task or attempt write does not.
-export const conversationsGoneStatsServed = serveValue(conversationsGoneStats, {
-  source: "db",
-  loader: async () => ({ totalGoneCount: await countGoneConversations() }),
-});
 
 // The `pushes` collection (declared in core as `pushRows`): its window —
 // filterable by `attemptId`, newest first — and its `:rows` point sibling, over

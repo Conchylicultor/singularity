@@ -11,7 +11,6 @@ import {
   conversationsSystemServed,
   conversationsGoneServed,
   conversationsByIdServed,
-  conversationsGoneStatsServed,
 } from "./internal/resources";
 import { attempts, conversations, taskBlocking, tasks } from "./internal/views";
 import {
@@ -234,7 +233,6 @@ export default {
     ...conversationsSystemServed.declare,
     ...conversationsGoneServed.declare,
     ...conversationsByIdServed.declare,
-    ...conversationsGoneStatsServed.declare,
     ...TASK_ROLLUPS.map((r) => DerivedTable(r)),
     View({ view: attempts }),
     View({ view: conversations }),

@@ -9901,9 +9901,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `resource.declare` "conversations.all"
+          - `resource.declare` "conversations.all:count"
           - `resource.declare` "conversations.all:groups"
           - `resource.declare` "conversations.all:rows"
           - `resource.declare` "conversations.history"
+          - `resource.declare` "conversations.history:count"
           - `resource.declare` "conversations.history:groups"
           - `resource.declare` "conversations.history:rows"
         - Uses:
@@ -9913,9 +9915,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core.conversationOwnerJoins`
         - Resources:
           - `conversations.all` (keyed, window)
+          - `conversations.all:count` (push)
           - `conversations.all:groups` (push)
           - `conversations.all:rows` (keyed, point)
           - `conversations.history` (keyed, window)
+          - `conversations.history:count` (push)
           - `conversations.history:groups` (push)
           - `conversations.history:rows` (keyed, point)
       - Core:
@@ -12748,6 +12752,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/data-view.scrollPaging`
                   - `primitives/icon-button.IconButton`
                   - `primitives/live-state.combineResources`
+                  - `primitives/live-state.foldResource`
                   - `primitives/live-state.ResourceReadiness`
                   - `primitives/optimistic-mutation.useOptimisticResource`
         - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
@@ -21583,6 +21588,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AllCollectionContracts`
           - `AllCollectionSpec`
           - `CompiledAllCollection`
+          - `CompiledCount`
           - `CompiledGroups`
           - `CompiledUnion`
           - `EntitySource`
@@ -21600,6 +21606,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WindowQueryResourceSpec`
         - Exports (values):
           - `compileAllCollection`
+          - `compileCountQuery`
           - `compileGroupsQuery`
           - `compileJoins`
           - `compileUnionCollection`
@@ -22826,8 +22833,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLiveRow`
           - `useLiveScroll`
       - Server:
-        - Uses: 23 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `infra/query-resource` ×20
+        - Uses: 25 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `infra/query-resource` ×22
           - `database/sql-column` ×2
           - `network/live/filter.filterSql`
         - Exports (types):
@@ -22901,7 +22908,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveColumnsHandle`
           - `LiveColumnsOwner`
           - `LiveContributedCollection`
+          - `LiveCountCodec`
+          - `LiveCountDescriptor`
+          - `LiveCountedCollection`
+          - `LiveCountParams`
+          - `LiveCountQuery`
           - `LiveCutKey`
+          - `LiveDecodedCountQuery`
           - `LiveDecodedGroupQuery`
           - `LiveDecodedQuery`
           - `LiveFilterable`
@@ -28459,11 +28472,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` ×46
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
-        - Uses: 71 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 72 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×7
+          - `primitives/live-state` ×5
           - `primitives/css/control-panel` ×4
-          - `primitives/live-state` ×4
           - `primitives/slot-render` ×4
           - `config_v2` ×2
           - `network/live` ×2
@@ -28508,6 +28521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewFoldLines`
           - `DataViewId`
           - `DataViewPaging`
+          - `DataViewPagingTotal`
           - `DataViewProps`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
@@ -28671,6 +28685,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewInMemoryOrigin`
           - `DataViewLiveOrigin`
           - `DataViewPaging`
+          - `DataViewPagingTotal`
           - `DataViewProps`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
@@ -35604,21 +35619,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` ×17
           - `derived-view` ×4
           - `derived-table` ×2
-        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `primitives/rank` ×3
-          - `database/sql-projection` ×2
-          - `infra/entities` ×2
-          - `infra/git/git-watcher` ×2
-          - `infra/worktree` ×2
-          - `network/live` ×2
+        - Uses:
+          - `database.db`
           - `database/derived-tables.DerivedTable`
           - `database/derived-views.View`
-          - `database.db`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
           - `infra/attachments.Attachments`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
           - `infra/git/git-read-cache.createSignedMemo`
+          - `infra/git/git-watcher.defineRefReaction`
+          - `infra/git/git-watcher.lastKnownMainSha`
           - `infra/host/host-read-pool.withHeavyReadSlot`
+          - `infra/worktree.ensureMainWorktreeRoot`
+          - `infra/worktree.isCanonicalWorktreePath`
+          - `network/live.serveCollection`
           - `primitives/commit-list.runGit`
+          - `primitives/rank.nextRankUnder`
+          - `primitives/rank.RankExecutor`
+          - `primitives/rank.withRank`
         - DB schema:
           - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
@@ -35739,7 +35760,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations-active` (keyed)
           - `conversations-active:rows` (keyed, point)
           - `conversations-gone` (keyed, window)
-          - `conversations-gone-stats` (push)
+          - `conversations-gone:count` (push)
           - `conversations-gone:groups` (push)
           - `conversations-gone:rows` (keyed, point)
           - `conversations-system` (keyed)
@@ -35769,7 +35790,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
           - `network/live.liveCollection`
-          - `network/live.liveValue`
           - `network/live/filter.liveText`
           - `primitives/pane.defineRoute`
           - `primitives/rank.RankSchema`
@@ -35800,7 +35820,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationsById`
           - `ConversationSchema`
           - `conversationsGone`
-          - `conversationsGoneStats`
           - `conversationsSystem`
           - `ConversationStatusSchema`
           - `ConversationSummarySchema`

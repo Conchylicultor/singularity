@@ -28,7 +28,7 @@ export const DbQueryDeadlinePayloadSchema = z.object({
   elapsedMs: z.number(),
   /** The bound in force for this call: the pool default or a `withQueryDeadline` scope. */
   deadlineMs: z.number(),
-  /** The runtime-profiler entry the query ran under ("push conversations-gone-stats"), when known. */
+  /** The runtime-profiler entry the query ran under ("push conversations-gone:count"), when known. */
   origin: z.string().nullable(),
   /**
    * The connection the call ran on. Rows filed before every connection carried

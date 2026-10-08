@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { z } from "zod";
 import {
   useResource,
   type PagedResourceResult,
@@ -9,6 +10,8 @@ import {
 import type {
   LiveAllCollection,
   LiveCollection,
+  LiveCountedCollection,
+  LiveCountQuery,
   LiveGroup,
   LiveGroupableColumn,
   LiveGroupQuery,
@@ -147,6 +150,11 @@ function listShape<Row, F, S extends string>(
  *   boolean filterable column takes (with counts), ordered by count desc then
  *   value; each value typed as the row field. The same list result
  *   as a window: `loadMore()` pages through groups.
+ * - `useLive(c, { count: true, where? })` — how many rows match `where`, as
+ *   `ResourceResult<number>`, kept live; only on a collection declared
+ *   `count: true`. `null` in place of the query (or of both) reads nothing
+ *   (pending) — for a surface whose count is not cheap right now (a search is
+ *   on), or that has no collection to count.
  * - `useLive(c, { ids })` — an explicit id set, via the `:rows` point sibling.
  *   No paging fields: an id set is not a window. The one list-free read, so it
  *   (and `useLiveRow`) also takes a lookup-only collection; a window or
@@ -181,6 +189,10 @@ export function useLive<
   collection: LiveCollection<Row, F, S>,
   query: LiveGroupQuery<F, G>,
 ): LiveListResult<LiveGroup<LiveGroupValue<Row, G>>>;
+export function useLive<Row, F, S extends string>(
+  collection: LiveCountedCollection<Row, F, S> | null,
+  query: LiveCountQuery<F> | null,
+): ResourceResult<number>;
 /**
  * - `useLive(all)` — a collection declared `all`: every row, in its declared
  *   order, as `ResourceResult<Row[]>` (settled on its first render when the
@@ -232,6 +244,7 @@ export function useLive<T, P extends Record<string, string>>(
 ): ResourceResult<T>;
 export function useLive<Row, F, S extends string>(
   source:
+    | null
     | LiveCollection<Row, F, S>
     | LiveRowsCollection<Row>
     | LiveAllCollection<Row>
@@ -239,13 +252,19 @@ export function useLive<Row, F, S extends string>(
   query?:
     | LiveQuery<F, S>
     | LiveGroupQuery<F>
+    | LiveCountQuery<F>
     | LiveIdsQuery
     | LiveAllSelect<Row, unknown>
     | Record<string, string>
     | null,
 ): LiveListResult<unknown> | ResourceResult<unknown> {
   // A declaration never changes kind between renders (it is a module-level
-  // const), so the branch below keeps the hook order stable.
+  // const), so the branch below keeps the hook order stable. No source is the
+  // count overload's skip (the only one that takes `null`).
+  if (source === null) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- fixed per call site: only the count overload passes null
+    return useCount(null, null);
+  }
   if ("live" in source) {
     // `null` is the substrate's skip; `useResource` canonicalizes the params
     // (an absent optional one is one tuple however it is spelled).
@@ -264,6 +283,15 @@ export function useLive<Row, F, S extends string>(
       LiveAllSelect<Row, unknown> | undefined;
     // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
     return useAll(all, options);
+  }
+  // A count — or `null`, which only the count overload takes on a collection.
+  // Which of the two a call site asks is fixed by its overload.
+  if (query === null || (query !== undefined && "count" in query)) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
+    return useCount(
+      source as LiveCollection<Row, F, S>,
+      query as LiveCountQuery<F> | null,
+    );
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
   return useCollection(
@@ -290,6 +318,54 @@ function useAll<Row>(
 ): ResourceResult<unknown> {
   return useResource(all, undefined, { gate: true, select: options?.select });
 }
+
+/**
+ * A collection's total over `where` through its `:count` sibling — a `null`
+ * query (or collection) reads nothing, on {@link SKIPPED_COUNT}: a skipped read
+ * never names a resource's params, so a collection with no `:count` may be
+ * skipped too.
+ */
+function useCount<Row, F, S extends string>(
+  collection: LiveCollection<Row, F, S> | null,
+  query: LiveCountQuery<F> | null,
+): ResourceResult<number> {
+  const descriptor = collection?.count ?? null;
+  if (descriptor === null && query !== null) {
+    throw new Error(
+      `useLive("${collection?.key ?? "null"}", { count }): the collection is not declared \`count: true\``,
+    );
+  }
+  const paramsKey =
+    query === null || descriptor === null
+      ? null
+      : JSON.stringify(descriptor.count.encode({ where: query.where }));
+  const params = useMemo(
+    () =>
+      paramsKey === null
+        ? null
+        : (JSON.parse(paramsKey) as Record<string, string>),
+    [paramsKey],
+  );
+  return useResource(
+    (descriptor ?? SKIPPED_COUNT) as ResourceDescriptor<
+      number,
+      Record<string, string>
+    >,
+    params,
+  );
+}
+
+/**
+ * The descriptor a skipped count reads (always with `null` params, so never
+ * subscribed or fetched): never registered, its key no collection can mint.
+ */
+const SKIPPED_COUNT: ResourceDescriptor<number, Record<string, string>> = {
+  key: "network/live:count:skipped",
+  schema: z.number(),
+  validateParams: () => {
+    throw new Error("network/live: the skipped count is never read");
+  },
+};
 
 function useCollection<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S> | LiveRowsCollection<Row>,

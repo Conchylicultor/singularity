@@ -14,7 +14,7 @@ const boltIcon = symbol("bolt");
 
 // One-line span-stuck summary for the Debug → Reports list, e.g.
 // "[stuck] still running after 3 min: flush flushNotifies → push
-// conversations-gone-stats", plus a View-trace chip onto everything that was in
+// conversations-gone:count", plus a View-trace chip onto everything that was in
 // flight when it was detected. The destructive chip is what separates it at a
 // glance from a slow-op row: that one finished slowly, this one had not
 // finished at all.

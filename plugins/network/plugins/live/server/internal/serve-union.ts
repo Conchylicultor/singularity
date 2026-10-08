@@ -580,6 +580,8 @@ export function serveUnionCollection<
     window,
     rows,
     groups,
+    // A union has no total (`count` is refused beside `arms`).
+    count: null,
     keys: [window.key, rows.key, groups.key],
     declare: [
       ResourceContribution.Declare(window),

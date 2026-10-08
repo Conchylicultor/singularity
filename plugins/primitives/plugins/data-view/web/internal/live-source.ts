@@ -10,12 +10,14 @@ import {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
   LiveColumnsDeclaration,
+  LiveCountedCollection,
   LiveOrderBy,
   LiveSortDirection,
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
-import { useLiveScroll } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveScroll } from "@plugins/network/plugins/live/web";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type {
   DataViewPaging,
   FieldDef,
@@ -124,6 +126,12 @@ export function useLiveSource<TRow>(args: {
         /** The contributed-column handles the query names — the codec validates against them. */
         columns: readonly LiveColumnsDeclaration[];
         sectionOrder: "bucket" | "appearance";
+        /**
+         * The source's scope alone, when it is ALL the query filters by (no
+         * view filter, no search) — the one `where` a total is read over;
+         * `null` when the view narrows it.
+         */
+        totalWhere: { where: Filter | undefined } | null;
       } => {
     if (!source || !plan) return { kind: "none" };
     // The scope's value is not known yet: read nothing, show the loading state.
@@ -223,6 +231,10 @@ export function useLiveSource<TRow>(args: {
         columns,
         sectionOrder,
         resetKey: JSON.stringify({ where: resetWhere ?? null, order }),
+        totalWhere:
+          renamed === undefined && search === undefined
+            ? { where: scope }
+            : null,
       };
     } catch (err) {
       if (!(err instanceof FilterError)) throw err;
@@ -264,12 +276,50 @@ export function useLiveSource<TRow>(args: {
     lowering.kind === "ok" ? { resetKey: lowering.resetKey } : {},
   );
 
+  // The total, when cheap: a collection declared `count: true`, read over the
+  // source's scope alone — under a view filter or a search it is not read, and
+  // the counts stay lower bounds.
+  const counted =
+    source && source.collection.count !== null
+      ? (source.collection as unknown as LiveCountedCollection<
+          TRow,
+          unknown,
+          string
+        >)
+      : null;
+  const totalWhere =
+    counted !== null && lowering.kind === "ok" ? lowering.totalWhere : null;
+  const total = useLive(
+    counted,
+    totalWhere === null
+      ? null
+      : {
+          count: true,
+          ...(totalWhere.where !== undefined
+            ? { where: totalWhere.where as LiveWhere<unknown> }
+            : {}),
+        },
+  );
+  // Not known yet, or failed with nothing seen: no total — the counts stay
+  // lower bounds, which are still true (the failure is the read's to report).
+  const totalCount = foldResource(total, {
+    ready: (n) => n,
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+  });
+
   const settled =
     scroll.status === "loading" || scroll.status === "error" ? null : scroll;
   const rows = (settled?.rows ?? NO_ROWS) as readonly TRow[];
   const paging = useMemo(
-    () => (settled === null ? NOT_PAGING : scrollPaging<TRow>(settled)),
-    [settled],
+    () =>
+      settled === null
+        ? NOT_PAGING
+        : {
+            ...scrollPaging<TRow>(settled),
+            total: totalCount === null ? null : { count: totalCount },
+          },
+    [settled, totalCount],
   );
 
   if (!source) return null;

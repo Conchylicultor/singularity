@@ -32,11 +32,13 @@ import {
   type JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
 import {
+  compileCountQuery,
   compileGroupsQuery,
   compileJoins,
   deferredWindowQueryResource,
   joinRefs,
   windowQueryResource,
+  type CompiledCount,
   type CompiledGroups,
   type ReadColumn,
   type QueryDb,
@@ -55,6 +57,7 @@ import {
   type LiveColumnsDeclaration,
   type LiveColumnsOwner,
   type LiveGroup,
+  type LiveCountParams,
   type LiveGroupParams,
   type LiveLookupCollection,
   type LiveWindowParams,
@@ -214,6 +217,8 @@ export interface CollectionSpecs extends LookupCollectionSpecs {
   window: WindowQueryResourceSpec<LiveWindowParams>;
   /** The `:groups` server half — the two-arg `defineResource` opts, routed by `reach`. */
   groups: CompiledGroups<LiveGroup<FilterScalar>, LiveGroupParams>;
+  /** The `:count` server half, when the collection is declared `count: true`. */
+  count: CompiledCount<LiveCountParams> | null;
 }
 
 export interface ServedCollection<Row> {
@@ -223,14 +228,12 @@ export interface ServedCollection<Row> {
   rows: Resource<Row[], PointParams>;
   /** The groups sibling (`${key}:groups`). */
   groups: Resource<LiveGroup<FilterScalar>[], LiveGroupParams>;
-  /** Every minted key — `[key, key:rows, key:groups]`. */
+  /** The count sibling (`${key}:count`), when declared `count: true`. */
+  count: Resource<number, LiveCountParams> | null;
+  /** Every minted key — `[key, key:rows, key:groups]`, then `key:count` when declared. */
   keys: string[];
   /** Spread into the plugin's `contributions`: one `Resource.Declare` per minted resource. */
-  declare: [
-    ReturnType<typeof ResourceContribution.Declare>,
-    ReturnType<typeof ResourceContribution.Declare>,
-    ReturnType<typeof ResourceContribution.Declare>,
-  ];
+  declare: ReturnType<typeof ResourceContribution.Declare>[];
 }
 
 /** A collection declared `all`, served: the whole ordered set (`key`) and its `:rows` sibling. */
@@ -886,6 +889,29 @@ export function compileCollection<
       ...withDb,
     },
   );
+  // The total over a `where` (declared `count: true`): the grouping's reads,
+  // no grouped column.
+  const countDescriptor = collection.count;
+  const count =
+    countDescriptor === null
+      ? null
+      : compileCountQuery<LiveCountParams>(countDescriptor.key, {
+          from: opts.from,
+          ...withJoins,
+          hostPk: joins.columnOf(bound.get(collection.id)!),
+          reads: groupReads,
+          query: (params) => {
+            const q = countDescriptor.count.decode(params);
+            return {
+              where: allOf([
+                base,
+                ...defaultsFor(q.where),
+                filterWhere(q.where),
+              ]),
+            };
+          },
+          ...withDb,
+        });
 
   return {
     window: {
@@ -939,6 +965,7 @@ export function compileCollection<
     },
     rows,
     groups,
+    count,
     select,
   };
 }
@@ -1050,16 +1077,28 @@ export function serveCollection<
   const window = windowQueryResource(collection.window, specs.window);
   const rows = windowQueryResource(collection.rows, specs.rows);
   const groups = defineResource(collection.groups, specs.groups);
+  const count =
+    collection.count === null || specs.count === null
+      ? null
+      : defineResource(collection.count, specs.count);
+  return servedWindow(window, rows, groups, count);
+}
+
+/** A window collection's served resources, their keys and their declarations. */
+function servedWindow<Row>(
+  window: Resource<Row[], LiveWindowParams>,
+  rows: Resource<Row[], PointParams>,
+  groups: Resource<LiveGroup<FilterScalar>[], LiveGroupParams>,
+  count: Resource<number, LiveCountParams> | null,
+): ServedCollection<Row> {
+  const all = [window, rows, groups, ...(count === null ? [] : [count])];
   return {
     window,
     rows,
     groups,
-    keys: [window.key, rows.key, groups.key],
-    declare: [
-      ResourceContribution.Declare(window),
-      ResourceContribution.Declare(rows),
-      ResourceContribution.Declare(groups),
-    ],
+    count,
+    keys: all.map((r) => r.key),
+    declare: all.map((r) => ResourceContribution.Declare(r)),
   };
 }
 
@@ -1139,15 +1178,17 @@ function serveContributed<
     collection.groups,
     () => compiled().groups,
   );
-  return {
-    window,
-    rows,
-    groups,
-    keys: [window.key, rows.key, groups.key],
-    declare: [
-      ResourceContribution.Declare(window),
-      ResourceContribution.Declare(rows),
-      ResourceContribution.Declare(groups),
-    ],
-  };
+  const count =
+    collection.count === null
+      ? null
+      : defineDeferredResource(collection.count, () => {
+          const c = compiled().count;
+          if (c === null) {
+            throw new Error(
+              `serveCollection("${collection.key}"): declared \`count\` but compiled none`,
+            );
+          }
+          return c;
+        });
+  return servedWindow(window, rows, groups, count);
 }

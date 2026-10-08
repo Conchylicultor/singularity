@@ -902,10 +902,11 @@ export interface DataViewRenderProps<TRow> {
    * Whether `rows` is the whole set: always in memory without `paging`; a
    * server-ordered list (live) only once read to its end. Section counts are
    * exact only when it is (or when a later section has started — see
-   * `sectionOrder`). `{ growable }`: an in-memory list some of whose rows are a
+   * `sectionOrder`). `{ growable }`: a list some (or all) of whose rows are a
    * paged read not read to its end ({@link DataViewPaging.isPaged}) — only a
    * section holding a `growable` row can gain rows, so only its count is a
-   * lower bound.
+   * lower bound — unless the read's `total` makes it exact
+   * ({@link DataViewPagingTotal}).
    */
   rowsComplete: DataViewRowsComplete<TRow>;
   /**
@@ -1230,7 +1231,33 @@ export interface DataViewInMemoryOrigin<
 
 /** See {@link DataViewRenderProps.rowsComplete}. */
 export type DataViewRowsComplete<TRow> =
-  boolean | { growable: (row: TRow) => boolean };
+  | boolean
+  | {
+      growable: (row: TRow) => boolean;
+      /**
+       * The paged read's known total — only while nothing hides rows of it
+       * (no search or filter narrows the view); `null` otherwise.
+       */
+      total: DataViewPagingTotal | null;
+    };
+
+/**
+ * How many rows a paged read holds in all — loaded or not — when that is known
+ * cheaply (a live collection declared `count: true`). A section holding the
+ * read's rows then counts exactly: its other rows plus the total — when the
+ * read's unloaded rows can only land in it.
+ */
+export interface DataViewPagingTotal {
+  /** Rows in the whole read. */
+  count: number;
+  /**
+   * Field ids every row of the read has ONE value of — so, grouped by one, the
+   * unloaded rows land in the section the loaded ones are in (the queue's
+   * synthetic `section`: every ended conversation is "done"). Ungrouped, they
+   * always do.
+   */
+  uniform?: readonly string[];
+}
 
 /** A read failing under rows that stay on screen — a notice above them, with its own Retry. */
 export interface DataViewSegmentNotice {
@@ -1261,6 +1288,12 @@ export interface DataViewPaging<TRow> {
   truncated: false | { hint: string };
   /** Reads failing under rows that stay on screen. */
   notices: readonly DataViewSegmentNotice[];
+  /**
+   * The read's known total, if any: section counts holding its rows read
+   * exact rather than "N+" before every page is loaded (while no search or
+   * filter hides rows of it). Absent or `null`: unknown.
+   */
+  total?: DataViewPagingTotal | null;
   /**
    * Which of `rows` came from the paged read — absent: all of them. They must
    * appear in `rows` in the read's order, so the LAST one is the read's tail:

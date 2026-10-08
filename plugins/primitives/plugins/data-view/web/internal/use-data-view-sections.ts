@@ -12,6 +12,7 @@ import {
   type FieldValue,
   type FilterOperatorSet,
   type GroupByRule,
+  type SectionCount,
   type ViewState,
 } from "../../core";
 import { useGroupingRegistry } from "../grouping-slot";
@@ -66,7 +67,8 @@ export interface PartitionOptions<TRow = unknown> {
    * Whether `rows` is the whole set (`DataViewRenderProps.rowsComplete`).
    * Absent ⇒ true (in memory). When not, a section's count is a lower bound
    * unless a later section has started (under `"appearance"` order) — or, for
-   * `{ growable }`, unless the section holds no growable row.
+   * `{ growable }`, unless the section holds no growable row, or the read's
+   * `total` makes it exact (see {@link sectionCount}).
    */
   rowsComplete?: DataViewRowsComplete<TRow>;
   /**
@@ -102,19 +104,12 @@ export function partitionIntoSections<TRow>(
     : undefined;
 
   const completeness = opts.rowsComplete ?? true;
-  // Whether a section holding these rows has them all.
-  const complete = (sectionRows: readonly TRow[]): boolean =>
-    typeof completeness === "boolean"
-      ? completeness
-      : !sectionRows.some(completeness.growable);
   // Ungrouped (or an unresolvable/value-less group field): one implicit section.
   if (!groupBy || !field?.value) {
     return [
       {
         key: null,
-        count: complete(rows)
-          ? exactCount(rows.length)
-          : atLeastCount(rows.length),
+        count: sectionCount(rows, rows, completeness, null),
         entries: rows.map((row, i) => ({ row, key: rowKey(row, i) })),
       },
     ];
@@ -197,14 +192,49 @@ export function partitionIntoSections<TRow>(
     // Exact when every row is loaded — or, sections in row order, when a later
     // section has started: a later page can only add sections after the tail.
     count:
-      complete(bucket.rows) || (byAppearance && i < ordered.length - 1)
+      byAppearance && i < ordered.length - 1
         ? exactCount(bucket.rows.length)
-        : atLeastCount(bucket.rows.length),
+        : sectionCount(bucket.rows, rows, completeness, {
+            fieldId: field.id,
+          }),
     entries: bucket.rows.map((row) => ({
       row,
       key: rowKey(row, globalIndex++),
     })),
   }));
+}
+
+/**
+ * One section's count: exact when it holds every row it can (`rowsComplete`
+ * true, or no growable row); else exact from the paged read's `total` when the
+ * read's unloaded rows can only land here — the section holds every loaded
+ * growable row and the view is ungrouped or grouped by a `uniform` field;
+ * else a lower bound.
+ * Never below the rows it holds (a total a write ago).
+ */
+function sectionCount<TRow>(
+  sectionRows: readonly TRow[],
+  allRows: readonly TRow[],
+  completeness: DataViewRowsComplete<TRow>,
+  /** The section's grouped field; `null` ungrouped. */
+  group: { fieldId: string } | null,
+): SectionCount {
+  const n = sectionRows.length;
+  if (completeness === true) return exactCount(n);
+  if (completeness === false) return atLeastCount(n);
+  const { growable, total } = completeness;
+  const paged = sectionRows.filter(growable).length;
+  if (paged === 0) return exactCount(n);
+  if (total === null) return atLeastCount(n);
+  const others = n - paged;
+  const holdsAll = paged === allRows.filter(growable).length;
+  if (
+    holdsAll &&
+    (group === null || (total.uniform ?? []).includes(group.fieldId))
+  ) {
+    return exactCount(Math.max(n, others + total.count));
+  }
+  return atLeastCount(n);
 }
 
 /**
@@ -225,6 +255,9 @@ export function partitionIntoSections<TRow>(
  * `section.count` becomes the post-collapse entry count — the rows the user
  * sees, not the members behind them — keeping its kind: a lower bound stays
  * one, since a later page can add entries (or only members) but never remove one.
+ * A count that also covers rows not loaded yet (a paged read's known total)
+ * keeps them — unless loaded rows collapsed: the unloaded ones might too, so
+ * the entries seen are only a lower bound.
  */
 export function aggregateSections<TRow>(
   sections: DataViewSection<TRow>[],
@@ -263,9 +296,14 @@ export function aggregateSections<TRow>(
         members,
       };
     }
+    const unloaded = section.count.n - section.entries.length;
+    const collapsed = section.entries.length - out.length;
     return {
       ...section,
-      count: { kind: section.count.kind, n: out.length },
+      count:
+        unloaded > 0 && collapsed > 0
+          ? atLeastCount(out.length)
+          : { kind: section.count.kind, n: out.length + Math.max(0, unloaded) },
       entries: out,
     };
   });

@@ -11,6 +11,11 @@ compile to:
   it (see *Bounded membership* below).
 - **`compileGroupsQuery`** — the grouping compiler: a collection's `:groups`
   sibling (see *Routes* below).
+- **`compileCountQuery`** — the count compiler: a collection's `:count`
+  sibling (declared `count: true`). Planned by the grouping planner
+  (`planGroupArm`, a constant in place of the grouped column — the same `full`
+  routes, the same per-tuple joins) and rendered without the GROUP BY, so it
+  is always one row.
 - **`compileAllCollection`** — the whole-ordered-set compiler: a collection
   declared `all` and its `:rows` sibling, set-at-a-time with grouped CTEs (see
   *The `all` compiler* below).
@@ -864,6 +869,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `AllCollectionContracts`
     - `AllCollectionSpec`
     - `CompiledAllCollection`
+    - `CompiledCount`
     - `CompiledGroups`
     - `CompiledUnion`
     - `EntitySource`
@@ -881,6 +887,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `WindowQueryResourceSpec`
   - Exports (values):
     - `compileAllCollection`
+    - `compileCountQuery`
     - `compileGroupsQuery`
     - `compileJoins`
     - `compileUnionCollection`

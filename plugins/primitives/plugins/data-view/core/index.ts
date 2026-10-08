@@ -94,6 +94,7 @@ export type {
   DataViewDataOrigin,
   DataViewInMemoryOrigin,
   DataViewPaging,
+  DataViewPagingTotal,
   DataViewRowsComplete,
   DataViewSegmentNotice,
   DataViewLiveOrigin,

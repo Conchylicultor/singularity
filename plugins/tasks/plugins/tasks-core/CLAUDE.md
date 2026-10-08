@@ -196,12 +196,12 @@ serves them.
   (`useLiveRow(taskDescriptions, id)`). A description autosave is that row's
   refill, and also the task's one-row refill in `tasks` (the derived
   `updated_at` moves).
-- **`conversationsGoneStats`** (`conversations-gone-stats`, `preload: "boot"`)
-  is a `liveValue` served with `serveValue({ source: "db" })` —
-  `{ totalGoneCount }`, the ended-conversation total beside the
-  `RECENT_GONE_LIMIT` gone window. Counted off the `conversations` table, not
-  `conversations_v`, so its read-set is that table alone: a task or attempt
-  write does not recount it.
+- **The ended-conversation total** is `conversationsGone`'s own `:count`
+  (declared `count: true`, preloaded with the window):
+  `useLive(conversationsGone, { count: true })`. The collection's own COUNT,
+  so it cannot drift from the rows the Done section pages through; its owner
+  joins are routed with column gates, so a task or attempt write recounts it
+  only when it moves a join key.
 - **One definition, two readers.** `server/internal/derived.ts` holds the
   tree's derivations (`attemptDerived`, `taskAttemptAggregates`, `taskDerived`,
   `depIsBlocking`); `views.ts` (`attempts_v`, `task_blocking_v`, `tasks_v`) and
@@ -256,8 +256,10 @@ serves them.
     other task or attempt write nothing (W4).
   - **`conversationsGone`** (`conversations-gone`) — a WINDOW of the ended
     conversations (`endedAt` desc, default `RECENT_GONE_LIMIT`, `maxLimit`
-    100, `preload: "boot"`; nothing filters it), so it leaves L2: the queue's
-    Done section and the welcome recents read the default, Recovery 50.
+    500, `scroll`, `count`, `preload: "boot"`; nothing filters it), so it
+    leaves L2: the welcome recents read the default, Recovery 50, and the
+    queue's Done section pages through it as a scroll, its count the
+    collection's `:count`.
   - **`conversationsById`** (`conversations.by-id`, lookup-only: `:rows`) —
     any conversation by id, whatever its status or age
     (`useLiveRow(conversationsById, id)`; `conversations/web`'s
@@ -276,21 +278,27 @@ serves them.
     - `resource.declare` ×17
     - `derived-view` ×4
     - `derived-table` ×2
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/rank` ×3
-    - `database/sql-projection` ×2
-    - `infra/entities` ×2
-    - `infra/git/git-watcher` ×2
-    - `infra/worktree` ×2
-    - `network/live` ×2
+  - Uses:
+    - `database.db`
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
-    - `database.db`
+    - `database/sql-projection.nullable`
+    - `database/sql-projection.parsed`
     - `infra/attachments.Attachments`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
     - `infra/git/git-read-cache.createSignedMemo`
+    - `infra/git/git-watcher.defineRefReaction`
+    - `infra/git/git-watcher.lastKnownMainSha`
     - `infra/host/host-read-pool.withHeavyReadSlot`
+    - `infra/worktree.ensureMainWorktreeRoot`
+    - `infra/worktree.isCanonicalWorktreePath`
+    - `network/live.serveCollection`
     - `primitives/commit-list.runGit`
+    - `primitives/rank.nextRankUnder`
+    - `primitives/rank.RankExecutor`
+    - `primitives/rank.withRank`
   - DB schema:
     - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
@@ -411,7 +419,7 @@ serves them.
     - `conversations-active` (keyed)
     - `conversations-active:rows` (keyed, point)
     - `conversations-gone` (keyed, window)
-    - `conversations-gone-stats` (push)
+    - `conversations-gone:count` (push)
     - `conversations-gone:groups` (push)
     - `conversations-gone:rows` (keyed, point)
     - `conversations-system` (keyed)
@@ -441,7 +449,6 @@ serves them.
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `network/live.liveCollection`
-    - `network/live.liveValue`
     - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`
@@ -472,7 +479,6 @@ serves them.
     - `conversationsById`
     - `ConversationSchema`
     - `conversationsGone`
-    - `conversationsGoneStats`
     - `conversationsSystem`
     - `ConversationStatusSchema`
     - `ConversationSummarySchema`

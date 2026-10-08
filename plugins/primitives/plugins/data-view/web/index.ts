@@ -32,6 +32,7 @@ export {
 export type {
   DataViewId,
   DataViewPaging,
+  DataViewPagingTotal,
   DataViewSegmentNotice,
 } from "../core";
 export type {

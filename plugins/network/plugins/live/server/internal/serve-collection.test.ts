@@ -597,6 +597,73 @@ describe("serveCollection — :groups", () => {
   });
 });
 
+describe("serveCollection — :count", () => {
+  function counted() {
+    return liveCollection(`test.live.counted-${seq++}`, {
+      row: SrcSchema,
+      id: "id",
+      filterable: { enabled: liveBoolean(), kind: liveText() },
+      sortable: ["n"],
+      default: { orderBy: [["n", "asc"]], limit: 2 },
+      maxLimit: 50,
+      count: true,
+    });
+  }
+
+  test("counts the rows the window lists — under the base where and a tuple's where — 0 for none", async () => {
+    const c = counted();
+    const specs = compileCollection(c, {
+      from: srcT,
+      db: db as unknown as QueryDb,
+      where: eq(srcT.hidden, false),
+    });
+    const count = (q: { where?: object }) =>
+      specs.count!.loader(c.count.count.encode(q));
+    expect(await count({})).toBe(0);
+    await put(
+      row("a", 1, true, "a", "build"),
+      row("b", 2, false, "b", "build"),
+      row("c", 3, true, "c", null),
+    );
+    await hide("c");
+    expect(await count({})).toBe(2);
+    expect(await count({ where: { enabled: true } })).toBe(1);
+    expect(await count({ where: { kind: { isEmpty: true } } })).toBe(0);
+  });
+
+  test("a collection not declared `count` compiles none", () => {
+    const specs = compileCollection(collection(), {
+      from: srcT,
+      db: db as unknown as QueryDb,
+    });
+    expect(specs.count).toBeNull();
+  });
+
+  test("a subscribed count is re-pushed on a change to its table (one full route)", async () => {
+    const c = counted();
+    const specs = compileCollection(c, {
+      from: srcT,
+      db: db as unknown as QueryDb,
+    });
+    expect(specs.count!.reach.routes.map((r) => [r.table, r.map.kind])).toEqual(
+      [[TABLE, "full"]],
+    );
+    const runtime = createResourceRuntime({ readSet: () => [TABLE] });
+    runtime.defineResource(c.count, specs.count!);
+    const h = attach(runtime, TABLE);
+    await put(row("a", 1), row("b", 2));
+    const params = c.count.count.encode({});
+    expect(await h.subscribe(c.count.key, params)).toBe(2);
+    await put(row("c", 3));
+    h.change("I", ["c"]);
+    await until(
+      () => h.updates(c.count.key, params).length > 0,
+      "count update",
+    );
+    expect(h.updates(c.count.key, params).at(-1)!.value).toBe(3);
+  });
+});
+
 describe("serveCollection — base where", () => {
   test("a base-where flip removes the row from the window, the :rows tuple and the group counts", async () => {
     const c = collection();

@@ -70,7 +70,7 @@ properties of the detector, as in `debug/queue-health`.
   operation collapse onto one row whose count is the number of separate runs
   that got stuck.
 - **Message:** `An operation has been running for 3 min and has not finished:
-  flush flushNotifies → push conversations-gone-stats` — open ancestors
+  flush flushNotifies → push conversations-gone:count` — open ancestors
   outermost first, then the stuck span. The age is the age *when detected*; a
   run is reported once and not re-measured, so it is a lower bound.
 - **Payload:** `spanId`, `kind`, `label`, `ageMs`, `thresholdMs`, `ancestors`

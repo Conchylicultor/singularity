@@ -784,8 +784,18 @@ one code path.
   consumer's other reads still loading). Otherwise a sentinel still in view
   would page the whole read in behind a collapsed header.
 - Counts: until the read is `complete`, `rowsComplete` is `{ growable:
-  isPaged }` — only a section holding a paged row reads as a lower bound
-  ("30+"); the others stay exact.
+  isPaged, total }` — only a section holding a paged row can read as a lower
+  bound ("30+"); the others stay exact. **Exact by default when cheap:** a
+  read that knows its total passes `paging.total` (`DataViewPagingTotal`:
+  `{ count, uniform? }`), and the section holding every loaded paged row
+  counts its other rows plus `count` — ungrouped, or grouped by a field in
+  `uniform` (one every row of the read shares, so the unloaded rows land in
+  the same section: the queue's `section`). A live `source` reads it itself
+  when its collection is declared `count: true` (`network/live`'s `:count`)
+  and only the source's scope applies. The total is dropped — "N+" again —
+  while the view's search or filter could hide rows of the read (a live
+  source does not even read it then), while it is loading, and for a section
+  the read's rows are split across.
 
 ## Create affordances (`creators`)
 
@@ -2116,11 +2126,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.WebRegister` ×46
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
-  - Uses: 71 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 72 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×7
+    - `primitives/live-state` ×5
     - `primitives/css/control-panel` ×4
-    - `primitives/live-state` ×4
     - `primitives/slot-render` ×4
     - `config_v2` ×2
     - `network/live` ×2
@@ -2165,6 +2175,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewFoldLines`
     - `DataViewId`
     - `DataViewPaging`
+    - `DataViewPagingTotal`
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewRowEntry`
@@ -2328,6 +2339,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewInMemoryOrigin`
     - `DataViewLiveOrigin`
     - `DataViewPaging`
+    - `DataViewPagingTotal`
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewRowEntry`

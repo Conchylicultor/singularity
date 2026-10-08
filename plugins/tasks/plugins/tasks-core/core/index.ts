@@ -49,7 +49,6 @@ export {
   conversationsSystem,
   conversationsGone,
   conversationsById,
-  conversationsGoneStats,
   RECENT_GONE_LIMIT,
 } from "./resources";
 

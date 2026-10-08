@@ -17,7 +17,7 @@ export function formatAge(ms: number): string {
   return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
 }
 
-// "flush flushNotifies → push conversations-gone-stats": the open ancestors,
+// "flush flushNotifies → push conversations-gone:count": the open ancestors,
 // outermost first, then the stuck span itself. Each step is "<kind> <label>",
 // the same spelling the runtime profiler and the trace lanes use.
 export function describeChain(

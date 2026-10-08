@@ -557,6 +557,64 @@ describe("groups codec", () => {
   });
 });
 
+describe("count codec", () => {
+  const counted = liveCollection("live-test.codec-counted", {
+    row: RowSchema,
+    id: "id",
+    filterable: { status: liveText(Status), enabled: liveBoolean() },
+    sortable: ["createdAt"],
+    default: { orderBy: [["createdAt", "desc"]], limit: 100 },
+    maxLimit: 500,
+    count: true,
+    preload: "boot",
+  });
+
+  it("is minted only when declared, and preloads with the window", () => {
+    expect(sources.count).toBeNull();
+    expect(counted.count.key).toBe("live-test.codec-counted:count");
+    expect(counted.count.preload).toBe("boot");
+  });
+
+  it("the whole collection is the param-less tuple; where as a window encodes it", () => {
+    const codec = counted.count.count;
+    expect(codec.encode({})).toEqual({});
+    expect(codec.encode({ where: {} })).toEqual({});
+    const params = codec.encode({ where: { enabled: true } });
+    expect(params).toEqual({
+      where: counted.window.window.encode({ where: { enabled: true } }).where,
+    });
+    expect(codec.decode(params).where).toEqual(
+      decodeFilter(params.where!, counted.filterable),
+    );
+    expect(codec.decode({}).where).toBeUndefined();
+  });
+
+  it("refuses a non-canonical or foreign param as a contract mismatch", () => {
+    const codec = counted.count.count;
+    expect(() => codec.decode({ limit: "1" })).toThrow(ResourceContractError);
+    expect(() => codec.decode({ where: "{}" })).toThrow(ResourceContractError);
+    expect(() =>
+      codec.encode({ groupBy: "status" } as unknown as { where?: object }),
+    ).toThrow(/takes a `where` only/);
+  });
+
+  it("is refused beside `arms` (an untyped caller)", () => {
+    expect(() =>
+      liveCollection("live-test.codec-counted-union", {
+        row: RowSchema,
+        id: "id",
+        filterable: {},
+        sortable: ["createdAt"],
+        default: { orderBy: [["createdAt", "desc"]], limit: 100 },
+        maxLimit: 500,
+        scroll: true,
+        arms: { discriminator: "status" },
+        count: true,
+      } as never),
+    ).toThrow(/count beside `arms`/);
+  });
+});
+
 describe("which failures are a contract mismatch", () => {
   // A DECODE failure is a subscription whose params do not match the
   // declaration (the runtime refuses it as `contract-mismatch`); a declaration

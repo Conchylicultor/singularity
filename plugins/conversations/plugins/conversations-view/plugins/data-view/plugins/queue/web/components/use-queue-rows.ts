@@ -9,6 +9,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   combineResources,
+  foldResource,
   type ResourceReadiness,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
@@ -105,15 +106,30 @@ export function useQueueRows(): {
         : goneScroll,
     [goneScroll],
   );
+  // How many have ended in all — the Done section's exact count before every
+  // page is loaded: every ended conversation is a "done" row, so grouped by
+  // `section` the unloaded ones land in Done (`uniform`).
+  const goneCount = useLive(conversationsGone, GONE_COUNT);
+  // Not known yet (or failed with nothing seen): no total, so Done reads as
+  // the lower bound it still is.
+  const goneTotal = foldResource(goneCount, {
+    ready: (n) => n,
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+  });
   const paging = useMemo(
     () =>
       goneScroll.status === "ready"
         ? {
             ...scrollPaging<QueueRow>(goneScroll),
             isPaged: (r: QueueRow) => r.section === "done",
+            total:
+              goneTotal === null
+                ? null
+                : { count: goneTotal, uniform: GONE_UNIFORM },
           }
         : undefined,
-    [goneScroll],
+    [goneScroll, goneTotal],
   );
   const tasksResult = useLive(taskRows);
 
@@ -322,6 +338,10 @@ export function useQueueRows(): {
 
 // The scroll's query: the collection's default order, every ended conversation.
 const GONE_QUERY = {};
+// The same set's total.
+const GONE_COUNT = { count: true } as const;
+// The fields every Done row shares a value of.
+const GONE_UNIFORM: readonly string[] = ["section"];
 
 // No display yet: nothing is on screen to drag, so there is nothing to reorder.
 function noReorder(): void {

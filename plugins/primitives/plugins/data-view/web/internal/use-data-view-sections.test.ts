@@ -801,3 +801,123 @@ describe("a server-ordered rows set: section order and counts", () => {
     expect(formatSectionCount({ kind: "atLeast", n: 3 })).toBe("3+");
   });
 });
+
+describe("partitionIntoSections — a paged read's known total", () => {
+  // Rows 1–3 are held in memory; 4–5 are the loaded prefix of a paged read
+  // (every one "done") that holds 40 rows in all.
+  const rows: Task[] = [
+    { id: "1", status: "todo" },
+    { id: "2", status: "doing" },
+    { id: "3", status: "done" },
+    { id: "4", status: "done" },
+    { id: "5", status: "done" },
+  ];
+  const growable = (t: Task) => Number(t.id) >= 4;
+  const opts = (
+    total: { count: number; uniform?: readonly string[] } | null,
+  ): PartitionOptions<Task> => ({
+    ...stubOpts({ enum: optionOrderGrouping }),
+    rowsComplete: { growable, total },
+  });
+
+  test("ungrouped: the held rows plus the read's total", () => {
+    const [only] = partitionIntoSections(
+      rows,
+      [statusField],
+      undefined,
+      rowKey,
+      opts({ count: 40 }),
+    );
+    expect(only!.count).toEqual({ kind: "exact", n: 43 });
+  });
+
+  test("grouped by a uniform field: the section holding the read counts its total, the others stay exact", () => {
+    const sections = partitionIntoSections(
+      rows,
+      [statusField],
+      by("status"),
+      rowKey,
+      opts({ count: 40, uniform: ["status"] }),
+    );
+    expect(sections.map((s) => [s.label, s.count])).toEqual([
+      ["To do", { kind: "exact", n: 1 }],
+      ["Doing", { kind: "exact", n: 1 }],
+      // Row 3 (held) + the read's 40.
+      ["Done", { kind: "exact", n: 41 }],
+    ]);
+  });
+
+  test("grouped by a field the read does not share: a lower bound", () => {
+    const sections = partitionIntoSections(
+      rows,
+      [statusField],
+      by("status"),
+      rowKey,
+      opts({ count: 40 }),
+    );
+    expect(sections.find((s) => s.label === "Done")!.count).toEqual({
+      kind: "atLeast",
+      n: 3,
+    });
+  });
+
+  test("the read's loaded rows split across sections: a lower bound everywhere they are", () => {
+    const split: Task[] = [
+      { id: "4", status: "todo" },
+      { id: "5", status: "done" },
+    ];
+    const sections = partitionIntoSections(
+      split,
+      [statusField],
+      by("status"),
+      rowKey,
+      opts({ count: 40, uniform: ["status"] }),
+    );
+    expect(sections.every((s) => s.count.kind === "atLeast")).toBe(true);
+  });
+
+  test("no total (unknown, or a search hides rows of the read): a lower bound", () => {
+    const [only] = partitionIntoSections(
+      rows,
+      [statusField],
+      undefined,
+      rowKey,
+      opts(null),
+    );
+    expect(only!.count).toEqual({ kind: "atLeast", n: 5 });
+  });
+
+  test("a total behind the rows loaded (a write ago) never counts below them", () => {
+    const [only] = partitionIntoSections(
+      rows,
+      [statusField],
+      undefined,
+      rowKey,
+      opts({ count: 1 }),
+    );
+    expect(only!.count).toEqual({ kind: "exact", n: 5 });
+  });
+});
+
+describe("aggregateSections — a count covering unloaded rows", () => {
+  const section = (n: number, ids: string[]): DataViewSection<Task> => ({
+    key: "done",
+    label: "Done",
+    count: { kind: "exact", n },
+    entries: ids.map((id) => ({ row: { id, status: "done" }, key: id })),
+  });
+
+  test("nothing collapses: the unloaded rows stay counted", () => {
+    const [s] = aggregateSections([section(40, ["a", "b"])], {
+      getKey: () => null,
+    });
+    expect(s!.count).toEqual({ kind: "exact", n: 40 });
+  });
+
+  test("loaded rows collapse: the unloaded may too, so only the entries seen are known", () => {
+    const [s] = aggregateSections([section(40, ["a", "b"])], {
+      getKey: () => "same",
+    });
+    expect(s!.count).toEqual({ kind: "atLeast", n: 1 });
+  });
+});

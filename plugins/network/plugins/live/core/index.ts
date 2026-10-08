@@ -42,6 +42,9 @@ export type {
   LiveCollection,
   LiveCollectionOf,
   LiveCollectionSpec,
+  LiveCountCodec,
+  LiveCountDescriptor,
+  LiveCountedCollection,
   LiveGroupCodec,
   LiveGroupsDescriptor,
   LiveLookupCollection,
@@ -58,7 +61,10 @@ export type {
 export { LIVE_ROW_KEY, LIVE_ROW_KEY_MAX_BYTES } from "./internal/query";
 export type {
   LiveColumnFilter,
+  LiveCountParams,
+  LiveCountQuery,
   LiveCutKey,
+  LiveDecodedCountQuery,
   LiveDecodedGroupQuery,
   LiveDecodedQuery,
   LiveFilterable,

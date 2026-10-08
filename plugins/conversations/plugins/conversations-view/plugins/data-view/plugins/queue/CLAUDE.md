@@ -33,6 +33,7 @@
     - `primitives/data-view.scrollPaging`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.combineResources`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceReadiness`
     - `primitives/optimistic-mutation.useOptimisticResource`
 

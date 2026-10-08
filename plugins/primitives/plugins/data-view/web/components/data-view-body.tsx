@@ -836,13 +836,15 @@ function DataViewBodyInner<TRow>(
           now,
           groupOrder,
           // In memory without paging the rows are the whole set; a paged read
-          // says when it has read to the end (and, over held rows, which of
-          // them it pages).
+          // says when it has read to the end, which of the held rows it
+          // pages, and — while no search or filter hides rows of it (a live
+          // source asks for one only then) — its total.
           rowsComplete: (!paging || paging.complete
             ? true
-            : paging.isPaged
-              ? { growable: paging.isPaged }
-              : false) as DataViewRenderProps<unknown>["rowsComplete"],
+            : {
+                growable: paging.isPaged ?? ALL_ROWS,
+                total: matchesView === null ? (paging.total ?? null) : null,
+              }) as DataViewRenderProps<unknown>["rowsComplete"],
           sectionOrder: origin ? origin.sectionOrder : "bucket",
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
           setSectionCollapsed: (key, collapsed) =>
@@ -1105,6 +1107,8 @@ function isSectionCollapsed(
   return section?.key != null && collapsed.has(section.key);
 }
 const NO_QUERY = { query: "", filter: null };
+// Every row of a read with no `isPaged` is the read's.
+const ALL_ROWS = (): boolean => true;
 const NOOP = () => {};
 
 /** The shared "no fold open" set — one identity, so an idle view's `openFolds`

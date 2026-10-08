@@ -11,7 +11,6 @@ import {
   conversationsById,
   conversationsSystem,
   conversationsGone,
-  conversationsGoneStats,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { isActiveStatus, type ConversationEntry } from "../core";
 
@@ -26,14 +25,17 @@ export interface ConversationsData {
 export function useConversations(): ResourceResult<ConversationsData> {
   const active = useLive(conversationsActive);
   const gone = useLive(conversationsGone);
-  const stats = useLive(conversationsGoneStats);
-  const all = useCombinedResources({ active, gone, stats });
+  const goneCount = useLive(conversationsGone, GONE_COUNT);
+  const all = useCombinedResources({ active, gone, goneCount });
   return mapResource(all, (d): ConversationsData => ({
     active: d.active,
     recentGone: d.gone,
-    totalGoneCount: d.stats.totalGoneCount,
+    totalGoneCount: d.goneCount,
   }));
 }
+
+// Every ended conversation: the collection's whole total (boot-preloaded).
+const GONE_COUNT = { count: true } as const;
 
 // Point lookup by id: the `conversations.by-id` point read of this one id, so
 // the component re-renders only when THAT conversation changes — and any

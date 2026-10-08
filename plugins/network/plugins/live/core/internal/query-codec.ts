@@ -8,6 +8,8 @@ import {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   LIVE_GROUP_DEFAULT_LIMIT,
+  type LiveCountParams,
+  type LiveDecodedCountQuery,
   type LiveDecodedGroupQuery,
   type LiveDecodedQuery,
   type LiveGroupableDomain,
@@ -80,10 +82,15 @@ export interface LiveQueryCodec<C extends string, S extends string> {
   encodeGroups: (query: AnyGroupQuery) => LiveGroupParams;
   /** STRICT decode of a grouping query's params (throws unless exactly canonical). */
   decodeGroups: (params: Record<string, string>) => LiveDecodedGroupQuery<C>;
+  /** Canonical encode of a count query's `where` — the same canonicalisation as a window. */
+  encodeCount: (query: { where?: object }) => LiveCountParams;
+  /** STRICT decode of a count query's params (throws unless exactly canonical). */
+  decodeCount: (params: Record<string, string>) => LiveDecodedCountQuery;
 }
 
 const PARAM_KEYS = new Set(["limit", "where", "order", "after", "until"]);
 const GROUP_PARAM_KEYS = new Set(["groupBy", "limit", "where"]);
+const COUNT_PARAM_KEYS = new Set(["where"]);
 
 /** Keys a `where` object spells a `Filter` tree with — never filterable column names. */
 export const RESERVED_COLUMNS: ReadonlySet<string> = new Set([
@@ -524,7 +531,47 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     return decoded;
   };
 
-  return { encode, decode, encodeGroups, decodeGroups };
+  // ── Count queries ──────────────────────────────────────────────────
+  // A `where` alone, under the same discipline: the unfiltered total is `{}`.
+
+  const countParams = (where: string | undefined): LiveCountParams =>
+    where === undefined ? {} : { where };
+
+  const encodeCount = (query: { where?: object }): LiveCountParams => {
+    // Typed out, but an untyped caller must not have them silently ignored.
+    for (const k of ["groupBy", "orderBy", "limit"] as const) {
+      if ((query as Record<string, unknown>)[k] !== undefined) {
+        fail(`a count query takes a \`where\` only — got ${k}`);
+      }
+    }
+    return countParams(encodeWhere(query.where));
+  };
+
+  const decodeCount = (
+    params: Record<string, string>,
+  ): LiveDecodedCountQuery => {
+    for (const k of Object.keys(params)) {
+      if (!COUNT_PARAM_KEYS.has(k)) reject(`decodeCount: unknown param "${k}"`);
+    }
+    const decoded: LiveDecodedCountQuery = {
+      where: decodeWhere(params.where),
+    };
+    if (!sameParams(countParams(params.where), params)) {
+      reject(
+        `decodeCount: params are not canonical — got ${JSON.stringify(params)}`,
+      );
+    }
+    return decoded;
+  };
+
+  return {
+    encode,
+    decode,
+    encodeGroups,
+    decodeGroups,
+    encodeCount,
+    decodeCount,
+  };
 }
 
 function parseJson(raw: string, reject: (m: string) => never): unknown {
@@ -537,7 +584,7 @@ function parseJson(raw: string, reject: (m: string) => never): unknown {
 }
 
 function sameParams(
-  a: LiveWindowParams | LiveGroupParams,
+  a: LiveWindowParams | LiveGroupParams | LiveCountParams,
   b: Record<string, string>,
 ): boolean {
   const keys = Object.keys(b);

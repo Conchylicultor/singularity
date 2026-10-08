@@ -1,4 +1,4 @@
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { z } from "zod";
 import {
@@ -124,7 +124,7 @@ export const pushRows = liveCollection("pushes", {
 
 // The conversation lists, as three collections over the `conversations` table
 // with its owners joined (attempt → task) — never `conversations_v` — plus a
-// by-id read and one scalar (`conversationsGoneStats`, below). The rows are
+// by-id read. The rows are
 // the full `Conversation` (every column, the owners' `worktreePath` / `taskId`
 // / `taskTitle`, and `active` = `status <> 'done'`), served in
 // `../server/internal/conversation-rows.ts`.
@@ -181,7 +181,10 @@ export const conversationsSystem = liveCollection("conversations-system", {
 // scrolls (`useLiveScroll`: its first segment IS the default window). A close
 // is an entrant at the top, a restore an exit; it is not L2-persisted (a
 // bounded window leaves L2). Nothing filters it (`filterable: {}`).
-// Boot-critical: the default window paints from the boot snapshot.
+// Boot-critical: the default window paints from the boot snapshot. Counted
+// (`count: true`): `useLive(conversationsGone, { count: true })` is how many
+// conversations have ended in all — the welcome counts, and the Done
+// section's exact count — preloaded with the window, one COUNT per write.
 export const conversationsGone = liveCollection("conversations-gone", {
   row: ConversationSchema,
   id: "id",
@@ -190,6 +193,7 @@ export const conversationsGone = liveCollection("conversations-gone", {
   default: { orderBy: [["endedAt", "desc"]], limit: RECENT_GONE_LIMIT },
   maxLimit: 500,
   scroll: true,
+  count: true,
   preload: "boot",
 });
 // One conversation by id, whatever its status or age (`useLiveRow`): the
@@ -200,12 +204,4 @@ export const conversationsGone = liveCollection("conversations-gone", {
 export const conversationsById = liveCollection("conversations.by-id", {
   row: ConversationSchema,
   id: "id",
-});
-// How many conversations have ended in all — the gone list above holds only the
-// newest RECENT_GONE_LIMIT. One scalar, pushed whole. `preload: "boot"`: the
-// boot snapshot hydrates it (and L2 persists it) alongside the lists it
-// completes, so the welcome counts paint settled.
-export const conversationsGoneStats = liveValue("conversations-gone-stats", {
-  schema: z.object({ totalGoneCount: z.number() }),
-  preload: "boot",
 });

@@ -246,6 +246,15 @@ export const resourceDescriptorFactories = {
         preloadable: false,
         requires: "default",
       },
+      // The total (declared `count: true`): its param-less `{}` tuple — the
+      // whole collection's count — preloads with the window.
+      {
+        suffix: ":count",
+        keyed: false,
+        membership: null,
+        preloadable: true,
+        requires: "count",
+      },
     ],
   },
 } satisfies Record<MintingFactoryName, DescriptorFactory>;

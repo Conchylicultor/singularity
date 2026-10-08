@@ -1,7 +1,6 @@
 import {
   and,
   asc,
-  count,
   desc,
   eq,
   inArray,
@@ -185,26 +184,6 @@ export function listRetainedConversations(): Promise<Conversation[]> {
     { activeOrHeldTask: true },
     { col: conversations.createdAt, dir: "desc" },
   );
-}
-
-// The ended user-visible conversations, counted off the `conversations` TABLE
-// rather than `conversations_v`: the same set (the view inner-joins the
-// attempt and its task, both NOT NULL FKs, and its `active` is
-// `status <> 'done'`), but the live `conversations-gone-stats` value reading
-// it would otherwise capture the view's whole read-set — `tasks` and
-// `attempts` included — and recount on every task and attempt write.
-export async function countGoneConversations(): Promise<number> {
-  const [row] = await db
-    .select({ value: count() })
-    .from(_conversations)
-    .where(
-      and(
-        ne(_conversations.kind, "system"),
-        eq(_conversations.status, "done"),
-        isNotNull(_conversations.endedAt),
-      ),
-    );
-  return row?.value ?? 0;
 }
 
 // Every conversation id of one attempt — INCLUDING system kinds, unlike every

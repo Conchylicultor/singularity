@@ -33,6 +33,7 @@ useLive(eventSources, { where: { enabled: true }, orderBy: [["name", "asc"]], li
 useLive(eventSources, { where: or({ column: "status", op: "eq", operand: "error" },
                                   { column: "enabled", op: "eq", operand: false }) }); // a Filter tree
 useLive(eventSources, { groupBy: "status", where: { enabled: true } }); // values + counts
+useLive(eventSources, { count: true, where: { enabled: true } });     // a total (declared `count: true`)
 useLive(eventSources, { ids: visibleIds });                           // point set
 useLiveRow(eventSources, sourceId);                                   // one row (a null id: not found)
 
@@ -47,9 +48,18 @@ useLive(graphNodes);                                                  // every r
 useLive(graphNodes, { select: countNodes });                          // a slice of it (a stable selector)
 ```
 
+- **Totals (`count: true`).** A window collection may declare `count: true`
+  — its author's statement that a COUNT over it is cheap enough to keep live
+  (recomputed on every write to a table it reads; leave it off a large or
+  write-hot table). It mints `key:count`, read with `useLive(c, { count:
+  true, where? })`. A DataView listing the collection as a live `source` reads
+  it over the source's scope (never under a view filter or search) and shows
+  exact section counts instead of "N+" before every page is loaded. Not on a
+  union collection yet (a declaration error beside `arms`).
 - **Declare.** The key is a positional string literal (the build scanners read it).
   One declaration mints three resources — `key` (window), `key:rows` (point) and
-  `key:groups` (grouping) — and all three show in the docs. Bounded by
+  `key:groups` (grouping) — and all three show in the docs; declared
+  `count: true`, a fourth, `key:count` (see *Totals* below). Bounded by
   construction: `default.limit` and `maxLimit` are required, and a grouping returns
   at most the filter language's `LIST_MAX` (100) groups. The one unbounded
   spelling is a separate form, `all` (below), which must state its
@@ -118,7 +128,8 @@ useLive(graphNodes, { select: countNodes });                          // a slice
   to `key`, which has no `defaultParams`: the boot snapshot hydrates its one
   param-less tuple `{}`. `"boot-and-keep"` also keeps that preloaded tuple's
   cache resident. `:rows` and `:groups` are never preloaded — the server cannot know a tab's id sets or
-  grouping queries at boot. Default `"none"`. The scanners read the flag through the resource
+  grouping queries at boot. A declared `:count` preloads with the window, at
+  its param-less `{}` tuple (the whole collection's total). Default `"none"`. The scanners read the flag through the resource
   vocabulary (`tooling/resource-vocabulary`: each factory names the field it
   spells its preload with, and each mint whether the flag reaches it).
 - **Serve.** `serveCollection(c, { from, joins?, where?, columns? })` binds every ROW
@@ -187,6 +198,11 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     is checked against the ROW schema's field (a group value is a stored value;
     an operand narrowing like `liveText(Enum)` is tsc-only), so a value the row
     type cannot hold fails loudly.
+  - `:count` (declared `count: true`) is a plain push value per `where`,
+    compiled by query-resource's `compileCountQuery`: the grouping's plan —
+    the same `full` routes and per-tuple joins — rendered as `SELECT count(*)
+    … WHERE <base> AND <defaults> AND <where>`, so it counts exactly the rows
+    the window lists.
   - **All three are ROUTED** (research/2026-09-29-global-scoped-change-routing.md):
     each compiler emits the routes its SQL reads, and the runtime's
     `routeTableChange` serves them — never the loader read-set — so a change
@@ -274,6 +290,10 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     `canGrow` / `loadMore()` page through groups exactly like rows. `where`
     applies as given — to keep every chip visible while one is picked, leave the
     grouped column out of it.
+  - A **total** — `{ count: true, where? }` — on a collection declared
+    `count: true`: `ResourceResult<number>`, how many rows match `where`
+    (see *Totals*). A `null` query (and collection) reads nothing (pending):
+    a surface whose count is not cheap right now.
   - An `{ ids }` query reads the point sibling: `ResourceResult<Row[]>`, no
     paging fields.
   - **A collection declared `all`** — `useLive(all)` → `ResourceResult<Row[]>`,
@@ -863,8 +883,8 @@ for a new reader of the two page resources.
     - `useLiveRow`
     - `useLiveScroll`
 - Server:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×20
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/query-resource` ×22
     - `database/sql-column` ×2
     - `network/live/filter.filterSql`
   - Exports (types):
@@ -938,7 +958,13 @@ for a new reader of the two page resources.
     - `LiveColumnsHandle`
     - `LiveColumnsOwner`
     - `LiveContributedCollection`
+    - `LiveCountCodec`
+    - `LiveCountDescriptor`
+    - `LiveCountedCollection`
+    - `LiveCountParams`
+    - `LiveCountQuery`
     - `LiveCutKey`
+    - `LiveDecodedCountQuery`
     - `LiveDecodedGroupQuery`
     - `LiveDecodedQuery`
     - `LiveFilterable`

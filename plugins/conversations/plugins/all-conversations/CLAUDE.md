@@ -39,9 +39,11 @@
 - Server:
   - Contributes:
     - `resource.declare` "conversations.all"
+    - `resource.declare` "conversations.all:count"
     - `resource.declare` "conversations.all:groups"
     - `resource.declare` "conversations.all:rows"
     - `resource.declare` "conversations.history"
+    - `resource.declare` "conversations.history:count"
     - `resource.declare` "conversations.history:groups"
     - `resource.declare` "conversations.history:rows"
   - Uses:
@@ -51,9 +53,11 @@
     - `tasks/tasks-core.conversationOwnerJoins`
   - Resources:
     - `conversations.all` (keyed, window)
+    - `conversations.all:count` (push)
     - `conversations.all:groups` (push)
     - `conversations.all:rows` (keyed, point)
     - `conversations.history` (keyed, window)
+    - `conversations.history:count` (push)
     - `conversations.history:groups` (push)
     - `conversations.history:rows` (keyed, point)
 - Core:

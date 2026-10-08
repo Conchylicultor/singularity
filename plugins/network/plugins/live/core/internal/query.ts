@@ -106,6 +106,8 @@ export interface LiveQuery<F, S extends string> {
   columns?: readonly LiveColumnsDeclaration[];
   /** A grouping is its own query shape — {@link LiveGroupQuery}. */
   groupBy?: never;
+  /** A total is its own query shape — {@link LiveCountQuery}. */
+  count?: never;
 }
 
 /** The domains a grouping may group on — one chip per scalar value. */
@@ -137,6 +139,20 @@ export interface LiveGroupQuery<
   where?: LiveWhere<F>;
   limit?: number;
   orderBy?: never;
+}
+
+/**
+ * A total: how many of the collection's rows match `where` — one number,
+ * pushed whole and recomputed on every write to a table it reads. Only on a
+ * collection declared `count: true` (its author's statement that the COUNT is
+ * cheap enough to keep live).
+ */
+export interface LiveCountQuery<F> {
+  count: true;
+  where?: LiveWhere<F>;
+  groupBy?: never;
+  orderBy?: never;
+  limit?: never;
 }
 
 /** One group: a value of the grouped column (NULL is its own group) and how many rows carry it. */
@@ -210,6 +226,21 @@ export type LiveGroupParams = {
   limit: string;
   where?: string;
 };
+
+/**
+ * The count resource's wire params: `where` as the window's canonical filter
+ * encoding, present only when not the absent filter — so the total of the
+ * whole collection is the param-less `{}` tuple (the one a preload hydrates).
+ */
+export type LiveCountParams = {
+  where?: string;
+};
+
+/** A decoded count query. */
+export interface LiveDecodedCountQuery {
+  /** The canonical filter (validated by the strict decode); `undefined` when unfiltered. */
+  where: Filter | undefined;
+}
 
 /** A decoded query with every default filled in — what a server compiler consumes. */
 export interface LiveDecodedQuery<S extends string> {

@@ -5,6 +5,8 @@ export {
   windowQueryResource,
 } from "./internal/compile-window";
 export { compileGroupsQuery } from "./internal/compile-groups";
+export { compileCountQuery } from "./internal/compile-count";
+export type { CompiledCount } from "./internal/compile-count";
 export { compileAllCollection } from "./internal/compile-alias";
 export type {
   AllBind,

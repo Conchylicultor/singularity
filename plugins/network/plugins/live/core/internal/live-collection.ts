@@ -18,6 +18,8 @@ import {
 import {
   LIVE_GROUP_DEFAULT_LIMIT,
   LIVE_ROW_KEY,
+  type LiveCountParams,
+  type LiveDecodedCountQuery,
   type LiveDecodedGroupQuery,
   type LiveDecodedQuery,
   type LiveFilterable,
@@ -113,6 +115,31 @@ export type LiveGroupsDescriptor<F> = ResourceDescriptor<
   LiveGroupParams
 > & { keyed?: never; initialData?: never; groups: LiveGroupCodec<F> };
 
+/** The count descriptor's codec: the count query ⇄ wire-params pair. */
+export interface LiveCountCodec {
+  /** Canonical encode. Throws on a bad `where`. */
+  encode: (query: { where?: object }) => LiveCountParams;
+  /** STRICT decode. Throws unless `params` is exactly a canonical encoding. */
+  decode: (params: Record<string, string>) => LiveDecodedCountQuery;
+}
+
+/**
+ * `${key}:count` — a plain (non-keyed) push value per `where`: how many rows of
+ * the collection match it. Minted only for a collection declared `count: true`.
+ * Preloaded with the collection: its param-less `{}` tuple (the whole
+ * collection's total) hydrates beside the default window.
+ */
+export type LiveCountDescriptor<F> = ResourceDescriptor<
+  number,
+  LiveCountParams
+> & {
+  keyed?: never;
+  initialData?: never;
+  count: LiveCountCodec;
+  /** Phantom — the filterable columns a count's `where` may name. */
+  readonly __filterable?: F;
+};
+
 /**
  * A collection's row schema: a zod OBJECT, so its keys can be read — the server
  * projects exactly these keys, which is what keeps a server-only column (a
@@ -165,6 +192,11 @@ export interface LiveCollection<
   window: LiveWindowDescriptor<Row, F, S>;
   /** `${key}:groups` — the values a filterable column takes, with counts. */
   groups: LiveGroupsDescriptor<F>;
+  /**
+   * `${key}:count` — how many rows match a `where`; `null` unless the
+   * collection is declared `count: true` (see {@link LiveCollectionSpec.count}).
+   */
+  count: LiveCountDescriptor<F> | null;
   /** The filterable columns' domains — the filter language's declaration. */
   filterable: F;
   sortable: readonly S[];
@@ -225,10 +257,24 @@ export type LiveCollectionOf<
   S extends string,
   Sc,
   Co,
+  Cn = undefined,
 > = (Co extends true
   ? LiveContributedCollection<Row, F, S>
   : LiveCollection<Row, F, S>) &
-  (Sc extends true ? { scroll: true } : unknown) & { arms: null };
+  (Sc extends true ? { scroll: true } : unknown) &
+  (Cn extends true ? { count: LiveCountDescriptor<F> } : { count: null }) & {
+    arms: null;
+  };
+
+/**
+ * A collection declared `count: true` — the only kind `useLive(c, { count })`
+ * reads.
+ */
+export type LiveCountedCollection<Row, F, S extends string> = LiveCollection<
+  Row,
+  F,
+  S
+> & { count: LiveCountDescriptor<F> };
 
 /** A union collection's arms declaration: the row field naming each row's arm. */
 export interface LiveArms<D extends string = string> {
@@ -250,6 +296,7 @@ export type LiveArmsCollection<
   contributed: false;
   columnScope: null;
   arms: LiveArms<D>;
+  count: null;
 };
 
 /**
@@ -330,6 +377,14 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
    * collection: a surface listing it under another id cannot bind them.
    */
   columnScope?: string;
+  /**
+   * Mint `${key}:count` — how many rows match a `where`, kept live (a COUNT
+   * recomputed on every write to a table the collection reads). The author's
+   * statement that this COUNT is cheap: a DataView listing the collection then
+   * shows exact section counts, not lower bounds, while only its scope
+   * applies. Leave it off a large or write-hot table.
+   */
+  count?: true;
   /** A union collection is the `arms` overload's ({@link LiveArmsSpec}). */
   arms?: never;
   /** A whole ordered set is the `all` overload's ({@link LiveAllSpec}). */
@@ -351,13 +406,15 @@ export interface LiveArmsSpec<
   D extends string,
 > extends Omit<
   LiveCollectionSpec<Row, F, S>,
-  "scroll" | "contributed" | "columnScope" | "arms"
+  "scroll" | "contributed" | "columnScope" | "arms" | "count"
 > {
   /** The row field naming each row's arm (its value is the arm's kind). */
   arms: LiveArms<D>;
   scroll: true;
   contributed?: never;
   columnScope?: never;
+  /** Not yet: a union's total would sum its arms' counts. */
+  count?: never;
 }
 
 /**
@@ -405,6 +462,7 @@ export interface LiveNoWindowSpec<
   contributed?: never;
   columnScope?: never;
   arms?: never;
+  count?: never;
 }
 
 /** A lookup-only declaration (see {@link LiveNoWindowSpec}). */
@@ -419,7 +477,8 @@ export type LiveAllSpec<Row> = LiveNoWindowSpec<Row, LiveAllOrder<Row>> & {
  * Declare a live collection: one declaration minting three resources — `key`
  * (window membership: filtered, ordered, limited), `${key}:rows` (point
  * membership: explicit ids) and `${key}:groups` (a filterable column's values
- * with counts). Bounded by construction: a default limit and a `maxLimit` are
+ * with counts) — and, declared `count: true`, `${key}:count` (how many rows
+ * match a `where`). Bounded by construction: a default limit and a `maxLimit` are
  * required, and a grouping query is capped at `LIST_MAX` groups.
  *
  * Declared WITHOUT `default` (and so without `sortable` / `maxLimit` /
@@ -456,18 +515,20 @@ export function liveCollection<
   const S extends keyof Row & string = never,
   const Sc extends true | undefined = undefined,
   const Co extends true | undefined = undefined,
+  const Cn extends true | undefined = undefined,
 >(
   key: string,
   spec: LiveCollectionSpec<Row, F, S> & {
     scroll?: Sc;
     contributed?: Co;
+    count?: Cn;
     filterable: {
       [
         K in Exclude<keyof F, keyof Row> | Extract<keyof F, LiveReservedColumn>
       ]: never;
     };
   },
-): LiveCollectionOf<Row, F, S, Sc, Co>;
+): LiveCollectionOf<Row, F, S, Sc, Co, Cn>;
 export function liveCollection<
   Row,
   const Al extends LiveAllOrder<Row> | undefined = undefined,
@@ -496,12 +557,12 @@ export function liveCollection<Row, F, S extends string>(
     const fail = (message: string): never => {
       throw new Error(`liveCollection("${key}"): ${message}`);
     };
-    const stray = (["contributed", "columnScope"] as const).filter(
+    const stray = (["contributed", "columnScope", "count"] as const).filter(
       (f) => (spec as unknown as Record<string, unknown>)[f] !== undefined,
     );
     if (stray.length > 0) {
       fail(
-        `${stray.join(", ")} beside \`arms\` — a union collection's columns are its arms' own (\`liveArmColumns\`), never contributed or scoped.`,
+        `${stray.join(", ")} beside \`arms\` — a union collection's columns are its arms' own (\`liveArmColumns\`), never contributed or scoped, and it has no total yet.`,
       );
     }
     if (spec.default === undefined) {
@@ -552,6 +613,7 @@ const NOT_ALL_FIELDS: readonly string[] = [
   "scroll",
   "contributed",
   "columnScope",
+  "count",
 ];
 
 const SORT_DIRECTIONS: readonly LiveSortDirection[] = ["asc", "desc"];
@@ -635,6 +697,7 @@ const WINDOW_FIELDS: readonly string[] = [
   "contributed",
   "columnScope",
   "arms",
+  "count",
 ];
 
 /** The `:rows` point sibling and the row schema — what every collection mints. */
@@ -699,8 +762,9 @@ function fullCollection<Row, F, S extends string>(
   // Built on the window factory (descriptor registration, keyed `keyOf`,
   // `queryPk`), then its limit-only codec is replaced by the query codec. The
   // default window encodes to the same `{ limit }` bytes either way.
-  // Only the window is ever preloaded: `:rows` and `:groups` have no default
-  // tuple the server could load before a tab names one. The flag is forwarded
+  // Only the window (and a declared `:count`, at its unfiltered `{}` tuple) is
+  // ever preloaded: `:rows` and `:groups` have no default tuple the server
+  // could load before a tab names one. The flag is forwarded
   // as is — `"none"` is the absence of the descriptor field.
   const preloadOpts: { preload?: ResourcePreload } =
     spec.preload === undefined || spec.preload === "none"
@@ -764,6 +828,24 @@ function fullCollection<Row, F, S extends string>(
       void groupCodec.decode(params),
   };
   registerResourceDescriptor(groups as ResourceDescriptor<unknown>);
+  // Minted after `:groups` (descriptor registration order), only when declared.
+  // Preloaded with the window: its `{}` tuple is the whole collection's total.
+  let count: LiveCountDescriptor<F> | null = null;
+  if ((spec as { count?: true }).count === true) {
+    const countCodec: LiveCountCodec = {
+      encode: codec.encodeCount,
+      decode: codec.decodeCount,
+    };
+    count = {
+      key: `${key}:count`,
+      schema: z.number().int().nonnegative(),
+      count: countCodec,
+      validateParams: (params: Record<string, string>) =>
+        void countCodec.decode(params),
+      ...preloadOpts,
+    };
+    registerResourceDescriptor(count as ResourceDescriptor<unknown>);
+  }
   const filterable = spec.filterable as unknown as Filterable;
   const column = (name: string): LiveColumnRef => {
     const declared = Object.hasOwn(filterable, name)
@@ -786,6 +868,7 @@ function fullCollection<Row, F, S extends string>(
     ...base,
     window,
     groups,
+    count,
     filterable: spec.filterable,
     sortable: spec.sortable,
     scroll,

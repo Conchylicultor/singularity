@@ -71,6 +71,8 @@ export const allConversations = liveCollection("conversations.all", {
   // Other plugins' columns (conversations/usage: cost, tokens, agents) sort
   // and filter it too, under `$columns.<contributor>`.
   contributed: true,
+  // Counted: the list's section count is exact while only its scope applies.
+  count: true,
 });
 
 /**
@@ -89,4 +91,6 @@ export const conversationHistory = liveCollection("conversations.history", {
   scroll: true,
   columnScope: "conversations-sidebar",
   contributed: true,
+  // Counted: the list's section count is exact while only its scope applies.
+  count: true,
 });
