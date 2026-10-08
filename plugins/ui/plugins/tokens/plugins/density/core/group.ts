@@ -81,6 +81,15 @@ export const densityGroup = defineTokenGroup("density", {
   // e2e reads it back as a number.
   treeRowH: { default: "1.75rem", label: "Tree row height" },
   treeIndent: { default: "16px", label: "Tree indent" },
+  // A tree row's leading inset (before its icon / chevron slot) and the gap
+  // between its cells. Defaults = the 4px lead and `xs` gap it always had.
+  treeRowPadStart: { default: "4px", label: "Tree row lead inset" },
+  treeRowGap: { default: "var(--space-xs)", label: "Tree row gap" },
+  // How much of each depth level's indent moves the row's PILL (its hover /
+  // selected fill) rather than only its content. Default `0px`: every pill
+  // spans the full width and only its content indents; at `--tree-indent` a
+  // nested row's fill starts under its parent's icon. Never above the indent.
+  treePillIndent: { default: "0px", label: "Tree pill indent" },
   // Where an indent guide's hairline sits inside its indent step (its centre,
   // from the step's start). Default = the step's middle.
   treeGuideX: {

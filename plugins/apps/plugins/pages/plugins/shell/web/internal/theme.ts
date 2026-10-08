@@ -74,7 +74,12 @@ const sidebarPalette = sidebarPaletteGroup.fragment({
   },
 });
 
-/** A 260px sidebar of 30px rows, ending 8px above its bottom edge. */
+/**
+ * A 260px sidebar of 30px rows, ending 8px above its bottom edge, headed by
+ * the workspace row: a 34px row hung 10px below the sidebar's top edge, its
+ * 22px tile 16px in (the launcher's 32px button 11px in) and the name 10px
+ * after the tile (the button's 5px edge + the name's own 5px pad).
+ */
 const sidebarMetrics = sidebarMetricsGroup.fragment(
   both({
     // 261px: the mockup's 260px sidebar plus the 1px rule it draws on the
@@ -82,12 +87,18 @@ const sidebarMetrics = sidebarMetricsGroup.fragment(
     sidebarPanelWidth: "16.3125rem",
     sidebarRowHeight: "1.875rem",
     sidebarEndPad: "0.5rem",
+    sidebarBrandHeight: "2.75rem",
+    sidebarBrandPad: "0.625rem 0.6875rem 0",
+    sidebarBrandMarkSize: "1.375rem",
+    sidebarBrandGap: "0px",
+    sidebarBrandNamePadX: "0.3125rem",
   }),
 );
 
 /**
  * A 46px pane header with no bottom rule, 30px tree rows indented 14px per
- * level (root rows packed with no gap), and the mockup's popovers: a 248px menu (the section ⋯ panel), a
+ * level — the row's pill with them — (root rows packed with no gap), and the
+ * mockup's popovers: a 248px menu (the section ⋯ panel), a
  * 300px described menu (the page-kind menu), a 328px picker (icon and cover),
  * each a 6px-inset panel of 30px rows. A sidebar section head opens with
  * 14px above its label row and 2px below, so the 16px gap between sections
@@ -101,6 +112,12 @@ const density = densityGroup.fragment(
     chromePanePadEnd: "0.625rem",
     treeRowH: "1.875rem",
     treeIndent: "14px",
+    // The mockup's 8px row inset, 18px icon box and 8px gap, on the tree's
+    // 20px disclosure box: the icon centred 17px into the row, the label 34px.
+    treeRowPadStart: "7px",
+    treeRowGap: "7px",
+    // A nested row's fill starts under its parent's icon, not at the edge.
+    treePillIndent: "14px",
     treeRootGap: "0px",
     popoverWidthMenu: "15.5rem",
     popoverWidthDescribed: "18.75rem",
@@ -119,7 +136,8 @@ const density = densityGroup.fragment(
  *   tree row (`treeRowH` plus its 4px block padding) is not pushed taller.
  *   The page's own prose is the editor's separate `doc-text-*` scale and is
  *   untouched;
- * - 12.5px `label` and `caption`;
+ * - 13px `label` (the schema default: the sidebar's search field) and 12.5px
+ *   `caption`;
  * - 11.5px `group` (section heads) at weight 550;
  * - 38px `display` (the page title) on a 1.15 line at weight 650.
  *
@@ -132,7 +150,6 @@ const typeScale = typeScaleGroup.fragment(
   both({
     fontSizeBody: "0.84375rem",
     lineHeightBody: "1.375rem",
-    fontSizeLabel: "0.78125rem",
     fontSizeCaption: "0.78125rem",
     fontSizeGroup: "0.71875rem",
     fontWeightGroup: "550",

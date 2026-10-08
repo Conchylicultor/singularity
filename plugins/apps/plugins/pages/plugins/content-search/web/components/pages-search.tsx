@@ -18,7 +18,7 @@ const FIELD_STYLE = { paddingLeft: "calc(var(--space-sm) + var(--space-2xs))" };
 
 /**
  * Sidebar "Search" trigger: a filled, field-shaped button (32px, hairline
- * border, the search glyph then "Search" in muted text) that opens the reusable
+ * border, the search glyph then "Search" in muted label text) that opens the reusable
  * QuickFindDialog scoped to the "pages" source. Selecting a result opens the
  * page in the page-detail pane. It reads as a search field but is a button: the
  * typing happens in the dialog.
@@ -31,12 +31,14 @@ export function PagesSearch() {
     <>
       {/* No bottom padding: the section heads below open with their own. */}
       <div className="rail-follow pt-sm">
+        {/* A field's placeholder, not a nav row: the label rung (13px), a
+            step below the tree rows under it; its glyph follows (icon-auto). */}
         <Row
           bordered
           icon={<Icon icon={searchIcon} />}
           onClick={() => setOpen(true)}
           style={FIELD_STYLE}
-          className="h-8 rounded-lg bg-muted text-muted-foreground hover:border-popover-border"
+          className="h-8 rounded-lg bg-muted text-label font-normal text-muted-foreground hover:border-popover-border"
         >
           Search
         </Row>

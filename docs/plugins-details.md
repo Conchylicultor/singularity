@@ -3773,7 +3773,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
           - Exemptions:
             - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/prompt-origin-section.tsx` (debt)
-        - **`shell`** — App shell for Pages. Registers the /pages app entry, defines the Pages.Sidebar slot (headed by the standard app-shell brand header), and contributes the app's own theme (Ink), which Pages selects.
+        - **`shell`** — App shell for Pages. Registers the /pages app entry — its brand the workspace (the user's initial tile as the launcher mark, and "<first name>'s pages" from the OS account) — defines the Pages.Sidebar slot, and contributes the app's own theme (Ink), which Pages selects.
           - Web:
             - Slots: `Pages.Sidebar`
             - Slot contributors:
@@ -3785,9 +3785,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeEngine.Theme` "Ink"
             - Uses:
               - `apps-core.Apps`
+              - `infra/host-account.useHostAccount`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
+              - `primitives/css/center.Center`
               - `primitives/css/row.Row`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
               - `primitives/slot-render.defineRenderSlot`
               - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
@@ -20633,6 +20639,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `accountInitial`
           - `hostAccount`
           - `HostAccountSchema`
+      - Cross-plugin:
+        - Imported by: `apps/pages/shell`
     - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
       - Server:
         - Uses:
@@ -26967,8 +26975,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 109 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×26
+            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×27
               - `primitives` ×24
               - `page` ×17
               - `debug` ×8
@@ -27854,8 +27862,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 345 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×88
+            - Imported by: 346 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×89
               - `conversations` ×67
               - `primitives` ×39
               - `debug` ×32
@@ -28096,9 +28104,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 378 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 379 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×100
-              - `apps` ×66
+              - `apps` ×67
               - `conversations` ×50
               - `page` ×24
               - `debug` ×23
@@ -29882,8 +29890,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 195 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×49
+        - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×50
           - `conversations` ×38
           - `ui` ×22
           - `tasks` ×18
@@ -29957,8 +29965,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 173 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×56
+        - Imported by: 174 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×57
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×15

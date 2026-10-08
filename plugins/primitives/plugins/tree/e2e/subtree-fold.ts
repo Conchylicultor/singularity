@@ -51,7 +51,9 @@ const COLLAPSE = "Collapse subtree";
 
 interface RowInfo {
   label: string;
-  /** `paddingLeft` in px — depth × `--tree-indent` + 4. */
+  /** Where the row's content starts, in px — `marginLeft + paddingLeft`,
+   *  i.e. depth × `--tree-indent` + `--tree-row-pad-start`, however a theme
+   *  splits the indent between the pill and its content. */
   pad: number;
   /** One indent level in px — the row's resolved `--tree-indent` (a theme's). */
   indent: number;
@@ -65,7 +67,9 @@ const snapshot = (page: Page): Promise<RowInfo[]> =>
     [...document.querySelectorAll<HTMLElement>(".group\\/tree-row")].map(
       (el) => ({
         label: (el.textContent ?? "").split("\n")[0]!.trim(),
-        pad: parseFloat(getComputedStyle(el).paddingLeft) || 0,
+        pad:
+          (parseFloat(getComputedStyle(el).marginLeft) || 0) +
+          (parseFloat(getComputedStyle(el).paddingLeft) || 0),
         indent: parseFloat(
           getComputedStyle(el).getPropertyValue("--tree-indent"),
         ),

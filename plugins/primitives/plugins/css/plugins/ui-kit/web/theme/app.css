@@ -598,6 +598,10 @@
 @utility size-sidebar-brand-mark { width: var(--sidebar-brand-mark-size); height: var(--sidebar-brand-mark-size); } /* twmerge: extend size */
 @utility gap-sidebar-brand { gap: var(--sidebar-brand-gap); } /* twmerge: extend gap */
 @utility px-sidebar-brand-name { padding-inline: var(--sidebar-brand-name-pad-x); } /* twmerge: extend px */
+/* The brand header's box: its height and padding (sidebar-metrics
+ * `sidebarBrandHeight` / `sidebarBrandPad`, defaults the chrome bar's). */
+@utility h-sidebar-brand { height: var(--sidebar-brand-height); } /* twmerge: extend h */
+@utility p-sidebar-brand { padding: var(--sidebar-brand-pad); } /* twmerge: extend p */
 
 /* Control height utilities — the single source of truth for interactive-control
  * heights (Button, ToggleChip, ButtonGroup, …). Values come from the density
@@ -711,6 +715,9 @@
 /* A tree row's minimum height (`TreeRowChrome`) — density `treeRowH`, default
  * `1.75rem` (the `min-h-7` it always had). */
 @utility min-h-tree-row { min-height: var(--tree-row-h); } /* twmerge: extend min-h */
+/* The gap between a tree row's cells (`TreeRowChrome`) — density `treeRowGap`,
+ * default the `xs` step. */
+@utility gap-tree-row { gap: var(--tree-row-gap); } /* twmerge: extend gap */
 
 /* ── THE RAIL ─────────────────────────────────────────────────────────────
  * Applying padding is the act of OPENING A REGION, not decorating a box. A box

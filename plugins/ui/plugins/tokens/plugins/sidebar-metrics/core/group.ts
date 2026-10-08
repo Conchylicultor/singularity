@@ -49,6 +49,19 @@ export const sidebarMetricsGroup = defineTokenGroup("sidebar-metrics", {
     default: "var(--control-pad-md)",
     label: "Sidebar brand name padding X",
   },
+  // The brand header's own box (`h-sidebar-brand` + `p-sidebar-brand`): its
+  // height and its padding (a `padding` shorthand), the brand centred in what
+  // is left. Defaults = the chrome bar's height and inline inset it always had;
+  // a theme that wants the brand as a row hung from the sidebar's top edge
+  // gives it a block-start pad inside a shorter box.
+  sidebarBrandHeight: {
+    default: "var(--chrome-bar-h)",
+    label: "Sidebar brand height",
+  },
+  sidebarBrandPad: {
+    default: "0 var(--chrome-pad-x)",
+    label: "Sidebar brand padding",
+  },
 });
 
 export type SidebarMetricsTokenValues = {

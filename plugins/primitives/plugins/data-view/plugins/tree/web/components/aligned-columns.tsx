@@ -274,13 +274,13 @@ export function AlignedHeader({
       <Stack
         direction="row"
         align="center"
-        gap="xs"
+        gap="none"
         role="row"
         // A row tall, its rule inside; the titles in the small caption rung,
-        // faint.
-        className="min-h-tree-row border-b border-border px-xs text-caption-compact font-medium text-faint-foreground"
-        // Depth 0's indent in `TreeRowChrome` (`depth * --tree-indent + 4px`).
-        style={{ paddingLeft: 4 }}
+        // faint. Its cells sit `TreeRowChrome`'s gap apart.
+        className="min-h-tree-row gap-tree-row border-b border-border px-xs text-caption-compact font-medium text-faint-foreground"
+        // Depth 0's indent in `TreeRowChrome`: its lead inset.
+        style={{ paddingLeft: "var(--tree-row-pad-start)" }}
       >
         {/* The chevron / icon slot's width, so the Name title sits on the label. */}
         <span className="size-5" aria-hidden />

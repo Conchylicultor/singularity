@@ -23,7 +23,7 @@ export function FlushFraming({
       <Sidebar>
         {header && (
           // eslint-disable-next-line layout/no-adhoc-layout -- justify-center centers content within shadcn SidebarHeader's own flex column
-          <SidebarHeader className="h-chrome-bar justify-center px-chrome py-none">
+          <SidebarHeader className="h-sidebar-brand justify-center p-sidebar-brand">
             {header}
           </SidebarHeader>
         )}

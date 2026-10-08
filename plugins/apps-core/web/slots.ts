@@ -57,6 +57,11 @@ export interface AppEntry {
    * launcher's button). Omitted, the launcher draws {@link icon}. For an app
    * whose identity is a drawn logo rather than a glyph. */
   mark?: ComponentType<{ className?: string }>;
+  /** The name heading the app's sidebar (the brand's `header` form), drawn
+   * whole — text, typography and its own loading state. Omitted, the brand
+   * prints {@link AppRef.name}. For an app whose sidebar is named after what it
+   * holds rather than what it is ("Etienne's pages"). */
+  brandName?: ComponentType;
   component: ComponentType;
   onClick?: () => void;
   /** Marks this app as the fallback when the URL matches no app and on initial boot. */

@@ -24,6 +24,7 @@ import type { TreeDisclosureProps } from "../../core";
 import { Tree } from "../slots";
 import { TreeDisclosureToggle } from "./tree-disclosure-toggle";
 import { TreeGuides } from "./tree-guides";
+import { treeRowIndentStyle } from "./tree-indent";
 
 export type TreeRowChromeProps = {
   /**
@@ -209,7 +210,7 @@ export function TreeRowChrome({
     <Stack
       direction="row"
       align="center"
-      gap="xs"
+      gap="none"
       ref={rowRef as Ref<HTMLElement>}
       data-tree-row
       data-tree-id={rowId}
@@ -260,9 +261,10 @@ export function TreeRowChrome({
       // context the pinned action cluster anchors to — the chevron/disclosure
       // reveal keeps reading `group/tree-row`.
       className={cn(
-        // Row height and per-depth indent are density tokens (`treeRowH`,
-        // `treeIndent`), so a theme owns a tree's rhythm.
-        "group/tree-row min-h-tree-row rounded-md px-xs py-xs text-body",
+        // Row height, cell gap, lead inset and per-depth indent are density
+        // tokens (`treeRowH`, `treeRowGap`, `treeRowPadStart`, `treeIndent`),
+        // so a theme owns a tree's rhythm.
+        "group/tree-row min-h-tree-row gap-tree-row rounded-md px-xs py-xs text-body",
         // A focusable row (one with an open gesture) is walked with the arrow
         // keys, so the row the keys are on must show it.
         onOpen && "focus-ring",
@@ -282,7 +284,7 @@ export function TreeRowChrome({
           : "hover:bg-accent hover:[--scrim:var(--accent)]",
         className,
       )}
-      style={{ paddingLeft: `calc(${depth} * var(--tree-indent) + 4px)` }}
+      style={treeRowIndentStyle(depth)}
     >
       {guides && <TreeGuides depth={depth} />}
       {icon != null ? (

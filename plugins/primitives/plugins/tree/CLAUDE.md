@@ -153,7 +153,7 @@ any menu open inside it. Consequences to keep in mind:
 
 - **`TreeListProps.guides`** (default false) draws `TreeGuides` on every row and
   placeholder row: ONE decorative `Placed` box per row over its indent padding
-  (after the 4px lead, `depth × --tree-indent` wide), its background a repeating
+  (after the row's `--tree-row-pad-start` lead, `depth × --tree-indent` wide), its background a repeating
   1px line centred in each indent step, in `--tree-guide` (color-palette,
   default `var(--border)`). It lives in the padding, so no label, icon or
   aligned column moves.
@@ -164,6 +164,15 @@ any menu open inside it. Consequences to keep in mind:
   theme that sets neither token sees no change.
 - The placeholder row indents by the `--tree-indent` token like its siblings
   (it used to hard-code 16px, the token's default).
+- **The row's geometry is density tokens**, read in one place
+  (`web/internal/tree-indent.ts`): `treeRowPadStart` (the lead inset before the
+  icon slot, default 4px), `treeRowGap` (between cells, default `xs`) and
+  `treePillIndent` — how much of each level's indent moves the row's PILL (its
+  hover / selected fill, as margin) rather than only its content (as padding).
+  Default `0px`: full-width pills, the look every tree had. Pages sets it to
+  the whole indent, so a nested row's fill starts under its parent's icon. The
+  content lands at `depth × --tree-indent + --tree-row-pad-start` either way;
+  the placeholder row and the guides follow the same split.
 
 ## Context access
 
