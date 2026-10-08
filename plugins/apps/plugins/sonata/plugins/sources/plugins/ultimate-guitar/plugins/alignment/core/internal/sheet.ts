@@ -27,6 +27,8 @@ export interface SheetToken {
   section: number;
   line: number;
   chord: number;
+  /** The chord as written there. */
+  symbol: string;
   /** Index into {@link AlignSheet.shapes}, or `null` for a symbol theory cannot read. */
   shape: number | null;
 }
@@ -139,6 +141,7 @@ export function buildAlignSheet(parsed: ParsedTab): AlignSheet {
             section: si,
             line,
             chord: ci,
+            symbol: chord.symbol,
             shape: shapeOf(chord.symbol),
           });
         });

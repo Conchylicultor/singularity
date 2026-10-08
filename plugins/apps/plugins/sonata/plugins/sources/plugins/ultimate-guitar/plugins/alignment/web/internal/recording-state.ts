@@ -2,7 +2,7 @@ import type { LiveRowResult } from "@plugins/network/plugins/live/web";
 import type { UgTab } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
   ALIGNER_VERSION,
-  sheetHash,
+  fitsSheet,
   type AlignmentCandidate,
   type AlignmentPhase,
   type UgAlignmentRow,
@@ -39,16 +39,21 @@ export type RecordingState =
       /** Signed semitones, recording = sheet + transpose, in (−6, +6]. */
       transpose: number;
       capo: number;
+      /** Made by an earlier aligner: still played, until the next re-align. */
+      olderAligner: boolean;
     }
   /** Aligned below `WEAK_MATCH_THRESHOLD`: played all the same, as an unconfirmed match. */
-  | { kind: "weak"; videoId: string; score: number }
+  | { kind: "weak"; videoId: string; score: number; olderAligner: boolean }
   | {
       kind: "failed";
       videoId: string | null;
       message: string;
       permanent: boolean;
     }
-  /** Aligned (or weak) to an earlier sheet, video or aligner, and not re-aligning. */
+  /**
+   * The record cannot play this sheet — made for another sheet or video, or
+   * its chords moved in today's parse — and nothing is re-aligning.
+   */
   | { kind: "out-of-date"; videoId: string };
 
 /** Candidates the resolver has tried (whatever came of them). */
@@ -112,14 +117,16 @@ export function recordingState(
     case "weak":
     case "needs-video": {
       const record = row.record;
+      // The same rule as the player's (`appliedAlignment`): out of date
+      // exactly when the record would not play.
       if (
         record === null ||
         record.videoId !== videoId ||
-        record.sheetHash !== sheetHash(tab.content) ||
-        record.alignerVersion !== ALIGNER_VERSION
+        !fitsSheet(record, tab.content)
       ) {
         return { kind: "out-of-date", videoId };
       }
+      const olderAligner = record.alignerVersion !== ALIGNER_VERSION;
       return row.status === "aligned"
         ? {
             kind: "aligned",
@@ -127,13 +134,17 @@ export function recordingState(
             score: record.score,
             transpose: signedTranspose(record.transpose),
             capo: tab.capo,
+            olderAligner,
           }
-        : { kind: "weak", videoId, score: record.score };
+        : { kind: "weak", videoId, score: record.score, olderAligner };
     }
   }
 }
 
 const percent = (score: number) => `${Math.round(score * 100)}%`;
+
+const olderAlignerNote = (older: boolean) =>
+  older ? " · made by an earlier aligner (re-align to update)" : "";
 
 /** "+2 (capo 2)", "−3", "0". */
 export function formatTranspose(transpose: number, capo: number): string {
@@ -168,13 +179,13 @@ export function recordingStateLine(state: RecordingState): string {
         ? "Aligning the sheet…"
         : "Analysing the recording…";
     case "aligned":
-      return `Aligned ${percent(state.score)} · ${formatTranspose(state.transpose, state.capo)} semitones`;
+      return `Aligned ${percent(state.score)} · ${formatTranspose(state.transpose, state.capo)} semitones${olderAlignerNote(state.olderAligner)}`;
     case "weak":
-      return `Weak match (${percent(state.score)}) — playing it, but the timing is unconfirmed; a better video may align`;
+      return `Weak match (${percent(state.score)}) — playing it, but the timing is unconfirmed; a better video may align${olderAlignerNote(state.olderAligner)}`;
     case "failed":
       return `Failed: ${state.message}`;
     case "out-of-date":
-      return "Out of date — the sheet changed since it was aligned";
+      return "Out of date — the alignment no longer fits this sheet; re-align to sync the video";
   }
 }
 

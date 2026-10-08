@@ -6139,6 +6139,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `apps/sonata/sources/ultimate-guitar/tab.inferSections`
                       - `apps/sonata/sources/ultimate-guitar/tab.ParsedLine`
                       - `apps/sonata/sources/ultimate-guitar/tab.ParsedTab`
+                      - `apps/sonata/sources/ultimate-guitar/tab.parseUgContent`
                       - `apps/sonata/sources/ultimate-guitar/tab.UgTabSchema`
                       - `apps/sonata/theory.parseChordSymbol`
                       - `apps/sonata/theory.parseKeySignature`

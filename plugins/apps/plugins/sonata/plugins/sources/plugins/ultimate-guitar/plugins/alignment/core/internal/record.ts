@@ -2,11 +2,14 @@ import { z } from "zod";
 
 /**
  * The aligner's version: part of every stored record. Bump it when the
- * aligner's output changes meaning — `compile()` only applies a record whose
- * `alignerVersion` is current, and the job re-aligns a stale one. The
- * record's indices point into the PARSED tab, so a parser change that adds or
- * drops lines changes its meaning too (2: chord-substitution legend lines are
- * no longer lines of the song).
+ * aligner's output improves or changes meaning — the job re-aligns a record of
+ * an older version the next time it runs for that song. It does NOT decide
+ * whether a record plays: an older record keeps playing as long as it still
+ * lands on this sheet's chords (`fitsSheet`), so a new aligner never silences
+ * the alignments already made. The record's indices point into the PARSED tab,
+ * so a parser change that adds or drops lines can move them; each chord
+ * segment carries the chord's `symbol` so `fitsSheet` can tell (2:
+ * chord-substitution legend lines are no longer lines of the song).
  */
 export const ALIGNER_VERSION = 2;
 
@@ -17,6 +20,12 @@ export const ChordSegmentSchema = z.object({
   section: z.number().int().nonnegative(),
   line: z.number().int().nonnegative(),
   chord: z.number().int().nonnegative(),
+  /**
+   * The chord written at those indices when the record was made, so a parser
+   * change that moves the indices is caught (`fitsSheet`). Absent on records
+   * made before it was stored (aligner 1 and early 2).
+   */
+  symbol: z.string().optional(),
   /**
    * Which performance of its section this is (0-based, counting every time the
    * performance enters that sheet section — a "Chorus x2" yields 0 then 1).

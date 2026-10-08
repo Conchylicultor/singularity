@@ -41,12 +41,12 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import {
   inferSections,
+  parseUgContent,
   type InferredSection,
   type ParsedLine,
   type ParsedTab,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
-  ALIGNER_VERSION,
   sheetHash,
   type AlignmentRecord,
   type AlignmentSegment,
@@ -57,17 +57,28 @@ import { isRepeatMarker } from "./sheet";
 export const GAP_SECTION_NAME = "Not in sheet";
 
 /**
- * Whether `record` was made for the sheet `content` by the current aligner —
- * the only condition for applying it. The score is NOT one: a weak match is
+ * Whether `record` can play the sheet `content` — the only condition for
+ * applying it: made for this exact sheet (`sheetHash`), and every chord
+ * segment still names the chord it was aligned to in today's parse (the
+ * segment's `symbol`, when the record stored it; else just a chord at those
+ * indices). The aligner version is NOT a condition: a record made by an older
+ * aligner keeps playing until the job re-aligns it, so a new aligner never
+ * silences the alignments already made. Nor is the score: a weak match is
  * applied too (the song plays on its best try, and the Recording section says
  * it is unconfirmed); `WEAK_MATCH_THRESHOLD` only decides whether the
  * resolver keeps looking for a better video.
  */
 export function fitsSheet(record: AlignmentRecord, content: string): boolean {
-  return (
-    record.alignerVersion === ALIGNER_VERSION &&
-    record.sheetHash === sheetHash(content)
-  );
+  if (record.sheetHash !== sheetHash(content)) return false;
+  const sections = parseUgContent(content);
+  return record.segments.every((seg) => {
+    if (seg.kind === "gap") return true;
+    const chord = sections[seg.section]?.lines[seg.line]?.chords[seg.chord];
+    return (
+      chord !== undefined &&
+      (seg.symbol === undefined || seg.symbol === chord.symbol)
+    );
+  });
 }
 
 type ChordSegment = Extract<AlignmentSegment, { kind: "chord" }>;

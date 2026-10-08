@@ -253,8 +253,9 @@ export function collectUnrecognisedChords(parsed: ParsedTab): string[] {
 /**
  * Slot-facing compile: validate the raw `{ tab, alignment }` shape (loud failure
  * on mismatch) and parse the tab's markup. When the alignment was made for THIS
- * sheet (`fitsSheet`: current aligner, same `sheetHash` — a weak match
- * included), the Score plays on the recording's beats (`alignedScore`);
+ * sheet (`fitsSheet`: same `sheetHash`, and its chords still where today's
+ * parse puts them — a weak match, or one an earlier aligner made, included),
+ * the Score plays on the recording's beats (`alignedScore`);
  * otherwise the synthesized timeline.
  * The check is by construction, so a stale record can never be misapplied.
  */

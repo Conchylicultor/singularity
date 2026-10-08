@@ -26,7 +26,8 @@ export type UgSourceRaw = z.infer<typeof UgSourceRawSchema>;
 
 /**
  * The record a song's alignment row puts into `raw.alignment` for the sheet
- * `content`: its record, when it `fitsSheet` (current aligner, same sheet) and
+ * `content`: its record, when it `fitsSheet` (same sheet, chords still in place
+ * — whichever aligner made it) and
  * belongs to the row's video — or, with no video chosen, is the resolver's best
  * try kept by `needs-video` — else `null`. Its score plays no part: a weak
  * match plays too (the Recording section labels it unconfirmed). Nor does the

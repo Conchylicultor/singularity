@@ -93,6 +93,7 @@ describe("recordingState", () => {
       score: 0.82,
       transpose: 2,
       capo: 2,
+      olderAligner: false,
     });
     expect(recordingStateLine(state)).toBe(
       "Aligned 82% · +2 (capo 2) semitones",
@@ -118,12 +119,39 @@ describe("recordingState", () => {
     ).toBe("out-of-date");
   });
 
-  it("is out of date when the record was made by another aligner version", () => {
+  it("still plays a record made by an earlier aligner, saying so", () => {
+    const state = recordingState(
+      found({
+        status: "aligned",
+        record: record({ alignerVersion: ALIGNER_VERSION - 1 }),
+      }),
+      tab,
+    );
+    expect(state.kind === "aligned" && state.olderAligner).toBe(true);
+    expect(recordingStateLine(state)).toBe(
+      "Aligned 82% · +2 (capo 2) semitones · made by an earlier aligner (re-align to update)",
+    );
+  });
+
+  it("is out of date when the record's chords moved in today's parse", () => {
     expect(
       recordingState(
         found({
           status: "aligned",
-          record: record({ alignerVersion: ALIGNER_VERSION + 1 }),
+          record: record({
+            segments: [
+              {
+                kind: "chord",
+                section: 0,
+                line: 0,
+                chord: 0,
+                symbol: "Am",
+                occurrence: 0,
+                startBeat: 0,
+                endBeat: 4,
+              },
+            ],
+          }),
         }),
         tab,
       ).kind,

@@ -94,12 +94,17 @@ reason: it names the alignment record.
 5. **Player.**
    - Which record goes into `raw.alignment` is one rule, `appliedAlignment`
      (`core/internal/source-raw.ts`): the row's record when it `fitsSheet`
-     (current aligner, same sheet) and is the row's video's — or, with no
+     (same sheet, and every chord segment still names its chord — by the
+     `symbol` it stored — in today's parse) and is the row's video's — or, with no
      video chosen, the resolver's best try (`needs-video`) — else `null`. The
      score plays no part: a weak match is applied too, so the video plays and
      drives the transport, and the Recording section labels it unconfirmed
      with its score. `WEAK_MATCH_THRESHOLD` only decides whether the resolver
-     keeps looking. The row's `status` plays no part either, so a re-align that
+     keeps looking. Nor does `alignerVersion`: a record an earlier aligner made
+     keeps playing (labelled "made by an earlier aligner") until the job next
+     runs for the song and re-aligns it, so bumping `ALIGNER_VERSION` never
+     silences the alignments already made. A parser change that moves the
+     indices is what `fitsSheet` catches instead. The row's `status` plays no part either, so a re-align that
      is queued, running or failed leaves the last alignment of this video and
      sheet playing, and setting a new video drops the old one's at once.
    - UG `hydrate` fetches the tab and the alignment row (`getUgAlignment`)
@@ -110,17 +115,18 @@ reason: it names the alignment record.
      not at all right after `hydrate`).
    - UG's persist observer saves only when `raw.tab` changes, so this write is
      never taken for an edit.
-   - UG `compile()` applies the record only when it `fitsSheet` (current
-     aligner, same `sheetHash`), and otherwise falls back to the synthesized
-     timeline. A stale record is rejected by construction.
+   - UG `compile()` applies the record only when it `fitsSheet`, and otherwise
+     falls back to the synthesized timeline. A record that no longer lands on
+     the sheet's chords is rejected by construction.
 6. **Status.** The Recording section (`area: "editor"`, gated on a UG raw)
    derives a `RecordingState` union from the live row and the open tab
    (`web/internal/recording-state.ts`): loading, no video, finding a video
    (the candidate being tried), needs a video (n tried, best score), queued, aligning
    (phase), aligned (score and signed transpose with capo, "+2 (capo 2)"),
    weak ("needs a better video (31%)"), failed (message, Retry unless
-   permanent) and out of date (the record is for another sheet, video or
-   aligner version, and nothing is re-aligning). The collapsed `summary` shows the same line.
+   permanent) and out of date (the record would not play: another sheet or
+   video, or its chords moved — and nothing is re-aligning). Aligned and weak
+   note a record made by an earlier aligner. The collapsed `summary` shows the same line.
    Loading is its own arm, never rendered as "no video". The body also shows
    the chosen video's title and channel with "picked automatically" / "set by
    you", "Find a video" while there is none, and a disclosure listing the
@@ -218,6 +224,7 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `apps/sonata/sources/ultimate-guitar/tab.inferSections`
     - `apps/sonata/sources/ultimate-guitar/tab.ParsedLine`
     - `apps/sonata/sources/ultimate-guitar/tab.ParsedTab`
+    - `apps/sonata/sources/ultimate-guitar/tab.parseUgContent`
     - `apps/sonata/sources/ultimate-guitar/tab.UgTabSchema`
     - `apps/sonata/theory.parseChordSymbol`
     - `apps/sonata/theory.parseKeySignature`

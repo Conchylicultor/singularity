@@ -259,7 +259,19 @@ describe("alignedScore", () => {
 });
 
 describe("fitsSheet", () => {
-  const content = "[Verse]\n[ch]C[/ch] [ch]G[/ch]";
+  // The markup `sheet` spells: the record's indices must name its chords.
+  const chordLine = (line: string) =>
+    line
+      .split(" ")
+      .map((c) => `[ch]${c}[/ch]`)
+      .join(" ");
+  const content = [
+    "[Verse]",
+    ...VERSE.map(chordLine),
+    "[Chorus]",
+    ...CHORUS.map(chordLine),
+    "[Chorus]",
+  ].join("\n");
   const record: AlignmentRecord = {
     ...aligned(synthFeatures(played(VERSE_PLAYED))),
     sheetHash: sheetHash(content),
@@ -273,10 +285,33 @@ describe("fitsSheet", () => {
     expect(fitsSheet(record, `${content}\n[ch]Am[/ch]`)).toBe(false);
   });
 
-  it("rejects a record of another aligner version", () => {
+  it("still fits when an earlier aligner made it: the version is not a condition", () => {
     expect(
       fitsSheet({ ...record, alignerVersion: ALIGNER_VERSION - 1 }, content),
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  it("rejects a record whose chord moved in today's parse", () => {
+    const moved = record.segments.map((seg) =>
+      seg.kind === "chord" ? { ...seg, symbol: "F#" } : seg,
+    );
+    expect(fitsSheet({ ...record, segments: moved }, content)).toBe(false);
+  });
+
+  it("rejects a record naming a chord this sheet no longer has", () => {
+    const gone = record.segments.map((seg) =>
+      seg.kind === "chord" ? { ...seg, line: 7 } : seg,
+    );
+    expect(fitsSheet({ ...record, segments: gone }, content)).toBe(false);
+  });
+
+  it("fits an old record that stored no symbols while its indices still name chords", () => {
+    const bare = record.segments.map((seg) => {
+      if (seg.kind !== "chord") return seg;
+      const { symbol: _symbol, ...rest } = seg;
+      return rest;
+    });
+    expect(fitsSheet({ ...record, segments: bare }, content)).toBe(true);
   });
 
   it("still fits when the match is weak: the score is not a condition", () => {

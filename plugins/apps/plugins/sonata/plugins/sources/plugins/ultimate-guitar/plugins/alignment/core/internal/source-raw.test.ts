@@ -41,19 +41,17 @@ describe("appliedAlignment", () => {
     ).toBeNull();
   });
 
-  it("drops a record for another sheet or another aligner", () => {
+  it("drops a record for another sheet", () => {
     expect(
       appliedAlignment({ videoId: VIDEO, record: record() }, `${CONTENT}!`),
     ).toBeNull();
-    expect(
-      appliedAlignment(
-        {
-          videoId: VIDEO,
-          record: record({ alignerVersion: ALIGNER_VERSION - 1 }),
-        },
-        CONTENT,
-      ),
-    ).toBeNull();
+  });
+
+  it("keeps applying a record made by an earlier aligner", () => {
+    const older = record({ alignerVersion: ALIGNER_VERSION - 1 });
+    expect(appliedAlignment({ videoId: VIDEO, record: older }, CONTENT)).toBe(
+      older,
+    );
   });
 
   it("applies a weak match: the song plays on its best try", () => {

@@ -451,6 +451,7 @@ function toSegments(space: StateSpace, path: Int32Array): AlignmentSegment[] {
       section: token.section,
       line: token.line,
       chord: token.chord,
+      symbol: token.symbol,
       occurrence,
       startBeat: start,
       endBeat: end,
