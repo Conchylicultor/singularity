@@ -32,9 +32,12 @@ const buttonVariants = cva(
         // + `input` at 30% in dark mode, exactly the pairs it always wore — so a
         // theme restyles every outlined control (and every segment of an
         // outlined ButtonGroup: the seam between two segments is their shared
-        // hairline) at once.
+        // hairline) at once. Its hover is the palette's `outlineHover` /
+        // `outlineHoverForeground` (defaults `muted` in light mode, `input` at
+        // 50% in dark, + `foreground`), so a theme whose fill already is its
+        // muted tone can still step the hover visibly off it.
         outline:
-          "border-outline-border bg-outline-fill hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-input/50",
+          "border-outline-border bg-outline-fill hover:bg-outline-hover hover:text-outline-hover-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         // Ghost is the ONE transparent variant — it has no background of its

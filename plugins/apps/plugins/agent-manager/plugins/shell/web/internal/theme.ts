@@ -21,6 +21,8 @@ const DARK = {
   page: "oklch(0.195 0.012 248)",
   panel: "oklch(0.225 0.013 246)",
   fill: "oklch(0.265 0.015 244)",
+  // One step past the fill: a hovered outlined control.
+  fillHover: "oklch(0.305 0.017 242)",
   // Soft, not white: the app's usual 0.82 text lightness, tinted to the slate.
   text: "oklch(0.82 0.008 240)",
   // The emphasised tier, near white: the selected row, the active nav item,
@@ -45,6 +47,7 @@ const LIGHT = {
   page: "oklch(0.985 0.003 240)",
   panel: "oklch(0.965 0.005 240)",
   fill: "oklch(0.93 0.008 240)",
+  fillHover: "oklch(0.89 0.01 240)",
   text: "oklch(0.2 0.015 245)",
   textStrong: "oklch(0.13 0.015 245)",
   text2: "oklch(0.32 0.015 242)",
@@ -93,7 +96,8 @@ const colorPalette = colorPaletteGroup.fragment({
     subtleForeground: DARK.text2,
     // Thread cards, header chips and the prompt box sit one step up on the
     // panel tone, edged by the one hairline; outlined controls (the prompt's
-    // split template chips) fill with the hover tone.
+    // split template chips) fill with the hover tone and hover one step past
+    // it, the label brightening to the strong tier — the mockup's bg-2 → bg-3.
     chip: DARK.panel,
     messageCard: DARK.panel,
     messageCardBorder: DARK.border,
@@ -102,6 +106,8 @@ const colorPalette = colorPaletteGroup.fragment({
     composer: DARK.panel,
     outlineBorder: DARK.border,
     outlineFill: DARK.fill,
+    outlineHover: DARK.fillHover,
+    outlineHoverForeground: DARK.textStrong,
     codeBorder: DARK.border,
     // Toolbar glyphs and counters recede; hover brings them to full text.
     toolbarForeground: DARK.mutedText,
@@ -143,6 +149,8 @@ const colorPalette = colorPaletteGroup.fragment({
     composer: LIGHT.panel,
     outlineBorder: LIGHT.border,
     outlineFill: LIGHT.fill,
+    outlineHover: LIGHT.fillHover,
+    outlineHoverForeground: LIGHT.textStrong,
     codeBorder: LIGHT.border,
     toolbarForeground: LIGHT.mutedText,
   },

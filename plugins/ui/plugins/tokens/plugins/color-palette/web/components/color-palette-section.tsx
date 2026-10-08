@@ -48,6 +48,8 @@ const GROUPS: GroupDef[] = [
       "composer",
       "outlineBorder",
       "outlineFill",
+      "outlineHover",
+      "outlineHoverForeground",
       "toolbarForeground",
     ],
   },

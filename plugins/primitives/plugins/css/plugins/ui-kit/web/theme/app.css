@@ -86,6 +86,8 @@
     --color-composer: var(--composer);
     --color-outline-border: var(--outline-border);
     --color-outline-fill: var(--outline-fill);
+    --color-outline-hover: var(--outline-hover);
+    --color-outline-hover-foreground: var(--outline-hover-foreground);
     --color-code-border: var(--code-border);
     --color-toolbar-foreground: var(--toolbar-foreground);
     --color-selected: var(--selected);

@@ -229,6 +229,18 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     darkDefault: "color-mix(in oklab, var(--input) 30%, transparent)",
     label: "Outline control fill",
   },
+  // An `outline` Button's hovered fill and label. Its own token, not `muted`:
+  // a theme whose `outlineFill` IS its muted tone (Mist) would otherwise hover
+  // to the colour it already wears.
+  outlineHover: {
+    default: "var(--muted)",
+    darkDefault: "color-mix(in oklab, var(--input) 50%, transparent)",
+    label: "Outline control hover",
+  },
+  outlineHoverForeground: {
+    default: "var(--foreground)",
+    label: "Outline control hover text",
+  },
   // The inline-code chip's hairline (only drawn where a theme gives the chip a
   // border width, `borderCode` in density).
   codeBorder: {
